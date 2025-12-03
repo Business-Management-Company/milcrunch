@@ -1,8 +1,9 @@
 import MarketingLayout from "@/components/layout/MarketingLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Award, Users, Mic, TrendingUp, ArrowRight, CheckCircle } from "lucide-react";
+import { Award, Users, Mic, TrendingUp, ArrowRight, CheckCircle, Play } from "lucide-react";
 import { Link } from "react-router-dom";
+import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
 
 const VeteranPodcastAwards = () => {
   const results = [
@@ -32,6 +33,11 @@ const VeteranPodcastAwards = () => {
         <div className="container mx-auto">
           {/* Hero */}
           <div className="max-w-4xl mx-auto text-center mb-16 space-y-6">
+            <img 
+              src={vpaLogo} 
+              alt="Veteran Podcast Awards" 
+              className="w-40 h-40 mx-auto mb-4"
+            />
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
               <Award className="w-4 h-4 text-accent" />
               <span className="text-sm font-medium text-accent">Case Study</span>
@@ -42,6 +48,21 @@ const VeteranPodcastAwards = () => {
             <p className="text-xl text-muted-foreground">
               How we transformed the industry's leading podcast awards program using our own platform.
             </p>
+          </div>
+
+          {/* Promo Video Section */}
+          <div className="max-w-3xl mx-auto mb-16">
+            <Card className="bg-dark-section border-border overflow-hidden">
+              <div className="aspect-video flex items-center justify-center">
+                <div className="text-center p-8">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 mx-auto mb-4 flex items-center justify-center">
+                    <Play className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-dark-foreground font-medium">Promo Video Coming Soon</p>
+                  <p className="text-sm text-dark-muted mt-1">Share YouTube/Vimeo link to embed</p>
+                </div>
+              </div>
+            </Card>
           </div>
 
           {/* Results Grid */}
