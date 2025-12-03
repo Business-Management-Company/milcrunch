@@ -51,7 +51,7 @@ const Resources = () => {
       <section className="py-24 px-6">
         <div className="container mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-16 space-y-6">
-            <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground">
+            <h1 className="text-4xl md:text-6xl font-headline font-bold text-foreground">
               Resources
             </h1>
             <p className="text-xl text-muted-foreground">
@@ -72,7 +72,7 @@ const Resources = () => {
                 </div>
               </div>
               <div className="w-full md:w-1/2 space-y-4">
-                <h2 className="text-2xl font-display font-bold text-foreground">Watch the Product Tour</h2>
+                <h2 className="text-2xl font-headline font-bold text-foreground">Watch the Product Tour</h2>
                 <p className="text-muted-foreground">
                   See how Events & Awards OS can transform your event operations in this 5-minute walkthrough.
                 </p>
@@ -88,24 +88,24 @@ const Resources = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 max-w-3xl mx-auto">
             <Card className="bg-gradient-card border-border p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
               <FileText className="w-8 h-8 text-primary mx-auto mb-3" />
-              <h3 className="font-display font-bold text-foreground mb-1">Documentation</h3>
+              <h3 className="font-headline font-bold text-foreground mb-1">Documentation</h3>
               <p className="text-sm text-muted-foreground">Coming soon</p>
             </Card>
             <Card className="bg-gradient-card border-border p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
               <Play className="w-8 h-8 text-primary mx-auto mb-3" />
-              <h3 className="font-display font-bold text-foreground mb-1">Video Tutorials</h3>
+              <h3 className="font-headline font-bold text-foreground mb-1">Video Tutorials</h3>
               <p className="text-sm text-muted-foreground">Coming soon</p>
             </Card>
             <Card className="bg-gradient-card border-border p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
               <MessageSquare className="w-8 h-8 text-primary mx-auto mb-3" />
-              <h3 className="font-display font-bold text-foreground mb-1">Support</h3>
+              <h3 className="font-headline font-bold text-foreground mb-1">Support</h3>
               <p className="text-sm text-muted-foreground">Contact us</p>
             </Card>
           </div>
 
           {/* FAQs */}
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-display font-bold text-foreground mb-8 text-center">
+            <h2 className="text-3xl font-headline font-bold text-foreground mb-8 text-center">
               Frequently Asked Questions
             </h2>
             <Accordion type="single" collapsible className="space-y-4">
@@ -115,7 +115,7 @@ const Resources = () => {
                   value={`item-${index}`}
                   className="bg-card border border-border rounded-lg px-6"
                 >
-                  <AccordionTrigger className="text-left font-display font-semibold text-foreground hover:no-underline">
+                  <AccordionTrigger className="text-left font-headline font-semibold text-foreground hover:no-underline">
                     {faq.question}
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground">

@@ -58,7 +58,7 @@ const Pricing = () => {
       <section className="py-24 px-6">
         <div className="container mx-auto">
           <div className="max-w-3xl mx-auto text-center mb-16 space-y-6">
-            <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground">
+            <h1 className="text-4xl md:text-6xl font-headline font-bold text-foreground">
               Pricing & Licensing
             </h1>
             <p className="text-xl text-muted-foreground">
@@ -83,7 +83,7 @@ const Pricing = () => {
                 )}
                 
                 <div className="mb-6">
-                  <h3 className="text-xl font-display font-bold text-foreground mb-2">{plan.name}</h3>
+                  <h3 className="text-xl font-headline font-bold text-foreground mb-2">{plan.name}</h3>
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
                 

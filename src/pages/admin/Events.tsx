@@ -64,7 +64,7 @@ const AdminEvents = () => {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Events</h1>
+              <h1 className="text-2xl font-headline font-bold text-foreground">Events</h1>
               <p className="text-sm text-muted-foreground">Manage your events</p>
             </div>
           </div>
@@ -99,7 +99,7 @@ const AdminEvents = () => {
                     <Calendar className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-foreground mb-1">{event.title}</h3>
+                    <h3 className="font-headline font-bold text-foreground mb-1">{event.title}</h3>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -139,7 +139,7 @@ const AdminEvents = () => {
         {events.length === 0 && (
           <Card className="bg-gradient-card border-border p-12 text-center">
             <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-display font-bold text-foreground mb-2">No events yet</h3>
+            <h3 className="font-headline font-bold text-foreground mb-2">No events yet</h3>
             <p className="text-muted-foreground mb-4">Create your first event to get started.</p>
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
               <Link to="/admin/events/create">

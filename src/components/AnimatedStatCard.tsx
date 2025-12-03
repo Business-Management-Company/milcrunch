@@ -22,7 +22,7 @@ const AnimatedStatCard = ({ value, label }: AnimatedStatCardProps) => {
       ref={ref} 
       className="bg-gradient-card border-border p-6 text-center group hover:scale-105 transition-transform duration-300"
     >
-      <p className="text-4xl font-display font-bold text-primary mb-2 group-hover:scale-110 transition-transform">
+      <p className="text-4xl font-headline font-bold text-primary mb-2 group-hover:scale-110 transition-transform">
         {count}{suffix}
       </p>
       <p className="text-sm text-muted-foreground">{label}</p>

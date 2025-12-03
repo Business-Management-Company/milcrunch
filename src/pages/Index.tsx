@@ -15,7 +15,7 @@ import AnimatedStat from "@/components/AnimatedStat";
 import heroEventImage from "@/assets/hero-event.jpg";
 import podcasterImage from "@/assets/podcaster.jpg";
 import awardsCeremonyImage from "@/assets/awards-ceremony.jpg";
-import speakerEventImage from "@/assets/speaker-event.jpg";
+import veteranNetworkingEvent from "@/assets/veteran-networking-event.jpg";
 import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
 import nmpdImage from "@/assets/national-military-podcast-day.png";
 
@@ -25,7 +25,7 @@ const Index = () => {
       icon: Calendar,
       title: "Live & Hybrid Events",
       description: "Paid, free, or donation-based tickets. QR check-in, capacity controls, and real-time reporting.",
-      image: speakerEventImage,
+      image: veteranNetworkingEvent,
       gradient: "from-blue-500/30 via-cyan-500/20",
       accent: "bg-blue-500"
     },
@@ -212,7 +212,7 @@ const Index = () => {
 
                   {/* Title on image */}
                   <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h3 className="text-2xl font-display font-bold text-white drop-shadow-lg">
+                    <h3 className="text-2xl font-headline font-bold text-white drop-shadow-lg">
                       {feature.title}
                     </h3>
                   </div>
@@ -288,7 +288,7 @@ const Index = () => {
                   <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${agent.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
                     <agent.icon className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="font-display font-bold text-xl text-foreground">{agent.title}</h3>
+                  <h3 className="font-headline font-bold text-xl text-foreground">{agent.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {agent.description}
                   </p>
@@ -312,9 +312,9 @@ const Index = () => {
             {steps.map((step, index) => (
               <div key={index} className="text-center space-y-4">
                 <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-primary flex items-center justify-center">
-                  <span className="text-3xl font-display font-bold text-primary-foreground">{step.number}</span>
+                  <span className="text-3xl font-headline font-bold text-primary-foreground">{step.number}</span>
                 </div>
-                <h3 className="text-xl font-display font-bold text-dark-foreground">{step.title}</h3>
+                <h3 className="text-xl font-headline font-bold text-dark-foreground">{step.title}</h3>
                 <p className="text-dark-muted">{step.description}</p>
               </div>
             ))}
@@ -360,7 +360,7 @@ const Index = () => {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl md:text-3xl font-display font-bold text-white mb-2 drop-shadow-lg">
+                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
                     Veteran Podcast Awards
                   </h3>
                   <p className="text-white/80 text-sm md:text-base max-w-md">
@@ -409,7 +409,7 @@ const Index = () => {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl md:text-3xl font-display font-bold text-white mb-2 drop-shadow-lg">
+                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
                     National Military Podcast Day
                   </h3>
                   <p className="text-white/80 text-sm md:text-base max-w-md">
@@ -456,7 +456,7 @@ const Index = () => {
               Request Licensing Options
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-white/30 text-primary-foreground hover:bg-white/10">
+            <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-white text-white hover:bg-white/20">
               <Link to="/auth">
                 Sign In to Dashboard
               </Link>

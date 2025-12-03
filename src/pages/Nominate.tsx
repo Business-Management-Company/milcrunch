@@ -188,7 +188,7 @@ const Nominate = () => {
             <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle className="w-10 h-10 text-primary" />
             </div>
-            <h1 className="text-3xl font-display font-bold text-foreground">
+            <h1 className="text-3xl font-headline font-bold text-foreground">
               Nomination Submitted!
             </h1>
             <p className="text-muted-foreground">
@@ -217,7 +217,7 @@ const Nominate = () => {
             <Award className="w-4 h-4 text-accent" />
             <span className="text-sm font-medium text-accent">Nominations Open</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground">
+          <h1 className="text-4xl md:text-5xl font-headline font-bold text-foreground">
             Nominate a Podcast
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">

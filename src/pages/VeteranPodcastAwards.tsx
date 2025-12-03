@@ -73,7 +73,7 @@ const VeteranPodcastAwards = () => {
             <Award className="w-4 h-4 text-amber-400" />
             <span className="text-sm font-medium text-white">Case Study</span>
           </div>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold text-white text-center mb-4 animate-fade-in drop-shadow-lg">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold text-white text-center mb-4 animate-fade-in drop-shadow-lg">
             Veteran Podcast Awards
           </h1>
           <p className="text-lg md:text-xl text-white/80 text-center max-w-2xl animate-fade-in">
@@ -115,7 +115,7 @@ const VeteranPodcastAwards = () => {
                 <Mic className="w-8 h-8 text-accent" />
               </div>
               <div>
-                <h2 className="text-2xl font-display font-bold text-foreground mb-4">Overview</h2>
+                <h2 className="text-2xl font-headline font-bold text-foreground mb-4">Overview</h2>
                 <p className="text-muted-foreground leading-relaxed">
                   The Veteran Podcast Awards recognizes excellence in podcast content created by and for the 
                   military and veteran community. With 15+ categories, hundreds of nominations, and thousands 
@@ -128,7 +128,7 @@ const VeteranPodcastAwards = () => {
           {/* Challenge & Solution */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
             <Card className="bg-gradient-card border-border p-8">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-6 flex items-center gap-3">
+              <h2 className="text-2xl font-headline font-bold text-foreground mb-6 flex items-center gap-3">
                 <span className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
                   <span className="text-destructive font-bold">!</span>
                 </span>
@@ -145,7 +145,7 @@ const VeteranPodcastAwards = () => {
             </Card>
 
             <Card className="bg-gradient-card border-border p-8">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-6 flex items-center gap-3">
+              <h2 className="text-2xl font-headline font-bold text-foreground mb-6 flex items-center gap-3">
                 <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <CheckCircle className="w-4 h-4 text-primary" />
                 </span>
@@ -164,7 +164,7 @@ const VeteranPodcastAwards = () => {
 
           {/* Screenshots Placeholder */}
           <div className="mb-16">
-            <h2 className="text-2xl font-display font-bold text-foreground mb-8 text-center">Platform in Action</h2>
+            <h2 className="text-2xl font-headline font-bold text-foreground mb-8 text-center">Platform in Action</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {["Nomination Portal", "Judge Scoring Interface", "Ceremony Page"].map((title, index) => (
                 <Card key={index} className="bg-secondary border-border aspect-video flex items-center justify-center group hover:border-primary/50 transition-all duration-300">
@@ -221,7 +221,7 @@ const VeteranPodcastAwards = () => {
                 <span className="text-sm font-medium text-accent">Featured Event</span>
               </div>
               
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-dark-foreground">
+              <h2 className="text-3xl md:text-4xl font-headline font-bold text-dark-foreground">
                 National Military Podcast Day
               </h2>
               
@@ -267,7 +267,7 @@ const VeteranPodcastAwards = () => {
       {/* CTA Section */}
       <section className="py-24 px-6 bg-gradient-primary">
         <div className="container mx-auto text-center space-y-6">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground">
+          <h2 className="text-3xl md:text-4xl font-headline font-bold text-primary-foreground">
             Ready to Run Your Own Awards Program?
           </h2>
           <p className="text-xl text-primary-foreground/80 max-w-xl mx-auto">
