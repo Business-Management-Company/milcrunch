@@ -1,10 +1,11 @@
 import MarketingLayout from "@/components/layout/MarketingLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Award, Mic, ArrowRight, CheckCircle, Volume2, VolumeX } from "lucide-react";
+import { Award, Mic, ArrowRight, CheckCircle, Volume2, VolumeX, Calendar, MapPin, Users, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useRef } from "react";
 import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
+import nmpd from "@/assets/national-military-podcast-day.png";
 
 const VIDEO_URL = "https://swposmlpipmdwocpkfwc.supabase.co/storage/v1/object/public/videos/Logo%20version_1029.mp4";
 
@@ -102,8 +103,8 @@ const VeteranPodcastAwards = () => {
           {/* Results Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
             {results.map((result, index) => (
-              <Card key={index} className="bg-gradient-card border-border p-6 text-center">
-                <p className="text-4xl font-display font-bold text-primary mb-2">{result.number}</p>
+              <Card key={index} className="bg-gradient-card border-border p-6 text-center group hover:scale-105 transition-transform duration-300">
+                <p className="text-4xl font-display font-bold text-primary mb-2 group-hover:scale-110 transition-transform">{result.number}</p>
                 <p className="text-sm text-muted-foreground">{result.label}</p>
               </Card>
             ))}
@@ -168,34 +169,118 @@ const VeteranPodcastAwards = () => {
             <h2 className="text-2xl font-display font-bold text-foreground mb-8 text-center">Platform in Action</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {["Nomination Portal", "Judge Scoring Interface", "Ceremony Page"].map((title, index) => (
-                <Card key={index} className="bg-secondary border-border aspect-video flex items-center justify-center">
+                <Card key={index} className="bg-secondary border-border aspect-video flex items-center justify-center group hover:border-primary/50 transition-all duration-300">
                   <div className="text-center p-6">
-                    <div className="w-12 h-12 rounded-xl bg-muted mx-auto mb-4 flex items-center justify-center">
-                      <Award className="w-6 h-6 text-muted-foreground" />
+                    <div className="w-12 h-12 rounded-xl bg-muted mx-auto mb-4 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <Award className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <p className="text-muted-foreground">{title}</p>
+                    <p className="text-muted-foreground group-hover:text-foreground transition-colors">{title}</p>
                     <p className="text-xs text-muted-foreground/60 mt-1">Screenshot coming soon</p>
                   </div>
                 </Card>
               ))}
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* CTA */}
-          <div className="text-center">
-            <h2 className="text-2xl font-display font-bold text-foreground mb-4">
-              Ready to Run Your Own Awards Program?
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              Use the same platform that powers the Veteran Podcast Awards.
-            </p>
-            <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Link to="/auth?mode=signup">
-                Get Started
+      {/* National Military Podcast Day Section */}
+      <section className="py-24 px-6 bg-dark-section">
+        <div className="container mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Image Side */}
+            <div className="relative group">
+              <div className="relative rounded-2xl overflow-hidden shadow-elevated">
+                <img 
+                  src={nmpd} 
+                  alt="National Military Podcast Day"
+                  className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              </div>
+              {/* Floating badge */}
+              <div className="absolute -top-4 -right-4 bg-accent text-accent-foreground p-3 rounded-xl shadow-elevated">
+                <Calendar className="w-6 h-6" />
+              </div>
+              {/* Stats card */}
+              <div className="absolute -bottom-6 -left-6 bg-card p-4 rounded-xl shadow-elevated border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-foreground text-sm">5,000+</div>
+                    <div className="text-xs text-muted-foreground">Expected Attendees</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Side */}
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/20 border border-accent/30">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <span className="text-sm font-medium text-accent">Featured Event</span>
+              </div>
+              
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-dark-foreground">
+                National Military Podcast Day
+              </h2>
+              
+              <p className="text-xl text-dark-muted leading-relaxed">
+                The premier celebration of military podcasting, bringing together content creators, 
+                veterans, and enthusiasts for a day of networking, learning, and recognition.
+              </p>
+
+              <div className="flex flex-wrap gap-4 pt-2">
+                <div className="flex items-center gap-2 text-dark-muted">
+                  <Calendar className="w-5 h-5 text-accent" />
+                  <span>Annual Event</span>
+                </div>
+                <div className="flex items-center gap-2 text-dark-muted">
+                  <MapPin className="w-5 h-5 text-accent" />
+                  <span>Nationwide</span>
+                </div>
+              </div>
+
+              <ul className="space-y-3 pt-2">
+                {[
+                  "Live streaming panels & workshops",
+                  "Podcast meetups across the country",
+                  "Special awards ceremony",
+                  "Sponsor showcase opportunities"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-accent flex-shrink-0" />
+                    <span className="text-dark-foreground">{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground mt-4">
+                Learn More About NMPD
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+              </Button>
+            </div>
           </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 px-6 bg-gradient-primary">
+        <div className="container mx-auto text-center space-y-6">
+          <h2 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground">
+            Ready to Run Your Own Awards Program?
+          </h2>
+          <p className="text-xl text-primary-foreground/80 max-w-xl mx-auto">
+            Use the same platform that powers the Veteran Podcast Awards.
+          </p>
+          <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90 font-semibold transition-all hover:scale-105 h-14 px-8 text-lg">
+            <Link to="/auth?mode=signup">
+              Get Started
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
         </div>
       </section>
     </MarketingLayout>

@@ -5,15 +5,18 @@ import { Card } from "@/components/ui/card";
 import { 
   Calendar, Award, Users, Zap, Bot, 
   ArrowRight, CheckCircle, Sparkles, 
-  Building2, BarChart3, FileText, Play
+  Building2, BarChart3, FileText, Play, Star, TrendingUp
 } from "lucide-react";
 import PlatformBuilder from "@/components/PlatformBuilder";
+import FeaturedEventCard from "@/components/FeaturedEventCard";
 
 // Import images
 import heroEventImage from "@/assets/hero-event.jpg";
 import podcasterImage from "@/assets/podcaster.jpg";
 import awardsCeremonyImage from "@/assets/awards-ceremony.jpg";
 import speakerEventImage from "@/assets/speaker-event.jpg";
+import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
+import nmpdImage from "@/assets/national-military-podcast-day.png";
 
 const Index = () => {
   const features = [
@@ -22,18 +25,24 @@ const Index = () => {
       title: "Live & Hybrid Events",
       description: "Paid, free, or donation-based tickets. QR check-in, capacity controls, and real-time reporting.",
       image: speakerEventImage,
+      gradient: "from-blue-500/30 via-cyan-500/20",
+      accent: "bg-blue-500"
     },
     {
       icon: Award,
       title: "Awards & Nominations",
       description: "From Veteran Podcast Awards to Service Member of the Year—run nominations, judging, public voting, and winner announcements.",
       image: awardsCeremonyImage,
+      gradient: "from-amber-500/30 via-orange-500/20",
+      accent: "bg-amber-500"
     },
     {
       icon: FileText,
       title: "Sponsorships & Proposals",
       description: "Close sponsors faster with pre-built proposal templates, e-signing, and performance dashboards.",
       image: podcasterImage,
+      gradient: "from-purple-500/30 via-pink-500/20",
+      accent: "bg-purple-500"
     }
   ];
 
@@ -41,22 +50,26 @@ const Index = () => {
     {
       title: "Event Architect",
       description: "Describe your event; the agent drafts the schedule, registration flow, and pricing tiers.",
-      color: "bg-primary/10 text-primary border-primary/20"
+      icon: Calendar,
+      gradient: "from-blue-500 to-cyan-500"
     },
     {
       title: "Awards Designer",
       description: "Paste your theme; the agent generates categories, nomination questions, and judging rubric.",
-      color: "bg-accent/10 text-accent border-accent/20"
+      icon: Award,
+      gradient: "from-amber-500 to-orange-500"
     },
     {
       title: "Sponsor Closer",
       description: "Select sponsor types; the agent drafts proposals and follow-up sequences.",
-      color: "bg-emerald-50 text-emerald-600 border-emerald-200"
+      icon: TrendingUp,
+      gradient: "from-emerald-500 to-teal-500"
     },
     {
       title: "Attendee Concierge",
       description: "Attendees ask 'When is my next session?' and the agent answers with their personal agenda.",
-      color: "bg-purple-50 text-purple-600 border-purple-200"
+      icon: Users,
+      gradient: "from-purple-500 to-pink-500"
     }
   ];
 
@@ -155,7 +168,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* What You Can Run - With Images */}
+      {/* What You Can Run - Premium Cards */}
       <section className="py-24 px-6 bg-background">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
@@ -169,24 +182,36 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
-                <div className="aspect-video overflow-hidden">
+              <Card key={index} className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated hover:-translate-y-2">
+                <div className="aspect-[4/3] overflow-hidden relative">
                   <img 
                     src={feature.image} 
                     alt={feature.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors duration-300">
-                    <feature.icon className="w-6 h-6 text-primary" />
+                  <div className={`absolute inset-0 bg-gradient-to-t ${feature.gradient} to-transparent opacity-60`} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  
+                  {/* Floating icon */}
+                  <div className={`absolute top-4 right-4 w-12 h-12 ${feature.accent} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                    <feature.icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-xl font-display font-bold text-foreground group-hover:text-primary transition-colors">
-                    {feature.title}
-                  </h3>
+
+                  {/* Title on image */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h3 className="text-2xl font-display font-bold text-white drop-shadow-lg">
+                      {feature.title}
+                    </h3>
+                  </div>
+                </div>
+                <div className="p-6">
                   <p className="text-muted-foreground leading-relaxed">
                     {feature.description}
                   </p>
+                  <div className="mt-4 flex items-center text-primary font-medium group-hover:gap-2 transition-all">
+                    <span>Learn more</span>
+                    <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </Card>
             ))}
@@ -224,8 +249,8 @@ const Index = () => {
       {/* Interactive Platform Builder */}
       <PlatformBuilder />
 
-      {/* AI Event Agents - White Section */}
-      <section className="py-24 px-6 bg-background">
+      {/* AI Event Agents - Premium Section */}
+      <section className="py-24 px-6 bg-background overflow-hidden">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
@@ -242,14 +267,15 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {aiAgents.map((agent, index) => (
-              <Card key={index} className={`border-2 ${agent.color} transition-all duration-500 hover:shadow-elevated p-6`}>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-                      <span className="text-primary-foreground font-bold text-sm">{index + 1}</span>
-                    </div>
-                    <h3 className="font-display font-bold text-foreground">{agent.title}</h3>
+              <Card key={index} className="group relative overflow-hidden border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated hover:-translate-y-2 bg-card">
+                {/* Gradient background on hover */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${agent.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                
+                <div className="relative p-6 space-y-4">
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${agent.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                    <agent.icon className="w-7 h-7 text-white" />
                   </div>
+                  <h3 className="font-display font-bold text-xl text-foreground">{agent.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {agent.description}
                   </p>
@@ -283,49 +309,122 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Veteran Podcast Awards Proof - With Image */}
+      {/* Featured Events Showcase */}
       <section className="py-24 px-6 bg-background">
         <div className="container mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="relative">
-              <div className="rounded-2xl overflow-hidden shadow-elevated">
+          <div className="text-center mb-16 space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
+              <Star className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-accent">Success Stories</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground">
+              Powered by Our Platform
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Real events and awards programs running on our infrastructure
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* VPA Card */}
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
+              <div className="relative aspect-[16/10] overflow-hidden">
                 <img 
                   src={awardsCeremonyImage} 
-                  alt="Awards ceremony with golden trophy"
-                  className="w-full h-auto object-cover"
+                  alt="Veteran Podcast Awards"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 via-orange-500/10 to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                
+                {/* Logo */}
+                <div className="absolute top-4 left-4">
+                  <img src={vpaLogo} alt="" className="w-16 h-16 rounded-xl shadow-lg bg-white/10 backdrop-blur-sm p-2" />
+                </div>
+
+                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                  Flagship Awards
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="text-2xl md:text-3xl font-display font-bold text-white mb-2 drop-shadow-lg">
+                    Veteran Podcast Awards
+                  </h3>
+                  <p className="text-white/80 text-sm md:text-base max-w-md">
+                    The industry's leading awards for military & veteran podcast content
+                  </p>
+                </div>
               </div>
-              <div className="absolute -bottom-6 -right-6 bg-accent text-accent-foreground p-4 rounded-xl shadow-elevated">
-                <Award className="w-8 h-8" />
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-4 gap-4 text-center">
+                  {[
+                    { value: "500+", label: "Nominations" },
+                    { value: "50", label: "Judges" },
+                    { value: "10K+", label: "Votes" },
+                    { value: "20+", label: "Sponsors" }
+                  ].map((stat, i) => (
+                    <div key={i}>
+                      <div className="text-lg font-bold text-foreground">{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-[1.02] transition-transform">
+                  <Link to="/veteran-podcast-awards">
+                    View Case Study
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
               </div>
-            </div>
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground">
-                Veteran Podcast Awards is Our Flagship Example
-              </h2>
-              <p className="text-xl text-muted-foreground">
-                See how we built and run the industry's leading podcast awards using this exact platform.
-              </p>
-              <ul className="space-y-3">
-                {[
-                  "2,500+ nominations processed",
-                  "50 expert judges onboarded",
-                  "100,000+ public votes cast",
-                  "20+ sponsors secured"
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
-                    <span className="text-foreground">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Link to="/veteran-podcast-awards">
-                  See How This Runs on the Platform
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
+            </Card>
+
+            {/* NMPD Card */}
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <img 
+                  src={nmpdImage} 
+                  alt="National Military Podcast Day"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-500/20 via-cyan-500/10 to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-blue-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                  Annual Event
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="text-2xl md:text-3xl font-display font-bold text-white mb-2 drop-shadow-lg">
+                    National Military Podcast Day
+                  </h3>
+                  <p className="text-white/80 text-sm md:text-base max-w-md">
+                    The premier celebration bringing together military podcasters nationwide
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Annual Event</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="text-sm">5,000+ Expected</span>
+                  </div>
+                </div>
+
+                <Button asChild variant="outline" className="w-full border-border hover:bg-secondary group-hover:scale-[1.02] transition-transform">
+                  <Link to="/veteran-podcast-awards">
+                    Learn More
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
+            </Card>
           </div>
         </div>
       </section>
