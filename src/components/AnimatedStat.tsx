@@ -27,7 +27,7 @@ const AnimatedStat = ({ value, label, className = "" }: AnimatedStatProps) => {
 
   return (
     <div ref={ref} className={className}>
-      <div className="text-2xl font-display font-bold text-foreground">
+      <div className="text-2xl font-headline font-bold text-foreground">
         {displayValue}{suffix}
       </div>
       <div className="text-sm text-muted-foreground">{label}</div>

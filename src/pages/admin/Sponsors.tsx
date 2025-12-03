@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { 
   DollarSign, Plus, Search, MoreVertical,
-  Building2, FileText, ArrowLeft
+  Building2, FileText, ArrowLeft, Mail, Phone, User
 } from "lucide-react";
 
 const AdminSponsors = () => {
@@ -30,7 +30,10 @@ const AdminSponsors = () => {
       industry: "Financial Services",
       deals: 3,
       revenue: "$75,000",
-      status: "Active"
+      status: "Active",
+      contactName: "John Smith",
+      contactEmail: "john.smith@usaa.com",
+      contactPhone: "(210) 555-1234"
     },
     {
       id: "2",
@@ -38,7 +41,10 @@ const AdminSponsors = () => {
       industry: "Defense",
       deals: 2,
       revenue: "$120,000",
-      status: "Active"
+      status: "Active",
+      contactName: "Sarah Johnson",
+      contactEmail: "sarah.johnson@lmco.com",
+      contactPhone: "(301) 555-5678"
     },
     {
       id: "3",
@@ -46,7 +52,10 @@ const AdminSponsors = () => {
       industry: "Consulting",
       deals: 1,
       revenue: "$45,000",
-      status: "Proposal Sent"
+      status: "Proposal Sent",
+      contactName: "Michael Brown",
+      contactEmail: "michael.brown@bah.com",
+      contactPhone: "(703) 555-9012"
     }
   ];
 
@@ -61,7 +70,7 @@ const AdminSponsors = () => {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Sponsors & Proposals</h1>
+              <h1 className="text-2xl font-headline font-bold text-foreground">Sponsors & Proposals</h1>
               <p className="text-sm text-muted-foreground">Manage sponsor relationships and deals</p>
             </div>
           </div>
@@ -94,20 +103,39 @@ const AdminSponsors = () => {
         <div className="space-y-4">
           {sponsors.map((sponsor) => (
             <Card key={sponsor.id} className="bg-gradient-card border-border p-6 hover:border-primary/50 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
                     <Building2 className="w-6 h-6 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-display font-bold text-foreground mb-1">{sponsor.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="space-y-2">
+                    <h3 className="font-headline font-bold text-foreground">{sponsor.name}</h3>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <span>{sponsor.industry}</span>
                       <span>{sponsor.deals} active deals</span>
                       <span className="flex items-center gap-1 text-primary">
                         <DollarSign className="w-3 h-3" />
                         {sponsor.revenue} total
                       </span>
+                    </div>
+                    {/* Contact Info */}
+                    <div className="flex flex-wrap gap-4 pt-2 border-t border-border mt-2">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <User className="w-3.5 h-3.5 text-primary" />
+                        <span>{sponsor.contactName}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Mail className="w-3.5 h-3.5 text-primary" />
+                        <a href={`mailto:${sponsor.contactEmail}`} className="hover:text-primary transition-colors">
+                          {sponsor.contactEmail}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Phone className="w-3.5 h-3.5 text-primary" />
+                        <a href={`tel:${sponsor.contactPhone}`} className="hover:text-primary transition-colors">
+                          {sponsor.contactPhone}
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>

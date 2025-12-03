@@ -49,7 +49,7 @@ const PlatformBuilder = () => {
     <section className="py-24 px-6 bg-secondary/30">
       <div className="container mx-auto">
         <div className="text-center mb-16 space-y-4">
-          <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground">
+          <h2 className="text-4xl md:text-5xl font-headline font-bold text-foreground">
             Build Your Own Platform
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -112,7 +112,7 @@ const PlatformBuilder = () => {
               </div>
 
               <div className="text-center mb-6">
-                <h3 className="text-xl font-display font-bold text-foreground">My Custom Platform</h3>
+                <h3 className="text-xl font-headline font-bold text-foreground">My Custom Platform</h3>
                 <p className="text-sm text-muted-foreground">Your personalized Events & Awards OS</p>
               </div>
 

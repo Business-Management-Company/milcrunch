@@ -10,7 +10,7 @@ const Footer = () => {
               <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">EA</span>
               </div>
-              <span className="font-display font-bold text-lg text-foreground">Events & Awards OS</span>
+              <span className="font-headline font-bold text-lg text-foreground">Events & Awards OS</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               Launch, manage, and monetize military & veteran events and awards—powered by AI.
@@ -18,7 +18,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Platform</h4>
+            <h4 className="font-headline font-semibold text-foreground mb-4">Platform</h4>
             <ul className="space-y-2">
               <li><Link to="/platform/events" className="text-sm text-muted-foreground hover:text-primary transition-colors">Events</Link></li>
               <li><Link to="/platform/awards" className="text-sm text-muted-foreground hover:text-primary transition-colors">Awards & Nominations</Link></li>
@@ -28,7 +28,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Solutions</h4>
+            <h4 className="font-headline font-semibold text-foreground mb-4">Solutions</h4>
             <ul className="space-y-2">
               <li><Link to="/solutions/media-brands" className="text-sm text-muted-foreground hover:text-primary transition-colors">Media Brands</Link></li>
               <li><Link to="/solutions/event-teams" className="text-sm text-muted-foreground hover:text-primary transition-colors">Event Teams</Link></li>
@@ -37,7 +37,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-display font-semibold text-foreground mb-4">Company</h4>
+            <h4 className="font-headline font-semibold text-foreground mb-4">Company</h4>
             <ul className="space-y-2">
               <li><Link to="/veteran-podcast-awards" className="text-sm text-muted-foreground hover:text-primary transition-colors">Case Study</Link></li>
               <li><Link to="/pricing" className="text-sm text-muted-foreground hover:text-primary transition-colors">Pricing</Link></li>

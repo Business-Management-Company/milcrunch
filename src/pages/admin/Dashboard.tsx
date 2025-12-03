@@ -55,7 +55,7 @@ const Dashboard = () => {
             <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">EA</span>
             </div>
-            <span className="font-display font-bold text-foreground">Admin</span>
+            <span className="font-headline font-bold text-foreground">Admin</span>
           </Link>
         </div>
         
@@ -102,7 +102,7 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="flex-1 p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-display font-bold text-foreground mb-2">Dashboard</h1>
+          <h1 className="text-3xl font-headline font-bold text-foreground mb-2">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back! Here's what's happening.</p>
         </div>
 
@@ -117,7 +117,7 @@ const Dashboard = () => {
                 <TrendingUp className="w-4 h-4 text-primary" />
               </div>
               <p className="text-sm text-muted-foreground mb-1">{widget.label}</p>
-              <p className="text-2xl font-display font-bold text-foreground mb-1">{widget.value}</p>
+              <p className="text-2xl font-headline font-bold text-foreground mb-1">{widget.value}</p>
               <p className="text-xs text-primary">{widget.trend}</p>
             </Card>
           ))}
@@ -127,7 +127,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="bg-gradient-card border-border p-6 hover:border-primary/50 transition-colors cursor-pointer">
             <Calendar className="w-8 h-8 text-primary mb-4" />
-            <h3 className="font-display font-bold text-foreground mb-2">Create Event</h3>
+            <h3 className="font-headline font-bold text-foreground mb-2">Create Event</h3>
             <p className="text-sm text-muted-foreground mb-4">Launch a new live, virtual, or hybrid event.</p>
             <Button variant="outline" asChild size="sm">
               <Link to="/admin/events">Get Started</Link>
@@ -136,7 +136,7 @@ const Dashboard = () => {
 
           <Card className="bg-gradient-card border-border p-6 hover:border-accent/50 transition-colors cursor-pointer">
             <Award className="w-8 h-8 text-accent mb-4" />
-            <h3 className="font-display font-bold text-foreground mb-2">Create Awards Program</h3>
+            <h3 className="font-headline font-bold text-foreground mb-2">Create Awards Program</h3>
             <p className="text-sm text-muted-foreground mb-4">Set up categories, nominations, and judging.</p>
             <Button variant="outline" asChild size="sm">
               <Link to="/admin/awards">Get Started</Link>
@@ -145,7 +145,7 @@ const Dashboard = () => {
 
           <Card className="bg-gradient-card border-border p-6 hover:border-primary/50 transition-colors cursor-pointer">
             <Bot className="w-8 h-8 text-primary mb-4" />
-            <h3 className="font-display font-bold text-foreground mb-2">Use AI Agent</h3>
+            <h3 className="font-headline font-bold text-foreground mb-2">Use AI Agent</h3>
             <p className="text-sm text-muted-foreground mb-4">Let AI help plan your next event or awards.</p>
             <Button variant="outline" size="sm">Coming Soon</Button>
           </Card>

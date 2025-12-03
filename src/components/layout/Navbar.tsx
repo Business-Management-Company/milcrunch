@@ -28,7 +28,7 @@ const Navbar = () => {
             <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">EA</span>
             </div>
-            <span className="font-display font-bold text-lg text-foreground">Events & Awards OS</span>
+            <span className="font-headline font-bold text-lg text-foreground">Events & Awards OS</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">

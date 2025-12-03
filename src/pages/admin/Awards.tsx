@@ -61,7 +61,7 @@ const AdminAwards = () => {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Awards Programs</h1>
+              <h1 className="text-2xl font-headline font-bold text-foreground">Awards Programs</h1>
               <p className="text-sm text-muted-foreground">Manage nominations, judging, and winners</p>
             </div>
           </div>
@@ -96,7 +96,7 @@ const AdminAwards = () => {
                     <Award className="w-6 h-6 text-accent" />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-foreground mb-1">{award.title}</h3>
+                    <h3 className="font-headline font-bold text-foreground mb-1">{award.title}</h3>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>{award.categories} categories</span>
                       <span className="flex items-center gap-1">
