@@ -65,9 +65,11 @@ const AdminAwards = () => {
               <p className="text-sm text-muted-foreground">Manage nominations, judging, and winners</p>
             </div>
           </div>
-          <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Awards Program
+          <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" asChild>
+            <Link to="/admin/awards/create">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Awards Program
+            </Link>
           </Button>
         </div>
       </header>
