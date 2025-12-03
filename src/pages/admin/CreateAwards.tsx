@@ -174,14 +174,14 @@ const CreateAwards = () => {
         return (
           <div className="space-y-8 max-w-3xl mx-auto">
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-accent/20 to-accent/10 text-accent text-sm font-semibold mb-4 animate-pulse-glow">
                 <Sparkles className="w-4 h-4" />
                 AI-Powered Awards Designer
               </div>
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Create Your Awards Program
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Let AI help you design a world-class awards experience
               </p>
             </div>
@@ -243,10 +243,10 @@ const CreateAwards = () => {
         return (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Award Categories
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Define the categories nominees can compete in
               </p>
             </div>
@@ -346,10 +346,10 @@ const CreateAwards = () => {
         return (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Judging Configuration
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Set up how nominations will be evaluated
               </p>
             </div>
@@ -466,17 +466,17 @@ const CreateAwards = () => {
         return (
           <div className="space-y-8 max-w-3xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Awards Timeline
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Set key dates for your awards program
               </p>
             </div>
 
             <div className="space-y-6">
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-primary" />
                   Nominations
                 </h3>
@@ -572,17 +572,17 @@ const CreateAwards = () => {
         return (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Review Your Awards Program
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Everything looks great! Review and launch your program.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Award className="w-5 h-5 text-accent" />
                   Program Details
                 </h3>
@@ -705,19 +705,19 @@ const CreateAwards = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
       {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-50">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
+              <Button variant="ghost" size="icon" asChild className="hover:bg-accent/10">
                 <Link to="/admin/awards">
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-display font-bold text-foreground">Create Awards Program</h1>
+                <h1 className="text-2xl font-headline font-extrabold text-foreground">Create Awards Program</h1>
                 <p className="text-sm text-muted-foreground">
                   Step {currentStep + 1} of {WIZARD_STEPS.length}
                 </p>
@@ -725,7 +725,7 @@ const CreateAwards = () => {
             </div>
             <div className="flex items-center gap-4">
               <Progress value={progress} className="w-48 h-2" />
-              <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+              <span className="text-sm font-medium text-accent">{Math.round(progress)}%</span>
             </div>
           </div>
         </div>

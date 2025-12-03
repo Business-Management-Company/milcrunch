@@ -215,14 +215,14 @@ const CreateEvent = () => {
         return (
           <div className="space-y-8">
             <div className="text-center max-w-2xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-sm font-semibold mb-4 animate-pulse-glow">
                 <Sparkles className="w-4 h-4" />
                 AI-Powered Creation
               </div>
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 What type of event are you creating?
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Choose how attendees will experience your event
               </p>
             </div>
@@ -258,10 +258,10 @@ const CreateEvent = () => {
         return (
           <div className="space-y-8 max-w-3xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Tell us about your event
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Let AI help you craft compelling content
               </p>
             </div>
@@ -424,10 +424,10 @@ const CreateEvent = () => {
         return (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Registration Setup
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Choose how attendees will register for your event
               </p>
             </div>
@@ -500,23 +500,23 @@ const CreateEvent = () => {
         return (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Ticket Types
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Create different ticket tiers for your event
               </p>
             </div>
 
             <div className="space-y-4">
               {tickets.map((ticket, index) => (
-                <Card key={ticket.id} className="p-6 border-border">
+                <Card key={ticket.id} className="p-6 border-border hover:shadow-lg transition-shadow">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
                         <Ticket className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-display font-bold text-foreground">Ticket {index + 1}</span>
+                      <span className="font-headline font-bold text-foreground">Ticket {index + 1}</span>
                     </div>
                     {tickets.length > 1 && (
                       <Button
@@ -787,19 +787,19 @@ const CreateEvent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-50">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
+              <Button variant="ghost" size="icon" asChild className="hover:bg-primary/10">
                 <Link to="/admin/events">
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-display font-bold text-foreground">Create Event</h1>
+                <h1 className="text-2xl font-headline font-extrabold text-foreground">Create Event</h1>
                 <p className="text-sm text-muted-foreground">
                   Step {currentStep + 1} of {WIZARD_STEPS.length}
                 </p>
@@ -807,7 +807,7 @@ const CreateEvent = () => {
             </div>
             <div className="flex items-center gap-4">
               <Progress value={progress} className="w-48 h-2" />
-              <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+              <span className="text-sm font-medium text-primary">{Math.round(progress)}%</span>
             </div>
           </div>
         </div>

@@ -185,7 +185,7 @@ const Index = () => {
       <section className="py-24 px-6 bg-background">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground">
+            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
               What You Can Run
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -236,7 +236,7 @@ const Index = () => {
       <section className="py-24 px-6 bg-dark-section">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-dark-foreground">
+            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-dark-foreground">
               Built for Media Brands
             </h2>
             <p className="text-xl text-dark-muted max-w-2xl mx-auto">
@@ -270,7 +270,7 @@ const Index = () => {
               <Bot className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">AI-Powered</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground">
+            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
               AI Event Agents
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -303,7 +303,7 @@ const Index = () => {
       <section className="py-24 px-6 bg-dark-section">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-dark-foreground">
+            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-dark-foreground">
               How It Works
             </h2>
           </div>
@@ -330,7 +330,7 @@ const Index = () => {
               <Star className="w-4 h-4 text-accent" />
               <span className="text-sm font-medium text-accent">Success Stories</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-foreground">
+            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
               Powered by Our Platform
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -445,7 +445,7 @@ const Index = () => {
       {/* Final CTA - Gradient */}
       <section className="py-24 px-6 bg-gradient-primary">
         <div className="container mx-auto text-center space-y-8">
-          <h2 className="text-4xl md:text-5xl font-display font-bold text-primary-foreground">
+          <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-primary-foreground">
             Ready to Own Your Events Stack?
           </h2>
           <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
