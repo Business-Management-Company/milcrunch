@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useState, useRef } from "react";
 import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
 import nmpd from "@/assets/national-military-podcast-day.png";
+import AnimatedStatCard from "@/components/AnimatedStatCard";
 
 const VIDEO_URL = "https://swposmlpipmdwocpkfwc.supabase.co/storage/v1/object/public/videos/Logo%20version_1029.mp4";
 
@@ -103,10 +104,7 @@ const VeteranPodcastAwards = () => {
           {/* Results Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
             {results.map((result, index) => (
-              <Card key={index} className="bg-gradient-card border-border p-6 text-center group hover:scale-105 transition-transform duration-300">
-                <p className="text-4xl font-display font-bold text-primary mb-2 group-hover:scale-110 transition-transform">{result.number}</p>
-                <p className="text-sm text-muted-foreground">{result.label}</p>
-              </Card>
+              <AnimatedStatCard key={index} value={result.number} label={result.label} />
             ))}
           </div>
 
