@@ -99,7 +99,7 @@ const Index = () => {
                 <span className="text-sm font-medium text-primary">Powered by EventsAwardsTravel.com</span>
               </div>
               
-              <h1 className="text-4xl md:text-6xl font-display font-bold tracking-tight leading-tight text-foreground">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-extrabold tracking-tight leading-[1.1] text-foreground">
                 Your All-In-One Events & Awards Platform for the{" "}
                 <span className="text-gradient-primary">Military & Veteran</span>{" "}
                 Community
