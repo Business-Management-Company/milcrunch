@@ -278,7 +278,7 @@ const CreateAwards = () => {
                       <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
                         <Trophy className="w-5 h-5 text-accent" />
                       </div>
-                      <span className="font-display font-bold text-foreground">Category {index + 1}</span>
+                      <span className="font-headline font-bold text-foreground">Category {index + 1}</span>
                     </div>
                     {categories.length > 1 && (
                       <Button
@@ -355,7 +355,7 @@ const CreateAwards = () => {
             </div>
 
             <Card className="p-6 bg-secondary/50 border-border">
-              <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                 <Settings className="w-5 h-5 text-accent" />
                 Judging Settings
               </h3>
@@ -406,7 +406,7 @@ const CreateAwards = () => {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-display font-bold text-foreground flex items-center gap-2">
+                <h3 className="font-headline font-bold text-foreground flex items-center gap-2">
                   <Star className="w-5 h-5 text-accent" />
                   Scoring Rubric
                 </h3>
@@ -500,8 +500,8 @@ const CreateAwards = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Gavel className="w-5 h-5 text-accent" />
                   Judging Period
                 </h3>
@@ -525,8 +525,8 @@ const CreateAwards = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Vote className="w-5 h-5 text-primary" />
                   Public Voting (Optional)
                 </h3>
@@ -551,7 +551,7 @@ const CreateAwards = () => {
               </Card>
 
               <Card className="p-6 border-primary/30 bg-primary/5">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Crown className="w-5 h-5 text-primary" />
                   Ceremony / Announcement
                 </h3>
@@ -604,8 +604,8 @@ const CreateAwards = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-accent" />
                   Categories
                 </h3>
@@ -622,8 +622,8 @@ const CreateAwards = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Gavel className="w-5 h-5 text-accent" />
                   Judging
                 </h3>
@@ -645,8 +645,8 @@ const CreateAwards = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-accent" />
                   Timeline
                 </h3>
@@ -681,7 +681,7 @@ const CreateAwards = () => {
                   <Crown className="w-6 h-6 text-accent" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-display font-bold text-foreground">Ready to launch?</h3>
+                  <h3 className="font-headline font-bold text-foreground">Ready to launch?</h3>
                   <p className="text-sm text-muted-foreground">Your awards program will begin accepting nominations</p>
                 </div>
                 <div className="flex gap-3">
@@ -770,7 +770,7 @@ const CreateAwards = () => {
       </main>
 
       {/* Footer Navigation */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card py-4">
+      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm py-4 z-40">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <Button
             variant="outline"
