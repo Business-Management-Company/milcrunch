@@ -77,6 +77,9 @@ const Navbar = () => {
               <Link to="/veteran-podcast-awards">Case Study</Link>
             </Button>
             <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
+              <Link to="/nominate">Nominate</Link>
+            </Button>
+            <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
               <Link to="/pricing">Pricing</Link>
             </Button>
             <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
@@ -122,6 +125,7 @@ const Navbar = () => {
               <Link to="/platform/sponsorships" className="px-4 py-2 text-muted-foreground hover:text-foreground">Sponsorships</Link>
               <Link to="/platform/ai-agents" className="px-4 py-2 text-muted-foreground hover:text-foreground">AI Agents</Link>
               <Link to="/veteran-podcast-awards" className="px-4 py-2 text-muted-foreground hover:text-foreground">Case Study</Link>
+              <Link to="/nominate" className="px-4 py-2 text-muted-foreground hover:text-foreground">Nominate</Link>
               <Link to="/pricing" className="px-4 py-2 text-muted-foreground hover:text-foreground">Pricing</Link>
               <Link to="/resources" className="px-4 py-2 text-muted-foreground hover:text-foreground">Resources</Link>
               <div className="pt-4 px-4 flex flex-col gap-2">

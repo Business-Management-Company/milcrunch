@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Pricing from "./pages/Pricing";
 import Resources from "./pages/Resources";
 import VeteranPodcastAwards from "./pages/VeteranPodcastAwards";
+import Nominate from "./pages/Nominate";
 import PlatformEvents from "./pages/platform/Events";
 import PlatformAwards from "./pages/platform/Awards";
 import PlatformSponsorships from "./pages/platform/Sponsorships";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/veteran-podcast-awards" element={<VeteranPodcastAwards />} />
+            <Route path="/nominate" element={<Nominate />} />
             <Route path="/platform/events" element={<PlatformEvents />} />
             <Route path="/platform/awards" element={<PlatformAwards />} />
             <Route path="/platform/sponsorships" element={<PlatformSponsorships />} />
