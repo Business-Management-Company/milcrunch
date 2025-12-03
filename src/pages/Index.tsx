@@ -97,7 +97,7 @@ const Index = () => {
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-primary transition-all hover:scale-105 h-14 px-8 text-lg">
-                  Book a Recurrent Demo
+                  Book a Demo
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-border hover:bg-secondary transition-all hover:scale-105">
@@ -194,24 +194,16 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Built for Recurrent's Brands - Dark Section */}
+      {/* Built for Media Brands - Dark Section */}
       <section className="py-24 px-6 bg-dark-section">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-4xl md:text-5xl font-display font-bold text-dark-foreground">
-              Built for Recurrent's Brands
+              Built for Media Brands
             </h2>
             <p className="text-xl text-dark-muted max-w-2xl mx-auto">
               Multiple brands, one events infrastructure
             </p>
-          </div>
-          
-          <div className="flex flex-wrap justify-center gap-6 mb-12">
-            {["Military Times", "Task & Purpose", "Defense News", "Federal Times"].map((brand, index) => (
-              <div key={index} className="px-8 py-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-                <span className="font-display font-semibold text-lg text-dark-foreground">{brand}</span>
-              </div>
-            ))}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
