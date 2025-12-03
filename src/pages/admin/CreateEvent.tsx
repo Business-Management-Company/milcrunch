@@ -246,7 +246,7 @@ const CreateEvent = () => {
                   <div className="w-14 h-14 rounded-2xl bg-background flex items-center justify-center mb-4">
                     <type.icon className="w-7 h-7 text-foreground" />
                   </div>
-                  <h3 className="font-display font-bold text-lg text-foreground mb-2">{type.label}</h3>
+                  <h3 className="font-headline font-bold text-lg text-foreground mb-2">{type.label}</h3>
                   <p className="text-sm text-muted-foreground">{type.description}</p>
                 </Card>
               ))}
@@ -318,7 +318,7 @@ const CreateEvent = () => {
 
               {(eventType === "live" || eventType === "hybrid") && (
                 <Card className="p-6 bg-secondary/50 border-border">
-                  <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                  <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-primary" />
                     Venue Details
                   </h3>
@@ -360,7 +360,7 @@ const CreateEvent = () => {
               )}
 
               <Card className="p-6 bg-secondary/50 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Clock className="w-5 h-5 text-primary" />
                   Date & Time
                 </h3>
@@ -452,14 +452,14 @@ const CreateEvent = () => {
                   <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-4">
                     <type.icon className="w-7 h-7 text-foreground" />
                   </div>
-                  <h3 className="font-display font-bold text-lg text-foreground mb-2">{type.label}</h3>
+                  <h3 className="font-headline font-bold text-lg text-foreground mb-2">{type.label}</h3>
                   <p className="text-sm text-muted-foreground">{type.description}</p>
                 </Card>
               ))}
             </div>
 
             <Card className="p-6 bg-secondary/50 border-border">
-              <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                 <Settings className="w-5 h-5 text-primary" />
                 Additional Settings
               </h3>
@@ -587,10 +587,10 @@ const CreateEvent = () => {
         return (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Registration Form
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Customize what information you collect from attendees
               </p>
             </div>
@@ -670,17 +670,17 @@ const CreateEvent = () => {
         return (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <h2 className="text-3xl font-display font-bold text-foreground mb-3">
+              <h2 className="text-4xl font-headline font-extrabold text-foreground mb-3">
                 Review Your Event
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 Everything looks great! Review and publish your event.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-primary" />
                   Event Details
                 </h3>
@@ -706,8 +706,8 @@ const CreateEvent = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Ticket className="w-5 h-5 text-primary" />
                   Tickets
                 </h3>
@@ -723,8 +723,8 @@ const CreateEvent = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5 text-primary" />
                   Registration
                 </h3>
@@ -740,8 +740,8 @@ const CreateEvent = () => {
                 </div>
               </Card>
 
-              <Card className="p-6 border-border">
-                <h3 className="font-display font-bold text-foreground mb-4 flex items-center gap-2">
+              <Card className="p-6 border-border hover:shadow-lg transition-shadow">
+                <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-primary" />
                   Form Fields
                 </h3>
@@ -763,7 +763,7 @@ const CreateEvent = () => {
                   <Zap className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-display font-bold text-foreground">Ready to publish?</h3>
+                  <h3 className="font-headline font-bold text-foreground">Ready to publish?</h3>
                   <p className="text-sm text-muted-foreground">Your event will be live and accepting registrations</p>
                 </div>
                 <div className="flex gap-3">
@@ -847,12 +847,12 @@ const CreateEvent = () => {
       </div>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-12">
+      <main className="container mx-auto px-6 py-12 pb-32">
         {renderStepContent()}
       </main>
 
       {/* Footer Navigation */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card py-4">
+      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm py-4 z-40">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <Button
             variant="outline"
