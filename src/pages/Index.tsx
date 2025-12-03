@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import PlatformBuilder from "@/components/PlatformBuilder";
 import FeaturedEventCard from "@/components/FeaturedEventCard";
+import AnimatedStat from "@/components/AnimatedStat";
 
 // Import images
 import heroEventImage from "@/assets/hero-event.jpg";
@@ -124,10 +125,7 @@ const Index = () => {
               {/* Trust indicators */}
               <div className="flex flex-wrap gap-6 pt-4">
                 {stats.map((stat, i) => (
-                  <div key={i} className="text-center">
-                    <div className="text-2xl font-display font-bold text-foreground">{stat.value}</div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
-                  </div>
+                  <AnimatedStat key={i} value={stat.value} label={stat.label} className="text-center" />
                 ))}
               </div>
             </div>
