@@ -159,12 +159,27 @@ const Index = () => {
       </section>
 
       {/* Why Now Strip - Dark Section */}
-      <section className="py-8 px-6 bg-dark-section">
-        <div className="container mx-auto text-center">
-          <p className="text-lg md:text-xl font-medium">
-            <span className="text-accent font-bold">Eventbrite just changed hands.</span>{" "}
-            <span className="text-dark-foreground">This is your moment to own the events stack for your brands instead of renting it.</span>
-          </p>
+      <section className="py-12 px-6 bg-dark-section">
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 text-center md:text-left">
+            <div className="flex-1 max-w-3xl">
+              <p className="text-lg md:text-xl font-medium">
+                <span className="text-accent font-bold">Eventbrite was just acquired for $500M.</span>{" "}
+                <span className="text-dark-foreground">
+                  This is your moment to own your events infrastructure—stop paying per-ticket fees and platform subscriptions.
+                </span>
+              </p>
+            </div>
+            <a 
+              href="https://techcrunch.com/2025/12/02/bending-spoons-agrees-to-buy-eventbrite-for-500m-to-revive-stalled-brand/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-dark-foreground text-sm font-medium transition-all hover:scale-105 whitespace-nowrap"
+            >
+              Read the news
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
         </div>
       </section>
 
