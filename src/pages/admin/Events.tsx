@@ -68,9 +68,11 @@ const AdminEvents = () => {
               <p className="text-sm text-muted-foreground">Manage your events</p>
             </div>
           </div>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Event
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
+            <Link to="/admin/events/create">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Event
+            </Link>
           </Button>
         </div>
       </header>
@@ -139,9 +141,11 @@ const AdminEvents = () => {
             <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-display font-bold text-foreground mb-2">No events yet</h3>
             <p className="text-muted-foreground mb-4">Create your first event to get started.</p>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" asChild>
+              <Link to="/admin/events/create">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Event
+              </Link>
             </Button>
           </Card>
         )}
