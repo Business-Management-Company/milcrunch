@@ -1,11 +1,24 @@
 import MarketingLayout from "@/components/layout/MarketingLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Award, Users, Mic, TrendingUp, ArrowRight, CheckCircle, Play } from "lucide-react";
+import { Award, Mic, ArrowRight, CheckCircle, Volume2, VolumeX } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState, useRef } from "react";
 import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
 
+const VIDEO_URL = "https://swposmlpipmdwocpkfwc.supabase.co/storage/v1/object/public/videos/Logo%20version_1029.mp4";
+
 const VeteranPodcastAwards = () => {
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
   const results = [
     { number: "500+", label: "Nominations Received" },
     { number: "10K+", label: "Public Votes Cast" },
@@ -29,41 +42,62 @@ const VeteranPodcastAwards = () => {
 
   return (
     <MarketingLayout>
+      {/* Cinematic Video Hero */}
+      <section className="relative h-[80vh] min-h-[600px] overflow-hidden bg-black">
+        {/* Video Background */}
+        <video
+          ref={videoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src={VIDEO_URL} type="video/mp4" />
+        </video>
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60" />
+        
+        {/* Content */}
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
+          <img 
+            src={vpaLogo} 
+            alt="Veteran Podcast Awards" 
+            className="w-32 h-32 md:w-40 md:h-40 mb-6 animate-fade-in drop-shadow-2xl"
+          />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6 animate-fade-in">
+            <Award className="w-4 h-4 text-amber-400" />
+            <span className="text-sm font-medium text-white">Case Study</span>
+          </div>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold text-white text-center mb-4 animate-fade-in drop-shadow-lg">
+            Veteran Podcast Awards
+          </h1>
+          <p className="text-lg md:text-xl text-white/80 text-center max-w-2xl animate-fade-in">
+            How we transformed the industry's leading podcast awards program using our own platform.
+          </p>
+        </div>
+
+        {/* Sound Toggle */}
+        <button
+          onClick={toggleMute}
+          className="absolute bottom-6 right-6 z-20 p-3 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-all"
+          aria-label={isMuted ? "Unmute video" : "Mute video"}
+        >
+          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+        </button>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 animate-bounce">
+          <div className="w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center p-2">
+            <div className="w-1.5 h-2.5 bg-white/60 rounded-full" />
+          </div>
+        </div>
+      </section>
+
       <section className="py-24 px-6">
         <div className="container mx-auto">
-          {/* Hero */}
-          <div className="max-w-4xl mx-auto text-center mb-16 space-y-6">
-            <img 
-              src={vpaLogo} 
-              alt="Veteran Podcast Awards" 
-              className="w-40 h-40 mx-auto mb-4"
-            />
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
-              <Award className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium text-accent">Case Study</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground">
-              Veteran Podcast Awards
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              How we transformed the industry's leading podcast awards program using our own platform.
-            </p>
-          </div>
-
-          {/* Promo Video Section */}
-          <div className="max-w-3xl mx-auto mb-16">
-            <Card className="bg-dark-section border-border overflow-hidden">
-              <div className="aspect-video flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-16 h-16 rounded-full bg-primary/20 mx-auto mb-4 flex items-center justify-center">
-                    <Play className="w-8 h-8 text-primary" />
-                  </div>
-                  <p className="text-dark-foreground font-medium">Promo Video Coming Soon</p>
-                  <p className="text-sm text-dark-muted mt-1">Share YouTube/Vimeo link to embed</p>
-                </div>
-              </div>
-            </Card>
-          </div>
 
           {/* Results Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
