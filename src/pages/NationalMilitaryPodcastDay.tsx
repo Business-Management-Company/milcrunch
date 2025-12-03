@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Calendar, MapPin, Clock, Users, Mic, Heart, Star, Bell, CheckCircle } from "lucide-react";
+import CountdownTimer from "@/components/CountdownTimer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -97,8 +98,14 @@ const NationalMilitaryPodcastDay = () => {
               military community and civilians.
             </p>
 
+            {/* Countdown Timer */}
+            <CountdownTimer 
+              targetDate={new Date("2025-11-11T00:00:00")} 
+              label="Countdown to National Military Podcast Day"
+            />
+
             {/* Registration Form */}
-            <Card className="max-w-md mx-auto p-6 bg-card/80 backdrop-blur-sm border-primary/20">
+            <Card className="max-w-md mx-auto p-6 bg-card/80 backdrop-blur-sm border-primary/20 mt-8">
               <h3 className="font-headline text-xl font-bold mb-4">Get Reminded</h3>
               {isSubmitted ? (
                 <div className="flex items-center justify-center gap-2 text-primary py-4">
