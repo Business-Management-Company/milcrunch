@@ -28,6 +28,9 @@ import AdminEmailSignups from "./pages/admin/EmailSignups";
 import CreateEvent from "./pages/admin/CreateEvent";
 import CreateAwards from "./pages/admin/CreateAwards";
 import AttendeePortal from "./pages/attendee/Portal";
+import EventDetail from "./pages/events/EventDetail";
+import EventCheckout from "./pages/events/EventCheckout";
+import EventConfirmation from "./pages/events/EventConfirmation";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +64,9 @@ const App = () => (
             <Route path="/admin/sponsors" element={<AdminSponsors />} />
             <Route path="/admin/email-signups" element={<AdminEmailSignups />} />
             <Route path="/portal" element={<AttendeePortal />} />
+            <Route path="/events/:slug" element={<EventDetail />} />
+            <Route path="/events/:slug/checkout" element={<EventCheckout />} />
+            <Route path="/events/:slug/confirmation" element={<EventConfirmation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
