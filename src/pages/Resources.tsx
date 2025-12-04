@@ -132,7 +132,7 @@ const Resources = () => {
               Still have questions?
             </p>
             <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <a href="mailto:support@eventsawardstravel.com">
+              <a href="mailto:support@eventcruch.co">
                 Contact Support
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>

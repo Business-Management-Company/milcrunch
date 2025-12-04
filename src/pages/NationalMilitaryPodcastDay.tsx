@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import MarketingLayout from "@/components/layout/MarketingLayout";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import nmpodLogo from "@/assets/national-military-podcast-day.png";
 import podcast1 from "@/assets/podcast-1.jpg";
 import podcast2 from "@/assets/podcast-2.jpg";
@@ -20,17 +21,35 @@ import awardsCeremony from "@/assets/awards-ceremony.jpg";
 const NationalMilitaryPodcastDay = () => {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
-      setIsSubmitted(true);
-      toast({
-        title: "You're on the list!",
-        description: "We'll send you a reminder as we get closer to National Military Podcast Day.",
-      });
-      setEmail("");
+      setIsLoading(true);
+      try {
+        const { error } = await supabase
+          .from('email_signups')
+          .insert({ email, source: 'national-military-podcast-day' });
+
+        if (error) throw error;
+
+        setIsSubmitted(true);
+        toast({
+          title: "You're on the list!",
+          description: "We'll send you a reminder as we get closer to National Military Podcast Day.",
+        });
+        setEmail("");
+      } catch (error) {
+        toast({
+          title: "Something went wrong",
+          description: "Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -126,9 +145,9 @@ const NationalMilitaryPodcastDay = () => {
                       required
                       className="flex-1"
                     />
-                    <Button type="submit">
+                    <Button type="submit" disabled={isLoading}>
                       <Bell className="w-4 h-4 mr-2" />
-                      Remind Me
+                      {isLoading ? "Saving..." : "Remind Me"}
                     </Button>
                   </div>
                 </form>
