@@ -114,7 +114,7 @@ const Pricing = () => {
               Need a custom solution? We're happy to discuss.
             </p>
             <Button variant="outline" asChild>
-              <a href="mailto:sales@eventsawardstravel.com">
+              <a href="mailto:sales@eventcruch.co">
                 Talk to Sales
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>

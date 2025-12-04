@@ -285,6 +285,33 @@ export type Database = {
           },
         ]
       }
+      email_signups: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notes: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          notes?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notes?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           address: string | null
