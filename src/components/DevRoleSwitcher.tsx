@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useDevAdmin, SimulatedRole } from "@/contexts/DevAdminContext";
 import { getPermissionsForRole } from "@/hooks/useRolePermissions";
 import {
@@ -8,7 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, User, Users, Award, Briefcase, Star, UserCheck, Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Shield, User, Users, Award, Briefcase, Star, UserCheck, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 
 const roleConfig: { value: SimulatedRole; label: string; icon: React.ElementType; color: string }[] = [
   { value: "super_admin", label: "Super Admin", icon: Shield, color: "bg-red-500" },
@@ -22,6 +24,7 @@ const roleConfig: { value: SimulatedRole; label: string; icon: React.ElementType
 
 const DevRoleSwitcher = () => {
   const { isDevAdmin, simulatedRole, setSimulatedRole, effectiveRole } = useDevAdmin();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (!isDevAdmin) return null;
 
@@ -39,14 +42,38 @@ const DevRoleSwitcher = () => {
     { key: "canManageSettings", label: "Settings" },
   ];
 
+  // Collapsed state - just a small button
+  if (!isExpanded) {
+    return (
+      <Button
+        onClick={() => setIsExpanded(true)}
+        className="fixed bottom-4 right-4 z-50 bg-card border border-border shadow-lg hover:bg-secondary"
+        variant="outline"
+        size="sm"
+      >
+        <Shield className="w-4 h-4 text-red-500 mr-2" />
+        <span className="text-xs font-medium">{currentRole?.label}</span>
+        <ChevronUp className="w-3 h-3 ml-2" />
+      </Button>
+    );
+  }
+
   return (
     <div className="fixed bottom-4 right-4 z-50 bg-card border border-border rounded-lg shadow-lg p-4 min-w-[320px] max-h-[80vh] overflow-y-auto">
       <div className="flex items-center gap-2 mb-3">
         <Shield className="w-4 h-4 text-red-500" />
         <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Dev Mode</span>
-        <Badge variant="outline" className="ml-auto text-xs">
+        <Badge variant="outline" className="text-xs">
           super@eventcrunch.dev
         </Badge>
+        <Button
+          onClick={() => setIsExpanded(false)}
+          variant="ghost"
+          size="sm"
+          className="ml-auto h-6 w-6 p-0"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </Button>
       </div>
       
       <div className="space-y-2">
@@ -65,7 +92,7 @@ const DevRoleSwitcher = () => {
               )}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border border-border z-[100]">
             {roleConfig.map((role) => (
               <SelectItem key={role.value} value={role.value!}>
                 <div className="flex items-center gap-2">
