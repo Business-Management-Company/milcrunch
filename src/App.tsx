@@ -24,6 +24,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminEvents from "./pages/admin/Events";
 import AdminAwards from "./pages/admin/Awards";
 import AdminSponsors from "./pages/admin/Sponsors";
+import AdminEmailSignups from "./pages/admin/EmailSignups";
 import CreateEvent from "./pages/admin/CreateEvent";
 import CreateAwards from "./pages/admin/CreateAwards";
 import AttendeePortal from "./pages/attendee/Portal";
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/admin/awards" element={<AdminAwards />} />
             <Route path="/admin/awards/create" element={<CreateAwards />} />
             <Route path="/admin/sponsors" element={<AdminSponsors />} />
+            <Route path="/admin/email-signups" element={<AdminEmailSignups />} />
             <Route path="/portal" element={<AttendeePortal />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
