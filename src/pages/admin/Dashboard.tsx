@@ -9,7 +9,7 @@ import {
   Calendar, Award, Users, DollarSign, 
   BarChart3, Bot, Settings, LogOut,
   TrendingUp, Ticket, FileText, Mail,
-  Gavel, Building2, UserCircle
+  Gavel, Building2, UserCircle, Plane
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -58,6 +58,7 @@ const Dashboard = () => {
     { icon: Calendar, label: "Events", href: "/admin/events", visible: permissions.canManageEvents },
     { icon: Award, label: "Awards", href: "/admin/awards", visible: permissions.canManageAwards },
     { icon: Users, label: "Sponsors & Proposals", href: "/admin/sponsors", visible: permissions.canManageSponsors },
+    { icon: Plane, label: "Travel Add-ons", href: "/admin/travel", visible: permissions.canManageEvents },
     { icon: Mail, label: "Marketing", href: "/admin/marketing", visible: permissions.canManageMarketing },
     { icon: TrendingUp, label: "Analytics", href: "/admin/analytics", visible: permissions.canViewAnalytics },
     { icon: Bot, label: "AI Agents", href: "/admin/ai-agents", visible: permissions.canManageAIAgents },
