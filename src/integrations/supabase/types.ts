@@ -1064,6 +1064,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_public_nomination_data: {
+        Args: { nom: Database["public"]["Tables"]["nominations"]["Row"] }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
