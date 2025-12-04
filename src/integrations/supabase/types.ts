@@ -68,6 +68,59 @@ export type Database = {
           },
         ]
       }
+      airport_info: {
+        Row: {
+          airport_code: string
+          airport_name: string
+          created_at: string | null
+          distance_miles: number | null
+          drive_time_minutes: number | null
+          event_id: string
+          id: string
+          is_primary: boolean | null
+          rental_car_info: string | null
+          rideshare_estimate: string | null
+          shuttle_info: string | null
+          transportation_options: Json | null
+        }
+        Insert: {
+          airport_code: string
+          airport_name: string
+          created_at?: string | null
+          distance_miles?: number | null
+          drive_time_minutes?: number | null
+          event_id: string
+          id?: string
+          is_primary?: boolean | null
+          rental_car_info?: string | null
+          rideshare_estimate?: string | null
+          shuttle_info?: string | null
+          transportation_options?: Json | null
+        }
+        Update: {
+          airport_code?: string
+          airport_name?: string
+          created_at?: string | null
+          distance_miles?: number | null
+          drive_time_minutes?: number | null
+          event_id?: string
+          id?: string
+          is_primary?: boolean | null
+          rental_car_info?: string | null
+          rideshare_estimate?: string | null
+          shuttle_info?: string | null
+          transportation_options?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airport_info_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendees: {
         Row: {
           checked_in_at: string | null
@@ -564,6 +617,92 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_room_blocks: {
+        Row: {
+          address: string | null
+          amenities: Json | null
+          block_size: number | null
+          booking_code: string | null
+          booking_link: string | null
+          check_in_date: string | null
+          check_out_date: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          cutoff_date: string | null
+          event_id: string
+          hotel_name: string
+          id: string
+          is_active: boolean | null
+          is_primary: boolean | null
+          notes: string | null
+          phone: string | null
+          rate_per_night: number | null
+          rooms_booked: number | null
+          state: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          amenities?: Json | null
+          block_size?: number | null
+          booking_code?: string | null
+          booking_link?: string | null
+          check_in_date?: string | null
+          check_out_date?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          cutoff_date?: string | null
+          event_id: string
+          hotel_name: string
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          rate_per_night?: number | null
+          rooms_booked?: number | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          amenities?: Json | null
+          block_size?: number | null
+          booking_code?: string | null
+          booking_link?: string | null
+          check_in_date?: string | null
+          check_out_date?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          cutoff_date?: string | null
+          event_id?: string
+          hotel_name?: string
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          rate_per_night?: number | null
+          rooms_booked?: number | null
+          state?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_room_blocks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
