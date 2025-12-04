@@ -41,6 +41,7 @@ import TeamManagement from "./pages/admin/TeamManagement";
 import CreatorOnboarding from "./pages/admin/CreatorOnboarding";
 import CheckInDashboard from "./pages/admin/CheckInDashboard";
 import TravelAddons from "./pages/admin/TravelAddons";
+import DemoSponsorships from "./pages/admin/DemoSponsorships";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
               <Route path="/admin/sponsorship-wizard" element={<SponsorshipWizard />} />
               <Route path="/admin/onboarding" element={<CreatorOnboarding />} />
               <Route path="/admin/travel" element={<TravelAddons />} />
+              <Route path="/sponsors/demo" element={<DemoSponsorships />} />
               <Route path="/portal" element={<AttendeePortal />} />
               <Route path="/events/:slug" element={<EventDetail />} />
               <Route path="/events/:slug/checkout" element={<EventCheckout />} />
