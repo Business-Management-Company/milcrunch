@@ -41,8 +41,8 @@ const Dashboard = () => {
     { icon: Calendar, label: "Events", href: "/admin/events" },
     { icon: Award, label: "Awards", href: "/admin/awards" },
     { icon: Users, label: "Sponsors & Proposals", href: "/admin/sponsors" },
-    { icon: Mail, label: "Email Signups", href: "/admin/email-signups" },
-    { icon: BarChart3, label: "Reports", href: "/admin/reports" },
+    { icon: Mail, label: "Marketing", href: "/admin/marketing" },
+    { icon: TrendingUp, label: "Analytics", href: "/admin/analytics" },
     { icon: Bot, label: "AI Agents", href: "/admin/ai-agents" },
     { icon: Settings, label: "Settings", href: "/admin/settings" }
   ];
