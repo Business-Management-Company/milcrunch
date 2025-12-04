@@ -31,6 +31,8 @@ import AttendeePortal from "./pages/attendee/Portal";
 import EventDetail from "./pages/events/EventDetail";
 import EventCheckout from "./pages/events/EventCheckout";
 import EventConfirmation from "./pages/events/EventConfirmation";
+import EventPageBuilder from "./pages/admin/EventPageBuilder";
+import SponsorshipWizard from "./pages/admin/SponsorshipWizard";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +65,9 @@ const App = () => (
             <Route path="/admin/awards/create" element={<CreateAwards />} />
             <Route path="/admin/sponsors" element={<AdminSponsors />} />
             <Route path="/admin/email-signups" element={<AdminEmailSignups />} />
+            <Route path="/admin/events/:eventId/page-builder" element={<EventPageBuilder />} />
+            <Route path="/admin/events/:eventId/sponsorships" element={<SponsorshipWizard />} />
+            <Route path="/admin/sponsorship-wizard" element={<SponsorshipWizard />} />
             <Route path="/portal" element={<AttendeePortal />} />
             <Route path="/events/:slug" element={<EventDetail />} />
             <Route path="/events/:slug/checkout" element={<EventCheckout />} />
