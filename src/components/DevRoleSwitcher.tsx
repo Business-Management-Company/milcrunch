@@ -1,4 +1,5 @@
 import { useDevAdmin, SimulatedRole } from "@/contexts/DevAdminContext";
+import { getPermissionsForRole } from "@/hooks/useRolePermissions";
 import {
   Select,
   SelectContent,
@@ -7,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Shield, User, Users, Award, Briefcase, Star, UserCheck } from "lucide-react";
+import { Shield, User, Users, Award, Briefcase, Star, UserCheck, Check, X } from "lucide-react";
 
 const roleConfig: { value: SimulatedRole; label: string; icon: React.ElementType; color: string }[] = [
   { value: "super_admin", label: "Super Admin", icon: Shield, color: "bg-red-500" },
@@ -25,9 +26,21 @@ const DevRoleSwitcher = () => {
   if (!isDevAdmin) return null;
 
   const currentRole = roleConfig.find(r => r.value === effectiveRole);
+  const permissions = getPermissionsForRole(effectiveRole);
+
+  const permissionsList = [
+    { key: "canViewDashboard", label: "Dashboard" },
+    { key: "canManageEvents", label: "Events" },
+    { key: "canManageAwards", label: "Awards" },
+    { key: "canManageSponsors", label: "Sponsors" },
+    { key: "canManageMarketing", label: "Marketing" },
+    { key: "canViewAnalytics", label: "Analytics" },
+    { key: "canManageAIAgents", label: "AI Agents" },
+    { key: "canManageSettings", label: "Settings" },
+  ];
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 bg-card border border-border rounded-lg shadow-lg p-4 min-w-[280px]">
+    <div className="fixed bottom-4 right-4 z-50 bg-card border border-border rounded-lg shadow-lg p-4 min-w-[320px] max-h-[80vh] overflow-y-auto">
       <div className="flex items-center gap-2 mb-3">
         <Shield className="w-4 h-4 text-red-500" />
         <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Dev Mode</span>
@@ -67,9 +80,23 @@ const DevRoleSwitcher = () => {
       </div>
 
       <div className="mt-3 pt-3 border-t border-border">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground mb-2">
           Viewing as: <span className="font-medium text-foreground">{currentRole?.label}</span>
         </p>
+        <div className="grid grid-cols-2 gap-1">
+          {permissionsList.map(({ key, label }) => (
+            <div key={key} className="flex items-center gap-1 text-xs">
+              {permissions[key as keyof typeof permissions] ? (
+                <Check className="w-3 h-3 text-green-500" />
+              ) : (
+                <X className="w-3 h-3 text-muted-foreground/50" />
+              )}
+              <span className={permissions[key as keyof typeof permissions] ? "text-foreground" : "text-muted-foreground/50"}>
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
