@@ -431,6 +431,53 @@ export type Database = {
           },
         ]
       }
+      event_team_members: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          event_id: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          permissions: Json | null
+          role: Database["public"]["Enums"]["event_team_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          event_id: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["event_team_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["event_team_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_team_members_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           address: string | null
@@ -1344,6 +1391,53 @@ export type Database = {
           },
         ]
       }
+      team_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          email: string
+          event_id: string
+          expires_at: string | null
+          id: string
+          invited_by: string | null
+          permissions: Json | null
+          role: Database["public"]["Enums"]["event_team_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          email: string
+          event_id: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["event_team_role"]
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          email?: string
+          event_id?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["event_team_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_types: {
         Row: {
           benefits: Json | null
@@ -1518,6 +1612,18 @@ export type Database = {
         Args: { nom: Database["public"]["Tables"]["nominations"]["Row"] }
         Returns: boolean
       }
+      has_event_permission: {
+        Args: { _event_id: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
+      has_event_role: {
+        Args: {
+          _event_id: string
+          _roles: Database["public"]["Enums"]["event_team_role"][]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1526,6 +1632,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_event_admin: {
+        Args: { _event_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       ai_workflow_type:
@@ -1542,6 +1652,16 @@ export type Database = {
         | "judge"
         | "attendee"
       checkin_method: "qr" | "email" | "manual"
+      event_team_role:
+        | "owner"
+        | "admin"
+        | "event_manager"
+        | "marketing_manager"
+        | "registration_manager"
+        | "vendor_manager"
+        | "finance_manager"
+        | "staff"
+        | "view_only"
       event_type: "live" | "virtual" | "hybrid"
       nomination_status:
         | "draft"
@@ -1709,6 +1829,17 @@ export const Constants = {
         "attendee",
       ],
       checkin_method: ["qr", "email", "manual"],
+      event_team_role: [
+        "owner",
+        "admin",
+        "event_manager",
+        "marketing_manager",
+        "registration_manager",
+        "vendor_manager",
+        "finance_manager",
+        "staff",
+        "view_only",
+      ],
       event_type: ["live", "virtual", "hybrid"],
       nomination_status: [
         "draft",
