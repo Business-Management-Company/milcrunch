@@ -6,13 +6,32 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { 
   DollarSign, Plus, Search, MoreVertical,
-  Building2, FileText, ArrowLeft, Mail, Phone, User
+  Building2, FileText, ArrowLeft, Mail, Phone, User, ExternalLink
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Sponsor {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  website: string | null;
+  industries: string[] | null;
+}
 
 const AdminSponsors = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [loadingSponsors, setLoadingSponsors] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -20,44 +39,33 @@ const AdminSponsors = () => {
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    if (user) {
+      fetchSponsors();
+    }
+  }, [user]);
+
+  const fetchSponsors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("sponsors")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+      setSponsors(data || []);
+    } catch (error) {
+      console.error("Error fetching sponsors:", error);
+    } finally {
+      setLoadingSponsors(false);
+    }
+  };
+
   if (loading || !user) return null;
 
-  // Placeholder sponsors data
-  const sponsors = [
-    {
-      id: "1",
-      name: "USAA",
-      industry: "Financial Services",
-      deals: 3,
-      revenue: "$75,000",
-      status: "Active",
-      contactName: "John Smith",
-      contactEmail: "john.smith@usaa.com",
-      contactPhone: "(210) 555-1234"
-    },
-    {
-      id: "2",
-      name: "Lockheed Martin",
-      industry: "Defense",
-      deals: 2,
-      revenue: "$120,000",
-      status: "Active",
-      contactName: "Sarah Johnson",
-      contactEmail: "sarah.johnson@lmco.com",
-      contactPhone: "(301) 555-5678"
-    },
-    {
-      id: "3",
-      name: "Booz Allen Hamilton",
-      industry: "Consulting",
-      deals: 1,
-      revenue: "$45,000",
-      status: "Proposal Sent",
-      contactName: "Michael Brown",
-      contactEmail: "michael.brown@bah.com",
-      contactPhone: "(703) 555-9012"
-    }
-  ];
+  const filteredSponsors = sponsors.filter(s =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,9 +83,11 @@ const AdminSponsors = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <FileText className="w-4 h-4 mr-2" />
-              New Proposal
+            <Button variant="outline" asChild>
+              <Link to="/admin/sponsorship-wizard">
+                <FileText className="w-4 h-4 mr-2" />
+                New Proposal
+              </Link>
             </Button>
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Plus className="w-4 h-4 mr-2" />
@@ -100,61 +110,92 @@ const AdminSponsors = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {sponsors.map((sponsor) => (
-            <Card key={sponsor.id} className="bg-gradient-card border-border p-6 hover:border-primary/50 transition-colors cursor-pointer">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-6 h-6 text-primary" />
+        {loadingSponsors ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredSponsors.map((sponsor) => (
+              <Card key={sponsor.id} className="bg-gradient-card border-border p-6 hover:border-primary/50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="font-headline font-bold text-foreground">{sponsor.name}</h3>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        {sponsor.industries?.[0] && <span>{sponsor.industries[0]}</span>}
+                        {sponsor.website && (
+                          <a href={sponsor.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                            <ExternalLink className="w-3 h-3" />
+                            Website
+                          </a>
+                        )}
+                      </div>
+                      {(sponsor.contact_name || sponsor.contact_email || sponsor.contact_phone) && (
+                        <div className="flex flex-wrap gap-4 pt-2 border-t border-border mt-2">
+                          {sponsor.contact_name && (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <User className="w-3.5 h-3.5 text-primary" />
+                              <span>{sponsor.contact_name}</span>
+                            </div>
+                          )}
+                          {sponsor.contact_email && (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Mail className="w-3.5 h-3.5 text-primary" />
+                              <a href={`mailto:${sponsor.contact_email}`} className="hover:text-primary transition-colors">
+                                {sponsor.contact_email}
+                              </a>
+                            </div>
+                          )}
+                          {sponsor.contact_phone && (
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Phone className="w-3.5 h-3.5 text-primary" />
+                              <a href={`tel:${sponsor.contact_phone}`} className="hover:text-primary transition-colors">
+                                {sponsor.contact_phone}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="font-headline font-bold text-foreground">{sponsor.name}</h3>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                      <span>{sponsor.industry}</span>
-                      <span>{sponsor.deals} active deals</span>
-                      <span className="flex items-center gap-1 text-primary">
-                        <DollarSign className="w-3 h-3" />
-                        {sponsor.revenue} total
-                      </span>
-                    </div>
-                    {/* Contact Info */}
-                    <div className="flex flex-wrap gap-4 pt-2 border-t border-border mt-2">
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <User className="w-3.5 h-3.5 text-primary" />
-                        <span>{sponsor.contactName}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Mail className="w-3.5 h-3.5 text-primary" />
-                        <a href={`mailto:${sponsor.contactEmail}`} className="hover:text-primary transition-colors">
-                          {sponsor.contactEmail}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Phone className="w-3.5 h-3.5 text-primary" />
-                        <a href={`tel:${sponsor.contactPhone}`} className="hover:text-primary transition-colors">
-                          {sponsor.contactPhone}
-                        </a>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-4">
+                    <span className="px-3 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                      Active
+                    </span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>Create Proposal</DropdownMenuItem>
+                        <DropdownMenuItem>View Deals</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    sponsor.status === "Active" 
-                      ? "bg-primary/10 text-primary" 
-                      : "bg-accent/10 text-accent"
-                  }`}>
-                    {sponsor.status}
-                  </span>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!loadingSponsors && filteredSponsors.length === 0 && (
+          <Card className="bg-gradient-card border-border p-12 text-center">
+            <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-headline font-bold text-foreground mb-2">No sponsors yet</h3>
+            <p className="text-muted-foreground mb-4">Add your first sponsor to get started.</p>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Sponsor
+            </Button>
+          </Card>
+        )}
       </main>
     </div>
   );
