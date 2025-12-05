@@ -6,13 +6,36 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { 
   Calendar, Plus, Search, MoreVertical,
-  MapPin, Users, ArrowLeft
+  MapPin, Users, ArrowLeft, Eye, UserCheck,
+  BarChart3, Edit, ExternalLink
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+
+interface Event {
+  id: string;
+  title: string;
+  slug: string;
+  event_type: string;
+  start_date: string | null;
+  end_date: string | null;
+  venue: string | null;
+  city: string | null;
+  is_published: boolean;
+}
 
 const AdminEvents = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -20,38 +43,33 @@ const AdminEvents = () => {
     }
   }, [user, loading, navigate]);
 
+  useEffect(() => {
+    if (user) {
+      fetchEvents();
+    }
+  }, [user]);
+
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("events")
+        .select("id, title, slug, event_type, start_date, end_date, venue, city, is_published")
+        .order("start_date", { ascending: false });
+
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
   if (loading || !user) return null;
 
-  // Placeholder events data
-  const events = [
-    {
-      id: "1",
-      title: "Military Times Veterans Summit 2024",
-      type: "Hybrid",
-      date: "March 15-17, 2024",
-      location: "Washington, DC",
-      registrations: 450,
-      status: "Published"
-    },
-    {
-      id: "2",
-      title: "Task & Purpose Virtual Career Fair",
-      type: "Virtual",
-      date: "April 5, 2024",
-      location: "Online",
-      registrations: 1200,
-      status: "Draft"
-    },
-    {
-      id: "3",
-      title: "Defense Innovation Conference",
-      type: "Live",
-      date: "May 20-21, 2024",
-      location: "San Diego, CA",
-      registrations: 320,
-      status: "Published"
-    }
-  ];
+  const filteredEvents = events.filter(event =>
+    event.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,53 +108,108 @@ const AdminEvents = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {events.map((event) => (
-            <Card key={event.id} className="bg-gradient-card border-border p-6 hover:border-primary/50 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-primary" />
+        {loadingEvents ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredEvents.map((event) => (
+              <Card 
+                key={event.id} 
+                className="bg-gradient-card border-border p-6 hover:border-primary/50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-headline font-bold text-foreground mb-1">{event.title}</h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        {event.start_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {format(new Date(event.start_date), "MMM d, yyyy")}
+                          </span>
+                        )}
+                        {(event.venue || event.city) && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {event.venue || event.city}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-headline font-bold text-foreground mb-1">{event.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {event.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {event.location}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {event.registrations} registered
-                      </span>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      event.is_published 
+                        ? "bg-primary/10 text-primary" 
+                        : "bg-secondary text-muted-foreground"
+                    }`}>
+                      {event.is_published ? "Published" : "Draft"}
+                    </span>
+                    <span className="px-3 py-1 text-xs font-medium rounded-full bg-secondary text-muted-foreground capitalize">
+                      {event.event_type}
+                    </span>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/events/${event.slug}`}>
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Link>
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link to={`/events/${event.slug}`} className="flex items-center">
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              View Public Page
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/events/${event.id}/page-builder`} className="flex items-center">
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Landing Page
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/events/${event.id}/check-in`} className="flex items-center">
+                              <UserCheck className="w-4 h-4 mr-2" />
+                              Manage Attendees
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/events/${event.id}/sponsorships`} className="flex items-center">
+                              <Users className="w-4 h-4 mr-2" />
+                              Sponsorships
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to={`/admin/events/${event.id}/team`} className="flex items-center">
+                              <Users className="w-4 h-4 mr-2" />
+                              Team & Permissions
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    event.status === "Published" 
-                      ? "bg-primary/10 text-primary" 
-                      : "bg-secondary text-muted-foreground"
-                  }`}>
-                    {event.status}
-                  </span>
-                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-secondary text-muted-foreground">
-                    {event.type}
-                  </span>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
 
-        {events.length === 0 && (
+        {!loadingEvents && filteredEvents.length === 0 && (
           <Card className="bg-gradient-card border-border p-12 text-center">
             <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-headline font-bold text-foreground mb-2">No events yet</h3>
