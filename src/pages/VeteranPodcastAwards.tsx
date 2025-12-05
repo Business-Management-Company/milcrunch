@@ -162,18 +162,43 @@ const VeteranPodcastAwards = () => {
             </Card>
           </div>
 
-          {/* Screenshots Placeholder */}
+          {/* Screenshots Placeholder - Enhanced */}
           <div className="mb-16">
             <h2 className="text-2xl font-headline font-bold text-foreground mb-8 text-center">Platform in Action</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {["Nomination Portal", "Judge Scoring Interface", "Ceremony Page"].map((title, index) => (
-                <Card key={index} className="bg-secondary border-border aspect-video flex items-center justify-center group hover:border-primary/50 transition-all duration-300">
-                  <div className="text-center p-6">
-                    <div className="w-12 h-12 rounded-xl bg-muted mx-auto mb-4 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                      <Award className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+              {[
+                { title: "Nomination Portal", icon: Mic, gradient: "from-blue-500 to-cyan-500", description: "Submit & track nominations" },
+                { title: "Judge Scoring Interface", icon: Award, gradient: "from-amber-500 to-orange-500", description: "Score & evaluate entries" },
+                { title: "Ceremony Page", icon: Sparkles, gradient: "from-purple-500 to-pink-500", description: "Celebrate the winners" }
+              ].map((item, index) => (
+                <Card key={index} className="relative overflow-hidden bg-gradient-to-br from-secondary via-secondary to-muted border-border aspect-video flex items-center justify-center group hover:border-primary/50 transition-all duration-500 hover:shadow-elevated hover:-translate-y-2">
+                  {/* Animated gradient background */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                  
+                  {/* Decorative elements */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/5 to-transparent rounded-bl-full" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-accent/5 to-transparent rounded-tr-full" />
+                  
+                  {/* Animated border glow */}
+                  <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 blur-sm -z-10" />
+                  
+                  <div className="relative text-center p-6 z-10">
+                    {/* Icon with gradient background */}
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${item.gradient} mx-auto mb-4 flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+                      <item.icon className="w-8 h-8 text-white" />
                     </div>
-                    <p className="text-muted-foreground group-hover:text-foreground transition-colors">{title}</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">Screenshot coming soon</p>
+                    
+                    {/* Title */}
+                    <p className="text-foreground font-semibold text-lg group-hover:text-primary transition-colors">{item.title}</p>
+                    
+                    {/* Description */}
+                    <p className="text-sm text-muted-foreground mt-2">{item.description}</p>
+                    
+                    {/* Coming soon badge */}
+                    <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      <span className="text-xs text-primary font-medium">Coming Soon</span>
+                    </div>
                   </div>
                 </Card>
               ))}

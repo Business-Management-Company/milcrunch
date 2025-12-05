@@ -202,7 +202,7 @@ const Index = () => {
             <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
               <div className="relative aspect-[16/10] overflow-hidden">
                 <img 
-                  src={awardsCeremonyImage} 
+                  src={nmpdImage} 
                   alt="Veteran Podcast Awards"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
@@ -243,8 +243,12 @@ const Index = () => {
                   ))}
                 </div>
 
-                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-[1.02] transition-transform">
-                  <Link to="/veteran-podcast-awards">
+                <Button 
+                  asChild 
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-[1.02] transition-transform"
+                  onClick={() => window.scrollTo(0, 0)}
+                >
+                  <Link to="/veteran-podcast-awards" onClick={() => window.scrollTo(0, 0)}>
                     View Case Study
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -256,7 +260,7 @@ const Index = () => {
             <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
               <div className="relative aspect-[16/10] overflow-hidden">
                 <img 
-                  src={nmpdImage} 
+                  src={awardsCeremonyImage} 
                   alt="National Military Podcast Day"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
