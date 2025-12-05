@@ -16,6 +16,7 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(searchParams.get("mode") === "signup");
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -23,7 +24,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, resetPassword } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -57,7 +58,21 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        const emailResult = emailSchema.safeParse(email);
+        if (!emailResult.success) {
+          setErrors({ email: emailResult.error.errors[0].message });
+          setLoading(false);
+          return;
+        }
+        const { error } = await resetPassword(email);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Password reset email sent! Check your inbox.");
+          setIsForgotPassword(false);
+        }
+      } else if (isSignUp) {
         const { error } = await signUp(email, password, fullName);
         if (error) {
           if (error.message.includes("already registered")) {
@@ -107,17 +122,19 @@ const Auth = () => {
             </div>
           </div>
           <CardTitle className="text-2xl font-display">
-            {isSignUp ? "Create an Account" : "Welcome Back"}
+            {isForgotPassword ? "Reset Password" : isSignUp ? "Create an Account" : "Welcome Back"}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            {isSignUp 
-              ? "Sign up to start managing events and awards" 
-              : "Sign in to your Events & Awards OS account"}
+            {isForgotPassword
+              ? "Enter your email to receive a password reset link"
+              : isSignUp 
+                ? "Sign up to start managing events and awards" 
+                : "Sign in to your Events & Awards OS account"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
+            {isSignUp && !isForgotPassword && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input
@@ -149,59 +166,85 @@ const Auth = () => {
               )}
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setErrors({ ...errors, password: undefined });
-                  }}
-                  className={`bg-secondary border-border pr-10 ${errors.password ? "border-destructive" : ""}`}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+            {!isForgotPassword && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
                   )}
-                </Button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setErrors({ ...errors, password: undefined });
+                    }}
+                    className={`bg-secondary border-border pr-10 ${errors.password ? "border-destructive" : ""}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
-              )}
-            </div>
+            )}
             
             <Button
               type="submit"
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={loading}
             >
-              {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? "Loading..." : isForgotPassword ? "Send Reset Link" : isSignUp ? "Create Account" : "Sign In"}
             </Button>
           </form>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-primary hover:underline font-medium"
-              >
-                {isSignUp ? "Sign In" : "Sign Up"}
-              </button>
-            </p>
+            {isForgotPassword ? (
+              <p className="text-sm text-muted-foreground">
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(false)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Back to Sign In
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  {isSignUp ? "Sign In" : "Sign Up"}
+                </button>
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
