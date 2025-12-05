@@ -25,7 +25,7 @@ const Index = () => {
       icon: Calendar,
       title: "Live & Hybrid Events",
       description: "Paid, free, or donation-based tickets. QR check-in, capacity controls, and real-time reporting.",
-      image: veteranNetworkingEvent,
+      image: podcasterImage,
       gradient: "from-blue-500/30 via-cyan-500/20",
       accent: "bg-blue-500"
     },
@@ -41,7 +41,7 @@ const Index = () => {
       icon: FileText,
       title: "Sponsorships & Proposals",
       description: "Close sponsors faster with pre-built proposal templates, e-signing, and performance dashboards.",
-      image: podcasterImage,
+      image: veteranNetworkingEvent,
       gradient: "from-purple-500/30 via-pink-500/20",
       accent: "bg-purple-500"
     }
@@ -177,6 +177,126 @@ const Index = () => {
               Read the news
               <ArrowRight className="w-4 h-4" />
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Events Showcase - Moved up */}
+      <section className="py-24 px-6 bg-background">
+        <div className="container mx-auto">
+          <div className="text-center mb-16 space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
+              <Star className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-accent">Success Stories</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
+              Powered by Our Platform
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Real events and awards programs running on our infrastructure
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* VPA Card */}
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <img 
+                  src={awardsCeremonyImage} 
+                  alt="Veteran Podcast Awards"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 via-orange-500/10 to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                
+                {/* Logo */}
+                <div className="absolute top-4 left-4">
+                  <img src={vpaLogo} alt="" className="w-16 h-16 rounded-xl shadow-lg bg-white/10 backdrop-blur-sm p-2" />
+                </div>
+
+                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                  Flagship Awards
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
+                    Veteran Podcast Awards
+                  </h3>
+                  <p className="text-white/80 text-sm md:text-base max-w-md">
+                    The industry's leading awards for military & veteran podcast content
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-4 gap-4 text-center">
+                  {[
+                    { value: "500+", label: "Nominations" },
+                    { value: "50", label: "Judges" },
+                    { value: "10K+", label: "Votes" },
+                    { value: "20+", label: "Sponsors" }
+                  ].map((stat, i) => (
+                    <div key={i}>
+                      <div className="text-lg font-bold text-foreground">{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-[1.02] transition-transform">
+                  <Link to="/veteran-podcast-awards">
+                    View Case Study
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
+            </Card>
+
+            {/* NMPD Card */}
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <img 
+                  src={nmpdImage} 
+                  alt="National Military Podcast Day"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-blue-500/20 via-cyan-500/10 to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-blue-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                  Annual Event
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
+                    National Military Podcast Day
+                  </h3>
+                  <p className="text-white/80 text-sm md:text-base max-w-md">
+                    The premier celebration bringing together military podcasters nationwide
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Annual Event</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span className="text-sm">5,000+ Expected</span>
+                  </div>
+                </div>
+
+                <Button asChild variant="outline" className="w-full border-border hover:bg-secondary group-hover:scale-[1.02] transition-transform">
+                  <Link to="/veteran-podcast-awards">
+                    Learn More
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
+            </Card>
           </div>
         </div>
       </section>
@@ -318,126 +438,6 @@ const Index = () => {
                 <p className="text-dark-muted">{step.description}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Events Showcase */}
-      <section className="py-24 px-6 bg-background">
-        <div className="container mx-auto">
-          <div className="text-center mb-16 space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
-              <Star className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium text-accent">Success Stories</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
-              Powered by Our Platform
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Real events and awards programs running on our infrastructure
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* VPA Card */}
-            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
-              <div className="relative aspect-[16/10] overflow-hidden">
-                <img 
-                  src={awardsCeremonyImage} 
-                  alt="Veteran Podcast Awards"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 via-orange-500/10 to-transparent opacity-60" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                
-                {/* Logo */}
-                <div className="absolute top-4 left-4">
-                  <img src={vpaLogo} alt="" className="w-16 h-16 rounded-xl shadow-lg bg-white/10 backdrop-blur-sm p-2" />
-                </div>
-
-                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
-                  Flagship Awards
-                </div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
-                    Veteran Podcast Awards
-                  </h3>
-                  <p className="text-white/80 text-sm md:text-base max-w-md">
-                    The industry's leading awards for military & veteran podcast content
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-4 gap-4 text-center">
-                  {[
-                    { value: "500+", label: "Nominations" },
-                    { value: "50", label: "Judges" },
-                    { value: "10K+", label: "Votes" },
-                    { value: "20+", label: "Sponsors" }
-                  ].map((stat, i) => (
-                    <div key={i}>
-                      <div className="text-lg font-bold text-foreground">{stat.value}</div>
-                      <div className="text-xs text-muted-foreground">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-[1.02] transition-transform">
-                  <Link to="/veteran-podcast-awards">
-                    View Case Study
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-
-            {/* NMPD Card */}
-            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
-              <div className="relative aspect-[16/10] overflow-hidden">
-                <img 
-                  src={nmpdImage} 
-                  alt="National Military Podcast Day"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-blue-500/20 via-cyan-500/10 to-transparent opacity-60" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-
-                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-blue-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
-                  Annual Event
-                </div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
-                    National Military Podcast Day
-                  </h3>
-                  <p className="text-white/80 text-sm md:text-base max-w-md">
-                    The premier celebration bringing together military podcasters nationwide
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    <span className="text-sm">Annual Event</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="w-4 h-4 text-primary" />
-                    <span className="text-sm">5,000+ Expected</span>
-                  </div>
-                </div>
-
-                <Button asChild variant="outline" className="w-full border-border hover:bg-secondary group-hover:scale-[1.02] transition-transform">
-                  <Link to="/veteran-podcast-awards">
-                    Learn More
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </div>
-            </Card>
           </div>
         </div>
       </section>
