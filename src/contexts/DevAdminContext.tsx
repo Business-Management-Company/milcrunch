@@ -15,6 +15,17 @@ export type SimulatedRole =
   | "attendee"
   | null;
 
+// Role hierarchy - higher index = higher privilege
+const ROLE_HIERARCHY: SimulatedRole[] = [
+  "attendee",
+  "judge", 
+  "sponsor",
+  "event_planner",
+  "brand_admin",
+  "org_admin",
+  "super_admin"
+];
+
 interface DevAdminContextType {
   isDevAdmin: boolean;
   simulatedRole: SimulatedRole;
@@ -33,7 +44,7 @@ export const DevAdminProvider = ({ children }: { children: ReactNode }) => {
 
   const isDevAdmin = user?.email === DEV_ADMIN_EMAIL;
 
-  // Fetch user role from database
+  // Fetch user's highest privilege role from database
   useEffect(() => {
     const fetchUserRole = async () => {
       if (!user?.id) {
@@ -43,22 +54,35 @@ export const DevAdminProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
+        // Fetch ALL roles for this user
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id)
-          .maybeSingle();
+          .eq('user_id', user.id);
 
         if (error) {
-          console.error('Error fetching user role:', error);
+          console.error('Error fetching user roles:', error);
           setDbRole(null);
-        } else if (data) {
-          setDbRole(data.role as SimulatedRole);
+        } else if (data && data.length > 0) {
+          // Find the highest privilege role
+          let highestRole: SimulatedRole = null;
+          let highestIndex = -1;
+          
+          for (const row of data) {
+            const role = row.role as SimulatedRole;
+            const index = ROLE_HIERARCHY.indexOf(role);
+            if (index > highestIndex) {
+              highestIndex = index;
+              highestRole = role;
+            }
+          }
+          
+          setDbRole(highestRole);
         } else {
           setDbRole(null);
         }
       } catch (err) {
-        console.error('Error fetching user role:', err);
+        console.error('Error fetching user roles:', err);
         setDbRole(null);
       } finally {
         setLoadingRole(false);
