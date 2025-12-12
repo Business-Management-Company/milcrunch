@@ -43,6 +43,7 @@ import CheckInDashboard from "./pages/admin/CheckInDashboard";
 import TravelAddons from "./pages/admin/TravelAddons";
 import DemoSponsorships from "./pages/admin/DemoSponsorships";
 import SponsorPortal from "./pages/sponsor/Portal";
+import Demo from "./pages/Demo";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="/admin/onboarding" element={<CreatorOnboarding />} />
               <Route path="/admin/travel" element={<TravelAddons />} />
               <Route path="/sponsors/demo" element={<DemoSponsorships />} />
+              <Route path="/demo" element={<Demo />} />
               <Route path="/portal" element={<AttendeePortal />} />
               <Route path="/sponsor/portal" element={<SponsorPortal />} />
               <Route path="/events/:slug" element={<EventDetail />} />
