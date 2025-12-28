@@ -1,19 +1,20 @@
 import { Link } from "react-router-dom";
+import { Rocket } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="border-t border-border bg-card/50">
+    <footer className="border-t border-border bg-card">
       <div className="container mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">EA</span>
+              <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-primary">
+                <Rocket className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-headline font-bold text-lg text-foreground">Events & Awards OS</span>
+              <span className="font-display font-bold text-lg text-foreground tracking-wide">Event<span className="text-gradient-primary">Rocket</span></span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Launch, manage, and monetize military & veteran events and awards—powered by AI.
+              Launch, manage, and monetize world-class events and awards—powered by AI.
             </p>
           </div>
 
@@ -48,7 +49,7 @@ const Footer = () => {
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} EventCruch.co. All rights reserved.
+            © {new Date().getFullYear()} Event Rocket. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Privacy</a>
