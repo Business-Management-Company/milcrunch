@@ -48,8 +48,8 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         rocket: {
-          orange: "hsl(var(--rocket-orange))",
-          flame: "hsl(var(--rocket-flame))",
+          blue: "hsl(var(--rocket-blue))",
+          light: "hsl(var(--rocket-blue-light))",
         },
         space: {
           deep: "hsl(var(--space-deep))",
@@ -68,14 +68,14 @@ export default {
         'gradient-primary': 'var(--gradient-primary)',
         'gradient-accent': 'var(--gradient-accent)',
         'gradient-card': 'var(--gradient-card)',
-        'gradient-flame': 'var(--gradient-flame)',
+        'gradient-cosmos': 'var(--gradient-cosmos)',
       },
       boxShadow: {
         'glow': 'var(--shadow-glow)',
         'card': 'var(--shadow-card)',
         'elevated': 'var(--shadow-elevated)',
         'rocket': 'var(--shadow-rocket)',
-        'primary': '0 4px 20px 0 hsla(24, 95%, 53%, 0.5)',
+        'primary': '0 4px 20px 0 hsla(228, 87%, 57%, 0.5)',
       },
       fontFamily: {
         'display': ['Orbitron', 'sans-serif'],

@@ -15,7 +15,7 @@
     --popover: 222 47% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 24 95% 53%;
+    --primary: 228 87% 57%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 47% 15%;
@@ -32,31 +32,31 @@
 
     --border: 222 30% 18%;
     --input: 222 30% 20%;
-    --ring: 24 95% 53%;
+    --ring: 228 87% 57%;
 
     --radius: 0.75rem;
 
     /* Rocket theme colors */
-    --rocket-orange: 24 95% 53%;
-    --rocket-flame: 15 90% 55%;
+    --rocket-blue: 228 87% 57%;
+    --rocket-blue-light: 228 87% 70%;
     --space-deep: 222 47% 5%;
     --space-mid: 222 47% 12%;
     --cosmic-purple: 280 70% 60%;
-    --star-glow: 45 100% 70%;
+    --star-glow: 228 87% 80%;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(222 47% 5%) 0%, hsl(222 47% 12%) 50%, hsl(280 50% 15%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(222 47% 5%) 0%, hsl(222 47% 12%) 50%, hsl(228 50% 20%) 100%);
     --gradient-dark: linear-gradient(135deg, hsl(222 47% 8%) 0%, hsl(222 47% 5%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(24 95% 53%) 0%, hsl(15 90% 45%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(228 87% 57%) 0%, hsl(228 87% 45%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(280 70% 60%) 0%, hsl(300 70% 50%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(222 47% 10%) 0%, hsl(222 47% 7%) 100%);
-    --gradient-flame: linear-gradient(180deg, hsl(24 95% 53%) 0%, hsl(15 90% 40%) 50%, hsl(0 80% 30%) 100%);
+    --gradient-cosmos: linear-gradient(180deg, hsl(228 87% 57%) 0%, hsl(228 87% 40%) 50%, hsl(228 70% 30%) 100%);
     
     /* Shadows */
-    --shadow-glow: 0 0 60px hsla(24, 95%, 53%, 0.3);
-    --shadow-card: 0 4px 20px -4px hsla(0, 0%, 0%, 0.5), 0 0 40px -10px hsla(24, 95%, 53%, 0.15);
-    --shadow-elevated: 0 20px 40px -10px hsla(0, 0%, 0%, 0.6), 0 0 60px -20px hsla(24, 95%, 53%, 0.2);
-    --shadow-rocket: 0 0 80px hsla(24, 95%, 53%, 0.4), 0 0 120px hsla(280, 70%, 60%, 0.2);
+    --shadow-glow: 0 0 60px hsla(228, 87%, 57%, 0.3);
+    --shadow-card: 0 4px 20px -4px hsla(0, 0%, 0%, 0.5), 0 0 40px -10px hsla(228, 87%, 57%, 0.15);
+    --shadow-elevated: 0 20px 40px -10px hsla(0, 0%, 0%, 0.6), 0 0 60px -20px hsla(228, 87%, 57%, 0.2);
+    --shadow-rocket: 0 0 80px hsla(228, 87%, 57%, 0.4), 0 0 120px hsla(228, 70%, 70%, 0.2);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -107,11 +107,16 @@
   }
 
   .shadow-primary {
-    box-shadow: 0 4px 20px 0 hsla(24, 95%, 53%, 0.5);
+    box-shadow: 0 4px 20px 0 hsla(228, 87%, 57%, 0.5);
   }
 
   .shadow-rocket {
     box-shadow: var(--shadow-rocket);
+  }
+
+  .text-gradient-cosmos {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-cosmos);
   }
 
   .animate-float {
@@ -128,8 +133,8 @@
   }
 
   @keyframes pulse-glow {
-    0%, 100% { opacity: 0.6; box-shadow: 0 0 40px hsla(24, 95%, 53%, 0.3); }
-    50% { opacity: 1; box-shadow: 0 0 80px hsla(24, 95%, 53%, 0.5); }
+    0%, 100% { opacity: 0.6; box-shadow: 0 0 40px hsla(228, 87%, 57%, 0.3); }
+    50% { opacity: 1; box-shadow: 0 0 80px hsla(228, 87%, 57%, 0.5); }
   }
 
   .animate-rocket-glow {
@@ -137,8 +142,8 @@
   }
 
   @keyframes rocket-glow {
-    0%, 100% { filter: drop-shadow(0 0 20px hsla(24, 95%, 53%, 0.6)); }
-    50% { filter: drop-shadow(0 0 40px hsla(24, 95%, 53%, 0.9)); }
+    0%, 100% { filter: drop-shadow(0 0 20px hsla(228, 87%, 57%, 0.6)); }
+    50% { filter: drop-shadow(0 0 40px hsla(228, 87%, 57%, 0.9)); }
   }
 
   .bg-stars {
