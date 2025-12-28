@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, Rocket } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import eventRocketLogo from "@/assets/event-rocket-logo-new.png";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
@@ -26,8 +25,10 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2 group">
-            <img src={eventRocketLogo} alt="Event Rocket" className="w-9 h-9 rounded-lg shadow-primary group-hover:shadow-rocket transition-shadow duration-300" />
-            <span className="font-display font-bold text-lg text-foreground tracking-wide">Event<span className="text-gradient-primary">Rocket</span></span>
+            <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-primary group-hover:shadow-rocket transition-shadow duration-300">
+              <Rocket className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-display font-bold text-xl text-foreground tracking-wide">Event<span className="text-primary">Rocket</span></span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">

@@ -12,7 +12,7 @@ import FeaturedEventCard from "@/components/FeaturedEventCard";
 import AnimatedStat from "@/components/AnimatedStat";
 
 // Import images
-import eventHeroPeople from "@/assets/event-hero-people.jpg";
+import heroCollage from "@/assets/hero-collage.jpg";
 import featureInPerson from "@/assets/feature-in-person.jpg";
 import featureVirtual from "@/assets/feature-virtual.jpg";
 import featureHybrid from "@/assets/feature-hybrid.jpg";
@@ -88,51 +88,50 @@ const Index = () => {
 
   return (
     <MarketingLayout>
-      {/* Hero Section - People at Events */}
-      <section className="relative min-h-[95vh] flex items-center overflow-hidden">
-        {/* Background Image */}
+      {/* Hero Section - Netflix Style Collage */}
+      <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden">
+        {/* Netflix-style Background Collage */}
         <div className="absolute inset-0">
           <img 
-            src={eventHeroPeople} 
-            alt="Professionals networking at conference event" 
-            className="w-full h-full object-cover"
+            src={heroCollage} 
+            alt="Events and conferences collage" 
+            className="w-full h-full object-cover scale-110"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+          {/* Heavy gradient overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
+          <div className="absolute inset-0 bg-gradient-radial from-transparent via-background/40 to-background/80" />
         </div>
 
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="max-w-3xl space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 backdrop-blur-sm animate-pulse-glow">
-              <Rocket className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Virtual • In-Person • Hybrid</span>
-            </div>
-            
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.1]">
-              <span className="text-foreground">Launch Events</span>
+        <div className="container mx-auto px-6 relative z-10 text-center">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight leading-[1.05]">
+              <span className="text-foreground">Events, Awards</span>
               <br />
-              <span className="text-gradient-primary">That Connect</span>
+              <span className="text-foreground">& Sponsorships</span>
             </h1>
             
-            <p className="text-xl text-muted-foreground max-w-xl leading-relaxed">
-              The all-in-one platform for events and awards. Create, manage, and scale with AI-powered automation.
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              The all-in-one platform to launch, manage, and scale your events with AI-powered automation.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-primary-foreground font-bold shadow-rocket transition-all hover:scale-105 h-14 px-8 text-lg animate-rocket-glow">
-                <Rocket className="mr-2 h-5 w-5" />
-                Start Free
-              </Button>
-              <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-border bg-background/50 backdrop-blur-sm hover:bg-secondary transition-all hover:scale-105">
-                <Link to="/events">
-                  <Calendar className="mr-2 h-5 w-5" />
-                  Explore Events
-                </Link>
-              </Button>
+            {/* Netflix-style email signup */}
+            <div className="max-w-xl mx-auto pt-4">
+              <p className="text-muted-foreground mb-4">Ready to launch? Enter your email to get started.</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input 
+                  type="email" 
+                  placeholder="Email address"
+                  className="flex-1 h-14 px-6 rounded-lg bg-secondary/80 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent backdrop-blur-sm"
+                />
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-14 px-8 text-lg transition-all hover:scale-105">
+                  Get Started
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
             {/* Trust indicators */}
-            <div className="flex flex-wrap gap-6 pt-4">
+            <div className="flex flex-wrap justify-center gap-8 pt-8">
               {stats.map((stat, i) => (
                 <AnimatedStat key={i} value={stat.value} label={stat.label} className="text-center" />
               ))}
@@ -140,8 +139,8 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Decorative elements */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+        {/* Bottom gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background to-transparent" />
       </section>
 
       {/* Why Now Strip - Dark Section */}

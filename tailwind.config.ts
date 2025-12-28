@@ -69,6 +69,7 @@ export default {
         'gradient-accent': 'var(--gradient-accent)',
         'gradient-card': 'var(--gradient-card)',
         'gradient-cosmos': 'var(--gradient-cosmos)',
+        'gradient-radial': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
       },
       boxShadow: {
         'glow': 'var(--shadow-glow)',
