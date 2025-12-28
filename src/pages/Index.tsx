@@ -12,10 +12,11 @@ import FeaturedEventCard from "@/components/FeaturedEventCard";
 import AnimatedStat from "@/components/AnimatedStat";
 
 // Import images
-import rocketHeroImage from "@/assets/rocket-hero.jpg";
-import podcasterImage from "@/assets/podcaster.jpg";
+import eventHeroPeople from "@/assets/event-hero-people.jpg";
+import featureInPerson from "@/assets/feature-in-person.jpg";
+import featureVirtual from "@/assets/feature-virtual.jpg";
+import featureHybrid from "@/assets/feature-hybrid.jpg";
 import awardsCeremonyImage from "@/assets/awards-ceremony.jpg";
-import veteranNetworkingEvent from "@/assets/veteran-networking-event.jpg";
 import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
 import nmpdImage from "@/assets/national-military-podcast-day.png";
 
@@ -23,25 +24,25 @@ const Index = () => {
   const features = [
     {
       icon: Calendar,
-      title: "Live & Hybrid Events",
-      description: "Paid, free, or donation-based tickets. QR check-in, capacity controls, and real-time reporting.",
-      image: podcasterImage,
+      title: "In-Person Events",
+      description: "Full-scale conferences, workshops, and networking sessions with QR check-in, capacity controls, and real-time reporting.",
+      image: featureInPerson,
       gradient: "from-rocket-orange/30 via-rocket-flame/20",
       accent: "bg-primary"
     },
     {
-      icon: Award,
-      title: "Awards & Nominations",
-      description: "Run nominations, judging panels, public voting, and winner announcements—all in one place.",
-      image: awardsCeremonyImage,
+      icon: Users,
+      title: "Virtual Events",
+      description: "Webinars, online summits, and digital conferences with seamless streaming, attendee engagement tools, and analytics.",
+      image: featureVirtual,
       gradient: "from-cosmic-purple/30 via-accent/20",
       accent: "bg-accent"
     },
     {
-      icon: FileText,
-      title: "Sponsorships & Proposals",
-      description: "Close sponsors faster with pre-built proposal templates, e-signing, and performance dashboards.",
-      image: veteranNetworkingEvent,
+      icon: Zap,
+      title: "Hybrid Events",
+      description: "The best of both worlds—combine in-person and virtual audiences for maximum reach and engagement.",
+      image: featureHybrid,
       gradient: "from-primary/30 via-rocket-flame/20",
       accent: "bg-primary"
     }
@@ -89,13 +90,13 @@ const Index = () => {
 
   return (
     <MarketingLayout>
-      {/* Hero Section - Rocket Launch Theme */}
+      {/* Hero Section - People at Events */}
       <section className="relative min-h-[95vh] flex items-center overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
           <img 
-            src={rocketHeroImage} 
-            alt="Rocket launching into space" 
+            src={eventHeroPeople} 
+            alt="Professionals networking at conference event" 
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
@@ -106,13 +107,13 @@ const Index = () => {
           <div className="max-w-3xl space-y-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 backdrop-blur-sm animate-pulse-glow">
               <Rocket className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Launch Your Events to New Heights</span>
+              <span className="text-sm font-medium text-primary">Virtual • In-Person • Hybrid</span>
             </div>
             
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.1]">
-              <span className="text-foreground">Your Events</span>
+              <span className="text-foreground">Launch Events</span>
               <br />
-              <span className="text-gradient-primary">Deserve Liftoff</span>
+              <span className="text-gradient-primary">That Connect</span>
             </h1>
             
             <p className="text-xl text-muted-foreground max-w-xl leading-relaxed">
@@ -122,12 +123,12 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-primary-foreground font-bold shadow-rocket transition-all hover:scale-105 h-14 px-8 text-lg animate-rocket-glow">
                 <Rocket className="mr-2 h-5 w-5" />
-                Launch Now
+                Start Free
               </Button>
               <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-border bg-background/50 backdrop-blur-sm hover:bg-secondary transition-all hover:scale-105">
-                <Link to="/demo">
-                  <Play className="mr-2 h-5 w-5" />
-                  See It In Action
+                <Link to="/events">
+                  <Calendar className="mr-2 h-5 w-5" />
+                  Explore Events
                 </Link>
               </Button>
             </div>

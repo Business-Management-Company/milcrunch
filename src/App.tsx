@@ -44,6 +44,7 @@ import TravelAddons from "./pages/admin/TravelAddons";
 import DemoSponsorships from "./pages/admin/DemoSponsorships";
 import SponsorPortal from "./pages/sponsor/Portal";
 import Demo from "./pages/Demo";
+import EventsCalendar from "./pages/EventsCalendar";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ const App = () => (
               <Route path="/admin/travel" element={<TravelAddons />} />
               <Route path="/sponsors/demo" element={<DemoSponsorships />} />
               <Route path="/demo" element={<Demo />} />
+              <Route path="/events" element={<EventsCalendar />} />
               <Route path="/portal" element={<AttendeePortal />} />
               <Route path="/sponsor/portal" element={<SponsorPortal />} />
               <Route path="/events/:slug" element={<EventDetail />} />
