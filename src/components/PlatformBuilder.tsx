@@ -1,144 +1,252 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { 
   Calendar, Award, Users, FileText, Bot, 
   Ticket, QrCode, Vote, Gavel, Sparkles,
-  ArrowRight, Check
+  ArrowRight, GripVertical, Plus
 } from "lucide-react";
 
 interface Module {
   id: string;
   title: string;
+  shortTitle: string;
   description: string;
   icon: React.ElementType;
   category: "events" | "awards" | "sponsors" | "ai";
-  enabled: boolean;
+  color: string;
 }
 
+const availableModules: Module[] = [
+  { id: "ticketing", title: "Ticketing & Registration", shortTitle: "Ticketing", description: "Sell tickets and manage registrations", icon: Ticket, category: "events", color: "bg-primary text-primary-foreground" },
+  { id: "checkin", title: "QR Check-in", shortTitle: "Check-in", description: "Scan badges and track attendance", icon: QrCode, category: "events", color: "bg-primary text-primary-foreground" },
+  { id: "calendar", title: "Event Calendar", shortTitle: "Calendar", description: "Public calendar and iCal exports", icon: Calendar, category: "events", color: "bg-primary text-primary-foreground" },
+  { id: "nominations", title: "Nominations Portal", shortTitle: "Nominations", description: "Collect and manage nominations", icon: Award, category: "awards", color: "bg-accent text-accent-foreground" },
+  { id: "judging", title: "Judge Scoring", shortTitle: "Judging", description: "Rubric-based scoring system", icon: Gavel, category: "awards", color: "bg-accent text-accent-foreground" },
+  { id: "voting", title: "Public Voting", shortTitle: "Voting", description: "Fan voting campaigns", icon: Vote, category: "awards", color: "bg-accent text-accent-foreground" },
+  { id: "sponsors", title: "Sponsor CRM", shortTitle: "Sponsors", description: "Track sponsor relationships", icon: Users, category: "sponsors", color: "bg-emerald-500 text-white" },
+  { id: "proposals", title: "Proposal Builder", shortTitle: "Proposals", description: "Generate branded proposals", icon: FileText, category: "sponsors", color: "bg-emerald-500 text-white" },
+  { id: "ai-architect", title: "AI Event Architect", shortTitle: "AI Events", description: "Auto-generate event schedules", icon: Bot, category: "ai", color: "bg-cosmic-purple text-white" },
+];
+
 const PlatformBuilder = () => {
-  const [modules, setModules] = useState<Module[]>([
-    { id: "ticketing", title: "Ticketing & Registration", description: "Sell tickets and manage registrations", icon: Ticket, category: "events", enabled: true },
-    { id: "checkin", title: "QR Check-in", description: "Scan badges and track attendance", icon: QrCode, category: "events", enabled: true },
-    { id: "calendar", title: "Event Calendar", description: "Public calendar and iCal exports", icon: Calendar, category: "events", enabled: false },
-    { id: "nominations", title: "Nominations Portal", description: "Collect and manage nominations", icon: Award, category: "awards", enabled: true },
-    { id: "judging", title: "Judge Scoring", description: "Rubric-based scoring system", icon: Gavel, category: "awards", enabled: true },
-    { id: "voting", title: "Public Voting", description: "Fan voting campaigns", icon: Vote, category: "awards", enabled: false },
-    { id: "sponsors", title: "Sponsor CRM", description: "Track sponsor relationships", icon: Users, category: "sponsors", enabled: true },
-    { id: "proposals", title: "Proposal Builder", description: "Generate branded proposals", icon: FileText, category: "sponsors", enabled: true },
-    { id: "ai-architect", title: "AI Event Architect", description: "Auto-generate event schedules", icon: Bot, category: "ai", enabled: false },
-    { id: "ai-awards", title: "AI Awards Designer", description: "Generate categories & rubrics", icon: Sparkles, category: "ai", enabled: false },
-  ]);
+  const [workspace, setWorkspace] = useState<string[]>(["ticketing", "nominations", "sponsors"]);
+  const [draggedModule, setDraggedModule] = useState<string | null>(null);
 
-  const toggleModule = (id: string) => {
-    setModules(prev => prev.map(m => 
-      m.id === id ? { ...m, enabled: !m.enabled } : m
-    ));
+  const handleDragStart = (moduleId: string) => {
+    setDraggedModule(moduleId);
   };
 
-  const enabledModules = modules.filter(m => m.enabled);
-  const categoryColors = {
-    events: "border-primary bg-primary/5",
-    awards: "border-accent bg-accent/5",
-    sponsors: "border-emerald-500 bg-emerald-50",
-    ai: "border-purple-500 bg-purple-50",
+  const handleDragEnd = () => {
+    setDraggedModule(null);
   };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedModule && !workspace.includes(draggedModule)) {
+      setWorkspace([...workspace, draggedModule]);
+    }
+    setDraggedModule(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleRemoveFromWorkspace = (moduleId: string) => {
+    setWorkspace(workspace.filter(id => id !== moduleId));
+  };
+
+  const handleAddToWorkspace = (moduleId: string) => {
+    if (!workspace.includes(moduleId)) {
+      setWorkspace([...workspace, moduleId]);
+    }
+  };
+
+  const handleReorder = (dragIndex: number, hoverIndex: number) => {
+    const newWorkspace = [...workspace];
+    const draggedItem = newWorkspace[dragIndex];
+    newWorkspace.splice(dragIndex, 1);
+    newWorkspace.splice(hoverIndex, 0, draggedItem);
+    setWorkspace(newWorkspace);
+  };
+
+  const workspaceModules = workspace.map(id => availableModules.find(m => m.id === id)!).filter(Boolean);
+  const storeModules = availableModules.filter(m => !workspace.includes(m.id));
 
   return (
-    <section className="py-24 px-6 bg-secondary/30">
+    <section className="py-24 px-6 bg-background">
       <div className="container mx-auto">
-        <div className="text-center mb-16 space-y-4">
-          <h2 className="text-4xl md:text-5xl font-headline font-bold text-foreground">
-            Build Your Own Platform
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose the modules you need. Toggle them on or off to create your perfect workspace.
-          </p>
-        </div>
+        <div className="grid lg:grid-cols-2 gap-16 items-start max-w-6xl mx-auto">
+          {/* Left side - Text content */}
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <span className="text-sm font-semibold text-primary uppercase tracking-wider">
+                More Than Just Event Software
+              </span>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-foreground leading-tight">
+                Build your
+                <br />
+                <span className="text-primary">event platform.</span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-lg">
+                Turn tools on as you need them. Pay only for what you use with credits. No lockouts—your work stays yours.
+              </p>
+            </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {/* Module Selection */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              {modules.map((module) => (
-                <Card 
-                  key={module.id}
-                  className={`p-4 cursor-pointer transition-all duration-300 border-2 ${
-                    module.enabled 
-                      ? categoryColors[module.category]
-                      : "border-border bg-card hover:border-muted-foreground/30"
-                  }`}
-                  onClick={() => toggleModule(module.id)}
+            <div className="flex flex-wrap gap-3">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-14 px-8">
+                Start Free
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button size="lg" variant="outline" className="h-14 px-8">
+                Schedule a Demo
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              Start free with 100 credits • No credit card required
+            </p>
+
+            {/* Audience tags */}
+            <div className="flex flex-wrap gap-2 pt-4">
+              {["Event Planners", "Podcasters", "Agencies", "Brands"].map((tag) => (
+                <span 
+                  key={tag}
+                  className="px-4 py-2 rounded-full bg-secondary text-secondary-foreground text-sm font-medium border border-border"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        module.enabled 
-                          ? module.category === "events" ? "bg-primary/10 text-primary" 
-                            : module.category === "awards" ? "bg-accent/10 text-accent"
-                            : module.category === "sponsors" ? "bg-emerald-100 text-emerald-600"
-                            : "bg-purple-100 text-purple-600"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        <module.icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className={`font-semibold ${module.enabled ? "text-foreground" : "text-muted-foreground"}`}>
-                          {module.title}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">{module.description}</p>
-                      </div>
-                    </div>
-                    <Switch 
-                      checked={module.enabled}
-                      onCheckedChange={() => toggleModule(module.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                </Card>
+                  {tag}
+                </span>
               ))}
             </div>
+
+            {/* Benefits list */}
+            <ul className="space-y-3 pt-4">
+              {[
+                "Build events fast with modular tools",
+                "Grow your audience with email + SMS",
+                "Monetize with tickets, sponsors, and offers"
+              ].map((benefit, i) => (
+                <li key={i} className="flex items-center gap-3 text-muted-foreground">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Preview Panel */}
-          <div className="lg:col-span-1">
-            <Card className="p-6 bg-card border-2 border-border sticky top-24">
-              <div className="flex items-center justify-between mb-6">
-                <span className="text-sm text-muted-foreground">Preview</span>
-                <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
-                  {enabledModules.length} modules
-                </span>
+          {/* Right side - Interactive builder */}
+          <div className="space-y-6">
+            <Card className="p-6 bg-card border-border shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-headline font-bold text-foreground">Event Workspace</h3>
+                  <p className="text-sm text-muted-foreground">{workspace.length} modules active</p>
+                </div>
+                <Button size="sm" variant="ghost" className="text-primary">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add
+                </Button>
               </div>
 
-              <div className="text-center mb-6">
-                <h3 className="text-xl font-headline font-bold text-foreground">My Custom Platform</h3>
-                <p className="text-sm text-muted-foreground">Your personalized Events & Awards OS</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {enabledModules.slice(0, 6).map((module) => (
-                  <div 
-                    key={module.id}
-                    className="p-3 bg-secondary/50 rounded-lg text-center"
-                  >
-                    <module.icon className="w-5 h-5 mx-auto mb-1 text-primary" />
-                    <span className="text-xs font-medium text-foreground">{module.title.split(' ')[0]}</span>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Module Store */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Module Store
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">Pick what you need</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {availableModules.slice(0, 9).map((module) => {
+                      const isInWorkspace = workspace.includes(module.id);
+                      return (
+                        <button
+                          key={module.id}
+                          onClick={() => isInWorkspace ? handleRemoveFromWorkspace(module.id) : handleAddToWorkspace(module.id)}
+                          draggable={!isInWorkspace}
+                          onDragStart={() => handleDragStart(module.id)}
+                          onDragEnd={handleDragEnd}
+                          className={`relative p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-1 ${
+                            isInWorkspace 
+                              ? "border-primary bg-primary/5 cursor-pointer" 
+                              : "border-border bg-card hover:border-primary/50 hover:bg-secondary/50 cursor-grab active:cursor-grabbing"
+                          }`}
+                        >
+                          {isInWorkspace && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                              <svg className="w-2.5 h-2.5 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className={`w-8 h-8 rounded-lg ${module.color} flex items-center justify-center`}>
+                            <module.icon className="w-4 h-4" />
+                          </div>
+                          <span className="text-[10px] font-medium text-foreground text-center leading-tight">
+                            {module.shortTitle}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
+                </div>
+
+                {/* My Workspace */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      My Workspace
+                    </p>
+                    <span className="text-xs text-muted-foreground">↕ Drag to reorder</span>
+                  </div>
+                  <div 
+                    className="space-y-2 min-h-[200px] p-2 rounded-xl border-2 border-dashed border-border bg-secondary/20"
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                  >
+                    {workspaceModules.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-8">
+                        Drag modules here
+                      </p>
+                    ) : (
+                      workspaceModules.map((module, index) => (
+                        <div
+                          key={module.id}
+                          className="flex items-center gap-2 p-2 bg-card rounded-lg border border-border hover:border-primary/50 transition-all cursor-grab active:cursor-grabbing group"
+                          draggable
+                          onDragStart={() => handleDragStart(module.id)}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <GripVertical className="w-3 h-3 text-muted-foreground/50 group-hover:text-muted-foreground" />
+                          <div className={`w-6 h-6 rounded-md ${module.color} flex items-center justify-center flex-shrink-0`}>
+                            <module.icon className="w-3 h-3" />
+                          </div>
+                          <span className="text-xs font-medium text-foreground flex-1">{module.shortTitle}</span>
+                          <div className="w-2 h-2 rounded-full bg-primary" />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    {workspace.length} active • {availableModules.length - workspace.length} available
+                  </p>
+                  <p className="text-xs text-primary font-medium mt-1">
+                    Start with {Math.min(3, availableModules.length - workspace.length)} free
+                  </p>
+                </div>
               </div>
 
-              {enabledModules.length > 6 && (
-                <p className="text-sm text-muted-foreground text-center mb-6">
-                  +{enabledModules.length - 6} more modules
-                </p>
-              )}
-
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Create My Workspace
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              {/* Pagination dots */}
+              <div className="flex justify-center gap-2 mb-6">
+                <div className="w-6 h-1.5 rounded-full bg-primary" />
+                <div className="w-1.5 h-1.5 rounded-full bg-border" />
+                <div className="w-1.5 h-1.5 rounded-full bg-border" />
+                <div className="w-1.5 h-1.5 rounded-full bg-border" />
+              </div>
             </Card>
           </div>
         </div>
