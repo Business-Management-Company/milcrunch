@@ -7,11 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
   Calendar, MapPin, Users, Monitor, Wifi, Search, 
-  ArrowRight, Filter, ChevronLeft, ChevronRight
+  ArrowRight, Filter, ChevronLeft, ChevronRight, RefreshCw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-
+import { useToast } from "@/hooks/use-toast";
 type EventType = "live" | "virtual" | "hybrid";
 
 interface Event {
@@ -37,8 +37,10 @@ const eventTypeConfig: Record<EventType, { label: string; icon: any; color: stri
 const EventsCalendar = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scraping, setScraping] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<EventType | "all">("all");
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchEvents();
@@ -58,6 +60,41 @@ const EventsCalendar = () => {
       console.error("Error fetching events:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const scrapeEvents = async () => {
+    setScraping(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-events', {
+        body: { searchQuery: 'tech startup conference' }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.events) {
+        // Merge scraped events with sample events
+        const scrapedEvents = data.events.map((e: any) => ({
+          ...e,
+          slug: e.id,
+          end_date: null,
+          cover_image_url: null,
+        }));
+        setEvents(prev => [...scrapedEvents, ...prev]);
+        toast({
+          title: "Events loaded",
+          description: `Found ${data.events.length} tech & startup events`,
+        });
+      }
+    } catch (error) {
+      console.error("Error scraping events:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load events. Using sample data.",
+        variant: "destructive",
+      });
+    } finally {
+      setScraping(false);
     }
   };
 
@@ -195,7 +232,17 @@ const EventsCalendar = () => {
             </div>
 
             {/* Event Type Filters */}
-            <div className="flex gap-2 flex-wrap justify-center">
+            <div className="flex gap-2 flex-wrap justify-center items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scrapeEvents}
+                disabled={scraping}
+                className="mr-2"
+              >
+                <RefreshCw className={`w-4 h-4 mr-1 ${scraping ? 'animate-spin' : ''}`} />
+                {scraping ? 'Loading...' : 'Load Events'}
+              </Button>
               <Button
                 variant={activeFilter === "all" ? "default" : "outline"}
                 size="sm"
