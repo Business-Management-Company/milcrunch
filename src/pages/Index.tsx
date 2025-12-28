@@ -32,7 +32,7 @@ const Index = () => {
     {
       icon: Award,
       title: "Awards & Nominations",
-      description: "From Veteran Podcast Awards to Service Member of the Year—run nominations, judging, public voting, and winner announcements.",
+      description: "Run nominations, judging panels, public voting, and winner announcements—all in one place.",
       image: awardsCeremonyImage,
       gradient: "from-cosmic-purple/30 via-accent/20",
       accent: "bg-accent"
@@ -116,7 +116,7 @@ const Index = () => {
             </h1>
             
             <p className="text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Design events, run awards programs, sell tickets, and sign sponsors—powered by AI agents that do the heavy lifting.
+              The all-in-one platform for events and awards. Create, manage, and scale with AI-powered automation.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
@@ -125,9 +125,9 @@ const Index = () => {
                 Launch Now
               </Button>
               <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-border bg-background/50 backdrop-blur-sm hover:bg-secondary transition-all hover:scale-105">
-                <Link to="/veteran-podcast-awards">
+                <Link to="/demo">
                   <Play className="mr-2 h-5 w-5" />
-                  See Case Study
+                  See It In Action
                 </Link>
               </Button>
             </div>
@@ -302,7 +302,7 @@ const Index = () => {
               What You Can Run
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              One platform for every type of military & veteran engagement
+              One platform for every type of event and engagement
             </p>
           </div>
           
@@ -345,23 +345,23 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Built for Media Brands - Dark Section */}
+      {/* Built for Scale - Dark Section */}
       <section className="py-24 px-6 bg-dark-section">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-dark-foreground">
-              Built for Media Brands
+              Built for Scale
             </h2>
             <p className="text-xl text-dark-muted max-w-2xl mx-auto">
-              Multiple brands, one events infrastructure
+              From startup events to enterprise conferences
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
             {[
-              { icon: Building2, text: "Multiple brands, one events infrastructure" },
+              { icon: Building2, text: "Multiple brands, one unified platform" },
               { icon: Users, text: "Shared audience data and reporting" },
-              { icon: Sparkles, text: "White-label branding per brand/event" }
+              { icon: Sparkles, text: "White-label branding per event" }
             ].map((item, index) => (
               <div key={index} className="flex items-center gap-3 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
                 <item.icon className="w-5 h-5 text-accent flex-shrink-0" />

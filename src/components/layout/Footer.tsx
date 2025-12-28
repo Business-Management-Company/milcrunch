@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Rocket } from "lucide-react";
+import eventRocketLogo from "@/assets/event-rocket-logo.png";
 
 const Footer = () => {
   return (
@@ -8,13 +8,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-primary">
-                <Rocket className="h-5 w-5 text-primary-foreground" />
-              </div>
+              <img src={eventRocketLogo} alt="Event Rocket" className="w-9 h-9 rounded-lg shadow-primary" />
               <span className="font-display font-bold text-lg text-foreground tracking-wide">Event<span className="text-gradient-primary">Rocket</span></span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Launch, manage, and monetize world-class events and awards—powered by AI.
+              The all-in-one platform for events and awards. Launch, manage, and scale with AI.
             </p>
           </div>
 
