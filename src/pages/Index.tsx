@@ -5,14 +5,14 @@ import { Card } from "@/components/ui/card";
 import { 
   Calendar, Award, Users, Zap, Bot, 
   ArrowRight, CheckCircle, Sparkles, 
-  Building2, BarChart3, FileText, Play, Star, TrendingUp
+  Building2, BarChart3, FileText, Play, Star, TrendingUp, Rocket
 } from "lucide-react";
 import PlatformBuilder from "@/components/PlatformBuilder";
 import FeaturedEventCard from "@/components/FeaturedEventCard";
 import AnimatedStat from "@/components/AnimatedStat";
 
 // Import images
-import heroEventImage from "@/assets/hero-event.jpg";
+import rocketHeroImage from "@/assets/rocket-hero.jpg";
 import podcasterImage from "@/assets/podcaster.jpg";
 import awardsCeremonyImage from "@/assets/awards-ceremony.jpg";
 import veteranNetworkingEvent from "@/assets/veteran-networking-event.jpg";
@@ -26,24 +26,24 @@ const Index = () => {
       title: "Live & Hybrid Events",
       description: "Paid, free, or donation-based tickets. QR check-in, capacity controls, and real-time reporting.",
       image: podcasterImage,
-      gradient: "from-blue-500/30 via-cyan-500/20",
-      accent: "bg-blue-500"
+      gradient: "from-rocket-orange/30 via-rocket-flame/20",
+      accent: "bg-primary"
     },
     {
       icon: Award,
       title: "Awards & Nominations",
       description: "From Veteran Podcast Awards to Service Member of the Year—run nominations, judging, public voting, and winner announcements.",
       image: awardsCeremonyImage,
-      gradient: "from-amber-500/30 via-orange-500/20",
-      accent: "bg-amber-500"
+      gradient: "from-cosmic-purple/30 via-accent/20",
+      accent: "bg-accent"
     },
     {
       icon: FileText,
       title: "Sponsorships & Proposals",
       description: "Close sponsors faster with pre-built proposal templates, e-signing, and performance dashboards.",
       image: veteranNetworkingEvent,
-      gradient: "from-purple-500/30 via-pink-500/20",
-      accent: "bg-purple-500"
+      gradient: "from-primary/30 via-rocket-flame/20",
+      accent: "bg-primary"
     }
   ];
 
@@ -52,13 +52,13 @@ const Index = () => {
       title: "Event Architect",
       description: "Describe your event; the agent drafts the schedule, registration flow, and pricing tiers.",
       icon: Calendar,
-      gradient: "from-blue-500 to-cyan-500"
+      gradient: "from-primary to-rocket-flame"
     },
     {
       title: "Awards Designer",
       description: "Paste your theme; the agent generates categories, nomination questions, and judging rubric.",
       icon: Award,
-      gradient: "from-amber-500 to-orange-500"
+      gradient: "from-accent to-cosmic-purple"
     },
     {
       title: "Sponsor Closer",
@@ -70,7 +70,7 @@ const Index = () => {
       title: "Attendee Concierge",
       description: "Attendees ask 'When is my next session?' and the agent answers with their personal agenda.",
       icon: Users,
-      gradient: "from-purple-500 to-pink-500"
+      gradient: "from-cosmic-purple to-accent"
     }
   ];
 
@@ -89,71 +89,60 @@ const Index = () => {
 
   return (
     <MarketingLayout>
-      {/* Hero Section - Bright with Image */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-hero">
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-primary">Powered by EventCruch.co</span>
-              </div>
-              
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-extrabold tracking-tight leading-[1.1] text-foreground">
-                Your All-In-One Events & Awards Platform for the{" "}
-                <span className="text-gradient-primary">Military & Veteran</span>{" "}
-                Community
-              </h1>
-              
-              <p className="text-xl text-muted-foreground max-w-xl leading-relaxed">
-                Design events, run awards programs, sell tickets, and sign sponsors—powered by AI agents that do the heavy lifting.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-primary transition-all hover:scale-105 h-14 px-8 text-lg">
-                  Book a Demo
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-border hover:bg-secondary transition-all hover:scale-105">
-                  <Link to="/veteran-podcast-awards">
-                    <Play className="mr-2 h-5 w-5" />
-                    See Case Study
-                  </Link>
-                </Button>
-              </div>
+      {/* Hero Section - Rocket Launch Theme */}
+      <section className="relative min-h-[95vh] flex items-center overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img 
+            src={rocketHeroImage} 
+            alt="Rocket launching into space" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+        </div>
 
-              {/* Trust indicators */}
-              <div className="flex flex-wrap gap-6 pt-4">
-                {stats.map((stat, i) => (
-                  <AnimatedStat key={i} value={stat.value} label={stat.label} className="text-center" />
-                ))}
-              </div>
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="max-w-3xl space-y-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 backdrop-blur-sm animate-pulse-glow">
+              <Rocket className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Launch Your Events to New Heights</span>
+            </div>
+            
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.1]">
+              <span className="text-foreground">Your Events</span>
+              <br />
+              <span className="text-gradient-primary">Deserve Liftoff</span>
+            </h1>
+            
+            <p className="text-xl text-muted-foreground max-w-xl leading-relaxed">
+              Design events, run awards programs, sell tickets, and sign sponsors—powered by AI agents that do the heavy lifting.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-primary-foreground font-bold shadow-rocket transition-all hover:scale-105 h-14 px-8 text-lg animate-rocket-glow">
+                <Rocket className="mr-2 h-5 w-5" />
+                Launch Now
+              </Button>
+              <Button size="lg" variant="outline" asChild className="h-14 px-8 text-lg border-border bg-background/50 backdrop-blur-sm hover:bg-secondary transition-all hover:scale-105">
+                <Link to="/veteran-podcast-awards">
+                  <Play className="mr-2 h-5 w-5" />
+                  See Case Study
+                </Link>
+              </Button>
             </div>
 
-            <div className="relative hidden lg:block">
-              <div className="relative rounded-2xl overflow-hidden shadow-elevated">
-                <img 
-                  src={heroEventImage} 
-                  alt="Military veterans networking at conference event" 
-                  className="w-full h-auto object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent" />
-              </div>
-              {/* Floating stats card */}
-              <div className="absolute -bottom-6 -left-6 bg-card p-4 rounded-xl shadow-elevated border border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-foreground">1,200+</div>
-                    <div className="text-sm text-muted-foreground">Attendees registered</div>
-                  </div>
-                </div>
-              </div>
+            {/* Trust indicators */}
+            <div className="flex flex-wrap gap-6 pt-4">
+              {stats.map((stat, i) => (
+                <AnimatedStat key={i} value={stat.value} label={stat.label} className="text-center" />
+              ))}
             </div>
           </div>
         </div>
+
+        {/* Decorative elements */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
 
       {/* Why Now Strip - Dark Section */}

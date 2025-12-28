@@ -21,14 +21,14 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-white/95 backdrop-blur-xl shadow-sm">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur-xl">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">EA</span>
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-primary group-hover:shadow-rocket transition-shadow duration-300">
+              <span className="text-primary-foreground font-display font-bold text-sm">🚀</span>
             </div>
-            <span className="font-headline font-bold text-lg text-foreground">Events & Awards OS</span>
+            <span className="font-display font-bold text-lg text-foreground tracking-wide">Event<span className="text-gradient-primary">Rocket</span></span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">

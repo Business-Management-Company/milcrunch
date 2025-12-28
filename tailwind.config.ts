@@ -47,10 +47,19 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        dark: {
-          DEFAULT: "hsl(var(--dark-bg))",
-          foreground: "hsl(var(--dark-foreground))",
-          muted: "hsl(var(--dark-muted))",
+        rocket: {
+          orange: "hsl(var(--rocket-orange))",
+          flame: "hsl(var(--rocket-flame))",
+        },
+        space: {
+          deep: "hsl(var(--space-deep))",
+          mid: "hsl(var(--space-mid))",
+        },
+        cosmic: {
+          purple: "hsl(var(--cosmic-purple))",
+        },
+        star: {
+          glow: "hsl(var(--star-glow))",
         },
       },
       backgroundImage: {
@@ -59,15 +68,17 @@ export default {
         'gradient-primary': 'var(--gradient-primary)',
         'gradient-accent': 'var(--gradient-accent)',
         'gradient-card': 'var(--gradient-card)',
+        'gradient-flame': 'var(--gradient-flame)',
       },
       boxShadow: {
         'glow': 'var(--shadow-glow)',
         'card': 'var(--shadow-card)',
         'elevated': 'var(--shadow-elevated)',
-        'primary': '0 4px 14px 0 hsla(217, 91%, 60%, 0.4)',
+        'rocket': 'var(--shadow-rocket)',
+        'primary': '0 4px 20px 0 hsla(24, 95%, 53%, 0.5)',
       },
       fontFamily: {
-        'display': ['Playfair Display', 'serif'],
+        'display': ['Orbitron', 'sans-serif'],
         'headline': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
         'sans': ['Inter', 'system-ui', 'sans-serif'],
       },
@@ -93,12 +104,18 @@ export default {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
+        "rocket-launch": {
+          "0%": { transform: "translateY(100px) scale(0.8)", opacity: "0" },
+          "50%": { transform: "translateY(-10px) scale(1.05)", opacity: "1" },
+          "100%": { transform: "translateY(0) scale(1)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-out",
         "scale-in": "scale-in 0.3s ease-out",
+        "rocket-launch": "rocket-launch 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
       },
     },
   },
