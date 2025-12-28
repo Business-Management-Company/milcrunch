@@ -17,8 +17,6 @@ import featureInPerson from "@/assets/feature-in-person.jpg";
 import featureVirtual from "@/assets/feature-virtual.jpg";
 import featureHybrid from "@/assets/feature-hybrid.jpg";
 import awardsCeremonyImage from "@/assets/awards-ceremony.jpg";
-import vpaLogo from "@/assets/veteran-podcast-awards-logo.png";
-import nmpdImage from "@/assets/national-military-podcast-day.png";
 
 const Index = () => {
   const features = [
@@ -171,139 +169,19 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Featured Events Showcase - Moved up */}
+      {/* Event Formats - What You Can Run (moved above Powered by Platform) */}
       <section className="py-24 px-6 bg-background">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
-              <Star className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium text-accent">Success Stories</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Event Formats</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
-              Powered by Our Platform
+              Run Any Type of Event
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Real events and awards programs running on our infrastructure
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* VPA Card */}
-            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
-              <div className="relative aspect-[16/10] overflow-hidden">
-                <img 
-                  src={nmpdImage} 
-                  alt="Veteran Podcast Awards"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 via-orange-500/10 to-transparent opacity-60" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                
-                {/* Logo */}
-                <div className="absolute top-4 left-4">
-                  <img src={vpaLogo} alt="" className="w-16 h-16 rounded-xl shadow-lg bg-white/10 backdrop-blur-sm p-2" />
-                </div>
-
-                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-amber-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
-                  Flagship Awards
-                </div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
-                    Veteran Podcast Awards
-                  </h3>
-                  <p className="text-white/80 text-sm md:text-base max-w-md">
-                    The industry's leading awards for military & veteran podcast content
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-4 gap-4 text-center">
-                  {[
-                    { value: "500+", label: "Nominations" },
-                    { value: "50", label: "Judges" },
-                    { value: "10K+", label: "Votes" },
-                    { value: "20+", label: "Sponsors" }
-                  ].map((stat, i) => (
-                    <div key={i}>
-                      <div className="text-lg font-bold text-foreground">{stat.value}</div>
-                      <div className="text-xs text-muted-foreground">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <Button 
-                  asChild 
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-[1.02] transition-transform"
-                  onClick={() => window.scrollTo(0, 0)}
-                >
-                  <Link to="/veteran-podcast-awards" onClick={() => window.scrollTo(0, 0)}>
-                    View Case Study
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-
-            {/* NMPD Card */}
-            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
-              <div className="relative aspect-[16/10] overflow-hidden">
-                <img 
-                  src={awardsCeremonyImage} 
-                  alt="National Military Podcast Day"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-blue-500/20 via-cyan-500/10 to-transparent opacity-60" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-
-                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-blue-500 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
-                  Annual Event
-                </div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
-                    National Military Podcast Day
-                  </h3>
-                  <p className="text-white/80 text-sm md:text-base max-w-md">
-                    The premier celebration bringing together military podcasters nationwide
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    <span className="text-sm">Annual Event</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="w-4 h-4 text-primary" />
-                    <span className="text-sm">5,000+ Expected</span>
-                  </div>
-                </div>
-
-                <Button asChild variant="outline" className="w-full border-border hover:bg-secondary group-hover:scale-[1.02] transition-transform">
-                  <Link to="/veteran-podcast-awards">
-                    Learn More
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* What You Can Run - Premium Cards */}
-      <section className="py-24 px-6 bg-background">
-        <div className="container mx-auto">
-          <div className="text-center mb-16 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
-              What You Can Run
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              One platform for every type of event and engagement
+              Choose your format—we handle the rest
             </p>
           </div>
           
@@ -346,29 +224,158 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Built for Scale - Dark Section */}
+      {/* Platform Solutions - What's Included */}
       <section className="py-24 px-6 bg-dark-section">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20">
+              <Sparkles className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-accent">Platform</span>
+            </div>
             <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-dark-foreground">
-              Built for Scale
+              Everything You Need
             </h2>
             <p className="text-xl text-dark-muted max-w-2xl mx-auto">
-              From startup events to enterprise conferences
+              Ticketing, marketing, awards, and sponsorships—all in one place
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Building2, text: "Multiple brands, one unified platform" },
-              { icon: Users, text: "Shared audience data and reporting" },
-              { icon: Sparkles, text: "White-label branding per event" }
+              { icon: Calendar, title: "Event Ticketing", description: "Sell tickets with flexible pricing, promo codes, and group discounts" },
+              { icon: Award, title: "Awards Programs", description: "Run nominations, judging panels, and public voting campaigns" },
+              { icon: FileText, title: "Sponsorships", description: "Create proposals, track engagement, and close deals faster" },
+              { icon: BarChart3, title: "Analytics", description: "Real-time dashboards for sales, attendance, and engagement" }
             ].map((item, index) => (
-              <div key={index} className="flex items-center gap-3 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                <item.icon className="w-5 h-5 text-accent flex-shrink-0" />
-                <span className="text-dark-foreground text-sm">{item.text}</span>
+              <div key={index} className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:bg-white/10 transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <item.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-headline font-bold text-lg text-dark-foreground mb-2">{item.title}</h3>
+                <p className="text-sm text-dark-muted">{item.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Success Stories - Powered by Platform */}
+      <section className="py-24 px-6 bg-background">
+        <div className="container mx-auto">
+          <div className="text-center mb-16 space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
+              <Star className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-accent">Case Studies</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
+              Powered by Event Rocket
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              See what's possible with our platform
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Tech Summit Card */}
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <img 
+                  src={featureInPerson} 
+                  alt="Tech Innovation Summit"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-primary/10 to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                  Conference
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
+                    Tech Innovation Summit
+                  </h3>
+                  <p className="text-white/80 text-sm md:text-base max-w-md">
+                    Annual conference bringing together 2,500+ tech leaders
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-4 gap-4 text-center">
+                  {[
+                    { value: "2.5K", label: "Attendees" },
+                    { value: "45", label: "Speakers" },
+                    { value: "$150K", label: "Revenue" },
+                    { value: "12", label: "Sponsors" }
+                  ].map((stat, i) => (
+                    <div key={i}>
+                      <div className="text-lg font-bold text-foreground">{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button 
+                  asChild 
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-[1.02] transition-transform"
+                >
+                  <Link to="/demo">
+                    View Demo
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
+            </Card>
+
+            {/* Global Awards Card */}
+            <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <img 
+                  src={awardsCeremonyImage} 
+                  alt="Global Marketing Awards"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-accent/20 via-accent/10 to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-accent text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                  Awards Program
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h3 className="text-2xl md:text-3xl font-headline font-bold text-white mb-2 drop-shadow-lg">
+                    Global Marketing Awards
+                  </h3>
+                  <p className="text-white/80 text-sm md:text-base max-w-md">
+                    Industry-leading awards celebrating marketing excellence
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-4 gap-4 text-center">
+                  {[
+                    { value: "800+", label: "Nominations" },
+                    { value: "30", label: "Categories" },
+                    { value: "25K", label: "Votes" },
+                    { value: "18", label: "Sponsors" }
+                  ].map((stat, i) => (
+                    <div key={i}>
+                      <div className="text-lg font-bold text-foreground">{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button asChild variant="outline" className="w-full border-border hover:bg-secondary group-hover:scale-[1.02] transition-transform">
+                  <Link to="/demo">
+                    Explore Awards
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
+            </Card>
           </div>
         </div>
       </section>
