@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import eventRocketLogo from "@/assets/event-rocket-logo.png";
+import eventRocketLogo from "@/assets/event-rocket-logo-new.png";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();

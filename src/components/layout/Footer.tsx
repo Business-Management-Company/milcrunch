@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import eventRocketLogo from "@/assets/event-rocket-logo.png";
+import eventRocketLogo from "@/assets/event-rocket-logo-new.png";
 
 const Footer = () => {
   return (
