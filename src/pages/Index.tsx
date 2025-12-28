@@ -12,7 +12,7 @@ import FeaturedEventCard from "@/components/FeaturedEventCard";
 import AnimatedStat from "@/components/AnimatedStat";
 
 // Import images
-import heroCollage from "@/assets/hero-collage.jpg";
+import heroCollage from "@/assets/hero-events-fun.jpg";
 import featureInPerson from "@/assets/feature-in-person.jpg";
 import featureVirtual from "@/assets/feature-virtual.jpg";
 import featureHybrid from "@/assets/feature-hybrid.jpg";
@@ -168,7 +168,10 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Event Formats - What You Can Run (moved above Powered by Platform) */}
+      {/* Interactive Platform Builder - Moved up */}
+      <PlatformBuilder />
+
+      {/* Event Formats - What You Can Run */}
       <section className="py-24 px-6 bg-background">
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
@@ -378,9 +381,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-
-      {/* Interactive Platform Builder */}
-      <PlatformBuilder />
 
       {/* AI Event Agents - Premium Section */}
       <section className="py-24 px-6 bg-background overflow-hidden">
