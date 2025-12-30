@@ -79,8 +79,8 @@ export default {
         'primary': '0 4px 20px 0 hsla(228, 87%, 57%, 0.5)',
       },
       fontFamily: {
-        'display': ['Orbitron', 'sans-serif'],
-        'headline': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        'display': ['Bebas Neue', 'sans-serif'],
+        'headline': ['Bebas Neue', 'sans-serif'],
         'sans': ['Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
