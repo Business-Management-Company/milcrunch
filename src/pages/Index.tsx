@@ -12,7 +12,7 @@ import FeaturedEventCard from "@/components/FeaturedEventCard";
 import AnimatedStat from "@/components/AnimatedStat";
 
 // Import images
-import heroCollage from "@/assets/hero-events-fun.jpg";
+import heroCollage from "@/assets/hero-crowd-party.jpg";
 import featureInPerson from "@/assets/feature-in-person.jpg";
 import featureVirtual from "@/assets/feature-virtual.jpg";
 import featureHybrid from "@/assets/feature-hybrid.jpg";
@@ -104,7 +104,7 @@ const Index = () => {
 
         <div className="container mx-auto px-6 relative z-10 text-center">
           <div className="max-w-4xl mx-auto space-y-8">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight leading-[1.05]">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display tracking-wide leading-[1.05] uppercase">
               <span className="text-foreground">Events, Awards</span>
               <br />
               <span className="text-foreground">& Sponsorships</span>
