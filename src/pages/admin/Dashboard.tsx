@@ -27,11 +27,11 @@ const Dashboard = () => {
   useEffect(() => {
     if (!loading && user && !permissions.canViewDashboard) {
       if (permissions.canViewAttendeePortal) {
-        navigate("/attendee/portal");
+        navigate("/portal");
       } else if (permissions.canViewSponsorPortal) {
         navigate("/sponsor/portal");
       } else if (permissions.canJudgeNominations) {
-        navigate("/judge/portal");
+        navigate("/portal"); // Judge portal not implemented yet, redirect to main portal
       }
     }
   }, [permissions, loading, user, navigate]);
