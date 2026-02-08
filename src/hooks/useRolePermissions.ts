@@ -149,7 +149,7 @@ const rolePermissionsMap: Record<NonNullable<SimulatedRole>, RolePermissions> = 
 };
 
 const defaultPermissions: RolePermissions = {
-  canViewDashboard: false,
+  canViewDashboard: true,
   canManageEvents: false,
   canManageAwards: false,
   canManageSponsors: false,
@@ -163,8 +163,8 @@ const defaultPermissions: RolePermissions = {
   canCheckInAttendees: false,
   canJudgeNominations: false,
   canViewSponsorPortal: false,
-  canViewAttendeePortal: false,
-  dashboardLabel: "Guest",
+  canViewAttendeePortal: true,
+  dashboardLabel: "Member",
 };
 
 export const useRolePermissions = (): RolePermissions => {
