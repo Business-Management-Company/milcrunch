@@ -26,9 +26,11 @@ const SIDEBAR_SECTIONS: { label: string; items: NavItem[] }[] = [
     label: "CREATORS & CONTENT",
     items: [
       { type: "link", href: "/brand/discover", label: "Discovery", emoji: "🔍" },
+      { type: "link", href: "/brand/directory", label: "Influencer Directory", emoji: "👥" },
       { type: "link", href: "/lists", label: "Influencer Lists", emoji: "📋" },
       { type: "link", href: "/verification", label: "Verification", emoji: "✅" },
-      { type: "link", href: "/podcasts", label: "Podcasts", emoji: "🎙️" },
+      { type: "link", href: "/admin/featured-creators", label: "Featured Creators", emoji: "⭐" },
+      { type: "link", href: "/brand/attribution", label: "Creator Attribution", emoji: "📊" },
     ],
   },
   {
@@ -49,7 +51,7 @@ const SIDEBAR_SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "MEDIA",
     items: [
-      { type: "link", href: "/admin/media/podcasts", label: "Podcasts", emoji: "🎙️" },
+      { type: "link", href: "/brand/podcasts", label: "Podcasts", emoji: "🎙️" },
       { type: "link", href: "/admin/media/pdtv", label: "PDTV", emoji: "📺" },
     ],
   },

@@ -1,11 +1,11 @@
 /**
  * Fetch and parse an RSS podcast feed.
- * Tries direct fetch first; falls back to allorigins CORS proxy on failure.
- * Timeout: 10 seconds.
+ * Fetches via app proxy (/api/rss-proxy) when available to avoid CORS; falls back to allorigins.
+ * Parses XML with DOMParser (browser-native, no Node deps).
  */
 
 const CORS_PROXY = "https://api.allorigins.win/raw?url=";
-const TIMEOUT_MS = 10000;
+const TIMEOUT_MS = 15000;
 
 export interface ParsedEpisode {
   title: string;
@@ -28,36 +28,40 @@ export interface ParsedPodcastFeed {
   episodes: ParsedEpisode[];
 }
 
+/** Fetch RSS XML: try app proxy first (no CORS), then CORS proxy. */
+async function fetchRssXml(feedUrl: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const proxyUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/api/rss-proxy?url=${encodeURIComponent(feedUrl)}`
+        : `${CORS_PROXY}${encodeURIComponent(feedUrl)}`;
+    const res = await fetch(proxyUrl, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const xml = await res.text();
+    clearTimeout(timeout);
+    return xml;
+  } catch (proxyErr) {
+    clearTimeout(timeout);
+    const fallbackUrl = CORS_PROXY + encodeURIComponent(feedUrl);
+    const controller2 = new AbortController();
+    const t2 = setTimeout(() => controller2.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(fallbackUrl, { signal: controller2.signal });
+      if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+      const xml = await res.text();
+      clearTimeout(t2);
+      return xml;
+    } finally {
+      clearTimeout(t2);
+    }
+  }
+}
+
 function decodeHtmlEntities(text: string): string {
   const doc = new DOMParser().parseFromString(`<div>${text}</div>`, "text/html");
   return doc.documentElement.textContent ?? text;
-}
-
-function getText(el: Element | null, tag: string): string {
-  if (!el) return "";
-  const child = el.getElementsByTagName(tag)[0];
-  return child ? decodeHtmlEntities(child.textContent?.trim() ?? "") : "";
-}
-
-function getAttr(el: Element | null, tag: string, attr: string): string {
-  if (!el) return "";
-  const child = el.getElementsByTagName(tag)[0];
-  if (!child) return "";
-  return child.getAttribute(attr) ?? child.getAttribute(attr.replace("href", "href")) ?? "";
-}
-
-// iTunes namespace often used without prefix in RSS
-function getItunesOrChannel(el: Document, tag: string): string {
-  const channel = el.getElementsByTagName("channel")[0];
-  if (!channel) return "";
-  const byTag = channel.getElementsByTagName(tag)[0];
-  if (byTag) return decodeHtmlEntities(byTag.textContent?.trim() ?? "");
-  const itunes = channel.getElementsByTagName("itunes:author")[0]
-    ?? channel.querySelector("[*|author]");
-  if (tag === "itunes:author" && itunes) return decodeHtmlEntities(itunes.textContent?.trim() ?? "");
-  const image = channel.getElementsByTagName("itunes:image")[0] ?? channel.querySelector("[*|image]");
-  if (tag === "itunes:image" && image) return image.getAttribute("href") ?? "";
-  return "";
 }
 
 function getChannelText(doc: Document, tag: string): string {
@@ -74,6 +78,16 @@ function getChannelAttr(doc: Document, tag: string, attr: string): string {
   return el?.getAttribute(attr) ?? "";
 }
 
+function getItemText(item: Element, tag: string): string {
+  const el = item.getElementsByTagName(tag)[0];
+  return el ? decodeHtmlEntities(el.textContent?.trim() ?? "") : "";
+}
+
+function getItemAttr(item: Element, tag: string, attr: string): string {
+  const el = item.getElementsByTagName(tag)[0];
+  return el?.getAttribute(attr) ?? "";
+}
+
 function parseItems(doc: Document, limit: number): ParsedEpisode[] {
   const channel = doc.getElementsByTagName("channel")[0];
   if (!channel) return [];
@@ -83,7 +97,7 @@ function parseItems(doc: Document, limit: number): ParsedEpisode[] {
     const item = items[i];
     const enclosure = item.getElementsByTagName("enclosure")[0];
     const audioUrl = enclosure?.getAttribute("url") ?? "";
-    const title = getText(item, "title");
+    const title = getItemText(item, "title");
     const descEl = item.getElementsByTagName("description")[0];
     const description = descEl ? decodeHtmlEntities(descEl.textContent?.trim() ?? "") : "";
     const durationEl = item.getElementsByTagName("duration")[0] ?? item.querySelector("[*|duration]");
@@ -105,24 +119,8 @@ function parseItems(doc: Document, limit: number): ParsedEpisode[] {
 }
 
 export async function parsePodcastFeed(feedUrl: string): Promise<ParsedPodcastFeed | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
   try {
-    let xml: string;
-    try {
-      const res = await fetch(feedUrl, { signal: controller.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      xml = await res.text();
-    } catch (directErr) {
-      const proxyUrl = CORS_PROXY + encodeURIComponent(feedUrl);
-      const res = await fetch(proxyUrl, { signal: controller.signal });
-      if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-      xml = await res.text();
-    } finally {
-      clearTimeout(timeout);
-    }
-
+    const xml = await fetchRssXml(feedUrl);
     const doc = new DOMParser().parseFromString(xml, "text/xml");
     const channel = doc.getElementsByTagName("channel")[0];
     if (!channel) {
@@ -153,7 +151,7 @@ export async function parsePodcastFeed(feedUrl: string): Promise<ParsedPodcastFe
       if (pub) lastEpisodeDate = pub.textContent?.trim() ?? "";
     }
 
-    const episodes = parseItems(doc, 10);
+    const episodes = parseItems(doc, 50);
 
     return {
       title,
@@ -167,7 +165,6 @@ export async function parsePodcastFeed(feedUrl: string): Promise<ParsedPodcastFe
       episodes,
     };
   } catch (err) {
-    clearTimeout(timeout);
     console.error("[parsePodcastFeed] Failed for", feedUrl, err);
     return null;
   }

@@ -1,3 +1,5 @@
+// Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
+// (Vercel does not inject headers), so we always send Authorization in every fetch.
 const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
 const ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
 
@@ -212,6 +214,7 @@ export async function searchCreators(
   query: string,
   options: SearchCreatorsOptions = {}
 ): Promise<SearchCreatorsResult> {
+  console.log("[Discovery] API key present:", !!import.meta.env.VITE_INFLUENCERS_CLUB_API_KEY);
   const trimmed = query.trim();
   const apiKey = getApiKey();
 
@@ -245,8 +248,8 @@ export async function searchCreators(
   const res = await fetch(DISCOVERY_URL, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
   });

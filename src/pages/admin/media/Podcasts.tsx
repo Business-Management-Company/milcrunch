@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
+import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -64,24 +65,22 @@ const CATEGORIES = ["Military", "Veterans", "Fitness", "News & Politics", "Comed
 const PAGE_SIZE = 25;
 
 function parseCSV(text: string): { feed_url: string; title?: string; category?: string; author?: string }[] {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const header = lines[0].toLowerCase().split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-  const feedUrlIdx = header.findIndex((h) => h === "feed_url" || h === "feed url");
-  if (feedUrlIdx === -1) return [];
-  const titleIdx = header.findIndex((h) => h === "title");
-  const categoryIdx = header.findIndex((h) => h === "category");
-  const authorIdx = header.findIndex((h) => h === "author");
+  const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
+  const fields = result.meta.fields ?? [];
+  const feedUrlKey = fields.find((f) => /^feed_?url$/i.test(f.trim())) ?? fields.find((f) => /feed\s*url/i.test(f));
+  if (!feedUrlKey) return [];
+  const titleKey = fields.find((f) => /^title$/i.test(f.trim()));
+  const categoryKey = fields.find((f) => /^category$/i.test(f.trim()));
+  const authorKey = fields.find((f) => /^author$/i.test(f.trim()));
   const rows: { feed_url: string; title?: string; category?: string; author?: string }[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].match(/("([^"]*)")|([^,]+)/g)?.map((v) => v?.replace(/^"|"$/g, "").trim() ?? "") ?? [];
-    const feed_url = values[feedUrlIdx]?.trim();
+  for (const row of result.data) {
+    const feed_url = (row[feedUrlKey] ?? "").trim();
     if (!feed_url) continue;
     rows.push({
       feed_url,
-      title: titleIdx >= 0 ? values[titleIdx]?.trim() : undefined,
-      category: categoryIdx >= 0 ? values[categoryIdx]?.trim() : undefined,
-      author: authorIdx >= 0 ? values[authorIdx]?.trim() : undefined,
+      title: (titleKey ? (row[titleKey] ?? "").trim() : "") || undefined,
+      category: (categoryKey ? (row[categoryKey] ?? "").trim() : "") || undefined,
+      author: (authorKey ? (row[authorKey] ?? "").trim() : "") || undefined,
     });
   }
   return rows;
@@ -117,6 +116,7 @@ export default function AdminPodcasts() {
 
   const [deleteTarget, setDeleteTarget] = useState<PodcastRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPodcasts = useCallback(async () => {
     const { data, error } = await supabase
@@ -268,33 +268,65 @@ export default function AdminPodcasts() {
       const text = String(reader.result ?? "");
       const rows = parseCSV(text);
       setCsvRows(rows);
-      setCsvOpen(true);
+      setCsvOpen(rows.length > 0);
+      if (rows.length === 0) toast.error("No valid rows with feed_url found in CSV.");
     };
-    reader.readAsText(file);
+    reader.onerror = () => toast.error("Failed to read file.");
+    reader.readAsText(file, "UTF-8");
     e.target.value = "";
   };
 
   const handleCSVImport = async () => {
     if (csvRows.length === 0) return;
     setCsvImporting(true);
+    setCsvProgress(0);
     let done = 0;
-    for (const row of csvRows) {
-      const { error } = await supabase.from("podcasts").upsert(
-        {
-          feed_url: row.feed_url,
-          title: row.title ?? null,
-          category: row.category ?? null,
-          author: row.author ?? null,
-          status: "active",
-        },
-        { onConflict: "feed_url" }
-      );
-      if (!error) done++;
-      setCsvProgress(Math.round((done / csvRows.length) * 100));
+    const total = csvRows.length;
+    for (let i = 0; i < total; i++) {
+      const row = csvRows[i];
+      const parsed = await parsePodcastFeed(row.feed_url);
+      if (parsed) {
+        const { data: inserted, error: insertError } = await supabase
+          .from("podcasts")
+          .upsert(
+            {
+              feed_url: row.feed_url,
+              title: (parsed.title || row.title) ?? null,
+              description: parsed.description ?? null,
+              author: (parsed.author || row.author) ?? null,
+              artwork_url: parsed.artworkUrl ?? null,
+              website_url: parsed.websiteUrl ?? null,
+              category: row.category ?? null,
+              language: parsed.language || "en",
+              episode_count: parsed.episodeCount,
+              last_episode_date: parsed.lastEpisodeDate ? new Date(parsed.lastEpisodeDate).toISOString() : null,
+              status: "active",
+            },
+            { onConflict: "feed_url" }
+          )
+          .select("id")
+          .single();
+        if (!insertError && inserted && parsed.episodes.length > 0) {
+          await supabase.from("podcast_episodes").delete().eq("podcast_id", inserted.id);
+          await supabase.from("podcast_episodes").insert(
+            parsed.episodes.map((ep) => ({
+              podcast_id: inserted.id,
+              title: ep.title || null,
+              description: ep.description || null,
+              audio_url: ep.audioUrl || null,
+              duration: ep.duration || null,
+              published_at: ep.publishedAt ? new Date(ep.publishedAt).toISOString() : null,
+              episode_artwork_url: ep.artworkUrl || null,
+            }))
+          );
+        }
+        if (!insertError) done++;
+      }
+      setCsvProgress(Math.round(((i + 1) / total) * 100));
     }
     setCsvImporting(false);
     setCsvProgress(100);
-    toast.success(`Imported ${done} of ${csvRows.length} feeds.`);
+    toast.success(`Imported ${done} of ${total} feeds.`);
     setCsvOpen(false);
     setCsvRows([]);
     await fetchPodcasts();
@@ -434,15 +466,22 @@ export default function AdminPodcasts() {
             <Plus className="h-4 w-4 mr-2" />
             Add Feed
           </Button>
-          <label className="cursor-pointer">
-            <input type="file" accept=".csv" className="hidden" onChange={handleCSVPick} />
-            <Button variant="outline" size="sm" asChild>
-              <span>
-                <Upload className="h-4 w-4 mr-2" />
-                Import CSV
-              </span>
-            </Button>
-          </label>
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleCSVPick}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={() => csvInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
+          </Button>
         </div>
       </header>
 

@@ -137,6 +137,11 @@ export default function PodcastsPage() {
                   <div key={i} className="rounded-xl border border-gray-200 bg-gray-50 h-64 animate-pulse" />
                 ))}
               </div>
+            ) : podcasts.length === 0 ? (
+              <div className="text-center py-16 text-gray-500">
+                <Mic2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium text-gray-600">No podcasts yet. Check back soon!</p>
+              </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-16 text-gray-500">
                 <Mic2 className="h-12 w-12 mx-auto mb-4 opacity-50" />

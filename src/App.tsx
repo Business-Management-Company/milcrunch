@@ -46,18 +46,39 @@ import DemoSponsorships from "./pages/admin/DemoSponsorships";
 import SponsorPortal from "./pages/sponsor/Portal";
 import Demo from "./pages/Demo";
 import EventsCalendar from "./pages/EventsCalendar";
+import LoginPage from "./pages/creator/LoginPage";
+import SignupPage from "./pages/creator/SignupPage";
+import { CreatorRoute, BrandRoute } from "./components/auth/ProtectedRoute";
 import CreatorDashboard from "./pages/creator/CreatorDashboard";
 import CreatorProfile from "./pages/creator/CreatorProfile";
 import CreatorSocials from "./pages/creator/CreatorSocials";
+import CreatorBioPage from "./pages/creator/CreatorBioPage";
+import CreatorAnalytics from "./pages/creator/CreatorAnalytics";
+import CreatorOnboard from "./pages/creator/CreatorOnboard";
+import CreatorBioEditor from "./pages/creator/CreatorBioEditor";
+import CreatePost from "./pages/creator/CreatePost";
+import CreatorPosts from "./pages/creator/CreatorPosts";
+import CreatorEvents from "./pages/creator/CreatorEvents";
+import CreatorDeals from "./pages/creator/CreatorDeals";
+import CreatorLists from "./pages/creator/CreatorLists";
+import CreatorSettings from "./pages/creator/CreatorSettings";
+import CreatorCustomize from "./pages/creator/CreatorCustomize";
+import CreatorHelp from "./pages/creator/CreatorHelp";
+import SimilarCreators from "./pages/creator/SimilarCreators";
+import Leaderboard from "./pages/creator/Leaderboard";
 import CreatorOpportunities from "./pages/creator/CreatorOpportunities";
 import BrandDashboard from "./pages/brand/BrandDashboard";
 import BrandDiscover from "./pages/brand/BrandDiscover";
 import BrandLists from "./pages/brand/BrandLists";
+import BrandDirectory from "./pages/brand/BrandDirectory";
 import BrandCampaigns from "./pages/brand/BrandCampaigns";
+import BrandAttribution from "./pages/brand/BrandAttribution";
+import BrandSettings from "./pages/brand/BrandSettings";
 import PDXHome from "./pages/pdx/PDXHome";
 import CreatePDX from "./pages/pdx/CreatePDX";
 import AdminPodcasts from "./pages/admin/media/Podcasts";
 import PDTV from "./pages/admin/media/PDTV";
+import FeaturedCreators from "./pages/admin/FeaturedCreators";
 import BusinessOverview from "./pages/admin/BusinessOverview";
 import Podcasts from "./pages/Podcasts";
 import PlaceholderPage from "./pages/PlaceholderPage";
@@ -84,6 +105,8 @@ const App = () => (
               <Route path="/" element={<HomePage />} />
               <Route path="/home" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/veteran-podcast-awards" element={<VeteranPodcastAwards />} />
@@ -97,13 +120,17 @@ const App = () => (
               <Route path="/solutions/media-brands" element={<SolutionsMediaBrands />} />
               <Route path="/solutions/event-teams" element={<SolutionsEventTeams />} />
               <Route path="/solutions/sponsors" element={<SolutionsSponsors />} />
-              <Route element={<AppLayout />}>
+              <Route element={<BrandRoute><AppLayout /></BrandRoute>}>
                 <Route path="/dashboard" element={<SummaryDashboard />} />
                 <Route path="/lists" element={<BrandLists />} />
                 <Route path="/brand/dashboard" element={<BrandDashboard />} />
                 <Route path="/brand/discover" element={<BrandDiscover />} />
+                <Route path="/brand/directory" element={<BrandDirectory />} />
                 <Route path="/brand/lists" element={<BrandLists />} />
                 <Route path="/brand/campaigns" element={<BrandCampaigns />} />
+                <Route path="/brand/attribution" element={<BrandAttribution />} />
+                <Route path="/brand/settings" element={<BrandSettings />} />
+                <Route path="/brand/podcasts" element={<AdminPodcasts />} />
                 <Route path="/admin" element={<SummaryDashboard />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/events/create" element={<CreateEvent />} />
@@ -122,6 +149,7 @@ const App = () => (
               <Route path="/admin/travel" element={<TravelAddons />} />
               <Route path="/admin/media/podcasts" element={<AdminPodcasts />} />
               <Route path="/admin/media/pdtv" element={<PDTV />} />
+              <Route path="/admin/featured-creators" element={<FeaturedCreators />} />
               <Route path="/admin/business-overview" element={<BusinessOverview />} />
               <Route path="/pdx" element={<PDXHome />} />
               <Route path="/pdx/create" element={<CreatePDX />} />
@@ -143,11 +171,28 @@ const App = () => (
               <Route path="/events/:slug" element={<EventDetail />} />
               <Route path="/events/:slug/checkout" element={<EventCheckout />} />
               <Route path="/events/:slug/confirmation" element={<EventConfirmation />} />
-              {/* Creator routes (military/veteran creators) */}
-              <Route path="/creator/dashboard" element={<CreatorDashboard />} />
-              <Route path="/creator/profile" element={<CreatorProfile />} />
-              <Route path="/creator/socials" element={<CreatorSocials />} />
-              <Route path="/creator/opportunities" element={<CreatorOpportunities />} />
+              {/* Creator bio pages (public, with CreatorPixel tracking) */}
+              <Route path="/c/:handle" element={<CreatorBioPage />} />
+              <Route path="/c/:handle/:eventSlug" element={<CreatorBioPage />} />
+              {/* Creator app (protected, role-based redirect) */}
+              <Route path="/creator/onboard" element={<CreatorRoute><CreatorOnboard /></CreatorRoute>} />
+              <Route path="/creator/dashboard" element={<CreatorRoute><CreatorDashboard /></CreatorRoute>} />
+              <Route path="/creator/profile" element={<CreatorRoute><CreatorProfile /></CreatorRoute>} />
+              <Route path="/creator/bio" element={<CreatorRoute><CreatorBioEditor /></CreatorRoute>} />
+              <Route path="/creator/socials" element={<CreatorRoute><CreatorSocials /></CreatorRoute>} />
+              <Route path="/creator/post/new" element={<CreatorRoute><CreatePost /></CreatorRoute>} />
+              <Route path="/creator/posts" element={<CreatorRoute><CreatorPosts /></CreatorRoute>} />
+              <Route path="/creator/analytics" element={<CreatorRoute><CreatorAnalytics /></CreatorRoute>} />
+              <Route path="/creator/events" element={<CreatorRoute><CreatorEvents /></CreatorRoute>} />
+              <Route path="/creator/deals" element={<CreatorRoute><CreatorDeals /></CreatorRoute>} />
+              <Route path="/creator/lists" element={<CreatorRoute><CreatorLists /></CreatorRoute>} />
+              <Route path="/creator/settings" element={<CreatorRoute><CreatorSettings /></CreatorRoute>} />
+              <Route path="/creator/customize" element={<CreatorRoute><CreatorCustomize /></CreatorRoute>} />
+              <Route path="/creator/help" element={<CreatorRoute><CreatorHelp /></CreatorRoute>} />
+              <Route path="/creator/similar" element={<CreatorRoute><SimilarCreators /></CreatorRoute>} />
+              <Route path="/creator/leaderboard" element={<CreatorRoute><Leaderboard /></CreatorRoute>} />
+              <Route path="/creator/opportunities" element={<CreatorRoute><CreatorOpportunities /></CreatorRoute>} />
+              <Route path="/creator/:handle" element={<CreatorBioPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

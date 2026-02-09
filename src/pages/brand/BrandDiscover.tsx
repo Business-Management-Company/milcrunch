@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Link2, Mail, BadgeCheck } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +19,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
+import { upsertCreator } from "@/lib/creators-db";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import CreateListModal from "@/components/CreateListModal";
+import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
 
@@ -109,6 +119,10 @@ const BrandDiscover = () => {
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
   const [createListPendingCreator, setCreateListPendingCreator] = useState<CreatorCard | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
+  const [createListForBulkImportOpen, setCreateListForBulkImportOpen] = useState(false);
+  const [createListForBulkAddOpen, setCreateListForBulkAddOpen] = useState(false);
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
 
@@ -220,8 +234,120 @@ const BrandDiscover = () => {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === creators.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(creators.map((c) => c.id)));
+  };
+
+  const selectedCreators = creators.filter((c) => selectedIds.has(c.id));
+
+  const handleBulkAddToList = (listId: string) => {
+    const list = lists.find((l) => l.id === listId);
+    if (!list) return;
+    selectedCreators.forEach((c) => addCreatorToList(listId, creatorToListPayload(c)));
+    toast.success(`Added ${selectedCreators.length} creator${selectedCreators.length !== 1 ? "s" : ""} to ${list?.name ?? "list"}`);
+    setSelectedIds(new Set());
+  };
+
+  const handleImportAll = async () => {
+    const toImport = selectedCreators;
+    if (toImport.length === 0) return;
+    setImportProgress({ current: 0, total: toImport.length });
+    let done = 0;
+    for (const c of toImport) {
+      await upsertCreator({
+        display_name: c.name,
+        handle: c.username ?? c.id,
+        platform: c.platforms?.[0] ?? "instagram",
+        avatar_url: c.avatar ?? null,
+        follower_count: c.followers ?? null,
+        engagement_rate: c.engagementRate ?? null,
+        category: c.category ?? null,
+        bio: c.bio ?? null,
+        location: c.location ?? null,
+        is_verified: c.isVerified ?? false,
+      });
+      done++;
+      setImportProgress({ current: done, total: toImport.length });
+    }
+    setImportProgress(null);
+    setSelectedIds(new Set());
+    toast.success(`Imported ${done} creator${done !== 1 ? "s" : ""} to Directory`);
+  };
+
+  const handleImportAndAddToList = async (listId: string) => {
+    const list = lists.find((l) => l.id === listId);
+    if (!list) return;
+    const toImport = selectedCreators;
+    if (toImport.length === 0) return;
+    setImportProgress({ current: 0, total: toImport.length });
+    let done = 0;
+    for (const c of toImport) {
+      await upsertCreator({
+        display_name: c.name,
+        handle: c.username ?? c.id,
+        platform: c.platforms?.[0] ?? "instagram",
+        avatar_url: c.avatar ?? null,
+        follower_count: c.followers ?? null,
+        engagement_rate: c.engagementRate ?? null,
+        category: c.category ?? null,
+        bio: c.bio ?? null,
+        location: c.location ?? null,
+        is_verified: c.isVerified ?? false,
+      });
+      addCreatorToList(listId, creatorToListPayload(c));
+      done++;
+      setImportProgress({ current: done, total: toImport.length });
+    }
+    setImportProgress(null);
+    setSelectedIds(new Set());
+    toast.success(`Imported and added ${done} creator${done !== 1 ? "s" : ""} to ${list.name}`);
+  };
+
   return (
     <>
+      <Dialog open={!!importProgress} onOpenChange={() => {}}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Importing creators</DialogTitle>
+          </DialogHeader>
+          {importProgress && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Importing {importProgress.current} of {importProgress.total} creators...
+              </p>
+              <Progress value={(importProgress.current / importProgress.total) * 100} className="h-2" />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      <CreateListModal
+        open={createListForBulkImportOpen}
+        onOpenChange={setCreateListForBulkImportOpen}
+        onCreate={(name) => {
+          const newId = createList(name);
+          setCreateListForBulkImportOpen(false);
+          setTimeout(() => handleImportAndAddToList(newId), 0);
+        }}
+      />
+      <CreateListModal
+        open={createListForBulkAddOpen}
+        onOpenChange={setCreateListForBulkAddOpen}
+        onCreate={(name) => {
+          const newId = createList(name);
+          setCreateListForBulkAddOpen(false);
+          setTimeout(() => handleBulkAddToList(newId), 0);
+        }}
+      />
       <CreatorProfileModal
         open={profileModalOpen}
         onOpenChange={setProfileModalOpen}
@@ -378,7 +504,19 @@ const BrandDiscover = () => {
           {hasSearched && !apiLoading && (
             <>
               <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <p className="text-sm text-muted-foreground">{resultsLabel}</p>
+                <div className="flex items-center gap-4">
+                  <p className="text-sm text-muted-foreground">{resultsLabel}</p>
+                  {creators.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedIds.size === creators.length}
+                        onCheckedChange={selectAll}
+                        aria-label="Select all on page"
+                      />
+                      <span className="text-sm text-muted-foreground">Select all</span>
+                    </div>
+                  )}
+                </div>
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-[180px] rounded-lg bg-background dark:bg-slate-800 border-border">
                     <SelectValue placeholder="Sort by" />
@@ -429,7 +567,13 @@ const BrandDiscover = () => {
                           }
                         }}
                       >
-                        <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-[#0064B1] shadow-sm" aria-hidden />
+                        <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(creator.id)}
+                            onCheckedChange={() => toggleSelect(creator.id)}
+                            aria-label={`Select ${creator.name}`}
+                          />
+                        </div>
                         <div className="flex items-center gap-3 mb-2">
                           <img
                             src={creator.avatar}
@@ -569,6 +713,18 @@ const BrandDiscover = () => {
           )}
         </div>
       </div>
+
+      <BulkActionBar
+        mode="discovery"
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+        onAddToList={handleBulkAddToList}
+        listOptions={lists.map((l) => ({ id: l.id, name: l.name }))}
+        onCreateList={() => setCreateListForBulkAddOpen(true)}
+        onImportAll={handleImportAll}
+        onImportAndAddToList={handleImportAndAddToList}
+        onCreateListForImport={() => setCreateListForBulkImportOpen(true)}
+      />
     </>
   );
 };

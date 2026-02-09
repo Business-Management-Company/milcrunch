@@ -1,0 +1,61 @@
+import { supabase } from "@/integrations/supabase/client";
+
+export interface FeaturedCreator {
+  id: string;
+  display_name: string;
+  handle: string;
+  platform: string;
+  avatar_url: string | null;
+  follower_count: number | null;
+  engagement_rate: number | null;
+  category: string | null;
+  sort_order: number;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string | null;
+}
+
+/** For hero: top 3 active featured creators by sort_order. */
+export async function fetchFeaturedHero(limit = 3): Promise<FeaturedCreator[]> {
+  const { data, error } = await supabase
+    .from("featured_creators")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .limit(limit);
+  if (error) {
+    console.warn("[featured-creators] Hero fetch failed:", error.message);
+    return [];
+  }
+  return (data ?? []) as FeaturedCreator[];
+}
+
+/** For Big Names grid: up to 8 active featured creators. */
+export async function fetchFeaturedGrid(limit = 8): Promise<FeaturedCreator[]> {
+  const { data, error } = await supabase
+    .from("featured_creators")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .limit(limit);
+  if (error) {
+    console.warn("[featured-creators] Grid fetch failed:", error.message);
+    return [];
+  }
+  return (data ?? []) as FeaturedCreator[];
+}
+
+export function formatFollowerCount(n: number | null | undefined): string {
+  if (n == null) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+export function getInitials(displayName: string, handle: string): string {
+  const parts = displayName.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  if (displayName.length >= 2) return displayName.slice(0, 2).toUpperCase();
+  if (handle.length >= 2) return handle.slice(0, 2).toUpperCase();
+  return "?";
+}

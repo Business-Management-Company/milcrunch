@@ -16,14 +16,19 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  fetchFeaturedHero,
+  fetchFeaturedGrid,
+  formatFollowerCount,
+  getInitials,
+  type CreatorRow,
+} from "@/lib/creators-db";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
-const HERO_CARDS = [
-  { name: "Jason S.", handle: "savagekingdomboerboels", niche: "Veterans", followers: "359.1K", engagement: "3.2%", initials: "JS" },
-  { name: "Kevin W.", handle: "wheelchairkev", niche: "Motivation", followers: "353.1K", engagement: "4.8%", initials: "KW" },
-  { name: "Taylor S.", handle: "tsyontz", niche: "Military", followers: "96.8K", engagement: "2.1%", initials: "TS" },
-];
+// Hero background: diverse group / military community (placeholder)
+const HERO_BG_IMAGE =
+  "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1920&q=80";
 
 const NICHE_TAG_CLASSES: Record<string, string> = {
   Veterans: "bg-blue-100 text-blue-700",
@@ -41,32 +46,17 @@ const AUDIENCE = [
   { label: "Brands", icon: Building2 },
 ];
 
-const CATEGORIES = [
-  "Military Life",
-  "Fitness",
-  "Veterans",
-  "Lifestyle",
-  "Podcasts",
-  "Business",
-  "Gaming",
-  "Education",
-  "News & Politics",
-  "All Creators",
-];
-
-const FEATURED_CREATORS = [
-  { name: "Jason", handle: "savagekingdomboerboels", followers: "359.1K", niche: "Veterans", initials: "JS" },
-  { name: "Kevin", handle: "wheelchairkev", followers: "353.1K", niche: "Motivation", initials: "KW" },
-  { name: "Sven", handle: "badasscounseling", followers: "164.6K", niche: "Lifestyle", initials: "SV" },
-  { name: "David", handle: "frommilitarytomillionaire", followers: "107.9K", niche: "Military", initials: "DA" },
-  { name: "Taylor", handle: "tsyontz", followers: "96.8K", niche: "Military", initials: "TS" },
-  { name: "Jon", handle: "itsjonlynch", followers: "88.6K", niche: "Military", initials: "JO" },
-  { name: "Chive Charities", handle: "chivecharities", followers: "43.1K", niche: "Veterans", initials: "CC" },
-  { name: "Kashi", handle: "hopefor22aday_kashi", followers: "42.0K", niche: "Military", initials: "KA" },
-  { name: "Zack", handle: "zack_a_knight", followers: "39.5K", niche: "Religion", initials: "ZA" },
-  { name: "Ashlee", handle: "thewomanandwarrior", followers: "34.6K", niche: "Military", initials: "AS" },
-  { name: "Sky", handle: "skyverava", followers: "32.7K", niche: "Veterans", initials: "SK" },
-  { name: "Jillian", handle: "jillianphillipsart", followers: "23.3K", niche: "Art", initials: "JI" },
+const CATEGORIES: { label: string; image: string }[] = [
+  { label: "Military Life", image: "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&q=80" },
+  { label: "Fitness", image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80" },
+  { label: "Veterans", image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=600&q=80" },
+  { label: "Lifestyle", image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&q=80" },
+  { label: "Podcasts", image: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=600&q=80" },
+  { label: "Business", image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&q=80" },
+  { label: "Gaming", image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=80" },
+  { label: "Education", image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&q=80" },
+  { label: "News & Politics", image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&q=80" },
+  { label: "All Creators", image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80" },
 ];
 
 const EVENTS = [
@@ -84,11 +74,30 @@ const BRAND_FEATURES = [
 
 type PodcastRow = Database["public"]["Tables"]["podcasts"]["Row"];
 
+const HERO_FALLBACK: CreatorRow[] = [
+  { id: "1", display_name: "Jason S.", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 0, created_at: null },
+  { id: "2", display_name: "Kevin W.", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 1, created_at: null },
+  { id: "3", display_name: "Taylor S.", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 2, created_at: null },
+];
+
+const GRID_FALLBACK: CreatorRow[] = [
+  { id: "g1", display_name: "Jason", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 0, created_at: null },
+  { id: "g2", display_name: "Kevin", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 1, created_at: null },
+  { id: "g3", display_name: "Sven", handle: "badasscounseling", platform: "instagram", avatar_url: null, follower_count: 164600, engagement_rate: 2.5, category: "Lifestyle", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 2, created_at: null },
+  { id: "g4", display_name: "David", handle: "frommilitarytomillionaire", platform: "instagram", avatar_url: null, follower_count: 107900, engagement_rate: 2.8, category: "Military", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 3, created_at: null },
+  { id: "g5", display_name: "Taylor", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 4, created_at: null },
+  { id: "g6", display_name: "Jon", handle: "itsjonlynch", platform: "instagram", avatar_url: null, follower_count: 88600, engagement_rate: 3.0, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 5, created_at: null },
+  { id: "g7", display_name: "Chive Charities", handle: "chivecharities", platform: "instagram", avatar_url: null, follower_count: 43100, engagement_rate: 4.1, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 6, created_at: null },
+  { id: "g8", display_name: "Kashi", handle: "hopefor22aday_kashi", platform: "instagram", avatar_url: null, follower_count: 42000, engagement_rate: 2.9, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 7, created_at: null },
+];
+
 export default function HomePage() {
   const [navScrolled, setNavScrolled] = useState(false);
   const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
   const [podcastTotal, setPodcastTotal] = useState<number | null>(null);
   const [podcastsLoading, setPodcastsLoading] = useState(true);
+  const [heroCreators, setHeroCreators] = useState<CreatorRow[]>(HERO_FALLBACK);
+  const [gridCreators, setGridCreators] = useState<CreatorRow[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -101,6 +110,17 @@ export default function HomePage() {
       setPodcasts(data ?? []);
       setPodcastTotal(count ?? 0);
       setPodcastsLoading(false);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const [hero, grid] = await Promise.all([
+        fetchFeaturedHero(3),
+        fetchFeaturedGrid(8),
+      ]);
+      setHeroCreators(hero.length >= 3 ? hero : HERO_FALLBACK);
+      setGridCreators(grid.length > 0 ? grid : GRID_FALLBACK);
     })();
   }, []);
 
@@ -149,18 +169,21 @@ export default function HomePage() {
       </header>
 
       <main>
-        {/* Hero — full-width overlay, 95vh, floating creator cards (Grid Coordinates style) */}
+        {/* Hero — full-width background image + overlay, floating creator cards (Grid Coordinates style) */}
         <section className="relative min-h-[95vh] flex flex-col md:flex-row items-center justify-center px-4 md:px-8 pt-20 pb-24 overflow-hidden">
-          {/* Background: full-width photo-style gradient (left darker, right lighter) + optional subtle pattern */}
+          {/* Background: full-width photo + dark navy overlay */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url("${HERO_BG_IMAGE}")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
           <div
             className="absolute inset-0"
             style={{
-              background: `
-                linear-gradient(to right, rgba(0,7,65,0.92) 0%, rgba(0,7,65,0.85) 50%, rgba(0,7,65,0.7) 100%),
-                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='none' stroke='%23ffffff' stroke-width='0.15' opacity='0.04'/%3E%3Cpath d='M0 0h60v60H0z' fill='none' stroke='%23ffffff' stroke-width='0.08' opacity='0.03'/%3E%3C/svg%3E")
-              `,
-              backgroundSize: "cover, 60px 60px",
-              backgroundPosition: "center, 0 0",
+              background: "linear-gradient(to right, rgba(27,42,74,0.85) 0%, rgba(27,42,74,0.6) 100%)",
             }}
           />
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
@@ -168,27 +191,23 @@ export default function HomePage() {
             <div className="flex-1 md:max-w-[60%] text-center md:text-left">
               <div className="inline-flex items-center rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-6">
                 <span className="text-[#F0A71F] text-xs font-semibold uppercase tracking-wide">
-                  ☆ BE SEEN. BE HEARD. BE UNDERSTOOD.
+                  ☆ THE MILITARY CREATOR PLATFORM
                 </span>
               </div>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-4">
-                For the Military &<br />
-                <span className="text-[#F0A71F]">Veteran Community</span><br />
-                to Thrive
+                Stop juggling your events, creators, sponsors, and media.
               </h1>
-              <p className="text-white/90 text-base md:text-lg max-w-xl mb-8">
-                ParadeDeck is where the military and veteran community comes to be{" "}
-                <strong className="text-white">seen, heard, and understood</strong>. Whether you're a{" "}
-                <strong className="text-white">veteran, active duty, military spouse, podcaster, or content creator</strong> — this is your platform to share your story, grow your influence, and connect with those who truly understand your journey.
+              <p className="text-white/90 text-base md:text-lg max-w-[600px] mb-8">
+                ParadeDeck brings it all into one command center — so you can focus on the mission.
               </p>
               <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
                 <Link to="/brand/discover">
-                  <Button size="lg" className="rounded-lg bg-[#0064B1] hover:bg-[#0064B1]/90 text-white px-6 py-3 font-semibold">
-                    Become a Creator →
+                  <Button size="lg" className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold">
+                    Get Started →
                   </Button>
                 </Link>
                 <a href="/#creators">
-                  <Button size="lg" variant="outline" className="rounded-lg bg-white/10 hover:bg-white/15 border-white/20 text-white px-6 py-3 font-medium inline-flex items-center gap-2">
+                  <Button size="lg" variant="outline" className="rounded-lg bg-transparent hover:bg-white/10 border-white/40 text-white px-6 py-3 font-medium inline-flex items-center gap-2">
                     <Play className="h-4 w-4" />
                     Browse Creators
                   </Button>
@@ -206,44 +225,52 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            {/* Right 40% — stacked floating creator cards (Grid Coordinates style) */}
-            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end relative min-h-[340px] md:min-h-[420px]">
-              {HERO_CARDS.map((card, i) => (
+            {/* Right 40% — stacked floating creator cards (profile photo, name, @handle, pill, stats) */}
+            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end relative min-h-[380px] md:min-h-[440px]">
+              {heroCreators.map((card, i) => (
                 <div
-                  key={card.handle}
-                  className="absolute bg-white rounded-xl shadow-2xl p-5 w-[300px] hero-float"
+                  key={card.id}
+                  className="absolute bg-white rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.02] p-5 w-[320px] hero-float transition-all duration-300"
                   style={{
-                    top: 20 + i * 80,
+                    top: 20 + i * 88,
                     left: "50%",
-                    marginLeft: i * 20 - 150,
+                    marginLeft: i * 24 - 160,
                     animationDelay: `${i * 0.3}s`,
                     zIndex: i + 1,
                   }}
                 >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex flex-col items-center text-center">
+                    {card.category && (
+                      <span
+                        className={`absolute top-0 right-0 rounded-full px-3 py-0.5 text-xs font-semibold ${
+                          NICHE_TAG_CLASSES[card.category] ?? "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {card.category}
+                      </span>
+                    )}
+                    {card.avatar_url ? (
+                      <img
+                        src={card.avatar_url}
+                        alt={card.display_name}
+                        className="h-20 w-20 rounded-full object-cover shrink-0 mb-3 mx-auto"
+                      />
+                    ) : (
                       <div
-                        className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                        className="h-20 w-20 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0 mb-3 mx-auto"
                         style={{ background: "linear-gradient(135deg, #0064B1 0%, #053877 100%)" }}
                       >
-                        {card.initials}
+                        {getInitials(card.display_name, card.handle)}
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-[#000741] truncate">{card.name}</p>
-                        <p className="text-sm text-gray-500 truncate">@{card.handle}</p>
-                      </div>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-3 py-0.5 text-xs font-semibold ${
-                        NICHE_TAG_CLASSES[card.niche] ?? "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {card.niche}
-                    </span>
+                    )}
+                    <p className="font-semibold text-[#000741] truncate w-full">{card.display_name}</p>
+                    <p className="text-sm text-gray-500 truncate w-full">@{card.handle}</p>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-gray-600">{card.followers} Followers</span>
-                    <span className="text-emerald-600 font-medium">{card.engagement} Engagement</span>
+                  <div className="flex items-center justify-center gap-4 text-sm mt-4 pt-4 border-t border-gray-100">
+                    <span className="text-emerald-600 font-medium">{formatFollowerCount(card.follower_count)} Followers</span>
+                    {card.engagement_rate != null && (
+                      <span className="text-emerald-600 font-medium">{card.engagement_rate}% Engagement</span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -260,17 +287,24 @@ export default function HomePage() {
           `}</style>
         </section>
 
-        {/* FOR — audience types */}
-        <section className="relative z-10 -mt-8 pb-12">
-          <p className="text-center text-xs font-semibold text-white/70 uppercase tracking-widest mb-4">
-            FOR
+        {/* FOR — Built For Those Who Serve & Create (single section, icon + label together) */}
+        <section className="relative z-10 bg-[#0a1628] py-16 px-4">
+          <h2 className="text-center text-xl md:text-2xl font-bold text-white mb-2">
+            Built For Those Who Serve & Create
+          </h2>
+          <p className="text-center text-white/80 text-sm md:text-base max-w-xl mx-auto mb-10">
+            Whether you wore the uniform or support those who did
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 text-white/90 text-sm font-medium">
-            <span className="inline-flex items-center gap-2"><Shield className="h-4 w-4 text-[#F0A71F]" /> Veterans</span>
-            <span className="inline-flex items-center gap-2"><Users className="h-4 w-4 text-[#F0A71F]" /> Military Spouses</span>
-            <span className="inline-flex items-center gap-2"><Mic2 className="h-4 w-4 text-[#F0A71F]" /> Podcasters</span>
-            <span className="inline-flex items-center gap-2"><TrendingUp className="h-4 w-4 text-[#F0A71F]" /> Content Creators</span>
-            <span className="inline-flex items-center gap-2"><Building2 className="h-4 w-4 text-[#F0A71F]" /> Brands</span>
+          <div className="flex flex-wrap items-stretch justify-center gap-8 md:gap-12">
+            {AUDIENCE.map(({ label, icon: Icon }) => (
+              <div
+                key={label}
+                className="flex flex-col items-center gap-2 text-white rounded-xl px-6 py-4 transition-transform duration-200 hover:scale-105 min-w-[120px]"
+              >
+                <Icon className="h-8 w-8 text-[#F0A71F] shrink-0" aria-hidden />
+                <span className="text-sm font-medium text-white text-center">{label}</span>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -291,30 +325,23 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {CATEGORIES.map((cat, i) => {
-                const colors = [
-                  "from-[#0a1628] to-transparent",
-                  "from-[#0d4f4f] to-transparent",
-                  "from-[#3d5c3d] to-transparent",
-                  "from-[#374151] to-transparent",
-                  "from-[#1e3a5f] to-transparent",
-                  "from-[#4a5568] to-transparent",
-                  "from-[#2d3748] to-transparent",
-                  "from-[#234e52] to-transparent",
-                  "from-[#2c5282] to-transparent",
-                  "from-[#0064B1] to-transparent",
-                ];
-                return (
-                  <Link
-                    key={cat}
-                    to="/brand/discover"
-                    className={`aspect-[16/10] rounded-xl overflow-hidden bg-gradient-to-t ${colors[i % colors.length]} flex items-end gap-2 p-4 transition-transform hover:scale-105`}
-                  >
-                    <Users className="h-4 w-4 text-white shrink-0" />
-                    <span className="text-white font-semibold text-sm">{cat}</span>
-                  </Link>
-                );
-              })}
+              {CATEGORIES.map((cat, i) => (
+                <Link
+                  key={cat.label}
+                  to="/brand/discover"
+                  className="group relative h-[140px] rounded-xl overflow-hidden flex items-end p-4 transition-transform duration-300 hover:scale-[1.03]"
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url("${cat.image}")` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent group-hover:from-black/70 group-hover:via-black/25 transition-colors" />
+                  <div className="relative flex items-center gap-2 text-white">
+                    <Users className="h-4 w-4 shrink-0 opacity-90" />
+                    <span className="font-semibold text-sm">{cat.label}</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
@@ -338,27 +365,45 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {FEATURED_CREATORS.map((c) => (
+              {gridCreators.map((c) => (
                 <Link
-                  key={c.handle}
-                  to="/brand/discover"
-                  className="group rounded-xl overflow-hidden aspect-[4/3] relative bg-gradient-to-br from-[#0064B1] to-[#053877] flex flex-col justify-end p-4 hover:ring-2 hover:ring-[#0064B1] transition-all"
+                  key={c.id}
+                  to={`/brand/discover?creator=${encodeURIComponent(c.handle)}`}
+                  className="group rounded-xl overflow-hidden aspect-[4/3] relative flex flex-col justify-end p-4 hover:ring-2 hover:ring-[#0064B1] transition-all"
                 >
-                  <span className="absolute top-3 right-3 bg-[#0064B1] text-white text-xs px-3 py-1 rounded-full font-medium border border-white/30">
-                    Verified
-                  </span>
-                  <span className="absolute inset-0 flex items-center justify-center text-white/20 text-[80px] md:text-[120px] font-bold pointer-events-none">
-                    {c.initials}
-                  </span>
+                  {c.avatar_url ? (
+                    <>
+                      <img
+                        src={c.avatar_url}
+                        alt={c.display_name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#0064B1] to-[#053877]" />
+                  )}
+                  {c.is_verified && (
+                    <span className="absolute top-3 right-3 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-medium border border-white/30">
+                      Verified
+                    </span>
+                  )}
+                  {!c.avatar_url && (
+                    <span className="absolute inset-0 flex items-center justify-center text-white/20 text-[80px] md:text-[120px] font-bold pointer-events-none">
+                      {getInitials(c.display_name, c.handle)}
+                    </span>
+                  )}
                   <div className="relative flex items-center gap-2 text-white/90 text-xs mb-1">
-                    <Instagram className="h-3.5 w-3.5" />
-                    <span>{c.followers} followers</span>
+                    <Instagram className="h-3.5 w-3.5 shrink-0" />
+                    <span>{formatFollowerCount(c.follower_count)} followers</span>
                   </div>
-                  <p className="font-semibold text-white">{c.name}</p>
+                  <p className="font-semibold text-white">{c.display_name}</p>
                   <p className="text-white/80 text-sm">@{c.handle}</p>
-                  <span className="inline-block mt-1 w-fit bg-white/20 text-white rounded-full px-2.5 py-0.5 text-xs font-medium">
-                    {c.niche}
-                  </span>
+                  {c.category && (
+                    <span className="inline-block mt-1 w-fit bg-white/20 text-white rounded-full px-2.5 py-0.5 text-xs font-medium">
+                      {c.category}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

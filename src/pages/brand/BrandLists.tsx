@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useLists } from "@/contexts/ListContext";
 import { List, Trash2, ChevronRight, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CreateListModal from "@/components/CreateListModal";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
+import BulkActionBar from "@/components/BulkActionBar";
 import type { CreatorCard } from "@/lib/influencers-club";
 import type { ListCreator } from "@/contexts/ListContext";
+import { toast } from "sonner";
 
 function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -43,10 +46,15 @@ const BrandLists = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const selectedList = selectedListId
     ? lists.find((l) => l.id === selectedListId)
     : null;
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [selectedListId]);
 
   const handleCreateList = (name: string) => {
     const id = createList(name);
@@ -56,6 +64,28 @@ const BrandLists = () => {
   const openProfile = (creator: ListCreator) => {
     setProfileCreator(listCreatorToCard(creator));
     setProfileModalOpen(true);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (!selectedList) return;
+    if (selectedIds.size === selectedList.creators.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(selectedList.creators.map((c) => c.id)));
+  };
+
+  const handleBulkRemove = () => {
+    if (!selectedList) return;
+    selectedIds.forEach((id) => removeCreatorFromList(selectedList.id, id));
+    toast.success(`Removed ${selectedIds.size} creator${selectedIds.size !== 1 ? "s" : ""} from list`);
+    setSelectedIds(new Set());
   };
 
   return (
@@ -134,9 +164,21 @@ const BrandLists = () => {
 
       {selectedList && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-foreground mb-1">
-            {selectedList.name}
-          </h2>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="text-lg font-semibold text-foreground">
+              {selectedList.name}
+            </h2>
+            {selectedList.creators.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedIds.size === selectedList.creators.length}
+                  onCheckedChange={selectAll}
+                  aria-label="Select all"
+                />
+                <span className="text-sm text-muted-foreground">Select all</span>
+              </div>
+            )}
+          </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Creators
           </p>
@@ -144,9 +186,16 @@ const BrandLists = () => {
             {selectedList.creators.map((creator) => (
               <Card
                 key={creator.id}
-                className="bg-gradient-card border-border p-4 flex flex-col"
+                className="bg-gradient-card border-border p-4 flex flex-col relative"
               >
-                <div className="flex items-start gap-3 mb-3">
+                <div className="absolute top-3 left-3 z-10">
+                  <Checkbox
+                    checked={selectedIds.has(creator.id)}
+                    onCheckedChange={() => toggleSelect(creator.id)}
+                    aria-label={`Select ${creator.name}`}
+                  />
+                </div>
+                <div className="flex items-start gap-3 mb-3 pt-6">
                   <img
                     src={creator.avatar}
                     alt={creator.name}
@@ -214,6 +263,15 @@ const BrandLists = () => {
             </p>
           )}
         </div>
+      )}
+
+      {selectedList && (
+        <BulkActionBar
+          mode="list"
+          selectedCount={selectedIds.size}
+          onClearSelection={() => setSelectedIds(new Set())}
+          onRemoveFromList={handleBulkRemove}
+        />
       )}
     </>
   );

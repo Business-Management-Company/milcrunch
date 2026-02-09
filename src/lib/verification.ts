@@ -22,6 +22,13 @@ function getKey(envKey: string): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function safeString(val: unknown): string {
+  if (!val) return "";
+  if (typeof val === "string") return val.toLowerCase();
+  if (typeof val === "object" && "name" in val) return String((val as { name?: unknown }).name).toLowerCase();
+  return String(val).toLowerCase();
+}
+
 // --- People Data Labs ---
 export interface PDLEnrichParams {
   name?: string;
@@ -44,6 +51,8 @@ export interface PDLResponse {
   [key: string]: unknown;
 }
 
+const PDL_BASE = "https://api.peopledatalabs.com/v5/person/enrich";
+
 export async function enrichPersonPDL(params: PDLEnrichParams): Promise<PDLResponse | null> {
   const key = getKey("VITE_PDL_API_KEY");
   if (!key) {
@@ -54,9 +63,13 @@ export async function enrichPersonPDL(params: PDLEnrichParams): Promise<PDLRespo
   if (params.name) searchParams.set("name", params.name);
   if (params.profile?.length) searchParams.set("profile", params.profile.join(","));
   if (params.location) searchParams.set("location", params.location);
-  searchParams.set("api_key", key);
   try {
-    const res = await fetch(`/api/pdl/v5/person/enrich?${searchParams.toString()}`);
+    const res = await fetch(`${PDL_BASE}?${searchParams.toString()}`, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": key,
+      },
+    });
     if (!res.ok) throw new Error(`PDL ${res.status}`);
     const json = await res.json();
     return (json.data ?? json) as PDLResponse;
@@ -64,13 +77,6 @@ export async function enrichPersonPDL(params: PDLEnrichParams): Promise<PDLRespo
     console.error("[Verification] PDL error:", e);
     return null;
   }
-}
-
-function safeString(val: unknown): string {
-  if (val == null) return "";
-  if (typeof val === "string") return val.toLowerCase();
-  if (typeof val === "object" && val !== null && "name" in val) return String((val as { name?: unknown }).name).toLowerCase();
-  return String(val).toLowerCase();
 }
 
 export function scorePDL(data: PDLResponse | null): number {
@@ -82,12 +88,13 @@ export function scorePDL(data: PDLResponse | null): number {
   const educationList = (data.education ?? (data as { education?: unknown[] }).education ?? []) as Record<string, unknown>[];
   for (const job of employment) {
     const org = safeString(job?.company) || safeString(job?.organization);
-    const jobTitle = safeString(job?.title) || safeString(job?.name);
+    const jobTitle = safeString(job?.title);
     if (employer === 0 && MILITARY_EMPLOYERS.some((e) => org.includes(e.toLowerCase()))) employer = 15;
     if (title === 0 && MILITARY_TITLES.some((t) => jobTitle.includes(t.toLowerCase()))) title = 10;
   }
   for (const edu of educationList) {
     const school = safeString(edu?.school);
+    const degree = safeString(edu?.degree);
     if (education === 0 && MILITARY_ACADEMIES.some((a) => school.includes(a.toLowerCase()))) education = 5;
   }
   return Math.min(30, employer + title + education);
@@ -109,9 +116,11 @@ export async function searchSerp(query: string): Promise<SerpResult[]> {
     console.warn("[Verification] VITE_SERP_API_KEY not set");
     return [];
   }
-  const params = new URLSearchParams({ engine: "google", q: query, api_key: key, num: "10" });
+  const serpUrl = `https://serpapi.com/search.json?api_key=${key}&engine=google&q=${encodeURIComponent(query)}&num=10`;
   try {
-    const res = await fetch(`/api/serp/search?${params.toString()}`);
+    const res = await fetch(serpUrl, {
+      headers: { "Content-Type": "application/json" },
+    });
     if (!res.ok) throw new Error(`SerpAPI ${res.status}`);
     const data: SerpResponse = await res.json();
     return data.organic_results ?? [];
@@ -143,17 +152,21 @@ export function categorizeAndScoreSnippet(snippet: string, title: string): { cat
 }
 
 // --- FireCrawl ---
+const FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v1/scrape";
+
 export async function scrapeFirecrawl(url: string): Promise<{ markdown?: string } | null> {
   const key = getKey("VITE_FIRECRAWL_API_KEY");
-  console.log("[FireCrawl] API key present:", !!import.meta.env.VITE_FIRECRAWL_API_KEY);
   if (!key) {
     console.warn("[Verification] VITE_FIRECRAWL_API_KEY not set");
     return null;
   }
   try {
-    const res = await fetch("/api/firecrawl/v1/scrape", {
+    const res = await fetch(FIRECRAWL_SCRAPE_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+      },
       body: JSON.stringify({ url, formats: ["markdown"] }),
     });
     if (!res.ok) throw new Error(`FireCrawl ${res.status}`);
@@ -244,7 +257,8 @@ Be thorough but fair. Not finding evidence doesn't mean the claim is false — m
     if (!res.ok) throw new Error(`Anthropic ${res.status}`);
     const data = await res.json();
     const text = data.content?.[0]?.text ?? "";
-    return text || "No analysis generated.";
+    const out = (text ?? "").trim();
+    return out ? out : "No analysis generated.";
   } catch (e) {
     console.error("[Verification] Claude error:", e);
     return `Analysis failed: ${(e as Error).message}`;
@@ -282,25 +296,36 @@ export async function runVerificationPipeline(
   firecrawlData: { url: string; markdown?: string }[];
   aiAnalysis: string;
 }> {
+  console.log("[Verify] API Keys present:", {
+    serp: !!import.meta.env.VITE_SERP_API_KEY,
+    firecrawl: !!import.meta.env.VITE_FIRECRAWL_API_KEY,
+    pdl: !!import.meta.env.VITE_PDL_API_KEY,
+    anthropic: !!import.meta.env.VITE_ANTHROPIC_API_KEY,
+  });
+
   const evidenceSources: EvidenceSource[] = [];
   const redFlags: RedFlag[] = [];
-  const firecrawlData: { url: string; markdown?: string }[] = [];
+  let firecrawlData: { url: string; markdown?: string }[] = [];
   let pdlData: PDLResponse | null = null;
   let serpResults: SerpResult[] = [];
   let pdlScore = 0;
   let contentSignals = { hasUnitOrMOS: false, hasDates: false, hasAwards: false };
 
-  // Phase 1: PDL
+  // Phase 1: PDL — always mark complete even if no results
   onPhase({ phase: 1, name: "People Data Labs", status: "running" });
-  pdlData = await enrichPersonPDL({
-    name: input.fullName,
-    profile: input.linkedinUrl ? [input.linkedinUrl] : undefined,
-    location: undefined,
-  });
-  pdlScore = scorePDL(pdlData);
+  try {
+    pdlData = await enrichPersonPDL({
+      name: input.fullName,
+      profile: input.linkedinUrl ? [input.linkedinUrl] : undefined,
+      location: undefined,
+    });
+    pdlScore = scorePDL(pdlData);
+  } catch (e) {
+    console.warn("[Verify] Phase 1 failed:", e);
+  }
   onPhase({ phase: 1, name: "People Data Labs", status: "done", data: pdlData });
 
-  // Phase 2: SerpAPI (multiple searches)
+  // Phase 2: SerpAPI — always mark complete even if no results
   onPhase({ phase: 2, name: "Web Search", status: "running" });
   const queries = [
     `${input.fullName} military veteran`,
@@ -309,44 +334,51 @@ export async function runVerificationPipeline(
     `${input.fullName} site:linkedin.com military`,
     `${input.fullName} DD-214`,
   ].filter(Boolean);
-  for (const q of queries) {
-    const results = await searchSerp(q);
-    serpResults = [...serpResults, ...results];
+  try {
+    for (const q of queries) {
+      const results = await searchSerp(q);
+      serpResults = [...serpResults, ...results];
+    }
+    const seen = new Set<string>();
+    for (const r of serpResults) {
+      const url = r.link ?? "";
+      if (seen.has(url)) continue;
+      seen.add(url);
+      const { category, relevance, isRedFlag } = categorizeAndScoreSnippet(r.snippet ?? "", r.title ?? "");
+      evidenceSources.push({
+        title: r.title ?? "No title",
+        url,
+        snippet: r.snippet ?? "",
+        relevanceScore: relevance,
+        category,
+        isRedFlag,
+      });
+      if (isRedFlag) redFlags.push({ text: r.snippet ?? "", source: url, severity: "high" });
+    }
+    evidenceSources.sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
+  } catch (e) {
+    console.warn("[Verify] Phase 2 failed:", e);
   }
-  const seen = new Set<string>();
-  for (const r of serpResults) {
-    const url = r.link ?? "";
-    if (seen.has(url)) continue;
-    seen.add(url);
-    const { category, relevance, isRedFlag } = categorizeAndScoreSnippet(r.snippet ?? "", r.title ?? "");
-    evidenceSources.push({
-      title: r.title ?? "No title",
-      url,
-      snippet: r.snippet ?? "",
-      relevanceScore: relevance,
-      category,
-      isRedFlag,
-    });
-    if (isRedFlag) redFlags.push({ text: r.snippet ?? "", source: url, severity: "high" });
-  }
-  evidenceSources.sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
   onPhase({ phase: 2, name: "Web Search", status: "done", data: evidenceSources });
 
   // Phase 3: Deep Extraction (FireCrawl) — non-blocking; failures must not kill the pipeline
   onPhase({ phase: 3, name: "Deep Extraction", status: "running" });
   try {
-    const topUrls = evidenceSources.slice(0, 3).map((s) => s.url).filter(Boolean);
+    const topUrls =
+      serpResults
+        .slice(0, 3)
+        .map((r) => r.link)
+        .filter(Boolean) as string[];
     if (topUrls.length > 0) {
-      const scrapePromises = topUrls.map((url) =>
+      const scrapePromises = topUrls.map((url: string) =>
         scrapeFirecrawl(url).catch((err: unknown) => {
           console.log("[Verify] FireCrawl failed for:", url, err instanceof Error ? err.message : String(err));
           return null;
         })
       );
-      const timeoutMs = 15000;
       const results = (await Promise.race([
         Promise.all(scrapePromises),
-        new Promise<({ markdown?: string } | null)[]>((resolve) => setTimeout(() => resolve([]), timeoutMs)),
+        new Promise<({ markdown?: string } | null)[]>((resolve) => setTimeout(() => resolve([]), 15000)),
       ])) as ({ markdown?: string } | null)[];
       for (let i = 0; i < results.length && i < topUrls.length; i++) {
         const scraped = results[i];
@@ -359,12 +391,12 @@ export async function runVerificationPipeline(
         }
       }
     }
-    onPhase({ phase: 3, name: "Deep Extraction", status: "done", data: firecrawlData });
   } catch (err) {
-    console.warn("[Verify] Phase 3 failed, continuing to AI analysis:", err);
-    firecrawlData.length = 0;
-    onPhase({ phase: 3, name: "Deep Extraction", status: "done", data: [] });
+    console.warn("[Verify] Phase 3 failed, continuing:", err);
+    firecrawlData = [];
   }
+  // ALWAYS continue to Phase 4 regardless of Phase 3 outcome. Pass whatever data we have: PDL + SerpAPI at minimum, FireCrawl if available.
+  onPhase({ phase: 3, name: "Deep Extraction", status: "done", data: firecrawlData });
 
   // Phase 4: AI Analysis — ALWAYS runs regardless of Phase 3 outcome
   onPhase({ phase: 4, name: "AI Analysis", status: "running" });

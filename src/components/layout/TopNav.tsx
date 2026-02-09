@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Bell, ChevronDown, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAIAssistant } from "@/contexts/AIAssistantContext";
@@ -17,6 +18,10 @@ interface TopNavProps {
 
 export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
   const { togglePanel: toggleAIPanel } = useAIAssistant();
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  };
   return (
     <header
       className={cn(
@@ -78,8 +83,12 @@ export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
             <DropdownMenuItem asChild>
               <Link to="/brand/discover">Discover</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem className="text-muted-foreground">Sign out</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/brand/settings">Settings</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-muted-foreground cursor-pointer" onClick={handleSignOut}>
+              Sign out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
