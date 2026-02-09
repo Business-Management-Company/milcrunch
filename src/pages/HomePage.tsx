@@ -26,9 +26,9 @@ import {
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
-// Hero background: diverse group / military community (placeholder)
+// Hero background: diverse group in studio (Image 2 style — 15–20 people, professional)
 const HERO_BG_IMAGE =
-  "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=1920&q=80";
+  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1920&q=80";
 
 const NICHE_TAG_CLASSES: Record<string, string> = {
   Veterans: "bg-blue-100 text-blue-700",
@@ -180,10 +180,11 @@ export default function HomePage() {
               backgroundPosition: "center",
             }}
           />
+          {/* Dark blue left → teal-tinted blue right (Image 2 overlay) */}
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to right, rgba(27,42,74,0.85) 0%, rgba(27,42,74,0.6) 100%)",
+              background: "linear-gradient(to right, rgba(27,42,74,0.88) 0%, rgba(25,55,65,0.65) 100%)",
             }}
           />
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
@@ -225,51 +226,59 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            {/* Right 40% — stacked floating creator cards (profile photo, name, @handle, pill, stats) */}
-            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end relative min-h-[380px] md:min-h-[440px]">
+            {/* Right 40% — stacked creator cards (Image 1: photo left, name/handle, pill right, stats bottom) */}
+            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end relative min-h-[340px] md:min-h-[400px]">
               {heroCreators.map((card, i) => (
                 <div
                   key={card.id}
-                  className="absolute bg-white rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.02] p-5 w-[320px] hero-float transition-all duration-300"
+                  className="absolute bg-white rounded-xl shadow-lg hover:shadow-xl p-4 w-[300px] hero-float transition-shadow duration-300"
                   style={{
-                    top: 20 + i * 88,
+                    top: 16 + i * 84,
                     left: "50%",
-                    marginLeft: i * 24 - 160,
+                    marginLeft: i * 22 - 150,
                     animationDelay: `${i * 0.3}s`,
                     zIndex: i + 1,
                   }}
                 >
-                  <div className="relative flex flex-col items-center text-center">
+                  {/* Top row: circular photo left, name + handle middle, category pill right */}
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {card.avatar_url ? (
+                        <img
+                          src={card.avatar_url}
+                          alt={card.display_name}
+                          className="h-14 w-14 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                          style={{ background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)" }}
+                        >
+                          {getInitials(card.display_name, card.handle)}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-[#0f172a] truncate text-base">{card.display_name}</p>
+                        <p className="text-sm text-gray-500 truncate">@{card.handle}</p>
+                      </div>
+                    </div>
                     {card.category && (
-                      <span
-                        className={`absolute top-0 right-0 rounded-full px-3 py-0.5 text-xs font-semibold ${
-                          NICHE_TAG_CLASSES[card.category] ?? "bg-gray-100 text-gray-700"
-                        }`}
-                      >
+                      <span className="shrink-0 rounded-full bg-teal-100 text-teal-800 px-2.5 py-0.5 text-xs font-semibold">
                         {card.category}
                       </span>
                     )}
-                    {card.avatar_url ? (
-                      <img
-                        src={card.avatar_url}
-                        alt={card.display_name}
-                        className="h-20 w-20 rounded-full object-cover shrink-0 mb-3 mx-auto"
-                      />
-                    ) : (
-                      <div
-                        className="h-20 w-20 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0 mb-3 mx-auto"
-                        style={{ background: "linear-gradient(135deg, #0064B1 0%, #053877 100%)" }}
-                      >
-                        {getInitials(card.display_name, card.handle)}
-                      </div>
-                    )}
-                    <p className="font-semibold text-[#000741] truncate w-full">{card.display_name}</p>
-                    <p className="text-sm text-gray-500 truncate w-full">@{card.handle}</p>
                   </div>
-                  <div className="flex items-center justify-center gap-4 text-sm mt-4 pt-4 border-t border-gray-100">
-                    <span className="text-emerald-600 font-medium">{formatFollowerCount(card.follower_count)} Followers</span>
+                  {/* Stats row: number bold (black / green), label small gray */}
+                  <div className="flex items-baseline gap-4 text-sm pt-3 border-t border-gray-100">
+                    <span>
+                      <span className="font-semibold text-[#0f172a]">{formatFollowerCount(card.follower_count)}</span>
+                      <span className="text-gray-500 text-xs ml-1">Followers</span>
+                    </span>
                     {card.engagement_rate != null && (
-                      <span className="text-emerald-600 font-medium">{card.engagement_rate}% Engagement</span>
+                      <span>
+                        <span className="font-semibold text-emerald-600">{card.engagement_rate}%</span>
+                        <span className="text-gray-500 text-xs ml-1">Engagement</span>
+                      </span>
                     )}
                   </div>
                 </div>

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAIAssistant } from "@/contexts/AIAssistantContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 type NavItem =
@@ -72,6 +73,7 @@ interface SidebarProps {
 export default function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
   const { togglePanel: toggleAIPanel } = useAIAssistant();
+  const { isSuperAdmin } = useAuth();
 
   const navItemClass = (isActive: boolean) =>
     cn(
@@ -145,6 +147,22 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           </div>
         ))}
       </nav>
+
+      {isSuperAdmin && (
+        <div className={cn("px-3 pb-2", collapsed && "flex flex-col items-center")}>
+          <Link
+            to="/admin"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+              "hover:bg-amber-500/10 text-amber-600 dark:text-amber-400",
+              location.pathname.startsWith("/admin") && "bg-amber-500/10 font-medium"
+            )}
+          >
+            <span className="text-base leading-none" aria-hidden>⚡</span>
+            {!collapsed && <span>Admin</span>}
+          </Link>
+        </div>
+      )}
 
       <div className={cn("p-3 border-t border-gray-200 dark:border-gray-800 space-y-2", collapsed && "flex flex-col items-center")}>
         {!collapsed && (

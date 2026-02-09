@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type UserRole = "creator" | "brand" | "admin";
+export type UserRole = "creator" | "brand" | "admin" | "super_admin";
 
 export interface CreatorProfileRow {
   id: string;
@@ -21,6 +21,9 @@ interface AuthContextType {
   loading: boolean;
   /** Set after loading when user exists; from creator_profiles or null if brand/admin/no row */
   creatorProfile: CreatorProfileRow | null;
+  /** Resolved role from creator_profiles or user_metadata (includes super_admin). */
+  role: UserRole | null;
+  isSuperAdmin: boolean;
   refetchCreatorProfile: () => Promise<void>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signUpCreator: (opts: {
@@ -183,8 +186,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!creatorProfile || !creatorProfile.onboarding_completed) return "/creator/onboard";
       return "/creator/dashboard";
     }
+    if (role === "super_admin") return "/admin";
     return "/brand/dashboard";
   }, [user, creatorProfile]);
+
+  const resolvedRole = (creatorProfile?.role as UserRole) ?? (user?.user_metadata?.role as UserRole) ?? ("creator" as UserRole);
+  const isSuperAdmin = resolvedRole === "super_admin";
 
   return (
     <AuthContext.Provider
@@ -193,6 +200,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session,
         loading,
         creatorProfile,
+        role: user ? resolvedRole : null,
+        isSuperAdmin: !!user && isSuperAdmin,
         refetchCreatorProfile,
         signUp,
         signUpCreator,

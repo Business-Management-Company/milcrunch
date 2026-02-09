@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { Outlet } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,9 @@ import TopNav from "@/components/layout/TopNav";
 import Sidebar from "@/components/layout/Sidebar";
 import CommandPalette from "@/components/CommandPalette";
 import AIAssistant from "@/components/AIAssistant";
+import FloatingAdminChat from "@/components/superadmin/FloatingAdminChat";
 import { useAIAssistant } from "@/contexts/AIAssistantContext";
+import { AdminChatContext } from "@/contexts/AdminChatContext";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_WIDTH = 240;
@@ -17,6 +19,7 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { isOpen: aiPanelOpen, togglePanel: toggleAIPanel } = useAIAssistant();
+  const adminChat = useContext(AdminChatContext);
 
   const checkMobile = useCallback(() => {
     const m = window.innerWidth < 768;
@@ -75,6 +78,7 @@ export default function AppLayout() {
       </main>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       <AIAssistant />
+      {adminChat && <FloatingAdminChat />}
     </div>
   );
 }

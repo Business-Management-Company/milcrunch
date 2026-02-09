@@ -48,7 +48,7 @@ import Demo from "./pages/Demo";
 import EventsCalendar from "./pages/EventsCalendar";
 import LoginPage from "./pages/creator/LoginPage";
 import SignupPage from "./pages/creator/SignupPage";
-import { CreatorRoute, BrandRoute } from "./components/auth/ProtectedRoute";
+import { CreatorRoute, BrandRoute, SuperAdminRoute } from "./components/auth/ProtectedRoute";
 import CreatorDashboard from "./pages/creator/CreatorDashboard";
 import CreatorProfile from "./pages/creator/CreatorProfile";
 import CreatorSocials from "./pages/creator/CreatorSocials";
@@ -87,6 +87,13 @@ import { ListProvider } from "./contexts/ListContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import AppLayout from "./components/layout/AppLayout";
+import { AdminChatProvider } from "./contexts/AdminChatContext";
+import FloatingAdminChat from "./components/superadmin/FloatingAdminChat";
+import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
+import AdminTasks from "./pages/superadmin/AdminTasks";
+import AdminDeployments from "./pages/superadmin/AdminDeployments";
+import AdminPrompts from "./pages/superadmin/AdminPrompts";
+import AdminChat from "./pages/superadmin/AdminChat";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +127,14 @@ const App = () => (
               <Route path="/solutions/media-brands" element={<SolutionsMediaBrands />} />
               <Route path="/solutions/event-teams" element={<SolutionsEventTeams />} />
               <Route path="/solutions/sponsors" element={<SolutionsSponsors />} />
+              {/* Super Admin panel: /admin, /admin/tasks, etc. — only super_admin; others redirect to /brand/dashboard */}
+              <Route path="/admin" element={<SuperAdminRoute><AdminChatProvider><AppLayout /></AdminChatProvider></SuperAdminRoute>}>
+                <Route index element={<SuperAdminDashboard />} />
+                <Route path="tasks" element={<AdminTasks />} />
+                <Route path="deployments" element={<AdminDeployments />} />
+                <Route path="prompts" element={<AdminPrompts />} />
+                <Route path="chat" element={<AdminChat />} />
+              </Route>
               <Route element={<BrandRoute><AppLayout /></BrandRoute>}>
                 <Route path="/dashboard" element={<SummaryDashboard />} />
                 <Route path="/lists" element={<BrandLists />} />
@@ -131,7 +146,6 @@ const App = () => (
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />
-                <Route path="/admin" element={<SummaryDashboard />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/events/create" element={<CreateEvent />} />
               <Route path="/admin/awards" element={<AdminAwards />} />
