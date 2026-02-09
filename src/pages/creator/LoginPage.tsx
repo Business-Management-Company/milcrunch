@@ -61,18 +61,31 @@ export default function LoginPage() {
     }
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     const role = (currentUser?.user_metadata?.role as string) || "creator";
-    let path: string;
-    if (role === "super_admin") path = "/admin";
-    else if (role === "admin" || role === "brand") path = "/brand/dashboard";
-    else {
+
+    if (role === "super_admin") {
+      navigate("/admin", { replace: true });
+      return;
+    }
+    if (role === "admin" || role === "brand") {
+      navigate("/brand/dashboard", { replace: true });
+      return;
+    }
+
+    if (role === "creator") {
       const { data: profile } = await supabase
         .from("creator_profiles")
         .select("onboarding_completed")
         .eq("user_id", currentUser?.id)
         .maybeSingle();
-      path = profile?.onboarding_completed ? "/creator/dashboard" : "/creator/onboard";
+      if (!profile || !profile.onboarding_completed) {
+        navigate("/creator/onboard", { replace: true });
+      } else {
+        navigate("/creator/dashboard", { replace: true });
+      }
+      return;
     }
-    navigate(path, { replace: true });
+
+    navigate("/creator/dashboard", { replace: true });
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {

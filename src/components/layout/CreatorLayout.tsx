@@ -79,12 +79,17 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
 const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, creatorProfile, signOut } = useAuth();
+  const { user, creatorProfile, role, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  if (creatorProfile && !creatorProfile.onboarding_completed && !location.pathname.startsWith("/creator/onboard")) {
+  if (
+    role === "creator" &&
+    creatorProfile &&
+    !creatorProfile.onboarding_completed &&
+    !location.pathname.startsWith("/creator/onboard")
+  ) {
     navigate("/creator/onboard", { replace: true });
     return null;
   }
