@@ -35,7 +35,7 @@ export function CreatorRoute({ children }: { children: ReactNode }) {
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  const role = (creatorProfile?.role ?? user.user_metadata?.role) as string | undefined;
+  const role = (user.user_metadata?.role ?? creatorProfile?.role) as string | undefined;
   if (role === "brand" || role === "admin") {
     return <Navigate to="/brand/dashboard" replace />;
   }
@@ -57,9 +57,12 @@ export function BrandRoute({ children }: { children: ReactNode }) {
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  const role = (creatorProfile?.role ?? user.user_metadata?.role) as string | undefined;
+  const role = (user.user_metadata?.role ?? creatorProfile?.role) as string | undefined;
   if (role === "creator") {
     return <Navigate to="/creator/dashboard" replace />;
+  }
+  if (role === "brand" || role === "admin") {
+    return <>{children}</>;
   }
   return <>{children}</>;
 }

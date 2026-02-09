@@ -1,16 +1,27 @@
 import { Link } from "react-router-dom";
 import { Bell, ChevronDown, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAIAssistant } from "@/contexts/AIAssistantContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+function getInitials(name: string | undefined, email: string): string {
+  if (name?.trim()) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  const local = email.split("@")[0];
+  return local.slice(0, 2).toUpperCase();
+}
 
 interface TopNavProps {
   onOpenCommandPalette: () => void;
@@ -18,10 +29,15 @@ interface TopNavProps {
 
 export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
   const { togglePanel: toggleAIPanel } = useAIAssistant();
+  const { user, isSuperAdmin, signOut } = useAuth();
+  const displayName = user?.user_metadata?.full_name ?? user?.email ?? "User";
+  const initials = getInitials(user?.user_metadata?.full_name as string, user?.email ?? "");
+
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     window.location.href = "/";
   };
+
   return (
     <header
       className={cn(
@@ -70,13 +86,24 @@ export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1.5">
               <div className="h-8 w-8 rounded-full bg-pd-blue/20 flex items-center justify-center">
-                <span className="text-sm font-medium text-pd-blue">R</span>
+                <span className="text-sm font-medium text-pd-blue">{initials || "?"}</span>
               </div>
-              <span className="text-sm font-medium text-foreground hidden sm:inline">Recurrent</span>
+              <span className="text-sm font-medium text-foreground hidden sm:inline truncate max-w-[120px]">{displayName}</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            {isSuperAdmin && (
+              <>
+                <DropdownMenuItem asChild>
+                  <Link to="/admin">⚡ View as Admin</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/creator/dashboard">View as Creator</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem asChild>
               <Link to="/brand/dashboard">Dashboard</Link>
             </DropdownMenuItem>

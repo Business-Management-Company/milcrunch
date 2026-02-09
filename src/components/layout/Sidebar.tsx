@@ -159,7 +159,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
             )}
           >
             <span className="text-base leading-none" aria-hidden>⚡</span>
-            {!collapsed && <span>Admin</span>}
+            {!collapsed && <span>Super Admin</span>}
           </Link>
         </div>
       )}

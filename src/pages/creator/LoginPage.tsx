@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,9 +59,20 @@ export default function LoginPage() {
       }
       return;
     }
-    const path = getRedirectPath();
-    if (path) navigate(path, { replace: true });
-    else navigate("/creator/dashboard", { replace: true });
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const role = (currentUser?.user_metadata?.role as string) || "creator";
+    let path: string;
+    if (role === "super_admin") path = "/admin";
+    else if (role === "admin" || role === "brand") path = "/brand/dashboard";
+    else {
+      const { data: profile } = await supabase
+        .from("creator_profiles")
+        .select("onboarding_completed")
+        .eq("user_id", currentUser?.id)
+        .maybeSingle();
+      path = profile?.onboarding_completed ? "/creator/dashboard" : "/creator/onboard";
+    }
+    navigate(path, { replace: true });
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {

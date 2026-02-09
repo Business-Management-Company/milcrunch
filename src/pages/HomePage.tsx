@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sun,
@@ -79,24 +80,14 @@ const HERO_FALLBACK: CreatorRow[] = [
   { id: "3", display_name: "Taylor S.", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 2, created_at: null },
 ];
 
-// Hero creator cards — Grid Coordinates style (hardcoded for now)
-type HeroCardData = {
-  photo: string;
-  name: string;
-  handle: string;
-  category: string;
-  categoryColor: string;
-  followers: string;
-  engagement: string;
-};
-
-const HERO_CARDS: HeroCardData[] = [
+// Hero creator cards — Grid Coordinates style (single data array, same structure for all 3)
+const heroCreators = [
   {
     photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face",
     name: "Jason A.",
     handle: "@savagekingdom",
     category: "Veterans",
-    categoryColor: "bg-blue-50 text-blue-700 border-blue-200",
+    categoryColor: "bg-blue-50 text-blue-700 border border-blue-200",
     followers: "359.1K",
     engagement: "3.2%",
   },
@@ -105,7 +96,7 @@ const HERO_CARDS: HeroCardData[] = [
     name: "Kevin W.",
     handle: "@wheelchairkev",
     category: "Motivation",
-    categoryColor: "bg-purple-50 text-purple-700 border-purple-200",
+    categoryColor: "bg-purple-50 text-purple-700 border border-purple-200",
     followers: "353.1K",
     engagement: "4.1%",
   },
@@ -114,71 +105,11 @@ const HERO_CARDS: HeroCardData[] = [
     name: "Taylor S.",
     handle: "@tsyontz",
     category: "Military",
-    categoryColor: "bg-green-50 text-green-700 border-green-200",
+    categoryColor: "bg-green-50 text-green-700 border border-green-200",
     followers: "96.8K",
     engagement: "2.1%",
   },
 ];
-
-function HeroCreatorCard({
-  photo,
-  name,
-  handle,
-  category,
-  categoryColor,
-  followers,
-  engagement,
-  style,
-  className = "",
-}: HeroCardData & { style?: React.CSSProperties; className?: string }) {
-  const [imgError, setImgError] = useState(false);
-  const initials = getInitials(name, handle.replace("@", ""));
-
-  return (
-    <div
-      className={`bg-white rounded-2xl p-5 w-[360px] transition-shadow duration-300 hover:shadow-2xl ${className}`}
-      style={{
-        boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
-        ...style,
-      }}
-    >
-      <div className="flex items-center gap-3">
-        {!imgError ? (
-          <img
-            src={photo}
-            alt={name}
-            className="w-12 h-12 rounded-full object-cover shrink-0"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-            style={{ background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)" }}
-          >
-            {initials}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-gray-900 text-base truncate">{name}</div>
-          <div className="text-gray-500 text-sm truncate">{handle}</div>
-        </div>
-        <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border ${categoryColor}`}>
-          {category}
-        </span>
-      </div>
-      <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
-        <div>
-          <div className="text-lg font-bold text-gray-900">{followers}</div>
-          <div className="text-xs text-gray-500">Followers</div>
-        </div>
-        <div>
-          <div className="text-lg font-bold text-emerald-500">{engagement}</div>
-          <div className="text-xs text-gray-500">Engagement</div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const GRID_FALLBACK: CreatorRow[] = [
   { id: "g1", display_name: "Jason", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 0, created_at: null },
@@ -192,6 +123,8 @@ const GRID_FALLBACK: CreatorRow[] = [
 ];
 
 export default function HomePage() {
+  const { user, loading: authLoading, getRedirectPath } = useAuth();
+  const navigate = useNavigate();
   const [navScrolled, setNavScrolled] = useState(false);
   const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
   const [podcastTotal, setPodcastTotal] = useState<number | null>(null);
@@ -257,11 +190,30 @@ export default function HomePage() {
         </nav>
         <div className="flex items-center gap-3 shrink-0">
           <span className="text-gray-400 p-1.5" aria-hidden><Sun className="h-4 w-4" /></span>
-          <Link to="/brand/discover" className={`text-sm font-medium ${navLinkClass}`}>
+          <Link to="/login" className={`text-sm font-medium ${navLinkClass}`}>
             Sign In
           </Link>
-          <Link to="/brand/discover">
-            <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 py-2 font-semibold">
+          {user ? (
+            <Button
+              size="sm"
+              className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 py-2 font-semibold"
+              onClick={() => {
+                const path = getRedirectPath();
+                if (path) navigate(path);
+                else navigate("/creator/dashboard");
+              }}
+            >
+              Get Started →
+            </Button>
+          ) : (
+            <Link to="/signup">
+              <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 py-2 font-semibold">
+                Get Started →
+              </Button>
+            </Link>
+          )}
+          <Link to="/signup">
+            <Button size="sm" variant="outline" className="rounded-lg px-5 py-2 font-semibold">
               Become a Creator
             </Button>
           </Link>
@@ -302,11 +254,25 @@ export default function HomePage() {
                 ParadeDeck brings it all into one command center — so you can focus on the mission.
               </p>
               <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
-                <Link to="/brand/discover">
-                  <Button size="lg" className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold">
+                {user ? (
+                  <Button
+                    size="lg"
+                    className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold"
+                    onClick={() => {
+                      const path = getRedirectPath();
+                      if (path) navigate(path);
+                      else navigate("/creator/dashboard");
+                    }}
+                  >
                     Get Started →
                   </Button>
-                </Link>
+                ) : (
+                  <Link to="/signup">
+                    <Button size="lg" className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold">
+                      Get Started →
+                    </Button>
+                  </Link>
+                )}
                 <a href="/#creators">
                   <Button size="lg" variant="outline" className="rounded-lg bg-transparent hover:bg-white/10 border-white/40 text-white px-6 py-3 font-medium inline-flex items-center gap-2">
                     <Play className="h-4 w-4" />
@@ -326,24 +292,50 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            {/* Right 40% — Grid Coordinates style: 3 stacked creator cards */}
+            {/* Right 40% — Grid Coordinates style: 3 stacked creator cards (same structure for all) */}
             <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end">
-              <div className="relative w-[420px] h-[520px]">
-                <div className="absolute top-0 left-0 z-30 -rotate-2 hero-card-wrapper hero-card-fade-1">
-                  <div className="hero-card-float">
-                    <HeroCreatorCard {...HERO_CARDS[0]} />
+              <div className="relative w-[420px] min-h-[580px]">
+                {heroCreators.map((creator, i) => (
+                  <div
+                    key={i}
+                    className="absolute"
+                    style={{
+                      zIndex: 30 - i * 10,
+                      top: `${i * 190}px`,
+                      left: `${i * 20}px`,
+                      transform: `rotate(${(i - 1) * 2}deg)`,
+                    }}
+                  >
+                    <div className="hero-card-float" style={{ animationDelay: `${i * 0.2}s` }}>
+                      <div className="bg-white rounded-2xl p-5 w-[360px] shadow-xl transition-shadow duration-300 hover:shadow-2xl">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={creator.photo}
+                          alt={creator.name}
+                          className="w-12 h-12 rounded-full object-cover shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-gray-900 text-base truncate">{creator.name}</div>
+                          <div className="text-gray-500 text-sm truncate">{creator.handle}</div>
+                        </div>
+                        <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${creator.categoryColor}`}>
+                          {creator.category}
+                        </span>
+                      </div>
+                      <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
+                        <div>
+                          <div className="text-lg font-bold text-gray-900">{creator.followers}</div>
+                          <div className="text-xs text-gray-500">Followers</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-emerald-500">{creator.engagement}</div>
+                          <div className="text-xs text-gray-500">Engagement</div>
+                        </div>
+                      </div>
+                    </div>
+                    </div>
                   </div>
-                </div>
-                <div className="absolute top-[90px] left-[20px] z-20 hero-card-wrapper hero-card-fade-2">
-                  <div className="hero-card-float hero-card-float-delay-2">
-                    <HeroCreatorCard {...HERO_CARDS[1]} />
-                  </div>
-                </div>
-                <div className="absolute top-[180px] left-[40px] z-10 rotate-2 hero-card-wrapper hero-card-fade-3">
-                  <div className="hero-card-float hero-card-float-delay-3">
-                    <HeroCreatorCard {...HERO_CARDS[2]} />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -353,15 +345,6 @@ export default function HomePage() {
               50% { transform: translateY(-8px); }
             }
             .hero-card-float { animation: hero-float-kf 6s ease-in-out infinite; }
-            .hero-card-float-delay-2 { animation-delay: 0.2s; }
-            .hero-card-float-delay-3 { animation-delay: 0.4s; }
-            @keyframes hero-card-fade-kf {
-              from { opacity: 0; transform: translateY(12px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-            .hero-card-fade-1 { animation: hero-card-fade-kf 0.5s ease-out 0s forwards; opacity: 0; }
-            .hero-card-fade-2 { animation: hero-card-fade-kf 0.5s ease-out 0.15s forwards; opacity: 0; }
-            .hero-card-fade-3 { animation: hero-card-fade-kf 0.5s ease-out 0.3s forwards; opacity: 0; }
           `}</style>
         </section>
 

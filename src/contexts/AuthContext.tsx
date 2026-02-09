@@ -181,16 +181,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const getRedirectPath = useCallback((): string | null => {
     if (!user) return null;
-    const role = (creatorProfile?.role as UserRole) ?? (user.user_metadata?.role as UserRole) ?? "creator";
+    const role = (user.user_metadata?.role as UserRole) ?? (creatorProfile?.role as UserRole) ?? "creator";
+    if (role === "super_admin") return "/admin";
+    if (role === "admin" || role === "brand") return "/brand/dashboard";
     if (role === "creator") {
       if (!creatorProfile || !creatorProfile.onboarding_completed) return "/creator/onboard";
       return "/creator/dashboard";
     }
-    if (role === "super_admin") return "/admin";
-    return "/brand/dashboard";
+    return "/creator/dashboard";
   }, [user, creatorProfile]);
 
-  const resolvedRole = (creatorProfile?.role as UserRole) ?? (user?.user_metadata?.role as UserRole) ?? ("creator" as UserRole);
+  const resolvedRole = (user?.user_metadata?.role as UserRole) ?? (creatorProfile?.role as UserRole) ?? ("creator" as UserRole);
   const isSuperAdmin = resolvedRole === "super_admin";
 
   return (
