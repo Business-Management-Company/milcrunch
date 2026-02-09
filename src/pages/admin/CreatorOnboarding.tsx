@@ -19,7 +19,6 @@ import {
   Heart,
   Store,
   Sparkles,
-  Rocket,
   Image,
   FileText,
   Ticket,
@@ -96,7 +95,7 @@ const CreatorOnboarding = () => {
     { id: "marketing", label: "Marketing", icon: Mail },
     { id: "team", label: "Team & Permissions", icon: Shield },
     { id: "monetization", label: "Monetization", icon: DollarSign },
-    { id: "launch", label: "Launch", icon: Rocket },
+    { id: "launch", label: "Launch", icon: Calendar },
   ];
 
   const completedCount = checklist.filter(item => item.completed).length;
@@ -411,7 +410,7 @@ const CreatorOnboarding = () => {
           Go to Dashboard
         </Button>
         <Button onClick={() => navigate(`/admin/events`)}>
-          <Rocket className="mr-2 h-4 w-4" /> Manage Event
+          <Calendar className="mr-2 h-4 w-4" /> Manage Events
         </Button>
       </div>
     </div>

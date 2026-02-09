@@ -29,7 +29,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      navigate("/admin");
+      navigate("/dashboard");
     }
   }, [user, navigate]);
 
@@ -93,7 +93,7 @@ const Auth = () => {
           }
         } else {
           toast.success("Welcome back!");
-          navigate("/admin");
+          navigate("/dashboard");
         }
       }
     } catch (error) {
@@ -117,9 +117,7 @@ const Auth = () => {
       <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">EA</span>
-            </div>
+            <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-12 w-auto" />
           </div>
           <CardTitle className="text-2xl font-display">
             {isForgotPassword ? "Reset Password" : isSignUp ? "Create an Account" : "Welcome Back"}
@@ -128,8 +126,8 @@ const Auth = () => {
             {isForgotPassword
               ? "Enter your email to receive a password reset link"
               : isSignUp 
-                ? "Sign up to start managing events and awards" 
-                : "Sign in to your Events & Awards OS account"}
+                ? "Sign up to get started with ParadeDeck" 
+                : "Sign in to your ParadeDeck account"}
           </CardDescription>
         </CardHeader>
         <CardContent>

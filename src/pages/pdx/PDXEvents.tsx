@@ -1,0 +1,23 @@
+import { Card } from "@/components/ui/card";
+
+const PDXEvents = () => {
+  return (
+    <>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
+          Live & Virtual Experiences
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400">
+          Browse and manage live and virtual PDX experiences.
+        </p>
+      </div>
+      <Card className="bg-white dark:bg-pd-darkblue border border-gray-200 dark:border-pd-blue/20 p-8 rounded-xl">
+        <p className="text-muted-foreground text-center py-4">
+          Coming soon. Live and virtual experience listings will appear here.
+        </p>
+      </Card>
+    </>
+  );
+};
+
+export default PDXEvents;

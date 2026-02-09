@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Rocket } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -8,13 +7,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-primary">
-                <Rocket className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-display font-bold text-xl text-foreground tracking-wide">Event<span className="text-primary">Rocket</span></span>
+              <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-9 w-auto" />
+              <span className="font-display font-bold text-xl text-foreground tracking-wide">ParadeDeck</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
-              The all-in-one platform for events and awards. Launch, manage, and scale with AI.
+              Where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.
             </p>
           </div>
 
@@ -49,7 +46,7 @@ const Footer = () => {
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Event Rocket. All rights reserved.
+            © {new Date().getFullYear()} ParadeDeck. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Privacy</a>

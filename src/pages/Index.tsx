@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { 
   Calendar, Award, Users, Zap, Bot, 
   ArrowRight, CheckCircle, Sparkles, 
-  Building2, BarChart3, FileText, Play, Star, TrendingUp, Rocket
+  Building2, BarChart3, FileText, Play, Star, TrendingUp
 } from "lucide-react";
 import PlatformBuilder from "@/components/PlatformBuilder";
 import FeaturedEventCard from "@/components/FeaturedEventCard";
@@ -25,7 +25,7 @@ const Index = () => {
       title: "In-Person Events",
       description: "Full-scale conferences, workshops, and networking sessions with QR check-in, capacity controls, and real-time reporting.",
       image: featureInPerson,
-      gradient: "from-rocket-orange/30 via-rocket-flame/20",
+      gradient: "from-primary/30 via-pd-gold/20",
       accent: "bg-primary"
     },
     {
@@ -41,7 +41,7 @@ const Index = () => {
       title: "Hybrid Events",
       description: "The best of both worlds—combine in-person and virtual audiences for maximum reach and engagement.",
       image: featureHybrid,
-      gradient: "from-primary/30 via-rocket-flame/20",
+      gradient: "from-primary/30 via-pd-gold/20",
       accent: "bg-primary"
     }
   ];
@@ -51,7 +51,7 @@ const Index = () => {
       title: "Event Architect",
       description: "Describe your event; the agent drafts the schedule, registration flow, and pricing tiers.",
       icon: Calendar,
-      gradient: "from-primary to-rocket-flame"
+      gradient: "from-primary to-pd-gold"
     },
     {
       title: "Awards Designer",
@@ -270,7 +270,7 @@ const Index = () => {
               <span className="text-sm font-medium text-accent">Case Studies</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
-              Powered by Event Rocket
+              Powered by Parade Deck
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               See what's possible with our platform

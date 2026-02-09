@@ -121,6 +121,101 @@ export type Database = {
           },
         ]
       }
+      podcast_episodes: {
+        Row: {
+          id: string
+          podcast_id: string
+          title: string | null
+          description: string | null
+          audio_url: string | null
+          duration: string | null
+          published_at: string | null
+          episode_artwork_url: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          podcast_id: string
+          title?: string | null
+          description?: string | null
+          audio_url?: string | null
+          duration?: string | null
+          published_at?: string | null
+          episode_artwork_url?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          podcast_id?: string
+          title?: string | null
+          description?: string | null
+          audio_url?: string | null
+          duration?: string | null
+          published_at?: string | null
+          episode_artwork_url?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_episodes_podcast_id_fkey"
+            columns: ["podcast_id"]
+            isOneToOne: false
+            referencedRelation: "podcasts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcasts: {
+        Row: {
+          id: string
+          feed_url: string
+          title: string | null
+          description: string | null
+          author: string | null
+          artwork_url: string | null
+          website_url: string | null
+          category: string | null
+          language: string | null
+          episode_count: number | null
+          last_episode_date: string | null
+          status: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          feed_url: string
+          title?: string | null
+          description?: string | null
+          author?: string | null
+          artwork_url?: string | null
+          website_url?: string | null
+          category?: string | null
+          language?: string | null
+          episode_count?: number | null
+          last_episode_date?: string | null
+          status?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          feed_url?: string
+          title?: string | null
+          description?: string | null
+          author?: string | null
+          artwork_url?: string | null
+          website_url?: string | null
+          category?: string | null
+          language?: string | null
+          episode_count?: number | null
+          last_episode_date?: string | null
+          status?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       attendees: {
         Row: {
           checked_in_at: string | null
@@ -1678,6 +1773,75 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      verifications: {
+        Row: {
+          id: string
+          person_name: string
+          claimed_branch: string | null
+          claimed_rank: string | null
+          claimed_status: string | null
+          linkedin_url: string | null
+          website_url: string | null
+          verification_score: number | null
+          status: string | null
+          pdl_data: Json | null
+          serp_results: Json | null
+          firecrawl_data: Json | null
+          ai_analysis: string | null
+          evidence_sources: Json | null
+          red_flags: Json | null
+          notes: string | null
+          verified_by: string | null
+          created_at: string | null
+          updated_at: string | null
+          last_verified_at: string | null
+        }
+        Insert: {
+          id?: string
+          person_name: string
+          claimed_branch?: string | null
+          claimed_rank?: string | null
+          claimed_status?: string | null
+          linkedin_url?: string | null
+          website_url?: string | null
+          verification_score?: number | null
+          status?: string | null
+          pdl_data?: Json | null
+          serp_results?: Json | null
+          firecrawl_data?: Json | null
+          ai_analysis?: string | null
+          evidence_sources?: Json | null
+          red_flags?: Json | null
+          notes?: string | null
+          verified_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          last_verified_at?: string | null
+        }
+        Update: {
+          id?: string
+          person_name?: string
+          claimed_branch?: string | null
+          claimed_rank?: string | null
+          claimed_status?: string | null
+          linkedin_url?: string | null
+          website_url?: string | null
+          verification_score?: number | null
+          status?: string | null
+          pdl_data?: Json | null
+          serp_results?: Json | null
+          firecrawl_data?: Json | null
+          ai_analysis?: string | null
+          evidence_sources?: Json | null
+          red_flags?: Json | null
+          notes?: string | null
+          verified_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+          last_verified_at?: string | null
         }
         Relationships: []
       }

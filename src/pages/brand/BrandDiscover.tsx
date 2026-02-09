@@ -1,0 +1,576 @@
+import { useState, useRef, useCallback } from "react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Link2, Mail, BadgeCheck } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
+import CreatorProfileModal from "@/components/CreatorProfileModal";
+import CreateListModal from "@/components/CreateListModal";
+import { useLists } from "@/contexts/ListContext";
+import { toast } from "sonner";
+
+const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
+
+const PLATFORM_ICON_STYLES: Record<string, string> = {
+  instagram: "bg-gradient-to-br from-purple-500 to-pink-500 text-white",
+  tiktok: "bg-black dark:bg-white text-white dark:text-black",
+  youtube: "bg-red-600 text-white",
+  twitter: "bg-sky-500 text-white",
+  facebook: "bg-blue-600 text-white",
+  linkedin: "bg-blue-700 text-white",
+  podcast: "bg-violet-600 text-white",
+  twitch: "bg-purple-600 text-white",
+};
+function PlatformIcon({ platform }: { platform: string }) {
+  const plat = platform.toLowerCase();
+  const style = PLATFORM_ICON_STYLES[plat] ?? "bg-gray-500 text-white";
+  const letter = plat === "instagram" ? "I" : plat[0]?.toUpperCase() ?? "?";
+  return (
+    <span
+      className={cn("inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold", style)}
+      title={platform}
+      aria-label={platform}
+    >
+      {letter}
+    </span>
+  );
+}
+const PLATFORMS = [
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
+  { value: "twitter", label: "Twitter/X" },
+] as const;
+const FOLLOWER_OPTIONS = [
+  { value: "any", label: "Any", min: null as number | null, max: null as number | null },
+  { value: "1k-10k", label: "1K–10K", min: 1000, max: 10000 },
+  { value: "10k-50k", label: "10K–50K", min: 10000, max: 50000 },
+  { value: "50k-100k", label: "50K–100K", min: 50000, max: 100000 },
+  { value: "100k+", label: "100K+", min: 100000, max: null as number | null },
+] as const;
+const ENGAGEMENT_OPTIONS = [
+  { value: "any", label: "Any", min: null as number | null },
+  { value: "1", label: ">1%", min: 1 },
+  { value: "2", label: ">2%", min: 2 },
+  { value: "3", label: ">3%", min: 3 },
+  { value: "5", label: ">5%", min: 5 },
+] as const;
+const NICHE_OPTIONS = [
+  "All niches",
+  "Fitness",
+  "Lifestyle",
+  "Comedy",
+  "Education",
+  "Podcast",
+  "Speaking",
+  "Writing",
+] as const;
+const SORT_OPTIONS = [
+  { value: "relevancy", label: "Relevancy" },
+  { value: "followers", label: "Followers" },
+  { value: "engagement", label: "Engagement" },
+] as const;
+
+type Branch = (typeof BRANCHES)[number];
+
+function formatFollowers(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(0)}K`;
+  return String(count);
+}
+
+const BrandDiscover = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [platform, setPlatform] = useState<string>("instagram");
+  const [followersRange, setFollowersRange] = useState<string>("any");
+  const [engagementMin, setEngagementMin] = useState<string>("any");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [niche, setNiche] = useState<string>("All niches");
+  const [sortBy, setSortBy] = useState<string>("relevancy");
+  const [selectedBranches, setSelectedBranches] = useState<Set<Branch>>(new Set());
+  const [apiResults, setApiResults] = useState<{ creators: CreatorCard[]; total: number; rawResponse: unknown } | null>(null);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
+  const [createListModalOpen, setCreateListModalOpen] = useState(false);
+  const [createListPendingCreator, setCreateListPendingCreator] = useState<CreatorCard | null>(null);
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+
+  const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
+
+  const runSearch = useCallback(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setApiResults(null);
+      setApiLoading(false);
+      return;
+    }
+    setApiLoading(true);
+    setApiResults(null);
+    const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
+    const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
+    const keywords_in_bio =
+      selectedBranches.size > 0 ? Array.from(selectedBranches) : [""];
+    const options = {
+      platform: platform.toLowerCase(),
+      number_of_followers: {
+        min: followerOpt?.min ?? null,
+        max: followerOpt?.max ?? null,
+      },
+      engagement_percent: {
+        min: engagementOpt?.min ?? null,
+        max: null as number | null,
+      },
+      keywords_in_bio,
+      sort_by: sortBy as "relevancy" | "followers" | "engagement",
+    };
+    searchCreators(q, options)
+      .then((result) => {
+        if (searchQueryRef.current.trim() === q) setApiResults(result);
+      })
+      .catch((err) => {
+        if (searchQueryRef.current.trim() === q) setApiResults(null);
+        console.warn("[BrandDiscover] API search failed:", err);
+      })
+      .finally(() => {
+        if (searchQueryRef.current.trim() === q) setApiLoading(false);
+      });
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      runSearch();
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setPlatform("instagram");
+    setFollowersRange("any");
+    setEngagementMin("any");
+    setLocationFilter("");
+    setNiche("All niches");
+    setSortBy("relevancy");
+    setSelectedBranches(new Set());
+    setApiResults(null);
+  };
+
+  const toggleBranch = (branch: Branch) => {
+    setSelectedBranches((prev) => {
+      const next = new Set(prev);
+      if (next.has(branch)) next.delete(branch);
+      else next.add(branch);
+      return next;
+    });
+  };
+
+  const hasSearched = apiResults !== null;
+  const creators = apiResults?.creators ?? [];
+  const totalFromApi = apiResults?.total ?? 0;
+  const resultsLabel =
+    hasSearched && !apiLoading
+      ? `Showing ${creators.length} of ${totalFromApi >= 1000 ? formatFollowers(totalFromApi) : totalFromApi.toLocaleString()} results`
+      : "";
+
+  const creatorToListPayload = (c: CreatorCard) => ({
+    id: c.id,
+    name: c.name,
+    username: c.username,
+    avatar: c.avatar,
+    followers: c.followers,
+    engagementRate: c.engagementRate,
+    platforms: c.platforms,
+    bio: c.bio,
+    location: c.location,
+  });
+
+  const handleAddToList = (listId: string, listName: string, creator: CreatorCard) => {
+    addCreatorToList(listId, creatorToListPayload(creator));
+    toast.success(`Added ${creator.name} to ${listName}`);
+  };
+
+  const handleOpenCreateListForCreator = (creator: CreatorCard) => {
+    setCreateListPendingCreator(creator);
+    setCreateListModalOpen(true);
+  };
+
+  const handleCreateListAndAdd = (name: string) => {
+    const newId = createList(name);
+    if (createListPendingCreator) {
+      addCreatorToList(newId, creatorToListPayload(createListPendingCreator));
+      toast.success(`Added ${createListPendingCreator.name} to ${name}`);
+      setCreateListPendingCreator(null);
+    }
+  };
+
+  return (
+    <>
+      <CreatorProfileModal
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        creator={profileCreator}
+        onOpenCreator={(username) => {
+          setProfileCreator({
+            id: username,
+            name: username,
+            username,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random&size=128`,
+            followers: 0,
+            engagementRate: 0,
+            platforms: ["instagram"],
+            bio: "",
+          });
+          setProfileModalOpen(true);
+        }}
+      />
+      <CreateListModal
+        open={createListModalOpen}
+        onOpenChange={(open) => {
+          setCreateListModalOpen(open);
+          if (!open) setCreateListPendingCreator(null);
+        }}
+        onCreate={handleCreateListAndAdd}
+      />
+      <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
+              Discover Creators
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400">
+              Search and filter military and veteran creators by branch, follower range, and
+              specialty. Build lists and invite them to events and campaigns.
+            </p>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative max-w-2xl mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by name, handle, or keyword…"
+              className="pl-12 h-12 rounded-xl border border-border dark:border-gray-700 bg-background dark:bg-[#1A1D27] shadow-sm focus-visible:ring-2 transition-shadow hover:shadow-md"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+          </div>
+
+          {/* Filter bar */}
+          <div className="flex flex-wrap items-end gap-3 mb-4">
+            <Select value={platform} onValueChange={setPlatform}>
+              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                {PLATFORMS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={followersRange} onValueChange={setFollowersRange}>
+              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Followers" />
+              </SelectTrigger>
+              <SelectContent>
+                {FOLLOWER_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={engagementMin} onValueChange={setEngagementMin}>
+              <SelectTrigger className="w-[120px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Engagement" />
+              </SelectTrigger>
+              <SelectContent>
+                {ENGAGEMENT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Location"
+              className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+            />
+            <Select value={niche} onValueChange={setNiche}>
+              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Niche" />
+              </SelectTrigger>
+              <SelectContent>
+                {NICHE_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={runSearch} className="rounded-lg shrink-0 bg-pd-blue hover:bg-pd-darkblue text-white">
+              Search Creators
+            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          </div>
+
+          {/* Military Branch */}
+          <div className="mb-6">
+            <p className="text-sm font-medium text-foreground mb-2">Military Branch</p>
+            <div className="flex flex-wrap gap-2">
+              {BRANCHES.map((branch) => {
+                const selected = selectedBranches.has(branch);
+                return (
+                  <Badge
+                    key={branch}
+                    variant="outline"
+                    className={cn(
+                      "cursor-pointer transition-colors rounded-md",
+                      selected
+                        ? "bg-pd-blue/15 text-pd-blue border-pd-blue/50"
+                        : "hover:bg-muted hover:text-foreground border-border"
+                    )}
+                    onClick={() => toggleBranch(branch)}
+                  >
+                    {branch}
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+
+          {apiLoading && (
+            <div className="flex items-center gap-2 text-muted-foreground mb-4">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Searching creators…</span>
+            </div>
+          )}
+
+          {/* Empty state: no search yet */}
+          {!hasSearched && !apiLoading && (
+            <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-12 md:p-16 text-center">
+              <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium text-foreground mb-2">
+                Search for military and veteran creators
+              </p>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Enter a search term above and click Search Creators or press Enter to find creators by name, handle, or keyword.
+              </p>
+            </Card>
+          )}
+
+          {/* Results: after search */}
+          {hasSearched && !apiLoading && (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <p className="text-sm text-muted-foreground">{resultsLabel}</p>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[180px] rounded-lg bg-background dark:bg-slate-800 border-border">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>Sort by: {o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {creators.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {creators.map((creator) => {
+                    const nicheTags = [
+                      ...(creator.hashtags ?? []).map((t) => (t.startsWith("#") ? t : `#${t}`)),
+                      creator.nicheClass,
+                      creator.category,
+                      ...(creator.specialties ?? []),
+                    ].filter(Boolean) as string[];
+                    const instagramUrl = creator.username
+                      ? `https://instagram.com/${creator.username}`
+                      : null;
+                    const socialPlatforms = creator.socialPlatforms ?? [];
+                    const externalLinks = creator.externalLinks ?? [];
+                    const linkCount = externalLinks.length;
+                    const showLinksBadge = linkCount > 0;
+                    return (
+                      <Card
+                        key={creator.id}
+                        role="button"
+                        tabIndex={0}
+                        className={cn(
+                          "relative rounded-xl border p-5 flex flex-col transition-all duration-200 cursor-pointer",
+                          "bg-white border-gray-200 hover:shadow-md hover:border-[#0064B1]/30",
+                          "dark:bg-[#1A1D27] dark:border-gray-800 dark:hover:border-[#0064B1]/30"
+                        )}
+                        onClick={() => {
+                          setProfileCreator(creator);
+                          setProfileModalOpen(true);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setProfileCreator(creator);
+                            setProfileModalOpen(true);
+                          }
+                        }}
+                      >
+                        <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-[#0064B1] shadow-sm" aria-hidden />
+                        <div className="flex items-center gap-3 mb-2">
+                          <img
+                            src={creator.avatar}
+                            alt={creator.name}
+                            className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-white dark:border-slate-700 shadow-md"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-bold text-base text-[#000741] dark:text-white truncate flex items-center gap-1.5">
+                              {creator.name}
+                              {creator.isVerified && (
+                                <BadgeCheck className="h-4 w-4 shrink-0 text-[#0064B1]" aria-label="Verified" />
+                              )}
+                              {creator.hasEmail && (
+                                <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-label="Has email" title="Email available for outreach" />
+                              )}
+                            </h3>
+                            <p className="text-sm text-[#0064B1] truncate">
+                              {creator.username ? `@${creator.username}` : "\u00A0"}
+                            </p>
+                            {creator.location && (
+                              <p className="flex items-center gap-1 text-xs text-gray-400 dark:text-muted-foreground truncate mt-0.5">
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                {creator.location}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {socialPlatforms.length > 0 && (
+                          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                            {socialPlatforms.slice(0, 6).map((platform) => (
+                              <PlatformIcon key={platform} platform={platform} />
+                            ))}
+                          </div>
+                        )}
+                        {creator.bio && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">
+                            {creator.bio}
+                          </p>
+                        )}
+                        {nicheTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-3">
+                            {nicheTags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="inline-flex items-center rounded-full bg-[#0064B1]/10 text-[#0064B1] dark:bg-[#0064B1]/20 dark:text-[#0064B1] text-xs px-2 py-0.5 font-medium"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {nicheTags.length > 3 && (
+                              <span className="inline-flex items-center rounded-full bg-[#0064B1]/10 text-[#0064B1] dark:bg-[#0064B1]/20 dark:text-[#0064B1] text-xs px-2 py-0.5">
+                                +{nicheTags.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-center gap-4 py-2 mb-3 text-center border-y border-gray-100 dark:border-gray-800">
+                          <div>
+                            <p className="text-lg font-bold text-[#000741] dark:text-white tabular-nums">
+                              {formatFollowers(creator.followers)}
+                            </p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Followers</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold text-[#000741] dark:text-white tabular-nums">
+                              {typeof creator.engagementRate === "number"
+                                ? creator.engagementRate.toFixed(2)
+                                : "—"}%
+                            </p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Engagement</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold text-[#000741] dark:text-white tabular-nums">
+                              {showLinksBadge ? `🔗 ${linkCount}` : "—"}
+                            </p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide">Links</p>
+                          </div>
+                        </div>
+                        {showLinksBadge && (
+                          <p className="text-xs text-gray-400 dark:text-muted-foreground mb-1">
+                            🔗 {linkCount} link{linkCount !== 1 ? "s" : ""}
+                          </p>
+                        )}
+                        <div className="mt-auto space-y-2" onClick={(e) => e.stopPropagation()}>
+                          {isCreatorInList(creator.id) ? (
+                            <Button size="sm" className="w-full rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" disabled>
+                              Added ✓
+                            </Button>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" className="w-full rounded-lg bg-[#000741] hover:bg-[#053877] text-white dark:bg-[#000741] dark:hover:bg-[#053877]">
+                                  <ListPlus className="h-4 w-4 mr-2" />
+                                  Add to List
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                                {lists.map((list) => (
+                                  <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
+                                    {list.name}
+                                  </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Create New List
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                          <div className="flex gap-2 items-center">
+                            {instagramUrl ? (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="rounded-lg h-9 w-9 shrink-0"
+                                asChild
+                              >
+                                <a href={instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Open Instagram" onClick={(e) => e.stopPropagation()}>
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-8 text-center">
+                  <p className="text-muted-foreground">
+                    No creators match your search or filters. Try adjusting the search or clearing filters.
+                  </p>
+                </Card>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default BrandDiscover;

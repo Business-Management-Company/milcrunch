@@ -2,80 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Event Rocket - Bold launch-ready design system with space/rocket energy */
+/* ParadeDeck brand design system */
 
 @layer base {
+  /* Light mode – pd-page-light bg, white cards, pd-blue primary */
   :root {
-    --background: 230 25% 9%;
-    --foreground: 210 40% 98%;
+    --background: 220 20% 98%;
+    --foreground: 234 100% 13%;
 
-    --card: 230 25% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 234 100% 13%;
 
-    --popover: 230 25% 14%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 234 100% 13%;
 
-    --primary: 228 87% 57%;
+    --primary: 207 100% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 230 25% 18%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 234 100% 13%;
 
-    --muted: 230 20% 22%;
-    --muted-foreground: 220 15% 60%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 280 70% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 43 87% 53%;
+    --accent-foreground: 234 100% 13%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 357 85% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 230 20% 20%;
-    --input: 230 20% 24%;
-    --ring: 228 87% 57%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 207 100% 35%;
 
     --radius: 0.75rem;
 
-    /* Rocket theme colors */
-    --rocket-blue: 228 87% 57%;
-    --rocket-blue-light: 228 87% 70%;
-    --space-deep: 230 25% 9%;
-    --space-mid: 230 25% 16%;
+    --parade-blue: 207 100% 35%;
+    --parade-blue-light: 207 100% 45%;
+    --space-deep: 234 100% 13%;
+    --space-mid: 211 92% 24%;
     --cosmic-purple: 280 70% 60%;
-    --star-glow: 228 87% 80%;
+    --star-glow: 43 87% 53%;
 
-    /* Gradients - brighter, more vibrant */
-    --gradient-hero: linear-gradient(135deg, hsl(230 25% 9%) 0%, hsl(230 25% 14%) 50%, hsl(228 40% 22%) 100%);
-    --gradient-dark: linear-gradient(135deg, hsl(230 25% 12%) 0%, hsl(230 25% 9%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(228 87% 57%) 0%, hsl(228 87% 45%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(280 70% 60%) 0%, hsl(300 70% 50%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(230 25% 14%) 0%, hsl(230 25% 10%) 100%);
-    --gradient-cosmos: linear-gradient(180deg, hsl(228 87% 57%) 0%, hsl(228 87% 40%) 50%, hsl(228 70% 30%) 100%);
-    
-    /* Shadows */
-    --shadow-glow: 0 0 60px hsla(228, 87%, 57%, 0.3);
-    --shadow-card: 0 4px 20px -4px hsla(0, 0%, 0%, 0.5), 0 0 40px -10px hsla(228, 87%, 57%, 0.15);
-    --shadow-elevated: 0 20px 40px -10px hsla(0, 0%, 0%, 0.6), 0 0 60px -20px hsla(228, 87%, 57%, 0.2);
-    --shadow-rocket: 0 0 80px hsla(228, 87%, 57%, 0.4), 0 0 120px hsla(228, 70%, 70%, 0.2);
-    
+    --gradient-hero: linear-gradient(135deg, #F8F9FB 0%, #fff 100%);
+    --gradient-dark: linear-gradient(135deg, #F8F9FB 0%, #fff 100%);
+    --gradient-primary: linear-gradient(135deg, #0064B1 0%, #053877 100%);
+    --gradient-accent: linear-gradient(135deg, #F0A71F 0%, #e09a1a 100%);
+    --gradient-card: linear-gradient(180deg, #fff 0%, #fff 100%);
+    --gradient-cosmos: linear-gradient(180deg, #0064B1 0%, #053877 50%, #000741 100%);
+
+    --shadow-glow: 0 0 60px rgba(0, 100, 177, 0.2);
+    --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
+    --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.12);
+    --shadow-parade: 0 0 80px rgba(0, 100, 177, 0.25);
+
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  /* Dark mode – modern dark UI (#0F1117 / #1A1D27), not navy blue */
   .dark {
-    --background: 222 47% 3%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 6%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-    --muted: 222 30% 15%;
-    --muted-foreground: 215 20% 50%;
-    --border: 222 30% 15%;
-    --input: 222 30% 18%;
+    --background: 222 25% 7%;
+    --foreground: 0 0% 98%;
+
+    --card: 228 22% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 228 22% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 207 100% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 11%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 9% 60%;
+
+    --border: 220 13% 18%;
+    --input: 220 13% 16%;
+
+    --gradient-hero: linear-gradient(135deg, #0F1117 0%, #1A1D27 100%);
+    --gradient-dark: linear-gradient(135deg, #0F1117 0%, #1A1D27 100%);
+    --gradient-card: linear-gradient(180deg, #1A1D27 0%, #1A1D27 100%);
+
+    --shadow-glow: 0 0 60px rgba(0, 100, 177, 0.2);
+    --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.4);
+    --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    --shadow-parade: 0 0 80px rgba(0, 100, 177, 0.25);
   }
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border;
   }
@@ -110,8 +132,8 @@
     box-shadow: 0 4px 20px 0 hsla(228, 87%, 57%, 0.5);
   }
 
-  .shadow-rocket {
-    box-shadow: var(--shadow-rocket);
+  .shadow-parade {
+    box-shadow: var(--shadow-parade);
   }
 
   .text-gradient-cosmos {
@@ -137,11 +159,11 @@
     50% { opacity: 1; box-shadow: 0 0 80px hsla(228, 87%, 57%, 0.5); }
   }
 
-  .animate-rocket-glow {
-    animation: rocket-glow 2s ease-in-out infinite;
+  .animate-parade-glow {
+    animation: parade-glow 2s ease-in-out infinite;
   }
 
-  @keyframes rocket-glow {
+  @keyframes parade-glow {
     0%, 100% { filter: drop-shadow(0 0 20px hsla(228, 87%, 57%, 0.6)); }
     50% { filter: drop-shadow(0 0 40px hsla(228, 87%, 57%, 0.9)); }
   }

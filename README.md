@@ -1,8 +1,8 @@
-# Welcome to your Lovable project
+# ParadeDeck
+
+ParadeDeck is where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.
 
 ## Project info
-
-**URL**: https://lovable.dev/projects/54fc893b-165e-4bc6-ab6d-d6b1b5b34a6a
 
 ## How can I edit this code?
 

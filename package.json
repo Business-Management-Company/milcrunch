@@ -1,7 +1,8 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "parade-deck",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "ParadeDeck — For the military and veteran community to thrive. Creators, events, podcasts, and brands in one platform.",
   "type": "module",
   "scripts": {
     "dev": "vite",

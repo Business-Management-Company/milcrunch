@@ -1,398 +1,206 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import MarketingLayout from "@/components/layout/MarketingLayout";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { 
-  Calendar, MapPin, Users, Monitor, Wifi, Search, 
-  ArrowRight, Filter, ChevronLeft, ChevronRight, RefreshCw
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Mic2,
+  Search,
+  Plus,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-type EventType = "live" | "virtual" | "hybrid";
+import { cn } from "@/lib/utils";
 
-interface Event {
+type EventType = "in_person" | "virtual" | "hybrid";
+
+interface EventItem {
   id: string;
-  title: string;
-  description: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  venue: string | null;
-  city: string | null;
-  state: string | null;
-  event_type: EventType;
-  cover_image_url: string | null;
-  slug: string;
+  name: string;
+  dateLabel: string;
+  dateSort: string;
+  location: string;
+  type: EventType;
+  description: string;
+  attendees: number;
+  speakers: number;
 }
 
-const eventTypeConfig: Record<EventType, { label: string; icon: any; color: string }> = {
-  live: { label: "In-Person", icon: MapPin, color: "bg-primary" },
-  virtual: { label: "Virtual", icon: Monitor, color: "bg-accent" },
-  hybrid: { label: "Hybrid", icon: Wifi, color: "bg-cosmic-purple" },
+const SEED_EVENTS: EventItem[] = [
+  { id: "1", name: "Military Times Veterans Summit", dateLabel: "MAR 15", dateSort: "2026-03-15", location: "San Diego, CA", type: "in_person", description: "Annual gathering of veteran leaders, entrepreneurs, and advocates", attendees: 450, speakers: 24 },
+  { id: "2", name: "PDX at Fort Liberty", dateLabel: "APR 5", dateSort: "2026-04-05", location: "Fort Liberty, NC", type: "in_person", description: "ParadeDeck Experience featuring military creators and live entertainment", attendees: 320, speakers: 12 },
+  { id: "3", name: "MilSpouseFest San Diego", dateLabel: "APR 18", dateSort: "2026-04-18", location: "San Diego, CA", type: "hybrid", description: "The premier military spouse networking and empowerment event", attendees: 280, speakers: 18 },
+  { id: "4", name: "Military Influencer Conference (MIC) 2026", dateLabel: "SEP 15-17", dateSort: "2026-09-15", location: "Washington, D.C.", type: "in_person", description: "The largest gathering of military influencers and content creators", attendees: 1200, speakers: 60 },
+  { id: "5", name: "PDX at VFW National Convention", dateLabel: "AUG", dateSort: "2026-08-01", location: "TBD", type: "in_person", description: "ParadeDeck Experience at VFW's national convention", attendees: 0, speakers: 8 },
+  { id: "6", name: "Veteran Entrepreneur Summit", dateLabel: "OCT 10", dateSort: "2026-10-10", location: "Austin, TX", type: "virtual", description: "Connecting veteran entrepreneurs with investors and mentors", attendees: 520, speakers: 20 },
+  { id: "7", name: "Military Podcast Live", dateLabel: "JUN 22", dateSort: "2026-06-22", location: "Nashville, TN", type: "hybrid", description: "Live podcast recordings featuring top military content creators", attendees: 180, speakers: 15 },
+  { id: "8", name: "Armed Forces Day PDX", dateLabel: "MAY 16", dateSort: "2026-05-16", location: "Multiple Locations", type: "in_person", description: "Nationwide ParadeDeck Experiences celebrating Armed Forces Day", attendees: 800, speakers: 30 },
+];
+
+const EVENT_TYPE_CONFIG: Record<EventType, { label: string; className: string }> = {
+  in_person: { label: "In-Person", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  virtual: { label: "Virtual", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
+  hybrid: { label: "Hybrid", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300" },
 };
 
-const EventsCalendar = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [scraping, setScraping] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<EventType | "all">("all");
-  const { toast } = useToast();
+type DateFilter = "upcoming" | "past" | "this_month" | "this_year";
+type SortBy = "date" | "name" | "location";
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
+export default function EventsCalendar() {
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<EventType | "all">("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("upcoming");
+  const [sortBy, setSortBy] = useState<SortBy>("date");
 
-  const fetchEvents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("events")
-        .select("id, title, description, start_date, end_date, venue, city, state, event_type, cover_image_url, slug")
-        .eq("is_published", true)
-        .order("start_date", { ascending: true });
-
-      if (error) throw error;
-      setEvents(data || []);
-    } catch (error) {
-      console.error("Error fetching events:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const scrapeEvents = async () => {
-    setScraping(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('scrape-events', {
-        body: { searchQuery: 'tech startup conference' }
-      });
-
-      if (error) throw error;
-
-      if (data?.success && data?.events) {
-        // Merge scraped events with sample events
-        const scrapedEvents = data.events.map((e: any) => ({
-          ...e,
-          slug: e.id,
-          end_date: null,
-          cover_image_url: null,
-        }));
-        setEvents(prev => [...scrapedEvents, ...prev]);
-        toast({
-          title: "Events loaded",
-          description: `Found ${data.events.length} tech & startup events`,
-        });
-      }
-    } catch (error) {
-      console.error("Error scraping events:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load events. Using sample data.",
-        variant: "destructive",
-      });
-    } finally {
-      setScraping(false);
-    }
-  };
-
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.city?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = activeFilter === "all" || event.event_type === activeFilter;
-    return matchesSearch && matchesFilter;
-  });
-
-  // Sample events for display when DB is empty
-  const sampleEvents: Event[] = [
-    {
-      id: "sample-1",
-      title: "Tech Innovation Summit 2025",
-      description: "Join industry leaders for cutting-edge insights on AI, blockchain, and emerging technologies.",
-      start_date: "2025-03-15T09:00:00",
-      end_date: "2025-03-16T17:00:00",
-      venue: "Convention Center",
-      city: "San Francisco",
-      state: "CA",
-      event_type: "hybrid",
-      cover_image_url: null,
-      slug: "tech-innovation-summit-2025"
-    },
-    {
-      id: "sample-2",
-      title: "Global Marketing Conference",
-      description: "Learn the latest strategies in digital marketing, brand building, and customer acquisition.",
-      start_date: "2025-04-22T10:00:00",
-      end_date: "2025-04-23T16:00:00",
-      venue: "Virtual Event",
-      city: "Online",
-      state: null,
-      event_type: "virtual",
-      cover_image_url: null,
-      slug: "global-marketing-conference"
-    },
-    {
-      id: "sample-3",
-      title: "Startup Pitch Night",
-      description: "Watch promising startups pitch to top VCs. Network with founders and investors.",
-      start_date: "2025-02-28T18:00:00",
-      end_date: "2025-02-28T21:00:00",
-      venue: "Startup Hub",
-      city: "Austin",
-      state: "TX",
-      event_type: "live",
-      cover_image_url: null,
-      slug: "startup-pitch-night"
-    },
-    {
-      id: "sample-4",
-      title: "Product Management Workshop",
-      description: "Hands-on workshop covering roadmapping, prioritization, and stakeholder management.",
-      start_date: "2025-05-10T09:00:00",
-      end_date: "2025-05-10T17:00:00",
-      venue: "Online + NYC Office",
-      city: "New York",
-      state: "NY",
-      event_type: "hybrid",
-      cover_image_url: null,
-      slug: "product-management-workshop"
-    },
-    {
-      id: "sample-5",
-      title: "DevOps Days Conference",
-      description: "Deep dive into CI/CD, cloud infrastructure, and site reliability engineering.",
-      start_date: "2025-06-05T08:00:00",
-      end_date: "2025-06-06T18:00:00",
-      venue: "Tech Center",
-      city: "Seattle",
-      state: "WA",
-      event_type: "live",
-      cover_image_url: null,
-      slug: "devops-days-conference"
-    },
-    {
-      id: "sample-6",
-      title: "UX Design Masterclass",
-      description: "Learn user research, prototyping, and design thinking from industry experts.",
-      start_date: "2025-04-08T14:00:00",
-      end_date: "2025-04-08T18:00:00",
-      venue: "Virtual",
-      city: "Online",
-      state: null,
-      event_type: "virtual",
-      cover_image_url: null,
-      slug: "ux-design-masterclass"
-    }
-  ];
-
-  const displayEvents = filteredEvents.length > 0 ? filteredEvents : 
-    sampleEvents.filter((event) => {
-      const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = activeFilter === "all" || event.event_type === activeFilter;
-      return matchesSearch && matchesFilter;
+  const filteredAndSorted = useMemo(() => {
+    let list = SEED_EVENTS.filter((e) => {
+      const matchesSearch =
+        e.name.toLowerCase().includes(search.toLowerCase()) ||
+        e.location.toLowerCase().includes(search.toLowerCase()) ||
+        e.description.toLowerCase().includes(search.toLowerCase());
+      const matchesType = typeFilter === "all" || e.type === typeFilter;
+      if (!matchesSearch || !matchesType) return false;
+      const d = e.dateSort;
+      if (dateFilter === "past") return d < "2026-02-08";
+      if (dateFilter === "this_month") return d >= "2026-02-01" && d < "2026-03-01";
+      if (dateFilter === "this_year") return d >= "2026-01-01";
+      return true;
     });
+    list = [...list].sort((a, b) => {
+      if (sortBy === "date") return a.dateSort.localeCompare(b.dateSort);
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      return a.location.localeCompare(b.location);
+    });
+    return list;
+  }, [search, typeFilter, dateFilter, sortBy]);
 
   return (
-    <MarketingLayout>
-      {/* Hero Section */}
-      <section className="py-20 px-6 bg-gradient-hero">
-        <div className="container mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30">
-            <Calendar className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Discover Events</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-display font-bold text-foreground">
-            Events <span className="text-gradient-primary">Calendar</span>
-          </h1>
-          
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Find your next conference, workshop, or networking event. Filter by format and location.
-          </p>
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#000741] dark:text-white">Events</h1>
+          <p className="text-muted-foreground mt-0.5">Manage military and veteran community events</p>
         </div>
-      </section>
+        <Button asChild className="bg-[#0064B1] hover:bg-[#053877] text-white rounded-lg shrink-0">
+          <Link to="/pdx/create">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Event
+          </Link>
+        </Button>
+      </div>
 
-      {/* Filters */}
-      <section className="py-8 px-6 border-b border-border bg-card/50 sticky top-16 z-40 backdrop-blur-xl">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Search */}
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search events, locations..." 
-                className="pl-10 bg-background"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Event Type Filters */}
-            <div className="flex gap-2 flex-wrap justify-center items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={scrapeEvents}
-                disabled={scraping}
-                className="mr-2"
-              >
-                <RefreshCw className={`w-4 h-4 mr-1 ${scraping ? 'animate-spin' : ''}`} />
-                {scraping ? 'Loading...' : 'Load Events'}
-              </Button>
-              <Button
-                variant={activeFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveFilter("all")}
-                className={activeFilter === "all" ? "bg-gradient-primary" : ""}
-              >
-                All Events
-              </Button>
-              {(Object.keys(eventTypeConfig) as EventType[]).map((type) => {
-                const config = eventTypeConfig[type];
-                const Icon = config.icon;
-                return (
-                  <Button
-                    key={type}
-                    variant={activeFilter === type ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveFilter(type)}
-                    className={activeFilter === type ? config.color : ""}
-                  >
-                    <Icon className="w-4 h-4 mr-1" />
-                    {config.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
+      {/* Filters bar */}
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search events, locations..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
         </div>
-      </section>
-
-      {/* Events Grid */}
-      <section className="py-16 px-6 bg-background">
-        <div className="container mx-auto">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i} className="h-80 bg-card animate-pulse" />
-              ))}
-            </div>
-          ) : displayEvents.length === 0 ? (
-            <div className="text-center py-20">
-              <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-foreground mb-2">No events found</h3>
-              <p className="text-muted-foreground">Try adjusting your search or filters</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayEvents.map((event) => {
-                const typeConfig = eventTypeConfig[event.event_type];
-                const TypeIcon = typeConfig.icon;
-                
-                return (
-                  <Card 
-                    key={event.id} 
-                    className="group overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-300 hover:shadow-elevated hover:-translate-y-1"
-                  >
-                    {/* Event Image or Gradient */}
-                    <div className="aspect-[16/9] relative overflow-hidden">
-                      {event.cover_image_url ? (
-                        <img 
-                          src={event.cover_image_url} 
-                          alt={event.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className={`w-full h-full ${typeConfig.color} opacity-80`} />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-                      
-                      {/* Event Type Badge */}
-                      <Badge className={`absolute top-4 right-4 ${typeConfig.color} text-white`}>
-                        <TypeIcon className="w-3 h-3 mr-1" />
-                        {typeConfig.label}
-                      </Badge>
-
-                      {/* Date */}
-                      {event.start_date && (
-                        <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-sm rounded-lg p-2 text-center">
-                          <div className="text-xs text-muted-foreground uppercase">
-                            {format(new Date(event.start_date), "MMM")}
-                          </div>
-                          <div className="text-xl font-bold text-foreground">
-                            {format(new Date(event.start_date), "dd")}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-5 space-y-3">
-                      <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                        {event.title}
-                      </h3>
-                      
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {event.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {event.event_type === "virtual" ? (
-                          <>
-                            <Monitor className="w-4 h-4" />
-                            <span>Online Event</span>
-                          </>
-                        ) : (
-                          <>
-                            <MapPin className="w-4 h-4" />
-                            <span>{event.city}{event.state && `, ${event.state}`}</span>
-                          </>
-                        )}
-                      </div>
-
-                      <Button 
-                        asChild 
-                        variant="ghost" 
-                        className="w-full justify-between group-hover:bg-primary/10 group-hover:text-primary"
-                      >
-                        <Link to={`/events/${event.slug}`}>
-                          View Details
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+          {(["all", "in_person", "virtual", "hybrid"] as const).map((f) => (
+            <Button
+              key={f}
+              variant={typeFilter === f ? "default" : "outline"}
+              size="sm"
+              className={cn(
+                "rounded-full h-8",
+                typeFilter === f && "bg-[#0064B1] hover:bg-[#053877]"
+              )}
+              onClick={() => setTypeFilter(f)}
+            >
+              {f === "all" ? "All Events" : EVENT_TYPE_CONFIG[f].label}
+            </Button>
+          ))}
         </div>
-      </section>
+        <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue placeholder="Date" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="upcoming">Upcoming</SelectItem>
+            <SelectItem value="past">Past</SelectItem>
+            <SelectItem value="this_month">This Month</SelectItem>
+            <SelectItem value="this_year">This Year</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+          <SelectTrigger className="w-[140px] h-9">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date">Date</SelectItem>
+            <SelectItem value="name">Name</SelectItem>
+            <SelectItem value="location">Location</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      {/* CTA Section */}
-      <section className="py-20 px-6 bg-dark-section">
-        <div className="container mx-auto text-center space-y-6">
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-dark-foreground">
-            Ready to Launch Your Event?
-          </h2>
-          <p className="text-lg text-dark-muted max-w-xl mx-auto">
-            Create and manage in-person, virtual, or hybrid events with our all-in-one platform.
-          </p>
-          <Button size="lg" asChild className="bg-gradient-primary hover:opacity-90 shadow-rocket">
-            <Link to="/auth?mode=signup">
-              Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
+      {/* Events grid or empty state */}
+      {filteredAndSorted.length === 0 ? (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-12 text-center">
+          <Calendar className="h-14 w-14 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-[#000741] dark:text-white mb-2">No events yet</h3>
+          <p className="text-muted-foreground text-sm mb-4">Create your first event with the PDX wizard.</p>
+          <Button asChild className="bg-[#0064B1] hover:bg-[#053877] text-white rounded-lg">
+            <Link to="/pdx/create">Create Event</Link>
           </Button>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredAndSorted.map((event) => {
+            const typeConfig = EVENT_TYPE_CONFIG[event.type];
+            return (
+              <Card
+                key={event.id}
+                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="rounded-lg bg-[#0064B1] text-white text-xs font-bold px-2.5 py-1.5 shrink-0">
+                    {event.dateLabel}
+                  </div>
+                  <Badge variant="secondary" className={cn("text-xs shrink-0", typeConfig.className)}>
+                    {typeConfig.label}
+                  </Badge>
+                </div>
+                <h3 className="text-lg font-semibold text-[#000741] dark:text-white mb-1 line-clamp-2">
+                  {event.name}
+                </h3>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span>{event.location}</span>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                  {event.description}
+                </p>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <span className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    {event.attendees > 0 ? event.attendees.toLocaleString() : "—"}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Mic2 className="h-4 w-4" />
+                    {event.speakers}
+                  </span>
+                </div>
+              </Card>
+            );
+          })}
         </div>
-      </section>
-    </MarketingLayout>
+      )}
+    </div>
   );
-};
-
-export default EventsCalendar;
+}

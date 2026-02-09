@@ -19,6 +19,14 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "pd-navy": "#000741",
+        "pd-darkblue": "#053877",
+        "pd-blue": "#0064B1",
+        "pd-red": "#ED1C24",
+        "pd-darkred": "#BF2228",
+        "pd-gold": "#F0A71F",
+        "pd-sidebar-dark": "#000530",
+        "pd-page-light": "#F8F9FB",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -47,9 +55,9 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        rocket: {
-          blue: "hsl(var(--rocket-blue))",
-          light: "hsl(var(--rocket-blue-light))",
+        parade: {
+          blue: "hsl(var(--parade-blue))",
+          light: "hsl(var(--parade-blue-light))",
         },
         space: {
           deep: "hsl(var(--space-deep))",
@@ -75,13 +83,14 @@ export default {
         'glow': 'var(--shadow-glow)',
         'card': 'var(--shadow-card)',
         'elevated': 'var(--shadow-elevated)',
-        'rocket': 'var(--shadow-rocket)',
+        'parade': 'var(--shadow-parade)',
         'primary': '0 4px 20px 0 hsla(228, 87%, 57%, 0.5)',
       },
       fontFamily: {
         'display': ['Bebas Neue', 'sans-serif'],
         'headline': ['Bebas Neue', 'sans-serif'],
         'sans': ['Inter', 'system-ui', 'sans-serif'],
+        'serif': ['Playfair Display', 'Georgia', 'serif'],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -105,7 +114,7 @@ export default {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
-        "rocket-launch": {
+        "parade-launch": {
           "0%": { transform: "translateY(100px) scale(0.8)", opacity: "0" },
           "50%": { transform: "translateY(-10px) scale(1.05)", opacity: "1" },
           "100%": { transform: "translateY(0) scale(1)", opacity: "1" },
@@ -116,7 +125,7 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-out",
         "scale-in": "scale-in 0.3s ease-out",
-        "rocket-launch": "rocket-launch 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "parade-launch": "parade-launch 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
       },
     },
   },

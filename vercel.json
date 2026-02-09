@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/enrich/:path*",
+      "destination": "https://api.influencers.club/:path*"
+    },
+    {
+      "source": "/api/serp/:path*",
+      "destination": "https://serpapi.com/:path*"
+    },
+    {
+      "source": "/api/firecrawl/:path*",
+      "destination": "https://api.firecrawl.dev/:path*"
+    },
+    {
+      "source": "/api/pdl/:path*",
+      "destination": "https://api.peopledatalabs.com/:path*"
+    },
+    {
+      "source": "/api/resend/:path*",
+      "destination": "https://api.resend.com/:path*"
+    }
+  ]
+}
