@@ -60,6 +60,12 @@ export default function CreatorOnboard() {
       navigate("/login");
       return;
     }
+    const role = (user.user_metadata?.role as string) ?? "creator";
+    if (role === "super_admin" || role === "admin" || role === "brand") {
+      if (role === "super_admin") navigate("/admin", { replace: true });
+      else navigate("/brand/dashboard", { replace: true });
+      return;
+    }
     if (creatorProfile?.onboarding_completed) {
       navigate("/creator/dashboard");
       return;

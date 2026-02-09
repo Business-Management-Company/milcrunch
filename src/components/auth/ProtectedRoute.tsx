@@ -22,7 +22,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
 /** For creator routes: redirect brand/admin to /brand/dashboard, unauthenticated to /login. */
 export function CreatorRoute({ children }: { children: ReactNode }) {
-  const { user, loading, creatorProfile } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -35,7 +35,7 @@ export function CreatorRoute({ children }: { children: ReactNode }) {
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  const role = (user.user_metadata?.role ?? creatorProfile?.role) as string | undefined;
+  const role = (user.user_metadata?.role as string) ?? "creator";
   if (role === "brand" || role === "admin") {
     return <Navigate to="/brand/dashboard" replace />;
   }
@@ -44,7 +44,7 @@ export function CreatorRoute({ children }: { children: ReactNode }) {
 
 /** For brand/admin routes: redirect creator to /creator/dashboard. */
 export function BrandRoute({ children }: { children: ReactNode }) {
-  const { user, loading, creatorProfile } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -57,12 +57,9 @@ export function BrandRoute({ children }: { children: ReactNode }) {
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  const role = (user.user_metadata?.role ?? creatorProfile?.role) as string | undefined;
+  const role = (user.user_metadata?.role as string) ?? "creator";
   if (role === "creator") {
     return <Navigate to="/creator/dashboard" replace />;
-  }
-  if (role === "brand" || role === "admin") {
-    return <>{children}</>;
   }
   return <>{children}</>;
 }

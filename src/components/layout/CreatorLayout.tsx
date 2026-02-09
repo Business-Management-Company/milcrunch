@@ -79,17 +79,14 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
 const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, creatorProfile, role, signOut } = useAuth();
+  const { user, creatorProfile, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  if (
-    role === "creator" &&
-    creatorProfile &&
-    !creatorProfile.onboarding_completed &&
-    !location.pathname.startsWith("/creator/onboard")
-  ) {
+  const role = (user?.user_metadata?.role as string) ?? "creator";
+  const nonCreator = role === "super_admin" || role === "admin" || role === "brand";
+  if (!nonCreator && creatorProfile && !creatorProfile.onboarding_completed && !location.pathname.startsWith("/creator/onboard")) {
     navigate("/creator/onboard", { replace: true });
     return null;
   }
