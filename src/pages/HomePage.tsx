@@ -7,8 +7,8 @@ import {
   Shield,
   Users,
   Mic2,
-  TrendingUp,
-  Building2,
+  BarChart3,
+  Handshake,
   MapPin,
   Search,
   Instagram,
@@ -26,9 +26,8 @@ import {
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
-// Hero background: diverse group in studio (Image 2 style — 15–20 people, professional)
-const HERO_BG_IMAGE =
-  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1920&q=80";
+// Hero background: diverse creator group in studio (cyan–teal gradient, professional)
+const HERO_BG_IMAGE = "/home-hero-creators.png";
 
 const NICHE_TAG_CLASSES: Record<string, string> = {
   Veterans: "bg-blue-100 text-blue-700",
@@ -42,8 +41,8 @@ const AUDIENCE = [
   { label: "Veterans", icon: Shield },
   { label: "Military Spouses", icon: Users },
   { label: "Podcasters", icon: Mic2 },
-  { label: "Content Creators", icon: TrendingUp },
-  { label: "Brands", icon: Building2 },
+  { label: "Content Creators", icon: BarChart3 },
+  { label: "Brands", icon: Handshake },
 ];
 
 const CATEGORIES: { label: string; image: string }[] = [
@@ -79,6 +78,107 @@ const HERO_FALLBACK: CreatorRow[] = [
   { id: "2", display_name: "Kevin W.", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 1, created_at: null },
   { id: "3", display_name: "Taylor S.", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 2, created_at: null },
 ];
+
+// Hero creator cards — Grid Coordinates style (hardcoded for now)
+type HeroCardData = {
+  photo: string;
+  name: string;
+  handle: string;
+  category: string;
+  categoryColor: string;
+  followers: string;
+  engagement: string;
+};
+
+const HERO_CARDS: HeroCardData[] = [
+  {
+    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face",
+    name: "Jason A.",
+    handle: "@savagekingdom",
+    category: "Veterans",
+    categoryColor: "bg-blue-50 text-blue-700 border-blue-200",
+    followers: "359.1K",
+    engagement: "3.2%",
+  },
+  {
+    photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=96&h=96&fit=crop&crop=face",
+    name: "Kevin W.",
+    handle: "@wheelchairkev",
+    category: "Motivation",
+    categoryColor: "bg-purple-50 text-purple-700 border-purple-200",
+    followers: "353.1K",
+    engagement: "4.1%",
+  },
+  {
+    photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=96&h=96&fit=crop&crop=face",
+    name: "Taylor S.",
+    handle: "@tsyontz",
+    category: "Military",
+    categoryColor: "bg-green-50 text-green-700 border-green-200",
+    followers: "96.8K",
+    engagement: "2.1%",
+  },
+];
+
+function HeroCreatorCard({
+  photo,
+  name,
+  handle,
+  category,
+  categoryColor,
+  followers,
+  engagement,
+  style,
+  className = "",
+}: HeroCardData & { style?: React.CSSProperties; className?: string }) {
+  const [imgError, setImgError] = useState(false);
+  const initials = getInitials(name, handle.replace("@", ""));
+
+  return (
+    <div
+      className={`bg-white rounded-2xl p-5 w-[360px] transition-shadow duration-300 hover:shadow-2xl ${className}`}
+      style={{
+        boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+        ...style,
+      }}
+    >
+      <div className="flex items-center gap-3">
+        {!imgError ? (
+          <img
+            src={photo}
+            alt={name}
+            className="w-12 h-12 rounded-full object-cover shrink-0"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+            style={{ background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)" }}
+          >
+            {initials}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-gray-900 text-base truncate">{name}</div>
+          <div className="text-gray-500 text-sm truncate">{handle}</div>
+        </div>
+        <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border ${categoryColor}`}>
+          {category}
+        </span>
+      </div>
+      <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
+        <div>
+          <div className="text-lg font-bold text-gray-900">{followers}</div>
+          <div className="text-xs text-gray-500">Followers</div>
+        </div>
+        <div>
+          <div className="text-lg font-bold text-emerald-500">{engagement}</div>
+          <div className="text-xs text-gray-500">Engagement</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const GRID_FALLBACK: CreatorRow[] = [
   { id: "g1", display_name: "Jason", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 0, created_at: null },
@@ -226,63 +326,25 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            {/* Right 40% — stacked creator cards (Image 1: photo left, name/handle, pill right, stats bottom) */}
-            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end relative min-h-[340px] md:min-h-[400px]">
-              {heroCreators.map((card, i) => (
-                <div
-                  key={card.id}
-                  className="absolute bg-white rounded-xl shadow-lg hover:shadow-xl p-4 w-[300px] hero-float transition-shadow duration-300"
-                  style={{
-                    top: 16 + i * 84,
-                    left: "50%",
-                    marginLeft: i * 22 - 150,
-                    animationDelay: `${i * 0.3}s`,
-                    zIndex: i + 1,
-                  }}
-                >
-                  {/* Top row: circular photo left, name + handle middle, category pill right */}
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {card.avatar_url ? (
-                        <img
-                          src={card.avatar_url}
-                          alt={card.display_name}
-                          className="h-14 w-14 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <div
-                          className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-                          style={{ background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)" }}
-                        >
-                          {getInitials(card.display_name, card.handle)}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-bold text-[#0f172a] truncate text-base">{card.display_name}</p>
-                        <p className="text-sm text-gray-500 truncate">@{card.handle}</p>
-                      </div>
-                    </div>
-                    {card.category && (
-                      <span className="shrink-0 rounded-full bg-teal-100 text-teal-800 px-2.5 py-0.5 text-xs font-semibold">
-                        {card.category}
-                      </span>
-                    )}
-                  </div>
-                  {/* Stats row: number bold (black / green), label small gray */}
-                  <div className="flex items-baseline gap-4 text-sm pt-3 border-t border-gray-100">
-                    <span>
-                      <span className="font-semibold text-[#0f172a]">{formatFollowerCount(card.follower_count)}</span>
-                      <span className="text-gray-500 text-xs ml-1">Followers</span>
-                    </span>
-                    {card.engagement_rate != null && (
-                      <span>
-                        <span className="font-semibold text-emerald-600">{card.engagement_rate}%</span>
-                        <span className="text-gray-500 text-xs ml-1">Engagement</span>
-                      </span>
-                    )}
+            {/* Right 40% — Grid Coordinates style: 3 stacked creator cards */}
+            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end">
+              <div className="relative w-[420px] h-[520px]">
+                <div className="absolute top-0 left-0 z-30 -rotate-2 hero-card-wrapper hero-card-fade-1">
+                  <div className="hero-card-float">
+                    <HeroCreatorCard {...HERO_CARDS[0]} />
                   </div>
                 </div>
-              ))}
+                <div className="absolute top-[90px] left-[20px] z-20 hero-card-wrapper hero-card-fade-2">
+                  <div className="hero-card-float hero-card-float-delay-2">
+                    <HeroCreatorCard {...HERO_CARDS[1]} />
+                  </div>
+                </div>
+                <div className="absolute top-[180px] left-[40px] z-10 rotate-2 hero-card-wrapper hero-card-fade-3">
+                  <div className="hero-card-float hero-card-float-delay-3">
+                    <HeroCreatorCard {...HERO_CARDS[2]} />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <style>{`
@@ -290,28 +352,40 @@ export default function HomePage() {
               0%, 100% { transform: translateY(0); }
               50% { transform: translateY(-8px); }
             }
-            .hero-float {
-              animation: hero-float-kf 4s ease-in-out infinite;
+            .hero-card-float { animation: hero-float-kf 6s ease-in-out infinite; }
+            .hero-card-float-delay-2 { animation-delay: 0.2s; }
+            .hero-card-float-delay-3 { animation-delay: 0.4s; }
+            @keyframes hero-card-fade-kf {
+              from { opacity: 0; transform: translateY(12px); }
+              to { opacity: 1; transform: translateY(0); }
             }
+            .hero-card-fade-1 { animation: hero-card-fade-kf 0.5s ease-out 0s forwards; opacity: 0; }
+            .hero-card-fade-2 { animation: hero-card-fade-kf 0.5s ease-out 0.15s forwards; opacity: 0; }
+            .hero-card-fade-3 { animation: hero-card-fade-kf 0.5s ease-out 0.3s forwards; opacity: 0; }
           `}</style>
         </section>
 
-        {/* FOR — Built For Those Who Serve & Create (single section, icon + label together) */}
-        <section className="relative z-10 bg-[#0a1628] py-16 px-4">
-          <h2 className="text-center text-xl md:text-2xl font-bold text-white mb-2">
+        {/* Built For Those Who Serve & Create — single audience section */}
+        <section
+          className="relative z-10 py-20 px-8 text-center"
+          style={{ background: "#1B2A4A" }}
+        >
+          <h2 className="text-center text-white font-bold mb-12 text-[2rem]">
             Built For Those Who Serve & Create
           </h2>
-          <p className="text-center text-white/80 text-sm md:text-base max-w-xl mx-auto mb-10">
+          <p className="text-center text-gray-400 mx-auto mb-12 text-[1.1rem]">
             Whether you wore the uniform or support those who did
           </p>
-          <div className="flex flex-wrap items-stretch justify-center gap-8 md:gap-12">
+          <div className="flex flex-wrap justify-center items-start gap-16">
             {AUDIENCE.map(({ label, icon: Icon }) => (
               <div
                 key={label}
-                className="flex flex-col items-center gap-2 text-white rounded-xl px-6 py-4 transition-transform duration-200 hover:scale-105 min-w-[120px]"
+                className="flex flex-col items-center cursor-default transition-transform duration-200 hover:scale-110"
               >
-                <Icon className="h-8 w-8 text-[#F0A71F] shrink-0" aria-hidden />
-                <span className="text-sm font-medium text-white text-center">{label}</span>
+                <Icon className="h-12 w-12 text-[#F0A71F] shrink-0" aria-hidden />
+                <span className="text-white font-medium mt-3 text-base">
+                  {label}
+                </span>
               </div>
             ))}
           </div>
