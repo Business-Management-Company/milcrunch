@@ -1,688 +1,597 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Sun,
-  Shield,
-  Users,
-  Mic2,
-  BarChart3,
-  Handshake,
-  MapPin,
-  Search,
-  Instagram,
-  Play,
-} from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-import {
-  fetchFeaturedHero,
-  fetchFeaturedGrid,
-  formatFollowerCount,
-  getInitials,
-  type CreatorRow,
-} from "@/lib/creators-db";
+import { Link } from "react-router-dom";
 
-const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
+/* ──────────────────────────────────────────────
+   ParadeDeck Public Homepage
+   Route: /
+   Does NOT use AppLayout — standalone page.
+   ────────────────────────────────────────────── */
 
-// Hero background: diverse creator group in studio (cyan–teal gradient, professional)
-const HERO_BG_IMAGE = "/home-hero-creators.png";
-
-const NICHE_TAG_CLASSES: Record<string, string> = {
-  Veterans: "bg-blue-100 text-blue-700",
-  Motivation: "bg-purple-100 text-purple-700",
-  Military: "bg-green-100 text-green-700",
-  Fitness: "bg-orange-100 text-orange-700",
-  Lifestyle: "bg-pink-100 text-pink-700",
-};
-
-const AUDIENCE = [
-  { label: "Veterans", icon: Shield },
-  { label: "Military Spouses", icon: Users },
-  { label: "Podcasters", icon: Mic2 },
-  { label: "Content Creators", icon: BarChart3 },
-  { label: "Brands", icon: Handshake },
+// ── data ──
+const stats = [
+  { value: "340M+", label: "Profiles Indexed" },
+  { value: "100+", label: "PDX Events" },
+  { value: "6M+", label: "Creator Reach" },
+  { value: "24/7", label: "PDTV Streaming" },
 ];
 
-const CATEGORIES: { label: string; image: string }[] = [
-  { label: "Military Life", image: "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&q=80" },
-  { label: "Fitness", image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80" },
-  { label: "Veterans", image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=600&q=80" },
-  { label: "Lifestyle", image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&q=80" },
-  { label: "Podcasts", image: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=600&q=80" },
-  { label: "Business", image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&q=80" },
-  { label: "Gaming", image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=80" },
-  { label: "Education", image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&q=80" },
-  { label: "News & Politics", image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&q=80" },
-  { label: "All Creators", image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80" },
-];
-
-const EVENTS = [
-  { name: "MilSpouseFest San Diego", date: "Mar 15", location: "San Diego, CA", tag: "MilSpouseFest" },
-  { name: "PDX at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC", tag: "PDX" },
-  { name: "MIC 2026", date: "Sep", location: "Washington, DC", tag: "MIC" },
-  { name: "PDX at VFW National", date: "Aug", location: "Louisville, KY", tag: "PDX" },
-];
-
-const BRAND_FEATURES = [
-  { title: "AI Creator Discovery", desc: "Find verified military creators by branch, audience, niche, and engagement." },
-  { title: "Sponsor Events", desc: "Attach your brand to PDX events and get visibility across the community." },
-  { title: "First-Party Data", desc: "Real audience insights from real interactions — not anonymous impressions." },
-];
-
-type PodcastRow = Database["public"]["Tables"]["podcasts"]["Row"];
-
-const HERO_FALLBACK: CreatorRow[] = [
-  { id: "1", display_name: "Jason S.", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 0, created_at: null },
-  { id: "2", display_name: "Kevin W.", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 1, created_at: null },
-  { id: "3", display_name: "Taylor S.", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 2, created_at: null },
-];
-
-// Hero creator cards — Grid Coordinates style (single data array, same structure for all 3)
-const heroCreators = [
+const upcomingEvents = [
   {
-    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face",
-    name: "Jason A.",
-    handle: "@savagekingdom",
-    category: "Veterans",
-    categoryColor: "bg-blue-50 text-blue-700 border border-blue-200",
-    followers: "359.1K",
-    engagement: "3.2%",
+    name: "MilSpouseFest San Diego",
+    date: "Mar 15, 2026",
+    location: "San Diego, CA",
+    tag: "MilSpouse",
   },
   {
-    photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=96&h=96&fit=crop&crop=face",
-    name: "Kevin W.",
-    handle: "@wheelchairkev",
-    category: "Motivation",
-    categoryColor: "bg-purple-50 text-purple-700 border border-purple-200",
-    followers: "353.1K",
-    engagement: "4.1%",
+    name: "PDX at Fort Liberty",
+    date: "Apr 5, 2026",
+    location: "Fort Liberty, NC",
+    tag: "PDX Live",
   },
   {
-    photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=96&h=96&fit=crop&crop=face",
-    name: "Taylor S.",
-    handle: "@tsyontz",
-    category: "Military",
-    categoryColor: "bg-green-50 text-green-700 border border-green-200",
-    followers: "96.8K",
-    engagement: "2.1%",
+    name: "MIC 2026",
+    date: "Sep 2026",
+    location: "Washington, D.C.",
+    tag: "Conference",
+  },
+  {
+    name: "PDX at VFW National",
+    date: "Aug 2026",
+    location: "TBD",
+    tag: "PDX Live",
   },
 ];
 
-const GRID_FALLBACK: CreatorRow[] = [
-  { id: "g1", display_name: "Jason", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 0, created_at: null },
-  { id: "g2", display_name: "Kevin", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 1, created_at: null },
-  { id: "g3", display_name: "Sven", handle: "badasscounseling", platform: "instagram", avatar_url: null, follower_count: 164600, engagement_rate: 2.5, category: "Lifestyle", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 2, created_at: null },
-  { id: "g4", display_name: "David", handle: "frommilitarytomillionaire", platform: "instagram", avatar_url: null, follower_count: 107900, engagement_rate: 2.8, category: "Military", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 3, created_at: null },
-  { id: "g5", display_name: "Taylor", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 4, created_at: null },
-  { id: "g6", display_name: "Jon", handle: "itsjonlynch", platform: "instagram", avatar_url: null, follower_count: 88600, engagement_rate: 3.0, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 5, created_at: null },
-  { id: "g7", display_name: "Chive Charities", handle: "chivecharities", platform: "instagram", avatar_url: null, follower_count: 43100, engagement_rate: 4.1, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 6, created_at: null },
-  { id: "g8", display_name: "Kashi", handle: "hopefor22aday_kashi", platform: "instagram", avatar_url: null, follower_count: 42000, engagement_rate: 2.9, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 7, created_at: null },
+const oldWay = [
+  "3-day events, then silence until next year",
+  "Sponsors pay for a weekend, not a community",
+  "No year-round creator data or engagement",
+  "Attendees vanish after the closing ceremony",
 ];
 
-export default function HomePage() {
-  const { user, loading: authLoading, getRedirectPath } = useAuth();
-  const navigate = useNavigate();
-  const [navScrolled, setNavScrolled] = useState(false);
-  const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
-  const [podcastTotal, setPodcastTotal] = useState<number | null>(null);
-  const [podcastsLoading, setPodcastsLoading] = useState(true);
-  const [heroCreators, setHeroCreators] = useState<CreatorRow[]>(HERO_FALLBACK);
-  const [gridCreators, setGridCreators] = useState<CreatorRow[]>([]);
+const pdWay = [
+  "365-day community that lives between events",
+  "Year-round sponsor exposure & attribution",
+  "AI-powered creator discovery & verification",
+  "First-party data on every creator interaction",
+];
+
+const brandFeatures = [
+  {
+    icon: "🎯",
+    title: "AI Creator Discovery",
+    desc: "Find verified military creators by branch, audience, niche, and engagement — powered by real-time data.",
+  },
+  {
+    icon: "📊",
+    title: "First-Party Data",
+    desc: "Own your audience insights. Every click, view, and interaction feeds your dashboard — not a third party's.",
+  },
+  {
+    icon: "🎙️",
+    title: "PDX Live Experiences",
+    desc: "Produce branded live-stage events at military installations, conferences, and VFW posts nationwide.",
+  },
+];
+
+const creatorFeatures = [
+  {
+    icon: "🔗",
+    title: "Smart BIO Link",
+    desc: "Replace your Linktree with a ParadeDeck BIO — track every click with first-party data you actually own.",
+  },
+  {
+    icon: "📱",
+    title: "Connect Your Channels",
+    desc: "Link Instagram, TikTok, YouTube, and podcasts. One verified profile brands can discover instantly.",
+  },
+  {
+    icon: "🎤",
+    title: "Get on Stage",
+    desc: "Apply to speak, perform, or host at PDX events. Build your brand in front of live military audiences.",
+  },
+];
+
+const partners = ["VFW", "MIC", "MilSpouseFest", "MBA", "IAVA"];
+
+// ── components ──
+
+function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const { data, count } = await supabase
-        .from("podcasts")
-        .select("*", { count: "exact" })
-        .eq("status", "active")
-        .order("title", { ascending: true })
-        .range(0, 7);
-      setPodcasts(data ?? []);
-      setPodcastTotal(count ?? 0);
-      setPodcastsLoading(false);
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const [hero, grid] = await Promise.all([
-        fetchFeaturedHero(3),
-        fetchFeaturedGrid(8),
-      ]);
-      setHeroCreators(hero.length >= 3 ? hero : HERO_FALLBACK);
-      setGridCreators(grid.length > 0 ? grid : GRID_FALLBACK);
-    })();
-  }, []);
-
-  useEffect(() => {
-    const onScroll = () => setNavScrolled(window.scrollY > 60);
-    window.addEventListener("scroll", onScroll, { passive: true });
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const navLinkClass = navScrolled
-    ? "text-gray-600 hover:text-[#0064B1]"
-    : "text-white/90 hover:text-white";
-
   return (
-    <div className="min-h-screen bg-white text-[#000741]">
-      {/* Nav — transparent on hero, solid white with border on scroll */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 md:px-8 transition-all duration-300 ${
-          navScrolled ? "bg-white/95 backdrop-blur-md border-b border-gray-200" : "bg-transparent"
-        }`}
-      >
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-8 w-auto" />
-          <span className={`font-bold text-lg ${navScrolled ? "text-[#000741]" : "text-white"}`}>
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100"
+          : "bg-transparent"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* logo */}
+        <Link to="/" className="flex items-center gap-2.5">
+          <img
+            src="/Parade-Deck-Flag-logo.png"
+            alt="ParadeDeck"
+            className="h-8 w-auto"
+          />
+          <span
+            className={`text-lg font-bold tracking-tight transition-colors ${
+              scrolled ? "text-[#000741]" : "text-white"
+            }`}
+          >
             ParadeDeck
           </span>
         </Link>
-        <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
-          <a href="/#creators" className={`text-sm font-medium ${navLinkClass}`}>Creators</a>
-          <a href="/#events" className={`text-sm font-medium ${navLinkClass}`}>Events</a>
-          <Link to="/swag" className={`text-sm font-medium ${navLinkClass}`}>SWAG</Link>
-          <Link to="/speakers" className={`text-sm font-medium ${navLinkClass}`}>Speakers</Link>
-          <a href="/#features" className={`text-sm font-medium ${navLinkClass}`}>Features</a>
-        </nav>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-gray-400 p-1.5" aria-hidden><Sun className="h-4 w-4" /></span>
-          <Link to="/login" className={`text-sm font-medium ${navLinkClass}`}>
+
+        {/* links */}
+        <div className="hidden md:flex items-center gap-8">
+          {["For Brands", "For Creators", "Events"].map((t) => (
+            <a
+              key={t}
+              href={`#${t.toLowerCase().replace(/\s/g, "-")}`}
+              className={`text-sm font-medium transition-colors ${
+                scrolled
+                  ? "text-gray-600 hover:text-[#000741]"
+                  : "text-white/80 hover:text-white"
+              }`}
+            >
+              {t}
+            </a>
+          ))}
+          <Link
+            to="/brand/discover"
+            className={`text-sm font-medium px-4 py-2 rounded-lg border transition-all ${
+              scrolled
+                ? "border-[#000741] text-[#000741] hover:bg-[#000741]/5"
+                : "border-white/40 text-white hover:bg-white/10"
+            }`}
+          >
             Sign In
           </Link>
-          {user ? (
-            <Button
-              size="sm"
-              className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 py-2 font-semibold"
-              onClick={() => {
-                const path = getRedirectPath();
-                if (path) navigate(path);
-                else navigate("/creator/dashboard");
-              }}
-            >
-              Get Started →
-            </Button>
-          ) : (
-            <Link to="/signup">
-              <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 py-2 font-semibold">
-                Get Started →
-              </Button>
-            </Link>
-          )}
-          <Link to="/signup">
-            <Button size="sm" variant="outline" className="rounded-lg px-5 py-2 font-semibold">
-              Become a Creator
-            </Button>
+          <Link
+            to="/brand/discover"
+            className="text-sm font-semibold px-5 py-2 rounded-lg bg-[#0064B1] text-white hover:bg-[#0064B1]/90 transition-all shadow-lg shadow-[#0064B1]/20"
+          >
+            Get Started
           </Link>
         </div>
-      </header>
+      </div>
+    </nav>
+  );
+}
 
-      <main>
-        {/* Hero — full-width background image + overlay, floating creator cards (Grid Coordinates style) */}
-        <section className="relative min-h-[95vh] flex flex-col md:flex-row items-center justify-center px-4 md:px-8 pt-20 pb-24 overflow-hidden">
-          {/* Background: full-width photo + dark navy overlay */}
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url("${HERO_BG_IMAGE}")`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
-          {/* Dark blue left → teal-tinted blue right (Image 2 overlay) */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(to right, rgba(27,42,74,0.88) 0%, rgba(25,55,65,0.65) 100%)",
-            }}
-          />
-          <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
-            {/* Left 60% — badge, headline, subtitle, CTAs, branch chips */}
-            <div className="flex-1 md:max-w-[60%] text-center md:text-left">
-              <div className="inline-flex items-center rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-6">
-                <span className="text-[#F0A71F] text-xs font-semibold uppercase tracking-wide">
-                  ☆ THE MILITARY CREATOR PLATFORM
-                </span>
-              </div>
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-4">
-                Stop juggling your events, creators, sponsors, and media.
-              </h1>
-              <p className="text-white/90 text-base md:text-lg max-w-[600px] mb-8">
-                ParadeDeck brings it all into one command center — so you can focus on the mission.
-              </p>
-              <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
-                {user ? (
-                  <Button
-                    size="lg"
-                    className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold"
-                    onClick={() => {
-                      const path = getRedirectPath();
-                      if (path) navigate(path);
-                      else navigate("/creator/dashboard");
-                    }}
-                  >
-                    Get Started →
-                  </Button>
-                ) : (
-                  <Link to="/signup">
-                    <Button size="lg" className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold">
-                      Get Started →
-                    </Button>
-                  </Link>
-                )}
-                <a href="/#creators">
-                  <Button size="lg" variant="outline" className="rounded-lg bg-transparent hover:bg-white/10 border-white/40 text-white px-6 py-3 font-medium inline-flex items-center gap-2">
-                    <Play className="h-4 w-4" />
-                    Browse Creators
-                  </Button>
-                </a>
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                {BRANCHES.map((branch) => (
-                  <button
-                    key={branch}
-                    type="button"
-                    className="rounded-full bg-white/10 border border-white/20 text-white/80 px-4 py-1.5 text-sm font-medium hover:bg-white/15 transition-colors"
-                  >
-                    {branch}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Right 40% — Grid Coordinates style: 3 stacked creator cards (same structure for all) */}
-            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end">
-              <div className="relative w-[420px] min-h-[580px]">
-                {heroCreators.map((creator, i) => (
-                  <div
-                    key={i}
-                    className="absolute"
-                    style={{
-                      zIndex: 30 - i * 10,
-                      top: `${i * 190}px`,
-                      left: `${i * 20}px`,
-                      transform: `rotate(${(i - 1) * 2}deg)`,
-                    }}
-                  >
-                    <div className="hero-card-float" style={{ animationDelay: `${i * 0.2}s` }}>
-                      <div className="bg-white rounded-2xl p-5 w-[360px] shadow-xl transition-shadow duration-300 hover:shadow-2xl">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={creator.photo}
-                          alt={creator.name}
-                          className="w-12 h-12 rounded-full object-cover shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-gray-900 text-base truncate">{creator.name}</div>
-                          <div className="text-gray-500 text-sm truncate">{creator.handle}</div>
-                        </div>
-                        <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${creator.categoryColor}`}>
-                          {creator.category}
-                        </span>
-                      </div>
-                      <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
-                        <div>
-                          <div className="text-lg font-bold text-gray-900">{creator.followers}</div>
-                          <div className="text-xs text-gray-500">Followers</div>
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-emerald-500">{creator.engagement}</div>
-                          <div className="text-xs text-gray-500">Engagement</div>
-                        </div>
-                      </div>
-                    </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+function HeroSection() {
+  return (
+    <section className="relative min-h-[92vh] flex items-center overflow-hidden bg-[#000741]">
+      {/* background layers */}
+      <div className="absolute inset-0">
+        {/* gradient mesh */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#000741] via-[#053877] to-[#000741]" />
+        {/* geometric accent */}
+        <div
+          className="absolute top-0 right-0 w-[60%] h-full opacity-[0.07]"
+          style={{
+            background:
+              "repeating-linear-gradient(45deg, transparent, transparent 60px, #F0A71F 60px, #F0A71F 61px)",
+          }}
+        />
+        {/* radial glow */}
+        <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-[#0064B1]/15 blur-[120px]" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#000741] to-transparent" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-16 w-full">
+        <div className="max-w-3xl">
+          {/* badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 mb-8">
+            <span className="w-2 h-2 rounded-full bg-[#F0A71F] animate-pulse" />
+            <span className="text-xs font-medium text-white/80 tracking-wide uppercase">
+              Command Center — Now Live
+            </span>
           </div>
-          <style>{`
-            @keyframes hero-float-kf {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-8px); }
-            }
-            .hero-card-float { animation: hero-float-kf 6s ease-in-out infinite; }
-          `}</style>
-        </section>
 
-        {/* Built For Those Who Serve & Create — single audience section */}
-        <section
-          className="relative z-10 py-20 px-8 text-center"
-          style={{ background: "#1B2A4A" }}
-        >
-          <h2 className="text-center text-white font-bold mb-12 text-[2rem]">
-            Built For Those Who Serve & Create
-          </h2>
-          <p className="text-center text-gray-400 mx-auto mb-12 text-[1.1rem]">
-            Whether you wore the uniform or support those who did
+          {/* headline */}
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white leading-[1.05] tracking-tight mb-6">
+            The Military
+            <br />
+            <span className="bg-gradient-to-r from-[#F0A71F] to-[#ED1C24] bg-clip-text text-transparent">
+              Creator Network
+            </span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-white/70 max-w-xl leading-relaxed mb-10">
+            Connecting brands with military and veteran creators,{" "}
+            <span className="text-white font-medium">365 days a year</span>.
+            AI-powered discovery. First-party data. Live stage experiences.
           </p>
-          <div className="flex flex-wrap justify-center items-start gap-16">
-            {AUDIENCE.map(({ label, icon: Icon }) => (
-              <div
-                key={label}
-                className="flex flex-col items-center cursor-default transition-transform duration-200 hover:scale-110"
+
+          {/* CTAs */}
+          <div className="flex flex-wrap gap-4 mb-16">
+            <Link
+              to="/brand/discover"
+              className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-[#0064B1] text-white font-semibold text-base shadow-xl shadow-[#0064B1]/25 hover:shadow-[#0064B1]/40 hover:bg-[#0064B1]/90 transition-all"
+            >
+              Discover Creators
+              <svg
+                className="w-4 h-4 group-hover:translate-x-0.5 transition-transform"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
               >
-                <Icon className="h-12 w-12 text-[#F0A71F] shrink-0" aria-hidden />
-                <span className="text-white font-medium mt-3 text-base">
-                  {label}
-                </span>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+                />
+              </svg>
+            </Link>
+            <a
+              href="#for-creators"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl border border-white/20 text-white font-semibold text-base hover:bg-white/5 transition-all"
+            >
+              Join as Creator
+            </a>
+          </div>
+
+          {/* stats bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            {stats.map((s) => (
+              <div key={s.label}>
+                <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                  {s.value}
+                </div>
+                <div className="text-xs text-white/50 font-medium uppercase tracking-wider mt-1">
+                  {s.label}
+                </div>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* Browse by Category */}
-        <section id="features" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-              <div>
-                <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-2">
-                  DISCOVER CREATORS
-                </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
-                  Browse by Category
-                </h2>
-              </div>
-              <Link to="/brand/discover" className="text-[#0064B1] font-medium hover:underline text-sm">
-                View All →
-              </Link>
+      {/* decorative bottom edge */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <svg viewBox="0 0 1440 60" fill="none" className="w-full">
+          <path d="M0 60V20C360 0 720 0 1080 20L1440 40V60H0Z" fill="white" />
+        </svg>
+      </div>
+    </section>
+  );
+}
+
+function ProblemSolution() {
+  return (
+    <section className="py-24 bg-white" id="problem-solution">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#000741] tracking-tight mb-4">
+            From One-and-Done Events
+            <br />
+            to{" "}
+            <span className="text-[#0064B1]">Year-Round Community</span>
+          </h2>
+          <p className="text-gray-500 max-w-2xl mx-auto">
+            The industry's biggest events generate 3 days of engagement, then go
+            silent. ParadeDeck changes that.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* old way */}
+          <div className="relative rounded-2xl border-2 border-[#ED1C24]/20 bg-[#ED1C24]/[0.03] p-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ED1C24]/10 text-[#BF2228] text-xs font-bold uppercase tracking-wider mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ED1C24]" />
+              The Old Way
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {CATEGORIES.map((cat, i) => (
-                <Link
-                  key={cat.label}
-                  to="/brand/discover"
-                  className="group relative h-[140px] rounded-xl overflow-hidden flex items-end p-4 transition-transform duration-300 hover:scale-[1.03]"
+            <ul className="space-y-4">
+              {oldWay.map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <svg
+                    className="w-5 h-5 text-[#ED1C24]/60 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                  <span className="text-gray-600">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* PD way */}
+          <div className="relative rounded-2xl border-2 border-[#0064B1]/20 bg-[#0064B1]/[0.03] p-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0064B1]/10 text-[#0064B1] text-xs font-bold uppercase tracking-wider mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F0A71F]" />
+              The ParadeDeck Way
+            </div>
+            <ul className="space-y-4">
+              {pdWay.map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <svg
+                    className="w-5 h-5 text-[#0064B1] flex-shrink-0 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4.5 12.75l6 6 9-13.5"
+                    />
+                  </svg>
+                  <span className="text-gray-700 font-medium">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EventsSection() {
+  return (
+    <section className="py-24 bg-gray-50" id="events">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-end justify-between mb-12">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#000741] tracking-tight mb-3">
+              Upcoming Events
+            </h2>
+            <p className="text-gray-500">
+              Live stage experiences across the military community.
+            </p>
+          </div>
+          <Link
+            to="/brand/discover"
+            className="hidden sm:inline-flex text-sm font-semibold text-[#0064B1] hover:underline"
+          >
+            View All →
+          </Link>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {upcomingEvents.map((ev) => (
+            <div
+              key={ev.name}
+              className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:border-[#0064B1]/30 transition-all duration-200 cursor-pointer"
+            >
+              <div className="inline-block px-2.5 py-1 rounded-md bg-[#000741]/5 text-[#000741] text-[11px] font-bold uppercase tracking-wider mb-4">
+                {ev.tag}
+              </div>
+              <h3 className="font-bold text-[#000741] mb-2 group-hover:text-[#0064B1] transition-colors">
+                {ev.name}
+              </h3>
+              <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-1">
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
                 >
-                  <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
-                    style={{ backgroundImage: `url("${cat.image}")` }}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent group-hover:from-black/70 group-hover:via-black/25 transition-colors" />
-                  <div className="relative flex items-center gap-2 text-white">
-                    <Users className="h-4 w-4 shrink-0 opacity-90" />
-                    <span className="font-semibold text-sm">{cat.label}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Featured Creators */}
-        <section id="creators" className="px-4 md:px-8 py-16 md:py-20 bg-gray-50 scroll-mt-20">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-              <div>
-                <p className="text-[#ED1C24] text-xs font-semibold uppercase tracking-widest mb-2">
-                  AN AMAZING LINEUP
-                </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
-                  Big Names, Even Bigger Ideas
-                </h2>
+                </svg>
+                {ev.date}
               </div>
-              <Link to="/brand/discover">
-                <Button variant="outline" className="rounded-lg border-[#0064B1] text-[#0064B1] hover:bg-[#0064B1]/10">
-                  View All Creators →
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {gridCreators.map((c) => (
-                <Link
-                  key={c.id}
-                  to={`/brand/discover?creator=${encodeURIComponent(c.handle)}`}
-                  className="group rounded-xl overflow-hidden aspect-[4/3] relative flex flex-col justify-end p-4 hover:ring-2 hover:ring-[#0064B1] transition-all"
+              <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
                 >
-                  {c.avatar_url ? (
-                    <>
-                      <img
-                        src={c.avatar_url}
-                        alt={c.display_name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#0064B1] to-[#053877]" />
-                  )}
-                  {c.is_verified && (
-                    <span className="absolute top-3 right-3 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-medium border border-white/30">
-                      Verified
-                    </span>
-                  )}
-                  {!c.avatar_url && (
-                    <span className="absolute inset-0 flex items-center justify-center text-white/20 text-[80px] md:text-[120px] font-bold pointer-events-none">
-                      {getInitials(c.display_name, c.handle)}
-                    </span>
-                  )}
-                  <div className="relative flex items-center gap-2 text-white/90 text-xs mb-1">
-                    <Instagram className="h-3.5 w-3.5 shrink-0" />
-                    <span>{formatFollowerCount(c.follower_count)} followers</span>
-                  </div>
-                  <p className="font-semibold text-white">{c.display_name}</p>
-                  <p className="text-white/80 text-sm">@{c.handle}</p>
-                  {c.category && (
-                    <span className="inline-block mt-1 w-fit bg-white/20 text-white rounded-full px-2.5 py-0.5 text-xs font-medium">
-                      {c.category}
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Creator Directory — search + skeleton cards */}
-        <section className="px-4 md:px-8 py-16 md:py-20 bg-gray-50">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741] mb-2">
-              Creator Directory
-            </h2>
-            <p className="text-gray-600 mb-8">
-              The #1 network for military and veteran content creators. Discover authentic voices from those who served.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center max-w-2xl mx-auto mb-10">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search creators..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 bg-white text-[#000741] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0064B1] focus:border-transparent"
-                />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+                  />
+                </svg>
+                {ev.location}
               </div>
-              <select className="px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0064B1]">
-                <option>All Branches</option>
-              </select>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="rounded-xl border border-gray-200 bg-white p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-3 w-full mb-2" />
-                  <Skeleton className="h-3 w-2/3" />
-                </div>
-              ))}
-            </div>
-            <Link to="/brand/discover" className="text-[#0064B1] font-medium hover:underline">
-              Sign up to access the full Creator Directory →
-            </Link>
-          </div>
-        </section>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Podcast Network */}
-        <section className="px-4 md:px-8 py-16 md:py-20">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-              <div>
-                <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-2">
-                  TUNE IN
-                </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
-                  Veteran & Military Podcast Network
-                </h2>
-                <p className="text-gray-600 mt-1">Discover the voices of those who served. {podcastTotal != null ? `${podcastTotal} podcasts and counting.` : "Podcasts and counting."}</p>
-              </div>
-              <Link to="/podcasts">
-                <Button variant="outline" className="rounded-lg border-[#0064B1] text-[#0064B1] hover:bg-[#0064B1]/10">
-                  View All Podcasts →
-                </Button>
-              </Link>
-            </div>
-            {podcastsLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="rounded-xl overflow-hidden border border-gray-200 bg-white">
-                    <Skeleton className="aspect-video w-full" />
-                    <Skeleton className="h-4 w-3/4 m-3" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {podcasts.length === 0 ? (
-                  <p className="col-span-full text-sm text-gray-500 py-4">No podcasts yet. Check back soon.</p>
-                ) : (
-                  podcasts.map((p) => (
-                    <Link
-                      key={p.id}
-                      to="/podcasts"
-                      className="group rounded-xl overflow-hidden border border-gray-200 bg-white hover:shadow-lg transition-shadow"
-                    >
-                      <div className="aspect-video bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
-                        {p.artwork_url ? (
-                          <img src={p.artwork_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Mic2 className="h-12 w-12 text-white/80" />
-                        )}
-                      </div>
-                      <p className="p-3 text-sm font-medium text-[#000741] truncate" title={p.title ?? undefined}>
-                        {p.title ?? "Untitled"}
-                      </p>
-                    </Link>
-                  ))
-                )}
-              </div>
-            )}
+function FeatureGrid({
+  id,
+  badge,
+  title,
+  subtitle,
+  features,
+  bgClass = "bg-white",
+}: {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  features: { icon: string; title: string; desc: string }[];
+  bgClass?: string;
+}) {
+  return (
+    <section className={`py-24 ${bgClass}`} id={id}>
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <div className="inline-block px-3 py-1 rounded-full bg-[#0064B1]/10 text-[#0064B1] text-xs font-bold uppercase tracking-wider mb-4">
+            {badge}
           </div>
-        </section>
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#000741] tracking-tight mb-3">
+            {title}
+          </h2>
+          <p className="text-gray-500 max-w-xl mx-auto">{subtitle}</p>
+        </div>
 
-        {/* Events */}
-        <section id="events" className="px-4 md:px-8 py-16 md:py-20 bg-gray-50 scroll-mt-20">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741] mb-2">
-              Events That Don't End When the Lights Go Off
-            </h2>
-            <p className="text-gray-600 mb-8 max-w-2xl">
-              MIC. MilSpouseFest. PDX Live. Every event on ParadeDeck extends into a year-round community — not just 3 days on Whova.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {EVENTS.map((event) => (
-                <div
-                  key={event.name}
-                  className="rounded-xl border border-gray-200 bg-white p-5 flex flex-col"
-                >
-                  <span className="inline-block text-xs font-semibold text-[#0064B1] bg-[#0064B1]/10 rounded-full px-2.5 py-0.5 w-fit mb-3">
-                    {event.tag}
-                  </span>
-                  <h3 className="font-semibold text-[#000741] mb-1">{event.name}</h3>
-                  <p className="text-sm text-gray-500 mb-1">{event.date}</p>
-                  <p className="text-sm text-gray-600 flex items-center gap-1 mb-4">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    {event.location}
-                  </p>
-                  <Button size="sm" className="rounded-lg mt-auto w-full">
-                    Join Event
-                  </Button>
-                </div>
-              ))}
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="text-center p-8 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="text-4xl mb-5">{f.icon}</div>
+              <h3 className="text-lg font-bold text-[#000741] mb-2">
+                {f.title}
+              </h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
             </div>
-            <Link to="/pdx/create" className="text-[#0064B1] font-medium hover:underline">
-              Create Your Own Event →
-            </Link>
-          </div>
-        </section>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* For Brands */}
-        <section id="for-brands" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741] mb-8">
-              Reach the Military Community Year-Round
-            </h2>
-            <div className="grid md:grid-cols-3 gap-8 mb-10">
-              {BRAND_FEATURES.map((f) => (
-                <div key={f.title} className="rounded-xl border border-gray-200 bg-white p-6">
-                  <h3 className="font-semibold text-[#000741] mb-2">{f.title}</h3>
-                  <p className="text-sm text-gray-600">{f.desc}</p>
-                </div>
-              ))}
-            </div>
-            <Link to="/brand/discover">
-              <Button size="lg" className="rounded-lg bg-[#0064B1] hover:bg-[#053877] text-white">
-                Discover Creators
-              </Button>
-            </Link>
-          </div>
-        </section>
+function SocialProof() {
+  return (
+    <section className="py-16 bg-white border-t border-gray-100">
+      <div className="max-w-7xl mx-auto px-6 text-center">
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-8">
+          Trusted by Military & Veteran Organizations
+        </p>
+        <div className="flex flex-wrap justify-center items-center gap-10 sm:gap-16">
+          {partners.map((p) => (
+            <span
+              key={p}
+              className="text-xl sm:text-2xl font-bold text-gray-300 tracking-wide"
+            >
+              {p}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Bottom CTA banner */}
-        <section className="px-4 md:px-8 py-14 md:py-20 bg-[#0a1628]">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-xl md:text-2xl font-semibold text-white mb-6">
-              The military community doesn't stop. Neither should your platform.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link to="/brand/discover">
-                <Button size="lg" className="rounded-lg bg-[#0064B1] hover:bg-[#053877] text-white px-8">
-                  Join Free
-                </Button>
-              </Link>
-              <Link to="/pdx/create">
-                <Button size="lg" variant="outline" className="rounded-lg px-8 border-white/50 text-white hover:bg-white/10">
-                  Create an Event
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
+function CTABanner() {
+  return (
+    <section className="py-24 bg-[#000741] relative overflow-hidden">
+      <div
+        className="absolute inset-0 opacity-[0.05]"
+        style={{
+          background:
+            "repeating-linear-gradient(-45deg, transparent, transparent 40px, #F0A71F 40px, #F0A71F 41px)",
+        }}
+      />
+      <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
+        <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">
+          You already own the audience.
+          <br />
+          <span className="text-[#F0A71F]">
+            Give them a home between events.
+          </span>
+        </h2>
+        <p className="text-white/60 mb-10 max-w-lg mx-auto">
+          Turn 3-day event attendees into a 365-day community. ParadeDeck is the
+          operating system for military creator engagement.
+        </p>
+        <div className="flex flex-wrap justify-center gap-4">
+          <Link
+            to="/brand/discover"
+            className="px-8 py-3.5 rounded-xl bg-[#0064B1] text-white font-semibold shadow-xl shadow-[#0064B1]/25 hover:shadow-[#0064B1]/40 transition-all"
+          >
+            Request a Demo
+          </Link>
+          <Link
+            to="/brand/discover"
+            className="px-8 py-3.5 rounded-xl border border-white/20 text-white font-semibold hover:bg-white/5 transition-all"
+          >
+            Explore the Platform
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Footer */}
-        <footer className="px-4 md:px-8 py-10 border-t border-gray-200 bg-white">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
-              <div>
-                <Link to="/" className="flex items-center gap-2 mb-4">
-                  <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-6 w-auto" />
-                  <span className="font-bold text-[#000741]">ParadeDeck</span>
-                </Link>
-                <p className="text-sm text-gray-500">© 2026 ParadeDeck. All rights reserved.</p>
-                <div className="flex gap-4 mt-2 text-sm text-gray-500">
-                  <a href="#" className="hover:text-[#0064B1]">Privacy</a>
-                  <a href="#" className="hover:text-[#0064B1]">Terms</a>
-                  <a href="#" className="hover:text-[#0064B1]">Contact</a>
-                </div>
-              </div>
-              <nav className="flex flex-wrap gap-6 text-sm text-gray-600">
-                <a href="/#creators" className="hover:text-[#0064B1]">Community</a>
-                <a href="/#events" className="hover:text-[#0064B1]">Events</a>
-                <a href="/#creators" className="hover:text-[#0064B1]">Creators</a>
-                <a href="/#for-brands" className="hover:text-[#0064B1]">For Brands</a>
-                <Link to="/pdx" className="hover:text-[#0064B1]">PDX</Link>
-                <a href="#" className="hover:text-[#0064B1]">About</a>
-              </nav>
-            </div>
-          </div>
-        </footer>
-      </main>
+function Footer() {
+  return (
+    <footer className="py-10 bg-[#000741] border-t border-white/10">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/Parade-Deck-Flag-logo.png"
+            alt="ParadeDeck"
+            className="h-6 w-auto"
+          />
+          <span className="text-sm font-bold text-white/80">ParadeDeck</span>
+        </div>
+        <div className="flex items-center gap-6 text-xs text-white/40">
+          <a href="#" className="hover:text-white/70 transition-colors">
+            Privacy
+          </a>
+          <a href="#" className="hover:text-white/70 transition-colors">
+            Terms
+          </a>
+          <a href="#" className="hover:text-white/70 transition-colors">
+            Contact
+          </a>
+        </div>
+        <p className="text-xs text-white/30">
+          © 2026 ParadeDeck. All rights reserved.
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+// ── main export ──
+
+export default function Homepage() {
+  return (
+    <div className="min-h-screen bg-white">
+      <Navbar />
+      <HeroSection />
+      <ProblemSolution />
+      <EventsSection />
+      <FeatureGrid
+        id="for-brands"
+        badge="For Brands"
+        title="Find & Activate Military Creators"
+        subtitle="AI-powered discovery, verified audiences, and live activation — all in one platform."
+        features={brandFeatures}
+      />
+      <FeatureGrid
+        id="for-creators"
+        badge="For Creators"
+        title="Own Your Audience. Get Discovered."
+        subtitle="Stop renting your audience on social platforms. Build your brand with first-party data."
+        features={creatorFeatures}
+        bgClass="bg-gray-50"
+      />
+      <SocialProof />
+      <CTABanner />
+      <Footer />
     </div>
   );
 }
