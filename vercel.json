@@ -6,6 +6,7 @@
     {"source": "/api/firecrawl/:path*", "destination": "https://api.firecrawl.dev/:path*"},
     {"source": "/api/pdl/:path*", "destination": "https://api.peopledatalabs.com/:path*"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
-    {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"}
+    {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"},
+    {"source": "/((?!api/).*)", "destination": "/index.html"}
   ]
 }
