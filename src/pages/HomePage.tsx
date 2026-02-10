@@ -297,7 +297,6 @@ export default function HomePage() {
                       right: `${i * 30}px`,
                     }}
                   >
-                  >
                     <div className="hero-card-float" style={{ animationDelay: `${i * 0.2}s` }}>
                       <div className="bg-white rounded-2xl p-5 w-[360px] shadow-xl transition-shadow duration-300 hover:shadow-2xl">
                         <div className="flex items-center gap-3">
