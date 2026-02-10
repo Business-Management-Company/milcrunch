@@ -284,9 +284,6 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            }
-            .hero-card-float { animation: hero-float-kf 6s ease-in-out infinite; }
-          `}</style>
         </section>
 
         {/* Built For Those Who Serve & Create */}
