@@ -140,7 +140,7 @@ export default function AIAssistant() {
                     </div>
                     {m.creators && m.creators.length > 0 && (
                       <div className="flex flex-col gap-2 pl-7">
-                        {m.creators.slice(0, 5).map((creator) => (
+                        {m.creators.slice(0, 15).map((creator) => (
                           <ChatCreatorCard
                             key={creator.id}
                             creator={creator}
@@ -150,9 +150,9 @@ export default function AIAssistant() {
                             }}
                           />
                         ))}
-                        {m.creators.length > 5 && (
+                        {m.creators.length > 15 && (
                           <p className="text-xs text-muted-foreground pl-2">
-                            +{m.creators.length - 5} more. Refine your search to see others.
+                            +{m.creators.length - 15} more — See All in Discovery
                           </p>
                         )}
                       </div>
