@@ -1,0 +1,5 @@
+# PROTECTED FILES - Do not modify without testing
+# vercel.json - API proxy routing
+# api/influencers.js - Discovery proxy function
+# api/enrich.js - Enrich proxy function
+# src/lib/influencers-club.ts - API client
