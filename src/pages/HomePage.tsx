@@ -28,7 +28,7 @@ import {
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
 // Hero background: diverse creator group in studio (cyan–teal gradient, professional)
-const HERO_BG_IMAGE = "/home-hero-creators.png";
+const HERO_BG_IMAGE = "/Mil-Crunch-Hero.png";
 
 const AUDIENCE = [
   { label: "Veterans", icon: Shield },
@@ -233,7 +233,7 @@ export default function HomePage() {
           />
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
             {/* Left 60% — badge, headline, subtitle, CTAs, branch chips */}
-            <div className="flex-1 md:max-w-[60%] text-center md:text-left">
+            <div className="flex-1 md:max-w-[65%] text-center md:text-left">
               <div className="inline-flex items-center rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-6">
                 <span className="text-[#F0A71F] text-xs font-semibold uppercase tracking-wide">
                   ☆ THE MILITARY CREATOR PLATFORM
@@ -284,56 +284,6 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            {/* Right 40% — 3 stacked creator cards matching design mockup */}
-            <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end">
-              <div className="relative w-[380px] min-h-[520px]">
-                {heroCreators.map((creator, i) => (
-                  <div
-                    key={i}
-                    className="absolute"
-                    style={{
-                      zIndex: 30 - i * 10,
-                      top: `${i * 155}px`,
-                      right: `${i * 40}px`,
-                    }}
-                  >
-                    <div className="hero-card-float" style={{ animationDelay: `${i * 0.2}s` }}>
-                      <div className="bg-white rounded-2xl p-5 w-[340px] shadow-lg shadow-gray-200/80 transition-shadow duration-300 hover:shadow-2xl">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={creator.photo}
-                            alt={creator.name}
-                            className="w-12 h-12 rounded-full object-cover shrink-0 border-2 border-teal-100"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-gray-900 text-base truncate">{creator.name}</div>
-                            <div className="text-gray-500 text-sm truncate">{creator.handle}</div>
-                          </div>
-                          <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium ${creator.categoryColor}`}>
-                            {creator.category}
-                          </span>
-                        </div>
-                        <div className="flex gap-8 mt-4 pt-4 border-t border-gray-100">
-                          <div>
-                            <div className="text-lg font-bold text-gray-900">{creator.followers}</div>
-                            <div className="text-xs text-gray-500">Followers</div>
-                          </div>
-                          <div>
-                            <div className="text-lg font-bold text-teal-500">{creator.engagement}</div>
-                            <div className="text-xs text-gray-500">Engagement</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <style>{`
-            @keyframes hero-float-kf {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-8px); }
             }
             .hero-card-float { animation: hero-float-kf 6s ease-in-out infinite; }
           `}</style>
