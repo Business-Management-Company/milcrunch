@@ -75,7 +75,7 @@ const HERO_FALLBACK: CreatorRow[] = [
 // Hero creator cards — matching the design mockup (teal pills, photos, stats)
 const heroCreators = [
   {
-    photo: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=96&h=96&fit=crop&crop=face",
+    photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&fit=crop&crop=face",
     name: "Sofia M.",
     handle: "@sofiacreates",
     category: "Lifestyle",
@@ -84,7 +84,7 @@ const heroCreators = [
     engagement: "4.8%",
   },
   {
-    photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=96&h=96&fit=crop&crop=face",
+    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face",
     name: "Marcus J.",
     handle: "@marcusfitpro",
     category: "Fitness",
@@ -93,7 +93,7 @@ const heroCreators = [
     engagement: "6.2%",
   },
   {
-    photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=face",
+    photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=96&h=96&fit=crop&crop=face",
     name: "Lena Park",
     handle: "@lenaeats",
     category: "Food",
@@ -286,19 +286,19 @@ export default function HomePage() {
             </div>
             {/* Right 40% — 3 stacked creator cards matching design mockup */}
             <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end">
-              <div className="relative w-[420px] min-h-[560px]">
+              <div className="relative w-[380px] min-h-[520px]">
                 {heroCreators.map((creator, i) => (
                   <div
                     key={i}
                     className="absolute"
                     style={{
                       zIndex: 30 - i * 10,
-                      top: `${i * 165}px`,
-                      right: `${i * 30}px`,
+                      top: `${i * 155}px`,
+                      right: `${i * 40}px`,
                     }}
                   >
                     <div className="hero-card-float" style={{ animationDelay: `${i * 0.2}s` }}>
-                      <div className="bg-white rounded-2xl p-5 w-[360px] shadow-xl transition-shadow duration-300 hover:shadow-2xl">
+                      <div className="bg-white rounded-2xl p-5 w-[340px] shadow-lg shadow-gray-200/80 transition-shadow duration-300 hover:shadow-2xl">
                         <div className="flex items-center gap-3">
                           <img
                             src={creator.photo}
