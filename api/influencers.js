@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
-  const path = Array.isArray(req.query.path) ? req.query.path.join("/") : req.query.path;
-  const url = `https://api-dashboard.influencers.club/${path}`;
+  const stripped = req.url.replace(/^\/api\/influencers/, "");
+  const url = "https://api-dashboard.influencers.club" + (stripped || "/");
 
   const resp = await fetch(url, {
     method: req.method,
