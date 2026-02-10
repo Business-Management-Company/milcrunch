@@ -1,6 +1,6 @@
 // Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
 // (Vercel does not inject headers), so we always send Authorization in every fetch.
-const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
+const DISCOVERY_URL = "/api/enrich/public/v1/discovery/";
 const ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
 
 /**
