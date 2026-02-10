@@ -7,5 +7,4 @@
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"}
   ]
-}echo '' >> vercel.json
-git add . && git commit -m "fix newline" && git push origin main
+}
