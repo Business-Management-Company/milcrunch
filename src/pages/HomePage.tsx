@@ -286,17 +286,17 @@ export default function HomePage() {
             </div>
             {/* Right 40% — 3 stacked creator cards matching design mockup */}
             <div className="flex-1 md:max-w-[40%] flex justify-center md:justify-end">
-              <div className="relative w-[420px] min-h-[580px]">
+              <div className="relative w-[420px] min-h-[560px]">
                 {heroCreators.map((creator, i) => (
                   <div
                     key={i}
                     className="absolute"
                     style={{
                       zIndex: 30 - i * 10,
-                      top: `${i * 190}px`,
-                      left: `${i * 20}px`,
-                      transform: `rotate(${(i - 1) * 2}deg)`,
+                      top: `${i * 165}px`,
+                      right: `${i * 30}px`,
                     }}
+                  >
                   >
                     <div className="hero-card-float" style={{ animationDelay: `${i * 0.2}s` }}>
                       <div className="bg-white rounded-2xl p-5 w-[360px] shadow-xl transition-shadow duration-300 hover:shadow-2xl">
