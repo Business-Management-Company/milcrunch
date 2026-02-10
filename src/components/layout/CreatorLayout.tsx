@@ -84,9 +84,10 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const role = (user?.user_metadata?.role as string) ?? "creator";
-  const nonCreator = role === "super_admin" || role === "admin" || role === "brand";
-  if (!nonCreator && creatorProfile && !creatorProfile.onboarding_completed && !location.pathname.startsWith("/creator/onboard")) {
+  const role = (user?.user_metadata?.role as string) || (creatorProfile?.role as string) || "creator";
+  if (["super_admin", "admin", "brand"].includes(role)) {
+    // Do not redirect non-creator roles to onboarding
+  } else if (!creatorProfile?.onboarding_completed && !location.pathname.startsWith("/creator/onboard")) {
     navigate("/creator/onboard", { replace: true });
     return null;
   }

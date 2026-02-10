@@ -59,8 +59,8 @@ export default function LoginPage() {
       }
       return;
     }
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    const role = (currentUser?.user_metadata?.role as string) || "creator";
+    const { data: { user } } = await supabase.auth.getUser();
+    const role = user?.user_metadata?.role || "creator";
 
     if (role === "super_admin") {
       navigate("/admin", { replace: true });
@@ -70,22 +70,16 @@ export default function LoginPage() {
       navigate("/brand/dashboard", { replace: true });
       return;
     }
-
-    if (role === "creator") {
-      const { data: profile } = await supabase
-        .from("creator_profiles")
-        .select("onboarding_completed")
-        .eq("user_id", currentUser?.id)
-        .maybeSingle();
-      if (!profile || !profile.onboarding_completed) {
-        navigate("/creator/onboard", { replace: true });
-      } else {
-        navigate("/creator/dashboard", { replace: true });
-      }
-      return;
+    const { data: profile } = await supabase
+      .from("creator_profiles")
+      .select("onboarding_completed")
+      .eq("user_id", user?.id)
+      .maybeSingle();
+    if (!profile || !profile.onboarding_completed) {
+      navigate("/creator/onboard", { replace: true });
+    } else {
+      navigate("/creator/dashboard", { replace: true });
     }
-
-    navigate("/creator/dashboard", { replace: true });
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
