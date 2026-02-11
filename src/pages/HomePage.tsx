@@ -27,8 +27,8 @@ import {
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
-// Hero background: diverse creator group in studio (cyan–teal gradient, professional)
-const HERO_BG_IMAGE = "/Mil-Crunch-Hero.png";
+// Hero background: MIl-Crunch-Hero includes embedded social cards
+const HERO_BG_IMAGE = "/MIl-Crunch-Hero.png";
 
 const AUDIENCE = [
   { label: "Veterans", icon: Shield },
@@ -283,6 +283,7 @@ export default function HomePage() {
                   </button>
                 ))}
               </div>
+            </div>
             </div>
         </section>
 
