@@ -264,6 +264,7 @@ const BrandDiscover = () => {
   // Confidence scoring: how well does this creator match the search terms?
   const getConfidence = useCallback((creator: CreatorCard) => {
     const targets: string[] = [];
+    const militaryVariants = ["military", "veteran", "military spouse", "milspouse", "milso", "army", "navy", "air force", "marines", "coast guard", "national guard", "usmc", "usaf", "vet", "service member", "active duty", "reserve"];
     if (searchQuery.trim()) targets.push(...searchQuery.trim().toLowerCase().split(/\s+/));
     if (niche !== "All niches") targets.push(niche.toLowerCase());
     selectedBranches.forEach((b) => targets.push(b.toLowerCase()));
@@ -278,9 +279,13 @@ const BrandDiscover = () => {
       creator.name ?? "",
     ].join(" ").toLowerCase();
     const matches = targets.filter((t) => creatorText.includes(t));
-    const score = targets.length > 0 ? matches.length / targets.length : 0;
+    const milMatches = militaryVariants.filter((v) => creatorText.includes(v));
+    const milBoost = milMatches.length > 0 ? 0.4 : 0;
+    const baseScore = targets.length > 0 ? matches.length / targets.length : 0;
+    const score = Math.min(1, baseScore + milBoost);
+    const allMatches = [...new Set([...matches, ...milMatches])];
     const level = score >= 0.6 ? "high" : score >= 0.3 ? "medium" : "low";
-    return { level: level as "high" | "medium" | "low", score, matches };
+    return { level: level as "high" | "medium" | "low", score, matches: allMatches };
   }, [searchQuery, niche, selectedBranches, keywordsInBio]);
   const confidenceColors = {
     high: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -560,7 +565,7 @@ const BrandDiscover = () => {
             </Select>
             <Input
               placeholder="Keywords in bio (comma separated)"
-              className="w-[200px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
+              className="w-[300px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
               value={keywordsInBio}
               onChange={(e) => setKeywordsInBio(e.target.value)}
             />
