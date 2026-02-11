@@ -562,6 +562,7 @@ const BrandDiscover = () => {
               </div>
 
               {creators.length > 0 ? (
+                <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {creators.map((creator) => {
                     const nicheTags = [
@@ -745,6 +746,7 @@ const BrandDiscover = () => {
                     </Button>
                   </div>
                 )}
+                </>
               ) : (
                 <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-8 text-center">
                   <p className="text-muted-foreground">
