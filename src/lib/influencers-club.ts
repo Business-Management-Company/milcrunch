@@ -16,6 +16,8 @@ export interface CreatorCard {
   platforms: string[];
   bio: string;
   location?: string;
+  gender?: string;
+  language?: string;
   branch?: string;
   specialties?: string[];
   postsPerMonth?: number;
@@ -52,6 +54,8 @@ interface ApiProfile {
   state?: string;
   country?: string;
   location?: string;
+  gender?: string;
+  language?: string;
   category?: string;
   [key: string]: unknown;
 }
@@ -199,6 +203,8 @@ export interface SearchCreatorsOptions {
   sort_by?: "relevancy" | "followers" | "engagement";
   page?: number;
   location?: string;
+  gender?: string;
+  language?: string;
 }
 
 /** Result of a discovery search: mapped cards, total count, raw response. */
@@ -243,6 +249,8 @@ export async function searchCreators(
       keywords_in_bio,
       exclude_role_based_emails: false,
       ...(options.location ? { location: options.location } : {}),
+      ...(options.gender ? { gender: options.gender } : {}),
+      ...(options.language ? { language: { code: options.language } } : {}),
     },
   };
 

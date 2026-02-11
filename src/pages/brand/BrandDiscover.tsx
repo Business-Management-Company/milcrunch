@@ -68,10 +68,12 @@ const PLATFORMS = [
 ] as const;
 const FOLLOWER_OPTIONS = [
   { value: "any", label: "Any", min: null as number | null, max: null as number | null },
-  { value: "1k-10k", label: "1K–10K", min: 1000, max: 10000 },
-  { value: "10k-50k", label: "10K–50K", min: 10000, max: 50000 },
-  { value: "50k-100k", label: "50K–100K", min: 50000, max: 100000 },
-  { value: "100k+", label: "100K+", min: 100000, max: null as number | null },
+  { value: "nano", label: "Nano (1K–10K)", min: 1000, max: 10000 },
+  { value: "micro", label: "Micro (10K–50K)", min: 10000, max: 50000 },
+  { value: "mid-micro", label: "Micro (50K–100K)", min: 50000, max: 100000 },
+  { value: "mid", label: "Mid-tier (100K–500K)", min: 100000, max: 500000 },
+  { value: "macro", label: "Macro (500K–1M)", min: 500000, max: 1000000 },
+  { value: "mega", label: "Mega (1M+)", min: 1000000, max: null as number | null },
 ] as const;
 const ENGAGEMENT_OPTIONS = [
   { value: "any", label: "Any", min: null as number | null },
@@ -95,6 +97,22 @@ const SORT_OPTIONS = [
   { value: "followers", label: "Followers" },
   { value: "engagement", label: "Engagement" },
 ] as const;
+const GENDER_OPTIONS = [
+  { value: "any", label: "Any" },
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+] as const;
+const LANGUAGE_OPTIONS = [
+  { value: "any", label: "Any" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "pt", label: "Portuguese" },
+  { value: "ko", label: "Korean" },
+  { value: "ja", label: "Japanese" },
+  { value: "ar", label: "Arabic" },
+] as const;
 
 type Branch = (typeof BRANCHES)[number];
 
@@ -111,6 +129,9 @@ const BrandDiscover = () => {
   const [engagementMin, setEngagementMin] = useState<string>("any");
   const [locationFilter, setLocationFilter] = useState("");
   const [niche, setNiche] = useState<string>("All niches");
+  const [gender, setGender] = useState<string>("any");
+  const [language, setLanguage] = useState<string>("any");
+  const [keywordsInBio, setKeywordsInBio] = useState("");
   const [sortBy, setSortBy] = useState<string>("relevancy");
   const [selectedBranches, setSelectedBranches] = useState<Set<Branch>>(new Set());
   const [apiResults, setApiResults] = useState<{ creators: CreatorCard[]; total: number; rawResponse: unknown } | null>(null);
@@ -139,11 +160,11 @@ const BrandDiscover = () => {
     }
     setApiLoading(true);
     setCurrentPage(1);
-    setApiResults(null);
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
-    const keywords_in_bio =
-      selectedBranches.size > 0 ? Array.from(selectedBranches) : [""];
+    const branchKeys = selectedBranches.size > 0 ? Array.from(selectedBranches) : [];
+    const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
+    const keywords_in_bio = [...branchKeys, ...bioKeys].length > 0 ? [...branchKeys, ...bioKeys] : [""];
     const options = {
       platform: platform.toLowerCase(),
       number_of_followers: {
@@ -157,6 +178,8 @@ const BrandDiscover = () => {
       keywords_in_bio,
       sort_by: sortBy as "relevancy" | "followers" | "engagement",
       location: locationFilter.trim() || undefined,
+      gender: gender !== "any" ? gender : undefined,
+      language: language !== "any" ? language : undefined,
     };
     searchCreators(q, options)
       .then((result) => {
@@ -164,6 +187,9 @@ const BrandDiscover = () => {
       })
       .catch((err) => {
         if (searchQueryRef.current.trim() === q) setApiResults(null);
+    setGender("any");
+    setLanguage("any");
+    setKeywordsInBio("");
         console.warn("[BrandDiscover] API search failed:", err);
       })
       .finally(() => {
@@ -186,6 +212,8 @@ const BrandDiscover = () => {
       keywords_in_bio,
       sort_by: sortBy as "relevancy" | "followers" | "engagement",
       location: locationFilter.trim() || undefined,
+      gender: gender !== "any" ? gender : undefined,
+      language: language !== "any" ? language : undefined,
       page: nextPage,
     })
       .then((result) => {
@@ -216,6 +244,9 @@ const BrandDiscover = () => {
     setSortBy("relevancy");
     setSelectedBranches(new Set());
     setApiResults(null);
+    setGender("any");
+    setLanguage("any");
+    setKeywordsInBio("");
   };
 
   const toggleBranch = (branch: Branch) => {
@@ -479,6 +510,32 @@ const BrandDiscover = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={gender} onValueChange={setGender}>
+              <SelectTrigger className="w-[120px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Gender" />
+              </SelectTrigger>
+              <SelectContent>
+                {GENDER_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="w-[120px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Keywords in bio (comma separated)"
+              className="w-[200px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
+              value={keywordsInBio}
+              onChange={(e) => setKeywordsInBio(e.target.value)}
+            />
             <Button onClick={runSearch} className="rounded-lg shrink-0 bg-pd-blue hover:bg-pd-darkblue text-white">
               Search Creators
             </Button>
