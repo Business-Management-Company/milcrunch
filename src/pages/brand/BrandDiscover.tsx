@@ -67,7 +67,7 @@ const PLATFORMS = [
   { value: "twitter", label: "Twitter/X" },
 ] as const;
 const FOLLOWER_OPTIONS = [
-  { value: "any", label: "Any", min: null as number | null, max: null as number | null },
+  { value: "any", label: "All Followers", min: null as number | null, max: null as number | null },
   { value: "nano", label: "Nano (1K–10K)", min: 1000, max: 10000 },
   { value: "micro", label: "Micro (10K–50K)", min: 10000, max: 50000 },
   { value: "mid-micro", label: "Micro (50K–100K)", min: 50000, max: 100000 },
@@ -76,7 +76,7 @@ const FOLLOWER_OPTIONS = [
   { value: "mega", label: "Mega (1M+)", min: 1000000, max: null as number | null },
 ] as const;
 const ENGAGEMENT_OPTIONS = [
-  { value: "any", label: "Any", min: null as number | null },
+  { value: "any", label: "All Engagement", min: null as number | null },
   { value: "1", label: ">1%", min: 1 },
   { value: "2", label: ">2%", min: 2 },
   { value: "3", label: ">3%", min: 3 },
@@ -98,12 +98,12 @@ const SORT_OPTIONS = [
   { value: "engagement", label: "Engagement" },
 ] as const;
 const GENDER_OPTIONS = [
-  { value: "any", label: "Any" },
+  { value: "any", label: "All Genders" },
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
 ] as const;
 const LANGUAGE_OPTIONS = [
-  { value: "any", label: "Any" },
+  { value: "any", label: "All Languages" },
   { value: "en", label: "English" },
   { value: "es", label: "Spanish" },
   { value: "fr", label: "French" },
