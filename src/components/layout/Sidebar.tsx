@@ -27,7 +27,7 @@ const SIDEBAR_SECTIONS: { label: string; items: NavItem[] }[] = [
     label: "CREATORS & CONTENT",
     items: [
       { type: "link", href: "/brand/discover", label: "Discovery", emoji: "🔍" },
-      { type: "link", href: "/brand/directory", label: "Influencer Directory", emoji: "👥" },
+      { type: "link", href: "/brand/directory", label: "Directories", emoji: "👥" },
       { type: "link", href: "/lists", label: "Influencer Lists", emoji: "📋" },
       { type: "link", href: "/verification", label: "Verification", emoji: "✅" },
       { type: "link", href: "/admin/featured-creators", label: "Featured Creators", emoji: "⭐" },

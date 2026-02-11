@@ -260,6 +260,34 @@ const BrandDiscover = () => {
 
   const hasSearched = apiResults !== null;
   const creators = apiResults?.creators ?? [];
+
+  // Confidence scoring: how well does this creator match the search terms?
+  const getConfidence = useCallback((creator: CreatorCard) => {
+    const targets: string[] = [];
+    if (searchQuery.trim()) targets.push(...searchQuery.trim().toLowerCase().split(/\s+/));
+    if (niche !== "All niches") targets.push(niche.toLowerCase());
+    selectedBranches.forEach((b) => targets.push(b.toLowerCase()));
+    if (keywordsInBio.trim()) targets.push(...keywordsInBio.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean));
+    if (targets.length === 0) return { level: "none" as const, score: 0, matches: [] as string[] };
+    const creatorText = [
+      creator.bio ?? "",
+      ...(creator.hashtags ?? []),
+      creator.nicheClass ?? "",
+      creator.category ?? "",
+      ...(creator.specialties ?? []),
+      creator.name ?? "",
+    ].join(" ").toLowerCase();
+    const matches = targets.filter((t) => creatorText.includes(t));
+    const score = targets.length > 0 ? matches.length / targets.length : 0;
+    const level = score >= 0.6 ? "high" : score >= 0.3 ? "medium" : "low";
+    return { level: level as "high" | "medium" | "low", score, matches };
+  }, [searchQuery, niche, selectedBranches, keywordsInBio]);
+  const confidenceColors = {
+    high: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    low: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+    none: "hidden",
+  };
   const totalFromApi = apiResults?.total ?? 0;
   const resultsLabel =
     hasSearched && !apiLoading
@@ -628,6 +656,7 @@ const BrandDiscover = () => {
                       creator.category,
                       ...(creator.specialties ?? []),
                     ].filter(Boolean) as string[];
+                    const confidence = getConfidence(creator);
                     const instagramUrl = creator.username
                       ? `https://instagram.com/${creator.username}`
                       : null;
@@ -696,6 +725,14 @@ const BrandDiscover = () => {
                             {socialPlatforms.slice(0, 6).map((platform) => (
                               <PlatformIcon key={platform} platform={platform} />
                             ))}
+                          </div>
+                        )}
+                        {confidence.level !== "none" && (
+                          <div className="mb-2 flex items-center gap-1.5" title={confidence.matches.length > 0 ? `Matching: ${confidence.matches.join(", ")}` : "No keyword matches found"}>
+                            <span className={`inline-flex items-center rounded-full text-xs px-2 py-0.5 font-semibold ${confidenceColors[confidence.level]}`}>
+                              {confidence.level === "high" ? "High Match" : confidence.level === "medium" ? "Mid Match" : "Low Match"}
+                            </span>
+                            <span className="text-xs text-gray-400">{Math.round(confidence.score * 100)}%</span>
                           </div>
                         )}
                         {creator.bio && (
