@@ -285,9 +285,6 @@ export default function HomePage() {
               </div>
             </div>
             </div>
-            <div className="hidden md:flex flex-1 md:max-w-[40%] justify-center md:justify-end">
-              <img src="/Mil-Crunch-Hero-Cards.png" alt="Creator cards" className="w-[420px] drop-shadow-2xl" />
-            </div>
         </section>
 
         {/* Built For Those Who Serve & Create */}
