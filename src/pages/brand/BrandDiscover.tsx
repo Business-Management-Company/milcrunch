@@ -115,6 +115,8 @@ const BrandDiscover = () => {
   const [selectedBranches, setSelectedBranches] = useState<Set<Branch>>(new Set());
   const [apiResults, setApiResults] = useState<{ creators: CreatorCard[]; total: number; rawResponse: unknown } | null>(null);
   const [apiLoading, setApiLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
@@ -136,6 +138,7 @@ const BrandDiscover = () => {
       return;
     }
     setApiLoading(true);
+    setCurrentPage(1);
     setApiResults(null);
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
@@ -153,6 +156,7 @@ const BrandDiscover = () => {
       },
       keywords_in_bio,
       sort_by: sortBy as "relevancy" | "followers" | "engagement",
+      location: locationFilter.trim() || undefined,
     };
     searchCreators(q, options)
       .then((result) => {
@@ -166,6 +170,34 @@ const BrandDiscover = () => {
         if (searchQueryRef.current.trim() === q) setApiLoading(false);
       });
   }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches]);
+
+  const loadMore = useCallback(() => {
+    const q = searchQuery.trim();
+    if (!q || !apiResults) return;
+    const nextPage = currentPage + 1;
+    setLoadingMore(true);
+    const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
+    const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
+    const keywords_in_bio = selectedBranches.size > 0 ? Array.from(selectedBranches) : [""];
+    searchCreators(q, {
+      platform: platform.toLowerCase(),
+      number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
+      engagement_percent: { min: engagementOpt?.min ?? null, max: null },
+      keywords_in_bio,
+      sort_by: sortBy as "relevancy" | "followers" | "engagement",
+      location: locationFilter.trim() || undefined,
+      page: nextPage,
+    })
+      .then((result) => {
+        setApiResults((prev) => prev ? {
+          ...prev,
+          creators: [...prev.creators, ...result.creators],
+        } : result);
+        setCurrentPage(nextPage);
+      })
+      .catch((err) => console.warn("[BrandDiscover] Load more failed:", err))
+      .finally(() => setLoadingMore(false));
+  }, [searchQuery, apiResults, currentPage, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -702,6 +734,17 @@ const BrandDiscover = () => {
                     );
                   })}
                 </div>
+                {creators.length < totalFromApi && (
+                  <div className="flex justify-center mt-8">
+                    <Button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white px-8 py-3"
+                    >
+                      {loadingMore ? "Loading..." : `Load More (${creators.length} of ${totalFromApi >= 1000 ? formatFollowers(totalFromApi) : totalFromApi.toLocaleString()})`}
+                    </Button>
+                  </div>
+                )}
               ) : (
                 <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-8 text-center">
                   <p className="text-muted-foreground">

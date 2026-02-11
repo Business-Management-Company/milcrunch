@@ -197,6 +197,8 @@ export interface SearchCreatorsOptions {
   engagement_percent?: { min: number | null; max: number | null };
   keywords_in_bio?: string[];
   sort_by?: "relevancy" | "followers" | "engagement";
+  page?: number;
+  location?: string;
 }
 
 /** Result of a discovery search: mapped cards, total count, raw response. */
@@ -232,7 +234,7 @@ export async function searchCreators(
 
   const body = {
     platform: platformValue,
-    paging: { limit: 50, page: 1 },
+    paging: { limit: 50, page: options.page ?? 1 },
     sort: { sort_by: options.sort_by ?? "relevancy", sort_order: "desc" as const },
     filters: {
       ai_search: trimmed,
@@ -240,6 +242,7 @@ export async function searchCreators(
       engagement_percent: { min: engagement_percent.min, max: engagement_percent.max },
       keywords_in_bio,
       exclude_role_based_emails: false,
+      ...(options.location ? { location: options.location } : {}),
     },
   };
 
