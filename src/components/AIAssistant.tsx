@@ -62,7 +62,7 @@ export default function AIAssistant() {
       )}
       <aside
         className={cn(
-          "fixed right-0 z-50 flex flex-col bg-white dark:bg-[#0F1117] border-l border-gray-200 dark:border-gray-800 w-full md:w-[420px]",
+          "fixed right-0 z-50 flex flex-col bg-white dark:bg-[#0F1117] border-l border-gray-200 dark:border-gray-800 w-full md:w-[560px]",
           "transition-[transform] duration-300 ease-in-out",
           "shadow-2xl"
         )}
@@ -152,7 +152,7 @@ export default function AIAssistant() {
                         ))}
                         {m.creators.length > 15 && (
                           <p className="text-xs text-muted-foreground pl-2">
-                            +{m.creators.length - 15} more — See All in Discovery
+                            <a href="/brand/discover" className="text-blue-600 hover:underline font-medium">+{m.creators.length - 15} more — See All in Discovery</a>
                           </p>
                         )}
                       </div>

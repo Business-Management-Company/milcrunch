@@ -43,7 +43,7 @@ export default function FloatingAdminChat() {
         <div className="fixed bottom-6 right-6 z-50">
           <Button
             size="icon"
-            className="h-14 w-14 rounded-full shadow-lg bg-amber-500 hover:bg-amber-600 text-white"
+            className="h-14 w-14 rounded-full shadow-lg hidden bg-amber-500 hover:bg-amber-600 text-white"
             onClick={() => setOpen(true)}
             aria-label="Open AI chat"
           >
