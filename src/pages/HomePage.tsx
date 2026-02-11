@@ -228,7 +228,7 @@ export default function HomePage() {
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to right, rgba(27,42,74,0.88) 0%, rgba(25,55,65,0.65) 100%)",
+              background: "linear-gradient(to right, rgba(27,42,74,0.55) 0%, rgba(25,55,65,0.35) 100%)",
             }}
           />
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
