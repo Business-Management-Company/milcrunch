@@ -485,7 +485,7 @@ const BrandDiscover = () => {
               </SelectContent>
             </Select>
             <Select value={engagementMin} onValueChange={setEngagementMin}>
-              <SelectTrigger className="w-[120px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue placeholder="Engagement" />
               </SelectTrigger>
               <SelectContent>
@@ -511,7 +511,7 @@ const BrandDiscover = () => {
               </SelectContent>
             </Select>
             <Select value={gender} onValueChange={setGender}>
-              <SelectTrigger className="w-[120px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue placeholder="Gender" />
               </SelectTrigger>
               <SelectContent>
@@ -521,7 +521,7 @@ const BrandDiscover = () => {
               </SelectContent>
             </Select>
             <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger className="w-[120px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue placeholder="Language" />
               </SelectTrigger>
               <SelectContent>
