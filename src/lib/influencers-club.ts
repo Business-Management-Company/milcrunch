@@ -298,7 +298,6 @@ export async function enrichCreatorProfile(
   signal?: AbortSignal
 ): Promise<EnrichedProfileResponse | null> {
   const handle = username.replace(/^@/, "").trim();
-  console.log("[Enrich] Step 1: Starting fetch for handle:", handle);
 
   const url = ENRICH_URL;
   const body = {
@@ -312,9 +311,6 @@ export async function enrichCreatorProfile(
     throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
   }
 
-  console.log("[Enrich] Step 2: URL:", url);
-  console.log("[Enrich] Step 2: Body:", JSON.stringify(body));
-  console.log("[Enrich] Step 2: API Key present:", !!apiKey, "Key starts with:", apiKey?.substring(0, 8) + "...");
 
   let res: Response;
   try {
@@ -336,8 +332,6 @@ export async function enrichCreatorProfile(
     throw err;
   }
 
-  console.log("[Enrich] Step 3: Response received, status:", res.status, res.statusText);
-  console.log("[Enrich] Step 3: Response headers:", Object.fromEntries(res.headers.entries()));
 
   let text: string;
   try {
@@ -347,8 +341,6 @@ export async function enrichCreatorProfile(
     throw err;
   }
 
-  console.log("[Enrich] Step 4: Raw response text length:", text?.length);
-  console.log("[Enrich] Step 4: Raw response text (first 500 chars):", text?.substring(0, 500));
 
   let data: unknown;
   try {
@@ -360,13 +352,8 @@ export async function enrichCreatorProfile(
 
   // === VERY VISIBLE: full response for debugging mapping / "Data not available" ===
   const dataRecord = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
-  console.log("========== ENRICHMENT FULL RESPONSE START ==========");
   console.log(JSON.stringify(data, null, 2));
-  console.log("========== ENRICHMENT FULL RESPONSE END ==========");
-  console.log("TOP LEVEL KEYS:", Object.keys(dataRecord));
-  console.log("TOP LEVEL TYPES:", Object.fromEntries(Object.keys(dataRecord).map((k) => [k, typeof dataRecord[k]])));
   if (dataRecord.data) {
-    console.log("data.data KEYS:", Object.keys(dataRecord.data as object));
   }
   if (dataRecord.result) {
     console.log("data.result KEYS:", Object.keys(dataRecord.result as object));
