@@ -57,7 +57,7 @@ const BrandDashboard = () => {
             <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
               <ListChecks className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Lists</
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Lists</p>
           </div>
           <p className="text-2xl font-bold text-[#000741] dark:text-white">{lists.length}</p>
         </Card>
