@@ -786,11 +786,6 @@ const BrandDiscover = () => {
                             <p className="text-xs text-gray-500 uppercase tracking-wide">Links</p>
                           </div>
                         </div>
-                        {showLinksBadge && (
-                          <p className="text-xs text-gray-400 dark:text-muted-foreground mb-1">
-                            🔗 {linkCount} link{linkCount !== 1 ? "s" : ""}
-                          </p>
-                        )}
                         <div className="mt-auto space-y-2" onClick={(e) => e.stopPropagation()}>
                           {isCreatorInList(creator.id) ? (
                             <Button size="sm" className="w-full rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" disabled>
