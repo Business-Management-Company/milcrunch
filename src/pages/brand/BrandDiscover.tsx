@@ -48,15 +48,17 @@ const PLATFORM_ICON_STYLES: Record<string, string> = {
 };
 function PlatformIcon({ platform }: { platform: string }) {
   const plat = platform.toLowerCase();
-  const style = PLATFORM_ICON_STYLES[plat] ?? "bg-gray-500 text-white";
-  const letter = plat === "instagram" ? "I" : plat[0]?.toUpperCase() ?? "?";
+  const icons: Record<string, string> = {
+    instagram: "📷", tiktok: "♪", youtube: "▶", twitter: "𝕏",
+    facebook: "f", linkedin: "in", twitch: "◉", podcast: "🎙",
+  };
   return (
     <span
-      className={cn("inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold", style)}
+      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-[11px] text-gray-600 dark:text-gray-300"
       title={platform}
       aria-label={platform}
     >
-      {letter}
+      {icons[plat] ?? plat[0]?.toUpperCase() ?? "?"}
     </span>
   );
 }
@@ -711,7 +713,7 @@ const BrandDiscover = () => {
                                 <BadgeCheck className="h-4 w-4 shrink-0 text-[#0064B1]" aria-label="Verified" />
                               )}
                               {creator.hasEmail && (
-                                <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-label="Has email" title="Email available for outreach" />
+                                <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available for outreach"><Mail className="h-3 w-3" />Email</span>
                               )}
                             </h3>
                             <p className="text-sm text-[#0064B1] truncate">
