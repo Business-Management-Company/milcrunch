@@ -119,6 +119,8 @@ function formatDate() {
 
 export default function SummaryDashboard() {
   const today = formatDate();
+  const [credits, setCredits] = useState<{credits_available:number;credits_used:number}|null>(null);
+  useEffect(()=>{fetchCredits().then(setCredits);},[]);
 
   return (
     <div className="space-y-8">
@@ -157,6 +159,25 @@ export default function SummaryDashboard() {
         })}
       </div>
 
+      {/* API Credits */}
+      {credits && (
+        <div className="flex items-center gap-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] px-6 py-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">API Credits:</span>
+            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{credits.credits_available.toLocaleString()}</span>
+            <span className="text-sm text-gray-400">available</span>
+          </div>
+          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{credits.credits_used.toLocaleString()}</span>
+            <span className="text-sm text-gray-400">used</span>
+          </div>
+          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+          <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+            <div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.round((credits.credits_available/(credits.credits_available+credits.credits_used))*100)}%`}} />
+          </div>
+        </div>
+      )}
       {/* Quick actions */}
       <div>
         <h2 className="text-lg font-semibold text-[#000741] dark:text-white mb-4">Quick Actions</h2>
