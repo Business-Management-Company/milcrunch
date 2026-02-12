@@ -416,3 +416,18 @@ export async function enrichCreatorProfile(
 
   return { result: result ?? {}, instagram: ig };
 }
+
+/** Fetch API credit usage */
+export async function fetchCredits(): Promise<{ credits_available: number; credits_used: number } | null> {
+  const apiKey = getApiKey();
+  if (!apiKey) return null;
+  try {
+    const res = await fetch("/api/credits", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}

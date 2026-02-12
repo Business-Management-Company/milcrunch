@@ -2,6 +2,7 @@
   "rewrites": [
     {"source": "/api/influencers/:path(.*)", "destination": "/api/influencers"},
     {"source": "/api/enrich/:path(.*)", "destination": "/api/enrich"},
+    {"source": "/api/credits", "destination": "/api/credits"},
     {"source": "/api/serp/:path*", "destination": "https://serpapi.com/:path*"},
     {"source": "/api/firecrawl/:path*", "destination": "https://api.firecrawl.dev/:path*"},
     {"source": "/api/pdl/:path*", "destination": "https://api.peopledatalabs.com/:path*"},
