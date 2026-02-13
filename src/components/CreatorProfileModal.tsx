@@ -270,8 +270,7 @@ export default function CreatorProfileModal({
   const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
   const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
   const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
-  const growthObj = igRecord?.creator_follower_growth as Record<string, unknown> | undefined;
-  const incomeObj = igRecord?.income as Record<string, unknown> | undefined;
+  // growthObj and incomeObj are computed per-platform in the analytics useMemo below
 
   const displayUsername =
     (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username ?? username ?? "";
@@ -279,7 +278,15 @@ export default function CreatorProfileModal({
     (igRecord?.full_name as string) ?? (resultTop.first_name as string) ?? creator?.name ?? displayUsername ?? "—";
   const picture =
     (igRecord?.profile_picture_hd as string) ?? (igRecord?.profile_picture as string) ?? creator?.avatar ?? "";
-  const bio = (igRecord?.biography as string) ?? creator?.bio ?? "";
+  const bio = useMemo(() => {
+    if (selectedPlatform === "tiktok" && tiktokData) {
+      return (tiktokData.biography as string) ?? (tiktokData.bio as string) ?? creator?.bio ?? "";
+    }
+    if (selectedPlatform === "youtube" && youtubeData) {
+      return (youtubeData.description as string) ?? (youtubeData.biography as string) ?? creator?.bio ?? "";
+    }
+    return (igRecord?.biography as string) ?? creator?.bio ?? "";
+  }, [selectedPlatform, tiktokData, youtubeData, igRecord, creator?.bio]);
   const location =
     (igRecord?.location as string) ??
     (igRecord?.country as string) ??
@@ -331,20 +338,40 @@ export default function CreatorProfileModal({
     };
   }, [selectedPlatform, tiktokData, youtubeData, igRecord, reelsObj, creator]);
 
-  const incomeMin = incomeObj && typeof incomeObj === "object" ? (Number(incomeObj.min ?? 0) || undefined) : undefined;
-  const incomeMax = incomeObj && typeof incomeObj === "object" ? (Number(incomeObj.max ?? 0) || undefined) : undefined;
-  const income = formatIncome(incomeMin, incomeMax);
+  const { incomeMin, incomeMax, income, followerGrowth, reelsPct } = useMemo(() => {
+    // Pick the platform-specific data record for analytics
+    let platRecord: Record<string, unknown> | undefined;
+    if (selectedPlatform === "tiktok") platRecord = tiktokData;
+    else if (selectedPlatform === "youtube") platRecord = youtubeData;
+    else platRecord = igRecord;
 
-  const followerGrowth = growthObj && typeof growthObj === "object"
-    ? [
-        growthObj["3_months_ago"] != null && `${Number(growthObj["3_months_ago"]).toFixed(2)}% (3mo)`,
-        growthObj["6_months_ago"] != null && `${Number(growthObj["6_months_ago"]).toFixed(2)}% (6mo)`,
-        growthObj["12_months_ago"] != null && `${Number(growthObj["12_months_ago"]).toFixed(2)}% (12mo)`,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : "";
-  const reelsPct = Number(igRecord?.reels_percentage_last_12_posts ?? 0);
+    const incObj = platRecord?.income as Record<string, unknown> | undefined;
+    const iMin = incObj && typeof incObj === "object" ? (Number(incObj.min ?? 0) || undefined) : undefined;
+    const iMax = incObj && typeof incObj === "object" ? (Number(incObj.max ?? 0) || undefined) : undefined;
+
+    const growthRec = platRecord?.creator_follower_growth as Record<string, unknown> | undefined;
+    const fGrowth = growthRec && typeof growthRec === "object"
+      ? [
+          growthRec["3_months_ago"] != null && `${Number(growthRec["3_months_ago"]).toFixed(2)}% (3mo)`,
+          growthRec["6_months_ago"] != null && `${Number(growthRec["6_months_ago"]).toFixed(2)}% (6mo)`,
+          growthRec["12_months_ago"] != null && `${Number(growthRec["12_months_ago"]).toFixed(2)}% (12mo)`,
+        ]
+          .filter(Boolean)
+          .join(", ")
+      : "";
+
+    const rPct = selectedPlatform === "instagram"
+      ? Number(igRecord?.reels_percentage_last_12_posts ?? 0)
+      : 0;
+
+    return {
+      incomeMin: iMin,
+      incomeMax: iMax,
+      income: formatIncome(iMin, iMax),
+      followerGrowth: fGrowth,
+      reelsPct: rPct,
+    };
+  }, [selectedPlatform, tiktokData, youtubeData, igRecord]);
 
   const showEnrichmentLoading = enrichmentLoading && !enrichmentTimedOut;
   const engagementDisplay = engagement != null && engagement > 0 ? engagement : null;
@@ -559,33 +586,30 @@ export default function CreatorProfileModal({
                   </p>
                 )}
 
-                {hasDataForPlatform && selectedPlatform === "tiktok" && tiktokData && (
+                {(hasDataForPlatform || selectedPlatform === "instagram") && (
                   <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30 dark:bg-[#0F1117] p-4">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">TikTok</p>
-                    <div className="flex flex-wrap gap-4">
+                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">{PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}</p>
+                    <div className="flex flex-wrap gap-6">
                       <div>
-                        <p className="text-xs text-muted-foreground">Followers</p>
-                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(tiktokData.follower_count as number)}</p>
+                        <p className="text-xs text-muted-foreground">{selectedPlatform === "youtube" ? "Subscribers" : "Followers"}</p>
+                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(followers)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Engagement</p>
-                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatPercent(tiktokData.engagement_percent as number)}</p>
+                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatPercent(engagement)}</p>
                       </div>
-                    </div>
-                  </div>
-                )}
-                {hasDataForPlatform && selectedPlatform === "youtube" && youtubeData && (
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30 dark:bg-[#0F1117] p-4">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">YouTube</p>
-                    <div className="flex flex-wrap gap-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Subscribers</p>
-                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(youtubeData.subscriber_count as number)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Engagement</p>
-                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatPercent(youtubeData.engagement_percent as number)}</p>
-                      </div>
+                      {mediaCount > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">{selectedPlatform === "youtube" ? "Videos" : "Posts"}</p>
+                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(mediaCount)}</p>
+                        </div>
+                      )}
+                      {avgViews > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Avg Views</p>
+                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(avgViews)}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
