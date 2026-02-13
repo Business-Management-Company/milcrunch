@@ -234,17 +234,14 @@ const BrandDiscover = () => {
     };
     searchCreators(q, options)
       .then((result) => {
-        if (searchQueryRef.current.trim() === q) setApiResults(result);
+        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(result);
       })
       .catch((err) => {
-        if (searchQueryRef.current.trim() === q) setApiResults(null);
-    setGender("any");
-    setLanguage("any");
-    setKeywordsInBio("");
+        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(null);
         console.warn("[BrandDiscover] API search failed:", err);
       })
       .finally(() => {
-        if (searchQueryRef.current.trim() === q) setApiLoading(false);
+        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
   }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches]);
 
