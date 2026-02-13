@@ -160,10 +160,10 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
 
   const navItemClass = (isActive: boolean) =>
     cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-      "text-gray-600 dark:text-gray-400",
-      "hover:bg-[#0064B1]/5 dark:hover:bg-gray-800",
-      isActive && "bg-[#0064B1]/10 dark:bg-[#0064B1]/15 text-[#0064B1] dark:text-[#0064B1] font-medium",
+      "flex items-center gap-3 rounded-lg px-3 py-2 text-base transition-colors",
+      "text-gray-700 dark:text-gray-300",
+      "hover:bg-gray-50 dark:hover:bg-gray-800",
+      isActive && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium",
       collapsed && "justify-center px-2"
     );
 
@@ -188,8 +188,8 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           >
             <DashIcon
               className={cn(
-                "h-[18px] w-[18px] shrink-0",
-                dashboardActive ? "text-[#0064B1]" : "text-gray-400 dark:text-gray-500"
+                "h-5 w-5 shrink-0",
+                dashboardActive ? "text-blue-600" : "text-gray-500 dark:text-gray-400"
               )}
               strokeWidth={1.75}
             />
@@ -205,7 +205,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           return (
             <div
               key={section.label}
-              className={cn("mt-5", collapsed && "flex flex-col items-center")}
+              className={cn("mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/60", collapsed && "flex flex-col items-center")}
             >
               {!collapsed ? (
                 <button
@@ -213,16 +213,16 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   onClick={() => toggleSection(section.label)}
                   className="flex items-center justify-between w-full px-3 mb-1.5 group"
                 >
-                  <span className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold tracking-wider uppercase">
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400 font-semibold tracking-wider uppercase">
                     {section.label}
                   </span>
-                  <Chevron className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors" />
+                  <Chevron className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
                 </button>
               ) : (
                 <div className="mt-1" />
               )}
               {(!isSectionCollapsed || collapsed) && (
-                <ul className="space-y-0.5">
+                <ul className="space-y-1">
                   {section.items.map((item) => {
                     const isActive = location.pathname === item.href;
                     const Icon = item.icon;
@@ -235,10 +235,10 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                         >
                           <Icon
                             className={cn(
-                              "h-[18px] w-[18px] shrink-0",
+                              "h-5 w-5 shrink-0",
                               isActive
-                                ? "text-[#0064B1]"
-                                : "text-gray-400 dark:text-gray-500"
+                                ? "text-blue-600"
+                                : "text-gray-500 dark:text-gray-400"
                             )}
                             strokeWidth={1.75}
                           />
