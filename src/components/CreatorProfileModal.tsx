@@ -268,6 +268,8 @@ export default function CreatorProfileModal({
 
   const igRecord = ig && typeof ig === "object" ? (ig as Record<string, unknown>) : undefined;
   const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
+  const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
+  const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
   const growthObj = igRecord?.creator_follower_growth as Record<string, unknown> | undefined;
   const incomeObj = igRecord?.income as Record<string, unknown> | undefined;
 
@@ -292,15 +294,42 @@ export default function CreatorProfileModal({
     (igRecord?.category as string) ?? (Array.isArray(nicheClass) && nicheClass.length ? nicheClass.join(", ") : "") ?? "";
   const isVerified = Boolean(igRecord?.is_verified);
 
-  const followers = Number(igRecord?.follower_count ?? creator?.followers ?? 0);
-  const engagement = Number(igRecord?.engagement_percent ?? creator?.engagementRate ?? 0);
-  const mediaCount = Number(igRecord?.media_count ?? 0);
-  const postsPerMonth = Number(igRecord?.posting_frequency_recent_months ?? 0);
-  const avgLikes = Number(igRecord?.avg_likes ?? 0);
-  const avgComments = Number(igRecord?.avg_comments ?? 0);
-  const avgReelLikes = Number(reelsObj?.avg_like_count ?? 0);
-  const averageViewsForReels = Number(reelsObj?.avg_view_count ?? 0);
-  const avgViews = averageViewsForReels;
+  const { followers, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgReelLikes, avgViews } = useMemo(() => {
+    if (selectedPlatform === "tiktok" && tiktokData) {
+      return {
+        followers: Number(tiktokData.follower_count ?? 0),
+        engagement: Number(tiktokData.engagement_percent ?? 0),
+        mediaCount: Number(tiktokData.media_count ?? tiktokData.video_count ?? 0),
+        postsPerMonth: 0,
+        avgLikes: Number(tiktokData.avg_likes ?? tiktokData.avg_like_count ?? 0),
+        avgComments: Number(tiktokData.avg_comments ?? tiktokData.avg_comment_count ?? 0),
+        avgReelLikes: 0,
+        avgViews: Number(tiktokData.avg_view_count ?? tiktokData.avg_views ?? 0),
+      };
+    }
+    if (selectedPlatform === "youtube" && youtubeData) {
+      return {
+        followers: Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0),
+        engagement: Number(youtubeData.engagement_percent ?? 0),
+        mediaCount: Number(youtubeData.video_count ?? youtubeData.media_count ?? 0),
+        postsPerMonth: 0,
+        avgLikes: Number(youtubeData.avg_likes ?? youtubeData.avg_like_count ?? 0),
+        avgComments: Number(youtubeData.avg_comments ?? youtubeData.avg_comment_count ?? 0),
+        avgReelLikes: 0,
+        avgViews: Number(youtubeData.avg_view_count ?? youtubeData.avg_views ?? 0),
+      };
+    }
+    return {
+      followers: Number(igRecord?.follower_count ?? creator?.followers ?? 0),
+      engagement: Number(igRecord?.engagement_percent ?? creator?.engagementRate ?? 0),
+      mediaCount: Number(igRecord?.media_count ?? 0),
+      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? 0),
+      avgLikes: Number(igRecord?.avg_likes ?? 0),
+      avgComments: Number(igRecord?.avg_comments ?? 0),
+      avgReelLikes: Number(reelsObj?.avg_like_count ?? 0),
+      avgViews: Number(reelsObj?.avg_view_count ?? 0),
+    };
+  }, [selectedPlatform, tiktokData, youtubeData, igRecord, reelsObj, creator]);
 
   const incomeMin = incomeObj && typeof incomeObj === "object" ? (Number(incomeObj.min ?? 0) || undefined) : undefined;
   const incomeMax = incomeObj && typeof incomeObj === "object" ? (Number(incomeObj.max ?? 0) || undefined) : undefined;
@@ -323,9 +352,6 @@ export default function CreatorProfileModal({
     (selectedPlatform === "instagram" && !!ig) ||
     (selectedPlatform === "tiktok" && !!(resultTop as Record<string, unknown>).tiktok) ||
     (selectedPlatform === "youtube" && !!(resultTop as Record<string, unknown>).youtube);
-
-  const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
-  const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
 
   const recentPosts: PostItem[] = useMemo(() => {
     const raw = igRecord?.post_data;

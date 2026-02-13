@@ -160,11 +160,12 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
 
   const hashtags = instagram.hashtags;
   if (Array.isArray(hashtags) && hashtags.length > 0) {
-    partial.hashtags = hashtags.slice(0, 10).map((t: unknown) => {
+    const mapped = hashtags.map((t: unknown) => {
       if (typeof t === "string") return t.replace(/^#/, "");
       if (t && typeof t === "object" && "name" in t) return String((t as { name: string }).name).replace(/^#/, "");
       return String(t);
     });
+    partial.hashtags = [...new Set(mapped)].slice(0, 10);
   }
 
   const links = instagram.links_in_bio;
