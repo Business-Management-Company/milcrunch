@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
+import { searchCreators, enrichCreatorProfile, type CreatorCard, type EnrichedProfileResponse } from "@/lib/influencers-club";
 import { upsertCreator } from "@/lib/creators-db";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import CreateListModal from "@/components/CreateListModal";
@@ -111,6 +111,74 @@ function PlatformIcon({ platform, username }: { platform: string; username?: str
 
   return icon;
 }
+function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCard> {
+  const { result, instagram } = data;
+  const partial: Partial<CreatorCard> = {};
+
+  if (result.email) partial.hasEmail = true;
+
+  const creatorHas = result.creator_has as Record<string, boolean> | undefined;
+  if (creatorHas && typeof creatorHas === "object") {
+    const platforms: string[] = ["instagram"];
+    if (creatorHas.tiktok) platforms.push("tiktok");
+    if (creatorHas.youtube) platforms.push("youtube");
+    if (creatorHas.twitter) platforms.push("twitter");
+    if (creatorHas.facebook) platforms.push("facebook");
+    if (creatorHas.linkedin) platforms.push("linkedin");
+    if (creatorHas.twitch) platforms.push("twitch");
+    if (creatorHas.podcast) platforms.push("podcast");
+    partial.socialPlatforms = platforms;
+  }
+
+  const hashtags = instagram.hashtags;
+  if (Array.isArray(hashtags) && hashtags.length > 0) {
+    partial.hashtags = hashtags.slice(0, 10).map((t: unknown) => {
+      if (typeof t === "string") return t.replace(/^#/, "");
+      if (t && typeof t === "object" && "name" in t) return String((t as { name: string }).name).replace(/^#/, "");
+      return String(t);
+    });
+  }
+
+  const links = instagram.links_in_bio;
+  if (Array.isArray(links) && links.length > 0) {
+    const externalLinks: { label: string; url?: string }[] = [];
+    links.forEach((item: unknown) => {
+      const o = item as Record<string, unknown>;
+      const url = (o.url ?? o.href ?? o.link ?? o) as string | undefined;
+      if (typeof url !== "string" || !url.startsWith("http")) return;
+      const lower = url.toLowerCase();
+      let label = (o.label ?? o.title) as string | undefined;
+      if (!label) {
+        if (lower.includes("linktr.ee") || lower.includes("linktree")) label = "Linktree";
+        else if (lower.includes("amazon")) label = "Amazon";
+        else if (lower.includes("shopify")) label = "Shopify";
+        else if (lower.includes("bio.site")) label = "Bio.link";
+        else label = "Link";
+      }
+      externalLinks.push({ label: String(label), url });
+    });
+    if (externalLinks.length > 0) partial.externalLinks = externalLinks;
+  }
+
+  const city = instagram.city as string | undefined;
+  const state = instagram.state as string | undefined;
+  const country = instagram.country as string | undefined;
+  const loc = [city, state, country].filter(Boolean).join(", ").trim();
+  if (loc) partial.location = loc;
+
+  if (instagram.is_verified) partial.isVerified = true;
+
+  if (instagram.biography && typeof instagram.biography === "string") {
+    partial.bio = instagram.biography as string;
+  }
+
+  return partial;
+}
+
+const EnrichShimmer = () => (
+  <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse inline-block" />
+);
+
 const PLATFORMS = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
@@ -198,6 +266,10 @@ const BrandDiscover = () => {
   const [createListForBulkImportOpen, setCreateListForBulkImportOpen] = useState(false);
   const [createListForBulkAddOpen, setCreateListForBulkAddOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [enrichCache, setEnrichCache] = useState<Record<string, Partial<CreatorCard>>>({});
+  const [enrichingId, setEnrichingId] = useState<string | null>(null);
+  const enrichedSetRef = useRef<Set<string>>(new Set());
+  const enrichAbortRef = useRef<AbortController | null>(null);
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
 
@@ -212,6 +284,10 @@ const BrandDiscover = () => {
     }
     setApiLoading(true);
     setCurrentPage(1);
+    enrichAbortRef.current?.abort();
+    enrichedSetRef.current = new Set();
+    setEnrichCache({});
+    setEnrichingId(null);
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
     const branchKeys = selectedBranches.size > 0 ? Array.from(selectedBranches) : [];
@@ -296,6 +372,10 @@ const BrandDiscover = () => {
     setGender("any");
     setLanguage("any");
     setKeywordsInBio("");
+    enrichAbortRef.current?.abort();
+    enrichedSetRef.current = new Set();
+    setEnrichCache({});
+    setEnrichingId(null);
   };
 
   const toggleBranch = (branch: Branch) => {
@@ -309,6 +389,50 @@ const BrandDiscover = () => {
 
   const hasSearched = apiResults !== null;
   const creators = apiResults?.creators ?? [];
+
+  // Background enrichment: sequentially enrich each creator after search results load
+  useEffect(() => {
+    const creatorsToEnrich = apiResults?.creators ?? [];
+    if (creatorsToEnrich.length === 0) return;
+
+    const controller = new AbortController();
+    enrichAbortRef.current = controller;
+
+    const run = async () => {
+      for (const creator of creatorsToEnrich) {
+        if (controller.signal.aborted) break;
+        if (!creator.username || enrichedSetRef.current.has(creator.id)) continue;
+
+        setEnrichingId(creator.id);
+
+        try {
+          const data = await enrichCreatorProfile(creator.username, controller.signal);
+          if (data && !controller.signal.aborted) {
+            enrichedSetRef.current.add(creator.id);
+            const partial = extractFromEnrichment(data);
+            setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+          }
+        } catch (err) {
+          if ((err as Error)?.name === "AbortError") break;
+          console.warn("[BrandDiscover] Enrichment failed for", creator.username, err);
+          enrichedSetRef.current.add(creator.id);
+        }
+      }
+      if (!controller.signal.aborted) setEnrichingId(null);
+    };
+
+    run();
+
+    return () => {
+      controller.abort();
+    };
+  }, [apiResults]);
+
+  const getMergedCreator = (c: CreatorCard): CreatorCard => {
+    const enriched = enrichCache[c.id];
+    return enriched ? { ...c, ...enriched } : c;
+  };
+  const enrichRunning = enrichingId !== null;
 
   // Confidence scoring: how well does this creator match the search terms?
   const getConfidence = useCallback((creator: CreatorCard) => {
@@ -739,11 +863,14 @@ const BrandDiscover = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {creators.map((creator, _idx) => {
+                      {creators.map((baseCreator, _idx) => {
+                        const creator = getMergedCreator(baseCreator);
                         if (_idx === 0) console.log("[BrandDiscover] First creator (table):", creator);
                         const socialPlatforms = creator.socialPlatforms ?? [];
                         const linkCount = (creator.externalLinks ?? []).length;
                         const hashtags = creator.hashtags ?? [];
+                        const pending = enrichRunning && !enrichCache[baseCreator.id] && !!baseCreator.username;
+                        const isActiveEnrich = enrichingId === baseCreator.id;
                         return (
                           <tr
                             key={creator.id}
@@ -766,8 +893,9 @@ const BrandDiscover = () => {
                                   )}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-[#000741] dark:text-white truncate">
+                                  <p className="font-semibold text-[#000741] dark:text-white truncate flex items-center gap-1">
                                     {creator.name}
+                                    {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
                                   </p>
                                   <p className="text-xs text-[#0064B1] truncate">{creator.username ? `@${creator.username}` : ""}</p>
                                   {creator.location && (
@@ -781,6 +909,7 @@ const BrandDiscover = () => {
                                 {socialPlatforms.slice(0, 5).map((p) => (
                                   <PlatformIcon key={p} platform={p} username={creator.username} />
                                 ))}
+                                {pending && socialPlatforms.length <= 1 && <EnrichShimmer />}
                               </div>
                             </td>
                             <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowers(creator.followers)}</td>
@@ -788,6 +917,8 @@ const BrandDiscover = () => {
                             <td className="p-3 text-center">
                               {creator.hasEmail ? (
                                 <Mail className="h-4 w-4 text-blue-500 mx-auto" title="Email available" />
+                              ) : pending ? (
+                                <div className="mx-auto"><EnrichShimmer /></div>
                               ) : (
                                 <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
@@ -798,6 +929,8 @@ const BrandDiscover = () => {
                                   <ExternalLink className="h-3.5 w-3.5" />
                                   {linkCount}
                                 </span>
+                              ) : pending ? (
+                                <div className="mx-auto"><EnrichShimmer /></div>
                               ) : (
                                 <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
@@ -814,6 +947,8 @@ const BrandDiscover = () => {
                                     <span className="text-[11px] text-gray-400">+{hashtags.length - 2}</span>
                                   )}
                                 </div>
+                              ) : pending ? (
+                                <div className="flex gap-1"><EnrichShimmer /><EnrichShimmer /></div>
                               ) : (
                                 <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
@@ -849,7 +984,8 @@ const BrandDiscover = () => {
                 </div>
                 ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {creators.map((creator, _idx) => {
+                  {creators.map((baseCreator, _idx) => {
+                    const creator = getMergedCreator(baseCreator);
                     if (_idx === 0) console.log("[BrandDiscover] First creator object:", creator);
                     const nicheTags = [
                       creator.nicheClass,
