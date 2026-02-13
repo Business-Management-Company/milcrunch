@@ -248,7 +248,7 @@ export async function searchCreators(
 
   const body = {
     platform: platformValue,
-    paging: { limit: 50, page: options.page ?? 1 },
+    paging: { limit: 25, page: options.page ?? 1 },
     sort: { sort_by: options.sort_by ?? "relevancy", sort_order: "desc" as const },
     filters: {
       ai_search: trimmed,

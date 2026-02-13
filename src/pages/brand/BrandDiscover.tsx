@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -274,6 +274,7 @@ const NICHE_OPTIONS = [
   "Writing",
 ] as const;
 const SORT_OPTIONS = [
+  { value: "confidence", label: "Confidence" },
   { value: "relevancy", label: "Relevancy" },
   { value: "followers", label: "Followers" },
   { value: "engagement", label: "Engagement" },
@@ -313,7 +314,7 @@ const BrandDiscover = () => {
   const [gender, setGender] = useState<string>("any");
   const [language, setLanguage] = useState<string>("any");
   const [keywordsInBio, setKeywordsInBio] = useState("");
-  const [sortBy, setSortBy] = useState<string>("relevancy");
+  const [sortBy, setSortBy] = useState<string>("confidence");
   const [selectedBranches, setSelectedBranches] = useState<Set<Branch>>(new Set());
   const [apiResults, setApiResults] = useState<{ creators: CreatorCard[]; total: number; rawResponse: unknown } | null>(null);
   const [apiLoading, setApiLoading] = useState(false);
@@ -329,6 +330,7 @@ const BrandDiscover = () => {
   const [createListForBulkAddOpen, setCreateListForBulkAddOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [enrichCache, setEnrichCache] = useState<Record<string, Partial<CreatorCard>>>({});
+  const [enrichRawCache, setEnrichRawCache] = useState<Record<string, EnrichedProfileResponse>>({});
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const enrichedSetRef = useRef<Set<string>>(new Set());
   const enrichAbortRef = useRef<AbortController | null>(null);
@@ -381,11 +383,12 @@ const BrandDiscover = () => {
   // Load saved searches from Supabase
   const loadSavedSearches = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("saved_searches")
       .select("id, name, search_query, filters, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+    if (error) console.error("[SavedSearch] Load failed:", error.message, error);
     if (data) setSavedSearches(data as SavedSearchRow[]);
   }, [user]);
 
@@ -402,8 +405,8 @@ const BrandDiscover = () => {
     });
     setSavingSearch(false);
     if (error) {
-      console.error("[SavedSearch] Insert failed:", error);
-      toast.error("Failed to save search");
+      console.error("[SavedSearch] Insert failed:", error.message, error.details, error.hint, error);
+      toast.error(`Failed to save search: ${error.message}`);
     } else {
       toast.success(`Saved "${saveSearchName.trim()}"`);
       setSaveSearchOpen(false);
@@ -456,6 +459,7 @@ const BrandDiscover = () => {
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
+    setEnrichRawCache({});
     setEnrichingIds(new Set());
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
@@ -473,7 +477,7 @@ const BrandDiscover = () => {
         max: null as number | null,
       },
       keywords_in_bio,
-      sort_by: sortBy as "relevancy" | "followers" | "engagement",
+      sort_by: (sortBy === "confidence" ? "relevancy" : sortBy) as "relevancy" | "followers" | "engagement",
       location: locationFilter.trim() || undefined,
       gender: gender !== "any" ? gender : undefined,
       language: language !== "any" ? language : undefined,
@@ -513,7 +517,7 @@ const BrandDiscover = () => {
       number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
       engagement_percent: { min: engagementOpt?.min ?? null, max: null },
       keywords_in_bio,
-      sort_by: sortBy as "relevancy" | "followers" | "engagement",
+      sort_by: (sortBy === "confidence" ? "relevancy" : sortBy) as "relevancy" | "followers" | "engagement",
       location: locationFilter.trim() || undefined,
       gender: gender !== "any" ? gender : undefined,
       language: language !== "any" ? language : undefined,
@@ -544,7 +548,7 @@ const BrandDiscover = () => {
     setEngagementMin("any");
     setLocationFilter("");
     setNiche("All niches");
-    setSortBy("relevancy");
+    setSortBy("confidence");
     setSelectedBranches(new Set());
     setApiResults(null);
     setGender("any");
@@ -553,6 +557,7 @@ const BrandDiscover = () => {
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
+    setEnrichRawCache({});
     setEnrichingIds(new Set());
   };
 
@@ -596,6 +601,7 @@ const BrandDiscover = () => {
                 enrichedSetRef.current.add(creator.id);
                 const partial = extractFromEnrichment(cached);
                 setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+                setEnrichRawCache((prev) => ({ ...prev, [creator.id]: cached }));
                 return;
               }
 
@@ -605,6 +611,7 @@ const BrandDiscover = () => {
                 enrichedSetRef.current.add(creator.id);
                 const partial = extractFromEnrichment(data);
                 setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+                setEnrichRawCache((prev) => ({ ...prev, [creator.id]: data }));
                 // Save to Supabase cache (fire-and-forget)
                 setCachedEnrichment(creator.username!, data);
               }
@@ -669,6 +676,12 @@ const BrandDiscover = () => {
     low: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
     none: "hidden",
   };
+  // Sort by confidence when selected (client-side sort)
+  const displayCreators = useMemo(() => {
+    if (sortBy !== "confidence") return creators;
+    return [...creators].sort((a, b) => getConfidence(b).score - getConfidence(a).score);
+  }, [creators, sortBy, getConfidence]);
+
   const totalFromApi = apiResults?.total ?? 0;
   const resultsLabel =
     hasSearched && !apiLoading
@@ -851,6 +864,7 @@ const BrandDiscover = () => {
         open={profileModalOpen}
         onOpenChange={setProfileModalOpen}
         creator={profileCreator}
+        cachedEnrichment={profileCreator ? enrichRawCache[profileCreator.id] ?? null : null}
         onOpenCreator={(username) => {
           setProfileCreator({
             id: username,
@@ -1127,7 +1141,7 @@ const BrandDiscover = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {creators.map((baseCreator, _idx) => {
+                      {displayCreators.map((baseCreator, _idx) => {
                         const creator = getMergedCreator(baseCreator);
                         if (_idx === 0) console.log("[BrandDiscover] First creator (table):", creator);
                         const socialPlatforms = creator.socialPlatforms ?? [];
@@ -1248,7 +1262,7 @@ const BrandDiscover = () => {
                 </div>
                 ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {creators.map((baseCreator, _idx) => {
+                  {displayCreators.map((baseCreator, _idx) => {
                     const creator = getMergedCreator(baseCreator);
                     if (_idx === 0) console.log("[BrandDiscover] First creator object:", creator);
                     const nicheTags = [

@@ -86,6 +86,7 @@ interface CreatorProfileModalProps {
   creator: CreatorCard | null;
   onAddToList?: (creator: ListCreator) => void;
   onOpenCreator?: (username: string) => void;
+  cachedEnrichment?: EnrichedProfileResponse | null;
 }
 
 interface PostItem {
@@ -117,6 +118,7 @@ export default function CreatorProfileModal({
   creator,
   onAddToList,
   onOpenCreator,
+  cachedEnrichment,
 }: CreatorProfileModalProps) {
   const [enriched, setEnriched] = useState<EnrichedProfileResponse | null>(null);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
@@ -147,6 +149,15 @@ export default function CreatorProfileModal({
       setEnriched(null);
       setError("No username available for this creator.");
       setEnrichmentLoading(false);
+      return;
+    }
+
+    // Use cached enrichment from background enrichment if available
+    if (cachedEnrichment) {
+      console.log("[Enrich] Using cached enrichment for:", handle);
+      setEnriched(cachedEnrichment);
+      setEnrichmentLoading(false);
+      setError(null);
       return;
     }
 
@@ -205,7 +216,7 @@ export default function CreatorProfileModal({
       controllerRef.current = null;
       // Do NOT set generationRef.current = 0 — it causes the winning request's .then to see gen !== ref and skip setEnriched (e.g. after Strict Mode first cleanup)
     };
-  }, [open, creator?.id, creator?.username, username]);
+  }, [open, creator?.id, creator?.username, username, cachedEnrichment]);
 
   /** Two-level response: result (top-level) + result.instagram (ig) */
   const resultTop = enriched?.result ?? {};
