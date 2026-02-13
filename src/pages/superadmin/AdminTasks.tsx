@@ -314,7 +314,6 @@ export default function AdminTasks() {
       title: title || "New task",
       status,
       priority,
-      category: category.toLowerCase(),
       sort_order: maxOrder,
     });
     if (error) { console.error("Insert failed:", error); alert("Failed to create task: " + error.message); return; }
