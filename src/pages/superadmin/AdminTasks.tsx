@@ -46,18 +46,8 @@ const PRIORITIES = [
   { value: "low", label: "⚪ Low" },
 ] as const;
 
-const CATEGORIES = [
-  "Feature",
-  "Bug",
-  "Fix",
-  "UI",
-  "API",
-  "Integration",
-] as const;
-
 type TaskStatus = (typeof COLUMNS)[number]["status"];
 type Priority = (typeof PRIORITIES)[number]["value"];
-type Category = (typeof CATEGORIES)[number];
 
 interface AdminTask {
   id: string;
@@ -65,13 +55,7 @@ interface AdminTask {
   description: string | null;
   status: TaskStatus;
   priority: Priority;
-  category: string;
-  assignee: string | null;
-  due_date: string | null;
-  sort_order: number;
-  related_prompt_id: string | null;
   created_at: string | null;
-  updated_at: string | null;
 }
 
 interface ChecklistItem {
@@ -103,9 +87,8 @@ export default function AdminTasks() {
   const [view, setView] = useState<"board" | "list">("board");
   const [search, setSearch] = useState("");
   const [filterPriority, setFilterPriority] = useState<string>("all");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"priority" | "created" | "due">("created");
+  const [sortBy, setSortBy] = useState<"priority" | "created">("created");
   const [detailTask, setDetailTask] = useState<AdminTask | null>(null);
   const [detailChecklist, setDetailChecklist] = useState<ChecklistItem[]>([]);
   const [detailNotes, setDetailNotes] = useState<TaskNote[]>([]);
@@ -119,7 +102,6 @@ export default function AdminTasks() {
     const { data, error } = await supabase
       .from("admin_tasks")
       .select("*")
-      .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
     if (error) {
       console.error(error);
@@ -170,7 +152,7 @@ export default function AdminTasks() {
 
   const updateTaskStatus = useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
-      await supabase.from("admin_tasks").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", taskId);
+      await supabase.from("admin_tasks").update({ status: newStatus }).eq("id", taskId);
       fetchTasks();
     },
     [fetchTasks]
@@ -180,7 +162,6 @@ export default function AdminTasks() {
     .filter((t) => {
       if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterPriority !== "all" && t.priority !== filterPriority) return false;
-      if (filterCategory !== "all" && t.category.toLowerCase() !== filterCategory.toLowerCase()) return false;
       if (filterStatus !== "all" && t.status !== filterStatus) return false;
       return true;
     })
@@ -188,11 +169,6 @@ export default function AdminTasks() {
       if (sortBy === "priority") {
         const order: Priority[] = ["critical", "high", "medium", "low"];
         return order.indexOf(a.priority as Priority) - order.indexOf(b.priority as Priority);
-      }
-      if (sortBy === "due") {
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
       }
       return new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime();
     });
@@ -243,10 +219,7 @@ export default function AdminTasks() {
         title: detailTask.title,
         description: detailTask.description,
         priority: detailTask.priority,
-        category: detailTask.category,
         status: detailTask.status,
-        due_date: detailTask.due_date || null,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", detailTask.id);
     if (relatedPrompt.trim()) {
@@ -350,17 +323,6 @@ export default function AdminTasks() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c.toLowerCase()}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Status" />
@@ -372,14 +334,13 @@ export default function AdminTasks() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "priority" | "created" | "due")}>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "priority" | "created")}>
             <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="priority">Priority</SelectItem>
               <SelectItem value="created">Date created</SelectItem>
-              <SelectItem value="due">Due date</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex rounded-lg border border-input bg-background p-1">
@@ -401,7 +362,6 @@ export default function AdminTasks() {
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-medium">Title</th>
                   <th className="text-left p-3 font-medium">Priority</th>
-                  <th className="text-left p-3 font-medium">Category</th>
                   <th className="text-left p-3 font-medium">Status</th>
                   <th className="text-left p-3 font-medium">Created</th>
                 </tr>
@@ -419,7 +379,6 @@ export default function AdminTasks() {
                         {PRIORITIES.find((p) => p.value === t.priority)?.label ?? t.priority}
                       </span>
                     </td>
-                    <td className="p-3">{t.category}</td>
                     <td className="p-3">{COLUMNS.find((c) => c.status === t.status)?.label ?? t.status}</td>
                     <td className="p-3 text-muted-foreground">{t.created_at ? format(new Date(t.created_at), "MMM d, yyyy") : "—"}</td>
                   </tr>
@@ -476,12 +435,7 @@ export default function AdminTasks() {
                                 <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", priorityClass[task.priority as Priority])}>
                                   {PRIORITIES.find((p) => p.value === task.priority)?.label ?? task.priority}
                                 </span>
-                                <span className="rounded bg-muted px-2 py-0.5 text-xs">{task.category}</span>
                               </div>
-                              <p className="text-xs text-muted-foreground mt-1">{task.assignee ?? "Andrew"}</p>
-                              {task.due_date && (
-                                <p className="text-xs text-muted-foreground">Due {format(new Date(task.due_date), "MMM d")}</p>
-                              )}
                               {progress && (
                                 <div className="mt-2">
                                   <Progress value={(progress.done / progress.total) * 100} className="h-1.5" />
@@ -546,22 +500,6 @@ export default function AdminTasks() {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Category</label>
-                    <Select
-                      value={detailTask.category}
-                      onValueChange={(v) => setDetailTask({ ...detailTask, category: v })}
-                    >
-                      <SelectTrigger className="w-[140px] mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((c) => (
-                          <SelectItem key={c} value={c.toLowerCase()}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
                     <label className="text-sm font-medium text-muted-foreground">Status</label>
                     <Select
                       value={detailTask.status}
@@ -576,15 +514,6 @@ export default function AdminTasks() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Due date</label>
-                    <Input
-                      type="date"
-                      className="w-[140px] mt-1"
-                      value={detailTask.due_date ?? ""}
-                      onChange={(e) => setDetailTask({ ...detailTask, due_date: e.target.value || null })}
-                    />
                   </div>
                 </div>
                 <div>
@@ -653,7 +582,6 @@ export default function AdminTasks() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Created {detailTask.created_at ? format(new Date(detailTask.created_at), "PPp") : "—"}
-                  {detailTask.updated_at && ` · Updated ${format(new Date(detailTask.updated_at), "PPp")}`}
                 </p>
               </div>
               <DialogFooter>
