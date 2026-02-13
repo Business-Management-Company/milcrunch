@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
-  const key = process.env.VITE_FIRECRAWL_API_KEY;
+  const key = process.env.FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY;
   if (!key) {
-    return res.status(500).json({ error: "VITE_FIRECRAWL_API_KEY not configured" });
+    return res.status(500).json({ error: "FIRECRAWL_API_KEY not configured" });
   }
 
   const stripped = req.url.replace(/^\/api\/firecrawl/, "");

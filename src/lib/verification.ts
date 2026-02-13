@@ -49,14 +49,24 @@ export interface PDLResponse {
 export async function enrichPersonPDL(params: PDLEnrichParams): Promise<PDLResponse | null> {
   const searchParams = new URLSearchParams();
   if (params.name) searchParams.set("name", params.name);
-  if (params.profile?.length) searchParams.set("profile", params.profile.join(","));
+  if (params.profile?.length) {
+    for (const p of params.profile) searchParams.append("profile", p);
+  }
   if (params.location) searchParams.set("location", params.location);
+  searchParams.set("min_likelihood", "2");
   try {
-    const res = await fetch(`/api/pdl/v5/person/enrich?${searchParams.toString()}`, {
+    const url = `/api/pdl/v5/person/enrich?${searchParams.toString()}`;
+    console.log("[Verification] PDL request:", url);
+    const res = await fetch(url, {
       headers: { "Content-Type": "application/json" },
     });
-    if (!res.ok) throw new Error(`PDL ${res.status}`);
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn("[Verification] PDL response:", res.status, text.slice(0, 200));
+      throw new Error(`PDL ${res.status}`);
+    }
     const json = await res.json();
+    console.log("[Verification] PDL data keys:", Object.keys(json.data ?? json));
     return (json.data ?? json) as PDLResponse;
   } catch (e) {
     console.error("[Verification] PDL error:", e);

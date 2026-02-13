@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
-  const key = process.env.VITE_SERP_API_KEY;
+  const key = process.env.SERP_API_KEY || process.env.VITE_SERP_API_KEY;
   if (!key) {
-    return res.status(500).json({ error: "VITE_SERP_API_KEY not configured" });
+    return res.status(500).json({ error: "SERP_API_KEY not configured" });
   }
 
   // Extract query params from the request URL

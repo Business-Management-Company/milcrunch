@@ -42,6 +42,8 @@ import {
   AlertCircle,
   ExternalLink,
   User,
+  Gavel,
+  CheckCircle2,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -460,6 +462,138 @@ export default function Verification() {
   );
 }
 
+function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: string; recordId: string; onRefresh?: () => void }) {
+  const [results, setResults] = useState<{ title: string; url: string; snippet: string; isRedFlag: boolean }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const handleRunCriminalCheck = async () => {
+    setSearching(true);
+    try {
+      const queries = [
+        `"${personName}" criminal record`,
+        `"${personName}" arrest`,
+        `"${personName}" stolen valor`,
+      ];
+      const allResults: { title: string; url: string; snippet: string; isRedFlag: boolean }[] = [];
+      const seen = new Set<string>();
+      for (const q of queries) {
+        const serpResults = await searchSerp(q);
+        for (const r of serpResults) {
+          const url = r.link ?? "";
+          if (seen.has(url)) continue;
+          seen.add(url);
+          const text = `${r.title ?? ""} ${r.snippet ?? ""}`.toLowerCase();
+          const isRedFlag = /criminal|fraud|stolen valor|convicted|arrested|indicted|scam|fake|charge/i.test(text);
+          allResults.push({
+            title: r.title ?? "No title",
+            url,
+            snippet: r.snippet ?? "",
+            isRedFlag,
+          });
+        }
+      }
+      setResults(allResults);
+      setHasSearched(true);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const flagged = results.filter((r) => r.isRedFlag);
+  const clean = results.filter((r) => !r.isRedFlag);
+
+  return (
+    <div className="space-y-4">
+      {!hasSearched ? (
+        <div className="text-center py-8">
+          <Gavel className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground mb-4">
+            Run a criminal background check using public web records.
+            <br />
+            Searches for criminal records, arrests, and stolen valor reports.
+          </p>
+          <Button
+            onClick={handleRunCriminalCheck}
+            disabled={searching}
+            className="bg-[#0064B1] hover:bg-[#053877]"
+          >
+            {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+            Run Criminal Check
+          </Button>
+        </div>
+      ) : (
+        <>
+          {flagged.length === 0 && clean.length === 0 ? (
+            <Card className="rounded-xl border-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <CardContent className="flex items-center gap-3 py-6">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                <div>
+                  <p className="font-medium text-emerald-800 dark:text-emerald-300">No criminal records found</p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">No public criminal records, arrests, or stolen valor reports were found for {personName}.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : flagged.length === 0 ? (
+            <Card className="rounded-xl border-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <CardContent className="flex items-center gap-3 py-6">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                <div>
+                  <p className="font-medium text-emerald-800 dark:text-emerald-300">No criminal records found</p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">{results.length} search result(s) returned but none contain criminal indicators.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+          {flagged.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" /> {flagged.length} potential concern(s) found
+              </p>
+              {flagged.map((r, i) => (
+                <Card key={i} className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-red-700 dark:text-red-400 hover:underline flex items-center gap-1">
+                          {r.title} <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          {clean.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">{clean.length} other result(s)</p>
+              {clean.map((r, i) => (
+                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800">
+                  <CardContent className="p-4">
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0064B1] hover:underline flex items-center gap-1 text-sm">
+                      {r.title} <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          <div className="pt-2">
+            <Button variant="outline" size="sm" onClick={handleRunCriminalCheck} disabled={searching}>
+              {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Re-run Check
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
@@ -503,11 +637,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   return (
     <div className="p-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 rounded-xl bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="rounded-lg">Overview</TabsTrigger>
-          <TabsTrigger value="evidence" className="rounded-lg">Evidence Sources</TabsTrigger>
-          <TabsTrigger value="professional" className="rounded-lg">Professional Data</TabsTrigger>
-          <TabsTrigger value="deep" className="rounded-lg">Deep Analysis</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 gap-1 rounded-lg bg-transparent p-0 border-b border-gray-200 dark:border-gray-700 pb-1">
+          <TabsTrigger value="overview" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Overview</TabsTrigger>
+          <TabsTrigger value="evidence" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Evidence Sources</TabsTrigger>
+          <TabsTrigger value="professional" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Professional Data</TabsTrigger>
+          <TabsTrigger value="criminal" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Criminal History</TabsTrigger>
+          <TabsTrigger value="deep" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Deep Analysis</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -623,8 +758,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Employment Timeline</CardTitle>
             </CardHeader>
             <CardContent>
-              {!pdlData?.employment?.length ? (
-                <p className="text-sm text-muted-foreground">No employment data from PDL.</p>
+              {!pdlData ? (
+                <p className="text-sm text-muted-foreground">PDL lookup did not return data. This is normal — many people are not in the PDL database. Check that PDL_API_KEY is set in Vercel environment variables.</p>
+              ) : !pdlData.employment?.length ? (
+                <p className="text-sm text-muted-foreground">PDL found a profile but no employment history is listed.</p>
               ) : (
                 <ul className="space-y-3">
                   {((pdlData.employment ?? []) as { title?: string; name?: string; organization?: string; company?: string; start_date?: string; end_date?: string }[]).map((job, i) => {
@@ -662,6 +799,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               ) : null}
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="criminal" className="mt-4">
+          <CriminalHistoryTab personName={record.person_name} recordId={record.id} onRefresh={onRefresh} />
         </TabsContent>
         <TabsContent value="deep" className="mt-4">
           <div className="space-y-4">
