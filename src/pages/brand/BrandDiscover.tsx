@@ -36,31 +36,72 @@ import {
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
 
-const PLATFORM_ICON_STYLES: Record<string, string> = {
-  instagram: "bg-gradient-to-br from-purple-500 to-pink-500 text-white",
-  tiktok: "bg-black dark:bg-white text-white dark:text-black",
-  youtube: "bg-red-600 text-white",
-  twitter: "bg-sky-500 text-white",
-  facebook: "bg-blue-600 text-white",
-  linkedin: "bg-blue-700 text-white",
-  podcast: "bg-violet-600 text-white",
-  twitch: "bg-purple-600 text-white",
+const PLATFORM_URLS: Record<string, (u: string) => string> = {
+  instagram: (u) => `https://instagram.com/${u}`,
+  tiktok: (u) => `https://tiktok.com/@${u}`,
+  youtube: (u) => `https://youtube.com/@${u}`,
+  twitter: (u) => `https://x.com/${u}`,
 };
-function PlatformIcon({ platform }: { platform: string }) {
+
+const PLATFORM_SVGS: Record<string, React.ReactNode> = {
+  instagram: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.17.054 1.97.24 2.43.403a4.088 4.088 0 011.47.96c.458.457.78.92.96 1.47.163.46.349 1.26.404 2.43.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.055 1.17-.241 1.97-.404 2.43a4.088 4.088 0 01-.96 1.47 4.088 4.088 0 01-1.47.96c-.46.163-1.26.349-2.43.404-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.17-.055-1.97-.241-2.43-.404a4.088 4.088 0 01-1.47-.96 4.088 4.088 0 01-.96-1.47c-.163-.46-.349-1.26-.404-2.43C2.175 15.584 2.163 15.204 2.163 12s.012-3.584.07-4.85c.055-1.17.241-1.97.404-2.43a4.088 4.088 0 01.96-1.47 4.088 4.088 0 011.47-.96c.46-.163 1.26-.349 2.43-.404C8.416 2.175 8.796 2.163 12 2.163M12 0C8.741 0 8.333.014 7.053.072 5.775.131 4.902.333 4.14.63a6.21 6.21 0 00-2.228 1.45A6.21 6.21 0 00.462 4.308C.166 5.07-.036 5.944.005 7.222.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.059 1.278.261 2.15.558 2.913a6.21 6.21 0 001.45 2.228 6.21 6.21 0 002.228 1.45c.762.297 1.636.499 2.913.558C8.333 23.986 8.741 24 12 24s3.667-.014 4.947-.072c1.278-.059 2.15-.261 2.913-.558a6.21 6.21 0 002.228-1.45 6.21 6.21 0 001.45-2.228c.297-.762.499-1.636.558-2.913.058-1.28.072-1.688.072-4.947s-.014-3.667-.072-4.947c-.059-1.278-.261-2.15-.558-2.913a6.21 6.21 0 00-1.45-2.228A6.21 6.21 0 0019.86.462C19.098.166 18.224-.036 16.947.005 15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+    </svg>
+  ),
+  tiktok: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.75a8.18 8.18 0 004.77 1.52V6.82a4.84 4.84 0 01-1-.13z" />
+    </svg>
+  ),
+  youtube: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+      <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+    </svg>
+  ),
+  twitter: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  ),
+};
+
+function PlatformIcon({ platform, username }: { platform: string; username?: string }) {
   const plat = platform.toLowerCase();
-  const icons: Record<string, string> = {
-    instagram: "📷", tiktok: "♪", youtube: "▶", twitter: "𝕏",
-    facebook: "f", linkedin: "in", twitch: "◉", podcast: "🎙",
-  };
-  return (
+  const svg = PLATFORM_SVGS[plat];
+  const buildUrl = PLATFORM_URLS[plat];
+  const url = username && buildUrl ? buildUrl(username) : null;
+
+  const icon = (
     <span
-      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-[11px] text-gray-600 dark:text-gray-300"
+      className={cn(
+        "inline-flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
+        url
+          ? "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500"
+      )}
       title={platform}
       aria-label={platform}
     >
-      {icons[plat] ?? plat[0]?.toUpperCase() ?? "?"}
+      {svg ?? <span className="text-[11px] font-medium">{plat[0]?.toUpperCase() ?? "?"}</span>}
     </span>
   );
+
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex"
+      >
+        {icon}
+      </a>
+    );
+  }
+
+  return icon;
 }
 const PLATFORMS = [
   { value: "instagram", label: "Instagram" },
@@ -730,7 +771,7 @@ const BrandDiscover = () => {
                         {socialPlatforms.length > 0 && (
                           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                             {socialPlatforms.slice(0, 6).map((platform) => (
-                              <PlatformIcon key={platform} platform={platform} />
+                              <PlatformIcon key={platform} platform={platform} username={creator.username} />
                             ))}
                           </div>
                         )}
