@@ -318,15 +318,8 @@ export default function AdminTasks() {
       sort_order: maxOrder,
     });
     if (error) { console.error("Insert failed:", error); alert("Failed to create task: " + error.message); return; }
-      status,
-      priority,
-      category: category.toLowerCase(),
-      assignee: "Andrew",
-      sort_order: maxOrder,
-    });
     fetchTasks();
   };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
