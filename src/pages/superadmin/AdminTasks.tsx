@@ -315,7 +315,6 @@ export default function AdminTasks() {
       status,
       priority,
       category: category.toLowerCase(),
-      assignee: "Andrew",
       sort_order: maxOrder,
     });
     if (error) { console.error("Insert failed:", error); alert("Failed to create task: " + error.message); return; }
