@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { searchCreators, enrichCreatorProfile, type CreatorCard, type EnrichedProfileResponse } from "@/lib/influencers-club";
 import { upsertCreator } from "@/lib/creators-db";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
@@ -179,6 +180,40 @@ const EnrichShimmer = () => (
   <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse inline-block" />
 );
 
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function getCachedEnrichment(username: string): Promise<EnrichedProfileResponse | null> {
+  try {
+    const { data, error } = await supabase
+      .from("creator_enrichment_cache")
+      .select("enrichment_data, cached_at")
+      .eq("username", username.toLowerCase())
+      .eq("platform", "instagram")
+      .single();
+    if (error || !data) return null;
+    const cachedAt = new Date(data.cached_at).getTime();
+    if (Date.now() - cachedAt > CACHE_TTL_MS) return null;
+    return data.enrichment_data as EnrichedProfileResponse;
+  } catch {
+    return null;
+  }
+}
+
+async function setCachedEnrichment(username: string, enrichment: EnrichedProfileResponse): Promise<void> {
+  try {
+    await supabase
+      .from("creator_enrichment_cache")
+      .upsert({
+        username: username.toLowerCase(),
+        platform: "instagram",
+        enrichment_data: enrichment,
+        cached_at: new Date().toISOString(),
+      }, { onConflict: "username" });
+  } catch (err) {
+    console.warn("[EnrichCache] Failed to write cache:", err);
+  }
+}
+
 const PLATFORMS = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
@@ -267,7 +302,7 @@ const BrandDiscover = () => {
   const [createListForBulkAddOpen, setCreateListForBulkAddOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [enrichCache, setEnrichCache] = useState<Record<string, Partial<CreatorCard>>>({});
-  const [enrichingId, setEnrichingId] = useState<string | null>(null);
+  const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const enrichedSetRef = useRef<Set<string>>(new Set());
   const enrichAbortRef = useRef<AbortController | null>(null);
   const searchQueryRef = useRef(searchQuery);
@@ -287,7 +322,7 @@ const BrandDiscover = () => {
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
-    setEnrichingId(null);
+    setEnrichingIds(new Set());
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
     const branchKeys = selectedBranches.size > 0 ? Array.from(selectedBranches) : [];
@@ -375,7 +410,7 @@ const BrandDiscover = () => {
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
-    setEnrichingId(null);
+    setEnrichingIds(new Set());
   };
 
   const toggleBranch = (branch: Branch) => {
@@ -390,35 +425,60 @@ const BrandDiscover = () => {
   const hasSearched = apiResults !== null;
   const creators = apiResults?.creators ?? [];
 
-  // Background enrichment: sequentially enrich each creator after search results load
+  // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
   useEffect(() => {
-    const creatorsToEnrich = apiResults?.creators ?? [];
+    const creatorsToEnrich = (apiResults?.creators ?? []).filter(
+      (c) => c.username && !enrichedSetRef.current.has(c.id)
+    );
     if (creatorsToEnrich.length === 0) return;
 
     const controller = new AbortController();
     enrichAbortRef.current = controller;
+    const BATCH_SIZE = 10;
 
     const run = async () => {
-      for (const creator of creatorsToEnrich) {
+      for (let i = 0; i < creatorsToEnrich.length; i += BATCH_SIZE) {
         if (controller.signal.aborted) break;
-        if (!creator.username || enrichedSetRef.current.has(creator.id)) continue;
 
-        setEnrichingId(creator.id);
+        const batch = creatorsToEnrich.slice(i, i + BATCH_SIZE);
+        const batchIds = new Set(batch.map((c) => c.id));
+        setEnrichingIds(batchIds);
 
-        try {
-          const data = await enrichCreatorProfile(creator.username, controller.signal);
-          if (data && !controller.signal.aborted) {
-            enrichedSetRef.current.add(creator.id);
-            const partial = extractFromEnrichment(data);
-            setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
-          }
-        } catch (err) {
-          if ((err as Error)?.name === "AbortError") break;
-          console.warn("[BrandDiscover] Enrichment failed for", creator.username, err);
-          enrichedSetRef.current.add(creator.id);
-        }
+        const results = await Promise.allSettled(
+          batch.map(async (creator) => {
+            try {
+              // Check Supabase cache first
+              const cached = await getCachedEnrichment(creator.username!);
+              if (cached && !controller.signal.aborted) {
+                enrichedSetRef.current.add(creator.id);
+                const partial = extractFromEnrichment(cached);
+                setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+                return;
+              }
+
+              // Cache miss — call the API
+              const data = await enrichCreatorProfile(creator.username!, controller.signal);
+              if (data && !controller.signal.aborted) {
+                enrichedSetRef.current.add(creator.id);
+                const partial = extractFromEnrichment(data);
+                setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+                // Save to Supabase cache (fire-and-forget)
+                setCachedEnrichment(creator.username!, data);
+              }
+            } catch (err) {
+              if ((err as Error)?.name === "AbortError") throw err;
+              console.warn("[BrandDiscover] Enrichment failed for", creator.username, err);
+              enrichedSetRef.current.add(creator.id);
+            }
+          })
+        );
+
+        const aborted = results.some(
+          (r) => r.status === "rejected" && (r.reason as Error)?.name === "AbortError"
+        );
+        if (aborted || controller.signal.aborted) break;
       }
-      if (!controller.signal.aborted) setEnrichingId(null);
+      if (!controller.signal.aborted) setEnrichingIds(new Set());
     };
 
     run();
@@ -432,7 +492,7 @@ const BrandDiscover = () => {
     const enriched = enrichCache[c.id];
     return enriched ? { ...c, ...enriched } : c;
   };
-  const enrichRunning = enrichingId !== null;
+  const enrichRunning = enrichingIds.size > 0;
 
   // Confidence scoring: how well does this creator match the search terms?
   const getConfidence = useCallback((creator: CreatorCard) => {
@@ -870,7 +930,7 @@ const BrandDiscover = () => {
                         const linkCount = (creator.externalLinks ?? []).length;
                         const hashtags = creator.hashtags ?? [];
                         const pending = enrichRunning && !enrichCache[baseCreator.id] && !!baseCreator.username;
-                        const isActiveEnrich = enrichingId === baseCreator.id;
+                        const isActiveEnrich = enrichingIds.has(baseCreator.id);
                         return (
                           <tr
                             key={creator.id}
