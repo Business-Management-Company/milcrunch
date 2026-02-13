@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import CreatorProfileModal from "@/components/CreatorProfileModal";
 import CreateListModal from "@/components/CreateListModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -33,9 +34,35 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
+
+const LAST_SEARCH_KEY = "pd_discover_last_search";
+
+interface SavedSearchFilters {
+  searchQuery: string;
+  platform: string;
+  followersRange: string;
+  engagementMin: string;
+  locationFilter: string;
+  niche: string;
+  gender: string;
+  language: string;
+  keywordsInBio: string;
+  sortBy: string;
+  selectedBranches: string[];
+}
+
+interface SavedSearchRow {
+  id: string;
+  name: string;
+  search_query: string;
+  filters: SavedSearchFilters;
+  created_at: string;
+}
 
 const PLATFORM_URLS: Record<string, (u: string) => string> = {
   instagram: (u) => `https://instagram.com/${u}`,
@@ -309,6 +336,113 @@ const BrandDiscover = () => {
   searchQueryRef.current = searchQuery;
 
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
+  const { user } = useAuth();
+
+  // --- Saved searches state ---
+  const [savedSearches, setSavedSearches] = useState<SavedSearchRow[]>([]);
+  const [saveSearchOpen, setSaveSearchOpen] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState("");
+  const [savingSearch, setSavingSearch] = useState(false);
+  const didAutoLoad = useRef(false);
+
+  const getCurrentFilters = useCallback((): SavedSearchFilters => ({
+    searchQuery,
+    platform,
+    followersRange,
+    engagementMin,
+    locationFilter,
+    niche,
+    gender,
+    language,
+    keywordsInBio,
+    sortBy,
+    selectedBranches: Array.from(selectedBranches),
+  }), [searchQuery, platform, followersRange, engagementMin, locationFilter, niche, gender, language, keywordsInBio, sortBy, selectedBranches]);
+
+  const applyFilters = useCallback((f: SavedSearchFilters) => {
+    setSearchQuery(f.searchQuery);
+    setPlatform(f.platform);
+    setFollowersRange(f.followersRange);
+    setEngagementMin(f.engagementMin);
+    setLocationFilter(f.locationFilter);
+    setNiche(f.niche);
+    setGender(f.gender);
+    setLanguage(f.language);
+    setKeywordsInBio(f.keywordsInBio);
+    setSortBy(f.sortBy);
+    setSelectedBranches(new Set(f.selectedBranches as Branch[]));
+  }, []);
+
+  // Save last search to localStorage whenever a search runs
+  const persistLastSearch = useCallback((filters: SavedSearchFilters) => {
+    try { localStorage.setItem(LAST_SEARCH_KEY, JSON.stringify(filters)); } catch { /* quota */ }
+  }, []);
+
+  // Load saved searches from Supabase
+  const loadSavedSearches = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("saved_searches")
+      .select("id, name, search_query, filters, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (data) setSavedSearches(data as SavedSearchRow[]);
+  }, [user]);
+
+  // Save current search to Supabase
+  const handleSaveSearch = async () => {
+    if (!user || !saveSearchName.trim()) return;
+    setSavingSearch(true);
+    const filters = getCurrentFilters();
+    const { error } = await supabase.from("saved_searches").insert({
+      user_id: user.id,
+      name: saveSearchName.trim(),
+      search_query: filters.searchQuery,
+      filters,
+    });
+    setSavingSearch(false);
+    if (error) {
+      console.error("[SavedSearch] Insert failed:", error);
+      toast.error("Failed to save search");
+    } else {
+      toast.success(`Saved "${saveSearchName.trim()}"`);
+      setSaveSearchOpen(false);
+      setSaveSearchName("");
+      loadSavedSearches();
+    }
+  };
+
+  // Delete a saved search
+  const handleDeleteSavedSearch = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase.from("saved_searches").delete().eq("id", id);
+    setSavedSearches((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const pendingAutoSearch = useRef(false);
+
+  // Load a saved search: apply filters then trigger search
+  const handleLoadSavedSearch = useCallback((saved: SavedSearchRow) => {
+    applyFilters(saved.filters);
+    pendingAutoSearch.current = true;
+  }, [applyFilters]);
+
+  // Load saved searches on mount
+  useEffect(() => { loadSavedSearches(); }, [loadSavedSearches]);
+
+  // Auto-load last search from localStorage on mount
+  useEffect(() => {
+    if (didAutoLoad.current) return;
+    didAutoLoad.current = true;
+    try {
+      const raw = localStorage.getItem(LAST_SEARCH_KEY);
+      if (!raw) return;
+      const filters = JSON.parse(raw) as SavedSearchFilters;
+      if (!filters.searchQuery?.trim()) return;
+      applyFilters(filters);
+      pendingAutoSearch.current = true;
+    } catch { /* corrupt data */ }
+  }, [applyFilters]);
 
   const runSearch = useCallback(() => {
     const q = searchQuery.trim().replace(/^@/, "");
@@ -344,6 +478,7 @@ const BrandDiscover = () => {
       gender: gender !== "any" ? gender : undefined,
       language: language !== "any" ? language : undefined,
     };
+    persistLastSearch(getCurrentFilters());
     searchCreators(q, options)
       .then((result) => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(result);
@@ -355,7 +490,15 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
-  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches]);
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, persistLastSearch, getCurrentFilters]);
+
+  // Fire search after auto-load applies filters (runs once after state updates)
+  useEffect(() => {
+    if (pendingAutoSearch.current && searchQuery.trim()) {
+      pendingAutoSearch.current = false;
+      runSearch();
+    }
+  }, [searchQuery, runSearch]);
 
   const loadMore = useCallback(() => {
     const q = searchQuery.trim().replace(/^@/, "");
@@ -644,6 +787,33 @@ const BrandDiscover = () => {
 
   return (
     <>
+      {/* Save Search Modal */}
+      <Dialog open={saveSearchOpen} onOpenChange={setSaveSearchOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save Search</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="save-search-name">Search name</Label>
+            <Input
+              id="save-search-name"
+              placeholder="e.g. Military fitness influencers"
+              value={saveSearchName}
+              onChange={(e) => setSaveSearchName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveSearch(); }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSaveSearchOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveSearch} disabled={savingSearch || !saveSearchName.trim()} className="bg-pd-blue hover:bg-pd-darkblue text-white">
+              {savingSearch ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!importProgress} onOpenChange={() => {}}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -808,6 +978,40 @@ const BrandDiscover = () => {
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={clearFilters}>
               Clear Filters
             </Button>
+            {searchQuery.trim() && (
+              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => { setSaveSearchName(""); setSaveSearchOpen(true); }}>
+                <Save className="h-3.5 w-3.5 mr-1" />
+                Save Search
+              </Button>
+            )}
+            {savedSearches.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-lg">
+                    <Bookmark className="h-3.5 w-3.5 mr-1" />
+                    Saved
+                    <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  {savedSearches.map((s) => (
+                    <DropdownMenuItem key={s.id} onClick={() => handleLoadSavedSearch(s)} className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-sm">{s.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{s.search_query}</p>
+                      </div>
+                      <button
+                        className="ml-2 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 shrink-0"
+                        onClick={(e) => handleDeleteSavedSearch(s.id, e)}
+                        aria-label={`Delete ${s.name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           {/* Military Branch */}
