@@ -309,9 +309,15 @@ export default function AdminTasks() {
   };
 
   const addQuickTask = async (status: TaskStatus, title: string, priority: Priority, category: string) => {
-    const maxOrder = tasks.filter((t) => t.status === status).length;
-    await supabase.from("admin_tasks").insert({
+    const { error } = await supabase.from("admin_tasks").insert({
       title: title || "New task",
+      status,
+      priority,
+      category: category.toLowerCase(),
+      assignee: "Andrew",
+      sort_order: maxOrder,
+    });
+    if (error) { console.error("Insert failed:", error); alert("Failed to create task: " + error.message); return; }
       status,
       priority,
       category: category.toLowerCase(),
