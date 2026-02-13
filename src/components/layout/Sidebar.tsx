@@ -1,69 +1,119 @@
 import { Link, useLocation } from "react-router-dom";
-import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import {
+  BarChart3,
+  Calendar,
+  Mic,
+  Trophy,
+  Handshake,
+  Sparkles,
+  PlusCircle,
+  Search,
+  Users,
+  ListChecks,
+  ShieldCheck,
+  Star,
+  BarChart,
+  TrendingUp,
+  Radio,
+  ShoppingBag,
+  PenSquare,
+  Clock,
+  Headphones,
+  Video,
+  Building2,
+  UserCog,
+  Plug,
+  Briefcase,
+  KanbanSquare,
+  Rocket,
+  MessageSquare,
+  type LucideIcon,
+} from "lucide-react";
 
-type NavItem =
-  | { type: "link"; href: string; label: string; emoji: string }
-  | { type: "action"; action: "toggleAI"; label: string; emoji: string };
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: string;
+}
 
-const SIDEBAR_SECTIONS: { label: string; items: NavItem[] }[] = [
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const SIDEBAR_SECTIONS: NavSection[] = [
   {
     label: "DASHBOARD",
     items: [
-      { type: "link", href: "/dashboard", label: "Summary", emoji: "📊" },
+      { href: "/dashboard", label: "Summary", icon: BarChart3 },
     ],
   },
   {
-    label: "EVENTS & SPEAKERS",
+    label: "EVENTS",
     items: [
-      { type: "link", href: "/events", label: "Events", emoji: "📅" },
-      { type: "link", href: "/speakers", label: "Speakers", emoji: "🎤" },
-      { type: "link", href: "/awards", label: "Awards", emoji: "🏆" },
-      { type: "link", href: "/sponsors", label: "Sponsors", emoji: "💼" },
+      { href: "/events", label: "Events", icon: Calendar },
+      { href: "/speakers", label: "Speakers", icon: Mic },
+      { href: "/awards", label: "Awards", icon: Trophy },
+      { href: "/sponsors", label: "Sponsors", icon: Handshake },
+      { href: "/pdx", label: "Experiences", icon: Sparkles },
+      { href: "/pdx/create", label: "Create Experience", icon: PlusCircle },
     ],
   },
   {
     label: "CREATORS & CONTENT",
     items: [
-      { type: "link", href: "/brand/discover", label: "Discovery", emoji: "🔍" },
-      { type: "link", href: "/brand/directory", label: "Directories", emoji: "👥" },
-      { type: "link", href: "/lists", label: "Influencer Lists", emoji: "📋" },
-      { type: "link", href: "/verification", label: "Verification", emoji: "✅" },
-      { type: "link", href: "/admin/featured-creators", label: "Featured Creators", emoji: "⭐" },
-      { type: "link", href: "/brand/attribution", label: "Creator Attribution", emoji: "📊" },
-    ],
-  },
-  {
-    label: "PDX",
-    items: [
-      { type: "link", href: "/pdx", label: "Experiences", emoji: "🎪" },
-      { type: "link", href: "/pdx/create", label: "Create PDX", emoji: "✨" },
+      { href: "/brand/discover", label: "Discovery", icon: Search },
+      { href: "/brand/directory", label: "Directories", icon: Users },
+      { href: "/lists", label: "Influencer Lists", icon: ListChecks },
+      { href: "/verification", label: "Verification", icon: ShieldCheck },
+      { href: "/admin/featured-creators", label: "Featured Creators", icon: Star },
+      { href: "/brand/attribution", label: "Creator Attribution", icon: BarChart },
     ],
   },
   {
     label: "MARKETING & ANALYTICS",
     items: [
-      { type: "link", href: "/analytics", label: "Analytics", emoji: "📊" },
-      { type: "link", href: "/social-monitoring", label: "Social Monitoring", emoji: "📡" },
-      { type: "link", href: "/swag", label: "SWAG Store", emoji: "🛍️" },
+      { href: "/analytics", label: "Analytics", icon: TrendingUp },
+      { href: "/social-monitoring", label: "Social Monitoring", icon: Radio },
+      { href: "/swag", label: "SWAG Store", icon: ShoppingBag },
+    ],
+  },
+  {
+    label: "SOCIAL MEDIA",
+    items: [
+      { href: "/creator/post/new", label: "Create Post", icon: PenSquare },
+      { href: "/creator/posts", label: "Scheduled Posts", icon: Clock },
     ],
   },
   {
     label: "MEDIA",
     items: [
-      { type: "link", href: "/brand/podcasts", label: "Podcasts", emoji: "🎙️" },
-      { type: "link", href: "/admin/media/pdtv", label: "PDTV", emoji: "📺" },
+      { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
+      { href: "/admin/media/pdtv", label: "Streaming", icon: Video, badge: "Coming Soon" },
     ],
   },
   {
-    label: "COMPANY",
+    label: "SETTINGS",
     items: [
-      { type: "link", href: "/admin/business-overview", label: "Business Overview", emoji: "🏢" },
-      { type: "link", href: "/settings", label: "Settings", emoji: "⚙️" },
+      { href: "/brand/settings", label: "Company Profile", icon: Building2 },
+      { href: "/settings", label: "Team Members", icon: UserCog },
+      { href: "/settings", label: "Connectors", icon: Plug },
     ],
   },
 ];
+
+const SUPER_ADMIN_SECTION: NavSection = {
+  label: "SUPER ADMIN",
+  items: [
+    { href: "/admin/business-overview", label: "Business Overview", icon: Briefcase },
+    { href: "/admin/tasks", label: "Task Board", icon: KanbanSquare },
+    { href: "/admin/deployments", label: "Deployments", icon: Rocket },
+    { href: "/admin/chat", label: "AI Chat", icon: MessageSquare },
+  ],
+};
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -72,15 +122,19 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
-  const { togglePanel: toggleAIPanel } = useAIAssistant();
   const { isSuperAdmin } = useAuth();
+
+  const sections = isSuperAdmin
+    ? [...SIDEBAR_SECTIONS, SUPER_ADMIN_SECTION]
+    : SIDEBAR_SECTIONS;
 
   const navItemClass = (isActive: boolean) =>
     cn(
       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+      "text-gray-600 dark:text-gray-400",
       "hover:bg-[#0064B1]/5 dark:hover:bg-gray-800",
-      isActive && "bg-[#0064B1]/10 dark:bg-[#0064B1]/15 text-[#0064B1] font-medium border-l-2 border-[#0064B1] -ml-[2px] pl-[14px]",
-      collapsed && "justify-center px-0"
+      isActive && "bg-[#0064B1]/10 dark:bg-[#0064B1]/15 text-[#0064B1] dark:text-[#0064B1] font-medium",
+      collapsed && "justify-center px-2"
     );
 
   return (
@@ -92,53 +146,48 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       )}
     >
       <nav className="flex-1 overflow-y-auto py-4 px-3">
-        {SIDEBAR_SECTIONS.map((section, sectionIndex) => (
+        {sections.map((section, sectionIndex) => (
           <div
             key={section.label}
             className={cn(
               collapsed && "flex flex-col items-center",
-              sectionIndex > 0 && "mt-6"
+              sectionIndex > 0 && "mt-5"
             )}
           >
             {!collapsed && (
-              <p className="text-xs text-gray-400 font-semibold tracking-wider mb-2 px-3">
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold tracking-wider mb-1.5 px-3 uppercase">
                 {section.label}
               </p>
             )}
-            {sectionIndex === 0 && collapsed && <div className="mt-2" />}
+            {sectionIndex === 0 && collapsed && <div className="mt-1" />}
             <ul className="space-y-0.5">
               {section.items.map((item) => {
-                const isActive =
-                  item.type === "link" && location.pathname === item.href;
-                if (item.type === "action" && item.action === "toggleAI") {
-                  return (
-                    <li key="ai-agents">
-                      <button
-                        type="button"
-                        onClick={toggleAIPanel}
-                        className={cn(navItemClass(false), "w-full text-left")}
-                        title={collapsed ? item.label : undefined}
-                      >
-                        <span className="text-base leading-none" aria-hidden>
-                          {item.emoji}
-                        </span>
-                        {!collapsed && <span>{item.label}</span>}
-                      </button>
-                    </li>
-                  );
-                }
-                const href = item.type === "link" ? item.href : "#";
+                const isActive = location.pathname === item.href;
+                const Icon = item.icon;
                 return (
-                  <li key={item.type === "link" ? item.href : "ai"}>
+                  <li key={item.href + item.label}>
                     <Link
-                      to={href}
+                      to={item.href}
                       className={navItemClass(isActive)}
                       title={collapsed ? item.label : undefined}
                     >
-                      <span className="text-base leading-none shrink-0" aria-hidden>
-                        {item.emoji}
-                      </span>
-                      {!collapsed && <span>{item.label}</span>}
+                      <Icon
+                        className={cn(
+                          "h-[18px] w-[18px] shrink-0",
+                          isActive
+                            ? "text-[#0064B1]"
+                            : "text-gray-400 dark:text-gray-500"
+                        )}
+                        strokeWidth={1.75}
+                      />
+                      {!collapsed && (
+                        <span className="truncate">{item.label}</span>
+                      )}
+                      {!collapsed && item.badge && (
+                        <span className="ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 whitespace-nowrap">
+                          {item.badge}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
@@ -147,22 +196,6 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           </div>
         ))}
       </nav>
-
-      {isSuperAdmin && (
-        <div className={cn("px-3 pb-2", collapsed && "flex flex-col items-center")}>
-          <Link
-            to="/admin"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-              "hover:bg-amber-500/10 text-amber-600 dark:text-amber-400",
-              location.pathname.startsWith("/admin") && "bg-amber-500/10 font-medium"
-            )}
-          >
-            <span className="text-base leading-none" aria-hidden>⚡</span>
-            {!collapsed && <span>Super Admin</span>}
-          </Link>
-        </div>
-      )}
 
       <div className={cn("p-3 border-t border-gray-200 dark:border-gray-800 space-y-2", collapsed && "flex flex-col items-center")}>
         {!collapsed && (
