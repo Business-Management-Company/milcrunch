@@ -74,6 +74,7 @@ function getApiKey(): string {
 
 function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const p = account.profile;
+  if (index === 0) console.log("[influencers-club] Raw API profile[0]:", JSON.parse(JSON.stringify(account)));
   const id = (account.user_id ?? `api-${index}`) as string;
   const name = (p?.full_name ?? p?.username ?? "Unknown") as string;
 
@@ -133,12 +134,19 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   if (socialPlatforms.length === 0 && (p?.username || id)) socialPlatforms.push("instagram");
 
   const hashtagsRaw =
-    (p?.hashtags as string[] | undefined) ??
-    (p?.frequently_used_hashtags as string[] | undefined) ??
-    (p?.tags as string[] | undefined);
-  const hashtags = Array.isArray(hashtagsRaw)
-    ? hashtagsRaw.slice(0, 10).map((t) => (typeof t === "string" ? t.replace(/^#/, "") : String(t)))
-    : undefined;
+    (p?.hashtags as unknown) ??
+    (p?.frequently_used_hashtags as unknown) ??
+    (p?.top_hashtags as unknown) ??
+    (p?.popular_hashtags as unknown) ??
+    (p?.tags as unknown);
+  let hashtags: string[] | undefined;
+  if (Array.isArray(hashtagsRaw)) {
+    hashtags = hashtagsRaw.slice(0, 10).map((t) => {
+      if (typeof t === "string") return t.replace(/^#/, "");
+      if (t && typeof t === "object" && "name" in t) return String((t as { name: string }).name).replace(/^#/, "");
+      return String(t);
+    });
+  }
 
   const linksRaw =
     (p?.links_in_bio as unknown) ??

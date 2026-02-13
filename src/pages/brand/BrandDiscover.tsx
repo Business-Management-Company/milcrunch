@@ -203,7 +203,7 @@ const BrandDiscover = () => {
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
 
   const runSearch = useCallback(() => {
-    const q = searchQuery.trim();
+    const q = searchQuery.trim().replace(/^@/, "");
     if (!q) {
       setApiResults(null);
       setApiLoading(false);
@@ -249,7 +249,7 @@ const BrandDiscover = () => {
   }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches]);
 
   const loadMore = useCallback(() => {
-    const q = searchQuery.trim();
+    const q = searchQuery.trim().replace(/^@/, "");
     if (!q || !apiResults) return;
     const nextPage = currentPage + 1;
     setLoadingMore(true);
@@ -776,11 +776,19 @@ const BrandDiscover = () => {
                             )}
                           </div>
                         </div>
-                        {socialPlatforms.length > 0 && (
+                        {(socialPlatforms.length > 0 || creator.hasEmail) && (
                           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                             {socialPlatforms.slice(0, 6).map((platform) => (
                               <PlatformIcon key={platform} platform={platform} username={creator.username} />
                             ))}
+                            {creator.hasEmail && (
+                              <span
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 dark:bg-blue-900/30"
+                                title="Email available"
+                              >
+                                <Mail className="h-3.5 w-3.5 text-blue-500" />
+                              </span>
+                            )}
                           </div>
                         )}
                         {creator.hashtags && creator.hashtags.length > 0 && (
@@ -793,6 +801,11 @@ const BrandDiscover = () => {
                                 #{tag}
                               </span>
                             ))}
+                            {creator.hashtags.length > 3 && (
+                              <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-[11px] px-2 py-0.5">
+                                +{creator.hashtags.length - 3}
+                              </span>
+                            )}
                           </div>
                         )}
                         {confidence.level !== "none" && (
