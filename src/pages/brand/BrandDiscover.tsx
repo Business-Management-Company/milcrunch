@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -197,6 +197,7 @@ const BrandDiscover = () => {
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
   const [createListForBulkImportOpen, setCreateListForBulkImportOpen] = useState(false);
   const [createListForBulkAddOpen, setCreateListForBulkAddOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
 
@@ -697,10 +698,126 @@ const BrandDiscover = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="flex rounded-lg border border-border bg-background dark:bg-slate-800 p-0.5">
+                  <Button
+                    variant={viewMode === "grid" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setViewMode("grid")}
+                    aria-label="Grid view"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setViewMode("list")}
+                    aria-label="List view"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               {creators.length > 0 ? (
                 <>
+                {viewMode === "list" ? (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
+                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400 w-8"></th>
+                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Creator</th>
+                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Platforms</th>
+                        <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Followers</th>
+                        <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Engagement</th>
+                        <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">Links</th>
+                        <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400 w-28"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {creators.map((creator) => {
+                        const socialPlatforms = creator.socialPlatforms ?? [];
+                        const linkCount = (creator.externalLinks ?? []).length;
+                        return (
+                          <tr
+                            key={creator.id}
+                            className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors"
+                            onClick={() => { setProfileCreator(creator); setProfileModalOpen(true); }}
+                          >
+                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.has(creator.id)}
+                                onCheckedChange={() => toggleSelect(creator.id)}
+                                aria-label={`Select ${creator.name}`}
+                              />
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-3">
+                                <div className="relative shrink-0">
+                                  <img src={creator.avatar} alt={creator.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700" />
+                                  {creator.isVerified && (
+                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-[#0064B1] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-[#000741] dark:text-white truncate flex items-center gap-1.5">
+                                    {creator.name}
+                                    {creator.hasEmail && <Mail className="h-3 w-3 text-blue-500 shrink-0" title="Email available" />}
+                                  </p>
+                                  <p className="text-xs text-[#0064B1] truncate">{creator.username ? `@${creator.username}` : ""}</p>
+                                  {creator.location && (
+                                    <p className="text-xs text-gray-400 truncate flex items-center gap-0.5"><MapPin className="h-3 w-3 shrink-0" />{creator.location}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-1">
+                                {socialPlatforms.slice(0, 5).map((p) => (
+                                  <PlatformIcon key={p} platform={p} username={creator.username} />
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowers(creator.followers)}</td>
+                            <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof creator.engagementRate === "number" ? `${creator.engagementRate.toFixed(2)}%` : "—"}</td>
+                            <td className="p-3 text-center">
+                              <span className="inline-flex items-center gap-1 text-gray-500">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                {linkCount}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              {isCreatorInList(creator.id) ? (
+                                <span className="text-xs text-gray-400">Added</span>
+                              ) : (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="outline" className="h-7 text-xs rounded-md">
+                                      <ListPlus className="h-3 w-3 mr-1" /> Add
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {lists.map((list) => (
+                                      <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
+                                        {list.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                    <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
+                                      <Plus className="mr-2 h-4 w-4" /> Create New List
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {creators.map((creator, _idx) => {
                     if (_idx === 0) console.log("[BrandDiscover] First creator object:", creator);
@@ -716,7 +833,6 @@ const BrandDiscover = () => {
                     const socialPlatforms = creator.socialPlatforms ?? [];
                     const externalLinks = creator.externalLinks ?? [];
                     const linkCount = externalLinks.length;
-                    const showLinksBadge = linkCount > 0;
                     return (
                       <Card
                         key={creator.id}
@@ -747,17 +863,19 @@ const BrandDiscover = () => {
                           />
                         </div>
                         <div className="flex items-center gap-3 mb-2">
-                          <img
-                            src={creator.avatar}
-                            alt={creator.name}
-                            className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-white dark:border-slate-700 shadow-md"
-                          />
+                          <div className="relative shrink-0">
+                            <img
+                              src={creator.avatar}
+                              alt={creator.name}
+                              className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md"
+                            />
+                            {creator.isVerified && (
+                              <BadgeCheck className="absolute -top-1 -left-1 h-5 w-5 text-[#0064B1] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
+                            )}
+                          </div>
                           <div className="min-w-0 flex-1">
                             <h3 className="font-bold text-base text-[#000741] dark:text-white truncate flex items-center gap-1.5">
                               {creator.name}
-                              {creator.isVerified && (
-                                <BadgeCheck className="h-4 w-4 shrink-0 text-[#0064B1]" aria-label="Verified" />
-                              )}
                               {creator.hasEmail && (
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available for outreach"><Mail className="h-3 w-3" />Email</span>
                               )}
@@ -903,6 +1021,7 @@ const BrandDiscover = () => {
                     );
                   })}
                 </div>
+                )}
                 {creators.length < totalFromApi && (
                   <div className="flex justify-center mt-8">
                     <Button
