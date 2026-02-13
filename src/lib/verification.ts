@@ -17,11 +17,6 @@ const MILITARY_TITLES = [
 ];
 const MILITARY_ACADEMIES = ["West Point", "Annapolis", "Air Force Academy", "USMA", "USNA", "USAFA", "VMI", "The Citadel", "Norwich"];
 
-function getKey(envKey: string): string {
-  const v = import.meta.env[envKey];
-  return typeof v === "string" ? v.trim() : "";
-}
-
 function safeString(val: unknown): string {
   if (!val) return "";
   if (typeof val === "string") return val.toLowerCase();
@@ -51,24 +46,14 @@ export interface PDLResponse {
   [key: string]: unknown;
 }
 
-const PDL_BASE = "https://api.peopledatalabs.com/v5/person/enrich";
-
 export async function enrichPersonPDL(params: PDLEnrichParams): Promise<PDLResponse | null> {
-  const key = getKey("VITE_PDL_API_KEY");
-  if (!key) {
-    console.warn("[Verification] VITE_PDL_API_KEY not set");
-    return null;
-  }
   const searchParams = new URLSearchParams();
   if (params.name) searchParams.set("name", params.name);
   if (params.profile?.length) searchParams.set("profile", params.profile.join(","));
   if (params.location) searchParams.set("location", params.location);
   try {
-    const res = await fetch(`${PDL_BASE}?${searchParams.toString()}`, {
-      headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": key,
-      },
+    const res = await fetch(`/api/pdl/v5/person/enrich?${searchParams.toString()}`, {
+      headers: { "Content-Type": "application/json" },
     });
     if (!res.ok) throw new Error(`PDL ${res.status}`);
     const json = await res.json();
@@ -89,15 +74,15 @@ export function scorePDL(data: PDLResponse | null): number {
   for (const job of employment) {
     const org = safeString(job?.company) || safeString(job?.organization);
     const jobTitle = safeString(job?.title);
-    if (employer === 0 && MILITARY_EMPLOYERS.some((e) => org.includes(e.toLowerCase()))) employer = 15;
+    if (employer === 0 && MILITARY_EMPLOYERS.some((e) => org.includes(e.toLowerCase()))) employer = 20;
     if (title === 0 && MILITARY_TITLES.some((t) => jobTitle.includes(t.toLowerCase()))) title = 10;
   }
   for (const edu of educationList) {
     const school = safeString(edu?.school);
     const degree = safeString(edu?.degree);
-    if (education === 0 && MILITARY_ACADEMIES.some((a) => school.includes(a.toLowerCase()))) education = 5;
+    if (education === 0 && MILITARY_ACADEMIES.some((a) => school.includes(a.toLowerCase()))) education = 10;
   }
-  return Math.min(30, employer + title + education);
+  return Math.min(40, employer + title + education);
 }
 
 // --- SerpAPI ---
@@ -111,14 +96,8 @@ export interface SerpResponse {
 }
 
 export async function searchSerp(query: string): Promise<SerpResult[]> {
-  const key = getKey("VITE_SERP_API_KEY");
-  if (!key) {
-    console.warn("[Verification] VITE_SERP_API_KEY not set");
-    return [];
-  }
-  const serpUrl = `https://serpapi.com/search.json?api_key=${key}&engine=google&q=${encodeURIComponent(query)}&num=10`;
   try {
-    const res = await fetch(serpUrl, {
+    const res = await fetch(`/api/serp?engine=google&q=${encodeURIComponent(query)}&num=10`, {
       headers: { "Content-Type": "application/json" },
     });
     if (!res.ok) throw new Error(`SerpAPI ${res.status}`);
@@ -152,21 +131,11 @@ export function categorizeAndScoreSnippet(snippet: string, title: string): { cat
 }
 
 // --- FireCrawl ---
-const FIRECRAWL_SCRAPE_URL = "https://api.firecrawl.dev/v1/scrape";
-
 export async function scrapeFirecrawl(url: string): Promise<{ markdown?: string } | null> {
-  const key = getKey("VITE_FIRECRAWL_API_KEY");
-  if (!key) {
-    console.warn("[Verification] VITE_FIRECRAWL_API_KEY not set");
-    return null;
-  }
   try {
-    const res = await fetch(FIRECRAWL_SCRAPE_URL, {
+    const res = await fetch("/api/firecrawl/v1/scrape", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, formats: ["markdown"] }),
     });
     if (!res.ok) throw new Error(`FireCrawl ${res.status}`);
@@ -179,29 +148,43 @@ export async function scrapeFirecrawl(url: string): Promise<{ markdown?: string 
 }
 
 // --- Scoring ---
+// GENEROUS scoring: starts at 50 baseline. Absence of evidence is NOT evidence of fraud.
+// Only deduct for actual negative evidence (stolen valor, criminal record, factual impossibility).
 export function computeVerificationScore(
   pdlScore: number,
   evidenceSources: EvidenceSource[],
   contentSignals: { hasUnitOrMOS: boolean; hasDates: boolean; hasAwards: boolean }
 ): number {
-  let webScore = 0;
-  let deductions = 0;
+  const baseline = 50;
+
+  // Web corroboration: +5 per military-related source, max +25
   const corroborating = evidenceSources.filter((s) => s.category === "Military Service" && !s.isRedFlag);
-  webScore += Math.min(5, corroborating.length) * 8;
-  evidenceSources.filter((s) => s.isRedFlag).forEach(() => (deductions += 10));
-  webScore = Math.max(0, Math.min(40, webScore - deductions));
+  const webScore = Math.min(25, corroborating.length * 5);
+
+  // Content signals: +5 each, max +15
   let contentScore = 0;
-  if (contentSignals.hasUnitOrMOS) contentScore += 15;
-  if (contentSignals.hasDates) contentScore += 10;
+  if (contentSignals.hasUnitOrMOS) contentScore += 5;
+  if (contentSignals.hasDates) contentScore += 5;
   if (contentSignals.hasAwards) contentScore += 5;
-  contentScore = Math.min(30, contentScore);
-  return Math.min(100, Math.max(0, pdlScore + webScore + contentScore));
+
+  // Red flag deductions — only for actual negative evidence
+  let deductions = 0;
+  for (const s of evidenceSources.filter((s) => s.isRedFlag)) {
+    const text = `${s.title} ${s.snippet}`.toLowerCase();
+    if (/stolen valor/.test(text)) deductions += 40;
+    else if (/criminal|fraud|convicted|indicted|scam/.test(text)) deductions += 30;
+    else if (/fake|fabricat|impost/.test(text)) deductions += 20;
+    else deductions += 10;
+  }
+
+  return Math.min(100, Math.max(0, baseline + pdlScore + webScore + contentScore - deductions));
 }
 
 export function recommendStatus(score: number, hasCriminalFlags: boolean): "verified" | "pending" | "flagged" | "denied" {
-  if (hasCriminalFlags || score < 20) return "flagged";
-  if (score >= 80) return "verified";
-  if (score >= 50) return "pending";
+  // Only flag if there's actual negative evidence AND score is low
+  if (hasCriminalFlags && score < 40) return "flagged";
+  if (score >= 70) return "verified";
+  if (score >= 40) return "pending";
   return "flagged";
 }
 
@@ -223,7 +206,16 @@ export async function runVerificationAnalysis(params: {
 }): Promise<string> {
   const key = getAnthropicKey();
   if (!key) return "AI analysis skipped (no API key).";
-  const systemPrompt = `You are a military service verification analyst for ParadeDeck. Analyze the following evidence about ${params.personName} who claims to be a ${params.claimedStatus} from the ${params.claimedBranch} with rank ${params.claimedRank}.
+  const systemPrompt = `You are a military service verification analyst for ParadeDeck — a platform that supports and celebrates military creators and veterans. Your job is to look for SUPPORTING evidence, not to play "gotcha."
+
+CRITICAL PRINCIPLES:
+- Be GENEROUS. The default assumption is that the person IS who they claim to be.
+- Absence of evidence is NOT evidence of fraud. Many veterans have zero online footprint.
+- Only flag someone if there is CONCRETE NEGATIVE evidence (stolen valor conviction, criminal fraud, factually impossible claims like serving in a branch that didn't exist).
+- A lack of PDL employment data, web results, or scrape content should NOT lower confidence — these databases are incomplete.
+- Military service records are often not publicly available. This is normal.
+
+Analyze the following evidence about ${params.personName} who claims to be a ${params.claimedStatus} from the ${params.claimedBranch} with rank ${params.claimedRank}.
 
 Evidence sources:
 1. People Data Labs professional data: ${JSON.stringify(params.pdlData, null, 2)}
@@ -231,13 +223,13 @@ Evidence sources:
 3. Scraped page content: ${JSON.stringify(params.firecrawlExtractions, null, 2)}
 
 Provide:
-1. VERIFICATION CONFIDENCE: A score from 0-100% with reasoning
-2. EVIDENCE SUMMARY: Key findings supporting or contradicting the claim
-3. RED FLAGS: Any concerning findings (criminal records, inconsistencies, stolen valor indicators)
-4. RECOMMENDED STATUS: Verified, Pending (needs more info), Flagged (concerns found), or Denied
-5. SUGGESTED FOLLOW-UP: What additional steps could confirm the claim
+1. VERIFICATION CONFIDENCE: A score from 50-100% with reasoning. Start at 50% (benefit of the doubt) and only go UP with supporting evidence, or DOWN if there is concrete negative evidence.
+2. EVIDENCE SUMMARY: Key findings. Highlight anything that SUPPORTS the claim. Only mention contradictions if they are factual and specific.
+3. RED FLAGS: ONLY list these if there is actual negative evidence (criminal records, stolen valor reports, factual impossibilities). Do NOT list "no evidence found" as a red flag.
+4. RECOMMENDED STATUS: Verified (supporting evidence found), Pending (no evidence either way — this is the DEFAULT), Flagged (concrete negative evidence found).
+5. SUGGESTED FOLLOW-UP: What additional steps could confirm the claim — e.g., DD-214 upload, reference check, direct outreach.
 
-Be thorough but fair. Not finding evidence doesn't mean the claim is false — many veterans have limited online presence.`;
+Remember: Most veterans are telling the truth. Give them the benefit of the doubt.`;
 
   try {
     const res = await fetch(ANTHROPIC_URL, {
