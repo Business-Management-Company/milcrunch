@@ -83,6 +83,7 @@ import BusinessOverview from "./pages/admin/BusinessOverview";
 import Podcasts from "./pages/Podcasts";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Verification from "./pages/Verification";
+import Speakers from "./pages/Speakers";
 import { ListProvider } from "./contexts/ListContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
@@ -168,7 +169,7 @@ const App = () => (
               <Route path="/pdx" element={<PDXHome />} />
               <Route path="/pdx/create" element={<CreatePDX />} />
               {/* Placeholder pages */}
-              <Route path="/speakers" element={<PlaceholderPage title="Speakers" description="Manage event speakers and invite creators to your stages." />} />
+              <Route path="/speakers" element={<Speakers />} />
               <Route path="/awards" element={<PlaceholderPage title="Awards" description="Nominate and manage veteran podcast and creator awards." />} />
               <Route path="/sponsors" element={<PlaceholderPage title="Sponsors" description="Partner with brands and manage sponsorship opportunities." />} />
               <Route path="/verification" element={<Verification />} />

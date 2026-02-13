@@ -34,6 +34,8 @@ export interface VerificationRecord {
   red_flags: RedFlag[] | null;
   notes: string | null;
   verified_by: string | null;
+  source: string | null;
+  source_username: string | null;
   created_at: string | null;
   updated_at: string | null;
   last_verified_at: string | null;

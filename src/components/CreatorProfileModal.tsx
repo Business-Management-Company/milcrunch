@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -27,6 +28,7 @@ import {
   Youtube,
   Loader2,
   Link,
+  ShieldCheck,
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -120,6 +122,7 @@ export default function CreatorProfileModal({
   onOpenCreator,
   cachedEnrichment,
 }: CreatorProfileModalProps) {
+  const navigate = useNavigate();
   const [enriched, setEnriched] = useState<EnrichedProfileResponse | null>(null);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [enrichmentTimedOut, setEnrichmentTimedOut] = useState(false);
@@ -264,6 +267,66 @@ export default function CreatorProfileModal({
     onAddToList?.(listCreator);
     toast.success(`Added ${listCreator.name} to ${name}`);
     setCreateListModalOpen(false);
+  };
+
+  const handleVerifyMilitary = () => {
+    const BRANCH_PATTERNS: [RegExp, string][] = [
+      [/\barmy\b/i, "Army"],
+      [/\bnavy\b/i, "Navy"],
+      [/\bair\s*force\b/i, "Air Force"],
+      [/\bmarine[s]?\b|\busmc\b/i, "Marines"],
+      [/\bcoast\s*guard\b/i, "Coast Guard"],
+      [/\bspace\s*force\b/i, "Space Force"],
+    ];
+    const RANK_PATTERNS = /\b(Private|Corporal|Specialist|Sergeant|Staff Sergeant|Gunnery Sergeant|First Sergeant|Master Sergeant|Sergeant Major|Lieutenant|Captain|Major|Colonel|General|Admiral|Commander|Petty Officer|Seaman|Airman|Warrant Officer)\b/i;
+    const bioText = (igRecord?.biography as string) ?? creator?.bio ?? "";
+    const fullName = (igRecord?.full_name as string) ?? creator?.name ?? "";
+    let claimedBranch = "";
+    for (const [pattern, branch] of BRANCH_PATTERNS) {
+      if (pattern.test(bioText) || pattern.test(fullName)) { claimedBranch = branch; break; }
+    }
+    const rankMatch = bioText.match(RANK_PATTERNS);
+    const claimedRank = rankMatch ? rankMatch[1] : "";
+    // Gather links from enrichment
+    const linkedinUrl = (() => {
+      const profiles = resultTop.profiles as { url?: string; network?: string }[] | undefined;
+      if (Array.isArray(profiles)) {
+        const li = profiles.find((p) => p.network === "linkedin" || (p.url ?? "").includes("linkedin"));
+        if (li?.url) return li.url;
+      }
+      const links = (resultTop.other_links as string[]) ?? (resultTop.links_in_bio as string[]) ?? [];
+      if (Array.isArray(links)) {
+        const li = links.find((u) => typeof u === "string" && u.includes("linkedin.com"));
+        if (li) return li;
+      }
+      return "";
+    })();
+    const websiteUrl = (() => {
+      const links = (resultTop.other_links as string[]) ?? (resultTop.links_in_bio as string[]) ?? [];
+      if (Array.isArray(links)) {
+        const site = links.find((u) => typeof u === "string" && !u.includes("linkedin") && !u.includes("instagram") && !u.includes("tiktok") && !u.includes("youtube") && !u.includes("twitter") && !u.includes("facebook"));
+        if (site) return site;
+      }
+      return "";
+    })();
+    const platforms = availablePlatforms.map((p) => `${p}: @${displayUsername}`).join(", ");
+    const notes = [bioText, platforms].filter(Boolean).join("\n\n");
+    onOpenChange(false);
+    navigate("/verification", {
+      state: {
+        prefill: {
+          fullName,
+          claimedBranch,
+          claimedRank,
+          claimedStatus: "veteran",
+          linkedinUrl,
+          websiteUrl,
+          notes,
+          source: "discovery",
+          sourceUsername: displayUsername,
+        },
+      },
+    });
   };
 
   const igRecord = ig && typeof ig === "object" ? (ig as Record<string, unknown>) : undefined;
@@ -515,6 +578,14 @@ export default function CreatorProfileModal({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              <Button
+                variant="outline"
+                className="w-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 rounded-lg"
+                onClick={handleVerifyMilitary}
+              >
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Verify Military Status
+              </Button>
               <Button
                 variant="outline"
                 className="w-full bg-white dark:bg-transparent text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 rounded-lg"

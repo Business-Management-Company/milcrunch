@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,14 @@ import {
   User,
   Gavel,
   CheckCircle2,
+  MoreHorizontal,
+  UserPlus,
+  List,
+  Mail,
+  Download,
+  RefreshCw,
+  Trash2,
+  Mic,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -54,7 +63,25 @@ import {
   type PipelinePhase,
   type PDLResponse,
 } from "@/lib/verification";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const MILITARY_KEYWORDS = /military|veteran|army|navy|marine|air force|coast guard|served|deployment|dd-214|rank|sergeant|lieutenant|captain|medal|decorated|combat|reserve|guard|usmc|dod|veterans affairs/gi;
 
@@ -115,7 +142,21 @@ function SourceIcon({ category }: { category: string }) {
   return <FileText className="h-4 w-4 text-gray-400" />;
 }
 
+interface PrefillData {
+  fullName: string;
+  claimedBranch: string;
+  claimedRank: string;
+  claimedStatus: string;
+  linkedinUrl: string;
+  websiteUrl: string;
+  notes: string;
+  source?: string;
+  sourceUsername?: string;
+}
+
 export default function Verification() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [list, setList] = useState<VerificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -129,10 +170,19 @@ export default function Verification() {
     linkedinUrl: "",
     websiteUrl: "",
     notes: "",
+    source: "manual" as string,
+    sourceUsername: "" as string,
   });
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [phases, setPhases] = useState<PipelinePhase[]>([]);
   const [newRecordId, setNewRecordId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [addSpeakerOpen, setAddSpeakerOpen] = useState(false);
+  const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "" });
+  const [inviteEventOpen, setInviteEventOpen] = useState(false);
+  const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
+  const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
 
   const fetchVerifications = async () => {
     const { data, error } = await supabase
@@ -148,6 +198,28 @@ export default function Verification() {
       setLoading(false);
     })();
   }, []);
+
+  // Pre-fill from discovery navigation state
+  useEffect(() => {
+    const state = location.state as { prefill?: PrefillData } | null;
+    if (state?.prefill) {
+      const p = state.prefill;
+      setAddForm({
+        fullName: p.fullName,
+        claimedBranch: p.claimedBranch,
+        claimedRank: p.claimedRank,
+        claimedStatus: p.claimedStatus || "veteran",
+        linkedinUrl: p.linkedinUrl,
+        websiteUrl: p.websiteUrl,
+        notes: p.notes,
+        source: p.source || "manual",
+        sourceUsername: p.sourceUsername || "",
+      });
+      setAddOpen(true);
+      // Clear navigation state so refreshing doesn't re-open
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state]);
 
   const filtered = list.filter(
     (r) =>
@@ -198,6 +270,8 @@ export default function Verification() {
           ai_analysis: result.aiAnalysis,
           evidence_sources: result.evidenceSources,
           red_flags: result.redFlags,
+          source: addForm.source || "manual",
+          source_username: addForm.sourceUsername || null,
           last_verified_at: new Date().toISOString(),
         })
         .select("id")
@@ -224,13 +298,15 @@ export default function Verification() {
             red_flags: result.redFlags,
             notes: addForm.notes.trim() || null,
             verified_by: null,
+            source: addForm.source || "manual",
+            source_username: addForm.sourceUsername || null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_verified_at: new Date().toISOString(),
           } as VerificationRecord,
           ...prev,
         ]);
-        setAddForm({ fullName: "", claimedBranch: "", claimedRank: "", claimedStatus: "veteran", linkedinUrl: "", websiteUrl: "", notes: "" });
+        setAddForm({ fullName: "", claimedBranch: "", claimedRank: "", claimedStatus: "veteran", linkedinUrl: "", websiteUrl: "", notes: "", source: "manual", sourceUsername: "" });
         setTimeout(() => {
           setAddOpen(false);
           setNewRecordId(null);
@@ -242,6 +318,128 @@ export default function Verification() {
   };
 
   const expanded = expandedId ? list.find((r) => r.id === expandedId) : null;
+
+  const handleAddAsSpeaker = (row: VerificationRecord) => {
+    setSpeakerForm({
+      name: row.person_name,
+      branch: row.claimed_branch ?? "",
+      rank: row.claimed_rank ?? "",
+      bio: row.notes ?? (row.ai_analysis ? row.ai_analysis.slice(0, 300) : ""),
+      verification_id: row.id,
+    });
+    setAddSpeakerOpen(true);
+  };
+
+  const handleSaveSpeaker = async () => {
+    const { error } = await supabase.from("speakers").insert({
+      name: speakerForm.name,
+      branch: speakerForm.branch || null,
+      rank: speakerForm.rank || null,
+      bio: speakerForm.bio || null,
+      verification_id: speakerForm.verification_id || null,
+    });
+    if (error) {
+      toast.error("Failed to save speaker: " + error.message);
+    } else {
+      toast.success(`${speakerForm.name} added as speaker`);
+      setAddSpeakerOpen(false);
+    }
+  };
+
+  const handleInviteToEvent = async (row: VerificationRecord) => {
+    setInviteRecord(row);
+    const { data } = await supabase.from("events").select("id, title").order("start_date", { ascending: false }).limit(50);
+    setEvents((data ?? []) as { id: string; title: string }[]);
+    setSelectedEventId("");
+    setInviteEventOpen(true);
+  };
+
+  const handleSendInvite = async () => {
+    if (!selectedEventId || !inviteRecord) return;
+    const { error } = await supabase.from("event_invitations").insert({
+      event_id: selectedEventId,
+      person_name: inviteRecord.person_name,
+      verification_id: inviteRecord.id,
+      status: "invited",
+    });
+    if (error) {
+      toast.error("Failed to send invite: " + error.message);
+    } else {
+      toast.success(`Invited ${inviteRecord.person_name} to event`);
+      setInviteEventOpen(false);
+    }
+  };
+
+  const handleExportProfile = (row: VerificationRecord) => {
+    const lines = [
+      `MILITARY VERIFICATION REPORT`,
+      `Generated: ${new Date().toLocaleDateString()}`,
+      ``,
+      `Name: ${row.person_name}`,
+      `Claimed Branch: ${row.claimed_branch ?? "—"}`,
+      `Claimed Rank: ${row.claimed_rank ?? "—"}`,
+      `Status: ${row.claimed_status ?? "—"}`,
+      ``,
+      `VERIFICATION RESULT`,
+      `Score: ${row.verification_score ?? 0}%`,
+      `Status: ${(row.status ?? "pending").toUpperCase()}`,
+      ``,
+      `Evidence Sources: ${(row.evidence_sources as EvidenceSource[] | null)?.length ?? 0}`,
+      `Red Flags: ${(row.red_flags as RedFlag[] | null)?.length ?? 0}`,
+      ``,
+      `AI ANALYSIS`,
+      row.ai_analysis ?? "No analysis available.",
+      ``,
+      `Notes: ${row.notes ?? "—"}`,
+    ];
+    navigator.clipboard.writeText(lines.join("\n"));
+    toast.success("Profile copied to clipboard");
+  };
+
+  const handleReverify = async (row: VerificationRecord) => {
+    toast.info(`Re-verifying ${row.person_name}...`);
+    try {
+      const result = await runVerificationPipeline(
+        {
+          fullName: row.person_name,
+          claimedBranch: row.claimed_branch ?? "Unknown",
+          claimedRank: row.claimed_rank ?? "",
+          claimedStatus: row.claimed_status ?? "veteran",
+          linkedinUrl: row.linkedin_url ?? undefined,
+          websiteUrl: row.website_url ?? undefined,
+        },
+        () => {}
+      );
+      await supabase.from("verifications").update({
+        verification_score: result.verificationScore,
+        status: result.status,
+        pdl_data: result.pdlData,
+        serp_results: result.serpResults,
+        firecrawl_data: result.firecrawlData,
+        ai_analysis: result.aiAnalysis,
+        evidence_sources: result.evidenceSources,
+        red_flags: result.redFlags,
+        last_verified_at: new Date().toISOString(),
+      }).eq("id", row.id);
+      toast.success(`Re-verification complete for ${row.person_name}`);
+      await fetchVerifications();
+    } catch {
+      toast.error("Re-verification failed");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirmId) return;
+    const { error } = await supabase.from("verifications").delete().eq("id", deleteConfirmId);
+    if (error) {
+      toast.error("Failed to delete: " + error.message);
+    } else {
+      setList((prev) => prev.filter((r) => r.id !== deleteConfirmId));
+      setExpandedId(null);
+      toast.success("Verification deleted");
+    }
+    setDeleteConfirmId(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -438,7 +636,34 @@ export default function Verification() {
                         {row.last_verified_at ? new Date(row.last_verified_at).toLocaleDateString() : "—"}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); }}>Re-verify</Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAddAsSpeaker(row); }}>
+                              <UserPlus className="h-4 w-4 mr-2" /> Add as Speaker
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate("/lists"); }}>
+                              <List className="h-4 w-4 mr-2" /> Add to List
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleInviteToEvent(row); }}>
+                              <Mail className="h-4 w-4 mr-2" /> Invite to Event
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExportProfile(row); }}>
+                              <Download className="h-4 w-4 mr-2" /> Export Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReverify(row); }}>
+                              <RefreshCw className="h-4 w-4 mr-2" /> Re-verify
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(row.id); }}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                     {expandedId === row.id && expanded && (
@@ -458,6 +683,80 @@ export default function Verification() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add as Speaker Modal */}
+      <Dialog open={addSpeakerOpen} onOpenChange={setAddSpeakerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Mic className="h-5 w-5" /> Add as Speaker</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <Input value={speakerForm.name} onChange={(e) => setSpeakerForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Branch</Label>
+              <Input value={speakerForm.branch} onChange={(e) => setSpeakerForm((f) => ({ ...f, branch: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Rank</Label>
+              <Input value={speakerForm.rank} onChange={(e) => setSpeakerForm((f) => ({ ...f, rank: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Bio</Label>
+              <Textarea value={speakerForm.bio} onChange={(e) => setSpeakerForm((f) => ({ ...f, bio: e.target.value }))} rows={3} />
+            </div>
+            <Button onClick={handleSaveSpeaker} className="w-full bg-[#0064B1] hover:bg-[#053877]">
+              <UserPlus className="h-4 w-4 mr-2" /> Save Speaker
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite to Event Modal */}
+      <Dialog open={inviteEventOpen} onOpenChange={setInviteEventOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Mail className="h-5 w-5" /> Invite to Event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Invite <strong>{inviteRecord?.person_name}</strong> to an event.</p>
+            <div>
+              <Label>Select Event</Label>
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger><SelectValue placeholder="Choose an event..." /></SelectTrigger>
+                <SelectContent>
+                  {events.length === 0 ? (
+                    <SelectItem value="_none" disabled>No events found</SelectItem>
+                  ) : (
+                    events.map((ev) => (
+                      <SelectItem key={ev.id} value={ev.id}>{ev.title}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSendInvite} disabled={!selectedEventId} className="w-full bg-[#0064B1] hover:bg-[#053877]">
+              <Mail className="h-4 w-4 mr-2" /> Send Invitation
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete verification?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete this verification record. This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
