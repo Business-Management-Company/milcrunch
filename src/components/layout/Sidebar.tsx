@@ -160,10 +160,10 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
 
   const navItemClass = (isActive: boolean) =>
     cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 text-base transition-colors",
+      "flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors",
       "text-gray-700 dark:text-gray-300",
       "hover:bg-gray-50 dark:hover:bg-gray-800",
-      isActive && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium",
+      isActive && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400",
       collapsed && "justify-center px-2"
     );
 
@@ -213,7 +213,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   onClick={() => toggleSection(section.label)}
                   className="flex items-center justify-between w-full px-3 mb-1.5 group"
                 >
-                  <span className="text-[11px] text-gray-600 dark:text-gray-400 font-semibold tracking-wider uppercase">
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-semibold tracking-wider uppercase">
                     {section.label}
                   </span>
                   <Chevron className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
