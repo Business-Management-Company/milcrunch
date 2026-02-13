@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ import {
   KanbanSquare,
   Rocket,
   MessageSquare,
+  ChevronDown,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,13 +47,14 @@ interface NavSection {
   items: NavItem[];
 }
 
+// Dashboard is a standalone top-level link, not a collapsible section
+const DASHBOARD_ITEM: NavItem = {
+  href: "/dashboard",
+  label: "Dashboard",
+  icon: BarChart3,
+};
+
 const SIDEBAR_SECTIONS: NavSection[] = [
-  {
-    label: "DASHBOARD",
-    items: [
-      { href: "/dashboard", label: "Summary", icon: BarChart3 },
-    ],
-  },
   {
     label: "EVENTS",
     items: [
@@ -115,6 +119,22 @@ const SUPER_ADMIN_SECTION: NavSection = {
   ],
 };
 
+const STORAGE_KEY = "pd_sidebar_collapsed";
+
+function loadCollapsedSections(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* corrupt */ }
+  return {};
+}
+
+function saveCollapsedSections(state: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch { /* quota */ }
+}
+
 interface SidebarProps {
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
@@ -123,6 +143,16 @@ interface SidebarProps {
 export default function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
   const { isSuperAdmin } = useAuth();
+
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(loadCollapsedSections);
+
+  const toggleSection = useCallback((label: string) => {
+    setCollapsedSections((prev) => {
+      const next = { ...prev, [label]: !prev[label] };
+      saveCollapsedSections(next);
+      return next;
+    });
+  }, []);
 
   const sections = isSuperAdmin
     ? [...SIDEBAR_SECTIONS, SUPER_ADMIN_SECTION]
@@ -137,6 +167,9 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       collapsed && "justify-center px-2"
     );
 
+  const dashboardActive = location.pathname === DASHBOARD_ITEM.href;
+  const DashIcon = DASHBOARD_ITEM.icon;
+
   return (
     <aside
       className={cn(
@@ -146,55 +179,86 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       )}
     >
       <nav className="flex-1 overflow-y-auto py-4 px-3">
-        {sections.map((section, sectionIndex) => (
-          <div
-            key={section.label}
-            className={cn(
-              collapsed && "flex flex-col items-center",
-              sectionIndex > 0 && "mt-5"
-            )}
+        {/* Dashboard — standalone top-level link */}
+        <div className={cn(collapsed && "flex flex-col items-center")}>
+          <Link
+            to={DASHBOARD_ITEM.href}
+            className={navItemClass(dashboardActive)}
+            title={collapsed ? DASHBOARD_ITEM.label : undefined}
           >
-            {!collapsed && (
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold tracking-wider mb-1.5 px-3 uppercase">
-                {section.label}
-              </p>
-            )}
-            {sectionIndex === 0 && collapsed && <div className="mt-1" />}
-            <ul className="space-y-0.5">
-              {section.items.map((item) => {
-                const isActive = location.pathname === item.href;
-                const Icon = item.icon;
-                return (
-                  <li key={item.href + item.label}>
-                    <Link
-                      to={item.href}
-                      className={navItemClass(isActive)}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <Icon
-                        className={cn(
-                          "h-[18px] w-[18px] shrink-0",
-                          isActive
-                            ? "text-[#0064B1]"
-                            : "text-gray-400 dark:text-gray-500"
-                        )}
-                        strokeWidth={1.75}
-                      />
-                      {!collapsed && (
-                        <span className="truncate">{item.label}</span>
-                      )}
-                      {!collapsed && item.badge && (
-                        <span className="ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 whitespace-nowrap">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+            <DashIcon
+              className={cn(
+                "h-[18px] w-[18px] shrink-0",
+                dashboardActive ? "text-[#0064B1]" : "text-gray-400 dark:text-gray-500"
+              )}
+              strokeWidth={1.75}
+            />
+            {!collapsed && <span className="truncate">{DASHBOARD_ITEM.label}</span>}
+          </Link>
+        </div>
+
+        {/* Collapsible sections */}
+        {sections.map((section) => {
+          const isSectionCollapsed = !!collapsedSections[section.label];
+          const Chevron = isSectionCollapsed ? ChevronRight : ChevronDown;
+
+          return (
+            <div
+              key={section.label}
+              className={cn("mt-5", collapsed && "flex flex-col items-center")}
+            >
+              {!collapsed ? (
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.label)}
+                  className="flex items-center justify-between w-full px-3 mb-1.5 group"
+                >
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 font-semibold tracking-wider uppercase">
+                    {section.label}
+                  </span>
+                  <Chevron className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors" />
+                </button>
+              ) : (
+                <div className="mt-1" />
+              )}
+              {(!isSectionCollapsed || collapsed) && (
+                <ul className="space-y-0.5">
+                  {section.items.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.href + item.label}>
+                        <Link
+                          to={item.href}
+                          className={navItemClass(isActive)}
+                          title={collapsed ? item.label : undefined}
+                        >
+                          <Icon
+                            className={cn(
+                              "h-[18px] w-[18px] shrink-0",
+                              isActive
+                                ? "text-[#0064B1]"
+                                : "text-gray-400 dark:text-gray-500"
+                            )}
+                            strokeWidth={1.75}
+                          />
+                          {!collapsed && (
+                            <span className="truncate">{item.label}</span>
+                          )}
+                          {!collapsed && item.badge && (
+                            <span className="ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 whitespace-nowrap">
+                              {item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       <div className={cn("p-3 border-t border-gray-200 dark:border-gray-800 space-y-2", collapsed && "flex flex-col items-center")}>
