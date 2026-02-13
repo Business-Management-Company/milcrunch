@@ -197,7 +197,7 @@ const BrandDiscover = () => {
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
   const [createListForBulkImportOpen, setCreateListForBulkImportOpen] = useState(false);
   const [createListForBulkAddOpen, setCreateListForBulkAddOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
 
@@ -727,19 +727,23 @@ const BrandDiscover = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
-                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400 w-8"></th>
+                        <th className="p-3 w-8"></th>
                         <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Creator</th>
                         <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Platforms</th>
                         <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Followers</th>
-                        <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Engagement</th>
+                        <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Engage</th>
+                        <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
                         <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">Links</th>
-                        <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400 w-28"></th>
+                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Hashtags</th>
+                        <th className="p-3 w-24"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {creators.map((creator) => {
+                      {creators.map((creator, _idx) => {
+                        if (_idx === 0) console.log("[BrandDiscover] First creator (table):", creator);
                         const socialPlatforms = creator.socialPlatforms ?? [];
                         const linkCount = (creator.externalLinks ?? []).length;
+                        const hashtags = creator.hashtags ?? [];
                         return (
                           <tr
                             key={creator.id}
@@ -762,9 +766,8 @@ const BrandDiscover = () => {
                                   )}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-semibold text-[#000741] dark:text-white truncate flex items-center gap-1.5">
+                                  <p className="font-semibold text-[#000741] dark:text-white truncate">
                                     {creator.name}
-                                    {creator.hasEmail && <Mail className="h-3 w-3 text-blue-500 shrink-0" title="Email available" />}
                                   </p>
                                   <p className="text-xs text-[#0064B1] truncate">{creator.username ? `@${creator.username}` : ""}</p>
                                   {creator.location && (
@@ -783,10 +786,37 @@ const BrandDiscover = () => {
                             <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowers(creator.followers)}</td>
                             <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof creator.engagementRate === "number" ? `${creator.engagementRate.toFixed(2)}%` : "—"}</td>
                             <td className="p-3 text-center">
-                              <span className="inline-flex items-center gap-1 text-gray-500">
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                {linkCount}
-                              </span>
+                              {creator.hasEmail ? (
+                                <Mail className="h-4 w-4 text-blue-500 mx-auto" title="Email available" />
+                              ) : (
+                                <span className="text-gray-300 dark:text-gray-600">—</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              {linkCount > 0 ? (
+                                <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                  {linkCount}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 dark:text-gray-600">—</span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {hashtags.length > 0 ? (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {hashtags.slice(0, 2).map((tag) => (
+                                    <span key={tag} className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[11px] px-2 py-0.5">
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                  {hashtags.length > 2 && (
+                                    <span className="text-[11px] text-gray-400">+{hashtags.length - 2}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 dark:text-gray-600">—</span>
+                              )}
                             </td>
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               {isCreatorInList(creator.id) ? (
