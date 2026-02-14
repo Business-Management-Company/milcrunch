@@ -199,10 +199,17 @@ export function recommendStatus(score: number, hasCriminalFlags: boolean): "veri
 }
 
 // --- AI Analysis (Claude) ---
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_URL = "/api/anthropic";
 function getAnthropicKey(): string {
   const k = import.meta.env.VITE_ANTHROPIC_API_KEY;
   return typeof k === "string" ? k.trim() : "";
+}
+function anthropicHeaders(key: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "x-api-key": key,
+    "anthropic-version": "2023-06-01",
+  };
 }
 
 export async function runVerificationAnalysis(params: {
@@ -244,11 +251,7 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: anthropicHeaders(key),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2048,
@@ -330,11 +333,7 @@ Return ONLY the JSON object, no markdown formatting.`;
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: anthropicHeaders(key),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
@@ -594,11 +593,7 @@ ${params.aiAnalysis.slice(0, 2000)}`;
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: anthropicHeaders(key),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2048,
@@ -674,11 +669,7 @@ ${params.serpSnippets.slice(0, 3000)}`;
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: anthropicHeaders(key),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2048,

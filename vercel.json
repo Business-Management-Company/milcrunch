@@ -6,6 +6,7 @@
     {"source": "/api/serp/:path(.*)", "destination": "/api/serp"},
     {"source": "/api/firecrawl/:path(.*)", "destination": "/api/firecrawl"},
     {"source": "/api/pdl/:path(.*)", "destination": "/api/pdl"},
+    {"source": "/api/anthropic", "destination": "/api/anthropic"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"},
     {"source": "/((?!api/).*)", "destination": "/index.html"}

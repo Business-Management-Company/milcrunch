@@ -43,7 +43,6 @@ import {
   AlertCircle,
   ExternalLink,
   User,
-  Gavel,
   CheckCircle2,
   MoreHorizontal,
   UserPlus,
@@ -856,7 +855,7 @@ export default function Verification() {
   );
 }
 
-function CriminalHistoryTab({ personName, recordId, claimedBranch, locationContext, onRefresh }: {
+function BackgroundReviewTab({ personName, recordId, claimedBranch, locationContext, onRefresh }: {
   personName: string;
   recordId: string;
   claimedBranch?: string;
@@ -868,12 +867,14 @@ function CriminalHistoryTab({ personName, recordId, claimedBranch, locationConte
   const [aiFiltering, setAiFiltering] = useState(false);
   const [aiResults, setAiResults] = useState<AIFilteredCriminalResult[]>([]);
   const [aiSummary, setAiSummary] = useState("");
-  const [showUnlikely, setShowUnlikely] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const VISIBLE_COUNT = 5;
 
-  const handleRunCriminalCheck = async () => {
+  const handleRunBackgroundReview = async () => {
     setSearching(true);
     setAiResults([]);
     setAiSummary("");
+    setShowAll(false);
     try {
       const locSuffix = locationContext ? ` ${locationContext}` : "";
       const queries = [
@@ -925,154 +926,128 @@ function CriminalHistoryTab({ personName, recordId, claimedBranch, locationConte
     }
   };
 
-  const likely = aiResults.filter((r) => r.relevance_score > 70);
-  const possible = aiResults.filter((r) => r.relevance_score >= 30 && r.relevance_score <= 70);
-  const unlikely = aiResults.filter((r) => r.relevance_score < 30);
+  // Determine concern dot color for each result
+  const getConcernDot = (r: AIFilteredCriminalResult) => {
+    const isStolenValor = /stolen valor|fraud/i.test(r.title + " " + r.snippet + " " + r.reasoning);
+    if (r.concern_level === "high" || isStolenValor) return "bg-red-500";
+    if (r.concern_level === "medium") return "bg-amber-400";
+    return "bg-emerald-400";
+  };
+
+  // Determine overall summary status
+  const getSummaryStatus = () => {
+    if (aiResults.length === 0) return "clear";
+    const hasHighConcern = aiResults.some(
+      (r) => r.concern_level === "high" || /stolen valor/i.test(r.title + " " + r.snippet)
+    );
+    if (hasHighConcern) return "red";
+    const hasMediumConcern = aiResults.some((r) => r.concern_level === "medium" || r.relevance_score > 50);
+    if (hasMediumConcern) return "yellow";
+    return "clear";
+  };
+
+  // Sort results by relevance (most relevant first)
+  const sortedResults = [...aiResults].sort((a, b) => b.relevance_score - a.relevance_score);
+  const visibleResults = showAll ? sortedResults : sortedResults.slice(0, VISIBLE_COUNT);
+  const hiddenCount = sortedResults.length - VISIBLE_COUNT;
 
   return (
     <div className="space-y-4">
       {!hasSearched ? (
         <div className="text-center py-8">
-          <Gavel className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground mb-4">
-            Run an AI-powered criminal background check using public web records.
-            <br />
-            Results are filtered by AI to identify relevance to this specific person.
+          <ShieldCheck className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-base font-medium text-foreground mb-1">Run Background Review</p>
+          <p className="text-sm text-muted-foreground mb-5">
+            Search public records for brand safety and due diligence
           </p>
           <Button
-            onClick={handleRunCriminalCheck}
+            onClick={handleRunBackgroundReview}
             disabled={searching}
             className="bg-[#0064B1] hover:bg-[#053877]"
           >
             {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-            Run Criminal Check
+            Run Background Review
           </Button>
         </div>
       ) : (
         <>
-          {aiFiltering && (
+          {(searching || aiFiltering) && (
             <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
               <CardContent className="flex items-center gap-3 py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
-                <p className="text-sm text-blue-700 dark:text-blue-300">AI is analyzing results for relevance to {personName}...</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  {searching ? "Searching public records..." : `AI is analyzing results for relevance to ${personName}...`}
+                </p>
               </CardContent>
             </Card>
           )}
 
-          {!aiFiltering && aiSummary && (
-            <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
-              <CardContent className="flex items-start gap-3 py-4">
-                <ShieldCheck className="h-5 w-5 text-[#0064B1] shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-blue-800 dark:text-blue-300">AI Analysis Summary</p>
-                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">{aiSummary}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {!aiFiltering && !searching && hasSearched && (() => {
+            const status = getSummaryStatus();
+            if (status === "clear") return (
+              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">No public concerns found in background review</p>
+              </div>
+            );
+            if (status === "yellow") return (
+              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Some results may warrant review — see below</p>
+              </div>
+            );
+            return (
+              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                <p className="text-sm font-medium text-red-700 dark:text-red-300">Potential stolen valor or fraud results found — review carefully</p>
+              </div>
+            );
+          })()}
 
-          {!aiFiltering && aiResults.length === 0 && hasSearched && (
-            <Card className="rounded-xl border-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
-              <CardContent className="flex items-center gap-3 py-6">
-                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                <div>
-                  <p className="font-medium text-emerald-800 dark:text-emerald-300">No criminal records found</p>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400">No public criminal records, arrests, or stolen valor reports were found for {personName}.</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {!aiFiltering && likely.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" /> {likely.length} likely match(es)
-              </p>
-              {likely.map((r, i) => (
-                <Card key={i} className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
+          {!aiFiltering && !searching && visibleResults.length > 0 && (
+            <div className="space-y-2.5">
+              {visibleResults.map((r, i) => (
+                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+                      <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${getConcernDot(r)}`} />
                       <div className="flex-1 min-w-0">
-                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-red-700 dark:text-red-400 hover:underline flex items-center gap-1">
-                          {r.title} <ExternalLink className="h-3 w-3" />
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground hover:text-[#0064B1] hover:underline flex items-center gap-1 text-sm">
+                          {r.title} <ExternalLink className="h-3 w-3 text-muted-foreground" />
                         </a>
-                        <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <Badge variant="destructive" className="text-xs">Relevance: {r.relevance_score}%</Badge>
-                          <Badge variant="destructive" className="text-xs capitalize">{r.concern_level} concern</Badge>
-                        </div>
-                        <p className="text-xs text-red-600 dark:text-red-400 mt-1 italic">AI: {r.reasoning}</p>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.snippet}</p>
+                        <p className="text-xs text-muted-foreground mt-1.5 italic">{r.reasoning}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          )}
 
-          {!aiFiltering && possible.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" /> {possible.length} possible match(es)
-              </p>
-              {possible.map((r, i) => (
-                <Card key={i} className="rounded-xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1">
-                          {r.title} <ExternalLink className="h-3 w-3" />
-                        </a>
-                        <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <Badge className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Relevance: {r.relevance_score}%</Badge>
-                          <Badge className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 capitalize">{r.concern_level} concern</Badge>
-                        </div>
-                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">AI: {r.reasoning}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {!aiFiltering && unlikely.length > 0 && (
-            <div className="space-y-3">
-              <button
-                onClick={() => setShowUnlikely(!showUnlikely)}
-                className="text-sm text-muted-foreground flex items-center gap-2 hover:text-foreground transition-colors"
-              >
-                {showUnlikely ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                {unlikely.length} unlikely match(es) — probably different person
-              </button>
-              {showUnlikely && unlikely.map((r, i) => (
-                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800 opacity-70">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-600 dark:text-gray-400 hover:underline flex items-center gap-1 text-sm">
-                          {r.title} <ExternalLink className="h-3 w-3" />
-                        </a>
-                        <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">Relevance: {r.relevance_score}%</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 italic">AI: {r.reasoning}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {!showAll && hiddenCount > 0 && (
+                <button
+                  onClick={() => setShowAll(true)}
+                  className="text-sm text-[#0064B1] hover:underline flex items-center gap-1.5 pt-1"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  Show {hiddenCount} more result{hiddenCount !== 1 ? "s" : ""}
+                </button>
+              )}
+              {showAll && hiddenCount > 0 && (
+                <button
+                  onClick={() => setShowAll(false)}
+                  className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 pt-1"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  Show fewer results
+                </button>
+              )}
             </div>
           )}
 
           <div className="pt-2">
-            <Button variant="outline" size="sm" onClick={handleRunCriminalCheck} disabled={searching || aiFiltering}>
+            <Button variant="outline" size="sm" onClick={handleRunBackgroundReview} disabled={searching || aiFiltering}>
               {(searching || aiFiltering) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Re-run Check
+              Re-run Review
             </Button>
           </div>
         </>
@@ -1083,7 +1058,7 @@ function CriminalHistoryTab({ personName, recordId, claimedBranch, locationConte
 
 const READINESS_ITEMS: { key: string; label: string; auto: boolean }[] = [
   { key: "military_verified", label: "Military service verified", auto: true },
-  { key: "no_criminal", label: "No criminal concerns", auto: true },
+  { key: "no_criminal", label: "No background concerns", auto: true },
   { key: "id_verified", label: "ID / documents verified (DD-214, military ID)", auto: false },
   { key: "references_confirmed", label: "References confirmed", auto: false },
   { key: "availability_confirmed", label: "Availability confirmed", auto: false },
@@ -1690,7 +1665,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <TabsTrigger value="overview" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Overview</TabsTrigger>
           <TabsTrigger value="evidence" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Evidence Sources</TabsTrigger>
           <TabsTrigger value="professional" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Career Track</TabsTrigger>
-          <TabsTrigger value="criminal" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Criminal History</TabsTrigger>
+          <TabsTrigger value="criminal" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Background Review</TabsTrigger>
           <TabsTrigger value="deep" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Deep Analysis</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4">
@@ -1851,7 +1826,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <CareerTrackTab record={record} />
         </TabsContent>
         <TabsContent value="criminal" className="mt-4">
-          <CriminalHistoryTab
+          <BackgroundReviewTab
             personName={record.person_name}
             recordId={record.id}
             claimedBranch={record.claimed_branch ?? undefined}
