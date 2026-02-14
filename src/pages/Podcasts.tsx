@@ -74,9 +74,9 @@ export default function PodcastsPage() {
         }`}
       >
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-8 w-auto" />
+          <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-8 w-auto" />
           <span className={`font-bold text-lg ${navScrolled ? "text-[#000741]" : "text-white"}`}>
-            ParadeDeck
+            MilCrunch
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
@@ -202,10 +202,10 @@ export default function PodcastsPage() {
       <footer className="border-t border-gray-200 px-4 md:px-8 py-6">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-6 w-auto" />
-            <span className="font-bold text-[#000741]">ParadeDeck</span>
+            <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-6 w-auto" />
+            <span className="font-bold text-[#000741]">MilCrunch</span>
           </Link>
-          <p className="text-sm text-gray-500">© 2026 ParadeDeck. All rights reserved.</p>
+          <p className="text-sm text-gray-500">© 2026 MilCrunch. All rights reserved.</p>
         </div>
       </footer>
     </div>

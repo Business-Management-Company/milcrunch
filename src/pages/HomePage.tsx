@@ -187,7 +187,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
             <TooltipTrigger asChild>
               <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">ParadeDeck Verified</TooltipContent>
+            <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
           </Tooltip>
         )}
         {c.influencersclub_verified && (
@@ -336,9 +336,9 @@ export default function HomePage() {
         }`}
       >
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-8 w-auto" />
+          <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-8 w-auto" />
           <span className={`font-bold text-lg ${navScrolled ? "text-[#000741]" : "text-white"}`}>
-            ParadeDeck
+            MilCrunch
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
@@ -404,14 +404,14 @@ export default function HomePage() {
             <div className="flex-1 md:max-w-[65%] text-center md:text-left">
               <div className="inline-flex items-center rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-6">
                 <span className="text-[#F0A71F] text-xs font-semibold uppercase tracking-wide">
-                  ☆ THE MILITARY CREATOR PLATFORM
+                  ☆ THE MILITARY CREATOR NETWORK
                 </span>
               </div>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-4">
                 Stop juggling your events, creators, sponsors, and media.
               </h1>
               <p className="text-white/90 text-base md:text-lg max-w-[600px] mb-8">
-                ParadeDeck brings it all into one command center — so you can focus on the mission.
+                MilCrunch brings it all into one command center — so you can focus on the mission.
               </p>
               <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
                 {user ? (
@@ -614,7 +614,7 @@ export default function HomePage() {
               Events That Don't End When the Lights Go Off
             </h2>
             <p className="text-gray-600 mb-8 max-w-2xl">
-              MIC. MilSpouseFest. PDX Live. Every event on ParadeDeck extends into a year-round community — not just 3 days on Whova.
+              MIC. MilSpouseFest. PDX Live. Every event on MilCrunch extends into a year-round community — not just 3 days on Whova.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {EVENTS.map((event) => (
@@ -692,10 +692,10 @@ export default function HomePage() {
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
               <div>
                 <Link to="/" className="flex items-center gap-2 mb-4">
-                  <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-6 w-auto" />
-                  <span className="font-bold text-[#000741]">ParadeDeck</span>
+                  <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-6 w-auto" />
+                  <span className="font-bold text-[#000741]">MilCrunch</span>
                 </Link>
-                <p className="text-sm text-gray-500">© 2026 ParadeDeck. All rights reserved.</p>
+                <p className="text-sm text-gray-500">© 2026 MilCrunch. All rights reserved.</p>
                 <div className="flex gap-4 mt-2 text-sm text-gray-500">
                   <a href="#" className="hover:text-[#0064B1]">Privacy</a>
                   <a href="#" className="hover:text-[#0064B1]">Terms</a>

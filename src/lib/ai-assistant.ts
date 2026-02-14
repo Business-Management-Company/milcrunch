@@ -28,7 +28,7 @@ interface ApiMessage {
   content: string | ContentBlock[];
 }
 
-const SYSTEM_PROMPT = `You are ParadeDeck AI, an intelligent assistant for the ParadeDeck military creator platform. You help brands discover and manage military and veteran content creators.
+const SYSTEM_PROMPT = `You are MilCrunch AI, an intelligent assistant for the MilCrunch military creator platform. You help brands discover and manage military and veteran content creators.
 
 You have access to the following tools:
 1. search_creators - Search the Influencers.club database for creators

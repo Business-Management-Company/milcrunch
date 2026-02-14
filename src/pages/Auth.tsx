@@ -117,7 +117,7 @@ const Auth = () => {
       <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-12 w-auto" />
+            <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-12 w-auto" />
           </div>
           <CardTitle className="text-2xl font-display">
             {isForgotPassword ? "Reset Password" : isSignUp ? "Create an Account" : "Welcome Back"}
@@ -126,8 +126,8 @@ const Auth = () => {
             {isForgotPassword
               ? "Enter your email to receive a password reset link"
               : isSignUp 
-                ? "Sign up to get started with ParadeDeck" 
-                : "Sign in to your ParadeDeck account"}
+                ? "Sign up to get started with MilCrunch" 
+                : "Sign in to your MilCrunch account"}
           </CardDescription>
         </CardHeader>
         <CardContent>

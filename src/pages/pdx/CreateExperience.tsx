@@ -5,7 +5,7 @@ const CreateExperience = () => {
     <>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
-          The ParadeDeck Experience (PDX)
+          The MilCrunch Experience (PDX)
         </h1>
         <p className="text-gray-500 dark:text-gray-400">
           Create virtual or live experiences that connect brands with military creators.

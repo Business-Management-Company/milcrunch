@@ -68,7 +68,7 @@ export default function AdminChat() {
               </div>
             ) : messages.length === 0 && !streamingContent && !loading ? (
               <div className="text-center text-muted-foreground py-12">
-                <p className="font-medium">ParadeDeck project assistant</p>
+                <p className="font-medium">MilCrunch project assistant</p>
                 <p className="text-sm mt-1">Ask for status, move tasks, add checklist items, log deployments, or save prompts.</p>
                 <div className="mt-6 flex flex-wrap justify-center gap-2">
                   {QUICK_ACTIONS.map((a) => (

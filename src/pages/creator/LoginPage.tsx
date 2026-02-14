@@ -101,13 +101,13 @@ export default function LoginPage() {
       <Card className="w-full max-w-md bg-white/95 dark:bg-card border-border shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-12 w-auto" />
+            <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-12 w-auto" />
           </div>
           <CardTitle className="text-2xl font-headline">
             {isForgot ? "Reset Password" : "Welcome Back"}
           </CardTitle>
           <CardDescription>
-            {isForgot ? "Enter your email to receive a reset link" : "Sign in to your ParadeDeck creator account"}
+            {isForgot ? "Enter your email to receive a reset link" : "Sign in to your MilCrunch creator account"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

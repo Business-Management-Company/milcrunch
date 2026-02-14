@@ -68,8 +68,8 @@ export default function Creators() {
       {/* Top bar */}
       <header className="h-14 flex items-center justify-between px-4 md:px-8 border-b border-gray-200 bg-white sticky top-0 z-40">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/Parade-Deck-Flag-logo.png" alt="ParadeDeck" className="h-8 w-auto" />
-          <span className="font-bold text-lg text-[#000741]">ParadeDeck</span>
+          <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-8 w-auto" />
+          <span className="font-bold text-lg text-[#000741]">MilCrunch</span>
         </Link>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#0064B1]">Sign In</Link>
@@ -127,7 +127,7 @@ export default function Creators() {
                     {c.paradedeck_verified && (
                       <Tooltip>
                         <TooltipTrigger asChild><ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" /></TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">ParadeDeck Verified</TooltipContent>
+                        <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
                       </Tooltip>
                     )}
                     {c.influencersclub_verified && (
@@ -166,7 +166,7 @@ export default function Creators() {
 
       <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <p className="text-sm text-gray-500">© 2026 ParadeDeck. All rights reserved.</p>
+          <p className="text-sm text-gray-500">© 2026 MilCrunch. All rights reserved.</p>
           <Link to="/" className="text-sm text-[#0064B1] hover:underline">Home</Link>
         </div>
       </footer>

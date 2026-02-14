@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls *)",
+      "Bash(cd *)",
+      "Bash(mv *)",
+      "Bash(cp *)",
+      "Bash(cat *)",
+      "Bash(open *)",
+      "Bash(npm run build)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Read",
+      "WebFetch"
+    ]
+  }
+}

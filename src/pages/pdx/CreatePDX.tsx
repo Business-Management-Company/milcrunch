@@ -75,7 +75,7 @@ const SAMPLE_SCHEDULE = [
   { time: "8:15 AM", title: "Kick-off", type: "Keynote" as const, duration: "30min" as const },
   { time: "8:30 AM", title: "Panel: Collaboration and Giving Back", type: "Panel" as const, duration: "30min" as const },
   { time: "9:00 AM", title: "Fireside Chat: Finding Success", type: "Fireside Chat" as const, duration: "30min" as const },
-  { time: "9:30 AM", title: "What's Trending on ParadeDeck", type: "What's Trending" as const, duration: "30min" as const },
+  { time: "9:30 AM", title: "What's Trending on MilCrunch", type: "What's Trending" as const, duration: "30min" as const },
   { time: "10:00 AM", title: "Panel: Navigating Social Media", type: "Panel" as const, duration: "30min" as const },
   { time: "10:30 AM", title: "Panel: Beyond the Battlefield", type: "Panel" as const, duration: "90min" as const },
   { time: "12:00 PM", title: "Interview: Featured Creator", type: "Interview" as const, duration: "60min" as const },

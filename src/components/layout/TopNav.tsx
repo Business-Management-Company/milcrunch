@@ -46,9 +46,9 @@ export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Link to="/dashboard" className="flex items-center gap-2 shrink-0" aria-label="ParadeDeck home">
+        <Link to="/dashboard" className="flex items-center gap-2 shrink-0" aria-label="MilCrunch home">
           <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-8 w-auto" />
-          <span className="font-display font-bold text-lg text-foreground tracking-wide hidden sm:inline">ParadeDeck</span>
+          <span className="font-display font-bold text-lg text-foreground tracking-wide hidden sm:inline">MilCrunch</span>
         </Link>
       </div>
 

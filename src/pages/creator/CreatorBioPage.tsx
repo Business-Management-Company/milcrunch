@@ -239,8 +239,8 @@ export default function CreatorBioPage() {
   // Meta tags for SEO and social sharing
   useEffect(() => {
     if (!creator) return;
-    const title = `${creator.display_name} | ParadeDeck`;
-    const desc = creator.bio || `Connect with ${creator.display_name} on ParadeDeck.`;
+    const title = `${creator.display_name} | MilCrunch`;
+    const desc = creator.bio || `Connect with ${creator.display_name} on MilCrunch.`;
     const ogImage = creator.hero_image_url || creator.avatar_url || "/Parade-Deck-Flag-logo.png";
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const url = `${origin}/c/${creatorHandle}`;
@@ -551,10 +551,10 @@ export default function CreatorBioPage() {
         </div>
       </div>
 
-      {/* Powered by ParadeDeck bar (dismissible) */}
+      {/* Powered by MilCrunch bar (dismissible) */}
       {!poweredByDismissed && (
         <div className="sticky bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-2 py-2 px-4 bg-white/90 backdrop-blur border-t border-gray-200 md:max-w-[480px] md:mx-auto md:rounded-b-2xl md:mb-8">
-          <span className="text-xs text-gray-500">Powered by ParadeDeck</span>
+          <span className="text-xs text-gray-500">Powered by MilCrunch</span>
           <button
             type="button"
             onClick={() => setPoweredByDismissed(true)}
