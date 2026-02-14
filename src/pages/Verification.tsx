@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -27,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import {
   ShieldCheck,
+  ShieldAlert,
   Clock,
   AlertTriangle,
   XCircle,
@@ -57,6 +59,7 @@ import {
   Save,
   GraduationCap,
   Award,
+  LayoutDashboard,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -1404,8 +1407,18 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
   const [aiAwards, setAiAwards] = useState<AwardEntry[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState(false);
+  const [extractError, setExtractError] = useState("");
 
   const hasPDL = !!(pdlData?.employment?.length);
+  const hasWebSources = firecrawlData.length > 0 || sources.length > 0;
+
+  // Debug logging
+  useEffect(() => {
+    console.log("[CareerTrack] pdlData:", pdlData);
+    console.log("[CareerTrack] hasPDL:", hasPDL);
+    console.log("[CareerTrack] firecrawlData:", firecrawlData.length, "pages");
+    console.log("[CareerTrack] evidence_sources:", sources.length, "sources");
+  }, []);
 
   // Build PDL career entries
   const pdlCareer: CareerEntry[] = hasPDL
@@ -1433,22 +1446,36 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
 
   const handleExtract = async () => {
     setExtracting(true);
+    setExtractError("");
     try {
+      const firecrawlContent = firecrawlData.map((f) => f.markdown ?? "").join("\n\n---\n\n");
+      const serpSnippets = sources.map((s) => `${s.title}: ${s.snippet}`).join("\n");
+      console.log("[CareerTrack] Extracting with:", { firecrawlContentLen: firecrawlContent.length, serpSnippetsLen: serpSnippets.length });
       const result = await extractCareerTimeline({
         personName: record.person_name,
-        firecrawlContent: firecrawlData.map((f) => f.markdown ?? "").join("\n\n---\n\n"),
-        serpSnippets: sources.map((s) => `${s.title}: ${s.snippet}`).join("\n"),
+        firecrawlContent,
+        serpSnippets,
       });
+      console.log("[CareerTrack] Extraction result:", result);
       setAiCareer(result.career);
       setAiEducation(result.education);
       setAiAwards(result.awards);
       setExtracted(true);
-    } catch {
+    } catch (err) {
+      console.error("[CareerTrack] Extraction failed:", err);
+      setExtractError(err instanceof Error ? err.message : "Extraction failed");
       setExtracted(true);
     } finally {
       setExtracting(false);
     }
   };
+
+  // Auto-extract career data from web sources when no PDL data is available
+  useEffect(() => {
+    if (!hasPDL && !extracted && !extracting && hasWebSources) {
+      handleExtract();
+    }
+  }, []);
 
   const careerEntries = hasPDL ? pdlCareer : aiCareer;
   const educationEntries = hasPDL ? pdlEducation : aiEducation;
@@ -1483,6 +1510,12 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
             <div className="text-center py-6">
               <p className="text-sm text-muted-foreground">No career data found.</p>
               <p className="text-xs text-muted-foreground mt-1">This is normal — many people are not in public databases.</p>
+              {extractError && <p className="text-xs text-red-500 mt-2">Error: {extractError}</p>}
+              {extracted && hasWebSources && (
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => { setExtracted(false); setExtractError(""); handleExtract(); }}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry Extraction
+                </Button>
+              )}
             </div>
           ) : (
             <ul className="space-y-4">
@@ -1661,13 +1694,50 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   return (
     <div className="p-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 gap-1 rounded-lg bg-transparent p-0 border-b border-gray-200 dark:border-gray-700 pb-1">
-          <TabsTrigger value="overview" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Overview</TabsTrigger>
-          <TabsTrigger value="evidence" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Evidence Sources</TabsTrigger>
-          <TabsTrigger value="professional" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Career Track</TabsTrigger>
-          <TabsTrigger value="criminal" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Background Review</TabsTrigger>
-          <TabsTrigger value="deep" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Deep Analysis</TabsTrigger>
-        </TabsList>
+        <TooltipProvider delayDuration={300}>
+          <TabsList className="grid w-full grid-cols-5 gap-1.5 rounded-lg bg-transparent p-0 border-b border-gray-200 dark:border-gray-700 pb-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="overview" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
+                  <LayoutDashboard className="h-3.5 w-3.5" /> Overview
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p>Summary of verification score, speaker readiness checklist, and quick actions</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="evidence" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
+                  <Search className="h-3.5 w-3.5" /> Evidence
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p>Web search results that corroborate or contradict military service claims</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="professional" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
+                  <Briefcase className="h-3.5 w-3.5" /> Career Track
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p>Employment history, education, and professional background from PDL and web sources</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="criminal" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
+                  <ShieldAlert className="h-3.5 w-3.5" /> Background
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p>Public records search for brand safety and due diligence</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="deep" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
+                  <FileText className="h-3.5 w-3.5" /> Deep Analysis
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p>Detailed content extracted from web pages with military keywords highlighted</p></TooltipContent>
+            </Tooltip>
+          </TabsList>
+        </TooltipProvider>
         <TabsContent value="overview" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
