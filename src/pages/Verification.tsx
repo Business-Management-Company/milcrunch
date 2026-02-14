@@ -61,6 +61,8 @@ import {
   Award,
   LayoutDashboard,
   Pencil,
+  Video,
+  Play,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -937,6 +939,206 @@ export default function Verification() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// --- YouTube Video Result Type ---
+interface YouTubeVideoResult {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnail: string;
+  publishedAt: string;
+}
+
+function MediaTab({ record }: { record: VerificationRecord }) {
+  const [videos, setVideos] = useState<YouTubeVideoResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [lastSearchedAt, setLastSearchedAt] = useState<string | null>(null);
+  const VISIBLE_COUNT = 6;
+
+  // Load saved results on mount
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
+      const saved = checks.youtube_media as { videos?: YouTubeVideoResult[]; searched_at?: string } | undefined;
+      if (saved?.videos?.length) {
+        setVideos(saved.videos);
+        setLastSearchedAt(saved.searched_at ?? null);
+        setHasSearched(true);
+      }
+    })();
+  }, [record.id]);
+
+  const saveResults = async (results: YouTubeVideoResult[]) => {
+    const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+    const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
+    const now = new Date().toISOString();
+    await supabase.from("verifications").update({
+      manual_checks: { ...existing, youtube_media: { videos: results, searched_at: now } },
+    }).eq("id", record.id);
+    setLastSearchedAt(now);
+  };
+
+  const handleSearch = async () => {
+    setSearching(true);
+    setShowAll(false);
+    try {
+      const queries = [
+        `${record.person_name} military`,
+        `${record.person_name} veteran`,
+        `${record.person_name} speaker`,
+      ];
+      const allVideos: YouTubeVideoResult[] = [];
+      const seenIds = new Set<string>();
+
+      for (const q of queries) {
+        try {
+          const params = new URLSearchParams({
+            part: "snippet",
+            type: "video",
+            q,
+            maxResults: "5",
+          });
+          const resp = await fetch(`/api/youtube?${params.toString()}`);
+          if (!resp.ok) continue;
+          const data = await resp.json();
+          for (const item of data.items ?? []) {
+            const id = item.id?.videoId;
+            if (!id || seenIds.has(id)) continue;
+            seenIds.add(id);
+            allVideos.push({
+              videoId: id,
+              title: item.snippet?.title ?? "Untitled",
+              channelTitle: item.snippet?.channelTitle ?? "",
+              thumbnail: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url ?? "",
+              publishedAt: item.snippet?.publishedAt ?? "",
+            });
+          }
+        } catch {
+          // continue with next query
+        }
+      }
+
+      setVideos(allVideos);
+      setHasSearched(true);
+      await saveResults(allVideos);
+    } catch {
+      setHasSearched(true);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const visibleVideos = showAll ? videos : videos.slice(0, VISIBLE_COUNT);
+  const hiddenCount = videos.length - VISIBLE_COUNT;
+
+  return (
+    <div className="space-y-4">
+      {!hasSearched ? (
+        <div className="text-center py-8">
+          <Video className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <p className="text-base font-medium text-foreground mb-1">Search YouTube</p>
+          <p className="text-sm text-muted-foreground mb-5">
+            Find video appearances, interviews, and media coverage for {record.person_name}
+          </p>
+          <Button
+            onClick={handleSearch}
+            disabled={searching}
+            className="bg-[#0064B1] hover:bg-[#053877]"
+          >
+            {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+            Search Videos
+          </Button>
+        </div>
+      ) : (
+        <>
+          {searching && (
+            <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+              <CardContent className="flex items-center gap-3 py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+                <p className="text-sm text-blue-700 dark:text-blue-300">Searching YouTube for {record.person_name}...</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {!searching && videos.length === 0 && (
+            <div className="text-center py-6">
+              <Video className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No YouTube videos found for {record.person_name}.</p>
+            </div>
+          )}
+
+          {!searching && visibleVideos.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visibleVideos.map((v) => (
+                <a
+                  key={v.videoId}
+                  href={`https://www.youtube.com/watch?v=${v.videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#0064B1] hover:shadow-md transition-all"
+                >
+                  <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
+                    {v.thumbnail ? (
+                      <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Video className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                      <Play className="h-10 w-10 text-white drop-shadow-lg" />
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-sm font-medium line-clamp-2 group-hover:text-[#0064B1]">{v.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{v.channelTitle}</p>
+                    {v.publishedAt && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(v.publishedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {!searching && !showAll && hiddenCount > 0 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="text-sm text-[#0064B1] hover:underline flex items-center gap-1.5"
+            >
+              <ChevronDown className="h-4 w-4" />
+              See {hiddenCount} more video{hiddenCount !== 1 ? "s" : ""}
+            </button>
+          )}
+          {!searching && showAll && hiddenCount > 0 && (
+            <button
+              onClick={() => setShowAll(false)}
+              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+            >
+              <ChevronRight className="h-4 w-4" />
+              Show fewer
+            </button>
+          )}
+
+          <div className="pt-2 flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={handleSearch} disabled={searching}>
+              {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              Re-search
+            </Button>
+            {lastSearchedAt && (
+              <span className="text-xs text-muted-foreground">Last searched: {new Date(lastSearchedAt).toLocaleDateString()}</span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1860,7 +2062,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     <div className="p-6">
       <Tabs defaultValue="overview" className="w-full">
         <TooltipProvider delayDuration={300}>
-          <TabsList className="grid w-full grid-cols-5 gap-1.5 rounded-lg bg-transparent p-0 border-b border-gray-200 dark:border-gray-700 pb-1">
+          <TabsList className="grid w-full grid-cols-6 gap-1.5 rounded-lg bg-transparent p-0 border-b border-gray-200 dark:border-gray-700 pb-1">
             <Tooltip>
               <TooltipTrigger asChild>
                 <TabsTrigger value="overview" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
@@ -1884,6 +2086,14 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 </TabsTrigger>
               </TooltipTrigger>
               <TooltipContent side="bottom"><p>Employment history, education, and professional background from PDL and web sources</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="media" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
+                  <Video className="h-3.5 w-3.5" /> Media
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p>YouTube videos and media appearances featuring this person</p></TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -2059,6 +2269,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </TabsContent>
         <TabsContent value="professional" className="mt-4 space-y-6">
           <CareerTrackTab record={record} />
+        </TabsContent>
+        <TabsContent value="media" className="mt-4">
+          <MediaTab record={record} />
         </TabsContent>
         <TabsContent value="criminal" className="mt-4">
           <BackgroundReviewTab
