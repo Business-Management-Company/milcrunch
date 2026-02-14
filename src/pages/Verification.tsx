@@ -60,6 +60,7 @@ import {
   GraduationCap,
   Award,
   LayoutDashboard,
+  Pencil,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -109,6 +110,24 @@ const US_STATES = [
 
 function highlightMilitaryText(text: string) {
   return text.replace(MILITARY_KEYWORDS, (match) => `<mark class="bg-yellow-200 dark:bg-yellow-900/50 rounded px-0.5">${match}</mark>`);
+}
+
+function stripMarkdown(md: string): string {
+  return md
+    .replace(/!\[.*?\]\(.*?\)/g, "")           // images ![alt](url)
+    .replace(/\[([^\]]*)\]\(.*?\)/g, "$1")      // links [text](url) → text
+    .replace(/^#{1,6}\s+/gm, "")                // headings
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")         // bold
+    .replace(/(\*|_)(.*?)\1/g, "$2")            // italic
+    .replace(/~~(.*?)~~/g, "$1")                // strikethrough
+    .replace(/`{1,3}[^`]*`{1,3}/g, "")         // inline code & code blocks
+    .replace(/^[-*+]\s+/gm, "")                // unordered list bullets
+    .replace(/^\d+\.\s+/gm, "")                // ordered list numbers
+    .replace(/^>\s+/gm, "")                     // blockquotes
+    .replace(/---+|===+|\*\*\*+/g, "")         // horizontal rules
+    .replace(/https?:\/\/\S+/g, "")            // bare URLs
+    .replace(/\n{3,}/g, "\n\n")                // collapse multiple newlines
+    .trim();
 }
 
 function ConfidenceGauge({ score }: { score: number }) {
@@ -165,6 +184,53 @@ function NameStatusIcon({ score }: { score: number }) {
   if (score >= 70) return <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />;
   if (score >= 40) return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
   return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
+}
+
+function InlineNameEdit({ id, name, onSave }: { id: string; name: string; onSave: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === name) { setEditing(false); setValue(name); return; }
+    setSaving(true);
+    const { error } = await supabase.from("verifications").update({ person_name: trimmed }).eq("id", id);
+    setSaving(false);
+    if (!error) { toast.success("Name updated"); setEditing(false); onSave(); }
+    else toast.error("Failed to update name");
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <Input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") { setEditing(false); setValue(name); } }}
+          className="h-7 text-sm w-44 px-2"
+          autoFocus
+          disabled={saving}
+        />
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-emerald-600" />}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <span className="group flex items-center gap-1">
+      <span>{name}</span>
+      <button
+        className="opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+        title="Edit name"
+      >
+        <Pencil className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+      </button>
+    </span>
+  );
 }
 
 function SourceIcon({ category }: { category: string }) {
@@ -726,7 +792,7 @@ export default function Verification() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           <NameStatusIcon score={row.verification_score ?? 0} />
-                          <span>{row.person_name}</span>
+                          <InlineNameEdit id={row.id} name={row.person_name} onSave={fetchVerifications} />
                         </div>
                       </TableCell>
                       <TableCell>{row.claimed_branch ?? "—"}</TableCell>
@@ -888,7 +954,33 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
   const [aiResults, setAiResults] = useState<AIFilteredCriminalResult[]>([]);
   const [aiSummary, setAiSummary] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [lastReviewedAt, setLastReviewedAt] = useState<string | null>(null);
   const VISIBLE_COUNT = 5;
+
+  // Load saved results on mount
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("verifications").select("manual_checks").eq("id", recordId).single();
+      const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
+      const saved = checks.background_review as { results?: AIFilteredCriminalResult[]; summary?: string; reviewed_at?: string } | undefined;
+      if (saved?.results?.length || saved?.summary) {
+        setAiResults((saved.results ?? []) as AIFilteredCriminalResult[]);
+        setAiSummary((saved.summary ?? "") as string);
+        setLastReviewedAt((saved.reviewed_at ?? null) as string | null);
+        setHasSearched(true);
+      }
+    })();
+  }, [recordId]);
+
+  const saveResults = async (results: AIFilteredCriminalResult[], summary: string) => {
+    const { data } = await supabase.from("verifications").select("manual_checks").eq("id", recordId).single();
+    const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
+    const now = new Date().toISOString();
+    await supabase.from("verifications").update({
+      manual_checks: { ...existing, background_review: { results, summary, reviewed_at: now } },
+    }).eq("id", recordId);
+    setLastReviewedAt(now);
+  };
 
   const handleRunBackgroundReview = async () => {
     setSearching(true);
@@ -923,6 +1015,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
       if (allResults.length === 0) {
         setAiResults([]);
         setAiSummary("No search results found.");
+        await saveResults([], "No search results found.");
         return;
       }
 
@@ -937,6 +1030,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
         });
         setAiResults(filtered);
         setAiSummary(summary);
+        await saveResults(filtered, summary);
       } finally {
         setAiFiltering(false);
       }
@@ -1064,11 +1158,14 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
             </div>
           )}
 
-          <div className="pt-2">
+          <div className="pt-2 flex items-center gap-3">
             <Button variant="outline" size="sm" onClick={handleRunBackgroundReview} disabled={searching || aiFiltering}>
-              {(searching || aiFiltering) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Re-run Review
+              {(searching || aiFiltering) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              Re-run Background Review
             </Button>
+            {lastReviewedAt && (
+              <span className="text-xs text-muted-foreground">Last reviewed: {new Date(lastReviewedAt).toLocaleDateString()}</span>
+            )}
           </div>
         </>
       )}
@@ -1286,13 +1383,71 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
   );
 }
 
+function RawSourceCard({ url, markdown }: { url: string; markdown: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const cleaned = stripMarkdown(markdown);
+  const lines = cleaned.split("\n").filter((l) => l.trim());
+  const preview = lines.slice(0, 4).join("\n");
+  const hasMore = lines.length > 4;
+
+  return (
+    <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#0064B1] hover:underline flex items-center gap-1">
+            {new URL(url).hostname}{new URL(url).pathname.slice(0, 60)} <ExternalLink className="h-3 w-3" />
+          </a>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div
+          className="text-sm text-muted-foreground whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: highlightMilitaryText(expanded ? cleaned : preview) }}
+        />
+        {hasMore && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-[#0064B1] hover:underline mt-2 flex items-center gap-1"
+          >
+            {expanded ? <><ChevronDown className="h-3 w-3" /> Show less</> : <><ChevronRight className="h-3 w-3" /> Show more ({lines.length - 4} more lines)</>}
+          </button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
   const [narrative, setNarrative] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
+  const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
   const redFlags = (record.red_flags ?? []) as RedFlag[];
   const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
+
+  // Load saved dossier on mount
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
+      const saved = checks.deep_analysis as { narrative?: string; analyzed_at?: string } | undefined;
+      if (saved?.narrative) {
+        setNarrative(saved.narrative);
+        setLastAnalyzedAt(saved.analyzed_at ?? null);
+      }
+    })();
+  }, [record.id]);
+
+  const saveNarrative = async (text: string) => {
+    const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+    const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
+    const now = new Date().toISOString();
+    await supabase.from("verifications").update({
+      manual_checks: { ...existing, deep_analysis: { narrative: text, analyzed_at: now } },
+    }).eq("id", record.id);
+    setLastAnalyzedAt(now);
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -1306,6 +1461,7 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
         aiAnalysis: record.ai_analysis ?? "",
       });
       setNarrative(result || null);
+      if (result) await saveNarrative(result);
     } catch {
       setNarrative(null);
     } finally {
@@ -1356,6 +1512,9 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-[#0064B1]" /> Background Dossier
+              {lastAnalyzedAt && (
+                <span className="text-xs font-normal text-muted-foreground ml-auto">Last analyzed: {new Date(lastAnalyzedAt).toLocaleDateString()}</span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1364,7 +1523,7 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
             </div>
             <div className="mt-3 flex gap-2">
               <Button variant="outline" size="sm" onClick={handleGenerate}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Re-run Deep Analysis
               </Button>
               <Button variant="outline" size="sm" onClick={() => {
                 navigator.clipboard.writeText(narrative ?? "");
@@ -1385,23 +1544,12 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             {rawOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            Raw Sources ({firecrawlData.length})
+            Web Sources ({firecrawlData.length})
           </button>
           {rawOpen && (
             <div className="mt-3 space-y-3">
               {firecrawlData.map((f, i) => (
-                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#0064B1] hover:underline flex items-center gap-1">
-                        {f.url} <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: highlightMilitaryText((f.markdown ?? "").slice(0, 2000)) }} />
-                  </CardContent>
-                </Card>
+                <RawSourceCard key={i} url={f.url} markdown={f.markdown ?? ""} />
               ))}
             </div>
           )}
