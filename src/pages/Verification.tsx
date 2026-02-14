@@ -988,8 +988,7 @@ function MediaTab({ record }: { record: VerificationRecord }) {
   };
 
   const filterWithAI = async (candidates: YouTubeVideoResult[]): Promise<YouTubeVideoResult[]> => {
-    const apiKey = (import.meta.env.VITE_ANTHROPIC_API_KEY ?? "").trim();
-    if (!apiKey || candidates.length === 0) return candidates;
+    if (candidates.length === 0) return candidates;
 
     const prompt = `You are filtering YouTube search results for a specific person.
 
@@ -1015,7 +1014,6 @@ No markdown formatting, just the JSON array.`;
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
@@ -1269,8 +1267,8 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     try {
       const locSuffix = locationContext ? ` ${locationContext}` : "";
       const queries = [
-        `"${personName}" criminal record${locSuffix}`,
-        `"${personName}" arrest${locSuffix}`,
+        `"${personName}" controversy${locSuffix}`,
+        `"${personName}" fraud OR scandal${locSuffix}`,
         `"${personName}" stolen valor`,
       ];
       const allResults: { title: string; url: string; snippet: string }[] = [];
@@ -1293,8 +1291,8 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
 
       if (allResults.length === 0) {
         setAiResults([]);
-        setAiSummary("No search results found.");
-        await saveResults([], "No search results found.");
+        setAiSummary(`No public concerns found for ${personName}.`);
+        await saveResults([], `No public concerns found for ${personName}.`);
         return;
       }
 
@@ -1327,14 +1325,14 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     return "bg-emerald-400";
   };
 
-  // Determine overall summary status
+  // Determine overall summary status — only flag "red" if AI confirms a high-relevance, high-concern result about this person
   const getSummaryStatus = () => {
-    if (aiResults.length === 0) return "clear";
-    const hasHighConcern = aiResults.some(
-      (r) => r.concern_level === "high" || /stolen valor/i.test(r.title + " " + r.snippet)
-    );
+    // Filter to only results the AI considers actually relevant to this person
+    const relevant = aiResults.filter((r) => r.relevance_score > 50);
+    if (relevant.length === 0) return "clear";
+    const hasHighConcern = relevant.some((r) => r.concern_level === "high");
     if (hasHighConcern) return "red";
-    const hasMediumConcern = aiResults.some((r) => r.concern_level === "medium" || r.relevance_score > 50);
+    const hasMediumConcern = relevant.some((r) => r.concern_level === "medium");
     if (hasMediumConcern) return "yellow";
     return "clear";
   };
@@ -1380,7 +1378,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
             if (status === "clear") return (
               <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">No public concerns found in background review</p>
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">No public concerns found for {personName}. Background review complete.</p>
               </div>
             );
             if (status === "yellow") return (

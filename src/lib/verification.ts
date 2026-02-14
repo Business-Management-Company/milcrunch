@@ -200,14 +200,9 @@ export function recommendStatus(score: number, hasCriminalFlags: boolean): "veri
 
 // --- AI Analysis (Claude) ---
 const ANTHROPIC_URL = "/api/anthropic";
-function getAnthropicKey(): string {
-  const k = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  return typeof k === "string" ? k.trim() : "";
-}
-function anthropicHeaders(key: string): Record<string, string> {
+function anthropicHeaders(): Record<string, string> {
   return {
     "Content-Type": "application/json",
-    "x-api-key": key,
     "anthropic-version": "2023-06-01",
   };
 }
@@ -221,8 +216,6 @@ export async function runVerificationAnalysis(params: {
   serpResults: unknown;
   firecrawlExtractions: unknown;
 }): Promise<string> {
-  const key = getAnthropicKey();
-  if (!key) return "AI analysis skipped (no API key).";
   const systemPrompt = `You are a military service verification analyst for ParadeDeck — a platform that supports and celebrates military creators and veterans. Your job is to look for SUPPORTING evidence, not to play "gotcha."
 
 CRITICAL PRINCIPLES:
@@ -251,7 +244,7 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: anthropicHeaders(key),
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2048,
@@ -289,19 +282,6 @@ export async function filterCriminalResults(params: {
   filtered: AIFilteredCriminalResult[];
   summary: string;
 }> {
-  const key = getAnthropicKey();
-  if (!key) {
-    return {
-      filtered: params.results.map((r) => ({
-        ...r,
-        relevance_score: 50,
-        concern_level: "low" as const,
-        reasoning: "AI filtering unavailable (no API key)",
-      })),
-      summary: "AI filtering skipped — no Anthropic API key configured.",
-    };
-  }
-
   const prompt = `You are filtering criminal/background search results for a specific person. The subject is: ${params.personName}, claimed military branch: ${params.claimedBranch}, location context: ${params.locationContext || "unknown"}.
 
 Here are the search results to analyze:
@@ -333,7 +313,7 @@ Return ONLY the JSON object, no markdown formatting.`;
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: anthropicHeaders(key),
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
@@ -569,8 +549,6 @@ export async function generateDossierNarrative(params: {
   serpSnippets: string;
   aiAnalysis: string;
 }): Promise<string> {
-  const key = getAnthropicKey();
-  if (!key) return "";
   const prompt = `Summarize this person's background based on the following web content. Write a clean, professional 3-5 paragraph narrative dossier about ${params.personName} (claimed ${params.claimedType}, ${params.claimedBranch}).
 
 Include:
@@ -593,7 +571,7 @@ ${params.aiAnalysis.slice(0, 2000)}`;
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: anthropicHeaders(key),
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2048,
@@ -638,8 +616,6 @@ export async function extractCareerTimeline(params: {
   education: EducationEntry[];
   awards: AwardEntry[];
 }> {
-  const key = getAnthropicKey();
-  if (!key) return { career: [], education: [], awards: [] };
   const prompt = `Extract structured career, education, and awards data for ${params.personName} from the following web content. Return ONLY a JSON object with this exact structure:
 {
   "career": [
@@ -669,7 +645,7 @@ ${params.serpSnippets.slice(0, 3000)}`;
   try {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
-      headers: anthropicHeaders(key),
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2048,

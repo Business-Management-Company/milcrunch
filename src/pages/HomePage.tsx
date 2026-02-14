@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sun,
   Shield,
+  ShieldCheck,
+  BadgeCheck,
   Users,
   Mic2,
   BarChart3,
@@ -13,8 +15,15 @@ import {
   MapPin,
   Search,
   Instagram,
+  Youtube,
+  Twitter,
   Play,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -24,6 +33,10 @@ import {
   getInitials,
   type CreatorRow,
 } from "@/lib/creators-db";
+import {
+  fetchShowcaseCreators,
+  type ShowcaseCreator,
+} from "@/lib/featured-creators";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
@@ -103,6 +116,144 @@ const heroCreators = [
   },
 ];
 
+// --- Showcase helpers ---
+const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
+  </svg>
+);
+
+const BRANCH_STYLES: Record<string, string> = {
+  Army: "bg-green-800/10 text-green-800",
+  Navy: "bg-blue-900/10 text-blue-900",
+  "Air Force": "bg-sky-600/10 text-sky-700",
+  Marines: "bg-red-700/10 text-red-700",
+  "Coast Guard": "bg-orange-600/10 text-orange-700",
+  "Space Force": "bg-indigo-600/10 text-indigo-700",
+};
+
+const PLATFORM_ICON: Record<string, React.ReactNode> = {
+  instagram: <Instagram className="h-3.5 w-3.5" />,
+  tiktok: <TikTokIcon className="h-3.5 w-3.5" />,
+  youtube: <Youtube className="h-3.5 w-3.5" />,
+  twitter: <Twitter className="h-3.5 w-3.5" />,
+};
+
+function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
+  const platforms = c.platforms ?? [];
+  const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
+
+  return (
+    <Link
+      to={`/creator/${c.profile_slug || c.handle}`}
+      className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col items-center text-center"
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateY(0)" : "translateY(24px)",
+        transition: `opacity 0.5s ease-out ${index * 70}ms, transform 0.5s ease-out ${index * 70}ms, box-shadow 0.3s ease`,
+      }}
+    >
+      {/* Avatar with green verified ring */}
+      <div className="relative mb-3">
+        <div
+          className={`w-[72px] h-[72px] rounded-full overflow-hidden ${
+            c.paradedeck_verified
+              ? "ring-[3px] ring-emerald-500 ring-offset-2"
+              : "ring-1 ring-gray-200"
+          }`}
+        >
+          {c.avatar_url ? (
+            <img
+              src={c.avatar_url}
+              alt={c.display_name}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-lg">
+              {getInitials(c.display_name, c.handle)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Name + verification badges */}
+      <div className="flex items-center gap-1 mb-1.5">
+        <h3 className="font-semibold text-[#000741] text-sm leading-tight truncate max-w-[120px]">
+          {c.display_name}
+        </h3>
+        {c.paradedeck_verified && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">ParadeDeck Verified</TooltipContent>
+          </Tooltip>
+        )}
+        {c.influencersclub_verified && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">Creator Verified</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+
+      {/* Branch badge + Status */}
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
+        {c.branch && (
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${branchStyle}`}>
+            {c.branch}
+          </span>
+        )}
+        {c.status && (
+          <span className="text-[10px] text-gray-500 font-medium">{c.status}</span>
+        )}
+      </div>
+
+      {/* Follower count */}
+      <p className="text-sm font-bold text-[#000741] mb-2">
+        {formatFollowerCount(c.follower_count)}
+        <span className="text-xs font-normal text-gray-400 ml-1">followers</span>
+      </p>
+
+      {/* Platform icons */}
+      {platforms.length > 0 && (
+        <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-500 transition-colors">
+          {platforms.map((p) => (
+            <span key={p}>{PLATFORM_ICON[p] ?? null}</span>
+          ))}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+// --- Showcase fallback data (used before DB is seeded) ---
+const SHOWCASE_FALLBACK: ShowcaseCreator[] = [
+  { id: "s1", display_name: "MCRD San Diego", handle: "mcrdsd", platform: "instagram", avatar_url: null, follower_count: 487000, engagement_rate: 4.1, category: "Military Life", sort_order: 1, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Active Duty", bio: null, platforms: ["instagram", "tiktok", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "mcrdsd" },
+  { id: "s2", display_name: "Tabor Robak", handle: "taborrobak", platform: "instagram", avatar_url: null, follower_count: 156000, engagement_rate: 3.5, category: "Lifestyle", sort_order: 2, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "taborrobak" },
+  { id: "s3", display_name: "USA Born TV", handle: "usaborntv", platform: "instagram", avatar_url: null, follower_count: 892000, engagement_rate: 5.2, category: "Patriotic", sort_order: 3, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "tiktok", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "usaborntv" },
+  { id: "s4", display_name: "Veteran Style Coach", handle: "veteranstylecoach", platform: "instagram", avatar_url: null, follower_count: 73000, engagement_rate: 4.8, category: "Fashion", sort_order: 4, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "veteranstylecoach" },
+  { id: "s5", display_name: "Matt Best", handle: "mattbest11x", platform: "instagram", avatar_url: null, follower_count: 1200000, engagement_rate: 6.1, category: "Comedy", sort_order: 5, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "mattbest11x" },
+  { id: "s6", display_name: "Angry Cops", handle: "angrycops", platform: "instagram", avatar_url: null, follower_count: 2100000, engagement_rate: 5.8, category: "Comedy", sort_order: 6, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "angrycops" },
+  { id: "s7", display_name: "Jocko Willink", handle: "jockowillink", platform: "instagram", avatar_url: null, follower_count: 3100000, engagement_rate: 3.9, category: "Leadership", sort_order: 7, is_active: true, is_verified: true, created_at: null, branch: "Navy", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "jockowillink" },
+  { id: "s8", display_name: "Combat Flip Flops", handle: "combatflipflops", platform: "instagram", avatar_url: null, follower_count: 89000, engagement_rate: 3.4, category: "Business", sort_order: 8, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "combatflipflops" },
+  { id: "s9", display_name: "Donut Operator", handle: "doaboroperator", platform: "instagram", avatar_url: null, follower_count: 1400000, engagement_rate: 5.3, category: "Law & Military", sort_order: 9, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "donutoperator" },
+  { id: "s10", display_name: "Dakota Meyer", handle: "dakotameyer", platform: "instagram", avatar_url: null, follower_count: 356000, engagement_rate: 4.2, category: "Veteran Life", sort_order: 10, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Veteran", bio: null, platforms: ["instagram", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "dakotameyer" },
+  { id: "s11", display_name: "Joey Jones", handle: "johnny_joey_jones", platform: "instagram", avatar_url: null, follower_count: 245000, engagement_rate: 4.6, category: "News", sort_order: 11, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Veteran", bio: null, platforms: ["instagram", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "johnny_joey_jones" },
+  { id: "s12", display_name: "Black Rifle Coffee", handle: "blackriflecoffee", platform: "instagram", avatar_url: null, follower_count: 1800000, engagement_rate: 4.0, category: "Business", sort_order: 12, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "blackriflecoffee" },
+  { id: "s13", display_name: "Empowered MilSpouse", handle: "empoweredmilspouse", platform: "instagram", avatar_url: null, follower_count: 118000, engagement_rate: 5.7, category: "Lifestyle", sort_order: 13, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Spouse", bio: null, platforms: ["instagram", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "empoweredmilspouse" },
+  { id: "s14", display_name: "Rachel of Honor", handle: "rachelofhonor", platform: "instagram", avatar_url: null, follower_count: 95000, engagement_rate: 6.3, category: "Family", sort_order: 14, is_active: true, is_verified: true, created_at: null, branch: "Navy", status: "Spouse", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "rachelofhonor" },
+  { id: "s15", display_name: "SemperFi Fitness", handle: "semperfifitness", platform: "instagram", avatar_url: null, follower_count: 204000, engagement_rate: 5.1, category: "Fitness", sort_order: 15, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "semperfifitness" },
+  { id: "s16", display_name: "Air Force Amy", handle: "airforceamy", platform: "instagram", avatar_url: null, follower_count: 167000, engagement_rate: 4.4, category: "Lifestyle", sort_order: 16, is_active: true, is_verified: true, created_at: null, branch: "Air Force", status: "Veteran", bio: null, platforms: ["instagram", "tiktok", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "airforceamy" },
+  { id: "s17", display_name: "Navy Dave", handle: "navydave_", platform: "instagram", avatar_url: null, follower_count: 312000, engagement_rate: 4.7, category: "Military Life", sort_order: 17, is_active: true, is_verified: true, created_at: null, branch: "Navy", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "navydave_" },
+  { id: "s18", display_name: "Coast Guard Katie", handle: "coastguardkatie", platform: "instagram", avatar_url: null, follower_count: 54000, engagement_rate: 6.8, category: "Adventure", sort_order: 18, is_active: true, is_verified: true, created_at: null, branch: "Coast Guard", status: "Active Duty", bio: null, platforms: ["instagram", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "coastguardkatie" },
+  { id: "s19", display_name: "SpaceForce Steve", handle: "spaceforce_steve", platform: "instagram", avatar_url: null, follower_count: 78000, engagement_rate: 5.5, category: "Tech", sort_order: 19, is_active: true, is_verified: true, created_at: null, branch: "Space Force", status: "Active Duty", bio: null, platforms: ["instagram", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "spaceforce_steve" },
+  { id: "s20", display_name: "Military Mama", handle: "militarymama_", platform: "instagram", avatar_url: null, follower_count: 186000, engagement_rate: 5.9, category: "Family", sort_order: 20, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Spouse", bio: null, platforms: ["instagram", "tiktok", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "militarymama_" },
+];
+
 const GRID_FALLBACK: CreatorRow[] = [
   { id: "g1", display_name: "Jason", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 0, created_at: null },
   { id: "g2", display_name: "Kevin", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 1, created_at: null },
@@ -123,6 +274,9 @@ export default function HomePage() {
   const [podcastsLoading, setPodcastsLoading] = useState(true);
   const [heroCreatorsDb, setHeroCreatorsDb] = useState<CreatorRow[]>(HERO_FALLBACK);
   const [gridCreators, setGridCreators] = useState<CreatorRow[]>([]);
+  const [showcaseCreators, setShowcaseCreators] = useState<ShowcaseCreator[]>([]);
+  const [showcaseInView, setShowcaseInView] = useState(false);
+  const showcaseRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -140,12 +294,14 @@ export default function HomePage() {
 
   useEffect(() => {
     (async () => {
-      const [hero, grid] = await Promise.all([
+      const [hero, grid, showcase] = await Promise.all([
         fetchFeaturedHero(3),
         fetchFeaturedGrid(8),
+        fetchShowcaseCreators(20),
       ]);
       setHeroCreatorsDb(hero.length >= 3 ? hero : HERO_FALLBACK);
       setGridCreators(grid.length > 0 ? grid : GRID_FALLBACK);
+      setShowcaseCreators(showcase.length > 0 ? showcase : SHOWCASE_FALLBACK);
     })();
   }, []);
 
@@ -153,6 +309,18 @@ export default function HomePage() {
     const onScroll = () => setNavScrolled(window.scrollY > 60);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Intersection Observer for showcase animation
+  useEffect(() => {
+    const el = showcaseRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setShowcaseInView(true); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   const navLinkClass = navScrolled
@@ -351,110 +519,34 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Featured Creators */}
-        <section id="creators" className="px-4 md:px-8 py-16 md:py-20 bg-gray-50 scroll-mt-20">
+        {/* Verified Military Creator Showcase */}
+        <section id="creators" className="px-4 md:px-8 py-16 md:py-24 bg-gradient-to-b from-gray-50 to-white scroll-mt-20">
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-              <div>
-                <p className="text-[#ED1C24] text-xs font-semibold uppercase tracking-widest mb-2">
-                  AN AMAZING LINEUP
-                </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
-                  Big Names, Even Bigger Ideas
-                </h2>
-              </div>
-              <Link to="/brand/discover">
-                <Button variant="outline" className="rounded-lg border-[#0064B1] text-[#0064B1] hover:bg-[#0064B1]/10">
+            <div className="text-center mb-12">
+              <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-3">
+                TRUSTED BY BRANDS NATIONWIDE
+              </p>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#000741] mb-3">
+                Our Verified Military Creator Network
+              </h2>
+              <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+                Trusted voices. Verified service. Ready for your brand.
+              </p>
+            </div>
+
+            <div ref={showcaseRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+              {showcaseCreators.map((c, i) => (
+                <ShowcaseCard key={c.id} creator={c} index={i} inView={showcaseInView} />
+              ))}
+            </div>
+
+            <div className="text-center mt-10">
+              <Link to="/creators">
+                <Button size="lg" className="rounded-xl bg-[#0064B1] hover:bg-[#053877] text-white px-8 font-semibold shadow-md hover:shadow-lg transition-all">
                   View All Creators →
                 </Button>
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {gridCreators.map((c) => (
-                <Link
-                  key={c.id}
-                  to={`/brand/discover?creator=${encodeURIComponent(c.handle)}`}
-                  className="group rounded-xl overflow-hidden aspect-[4/3] relative flex flex-col justify-end p-4 hover:ring-2 hover:ring-[#0064B1] transition-all"
-                >
-                  {c.avatar_url ? (
-                    <>
-                      <img
-                        src={c.avatar_url}
-                        alt={c.display_name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#0064B1] to-[#053877]" />
-                  )}
-                  {c.is_verified && (
-                    <span className="absolute top-3 right-3 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-medium border border-white/30">
-                      Verified
-                    </span>
-                  )}
-                  {!c.avatar_url && (
-                    <span className="absolute inset-0 flex items-center justify-center text-white/20 text-[80px] md:text-[120px] font-bold pointer-events-none">
-                      {getInitials(c.display_name, c.handle)}
-                    </span>
-                  )}
-                  <div className="relative flex items-center gap-2 text-white/90 text-xs mb-1">
-                    <Instagram className="h-3.5 w-3.5 shrink-0" />
-                    <span>{formatFollowerCount(c.follower_count)} followers</span>
-                  </div>
-                  <p className="font-semibold text-white">{c.display_name}</p>
-                  <p className="text-white/80 text-sm">@{c.handle}</p>
-                  {c.category && (
-                    <span className="inline-block mt-1 w-fit bg-white/20 text-white rounded-full px-2.5 py-0.5 text-xs font-medium">
-                      {c.category}
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Creator Directory — search + skeleton cards */}
-        <section className="px-4 md:px-8 py-16 md:py-20 bg-gray-50">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741] mb-2">
-              Creator Directory
-            </h2>
-            <p className="text-gray-600 mb-8">
-              The #1 network for military and veteran content creators. Discover authentic voices from those who served.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center max-w-2xl mx-auto mb-10">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search creators..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 bg-white text-[#000741] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0064B1] focus:border-transparent"
-                />
-              </div>
-              <select className="px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0064B1]">
-                <option>All Branches</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="rounded-xl border border-gray-200 bg-white p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-3 w-full mb-2" />
-                  <Skeleton className="h-3 w-2/3" />
-                </div>
-              ))}
-            </div>
-            <Link to="/brand/discover" className="text-[#0064B1] font-medium hover:underline">
-              Sign up to access the full Creator Directory →
-            </Link>
           </div>
         </section>
 
