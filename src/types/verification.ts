@@ -36,6 +36,9 @@ export interface VerificationRecord {
   verified_by: string | null;
   source: string | null;
   source_username: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   manual_checks: Record<string, unknown> | null;
   created_at: string | null;
   updated_at: string | null;

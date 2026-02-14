@@ -175,7 +175,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       className={cn(
         "fixed left-0 top-14 bottom-0 z-30 flex flex-col border-r border-gray-200 dark:border-gray-800 transition-[width] duration-200",
         "bg-white dark:bg-[#0F1117]",
-        collapsed ? "w-16" : "w-60"
+        collapsed ? "w-16" : "w-64"
       )}
     >
       <nav className="flex-1 overflow-y-auto py-4 px-3">

@@ -53,6 +53,9 @@ import {
   RefreshCw,
   Trash2,
   Mic,
+  MapPin,
+  Trophy,
+  Save,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -86,6 +89,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const MILITARY_KEYWORDS = /military|veteran|army|navy|marine|air force|coast guard|served|deployment|dd-214|rank|sergeant|lieutenant|captain|medal|decorated|combat|reserve|guard|usmc|dod|veterans affairs/gi;
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
+  "IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH",
+  "NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT",
+  "VT","VA","WA","WV","WI","WY",
+] as const;
 
 function highlightMilitaryText(text: string) {
   return text.replace(MILITARY_KEYWORDS, (match) => `<mark class="bg-yellow-200 dark:bg-yellow-900/50 rounded px-0.5">${match}</mark>`);
@@ -152,6 +162,9 @@ interface PrefillData {
   linkedinUrl: string;
   websiteUrl: string;
   notes: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   source?: string;
   sourceUsername?: string;
 }
@@ -172,6 +185,9 @@ export default function Verification() {
     linkedinUrl: "",
     websiteUrl: "",
     notes: "",
+    city: "",
+    state: "",
+    zip: "",
     source: "manual" as string,
     sourceUsername: "" as string,
   });
@@ -214,6 +230,9 @@ export default function Verification() {
         linkedinUrl: p.linkedinUrl,
         websiteUrl: p.websiteUrl,
         notes: p.notes,
+        city: p.city || "",
+        state: p.state || "",
+        zip: p.zip || "",
         source: p.source || "manual",
         sourceUsername: p.sourceUsername || "",
       });
@@ -272,6 +291,9 @@ export default function Verification() {
           ai_analysis: result.aiAnalysis,
           evidence_sources: result.evidenceSources,
           red_flags: result.redFlags,
+          city: addForm.city.trim() || null,
+          state: addForm.state || null,
+          zip: addForm.zip.trim() || null,
           source: addForm.source || "manual",
           source_username: addForm.sourceUsername || null,
           manual_checks: {},
@@ -301,6 +323,9 @@ export default function Verification() {
             red_flags: result.redFlags,
             notes: addForm.notes.trim() || null,
             verified_by: null,
+            city: addForm.city.trim() || null,
+            state: addForm.state || null,
+            zip: addForm.zip.trim() || null,
             source: addForm.source || "manual",
             source_username: addForm.sourceUsername || null,
             manual_checks: {},
@@ -310,7 +335,7 @@ export default function Verification() {
           } as VerificationRecord,
           ...prev,
         ]);
-        setAddForm({ fullName: "", claimedBranch: "", claimedRank: "", claimedStatus: "veteran", linkedinUrl: "", websiteUrl: "", notes: "", source: "manual", sourceUsername: "" });
+        setAddForm({ fullName: "", claimedBranch: "", claimedRank: "", claimedStatus: "veteran", linkedinUrl: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
         setTimeout(() => {
           setAddOpen(false);
           setNewRecordId(null);
@@ -380,9 +405,10 @@ export default function Verification() {
       `Generated: ${new Date().toLocaleDateString()}`,
       ``,
       `Name: ${row.person_name}`,
-      `Claimed Branch: ${row.claimed_branch ?? "—"}`,
-      `Claimed Rank: ${row.claimed_rank ?? "—"}`,
+      `Branch: ${row.claimed_branch ?? "—"}`,
+      `Rank: ${row.claimed_rank ?? "—"}`,
       `Status: ${row.claimed_status ?? "—"}`,
+      `Location: ${[row.city, row.state, row.zip].filter(Boolean).join(", ") || "—"}`,
       ``,
       `VERIFICATION RESULT`,
       `Score: ${row.verification_score ?? 0}%`,
@@ -513,7 +539,7 @@ export default function Verification() {
                   />
                 </div>
                 <div>
-                  <Label>Claimed Branch</Label>
+                  <Label>Branch</Label>
                   <Select value={addForm.claimedBranch} onValueChange={(v) => setAddForm((f) => ({ ...f, claimedBranch: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
                     <SelectContent>
@@ -524,7 +550,7 @@ export default function Verification() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Claimed Rank</Label>
+                  <Label>Rank</Label>
                   <Input
                     value={addForm.claimedRank}
                     onChange={(e) => setAddForm((f) => ({ ...f, claimedRank: e.target.value }))}
@@ -532,7 +558,7 @@ export default function Verification() {
                   />
                 </div>
                 <div>
-                  <Label>Claimed Status</Label>
+                  <Label>Status</Label>
                   <Select value={addForm.claimedStatus} onValueChange={(v) => setAddForm((f) => ({ ...f, claimedStatus: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -557,6 +583,35 @@ export default function Verification() {
                     onChange={(e) => setAddForm((f) => ({ ...f, websiteUrl: e.target.value }))}
                     placeholder="https://..."
                   />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>City</Label>
+                    <Input
+                      value={addForm.city}
+                      onChange={(e) => setAddForm((f) => ({ ...f, city: e.target.value }))}
+                      placeholder="e.g. San Diego"
+                    />
+                  </div>
+                  <div>
+                    <Label>State</Label>
+                    <Select value={addForm.state} onValueChange={(v) => setAddForm((f) => ({ ...f, state: v }))}>
+                      <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
+                      <SelectContent>
+                        {US_STATES.map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Zip</Label>
+                    <Input
+                      value={addForm.zip}
+                      onChange={(e) => setAddForm((f) => ({ ...f, zip: e.target.value }))}
+                      placeholder="92101"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Additional Notes</Label>
@@ -605,8 +660,8 @@ export default function Verification() {
                 <TableRow className="border-gray-200 dark:border-gray-800">
                   <TableHead className="w-8"></TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Claimed Branch</TableHead>
-                  <TableHead>Claimed Rank</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Rank</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Confidence</TableHead>
                   <TableHead>Sources</TableHead>
@@ -784,9 +839,10 @@ function CriminalHistoryTab({ personName, recordId, claimedBranch, locationConte
     setAiResults([]);
     setAiSummary("");
     try {
+      const locSuffix = locationContext ? ` ${locationContext}` : "";
       const queries = [
-        `"${personName}" criminal record`,
-        `"${personName}" arrest`,
+        `"${personName}" criminal record${locSuffix}`,
+        `"${personName}" arrest${locSuffix}`,
         `"${personName}" stolen valor`,
       ];
       const allResults: { title: string; url: string; snippet: string }[] = [];
@@ -989,101 +1045,114 @@ function CriminalHistoryTab({ personName, recordId, claimedBranch, locationConte
   );
 }
 
-const MANUAL_CHECK_ITEMS = [
-  { key: "social_media_bio", label: "Social media bio matches claimed service", points: 5 },
-  { key: "profile_photo", label: "Profile photo consistent with claimed background", points: 5 },
-  { key: "linkedin_confirms", label: "LinkedIn confirms military service", points: 5 },
-  { key: "personal_knowledge", label: "Personal knowledge / direct communication", points: 10 },
-  { key: "documents_reviewed", label: "Documents reviewed (DD-214, military ID, etc.)", points: 15 },
-  { key: "trusted_referral", label: "Referred by trusted source", points: 5 },
-] as const;
+const READINESS_ITEMS: { key: string; label: string; auto: boolean }[] = [
+  { key: "military_verified", label: "Military service verified", auto: true },
+  { key: "no_criminal", label: "No criminal concerns", auto: true },
+  { key: "id_verified", label: "ID / documents verified (DD-214, military ID)", auto: false },
+  { key: "references_confirmed", label: "References confirmed", auto: false },
+  { key: "availability_confirmed", label: "Availability confirmed", auto: false },
+  { key: "media_kit", label: "Media kit received", auto: false },
+  { key: "contract_signed", label: "Contract signed", auto: false },
+];
 
-function ManualVerificationSection({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
+function SpeakerReadinessAssessment({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
   const rawChecks = (record.manual_checks ?? {}) as Record<string, unknown>;
   const [localChecks, setLocalChecks] = useState<Record<string, boolean>>(() => {
     const out: Record<string, boolean> = {};
-    for (const item of MANUAL_CHECK_ITEMS) {
-      out[item.key] = !!rawChecks[item.key];
+    for (const item of READINESS_ITEMS) {
+      if (!item.auto) out[item.key] = !!rawChecks[item.key];
     }
     return out;
   });
+  const [bookingNotes, setBookingNotes] = useState((rawChecks.booking_notes as string) ?? "");
   const [saving, setSaving] = useState(false);
-  const [baseScore] = useState(() => {
-    const stored = rawChecks._base_score;
-    return typeof stored === "number" ? stored : (record.verification_score ?? 0);
-  });
 
-  const manualScore = MANUAL_CHECK_ITEMS.reduce((sum, item) => sum + (localChecks[item.key] ? item.points : 0), 0);
-  const totalScore = Math.min(100, baseScore + manualScore);
+  const autoChecks: Record<string, boolean> = {
+    military_verified: (record.verification_score ?? 0) >= 70,
+    no_criminal: !((record.red_flags as RedFlag[] | null)?.length),
+  };
+
+  const checkedCount = READINESS_ITEMS.filter((item) =>
+    item.auto ? autoChecks[item.key] : localChecks[item.key]
+  ).length;
+  const total = READINESS_ITEMS.length;
+  const progressPct = Math.round((checkedCount / total) * 100);
 
   const handleToggle = async (key: string) => {
     const updated = { ...localChecks, [key]: !localChecks[key] };
     setLocalChecks(updated);
     setSaving(true);
-
-    const newManualScore = MANUAL_CHECK_ITEMS.reduce((sum, item) => sum + (updated[item.key] ? item.points : 0), 0);
-    const newTotal = Math.min(100, baseScore + newManualScore);
-    const checksToSave = { ...updated, _base_score: baseScore };
-
     await supabase.from("verifications").update({
-      manual_checks: checksToSave,
-      verification_score: newTotal,
-      ...(newTotal >= 95 ? { status: "verified" } : {}),
+      manual_checks: { ...updated, booking_notes: bookingNotes },
     }).eq("id", record.id);
-
     setSaving(false);
-    if (newTotal >= 95) toast.success("Score reached 95%+ — status auto-updated to Verified!");
     onRefresh?.();
   };
 
-  const handleOverride = async () => {
+  const handleSaveNotes = async () => {
     setSaving(true);
     await supabase.from("verifications").update({
-      verification_score: 100,
-      status: "verified",
+      manual_checks: { ...localChecks, booking_notes: bookingNotes },
     }).eq("id", record.id);
     setSaving(false);
-    toast.success("Manually marked as Fully Verified (100%)");
-    onRefresh?.();
+    toast.success("Booking notes saved");
   };
 
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4" /> Manual Verification
+          <Mic className="h-4 w-4" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+          {checkedCount >= 5 ? (
+            <Badge className="ml-auto bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs">CLEARED FOR BOOKING</Badge>
+          ) : checkedCount < 3 ? (
+            <Badge className="ml-auto bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
+          ) : (
+            <Badge className="ml-auto bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">Confirm verification signals manually. Points are added to the automated score.</p>
-        {MANUAL_CHECK_ITEMS.map((item) => (
-          <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              checked={!!localChecks[item.key]}
-              onChange={() => handleToggle(item.key)}
-              className="h-4 w-4 rounded border-gray-300 text-[#0064B1] focus:ring-[#0064B1]"
-            />
-            <span className="text-sm flex-1 group-hover:text-[#000741] dark:group-hover:text-white transition-colors">
-              {item.label}
-            </span>
-            <span className="text-xs text-muted-foreground">+{item.points}</span>
-          </label>
-        ))}
-        <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <span className="text-sm font-medium">Manual bonus: +{manualScore} pts</span>
-          <span className="text-sm text-muted-foreground">Total: {totalScore}%</span>
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-medium">Clearance: {checkedCount}/{total}</span>
+            <span className="text-xs text-muted-foreground">{progressPct}%</span>
+          </div>
+          <Progress value={progressPct} className="h-2" />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleOverride}
-          className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
-        >
-          <ShieldCheck className="h-4 w-4 mr-2" />
-          Override: Mark as Fully Verified
-        </Button>
+        {READINESS_ITEMS.map((item) => {
+          const isAuto = item.auto;
+          const checked = isAuto ? autoChecks[item.key] : localChecks[item.key];
+          return (
+            <label key={item.key} className={cn("flex items-center gap-3", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
+              <input
+                type="checkbox"
+                checked={!!checked}
+                onChange={isAuto ? undefined : () => handleToggle(item.key)}
+                disabled={isAuto}
+                className="h-4 w-4 rounded border-gray-300 text-[#0064B1] focus:ring-[#0064B1]"
+              />
+              <span className={cn("text-sm flex-1", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
+                {item.label}
+              </span>
+              {isAuto && <span className="text-xs text-muted-foreground">Auto</span>}
+            </label>
+          );
+        })}
+        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+          <Label className="text-sm font-medium">Booking Notes</Label>
+          <Textarea
+            value={bookingNotes}
+            onChange={(e) => setBookingNotes(e.target.value)}
+            placeholder="Notes about speaker availability, requirements, accommodations..."
+            rows={3}
+            className="mt-1"
+          />
+          <Button variant="outline" size="sm" onClick={handleSaveNotes} className="mt-2">
+            <Save className="h-3.5 w-3.5 mr-1.5" /> Save Notes
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1190,10 +1259,64 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
   const [additionalSearching, setAdditionalSearching] = useState(false);
+  const [reverifying, setReverifying] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [editNotes, setEditNotes] = useState(record.notes ?? "");
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
   const redFlags = (record.red_flags ?? []) as RedFlag[];
   const pdlData = record.pdl_data as PDLResponse | null;
   const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
+
+  const handleQuickReverify = async () => {
+    setReverifying(true);
+    toast.info(`Re-verifying ${record.person_name}...`);
+    try {
+      const result = await runVerificationPipeline(
+        {
+          fullName: record.person_name,
+          claimedBranch: record.claimed_branch ?? "Unknown",
+          claimedRank: record.claimed_rank ?? "",
+          claimedStatus: record.claimed_status ?? "veteran",
+          linkedinUrl: record.linkedin_url ?? undefined,
+          websiteUrl: record.website_url ?? undefined,
+        },
+        () => {}
+      );
+      await supabase.from("verifications").update({
+        verification_score: result.verificationScore,
+        status: result.status,
+        pdl_data: result.pdlData,
+        serp_results: result.serpResults,
+        firecrawl_data: result.firecrawlData,
+        ai_analysis: result.aiAnalysis,
+        evidence_sources: result.evidenceSources,
+        red_flags: result.redFlags,
+        last_verified_at: new Date().toISOString(),
+      }).eq("id", record.id);
+      toast.success("Re-verification complete");
+      onRefresh?.();
+    } catch {
+      toast.error("Re-verification failed");
+    } finally {
+      setReverifying(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    await supabase.from("verifications").update({ status: newStatus }).eq("id", record.id);
+    toast.success(`Status changed to ${newStatus}`);
+    onRefresh?.();
+  };
+
+  const handleSaveNotes = async () => {
+    await supabase.from("verifications").update({ notes: editNotes }).eq("id", record.id);
+    toast.success("Notes saved");
+    setNotesOpen(false);
+    onRefresh?.();
+  };
+
+  const proSources = sources.filter((s) => s.category === "Professional" || s.category === "Military Service");
+  const locationStr = [record.city, record.state, record.zip].filter(Boolean).join(", ");
 
   const handleRunAdditionalSearch = async () => {
     if (!additionalQuery.trim()) return;
@@ -1245,6 +1368,11 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               <CardContent className="space-y-2 text-sm">
                 <p className="font-medium">{record.person_name}</p>
                 <p className="text-muted-foreground">{record.claimed_branch ?? "—"} · {record.claimed_rank ?? "—"}</p>
+                {locationStr && (
+                  <p className="text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" /> {locationStr}
+                  </p>
+                )}
                 {record.linkedin_url && (
                   <a href={record.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#0064B1] hover:underline">
                     <Link2 className="h-3.5 w-3.5" /> LinkedIn
@@ -1272,14 +1400,51 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
-                <Button variant="outline" size="sm" className="justify-start">Re-verify</Button>
-                <Button variant="outline" size="sm" className="justify-start">Change Status</Button>
-                <Button variant="outline" size="sm" className="justify-start">Add Notes</Button>
+                <Button variant="outline" size="sm" className="justify-start" onClick={handleQuickReverify} disabled={reverifying}>
+                  {reverifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Re-verify
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="justify-start">
+                      <ChevronDown className="h-4 w-4 mr-2" /> Change Status
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleStatusChange("verified")}>
+                      <ShieldCheck className="h-4 w-4 mr-2 text-emerald-600" /> Verified
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange("pending")}>
+                      <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange("flagged")}>
+                      <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange("denied")}>
+                      <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {!notesOpen ? (
+                  <Button variant="outline" size="sm" className="justify-start" onClick={() => setNotesOpen(true)}>
+                    <FileText className="h-4 w-4 mr-2" /> Add Notes
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} placeholder="Add notes..." />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveNotes} className="bg-[#0064B1] hover:bg-[#053877]">
+                        <Save className="h-3.5 w-3.5 mr-1.5" /> Save
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setNotesOpen(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <ManualVerificationSection record={record} onRefresh={onRefresh} />
+            <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
             <SocialVerificationSection record={record} />
           </div>
         </TabsContent>
@@ -1348,17 +1513,14 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             )}
           </div>
         </TabsContent>
-        <TabsContent value="professional" className="mt-4">
-          <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Employment Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!pdlData ? (
-                <p className="text-sm text-muted-foreground">PDL lookup did not return data. This is normal — many people are not in the PDL database. Check that PDL_API_KEY is set in Vercel environment variables.</p>
-              ) : !pdlData.employment?.length ? (
-                <p className="text-sm text-muted-foreground">PDL found a profile but no employment history is listed.</p>
-              ) : (
+        <TabsContent value="professional" className="mt-4 space-y-6">
+          {/* PDL Employment Timeline */}
+          {pdlData?.employment?.length ? (
+            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Employment Timeline (PDL)</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <ul className="space-y-3">
                   {((pdlData.employment ?? []) as { title?: string; name?: string; organization?: string; company?: string; start_date?: string; end_date?: string }[]).map((job, i) => {
                     const org = (job.organization ?? job.company ?? "").toLowerCase();
@@ -1382,26 +1544,82 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                     );
                   })}
                 </ul>
-              )}
-              {pdlData?.education?.length ? (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p className="font-medium text-sm mb-2">Education</p>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {(pdlData.education as { school?: string; degree?: string }[]).map((e, i) => (
-                      <li key={i}>{e.school ?? ""} {e.degree ?? ""}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
+                {pdlData?.education?.length ? (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="font-medium text-sm mb-2">Education</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {(pdlData.education as { school?: string; degree?: string }[]).map((e, i) => (
+                        <li key={i}>{e.school ?? ""} {e.degree ?? ""}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Web-Sourced Professional Info (fallback when PDL is empty, or supplement) */}
+          {proSources.length > 0 ? (
+            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2"><Globe className="h-4 w-4" /> Professional Info from Web Sources</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {proSources.map((s, i) => (
+                  <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <SourceIcon category={s.category} />
+                    <div className="flex-1 min-w-0">
+                      <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0064B1] hover:underline flex items-center gap-1 text-sm">
+                        {s.title} <ExternalLink className="h-3 w-3" />
+                      </a>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-3" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(s.snippet) }} />
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs">{s.category}</Badge>
+                        <span className="text-xs text-muted-foreground">{s.relevanceScore}% relevance</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Firecrawl extracted content with military keywords */}
+          {firecrawlData.length > 0 && firecrawlData.some((f) => f.markdown && MILITARY_KEYWORDS.test(f.markdown)) ? (
+            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Extracted Content</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {firecrawlData.filter((f) => f.markdown && MILITARY_KEYWORDS.test(f.markdown)).map((f, i) => (
+                  <div key={i} className="border-b border-gray-100 dark:border-gray-800 last:border-0 pb-3">
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0064B1] hover:underline flex items-center gap-1">
+                      {f.url} <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <div className="text-sm text-muted-foreground mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: highlightMilitaryText((f.markdown ?? "").slice(0, 1500)) }} />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Empty state */}
+          {!pdlData?.employment?.length && proSources.length === 0 && firecrawlData.length === 0 && (
+            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+              <CardContent className="py-8 text-center">
+                <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No professional data available. PDL lookup did not return data and no professional web sources were found.</p>
+                <p className="text-xs text-muted-foreground mt-1">This is normal — many people are not in the PDL database.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
         <TabsContent value="criminal" className="mt-4">
           <CriminalHistoryTab
             personName={record.person_name}
             recordId={record.id}
             claimedBranch={record.claimed_branch ?? undefined}
-            locationContext={pdlData?.location ? (pdlData.location as Array<{name: string}>).map((l) => l.name).join(", ") : undefined}
+            locationContext={locationStr || (pdlData?.location ? (pdlData.location as Array<{name: string}>).map((l) => l.name).join(", ") : undefined)}
             onRefresh={onRefresh}
           />
         </TabsContent>
