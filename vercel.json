@@ -8,6 +8,7 @@
     {"source": "/api/pdl/:path(.*)", "destination": "/api/pdl"},
     {"source": "/api/anthropic", "destination": "/api/anthropic"},
     {"source": "/api/youtube", "destination": "/api/youtube"},
+    {"source": "/api/fetch-avatars", "destination": "/api/fetch-avatars"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"},
     {"source": "/((?!api/).*)", "destination": "/index.html"}

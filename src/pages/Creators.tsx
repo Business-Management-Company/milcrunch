@@ -43,6 +43,75 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
+function CreatorCard({ creator: c, inView, index }: { creator: ShowcaseCreator; inView: boolean; index: number }) {
+  const [imgSrc, setImgSrc] = useState<string | null>(c.avatar_url || c.ic_avatar_url || null);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const handleImgError = () => {
+    if (imgSrc === c.avatar_url && c.ic_avatar_url && c.ic_avatar_url !== c.avatar_url) {
+      setImgSrc(c.ic_avatar_url);
+    } else {
+      setImgFailed(true);
+    }
+  };
+
+  const showImage = !!imgSrc && !imgFailed;
+  const platforms = c.platforms ?? [];
+  const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
+
+  return (
+    <Link
+      to={`/creator/${c.profile_slug || c.handle}`}
+      className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col items-center text-center"
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? "translateY(0)" : "translateY(24px)",
+        transition: `opacity 0.5s ease-out ${index * 50}ms, transform 0.5s ease-out ${index * 50}ms, box-shadow 0.3s ease`,
+      }}
+    >
+      <div className="relative mb-3">
+        <div className={`w-[72px] h-[72px] rounded-full overflow-hidden ${c.paradedeck_verified ? "ring-[3px] ring-emerald-500 ring-offset-2" : "ring-1 ring-gray-200"}`}>
+          {showImage ? (
+            <img src={imgSrc!} alt={c.display_name} className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-lg">
+              {getInitials(c.display_name, c.handle)}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 mb-1.5">
+        <h3 className="font-semibold text-[#000741] text-sm leading-tight truncate max-w-[120px]">{c.display_name}</h3>
+        {c.paradedeck_verified && (
+          <Tooltip>
+            <TooltipTrigger asChild><ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" /></TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
+          </Tooltip>
+        )}
+        {c.influencersclub_verified && (
+          <Tooltip>
+            <TooltipTrigger asChild><BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" /></TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">Creator Verified</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
+        {c.branch && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${branchStyle}`}>{c.branch}</span>}
+        {c.status && <span className="text-[10px] text-gray-500 font-medium">{c.status}</span>}
+      </div>
+      <p className="text-sm font-bold text-[#000741] mb-2">
+        {formatFollowerCount(c.follower_count)}
+        <span className="text-xs font-normal text-gray-400 ml-1">followers</span>
+      </p>
+      {platforms.length > 0 && (
+        <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-500 transition-colors">
+          {platforms.map((p) => <span key={p}>{PLATFORM_ICON[p] ?? null}</span>)}
+        </div>
+      )}
+    </Link>
+  );
+}
+
 export default function Creators() {
   const [creators, setCreators] = useState<ShowcaseCreator[]>([]);
   const [inView, setInView] = useState(false);
@@ -97,62 +166,9 @@ export default function Creators() {
           </div>
 
           <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
-            {creators.map((c, i) => {
-              const platforms = c.platforms ?? [];
-              const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
-              return (
-                <Link
-                  key={c.id}
-                  to={`/creator/${c.profile_slug || c.handle}`}
-                  className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col items-center text-center"
-                  style={{
-                    opacity: inView ? 1 : 0,
-                    transform: inView ? "translateY(0)" : "translateY(24px)",
-                    transition: `opacity 0.5s ease-out ${i * 50}ms, transform 0.5s ease-out ${i * 50}ms, box-shadow 0.3s ease`,
-                  }}
-                >
-                  <div className="relative mb-3">
-                    <div className={`w-[72px] h-[72px] rounded-full overflow-hidden ${c.paradedeck_verified ? "ring-[3px] ring-emerald-500 ring-offset-2" : "ring-1 ring-gray-200"}`}>
-                      {c.avatar_url ? (
-                        <img src={c.avatar_url} alt={c.display_name} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-lg">
-                          {getInitials(c.display_name, c.handle)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 mb-1.5">
-                    <h3 className="font-semibold text-[#000741] text-sm leading-tight truncate max-w-[120px]">{c.display_name}</h3>
-                    {c.paradedeck_verified && (
-                      <Tooltip>
-                        <TooltipTrigger asChild><ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" /></TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {c.influencersclub_verified && (
-                      <Tooltip>
-                        <TooltipTrigger asChild><BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" /></TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">Creator Verified</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
-                    {c.branch && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${branchStyle}`}>{c.branch}</span>}
-                    {c.status && <span className="text-[10px] text-gray-500 font-medium">{c.status}</span>}
-                  </div>
-                  <p className="text-sm font-bold text-[#000741] mb-2">
-                    {formatFollowerCount(c.follower_count)}
-                    <span className="text-xs font-normal text-gray-400 ml-1">followers</span>
-                  </p>
-                  {platforms.length > 0 && (
-                    <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-500 transition-colors">
-                      {platforms.map((p) => <span key={p}>{PLATFORM_ICON[p] ?? null}</span>)}
-                    </div>
-                  )}
-                </Link>
-              );
-            })}
+            {creators.map((c, i) => (
+              <CreatorCard key={c.id} creator={c} inView={inView} index={i} />
+            ))}
           </div>
 
           {creators.length === 0 && (

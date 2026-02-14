@@ -23,6 +23,7 @@ export interface ShowcaseCreator extends FeaturedCreator {
   paradedeck_verified: boolean;
   influencersclub_verified: boolean;
   profile_slug: string | null;
+  ic_avatar_url: string | null;
 }
 
 /** For hero: top 3 active featured creators by sort_order. */
@@ -76,6 +77,7 @@ export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator
     paradedeck_verified: (row.paradedeck_verified as boolean) ?? false,
     influencersclub_verified: (row.influencersclub_verified as boolean) ?? false,
     profile_slug: (row.profile_slug as string) ?? null,
+    ic_avatar_url: (row.ic_avatar_url as string) ?? null,
   }));
 }
 
