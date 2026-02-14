@@ -209,7 +209,7 @@ export async function runVerificationAnalysis(params: {
   personName: string;
   claimedStatus: string;
   claimedBranch: string;
-  claimedRank: string;
+  claimedType: string;
   pdlData: unknown;
   serpResults: unknown;
   firecrawlExtractions: unknown;
@@ -225,7 +225,7 @@ CRITICAL PRINCIPLES:
 - A lack of PDL employment data, web results, or scrape content should NOT lower confidence — these databases are incomplete.
 - Military service records are often not publicly available. This is normal.
 
-Analyze the following evidence about ${params.personName} who claims to be a ${params.claimedStatus} from the ${params.claimedBranch} with rank ${params.claimedRank}.
+Analyze the following evidence about ${params.personName} who claims to be a ${params.claimedStatus} from the ${params.claimedBranch} of type ${params.claimedType}.
 
 Evidence sources:
 1. People Data Labs professional data: ${JSON.stringify(params.pdlData, null, 2)}
@@ -376,7 +376,7 @@ Return ONLY the JSON object, no markdown formatting.`;
 export interface VerificationInput {
   fullName: string;
   claimedBranch: string;
-  claimedRank: string;
+  claimedType: string;
   claimedStatus: string;
   linkedinUrl?: string;
   websiteUrl?: string;
@@ -437,7 +437,7 @@ export async function runVerificationPipeline(
   const queries = [
     `${input.fullName} military veteran`,
     `${input.fullName} ${input.claimedBranch}`,
-    input.claimedRank ? `${input.fullName} ${input.claimedRank}` : "",
+    input.claimedType ? `${input.fullName} ${input.claimedType}` : "",
     `${input.fullName} site:linkedin.com military`,
     `${input.fullName} DD-214`,
   ].filter(Boolean);
@@ -511,7 +511,7 @@ export async function runVerificationPipeline(
     personName: input.fullName,
     claimedStatus: input.claimedStatus,
     claimedBranch: input.claimedBranch,
-    claimedRank: input.claimedRank,
+    claimedType: input.claimedType,
     pdlData,
     serpResults: evidenceSources,
     firecrawlExtractions: firecrawlData,
@@ -532,4 +532,184 @@ export async function runVerificationPipeline(
     firecrawlData,
     aiAnalysis,
   };
+}
+
+// --- Branch Auto-Detection ---
+const BRANCH_PATTERNS: { branch: string; patterns: RegExp[] }[] = [
+  { branch: "Army", patterns: [/\barmy\b/i, /\bsoldier\b/i, /\bfort\s+(bragg|hood|campbell|benning|sill|drum|riley|bliss|carson|stewart|leonard wood)\b/i] },
+  { branch: "Navy", patterns: [/\bnavy\b/i, /\bsailor\b/i, /\bnaval\b/i, /\bUSN\b/] },
+  { branch: "Marines", patterns: [/\bmarine\s*corps?\b/i, /\bUSMC\b/, /\bmarine\b/i, /\bsemper\s*fi\b/i] },
+  { branch: "Air Force", patterns: [/\bair\s*force\b/i, /\bairman\b/i, /\bUSAF\b/] },
+  { branch: "Coast Guard", patterns: [/\bcoast\s*guard\b/i, /\bUSCG\b/] },
+  { branch: "Space Force", patterns: [/\bspace\s*force\b/i, /\bUSSF\b/] },
+];
+
+export function detectBranch(aiAnalysis: string | null, evidenceSources: { snippet: string; category: string }[]): string | null {
+  const texts = [
+    aiAnalysis ?? "",
+    ...evidenceSources.filter((s) => s.category === "Military Service").map((s) => s.snippet),
+  ].join(" ");
+  if (!texts.trim()) return null;
+  const counts: Record<string, number> = {};
+  for (const { branch, patterns } of BRANCH_PATTERNS) {
+    for (const pat of patterns) {
+      const matches = texts.match(new RegExp(pat.source, "gi"));
+      if (matches) counts[branch] = (counts[branch] ?? 0) + matches.length;
+    }
+  }
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return sorted.length > 0 ? sorted[0][0] : null;
+}
+
+// --- Dossier Narrative (Deep Analysis) ---
+export async function generateDossierNarrative(params: {
+  personName: string;
+  claimedBranch: string;
+  claimedType: string;
+  firecrawlContent: string;
+  serpSnippets: string;
+  aiAnalysis: string;
+}): Promise<string> {
+  const key = getAnthropicKey();
+  if (!key) return "";
+  const prompt = `Summarize this person's background based on the following web content. Write a clean, professional 3-5 paragraph narrative dossier about ${params.personName} (claimed ${params.claimedType}, ${params.claimedBranch}).
+
+Include:
+- Military service background (branch, rank, dates, units if available)
+- Key career highlights and current role
+- Notable achievements, awards, or community involvement
+- Any relevant public information
+
+Use bullet points for key facts where appropriate. Be factual — only include information supported by the sources below. If information is limited, say so briefly.
+
+WEB CONTENT:
+${params.firecrawlContent.slice(0, 8000)}
+
+SEARCH SNIPPETS:
+${params.serpSnippets.slice(0, 3000)}
+
+AI ANALYSIS:
+${params.aiAnalysis.slice(0, 2000)}`;
+
+  try {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+    const data = await res.json();
+    return (data.content?.[0]?.text ?? "").trim();
+  } catch (e) {
+    console.error("[Verification] Dossier generation error:", e);
+    return "";
+  }
+}
+
+// --- Career Timeline Extraction ---
+export interface CareerEntry {
+  org: string;
+  title: string;
+  dates: string;
+  location: string;
+  is_military: boolean;
+}
+
+export interface EducationEntry {
+  school: string;
+  degree: string;
+  dates: string;
+}
+
+export interface AwardEntry {
+  name: string;
+  context: string;
+}
+
+export async function extractCareerTimeline(params: {
+  personName: string;
+  firecrawlContent: string;
+  serpSnippets: string;
+}): Promise<{
+  career: CareerEntry[];
+  education: EducationEntry[];
+  awards: AwardEntry[];
+}> {
+  const key = getAnthropicKey();
+  if (!key) return { career: [], education: [], awards: [] };
+  const prompt = `Extract structured career, education, and awards data for ${params.personName} from the following web content. Return ONLY a JSON object with this exact structure:
+{
+  "career": [
+    { "org": "Organization Name", "title": "Job Title", "dates": "2010 - 2015", "location": "City, ST", "is_military": true }
+  ],
+  "education": [
+    { "school": "School Name", "degree": "Degree", "dates": "2005 - 2009" }
+  ],
+  "awards": [
+    { "name": "Award Name", "context": "Brief description" }
+  ]
+}
+
+Rules:
+- Order career entries from most recent to oldest
+- Set is_military=true for military, DoD, VA, or defense contractor roles
+- If dates are unknown, use ""
+- Only include information clearly supported by the sources
+- Return ONLY the JSON object, no markdown formatting
+
+WEB CONTENT:
+${params.firecrawlContent.slice(0, 8000)}
+
+SEARCH SNIPPETS:
+${params.serpSnippets.slice(0, 3000)}`;
+
+  try {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+    const data = await res.json();
+    const text = (data.content?.[0]?.text ?? "").trim();
+    const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(jsonStr);
+    return {
+      career: (parsed.career ?? []).map((c: Record<string, unknown>) => ({
+        org: String(c.org ?? ""),
+        title: String(c.title ?? ""),
+        dates: String(c.dates ?? ""),
+        location: String(c.location ?? ""),
+        is_military: !!c.is_military,
+      })),
+      education: (parsed.education ?? []).map((e: Record<string, unknown>) => ({
+        school: String(e.school ?? ""),
+        degree: String(e.degree ?? ""),
+        dates: String(e.dates ?? ""),
+      })),
+      awards: (parsed.awards ?? []).map((a: Record<string, unknown>) => ({
+        name: String(a.name ?? ""),
+        context: String(a.context ?? ""),
+      })),
+    };
+  } catch (e) {
+    console.error("[Verification] Career extraction error:", e);
+    return { career: [], education: [], awards: [] };
+  }
 }

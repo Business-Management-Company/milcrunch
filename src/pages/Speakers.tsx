@@ -56,6 +56,8 @@ import {
   Plus,
   Check,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TYPE_OPTIONS } from "@/types/verification";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -84,7 +86,7 @@ interface VerificationInfo {
   verification_score: number | null;
   status: string | null;
   claimed_branch: string | null;
-  claimed_rank: string | null;
+  claimed_type: string | null;
   claimed_status: string | null;
   ai_analysis: string | null;
 }
@@ -201,7 +203,7 @@ export default function Speakers() {
     if (speaker.verification_id) {
       const { data } = await supabase
         .from("verifications")
-        .select("id, verification_score, status, claimed_branch, claimed_rank, claimed_status, ai_analysis")
+        .select("id, verification_score, status, claimed_branch, claimed_type, claimed_status, ai_analysis")
         .eq("id", speaker.verification_id)
         .single();
       setExpandedVerification(data as VerificationInfo | null);
@@ -339,7 +341,7 @@ export default function Speakers() {
         prefill: {
           fullName: speaker.name,
           claimedBranch: speaker.branch ?? "",
-          claimedRank: speaker.rank ?? "",
+          claimedType: speaker.rank ?? "",
           claimedStatus: "veteran",
           linkedinUrl: speaker.linkedin_url ?? "",
           websiteUrl: speaker.website_url ?? "",
@@ -404,7 +406,7 @@ export default function Speakers() {
                 <TableHead className="w-8"></TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Branch</TableHead>
-                <TableHead>Rank</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Bio</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Added</TableHead>
@@ -567,9 +569,9 @@ export default function Speakers() {
                                             {expandedVerification.claimed_branch}
                                           </Badge>
                                         )}
-                                        {expandedVerification.claimed_rank && (
+                                        {expandedVerification.claimed_type && (
                                           <Badge variant="secondary" className="text-xs">
-                                            {expandedVerification.claimed_rank}
+                                            {expandedVerification.claimed_type}
                                           </Badge>
                                         )}
                                         {expandedVerification.claimed_status && (
@@ -691,11 +693,15 @@ export default function Speakers() {
               />
             </div>
             <div>
-              <Label>Rank</Label>
-              <Input
-                value={editForm.rank}
-                onChange={(e) => setEditForm((f) => ({ ...f, rank: e.target.value }))}
-              />
+              <Label>Type</Label>
+              <Select value={editForm.rank} onValueChange={(v) => setEditForm((f) => ({ ...f, rank: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>
+                  {TYPE_OPTIONS.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Bio</Label>

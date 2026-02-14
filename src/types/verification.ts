@@ -20,7 +20,7 @@ export interface VerificationRecord {
   id: string;
   person_name: string;
   claimed_branch: string | null;
-  claimed_rank: string | null;
+  claimed_type: string | null;
   claimed_status: string | null;
   linkedin_url: string | null;
   website_url: string | null;
@@ -46,6 +46,7 @@ export interface VerificationRecord {
 }
 
 export const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"] as const;
+export const TYPE_OPTIONS = ["Veteran", "Active Duty", "Reserve", "National Guard", "Spouse", "Other"] as const;
 export const CLAIMED_STATUS_OPTIONS: { value: ClaimedStatus; label: string }[] = [
   { value: "veteran", label: "Veteran" },
   { value: "active_duty", label: "Active Duty" },

@@ -56,17 +56,25 @@ import {
   MapPin,
   Trophy,
   Save,
+  GraduationCap,
+  Award,
 } from "lucide-react";
-import { BRANCHES, CLAIMED_STATUS_OPTIONS } from "@/types/verification";
+import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
 import {
   runVerificationPipeline,
   searchSerp,
   categorizeAndScoreSnippet,
   filterCriminalResults,
+  detectBranch,
+  generateDossierNarrative,
+  extractCareerTimeline,
   type PipelinePhase,
   type PDLResponse,
   type AIFilteredCriminalResult,
+  type CareerEntry,
+  type EducationEntry,
+  type AwardEntry,
 } from "@/lib/verification";
 import {
   DropdownMenu,
@@ -157,7 +165,7 @@ function SourceIcon({ category }: { category: string }) {
 interface PrefillData {
   fullName: string;
   claimedBranch: string;
-  claimedRank: string;
+  claimedType: string;
   claimedStatus: string;
   linkedinUrl: string;
   websiteUrl: string;
@@ -167,6 +175,8 @@ interface PrefillData {
   zip?: string;
   source?: string;
   sourceUsername?: string;
+  /** @deprecated kept for backwards compat with old navigation state */
+  claimedRank?: string;
 }
 
 export default function Verification() {
@@ -180,7 +190,7 @@ export default function Verification() {
   const [addForm, setAddForm] = useState({
     fullName: "",
     claimedBranch: "",
-    claimedRank: "",
+    claimedType: "",
     claimedStatus: "veteran",
     linkedinUrl: "",
     websiteUrl: "",
@@ -225,7 +235,7 @@ export default function Verification() {
       setAddForm({
         fullName: p.fullName,
         claimedBranch: p.claimedBranch,
-        claimedRank: p.claimedRank,
+        claimedType: p.claimedType || p.claimedRank || "",
         claimedStatus: p.claimedStatus || "veteran",
         linkedinUrl: p.linkedinUrl,
         websiteUrl: p.websiteUrl,
@@ -267,7 +277,7 @@ export default function Verification() {
         {
           fullName: addForm.fullName.trim(),
           claimedBranch: addForm.claimedBranch || "Unknown",
-          claimedRank: addForm.claimedRank.trim(),
+          claimedType: addForm.claimedType.trim(),
           claimedStatus: addForm.claimedStatus,
           linkedinUrl: addForm.linkedinUrl.trim() || undefined,
           websiteUrl: addForm.websiteUrl.trim() || undefined,
@@ -275,12 +285,16 @@ export default function Verification() {
         },
         onPhase
       );
+      // Auto-detect branch from AI analysis if not manually set
+      const detectedBranch = detectBranch(result.aiAnalysis, result.evidenceSources);
+      const finalBranch = addForm.claimedBranch || detectedBranch || null;
+
       const { data: inserted, error } = await supabase
         .from("verifications")
         .insert({
           person_name: addForm.fullName.trim(),
-          claimed_branch: addForm.claimedBranch || null,
-          claimed_rank: addForm.claimedRank.trim() || null,
+          claimed_branch: finalBranch,
+          claimed_type: addForm.claimedType || null,
           claimed_status: addForm.claimedStatus,
           linkedin_url: addForm.linkedinUrl.trim() || null,
           website_url: addForm.websiteUrl.trim() || null,
@@ -310,8 +324,8 @@ export default function Verification() {
             ...inserted,
             id: inserted.id,
             person_name: addForm.fullName.trim(),
-            claimed_branch: addForm.claimedBranch || null,
-            claimed_rank: addForm.claimedRank || null,
+            claimed_branch: finalBranch,
+            claimed_type: addForm.claimedType || null,
             claimed_status: addForm.claimedStatus,
             linkedin_url: addForm.linkedinUrl.trim() || null,
             website_url: addForm.websiteUrl.trim() || null,
@@ -337,7 +351,7 @@ export default function Verification() {
           } as VerificationRecord,
           ...prev,
         ]);
-        setAddForm({ fullName: "", claimedBranch: "", claimedRank: "", claimedStatus: "veteran", linkedinUrl: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
+        setAddForm({ fullName: "", claimedBranch: "", claimedType: "", claimedStatus: "veteran", linkedinUrl: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
         setTimeout(() => {
           setAddOpen(false);
           setNewRecordId(null);
@@ -354,7 +368,7 @@ export default function Verification() {
     setSpeakerForm({
       name: row.person_name,
       branch: row.claimed_branch ?? "",
-      rank: row.claimed_rank ?? "",
+      rank: row.claimed_type ?? "",
       bio: (() => {
         // Priority 1: notes field (bio from Discovery enrichment) — skip error messages
         if (row.notes && !/failed|error|skipped/i.test(row.notes)) return row.notes;
@@ -418,7 +432,7 @@ export default function Verification() {
       ``,
       `Name: ${row.person_name}`,
       `Branch: ${row.claimed_branch ?? "—"}`,
-      `Rank: ${row.claimed_rank ?? "—"}`,
+      `Type: ${row.claimed_type ?? "—"}`,
       `Status: ${row.claimed_status ?? "—"}`,
       `Location: ${[row.city, row.state, row.zip].filter(Boolean).join(", ") || "—"}`,
       ``,
@@ -445,7 +459,7 @@ export default function Verification() {
         {
           fullName: row.person_name,
           claimedBranch: row.claimed_branch ?? "Unknown",
-          claimedRank: row.claimed_rank ?? "",
+          claimedType: row.claimed_type ?? "",
           claimedStatus: row.claimed_status ?? "veteran",
           linkedinUrl: row.linkedin_url ?? undefined,
           websiteUrl: row.website_url ?? undefined,
@@ -562,12 +576,15 @@ export default function Verification() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Rank</Label>
-                  <Input
-                    value={addForm.claimedRank}
-                    onChange={(e) => setAddForm((f) => ({ ...f, claimedRank: e.target.value }))}
-                    placeholder="e.g. Sergeant, Captain"
-                  />
+                  <Label>Type</Label>
+                  <Select value={addForm.claimedType} onValueChange={(v) => setAddForm((f) => ({ ...f, claimedType: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {TYPE_OPTIONS.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Status</Label>
@@ -673,7 +690,7 @@ export default function Verification() {
                   <TableHead className="w-8"></TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Branch</TableHead>
-                  <TableHead>Rank</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Confidence</TableHead>
                   <TableHead>Sources</TableHead>
@@ -694,7 +711,7 @@ export default function Verification() {
                       </TableCell>
                       <TableCell className="font-medium">{row.person_name}</TableCell>
                       <TableCell>{row.claimed_branch ?? "—"}</TableCell>
-                      <TableCell>{row.claimed_rank ?? "—"}</TableCell>
+                      <TableCell>{row.claimed_type ?? "—"}</TableCell>
                       <TableCell><StatusBadge status={row.status ?? "pending"} /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -771,8 +788,15 @@ export default function Verification() {
               <Input value={speakerForm.branch} onChange={(e) => setSpeakerForm((f) => ({ ...f, branch: e.target.value }))} />
             </div>
             <div>
-              <Label>Rank</Label>
-              <Input value={speakerForm.rank} onChange={(e) => setSpeakerForm((f) => ({ ...f, rank: e.target.value }))} />
+              <Label>Type</Label>
+              <Select value={speakerForm.rank} onValueChange={(v) => setSpeakerForm((f) => ({ ...f, rank: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>
+                  {TYPE_OPTIONS.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Bio</Label>
@@ -1267,6 +1291,307 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
   );
 }
 
+function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
+  const [narrative, setNarrative] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [rawOpen, setRawOpen] = useState(false);
+  const redFlags = (record.red_flags ?? []) as RedFlag[];
+  const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
+  const sources = (record.evidence_sources ?? []) as EvidenceSource[];
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const result = await generateDossierNarrative({
+        personName: record.person_name,
+        claimedBranch: record.claimed_branch ?? "Unknown",
+        claimedType: record.claimed_type ?? "",
+        firecrawlContent: firecrawlData.map((f) => f.markdown ?? "").join("\n\n---\n\n"),
+        serpSnippets: sources.map((s) => `${s.title}: ${s.snippet}`).join("\n"),
+        aiAnalysis: record.ai_analysis ?? "",
+      });
+      setNarrative(result || null);
+    } catch {
+      setNarrative(null);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {redFlags.length > 0 && (
+        <Card className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-red-700 dark:text-red-400"><AlertCircle className="h-4 w-4" /> Red Flags</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside space-y-1 text-sm text-red-800 dark:text-red-300">
+              {redFlags.map((f, i) => (
+                <li key={i}>{f.text} {f.source && <a href={f.source} target="_blank" rel="noopener noreferrer" className="underline">Source</a>}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Narrative Dossier */}
+      {narrative === null && !generating ? (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardContent className="py-8 text-center">
+            <FileText className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-4">
+              Generate an AI-powered narrative dossier from all collected web sources and analysis.
+            </p>
+            <Button onClick={handleGenerate} className="bg-[#0064B1] hover:bg-[#053877]">
+              <Loader2 className={cn("h-4 w-4 mr-2", generating ? "animate-spin" : "hidden")} />
+              Generate Dossier
+            </Button>
+          </CardContent>
+        </Card>
+      ) : generating ? (
+        <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+          <CardContent className="flex items-center gap-3 py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+            <p className="text-sm text-blue-700 dark:text-blue-300">Generating narrative dossier for {record.person_name}...</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-[#0064B1]" /> Background Dossier
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+              {narrative}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleGenerate}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => {
+                navigator.clipboard.writeText(narrative ?? "");
+                toast.success("Dossier copied to clipboard");
+              }}>
+                <Download className="h-3.5 w-3.5 mr-1.5" /> Copy
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Collapsible Raw Sources */}
+      {firecrawlData.length > 0 && (
+        <div>
+          <button
+            onClick={() => setRawOpen(!rawOpen)}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {rawOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            Raw Sources ({firecrawlData.length})
+          </button>
+          {rawOpen && (
+            <div className="mt-3 space-y-3">
+              {firecrawlData.map((f, i) => (
+                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#0064B1] hover:underline flex items-center gap-1">
+                        {f.url} <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: highlightMilitaryText((f.markdown ?? "").slice(0, 2000)) }} />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {firecrawlData.length === 0 && narrative === null && !generating && (
+        <p className="text-sm text-muted-foreground">No scraped content available for deep analysis.</p>
+      )}
+    </div>
+  );
+}
+
+function CareerTrackTab({ record }: { record: VerificationRecord }) {
+  const pdlData = record.pdl_data as PDLResponse | null;
+  const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
+  const sources = (record.evidence_sources ?? []) as EvidenceSource[];
+  const [aiCareer, setAiCareer] = useState<CareerEntry[]>([]);
+  const [aiEducation, setAiEducation] = useState<EducationEntry[]>([]);
+  const [aiAwards, setAiAwards] = useState<AwardEntry[]>([]);
+  const [extracting, setExtracting] = useState(false);
+  const [extracted, setExtracted] = useState(false);
+
+  const hasPDL = !!(pdlData?.employment?.length);
+
+  // Build PDL career entries
+  const pdlCareer: CareerEntry[] = hasPDL
+    ? ((pdlData!.employment ?? []) as { title?: string; name?: string; organization?: string; company?: string; start_date?: string; end_date?: string; location_names?: string[] }[]).map((job) => {
+        const org = (job.organization ?? job.company ?? "").toLowerCase();
+        const title = (job.title ?? job.name ?? "").toLowerCase();
+        const isMil = MILITARY_EMPLOYERS.some((e) => org.includes(e.toLowerCase())) || MILITARY_TITLES.some((t) => title.includes(t.toLowerCase()));
+        return {
+          org: job.organization ?? job.company ?? "Unknown",
+          title: job.title ?? job.name ?? "",
+          dates: `${job.start_date ?? ""} – ${job.end_date ?? "Present"}`,
+          location: (job.location_names ?? []).join(", "),
+          is_military: isMil,
+        };
+      })
+    : [];
+
+  const pdlEducation: EducationEntry[] = pdlData?.education?.length
+    ? (pdlData.education as { school?: string; degree?: string; start_date?: string; end_date?: string }[]).map((e) => ({
+        school: e.school ?? "",
+        degree: e.degree ?? "",
+        dates: e.start_date || e.end_date ? `${e.start_date ?? ""} – ${e.end_date ?? ""}` : "",
+      }))
+    : [];
+
+  const handleExtract = async () => {
+    setExtracting(true);
+    try {
+      const result = await extractCareerTimeline({
+        personName: record.person_name,
+        firecrawlContent: firecrawlData.map((f) => f.markdown ?? "").join("\n\n---\n\n"),
+        serpSnippets: sources.map((s) => `${s.title}: ${s.snippet}`).join("\n"),
+      });
+      setAiCareer(result.career);
+      setAiEducation(result.education);
+      setAiAwards(result.awards);
+      setExtracted(true);
+    } catch {
+      setExtracted(true);
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const careerEntries = hasPDL ? pdlCareer : aiCareer;
+  const educationEntries = hasPDL ? pdlEducation : aiEducation;
+  const showExtractButton = !hasPDL && !extracted && !extracting;
+
+  return (
+    <div className="space-y-6">
+      {/* Career Timeline */}
+      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Briefcase className="h-4 w-4" /> Career Track
+            {hasPDL && <Badge variant="secondary" className="text-xs">PDL Data</Badge>}
+            {!hasPDL && extracted && <Badge variant="secondary" className="text-xs">AI Extracted</Badge>}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {showExtractButton ? (
+            <div className="text-center py-6">
+              <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground mb-4">No PDL data available. Extract career info from web sources using AI.</p>
+              <Button onClick={handleExtract} className="bg-[#0064B1] hover:bg-[#053877]">
+                Extract Career Data
+              </Button>
+            </div>
+          ) : extracting ? (
+            <div className="flex items-center gap-3 py-6 justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+              <p className="text-sm text-muted-foreground">Extracting career data from web sources...</p>
+            </div>
+          ) : careerEntries.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground">No career data found.</p>
+              <p className="text-xs text-muted-foreground mt-1">This is normal — many people are not in public databases.</p>
+            </div>
+          ) : (
+            <ul className="space-y-4">
+              {careerEntries.map((entry, i) => (
+                <li
+                  key={i}
+                  className={cn(
+                    "flex gap-4 pl-4 py-3 border-l-4 rounded-r-lg",
+                    entry.is_military
+                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
+                      : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{entry.org}</p>
+                      {entry.is_military && <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{entry.title}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      {entry.dates && <span>{entry.dates}</span>}
+                      {entry.location && (
+                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{entry.location}</span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Education */}
+      {educationEntries.length > 0 && (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <GraduationCap className="h-4 w-4" /> Education
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {educationEntries.map((e, i) => (
+                <li key={i} className="flex items-start gap-3 pl-4 border-l-4 border-blue-300 dark:border-blue-700 py-2">
+                  <div>
+                    <p className="font-medium">{e.school}</p>
+                    {e.degree && <p className="text-sm text-muted-foreground">{e.degree}</p>}
+                    {e.dates && <p className="text-xs text-muted-foreground">{e.dates}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Awards & Recognition */}
+      {aiAwards.length > 0 && (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Award className="h-4 w-4" /> Awards & Recognition
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {aiAwards.map((a, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <Trophy className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">{a.name}</p>
+                    {a.context && <p className="text-xs text-muted-foreground">{a.context}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
@@ -1275,9 +1600,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [notesOpen, setNotesOpen] = useState(false);
   const [editNotes, setEditNotes] = useState(record.notes ?? "");
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
-  const redFlags = (record.red_flags ?? []) as RedFlag[];
   const pdlData = record.pdl_data as PDLResponse | null;
-  const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
 
   const handleQuickReverify = async () => {
     setReverifying(true);
@@ -1287,7 +1610,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         {
           fullName: record.person_name,
           claimedBranch: record.claimed_branch ?? "Unknown",
-          claimedRank: record.claimed_rank ?? "",
+          claimedType: record.claimed_type ?? "",
           claimedStatus: record.claimed_status ?? "veteran",
           linkedinUrl: record.linkedin_url ?? undefined,
           websiteUrl: record.website_url ?? undefined,
@@ -1327,7 +1650,6 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     onRefresh?.();
   };
 
-  const proSources = sources.filter((s) => s.category === "Professional" || s.category === "Military Service");
   const locationStr = [record.city, record.state, record.zip].filter(Boolean).join(", ");
 
   const handleRunAdditionalSearch = async () => {
@@ -1367,7 +1689,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         <TabsList className="grid w-full grid-cols-5 gap-1 rounded-lg bg-transparent p-0 border-b border-gray-200 dark:border-gray-700 pb-1">
           <TabsTrigger value="overview" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Overview</TabsTrigger>
           <TabsTrigger value="evidence" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Evidence Sources</TabsTrigger>
-          <TabsTrigger value="professional" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Professional Data</TabsTrigger>
+          <TabsTrigger value="professional" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Career Track</TabsTrigger>
           <TabsTrigger value="criminal" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Criminal History</TabsTrigger>
           <TabsTrigger value="deep" className="rounded-lg px-3 py-2 font-medium text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:hover:bg-gray-700">Deep Analysis</TabsTrigger>
         </TabsList>
@@ -1379,7 +1701,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p className="font-medium">{record.person_name}</p>
-                <p className="text-muted-foreground">{record.claimed_branch ?? "—"} · {record.claimed_rank ?? "—"}</p>
+                <p className="text-muted-foreground">{record.claimed_branch ?? "—"} · {record.claimed_type ?? "—"} · {record.claimed_status ?? "—"}</p>
                 {locationStr && (
                   <p className="text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" /> {locationStr}
@@ -1526,105 +1848,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           </div>
         </TabsContent>
         <TabsContent value="professional" className="mt-4 space-y-6">
-          {/* PDL Employment Timeline */}
-          {pdlData?.employment?.length ? (
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Employment Timeline (PDL)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {((pdlData.employment ?? []) as { title?: string; name?: string; organization?: string; company?: string; start_date?: string; end_date?: string }[]).map((job, i) => {
-                    const org = (job.organization ?? job.company ?? "").toLowerCase();
-                    const title = (job.title ?? job.name ?? "").toLowerCase();
-                    const isMilitary = MILITARY_EMPLOYERS.some((e) => org.includes(e.toLowerCase())) || MILITARY_TITLES.some((t) => title.includes(t.toLowerCase()));
-                    return (
-                      <li
-                        key={i}
-                        className={cn(
-                          "flex gap-3 pl-3 border-l-2",
-                          isMilitary ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-gray-200 dark:border-gray-700"
-                        )}
-                      >
-                        <div>
-                          <p className="font-medium">{job.organization ?? job.company ?? "Unknown"}</p>
-                          <p className="text-sm text-muted-foreground">{job.title ?? job.name ?? ""}</p>
-                          <p className="text-xs text-muted-foreground">{job.start_date ?? ""} – {job.end_date ?? "Present"}</p>
-                        </div>
-                        {isMilitary && <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {pdlData?.education?.length ? (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="font-medium text-sm mb-2">Education</p>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {(pdlData.education as { school?: string; degree?: string }[]).map((e, i) => (
-                        <li key={i}>{e.school ?? ""} {e.degree ?? ""}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {/* Web-Sourced Professional Info (fallback when PDL is empty, or supplement) */}
-          {proSources.length > 0 ? (
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><Globe className="h-4 w-4" /> Professional Info from Web Sources</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {proSources.map((s, i) => (
-                  <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                    <SourceIcon category={s.category} />
-                    <div className="flex-1 min-w-0">
-                      <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0064B1] hover:underline flex items-center gap-1 text-sm">
-                        {s.title} <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-3" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(s.snippet) }} />
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">{s.category}</Badge>
-                        <span className="text-xs text-muted-foreground">{s.relevanceScore}% relevance</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {/* Firecrawl extracted content with military keywords */}
-          {firecrawlData.length > 0 && firecrawlData.some((f) => f.markdown && MILITARY_KEYWORDS.test(f.markdown)) ? (
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Extracted Content</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {firecrawlData.filter((f) => f.markdown && MILITARY_KEYWORDS.test(f.markdown)).map((f, i) => (
-                  <div key={i} className="border-b border-gray-100 dark:border-gray-800 last:border-0 pb-3">
-                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0064B1] hover:underline flex items-center gap-1">
-                      {f.url} <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <div className="text-sm text-muted-foreground mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: highlightMilitaryText((f.markdown ?? "").slice(0, 1500)) }} />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {/* Empty state */}
-          {!pdlData?.employment?.length && proSources.length === 0 && firecrawlData.length === 0 && (
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-              <CardContent className="py-8 text-center">
-                <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No professional data available. PDL lookup did not return data and no professional web sources were found.</p>
-                <p className="text-xs text-muted-foreground mt-1">This is normal — many people are not in the PDL database.</p>
-              </CardContent>
-            </Card>
-          )}
+          <CareerTrackTab record={record} />
         </TabsContent>
         <TabsContent value="criminal" className="mt-4">
           <CriminalHistoryTab
@@ -1636,38 +1860,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           />
         </TabsContent>
         <TabsContent value="deep" className="mt-4">
-          <div className="space-y-4">
-            {redFlags.length > 0 && (
-              <Card className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2 text-red-700 dark:text-red-400"><AlertCircle className="h-4 w-4" /> Red Flags</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-red-800 dark:text-red-300">
-                    {redFlags.map((f, i) => (
-                      <li key={i}>{f.text} {f.source && <a href={f.source} target="_blank" rel="noopener noreferrer" className="underline">Source</a>}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-            {firecrawlData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No scraped content.</p>
-            ) : (
-              firecrawlData.map((f, i) => (
-                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#0064B1] hover:underline">{f.url}</a>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: highlightMilitaryText((f.markdown ?? "").slice(0, 2000)) }} />
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+          <DeepAnalysisTab record={record} />
         </TabsContent>
       </Tabs>
     </div>
