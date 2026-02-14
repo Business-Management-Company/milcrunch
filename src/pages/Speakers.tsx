@@ -441,12 +441,13 @@ export default function Speakers() {
                         )}
                         <span>{speaker.name}</span>
                         {speaker.verification_status === "verified" && (
-                          <Badge
-                            className="gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
-                            variant="secondary"
-                          >
-                            <ShieldCheck className="h-3 w-3" /> Verified
-                          </Badge>
+                          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                        )}
+                        {speaker.verification_status === "pending" && speaker.verification_id && (
+                          <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+                        )}
+                        {speaker.verification_status === "flagged" && (
+                          <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
                         )}
                       </div>
                     </TableCell>
@@ -457,21 +458,13 @@ export default function Speakers() {
                     </TableCell>
                     <TableCell>
                       {speaker.verification_id ? (
-                        <Badge
-                          className={cn(
-                            "gap-1",
-                            speaker.verification_status === "verified"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : speaker.verification_status === "pending"
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-gray-100 text-gray-600"
-                          )}
-                          variant="secondary"
-                        >
-                          {speaker.verification_status ?? "linked"}
-                        </Badge>
+                        speaker.verification_status === "verified"
+                          ? <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                          : speaker.verification_status === "flagged"
+                            ? <AlertTriangle className="h-4 w-4 text-red-500" />
+                            : <Clock className="h-4 w-4 text-amber-500" />
                       ) : (
-                        <span className="text-sm text-muted-foreground">No verification</span>
+                        <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

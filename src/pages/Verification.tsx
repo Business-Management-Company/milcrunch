@@ -155,6 +155,18 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function StatusIcon({ status }: { status: string }) {
+  if (status === "verified") return <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />;
+  if (status === "flagged" || status === "denied") return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
+  return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
+}
+
+function NameStatusIcon({ score }: { score: number }) {
+  if (score >= 70) return <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />;
+  if (score >= 40) return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
+  return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
+}
+
 function SourceIcon({ category }: { category: string }) {
   if (category === "Military Service") return <ShieldCheck className="h-4 w-4 text-[#0064B1]" />;
   if (category === "Criminal Record") return <AlertCircle className="h-4 w-4 text-red-500" />;
@@ -711,10 +723,15 @@ export default function Verification() {
                       <TableCell>
                         {expandedId === row.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </TableCell>
-                      <TableCell className="font-medium">{row.person_name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <NameStatusIcon score={row.verification_score ?? 0} />
+                          <span>{row.person_name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>{row.claimed_branch ?? "—"}</TableCell>
                       <TableCell>{row.claimed_type ?? "—"}</TableCell>
-                      <TableCell><StatusBadge status={row.status ?? "pending"} /></TableCell>
+                      <TableCell><StatusIcon status={row.status ?? "pending"} /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Progress value={row.verification_score ?? 0} className="h-2 w-20" />

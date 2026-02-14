@@ -46,7 +46,7 @@ export interface VerificationRecord {
 }
 
 export const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"] as const;
-export const TYPE_OPTIONS = ["Veteran", "Active Duty", "Reserve", "National Guard", "Spouse", "Other"] as const;
+export const TYPE_OPTIONS = ["Veteran", "Active Duty", "Spouse", "DoD", "Other"] as const;
 export const CLAIMED_STATUS_OPTIONS: { value: ClaimedStatus; label: string }[] = [
   { value: "veteran", label: "Veteran" },
   { value: "active_duty", label: "Active Duty" },
