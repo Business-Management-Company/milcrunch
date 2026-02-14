@@ -333,6 +333,22 @@ export default function CreatorProfileModal({
   const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
   const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
   const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
+  const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
+
+  // Debug: log full enrichment response to verify platform data structure
+  useEffect(() => {
+    if (enriched) {
+      console.log("[CreatorProfileModal] FULL ENRICHMENT:", JSON.stringify(enriched, null, 2));
+      console.log("[CreatorProfileModal] resultTop keys:", Object.keys(resultTop));
+      console.log("[CreatorProfileModal] Platform data:", {
+        instagram: ig ? Object.keys(ig as object) : null,
+        tiktok: tiktokData ? Object.keys(tiktokData) : null,
+        youtube: youtubeData ? Object.keys(youtubeData) : null,
+        twitter: twitterData ? Object.keys(twitterData) : null,
+        creator_has: resultTop.creator_has,
+      });
+    }
+  }, [enriched]);
   // growthObj and incomeObj are computed per-platform in the analytics useMemo below
 
   const displayUsername =
@@ -348,8 +364,11 @@ export default function CreatorProfileModal({
     if (selectedPlatform === "youtube" && youtubeData) {
       return (youtubeData.description as string) ?? (youtubeData.biography as string) ?? creator?.bio ?? "";
     }
+    if (selectedPlatform === "twitter" && twitterData) {
+      return (twitterData.biography as string) ?? (twitterData.bio as string) ?? (twitterData.description as string) ?? creator?.bio ?? "";
+    }
     return (igRecord?.biography as string) ?? creator?.bio ?? "";
-  }, [selectedPlatform, tiktokData, youtubeData, igRecord, creator?.bio]);
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, creator?.bio]);
   const location =
     (igRecord?.location as string) ??
     (igRecord?.country as string) ??
@@ -364,16 +383,16 @@ export default function CreatorProfileModal({
     (igRecord?.category as string) ?? (Array.isArray(nicheClass) && nicheClass.length ? nicheClass.join(", ") : "") ?? "";
   const isVerified = Boolean(igRecord?.is_verified);
 
-  const { followers, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgReelLikes, avgViews } = useMemo(() => {
+  const { followers, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews } = useMemo(() => {
     if (selectedPlatform === "tiktok" && tiktokData) {
       return {
         followers: Number(tiktokData.follower_count ?? 0),
         engagement: Number(tiktokData.engagement_percent ?? 0),
         mediaCount: Number(tiktokData.media_count ?? tiktokData.video_count ?? 0),
-        postsPerMonth: 0,
+        postsPerMonth: Number(tiktokData.posting_frequency_recent_months ?? 0),
         avgLikes: Number(tiktokData.avg_likes ?? tiktokData.avg_like_count ?? 0),
         avgComments: Number(tiktokData.avg_comments ?? tiktokData.avg_comment_count ?? 0),
-        avgReelLikes: 0,
+        avgSpecial: Number(tiktokData.avg_shares ?? tiktokData.avg_share_count ?? 0),
         avgViews: Number(tiktokData.avg_view_count ?? tiktokData.avg_views ?? 0),
       };
     }
@@ -382,11 +401,23 @@ export default function CreatorProfileModal({
         followers: Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0),
         engagement: Number(youtubeData.engagement_percent ?? 0),
         mediaCount: Number(youtubeData.video_count ?? youtubeData.media_count ?? 0),
-        postsPerMonth: 0,
+        postsPerMonth: Number(youtubeData.posting_frequency_recent_months ?? 0),
         avgLikes: Number(youtubeData.avg_likes ?? youtubeData.avg_like_count ?? 0),
         avgComments: Number(youtubeData.avg_comments ?? youtubeData.avg_comment_count ?? 0),
-        avgReelLikes: 0,
+        avgSpecial: Number(youtubeData.avg_short_plays ?? youtubeData.avg_shorts_plays ?? 0),
         avgViews: Number(youtubeData.avg_view_count ?? youtubeData.avg_views ?? 0),
+      };
+    }
+    if (selectedPlatform === "twitter" && twitterData) {
+      return {
+        followers: Number(twitterData.follower_count ?? 0),
+        engagement: Number(twitterData.engagement_percent ?? 0),
+        mediaCount: Number(twitterData.media_count ?? twitterData.tweet_count ?? twitterData.statuses_count ?? 0),
+        postsPerMonth: Number(twitterData.posting_frequency_recent_months ?? 0),
+        avgLikes: Number(twitterData.avg_likes ?? twitterData.avg_like_count ?? 0),
+        avgComments: Number(twitterData.avg_comments ?? twitterData.avg_comment_count ?? twitterData.avg_replies ?? 0),
+        avgSpecial: Number(twitterData.avg_retweets ?? twitterData.avg_retweet_count ?? 0),
+        avgViews: Number(twitterData.avg_views ?? twitterData.avg_view_count ?? twitterData.avg_impressions ?? 0),
       };
     }
     return {
@@ -396,16 +427,46 @@ export default function CreatorProfileModal({
       postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? 0),
       avgLikes: Number(igRecord?.avg_likes ?? 0),
       avgComments: Number(igRecord?.avg_comments ?? 0),
-      avgReelLikes: Number(reelsObj?.avg_like_count ?? 0),
+      avgSpecial: Number(reelsObj?.avg_like_count ?? 0),
       avgViews: Number(reelsObj?.avg_view_count ?? 0),
     };
-  }, [selectedPlatform, tiktokData, youtubeData, igRecord, reelsObj, creator]);
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, reelsObj, creator]);
+
+  const statLabels = useMemo(() => {
+    switch (selectedPlatform) {
+      case "youtube":
+        return { followers: "Subscribers", mediaCount: "Videos", postsPerMonth: "Videos per Month", avgSpecial: "Avg Short Plays", avgLikes: "Average Likes", avgComments: "Average Comments", avgViews: "Average Views" };
+      case "tiktok":
+        return { followers: "Followers", mediaCount: "Videos", postsPerMonth: "Videos per Month", avgSpecial: "Average Shares", avgLikes: "Average Likes", avgComments: "Average Comments", avgViews: "Average Views" };
+      case "twitter":
+        return { followers: "Followers", mediaCount: "Tweets", postsPerMonth: "Tweets per Month", avgSpecial: "Average Retweets", avgLikes: "Average Likes", avgComments: "Average Comments", avgViews: "Average Views" };
+      default:
+        return { followers: "Followers", mediaCount: "Number of Posts", postsPerMonth: "Posts per Month", avgSpecial: "Average Reel Likes", avgLikes: "Average Likes", avgComments: "Average Comments", avgViews: "Average Views" };
+    }
+  }, [selectedPlatform]);
+
+  const platformHashtags = useMemo(() => {
+    let platData: Record<string, unknown> | undefined;
+    if (selectedPlatform === "tiktok") platData = tiktokData;
+    else if (selectedPlatform === "youtube") platData = youtubeData;
+    else if (selectedPlatform === "twitter") platData = twitterData;
+    else platData = igRecord;
+    if (!platData) return [];
+    const raw = platData.hashtags ?? platData.frequently_used_hashtags ?? platData.top_hashtags ?? platData.popular_hashtags ?? platData.tags;
+    if (!Array.isArray(raw)) return [];
+    return raw.slice(0, 10).map((t: unknown) => {
+      if (typeof t === "string") return t.replace(/^#/, "");
+      if (t && typeof t === "object" && "name" in t) return String((t as { name: string }).name).replace(/^#/, "");
+      return String(t);
+    });
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord]);
 
   const { incomeMin, incomeMax, income, followerGrowth, reelsPct } = useMemo(() => {
     // Pick the platform-specific data record for analytics
     let platRecord: Record<string, unknown> | undefined;
     if (selectedPlatform === "tiktok") platRecord = tiktokData;
     else if (selectedPlatform === "youtube") platRecord = youtubeData;
+    else if (selectedPlatform === "twitter") platRecord = twitterData;
     else platRecord = igRecord;
 
     const incObj = platRecord?.income as Record<string, unknown> | undefined;
@@ -434,14 +495,15 @@ export default function CreatorProfileModal({
       followerGrowth: fGrowth,
       reelsPct: rPct,
     };
-  }, [selectedPlatform, tiktokData, youtubeData, igRecord]);
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord]);
 
   const showEnrichmentLoading = enrichmentLoading && !enrichmentTimedOut;
   const engagementDisplay = engagement != null && engagement > 0 ? engagement : null;
   const hasDataForPlatform =
     (selectedPlatform === "instagram" && !!ig) ||
-    (selectedPlatform === "tiktok" && !!(resultTop as Record<string, unknown>).tiktok) ||
-    (selectedPlatform === "youtube" && !!(resultTop as Record<string, unknown>).youtube);
+    (selectedPlatform === "tiktok" && !!tiktokData) ||
+    (selectedPlatform === "youtube" && !!youtubeData) ||
+    (selectedPlatform === "twitter" && !!twitterData);
 
   const recentPosts: PostItem[] = useMemo(() => {
     const raw = igRecord?.post_data;
@@ -489,10 +551,16 @@ export default function CreatorProfileModal({
         return tiktokData?.username ? `https://tiktok.com/@${tiktokData.username}` : `https://tiktok.com/@${u}`;
       case "youtube":
         return youtubeData?.custom_url ?? (youtubeData?.channel_id ? `https://youtube.com/channel/${youtubeData.channel_id}` : `https://youtube.com/@${u}`);
+      case "twitter": {
+        const handle = (twitterData?.username as string) ?? u;
+        return `https://x.com/${handle}`;
+      }
+      case "linkedin":
+        return `https://linkedin.com/in/${u}`;
       default:
         return `https://instagram.com/${u}`;
     }
-  }, [selectedPlatform, displayUsername, creator?.username, tiktokData?.username, youtubeData?.custom_url, youtubeData?.channel_id]);
+  }, [selectedPlatform, displayUsername, creator?.username, tiktokData?.username, youtubeData?.custom_url, youtubeData?.channel_id, twitterData?.username]);
 
   const OTHER_LINKS_SHOWN = 4;
   const platformLinksFromEnrichment = useMemo(() => {
@@ -597,14 +665,14 @@ export default function CreatorProfileModal({
             <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
             <div className="space-y-0 text-sm">
               {[
-                { label: "Followers", value: followers ? formatNumber(followers) : "—" },
+                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—" },
                 { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : "—" },
-                { label: "Number of Posts", value: mediaCount ? formatNumber(mediaCount) : "—" },
-                { label: "Posts per Month", value: postsPerMonth ? formatNumber(postsPerMonth) : "—" },
-                { label: "Average Views", value: avgViews ? formatNumber(avgViews) : "—" },
-                { label: "Average Reel Likes", value: avgReelLikes ? formatNumber(avgReelLikes) : "—" },
-                { label: "Average Likes", value: avgLikes ? formatNumber(avgLikes) : "—" },
-                { label: "Average Comments", value: avgComments ? formatNumber(avgComments) : "—" },
+                { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : "—" },
+                { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : "—" },
+                { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : "—" },
+                { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : "—" },
+                { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : "—" },
+                { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : "—" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">{label}</span>
@@ -657,12 +725,12 @@ export default function CreatorProfileModal({
                   </p>
                 )}
 
-                {(hasDataForPlatform || selectedPlatform === "instagram") && (
+                {hasDataForPlatform && (
                   <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30 dark:bg-[#0F1117] p-4">
                     <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">{PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}</p>
                     <div className="flex flex-wrap gap-6">
                       <div>
-                        <p className="text-xs text-muted-foreground">{selectedPlatform === "youtube" ? "Subscribers" : "Followers"}</p>
+                        <p className="text-xs text-muted-foreground">{statLabels.followers}</p>
                         <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(followers)}</p>
                       </div>
                       <div>
@@ -671,7 +739,7 @@ export default function CreatorProfileModal({
                       </div>
                       {mediaCount > 0 && (
                         <div>
-                          <p className="text-xs text-muted-foreground">{selectedPlatform === "youtube" ? "Videos" : "Posts"}</p>
+                          <p className="text-xs text-muted-foreground">{statLabels.mediaCount}</p>
                           <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(mediaCount)}</p>
                         </div>
                       )}
@@ -743,7 +811,11 @@ export default function CreatorProfileModal({
                             ? (tiktokData?.username ? `https://tiktok.com/@${tiktokData.username}` : `https://tiktok.com/@${displayUsername}`)
                             : p === "youtube"
                               ? (youtubeData?.custom_url ?? (youtubeData?.channel_id ? `https://youtube.com/channel/${youtubeData.channel_id}` : `https://youtube.com/@${displayUsername}`))
-                              : "#";
+                              : p === "twitter"
+                                ? `https://x.com/${(twitterData?.username as string) ?? displayUsername}`
+                                : p === "linkedin"
+                                  ? `https://linkedin.com/in/${displayUsername}`
+                                  : "#";
                       return (
                         <a
                           key={p}
@@ -871,18 +943,30 @@ export default function CreatorProfileModal({
                           <p className="text-sm text-muted-foreground">{String(followerGrowth)}</p>
                         </div>
                       )}
-                      {reelsPct > 0 && (
+                      {selectedPlatform === "instagram" && reelsPct > 0 && (
                         <div>
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Content Mix</p>
                           <p className="text-sm text-muted-foreground">Reels {reelsPct}% of last 12 posts</p>
                         </div>
                       )}
                       <div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Posting Frequency</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">{statLabels.postsPerMonth.replace(" per Month", " Frequency").replace(" per Month", " Frequency")}</p>
                         <p className="text-sm text-muted-foreground">
                           {postsPerMonth != null && postsPerMonth > 0 ? `${formatNumber(postsPerMonth)} / mo` : "—"}
                         </p>
                       </div>
+                      {platformHashtags.length > 0 && (
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Top Hashtags</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {platformHashtags.map((tag: string) => (
+                              <span key={tag} className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </TabsContent>
                     <TabsContent value="posts" className="mt-4">
                       {recentPosts.length === 0 ? (
