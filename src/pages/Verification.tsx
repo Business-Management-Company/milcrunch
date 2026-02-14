@@ -219,7 +219,7 @@ export default function Verification() {
 
   // Pre-fill from discovery navigation state
   useEffect(() => {
-    const state = location.state as { prefill?: PrefillData } | null;
+    const state = location.state as { prefill?: PrefillData; expandId?: string } | null;
     if (state?.prefill) {
       const p = state.prefill;
       setAddForm({
@@ -237,7 +237,9 @@ export default function Verification() {
         sourceUsername: p.sourceUsername || "",
       });
       setAddOpen(true);
-      // Clear navigation state so refreshing doesn't re-open
+      navigate(location.pathname, { replace: true, state: {} });
+    } else if (state?.expandId) {
+      setExpandedId(state.expandId);
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state]);
@@ -353,7 +355,17 @@ export default function Verification() {
       name: row.person_name,
       branch: row.claimed_branch ?? "",
       rank: row.claimed_rank ?? "",
-      bio: row.notes ?? (row.ai_analysis ? row.ai_analysis.slice(0, 300) : ""),
+      bio: (() => {
+        // Priority 1: notes field (bio from Discovery enrichment) — skip error messages
+        if (row.notes && !/failed|error|skipped/i.test(row.notes)) return row.notes;
+        // Priority 2: extract from evidence source snippets
+        const evSources = (row.evidence_sources ?? []) as EvidenceSource[];
+        const best = evSources.find((s) => s.category === "Military Service" && s.snippet?.length > 50)
+          || evSources.find((s) => s.category === "Professional" && s.snippet?.length > 50);
+        if (best) return best.snippet.slice(0, 300);
+        // Priority 3: blank for manual entry
+        return "";
+      })(),
       verification_id: row.id,
     });
     setAddSpeakerOpen(true);
