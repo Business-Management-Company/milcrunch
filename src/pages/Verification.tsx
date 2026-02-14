@@ -60,8 +60,10 @@ import {
   runVerificationPipeline,
   searchSerp,
   categorizeAndScoreSnippet,
+  filterCriminalResults,
   type PipelinePhase,
   type PDLResponse,
+  type AIFilteredCriminalResult,
 } from "@/lib/verification";
 import {
   DropdownMenu,
@@ -272,6 +274,7 @@ export default function Verification() {
           red_flags: result.redFlags,
           source: addForm.source || "manual",
           source_username: addForm.sourceUsername || null,
+          manual_checks: {},
           last_verified_at: new Date().toISOString(),
         })
         .select("id")
@@ -300,6 +303,7 @@ export default function Verification() {
             verified_by: null,
             source: addForm.source || "manual",
             source_username: addForm.sourceUsername || null,
+            manual_checks: {},
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_verified_at: new Date().toISOString(),
@@ -761,20 +765,31 @@ export default function Verification() {
   );
 }
 
-function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: string; recordId: string; onRefresh?: () => void }) {
-  const [results, setResults] = useState<{ title: string; url: string; snippet: string; isRedFlag: boolean }[]>([]);
+function CriminalHistoryTab({ personName, recordId, claimedBranch, locationContext, onRefresh }: {
+  personName: string;
+  recordId: string;
+  claimedBranch?: string;
+  locationContext?: string;
+  onRefresh?: () => void;
+}) {
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [aiFiltering, setAiFiltering] = useState(false);
+  const [aiResults, setAiResults] = useState<AIFilteredCriminalResult[]>([]);
+  const [aiSummary, setAiSummary] = useState("");
+  const [showUnlikely, setShowUnlikely] = useState(false);
 
   const handleRunCriminalCheck = async () => {
     setSearching(true);
+    setAiResults([]);
+    setAiSummary("");
     try {
       const queries = [
         `"${personName}" criminal record`,
         `"${personName}" arrest`,
         `"${personName}" stolen valor`,
       ];
-      const allResults: { title: string; url: string; snippet: string; isRedFlag: boolean }[] = [];
+      const allResults: { title: string; url: string; snippet: string }[] = [];
       const seen = new Set<string>();
       for (const q of queries) {
         const serpResults = await searchSerp(q);
@@ -782,25 +797,45 @@ function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: s
           const url = r.link ?? "";
           if (seen.has(url)) continue;
           seen.add(url);
-          const text = `${r.title ?? ""} ${r.snippet ?? ""}`.toLowerCase();
-          const isRedFlag = /criminal|fraud|stolen valor|convicted|arrested|indicted|scam|fake|charge/i.test(text);
           allResults.push({
             title: r.title ?? "No title",
             url,
             snippet: r.snippet ?? "",
-            isRedFlag,
           });
         }
       }
-      setResults(allResults);
-      setHasSearched(true);
-    } finally {
       setSearching(false);
+      setHasSearched(true);
+
+      if (allResults.length === 0) {
+        setAiResults([]);
+        setAiSummary("No search results found.");
+        return;
+      }
+
+      // AI filtering
+      setAiFiltering(true);
+      try {
+        const { filtered, summary } = await filterCriminalResults({
+          personName,
+          claimedBranch: claimedBranch ?? "Unknown",
+          locationContext: locationContext ?? "",
+          results: allResults,
+        });
+        setAiResults(filtered);
+        setAiSummary(summary);
+      } finally {
+        setAiFiltering(false);
+      }
+    } catch {
+      setSearching(false);
+      setHasSearched(true);
     }
   };
 
-  const flagged = results.filter((r) => r.isRedFlag);
-  const clean = results.filter((r) => !r.isRedFlag);
+  const likely = aiResults.filter((r) => r.relevance_score > 70);
+  const possible = aiResults.filter((r) => r.relevance_score >= 30 && r.relevance_score <= 70);
+  const unlikely = aiResults.filter((r) => r.relevance_score < 30);
 
   return (
     <div className="space-y-4">
@@ -808,9 +843,9 @@ function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: s
         <div className="text-center py-8">
           <Gavel className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-4">
-            Run a criminal background check using public web records.
+            Run an AI-powered criminal background check using public web records.
             <br />
-            Searches for criminal records, arrests, and stolen valor reports.
+            Results are filtered by AI to identify relevance to this specific person.
           </p>
           <Button
             onClick={handleRunCriminalCheck}
@@ -823,7 +858,28 @@ function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: s
         </div>
       ) : (
         <>
-          {flagged.length === 0 && clean.length === 0 ? (
+          {aiFiltering && (
+            <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+              <CardContent className="flex items-center gap-3 py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+                <p className="text-sm text-blue-700 dark:text-blue-300">AI is analyzing results for relevance to {personName}...</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {!aiFiltering && aiSummary && (
+            <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+              <CardContent className="flex items-start gap-3 py-4">
+                <ShieldCheck className="h-5 w-5 text-[#0064B1] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-800 dark:text-blue-300">AI Analysis Summary</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">{aiSummary}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!aiFiltering && aiResults.length === 0 && hasSearched && (
             <Card className="rounded-xl border-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
               <CardContent className="flex items-center gap-3 py-6">
                 <CheckCircle2 className="h-6 w-6 text-emerald-600" />
@@ -833,23 +889,14 @@ function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: s
                 </div>
               </CardContent>
             </Card>
-          ) : flagged.length === 0 ? (
-            <Card className="rounded-xl border-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20">
-              <CardContent className="flex items-center gap-3 py-6">
-                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                <div>
-                  <p className="font-medium text-emerald-800 dark:text-emerald-300">No criminal records found</p>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400">{results.length} search result(s) returned but none contain criminal indicators.</p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-          {flagged.length > 0 && (
+          )}
+
+          {!aiFiltering && likely.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" /> {flagged.length} potential concern(s) found
+                <AlertTriangle className="h-4 w-4" /> {likely.length} likely match(es)
               </p>
-              {flagged.map((r, i) => (
+              {likely.map((r, i) => (
                 <Card key={i} className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -859,6 +906,11 @@ function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: s
                           {r.title} <ExternalLink className="h-3 w-3" />
                         </a>
                         <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Badge variant="destructive" className="text-xs">Relevance: {r.relevance_score}%</Badge>
+                          <Badge variant="destructive" className="text-xs capitalize">{r.concern_level} concern</Badge>
+                        </div>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1 italic">AI: {r.reasoning}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -866,30 +918,271 @@ function CriminalHistoryTab({ personName, recordId, onRefresh }: { personName: s
               ))}
             </div>
           )}
-          {clean.length > 0 && (
+
+          {!aiFiltering && possible.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{clean.length} other result(s)</p>
-              {clean.map((r, i) => (
-                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800">
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" /> {possible.length} possible match(es)
+              </p>
+              {possible.map((r, i) => (
+                <Card key={i} className="rounded-xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
                   <CardContent className="p-4">
-                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0064B1] hover:underline flex items-center gap-1 text-sm">
-                      {r.title} <ExternalLink className="h-3 w-3" />
-                    </a>
-                    <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1">
+                          {r.title} <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Badge className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Relevance: {r.relevance_score}%</Badge>
+                          <Badge className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 capitalize">{r.concern_level} concern</Badge>
+                        </div>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 italic">AI: {r.reasoning}</p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
+
+          {!aiFiltering && unlikely.length > 0 && (
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowUnlikely(!showUnlikely)}
+                className="text-sm text-muted-foreground flex items-center gap-2 hover:text-foreground transition-colors"
+              >
+                {showUnlikely ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                {unlikely.length} unlikely match(es) — probably different person
+              </button>
+              {showUnlikely && unlikely.map((r, i) => (
+                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800 opacity-70">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-600 dark:text-gray-400 hover:underline flex items-center gap-1 text-sm">
+                          {r.title} <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <p className="text-sm text-muted-foreground mt-1">{r.snippet}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">Relevance: {r.relevance_score}%</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 italic">AI: {r.reasoning}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           <div className="pt-2">
-            <Button variant="outline" size="sm" onClick={handleRunCriminalCheck} disabled={searching}>
-              {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            <Button variant="outline" size="sm" onClick={handleRunCriminalCheck} disabled={searching || aiFiltering}>
+              {(searching || aiFiltering) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Re-run Check
             </Button>
           </div>
         </>
       )}
     </div>
+  );
+}
+
+const MANUAL_CHECK_ITEMS = [
+  { key: "social_media_bio", label: "Social media bio matches claimed service", points: 5 },
+  { key: "profile_photo", label: "Profile photo consistent with claimed background", points: 5 },
+  { key: "linkedin_confirms", label: "LinkedIn confirms military service", points: 5 },
+  { key: "personal_knowledge", label: "Personal knowledge / direct communication", points: 10 },
+  { key: "documents_reviewed", label: "Documents reviewed (DD-214, military ID, etc.)", points: 15 },
+  { key: "trusted_referral", label: "Referred by trusted source", points: 5 },
+] as const;
+
+function ManualVerificationSection({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
+  const rawChecks = (record.manual_checks ?? {}) as Record<string, unknown>;
+  const [localChecks, setLocalChecks] = useState<Record<string, boolean>>(() => {
+    const out: Record<string, boolean> = {};
+    for (const item of MANUAL_CHECK_ITEMS) {
+      out[item.key] = !!rawChecks[item.key];
+    }
+    return out;
+  });
+  const [saving, setSaving] = useState(false);
+  const [baseScore] = useState(() => {
+    const stored = rawChecks._base_score;
+    return typeof stored === "number" ? stored : (record.verification_score ?? 0);
+  });
+
+  const manualScore = MANUAL_CHECK_ITEMS.reduce((sum, item) => sum + (localChecks[item.key] ? item.points : 0), 0);
+  const totalScore = Math.min(100, baseScore + manualScore);
+
+  const handleToggle = async (key: string) => {
+    const updated = { ...localChecks, [key]: !localChecks[key] };
+    setLocalChecks(updated);
+    setSaving(true);
+
+    const newManualScore = MANUAL_CHECK_ITEMS.reduce((sum, item) => sum + (updated[item.key] ? item.points : 0), 0);
+    const newTotal = Math.min(100, baseScore + newManualScore);
+    const checksToSave = { ...updated, _base_score: baseScore };
+
+    await supabase.from("verifications").update({
+      manual_checks: checksToSave,
+      verification_score: newTotal,
+      ...(newTotal >= 95 ? { status: "verified" } : {}),
+    }).eq("id", record.id);
+
+    setSaving(false);
+    if (newTotal >= 95) toast.success("Score reached 95%+ — status auto-updated to Verified!");
+    onRefresh?.();
+  };
+
+  const handleOverride = async () => {
+    setSaving(true);
+    await supabase.from("verifications").update({
+      verification_score: 100,
+      status: "verified",
+    }).eq("id", record.id);
+    setSaving(false);
+    toast.success("Manually marked as Fully Verified (100%)");
+    onRefresh?.();
+  };
+
+  return (
+    <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4" /> Manual Verification
+          {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">Confirm verification signals manually. Points are added to the automated score.</p>
+        {MANUAL_CHECK_ITEMS.map((item) => (
+          <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={!!localChecks[item.key]}
+              onChange={() => handleToggle(item.key)}
+              className="h-4 w-4 rounded border-gray-300 text-[#0064B1] focus:ring-[#0064B1]"
+            />
+            <span className="text-sm flex-1 group-hover:text-[#000741] dark:group-hover:text-white transition-colors">
+              {item.label}
+            </span>
+            <span className="text-xs text-muted-foreground">+{item.points}</span>
+          </label>
+        ))}
+        <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <span className="text-sm font-medium">Manual bonus: +{manualScore} pts</span>
+          <span className="text-sm text-muted-foreground">Total: {totalScore}%</span>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleOverride}
+          className="w-full text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+        >
+          <ShieldCheck className="h-4 w-4 mr-2" />
+          Override: Mark as Fully Verified
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SocialVerificationSection({ record }: { record: VerificationRecord }) {
+  const sources = (record.evidence_sources ?? []) as EvidenceSource[];
+  const pdlData = record.pdl_data as PDLResponse | null;
+  const isFromDiscovery = record.source === "discovery" || !!record.source_username;
+
+  interface PlatformInfo {
+    name: string;
+    url?: string;
+    snippet?: string;
+    hasMilitary: boolean;
+  }
+
+  const platforms: PlatformInfo[] = [];
+  const seenPlatforms = new Set<string>();
+
+  // Extract from evidence sources
+  for (const s of sources.filter((s) => s.category === "Social Media")) {
+    const url = s.url.toLowerCase();
+    let name = "Social Media";
+    if (url.includes("instagram")) name = "Instagram";
+    else if (url.includes("twitter") || url.includes("x.com")) name = "Twitter/X";
+    else if (url.includes("facebook")) name = "Facebook";
+    else if (url.includes("tiktok")) name = "TikTok";
+    else if (url.includes("youtube")) name = "YouTube";
+    else if (url.includes("linkedin")) name = "LinkedIn";
+
+    if (!seenPlatforms.has(name)) {
+      seenPlatforms.add(name);
+      const hasMilitary = MILITARY_KEYWORDS.test(s.snippet);
+      platforms.push({ name, url: s.url, snippet: s.snippet, hasMilitary });
+    }
+  }
+
+  // Extract from PDL profiles
+  if (pdlData?.profiles) {
+    for (const p of pdlData.profiles) {
+      const name = (p.network ?? "").charAt(0).toUpperCase() + (p.network ?? "").slice(1);
+      if (!seenPlatforms.has(name) && name) {
+        seenPlatforms.add(name);
+        platforms.push({ name, url: p.url, hasMilitary: false });
+      }
+    }
+  }
+
+  if (!isFromDiscovery && platforms.length === 0) return null;
+
+  const militaryPlatformCount = platforms.filter((p) => p.hasMilitary).length;
+
+  return (
+    <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Globe className="h-4 w-4" /> Social Verification
+          {militaryPlatformCount > 0 && (
+            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs">
+              +{militaryPlatformCount * 5} pts
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {platforms.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No social media profiles found in evidence or enrichment data.</p>
+        ) : (
+          platforms.map((p, i) => (
+            <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-sm">{p.name}</span>
+                  {p.url && (
+                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-[#0064B1] hover:underline">
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {p.hasMilitary ? (
+                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs gap-1">
+                      <Check className="h-3 w-3" /> Military keywords found
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">No military keywords</Badge>
+                  )}
+                </div>
+                {p.snippet && (
+                  <p className="text-sm text-muted-foreground mt-1" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(p.snippet) }} />
+                )}
+              </div>
+            </div>
+          ))
+        )}
+        {record.source_username && (
+          <p className="text-xs text-muted-foreground pt-1">Source: Discovery (@{record.source_username})</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -984,6 +1277,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 <Button variant="outline" size="sm" className="justify-start">Add Notes</Button>
               </CardContent>
             </Card>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <ManualVerificationSection record={record} onRefresh={onRefresh} />
+            <SocialVerificationSection record={record} />
           </div>
         </TabsContent>
         <TabsContent value="evidence" className="mt-4">
@@ -1100,7 +1397,13 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           </Card>
         </TabsContent>
         <TabsContent value="criminal" className="mt-4">
-          <CriminalHistoryTab personName={record.person_name} recordId={record.id} onRefresh={onRefresh} />
+          <CriminalHistoryTab
+            personName={record.person_name}
+            recordId={record.id}
+            claimedBranch={record.claimed_branch ?? undefined}
+            locationContext={pdlData?.location ? (pdlData.location as Array<{name: string}>).map((l) => l.name).join(", ") : undefined}
+            onRefresh={onRefresh}
+          />
         </TabsContent>
         <TabsContent value="deep" className="mt-4">
           <div className="space-y-4">

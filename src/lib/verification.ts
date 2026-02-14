@@ -267,6 +267,111 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
   }
 }
 
+// --- Criminal History AI Filter ---
+export interface AIFilteredCriminalResult {
+  title: string;
+  url: string;
+  snippet: string;
+  relevance_score: number;
+  concern_level: "none" | "low" | "medium" | "high";
+  reasoning: string;
+}
+
+export async function filterCriminalResults(params: {
+  personName: string;
+  claimedBranch: string;
+  locationContext: string;
+  results: { title: string; url: string; snippet: string }[];
+}): Promise<{
+  filtered: AIFilteredCriminalResult[];
+  summary: string;
+}> {
+  const key = getAnthropicKey();
+  if (!key) {
+    return {
+      filtered: params.results.map((r) => ({
+        ...r,
+        relevance_score: 50,
+        concern_level: "low" as const,
+        reasoning: "AI filtering unavailable (no API key)",
+      })),
+      summary: "AI filtering skipped — no Anthropic API key configured.",
+    };
+  }
+
+  const prompt = `You are filtering criminal/background search results for a specific person. The subject is: ${params.personName}, claimed military branch: ${params.claimedBranch}, location context: ${params.locationContext || "unknown"}.
+
+Here are the search results to analyze:
+${JSON.stringify(params.results, null, 2)}
+
+For each search result, determine:
+- RELEVANCE: Is this result likely about the SAME person, or a different person with a similar name? Consider location, age, context clues.
+- CONCERN_LEVEL: none, low, medium, high
+- REASONING: Brief explanation
+
+Return a JSON object with this exact structure:
+{
+  "results": [
+    {
+      "title": "...",
+      "url": "...",
+      "snippet": "...",
+      "relevance_score": 0-100,
+      "concern_level": "none|low|medium|high",
+      "reasoning": "..."
+    }
+  ],
+  "summary": "Based on analysis, X of Y results appear to be about a different person. Recommended confidence in criminal findings: Z%"
+}
+
+Be CONSERVATIVE with flagging — if you can't confirm it's the same person, mark relevance as low.
+Return ONLY the JSON object, no markdown formatting.`;
+
+  try {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+    const data = await res.json();
+    const text = (data.content?.[0]?.text ?? "").trim();
+    // Strip markdown code fences if present
+    const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+    const parsed = JSON.parse(jsonStr);
+    return {
+      filtered: (parsed.results ?? []).map((r: Record<string, unknown>) => ({
+        title: r.title ?? "",
+        url: r.url ?? "",
+        snippet: r.snippet ?? "",
+        relevance_score: typeof r.relevance_score === "number" ? r.relevance_score : 50,
+        concern_level: r.concern_level ?? "low",
+        reasoning: r.reasoning ?? "",
+      })),
+      summary: parsed.summary ?? "",
+    };
+  } catch (e) {
+    console.error("[Verification] Criminal filter AI error:", e);
+    return {
+      filtered: params.results.map((r) => ({
+        ...r,
+        relevance_score: 50,
+        concern_level: "low" as const,
+        reasoning: "AI filtering failed",
+      })),
+      summary: "AI filtering failed — showing unfiltered results.",
+    };
+  }
+}
+
 // --- Pipeline ---
 export interface VerificationInput {
   fullName: string;
