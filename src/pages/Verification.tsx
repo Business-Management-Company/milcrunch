@@ -948,13 +948,16 @@ interface YouTubeVideoResult {
   videoId: string;
   title: string;
   channelTitle: string;
+  description: string;
   thumbnail: string;
   publishedAt: string;
+  relevanceScore?: number;
 }
 
 function MediaTab({ record }: { record: VerificationRecord }) {
   const [videos, setVideos] = useState<YouTubeVideoResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [filtering, setFiltering] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [lastSearchedAt, setLastSearchedAt] = useState<string | null>(null);
@@ -984,14 +987,70 @@ function MediaTab({ record }: { record: VerificationRecord }) {
     setLastSearchedAt(now);
   };
 
+  const filterWithAI = async (candidates: YouTubeVideoResult[]): Promise<YouTubeVideoResult[]> => {
+    const apiKey = (import.meta.env.VITE_ANTHROPIC_API_KEY ?? "").trim();
+    if (!apiKey || candidates.length === 0) return candidates;
+
+    const prompt = `You are filtering YouTube search results for a specific person.
+
+The subject is: ${record.person_name}
+Claimed military branch: ${record.claimed_branch ?? "Unknown"}
+Claimed type: ${record.claimed_type ?? "Unknown"}
+
+For each video below, rate 0-100 how likely it is to actually feature or be about THIS specific person (not someone with a similar name, and not generic military content that just happened to appear in search results).
+
+Consider:
+- Does the video title or description mention this person's name?
+- Is the channel related to this person or interviewing them?
+- Could this be a name collision with a different person?
+
+Videos to evaluate:
+${JSON.stringify(candidates.map((v) => ({ videoId: v.videoId, title: v.title, channelTitle: v.channelTitle, description: v.description })), null, 2)}
+
+Return ONLY a JSON array like: [{"videoId": "...", "relevance_score": 85}, ...]
+No markdown formatting, just the JSON array.`;
+
+    try {
+      const res = await fetch("/api/anthropic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2048,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      if (!res.ok) return candidates;
+      const data = await res.json();
+      const text = (data.content?.[0]?.text ?? "").trim();
+      const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+      const scores: { videoId: string; relevance_score: number }[] = JSON.parse(jsonStr);
+      const scoreMap = new Map(scores.map((s) => [s.videoId, s.relevance_score]));
+
+      return candidates
+        .map((v) => ({ ...v, relevanceScore: scoreMap.get(v.videoId) ?? 0 }))
+        .filter((v) => (v.relevanceScore ?? 0) > 30)
+        .sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
+    } catch (e) {
+      console.error("[MediaTab] AI filtering error:", e);
+      return candidates;
+    }
+  };
+
   const handleSearch = async () => {
     setSearching(true);
     setShowAll(false);
     try {
+      const name = record.person_name;
+      const branch = record.claimed_branch ?? "";
       const queries = [
-        `${record.person_name} military`,
-        `${record.person_name} veteran`,
-        `${record.person_name} speaker`,
+        `"${name}"`,
+        `"${name}" ${branch}`.trim(),
+        `"${name}" military veteran`,
       ];
       const allVideos: YouTubeVideoResult[] = [];
       const seenIds = new Set<string>();
@@ -1015,6 +1074,7 @@ function MediaTab({ record }: { record: VerificationRecord }) {
               videoId: id,
               title: item.snippet?.title ?? "Untitled",
               channelTitle: item.snippet?.channelTitle ?? "",
+              description: item.snippet?.description ?? "",
               thumbnail: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url ?? "",
               publishedAt: item.snippet?.publishedAt ?? "",
             });
@@ -1024,12 +1084,26 @@ function MediaTab({ record }: { record: VerificationRecord }) {
         }
       }
 
-      setVideos(allVideos);
+      setSearching(false);
       setHasSearched(true);
-      await saveResults(allVideos);
+
+      if (allVideos.length === 0) {
+        setVideos([]);
+        await saveResults([]);
+        return;
+      }
+
+      // AI relevance filtering
+      setFiltering(true);
+      try {
+        const filtered = await filterWithAI(allVideos);
+        setVideos(filtered);
+        await saveResults(filtered);
+      } finally {
+        setFiltering(false);
+      }
     } catch {
       setHasSearched(true);
-    } finally {
       setSearching(false);
     }
   };
@@ -1057,23 +1131,26 @@ function MediaTab({ record }: { record: VerificationRecord }) {
         </div>
       ) : (
         <>
-          {searching && (
+          {(searching || filtering) && (
             <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
               <CardContent className="flex items-center gap-3 py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
-                <p className="text-sm text-blue-700 dark:text-blue-300">Searching YouTube for {record.person_name}...</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  {searching ? `Searching YouTube for "${record.person_name}"...` : "AI is filtering results for relevance..."}
+                </p>
               </CardContent>
             </Card>
           )}
 
-          {!searching && videos.length === 0 && (
+          {!searching && !filtering && videos.length === 0 && hasSearched && (
             <div className="text-center py-6">
               <Video className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No YouTube videos found for {record.person_name}.</p>
+              <p className="text-sm text-muted-foreground">No videos found featuring {record.person_name}.</p>
+              <p className="text-xs text-muted-foreground mt-1">This person may not have a significant YouTube presence.</p>
             </div>
           )}
 
-          {!searching && visibleVideos.length > 0 && (
+          {!searching && !filtering && visibleVideos.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {visibleVideos.map((v) => (
                 <a
@@ -1109,7 +1186,7 @@ function MediaTab({ record }: { record: VerificationRecord }) {
             </div>
           )}
 
-          {!searching && !showAll && hiddenCount > 0 && (
+          {!searching && !filtering && !showAll && hiddenCount > 0 && (
             <button
               onClick={() => setShowAll(true)}
               className="text-sm text-[#0064B1] hover:underline flex items-center gap-1.5"
@@ -1118,7 +1195,7 @@ function MediaTab({ record }: { record: VerificationRecord }) {
               See {hiddenCount} more video{hiddenCount !== 1 ? "s" : ""}
             </button>
           )}
-          {!searching && showAll && hiddenCount > 0 && (
+          {!searching && !filtering && showAll && hiddenCount > 0 && (
             <button
               onClick={() => setShowAll(false)}
               className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5"
@@ -1129,8 +1206,8 @@ function MediaTab({ record }: { record: VerificationRecord }) {
           )}
 
           <div className="pt-2 flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={handleSearch} disabled={searching}>
-              {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            <Button variant="outline" size="sm" onClick={handleSearch} disabled={searching || filtering}>
+              {(searching || filtering) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
               Re-search
             </Button>
             {lastSearchedAt && (
