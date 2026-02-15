@@ -96,7 +96,6 @@ import AdminTasks from "./pages/superadmin/AdminTasks";
 import AdminDeployments from "./pages/superadmin/AdminDeployments";
 import AdminPrompts from "./pages/superadmin/AdminPrompts";
 import AdminChat from "./pages/superadmin/AdminChat";
-import FetchAvatars from "./pages/admin/FetchAvatars";
 
 const queryClient = new QueryClient();
 
@@ -138,7 +137,6 @@ const App = () => (
                 <Route path="deployments" element={<AdminDeployments />} />
                 <Route path="prompts" element={<AdminPrompts />} />
                 <Route path="chat" element={<AdminChat />} />
-                <Route path="fetch-avatars" element={<FetchAvatars />} />
               </Route>
               <Route element={<BrandRoute><AppLayout /></BrandRoute>}>
                 <Route path="/dashboard" element={<SummaryDashboard />} />

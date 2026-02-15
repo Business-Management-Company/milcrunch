@@ -29,6 +29,7 @@ import {
   Loader2,
   Link,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -46,6 +47,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
+import { Checkbox } from "@/components/ui/checkbox";
 import CreateListModal from "@/components/CreateListModal";
 
 const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "twitter", "linkedin"];
@@ -129,7 +133,10 @@ export default function CreatorProfileModal({
   const [error, setError] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
+  const [approveForDir, setApproveForDir] = useState(false);
+  const [approvingDir, setApprovingDir] = useState(false);
   const { addCreatorToList, lists, createList, isCreatorInList } = useLists();
+  const { isSuperAdmin } = useAuth();
 
   const username = creator?.username ?? (creator?.name?.replace(/\s+/g, "_").toLowerCase());
 
@@ -249,24 +256,84 @@ export default function CreatorProfileModal({
 
   const addedToList = listCreator ? isCreatorInList(listCreator.id) : false;
 
-  const handleAddToList = (listId: string, listName: string) => {
+  const doApproveForDirectory = async () => {
+    if (!creator) return null;
+    const igData = ig as Record<string, unknown> | undefined;
+    const enrichedAvatar = (igData?.profile_picture_hd as string) ?? (igData?.profile_picture as string) ?? null;
+    const bioText = (igData?.biography as string) ?? creator.bio ?? "";
+    const branch = detectBranch(bioText);
+    const socialPlatforms = creator.socialPlatforms ?? [];
+
+    const { error: err } = await approveForDirectory({
+      handle: creator.username ?? creator.id,
+      display_name: creator.name,
+      platform: creator.platforms?.[0] ?? "instagram",
+      avatar_url: enrichedAvatar || creator.avatar || null,
+      follower_count: creator.followers ?? null,
+      engagement_rate: creator.engagementRate ?? null,
+      bio: bioText || null,
+      branch,
+      status: "veteran",
+      platforms: socialPlatforms.length > 0 ? socialPlatforms : creator.platforms,
+      category: creator.category ?? null,
+      ic_avatar_url: enrichedAvatar || null,
+    });
+    return err;
+  };
+
+  const handleAddToList = async (listId: string, listName: string) => {
     if (!listCreator) return;
     addCreatorToList(listId, listCreator);
     onAddToList?.(listCreator);
-    toast.success(`Added ${listCreator.name} to ${listName}`);
+    if (approveForDir && isSuperAdmin) {
+      setApprovingDir(true);
+      const err = await doApproveForDirectory();
+      setApprovingDir(false);
+      if (err) {
+        toast.error(`Added to list but directory approval failed: ${err}`);
+      } else {
+        toast.success(`Added ${listCreator.name} to ${listName} and approved for directory`);
+      }
+      setApproveForDir(false);
+    } else {
+      toast.success(`Added ${listCreator.name} to ${listName}`);
+    }
   };
 
   const handleOpenCreateListModal = () => {
     setCreateListModalOpen(true);
   };
 
-  const handleCreateListAndAdd = (name: string) => {
+  const handleCreateListAndAdd = async (name: string) => {
     if (!listCreator) return;
     const newId = createList(name);
     addCreatorToList(newId, listCreator);
     onAddToList?.(listCreator);
-    toast.success(`Added ${listCreator.name} to ${name}`);
+    if (approveForDir && isSuperAdmin) {
+      setApprovingDir(true);
+      const err = await doApproveForDirectory();
+      setApprovingDir(false);
+      if (err) {
+        toast.error(`Added to list but directory approval failed: ${err}`);
+      } else {
+        toast.success(`Added ${listCreator.name} to ${name} and approved for directory`);
+      }
+      setApproveForDir(false);
+    } else {
+      toast.success(`Added ${listCreator.name} to ${name}`);
+    }
     setCreateListModalOpen(false);
+  };
+
+  const handleStandaloneApprove = async () => {
+    setApprovingDir(true);
+    const err = await doApproveForDirectory();
+    setApprovingDir(false);
+    if (err) {
+      toast.error(`Directory approval failed: ${err}`);
+    } else {
+      toast.success(`${creator?.name} approved for public directory`);
+    }
   };
 
   const handleVerifyMilitary = () => {
@@ -631,6 +698,21 @@ export default function CreatorProfileModal({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
+                    {isSuperAdmin && (
+                      <div className="px-2 py-1.5 border-b border-gray-100 dark:border-gray-800">
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={approveForDir}
+                            onCheckedChange={(v) => setApproveForDir(!!v)}
+                            className="mt-0.5"
+                          />
+                          <div>
+                            <span className="text-xs font-medium text-[#000741] dark:text-white">Approve for Public Directory</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">This creator will appear on the homepage and public directory</p>
+                          </div>
+                        </label>
+                      </div>
+                    )}
                     {lists.map((list) => (
                       <DropdownMenuItem
                         key={list.id}
@@ -645,6 +727,17 @@ export default function CreatorProfileModal({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              )}
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  className="w-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 rounded-lg"
+                  onClick={handleStandaloneApprove}
+                  disabled={approvingDir}
+                >
+                  {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Globe className="mr-2 h-4 w-4" />}
+                  Approve for Directory
+                </Button>
               )}
               <Button
                 variant="outline"

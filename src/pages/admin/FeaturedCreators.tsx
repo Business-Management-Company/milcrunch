@@ -33,7 +33,6 @@ import {
   ChevronDown,
   Loader2,
   GripVertical,
-  ImageDown,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -86,12 +85,6 @@ export default function FeaturedCreators() {
   const [deleteTarget, setDeleteTarget] = useState<FeaturedCreator | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [reordering, setReordering] = useState(false);
-  const [fetchingAvatars, setFetchingAvatars] = useState(false);
-  const [avatarResults, setAvatarResults] = useState<{
-    summary: string;
-    first_response_keys: string[] | null;
-    results: { handle: string; display_name: string; status: string; avatar_url?: string; detail?: string; code?: number; top_level_keys?: string[] }[];
-  } | null>(null);
 
   const fetchList = useCallback(async () => {
     const { data, error } = await supabase
@@ -221,24 +214,17 @@ export default function FeaturedCreators() {
     toast.success(row.is_active ? "Hidden from homepage." : "Shown on homepage.");
   };
 
-  const fetchAllAvatars = async () => {
-    setFetchingAvatars(true);
-    setAvatarResults(null);
-    try {
-      const resp = await fetch("/api/fetch-avatars", { method: "POST" });
-      const json = await resp.json();
-      if (!resp.ok) {
-        toast.error(json.error || "Avatar fetch failed");
-        return;
-      }
-      toast.success(json.summary);
-      setAvatarResults(json);
-      fetchList();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Avatar fetch failed");
-    } finally {
-      setFetchingAvatars(false);
+  const toggleApproved = async (row: FeaturedCreator) => {
+    const { error } = await supabase
+      .from("featured_creators")
+      .update({ approved: !row.approved })
+      .eq("id", row.id);
+    if (error) {
+      toast.error(error.message);
+      return;
     }
+    fetchList();
+    toast.success(row.approved ? "Removed from public directory." : "Approved for public directory.");
   };
 
   const moveRow = async (index: number, direction: "up" | "down") => {
@@ -400,16 +386,10 @@ export default function FeaturedCreators() {
             Manage who appears on the homepage hero and Big Names grid. Order and active state control visibility.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={fetchAllAvatars} variant="outline" className="rounded-lg" disabled={fetchingAvatars}>
-            {fetchingAvatars ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ImageDown className="h-4 w-4 mr-2" />}
-            {fetchingAvatars ? "Fetching Avatars…" : "Fetch All Avatars"}
-          </Button>
-          <Button onClick={openAdd} className="rounded-lg">
-            <Plus className="h-4 w-4 mr-2" />
-            Add creator
-          </Button>
-        </div>
+        <Button onClick={openAdd} className="rounded-lg">
+          <Plus className="h-4 w-4 mr-2" />
+          Add creator
+        </Button>
       </div>
 
       {loading ? (
@@ -430,6 +410,7 @@ export default function FeaturedCreators() {
                 <TableHead>Followers</TableHead>
                 <TableHead>Eng. %</TableHead>
                 <TableHead>Active</TableHead>
+                <TableHead>Approved</TableHead>
                 <TableHead>Verified</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
@@ -488,6 +469,12 @@ export default function FeaturedCreators() {
                       onCheckedChange={() => toggleActive(row)}
                     />
                   </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={row.approved}
+                      onCheckedChange={() => toggleApproved(row)}
+                    />
+                  </TableCell>
                   <TableCell>{row.is_verified ? "✓" : "—"}</TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -500,6 +487,13 @@ export default function FeaturedCreators() {
                         <DropdownMenuItem onClick={() => openEdit(row)}>
                           <Pencil className="h-4 w-4 mr-2" />
                           Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleApproved(row)}>
+                          {row.approved ? (
+                            <><Trash2 className="h-4 w-4 mr-2" />Remove from Directory</>
+                          ) : (
+                            <><Plus className="h-4 w-4 mr-2" />Approve for Directory</>
+                          )}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-red-600"
@@ -520,39 +514,6 @@ export default function FeaturedCreators() {
               No featured creators yet. Add one to show them on the homepage.
             </div>
           )}
-        </div>
-      )}
-
-      {avatarResults && (
-        <div className="mt-6 border rounded-lg bg-gray-50 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-sm text-[#000741]">Avatar Fetch Results</h2>
-            <Button variant="ghost" size="sm" onClick={() => setAvatarResults(null)} className="text-xs text-gray-500">
-              Dismiss
-            </Button>
-          </div>
-          <p className="text-sm text-gray-700 mb-1">{avatarResults.summary}</p>
-          {avatarResults.first_response_keys && (
-            <p className="text-xs text-gray-500 mb-3">
-              API response top-level keys: <code className="bg-white px-1 py-0.5 rounded text-[11px]">{avatarResults.first_response_keys.join(", ")}</code>
-              <br />
-              <span className="text-amber-600">Check Vercel Function Logs for the full first response JSON.</span>
-            </p>
-          )}
-          <div className="space-y-1 max-h-64 overflow-y-auto">
-            {avatarResults.results.map((r) => (
-              <div key={r.handle} className="flex items-center gap-2 text-xs py-1 border-b border-gray-100 last:border-0">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${r.status === "success" ? "bg-green-500" : r.status === "no_avatar_found" ? "bg-yellow-500" : "bg-red-500"}`} />
-                <span className="font-medium w-32 truncate">{r.display_name}</span>
-                <span className="text-gray-500">@{r.handle}</span>
-                <span className={`ml-auto ${r.status === "success" ? "text-green-700" : "text-red-600"}`}>
-                  {r.status}
-                </span>
-                {r.detail && <span className="text-gray-400 max-w-48 truncate" title={r.detail}>{r.detail}</span>}
-                {r.top_level_keys && <span className="text-gray-400 text-[10px]">keys: {r.top_level_keys.join(", ")}</span>}
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

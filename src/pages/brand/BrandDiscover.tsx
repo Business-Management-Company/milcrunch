@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2 } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import CreateListModal from "@/components/CreateListModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -364,7 +365,9 @@ const BrandDiscover = () => {
   searchQueryRef.current = searchQuery;
 
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
+  const [approveForDir, setApproveForDir] = useState(false);
+  const [approvingDir, setApprovingDir] = useState(false);
 
   // --- Saved searches state ---
   const [savedSearches, setSavedSearches] = useState<SavedSearchRow[]>([]);
@@ -716,21 +719,64 @@ const BrandDiscover = () => {
       ? `Showing ${creators.length} of ${totalFromApi >= 1000 ? formatFollowers(totalFromApi) : totalFromApi.toLocaleString()} results`
       : "";
 
-  const creatorToListPayload = (c: CreatorCard) => ({
-    id: c.id,
-    name: c.name,
-    username: c.username,
-    avatar: c.avatar,
-    followers: c.followers,
-    engagementRate: c.engagementRate,
-    platforms: c.platforms,
-    bio: c.bio,
-    location: c.location,
-  });
+  const creatorToListPayload = (c: CreatorCard) => {
+    // Pull enriched avatar from raw cache if available
+    const raw = enrichRawCache[c.id];
+    const igData = raw?.instagram as Record<string, unknown> | undefined;
+    const enrichedAvatar = (igData?.profile_picture_hd as string) ?? (igData?.profile_picture as string) ?? null;
+    return {
+      id: c.id,
+      name: c.name,
+      username: c.username,
+      avatar: enrichedAvatar || c.avatar,
+      followers: c.followers,
+      engagementRate: c.engagementRate,
+      platforms: c.platforms,
+      bio: c.bio,
+      location: c.location,
+    };
+  };
 
-  const handleAddToList = (listId: string, listName: string, creator: CreatorCard) => {
+  const doApproveForDirectory = async (creator: CreatorCard) => {
+    const raw = enrichRawCache[creator.id];
+    const igData = raw?.instagram as Record<string, unknown> | undefined;
+    const enrichedAvatar = (igData?.profile_picture_hd as string) ?? (igData?.profile_picture as string) ?? null;
+    const bioText = (igData?.biography as string) ?? creator.bio ?? "";
+    const branch = detectBranch(bioText);
+    const socialPlatforms = creator.socialPlatforms ?? [];
+
+    const { error } = await approveForDirectory({
+      handle: creator.username ?? creator.id,
+      display_name: creator.name,
+      platform: creator.platforms?.[0] ?? "instagram",
+      avatar_url: enrichedAvatar || creator.avatar || null,
+      follower_count: creator.followers ?? null,
+      engagement_rate: creator.engagementRate ?? null,
+      bio: bioText || null,
+      branch,
+      status: "veteran",
+      platforms: socialPlatforms.length > 0 ? socialPlatforms : creator.platforms,
+      category: creator.category ?? null,
+      ic_avatar_url: enrichedAvatar || null,
+    });
+    return error;
+  };
+
+  const handleAddToList = async (listId: string, listName: string, creator: CreatorCard) => {
     addCreatorToList(listId, creatorToListPayload(creator));
-    toast.success(`Added ${creator.name} to ${listName}`);
+    if (approveForDir && isSuperAdmin) {
+      setApprovingDir(true);
+      const error = await doApproveForDirectory(creator);
+      setApprovingDir(false);
+      if (error) {
+        toast.error(`Added to list but directory approval failed: ${error}`);
+      } else {
+        toast.success(`Added ${creator.name} to ${listName} and approved for directory`);
+      }
+      setApproveForDir(false);
+    } else {
+      toast.success(`Added ${creator.name} to ${listName}`);
+    }
   };
 
   const handleOpenCreateListForCreator = (creator: CreatorCard) => {
@@ -738,12 +784,35 @@ const BrandDiscover = () => {
     setCreateListModalOpen(true);
   };
 
-  const handleCreateListAndAdd = (name: string) => {
+  const handleCreateListAndAdd = async (name: string) => {
     const newId = createList(name);
     if (createListPendingCreator) {
       addCreatorToList(newId, creatorToListPayload(createListPendingCreator));
-      toast.success(`Added ${createListPendingCreator.name} to ${name}`);
+      if (approveForDir && isSuperAdmin) {
+        setApprovingDir(true);
+        const error = await doApproveForDirectory(createListPendingCreator);
+        setApprovingDir(false);
+        if (error) {
+          toast.error(`Added to list but directory approval failed: ${error}`);
+        } else {
+          toast.success(`Added ${createListPendingCreator.name} to ${name} and approved for directory`);
+        }
+        setApproveForDir(false);
+      } else {
+        toast.success(`Added ${createListPendingCreator.name} to ${name}`);
+      }
       setCreateListPendingCreator(null);
+    }
+  };
+
+  const handleStandaloneApprove = async (creator: CreatorCard) => {
+    setApprovingDir(true);
+    const error = await doApproveForDirectory(creator);
+    setApprovingDir(false);
+    if (error) {
+      toast.error(`Directory approval failed: ${error}`);
+    } else {
+      toast.success(`${creator.name} approved for public directory`);
     }
   };
 
@@ -1260,27 +1329,55 @@ const BrandDiscover = () => {
                               )}
                             </td>
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                              {isCreatorInList(creator.id) ? (
-                                <span className="text-xs text-gray-400">Added</span>
-                              ) : (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button size="sm" variant="outline" className="h-7 text-xs rounded-md">
-                                      <ListPlus className="h-3 w-3 mr-1" /> Add
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {lists.map((list) => (
-                                      <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
-                                        {list.name}
+                              <div className="flex items-center justify-center gap-1">
+                                {isCreatorInList(creator.id) ? (
+                                  <span className="text-xs text-gray-400">Added</span>
+                                ) : (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="sm" variant="outline" className="h-7 text-xs rounded-md">
+                                        <ListPlus className="h-3 w-3 mr-1" /> Add
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {isSuperAdmin && (
+                                        <div className="px-2 py-1.5 border-b border-gray-100 dark:border-gray-800">
+                                          <label className="flex items-start gap-2 cursor-pointer">
+                                            <Checkbox
+                                              checked={approveForDir}
+                                              onCheckedChange={(v) => setApproveForDir(!!v)}
+                                              className="mt-0.5"
+                                            />
+                                            <div>
+                                              <span className="text-xs font-medium">Approve for Directory</span>
+                                            </div>
+                                          </label>
+                                        </div>
+                                      )}
+                                      {lists.map((list) => (
+                                        <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
+                                          {list.name}
+                                        </DropdownMenuItem>
+                                      ))}
+                                      <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
+                                        <Plus className="mr-2 h-4 w-4" /> Create New List
                                       </DropdownMenuItem>
-                                    ))}
-                                    <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
-                                      <Plus className="mr-2 h-4 w-4" /> Create New List
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                                {isSuperAdmin && !isCreatorInList(creator.id) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    title="Approve for Directory"
+                                    onClick={() => handleStandaloneApprove(creator)}
+                                    disabled={approvingDir}
+                                  >
+                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1462,6 +1559,21 @@ const BrandDiscover = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                                {isSuperAdmin && (
+                                  <div className="px-2 py-1.5 border-b border-gray-100 dark:border-gray-800">
+                                    <label className="flex items-start gap-2 cursor-pointer">
+                                      <Checkbox
+                                        checked={approveForDir}
+                                        onCheckedChange={(v) => setApproveForDir(!!v)}
+                                        className="mt-0.5"
+                                      />
+                                      <div>
+                                        <span className="text-xs font-medium text-[#000741] dark:text-white">Approve for Public Directory</span>
+                                        <p className="text-[10px] text-gray-400 leading-tight">This creator will appear on the homepage and public directory</p>
+                                      </div>
+                                    </label>
+                                  </div>
+                                )}
                                 {lists.map((list) => (
                                   <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
                                     {list.name}
@@ -1475,6 +1587,18 @@ const BrandDiscover = () => {
                             </DropdownMenu>
                           )}
                           <div className="flex gap-2 items-center">
+                            {isSuperAdmin && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-lg flex-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
+                                onClick={() => handleStandaloneApprove(creator)}
+                                disabled={approvingDir}
+                              >
+                                <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                                Approve
+                              </Button>
+                            )}
                             {instagramUrl ? (
                               <Button
                                 variant="outline"

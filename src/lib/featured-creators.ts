@@ -12,6 +12,7 @@ export interface FeaturedCreator {
   sort_order: number;
   is_active: boolean;
   is_verified: boolean;
+  approved: boolean;
   created_at: string | null;
 }
 
@@ -26,12 +27,13 @@ export interface ShowcaseCreator extends FeaturedCreator {
   ic_avatar_url: string | null;
 }
 
-/** For hero: top 3 active featured creators by sort_order. */
+/** For hero: top 3 active + approved featured creators by sort_order. */
 export async function fetchFeaturedHero(limit = 3): Promise<FeaturedCreator[]> {
   const { data, error } = await supabase
     .from("featured_creators")
     .select("*")
     .eq("is_active", true)
+    .eq("approved", true)
     .order("sort_order", { ascending: true })
     .limit(limit);
   if (error) {
@@ -41,12 +43,13 @@ export async function fetchFeaturedHero(limit = 3): Promise<FeaturedCreator[]> {
   return (data ?? []) as FeaturedCreator[];
 }
 
-/** For Big Names grid: up to 8 active featured creators. */
+/** For Big Names grid: up to 8 active + approved featured creators. */
 export async function fetchFeaturedGrid(limit = 8): Promise<FeaturedCreator[]> {
   const { data, error } = await supabase
     .from("featured_creators")
     .select("*")
     .eq("is_active", true)
+    .eq("approved", true)
     .order("sort_order", { ascending: true })
     .limit(limit);
   if (error) {
@@ -56,12 +59,13 @@ export async function fetchFeaturedGrid(limit = 8): Promise<FeaturedCreator[]> {
   return (data ?? []) as FeaturedCreator[];
 }
 
-/** Showcase grid: 20 active featured creators with branch/status/platforms data. */
+/** Showcase grid: 20 active + approved featured creators with branch/status/platforms data. */
 export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator[]> {
   const { data, error } = await supabase
     .from("featured_creators")
     .select("*")
     .eq("is_active", true)
+    .eq("approved", true)
     .order("sort_order", { ascending: true })
     .limit(limit);
   if (error) {
@@ -79,6 +83,86 @@ export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator
     profile_slug: (row.profile_slug as string) ?? null,
     ic_avatar_url: (row.ic_avatar_url as string) ?? null,
   }));
+}
+
+/** Detect military branch from bio text. Returns null if not found. */
+export function detectBranch(bio: string): string | null {
+  const patterns: [RegExp, string][] = [
+    [/\barmy\b/i, "Army"],
+    [/\bnavy\b/i, "Navy"],
+    [/\bair\s*force\b/i, "Air Force"],
+    [/\bmarine[s]?\b|\busmc\b/i, "Marines"],
+    [/\bcoast\s*guard\b/i, "Coast Guard"],
+    [/\bspace\s*force\b/i, "Space Force"],
+    [/\bnational\s*guard\b/i, "National Guard"],
+  ];
+  for (const [pattern, branch] of patterns) {
+    if (pattern.test(bio)) return branch;
+  }
+  return null;
+}
+
+/** Upsert a creator into featured_creators with approved = true for directory. */
+export async function approveForDirectory(data: {
+  handle: string;
+  display_name: string;
+  platform: string;
+  avatar_url?: string | null;
+  follower_count?: number | null;
+  engagement_rate?: number | null;
+  bio?: string | null;
+  branch?: string | null;
+  status?: string | null;
+  platforms?: string[];
+  platform_urls?: Record<string, string>;
+  category?: string | null;
+  ic_avatar_url?: string | null;
+}): Promise<{ error: string | null }> {
+  const handle = data.handle.replace(/^@/, "").trim();
+  // Get max sort_order so new entries go to end
+  const { data: maxRow } = await supabase
+    .from("featured_creators")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  const nextOrder = (maxRow?.[0]?.sort_order ?? 0) + 1;
+
+  const payload = {
+    display_name: data.display_name,
+    handle,
+    platform: data.platform || "instagram",
+    avatar_url: data.avatar_url || null,
+    follower_count: data.follower_count ?? null,
+    engagement_rate: data.engagement_rate ?? null,
+    bio: data.bio || null,
+    branch: data.branch || null,
+    status: data.status || null,
+    platforms: data.platforms || [],
+    platform_urls: data.platform_urls || {},
+    category: data.category || null,
+    ic_avatar_url: data.ic_avatar_url || null,
+    approved: true,
+    is_active: true,
+    sort_order: nextOrder,
+  };
+
+  // Upsert by handle + platform
+  const { error } = await supabase
+    .from("featured_creators")
+    .upsert(payload, { onConflict: "platform,handle", ignoreDuplicates: false });
+
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+/** Toggle approved status of a featured creator. */
+export async function toggleDirectoryApproval(id: string, approved: boolean): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from("featured_creators")
+    .update({ approved })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  return { error: null };
 }
 
 export function formatFollowerCount(n: number | null | undefined): string {
