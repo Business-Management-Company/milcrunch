@@ -40,8 +40,8 @@ import {
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
-// Hero background: MIl-Crunch-Hero includes embedded social cards
-const HERO_BG_IMAGE = "/MIl-Crunch-Hero.png";
+// Hero background: clean group photo without baked-in social cards
+const HERO_BG_IMAGE = "/home-hero-creators.png";
 
 const AUDIENCE = [
   { label: "Veterans", icon: Shield },
@@ -332,7 +332,6 @@ export default function HomePage() {
           <a href="/#features" className={`text-sm font-medium ${navLinkClass}`}>Features</a>
         </nav>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-gray-400 p-1.5" aria-hidden><Sun className="h-4 w-4" /></span>
           <Link to="/login" className={`text-sm font-medium ${navLinkClass}`}>
             Sign In
           </Link>
@@ -355,11 +354,6 @@ export default function HomePage() {
               </Button>
             </Link>
           )}
-          <Link to="/signup">
-            <Button size="sm" variant="outline" className="rounded-lg px-5 py-2 font-semibold">
-              Become a Creator
-            </Button>
-          </Link>
         </div>
       </header>
 
@@ -375,11 +369,11 @@ export default function HomePage() {
               backgroundPosition: "center",
             }}
           />
-          {/* Dark overlay — light enough to let the hero photo show through */}
+          {/* Light overlay — lets the hero photo show through clearly */}
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to right, rgba(27,42,74,0.40) 0%, rgba(25,55,65,0.25) 100%)",
+              background: "linear-gradient(to right, rgba(27,42,74,0.30) 0%, rgba(25,55,65,0.15) 100%)",
             }}
           />
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
