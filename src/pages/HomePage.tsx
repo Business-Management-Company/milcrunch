@@ -369,8 +369,8 @@ export default function HomePage() {
               backgroundPosition: "center",
             }}
           />
-          {/* ~20% dark overlay for text readability while keeping photo visible */}
-          <div className="absolute inset-0 bg-black/20" />
+          {/* ~50% dark overlay for text readability while keeping photo visible */}
+          <div className="absolute inset-0 bg-black/50" />
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
             {/* Left 60% — badge, headline, subtitle, CTAs, branch chips */}
             <div className="flex-1 md:max-w-[65%] text-center md:text-left">

@@ -20,6 +20,7 @@ import {
   Loader2,
   ArrowUpDown,
   RefreshCw,
+  ImageDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -30,6 +31,9 @@ import {
   getInitials,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
+import { searchCreators } from "@/lib/influencers-club";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const BRANCH_STYLES: Record<string, string> = {
@@ -45,12 +49,14 @@ type SortField = "sort_order" | "followers" | "engagement" | "added";
 
 const BrandDirectory = () => {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
   const [creators, setCreators] = useState<ShowcaseCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>("sort_order");
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+  const [backfillProgress, setBackfillProgress] = useState<{ current: number; total: number } | null>(null);
 
   const loadCreators = async () => {
     setLoading(true);
@@ -142,6 +148,45 @@ const BrandDirectory = () => {
     const set = new Set(creators.map((c) => c.branch).filter(Boolean) as string[]);
     return Array.from(set).sort();
   }, [creators]);
+
+  const handleBackfillAvatars = async () => {
+    const missing = creators.filter((c) => !c.avatar_url && !c.ic_avatar_url);
+    if (missing.length === 0) {
+      toast.info("All creators already have avatars");
+      return;
+    }
+    setBackfillProgress({ current: 0, total: missing.length });
+    let updated = 0;
+
+    for (let i = 0; i < missing.length; i++) {
+      const creator = missing[i];
+      setBackfillProgress({ current: i + 1, total: missing.length });
+      try {
+        const result = await searchCreators(creator.handle, {
+          platform: creator.platform || "instagram",
+          page: 1,
+        });
+        const match = result.creators[0];
+        if (match?.avatar && !match.avatar.includes("ui-avatars.com")) {
+          const { error } = await supabase
+            .from("featured_creators")
+            .update({ ic_avatar_url: match.avatar })
+            .eq("id", creator.id);
+          if (!error) {
+            updated++;
+            setCreators((prev) =>
+              prev.map((c) => (c.id === creator.id ? { ...c, ic_avatar_url: match.avatar } : c))
+            );
+          }
+        }
+      } catch (err) {
+        console.warn(`[Backfill] Failed for ${creator.handle}:`, err);
+      }
+    }
+
+    setBackfillProgress(null);
+    toast.success(`Updated ${updated} avatar${updated !== 1 ? "s" : ""}`);
+  };
 
   return (
     <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
@@ -236,6 +281,27 @@ const BrandDirectory = () => {
             <RefreshCw className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")} />
             Refresh
           </Button>
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg"
+              onClick={handleBackfillAvatars}
+              disabled={!!backfillProgress}
+            >
+              {backfillProgress ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  Fetching {backfillProgress.current} of {backfillProgress.total}...
+                </>
+              ) : (
+                <>
+                  <ImageDown className="h-4 w-4 mr-1.5" />
+                  Fetch Missing Avatars
+                </>
+              )}
+            </Button>
+          )}
           <Button
             size="sm"
             className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white ml-auto"
