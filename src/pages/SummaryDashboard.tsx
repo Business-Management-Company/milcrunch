@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
@@ -94,6 +95,7 @@ function formatCount(n: number): string {
 
 export default function SummaryDashboard() {
   const { user } = useAuth();
+  const { openPanel, sendMessage } = useAIAssistant();
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
 
@@ -175,23 +177,13 @@ export default function SummaryDashboard() {
     ]);
   }, []);
 
-  // Submit prompt → navigate to AI assistant (or just open it)
+  // Submit prompt → open AI Assistant panel and send message
   const handleSubmit = () => {
     const q = prompt.trim();
     if (!q) return;
-    // Dispatch a custom event the AIAssistant can pick up,
-    // or navigate to discover with the query if it seems like a search
-    const searchKeywords = ["find", "search", "discover", "show", "look for", "creators"];
-    const isSearch = searchKeywords.some((k) => q.toLowerCase().includes(k));
-    if (isSearch) {
-      window.location.href = `/brand/discover?q=${encodeURIComponent(q)}`;
-    } else {
-      // Open AI panel with pre-filled message
-      window.dispatchEvent(
-        new CustomEvent("open-ai-assistant", { detail: { message: q } }),
-      );
-    }
     setPrompt("");
+    openPanel();
+    sendMessage(q);
   };
 
   return (

@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -134,6 +135,19 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
   );
 
   const clearChat = useCallback(() => setMessages([]), []);
+
+  // Listen for "open-ai-assistant" custom events from anywhere in the app
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { message?: string } | undefined;
+      setIsOpen(true);
+      if (detail?.message?.trim()) {
+        sendMessage(detail.message.trim());
+      }
+    };
+    window.addEventListener("open-ai-assistant", handler);
+    return () => window.removeEventListener("open-ai-assistant", handler);
+  }, [sendMessage]);
 
   const value: AIAssistantContextValue = {
     isOpen,
