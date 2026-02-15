@@ -27,7 +27,7 @@ import CreateListModal from "@/components/CreateListModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
+import { approveForDirectory, detectBranch, extractAvatarFromEnrichment } from "@/lib/featured-creators";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -758,8 +758,7 @@ const BrandDiscover = () => {
   const creatorToListPayload = (c: CreatorCard) => {
     // Pull enriched avatar from raw cache if available
     const raw = enrichRawCache[c.id];
-    const igData = raw?.instagram as Record<string, unknown> | undefined;
-    const enrichedAvatar = (igData?.profile_picture_hd as string) ?? (igData?.profile_picture as string) ?? null;
+    const enrichedAvatar = extractAvatarFromEnrichment(raw);
     return {
       id: c.id,
       name: c.name,
@@ -776,7 +775,7 @@ const BrandDiscover = () => {
   const doApproveForDirectory = async (creator: CreatorCard, directoryId?: string) => {
     const raw = enrichRawCache[creator.id];
     const igData = raw?.instagram as Record<string, unknown> | undefined;
-    const enrichedAvatar = (igData?.profile_picture_hd as string) ?? (igData?.profile_picture as string) ?? null;
+    const enrichedAvatar = extractAvatarFromEnrichment(raw) ?? creator.avatar ?? null;
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];

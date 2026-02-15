@@ -29,7 +29,6 @@ import {
   Loader2,
   ArrowUpDown,
   RefreshCw,
-  ImageDown,
   LayoutGrid,
   List,
   Instagram,
@@ -54,7 +53,6 @@ import {
   type DirectoryMember,
 } from "@/lib/directories";
 import { formatFollowerCount, getInitials } from "@/lib/featured-creators";
-import { searchCreators } from "@/lib/influencers-club";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLists } from "@/contexts/ListContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,7 +107,6 @@ const BrandDirectory = () => {
   const [branchFilter, setBranchFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>("sort_order");
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
-  const [backfillProgress, setBackfillProgress] = useState<{ current: number; total: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try { return (localStorage.getItem(VIEW_KEY) as ViewMode) || "table"; } catch { return "table"; }
   });
@@ -228,6 +225,7 @@ const BrandDirectory = () => {
       display_name: c.name,
       platform: c.platform || "instagram",
       avatar_url: c.avatar || null,
+      ic_avatar_url: c.avatar || null,
       follower_count: c.followers ?? null,
       engagement_rate: c.engagementRate ?? null,
       bio: c.bio || null,
@@ -241,46 +239,6 @@ const BrandDirectory = () => {
     setPromoteListId("");
     toast.success(`Added ${added} creator${added !== 1 ? "s" : ""}${failed > 0 ? `, ${failed} failed` : ""}`);
     loadMembers(selectedDir.id);
-  };
-
-  // ─── Backfill avatars ──────────────────────────────────────
-
-  const handleBackfillAvatars = async () => {
-    if (!selectedDir) return;
-    const missing = members.filter((m) => !m.avatar_url && !m.ic_avatar_url);
-    if (missing.length === 0) { toast.info("All creators already have avatars"); return; }
-    setBackfillProgress({ current: 0, total: missing.length });
-    let updated = 0;
-    let failed = 0;
-    const BATCH = 5;
-
-    const fetchOne = async (m: DirectoryMember) => {
-      const result = await searchCreators(m.creator_handle, { platform: m.platform || "instagram", page: 1 });
-      const match = result.creators[0];
-      if (match?.avatar && !match.avatar.includes("ui-avatars.com")) {
-        const { error } = await supabase
-          .from("directory_members")
-          .update({ ic_avatar_url: match.avatar })
-          .eq("id", m.id);
-        if (!error) {
-          setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, ic_avatar_url: match.avatar } : x)));
-          return true;
-        }
-      }
-      return false;
-    };
-
-    for (let i = 0; i < missing.length; i += BATCH) {
-      const batch = missing.slice(i, i + BATCH);
-      const results = await Promise.allSettled(batch.map(fetchOne));
-      for (const r of results) {
-        if (r.status === "fulfilled" && r.value) updated++;
-        else if (r.status === "rejected") failed++;
-      }
-      setBackfillProgress({ current: Math.min(i + BATCH, missing.length), total: missing.length });
-    }
-    setBackfillProgress(null);
-    toast.success(`Updated ${updated} avatar${updated !== 1 ? "s" : ""}${failed > 0 ? `, ${failed} failed` : ""}`);
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
@@ -550,21 +508,6 @@ const BrandDirectory = () => {
             <RefreshCw className={cn("h-4 w-4 mr-1.5", membersLoading && "animate-spin")} />
             Refresh
           </Button>
-          {isSuperAdmin && (
-            <Button variant="outline" size="sm" className="rounded-lg" onClick={handleBackfillAvatars} disabled={!!backfillProgress}>
-              {backfillProgress ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  Fetching... {backfillProgress.current}/{backfillProgress.total}
-                </>
-              ) : (
-                <>
-                  <ImageDown className="h-4 w-4 mr-1.5" />
-                  Fetch Missing Avatars
-                </>
-              )}
-            </Button>
-          )}
           {/* View toggle */}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ml-auto">
             <button type="button" onClick={() => handleViewChange("table")} className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-pd-blue text-white" : "bg-background text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800")} title="Table view">

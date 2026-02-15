@@ -58,16 +58,21 @@ export async function fetchDirectoriesWithCounts(): Promise<Directory[]> {
   if (dirs.length === 0) return [];
 
   // Batch-fetch member counts
-  const { data: counts } = await supabase
+  const { data: counts, error: countErr } = await supabase
     .from("directory_members")
     .select("directory_id")
     .in("directory_id", dirs.map((d) => d.id));
+
+  if (countErr) {
+    console.error("[directories] member count fetch FAILED:", countErr.message, countErr.details, countErr.hint);
+  }
 
   const countMap = new Map<string, number>();
   for (const row of counts ?? []) {
     const did = (row as { directory_id: string }).directory_id;
     countMap.set(did, (countMap.get(did) ?? 0) + 1);
   }
+  console.log("[directories] member counts:", Object.fromEntries(countMap));
   return dirs.map((d) => ({ ...d, member_count: countMap.get(d.id) ?? 0 }));
 }
 
@@ -116,15 +121,33 @@ export async function deleteDirectory(id: string): Promise<{ error: string | nul
 // ─── Directory Member CRUD ──────────────────────────────────
 
 export async function fetchDirectoryMembers(directoryId: string): Promise<DirectoryMember[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  console.log("[directories] fetchDirectoryMembers →", {
+    directoryId,
+    userId: session?.user?.id ?? "NO SESSION",
+    role: (session?.user?.user_metadata as Record<string, unknown>)?.role ?? "unknown",
+  });
+
   const { data, error } = await supabase
     .from("directory_members")
     .select("*")
     .eq("directory_id", directoryId)
     .order("sort_order", { ascending: true });
+
   if (error) {
-    console.warn("[directories] members fetch failed:", error.message);
+    console.error("[directories] members fetch FAILED:", error.message, error.details, error.hint);
     return [];
   }
+
+  console.log("[directories] members returned:", data?.length ?? 0, "rows for directory", directoryId);
+  if ((data?.length ?? 0) === 0) {
+    // RLS debug: try a count without directory filter to see if ANY rows are readable
+    const { count, error: countErr } = await supabase
+      .from("directory_members")
+      .select("*", { count: "exact", head: true });
+    console.warn("[directories] RLS DEBUG — total readable rows across all directories:", count, countErr?.message ?? "OK");
+  }
+
   return (data ?? []).map(mapMemberRow);
 }
 
@@ -220,9 +243,10 @@ export async function fetchShowcaseFromDirectories(limit = 40): Promise<Director
     .limit(limit * 2); // over-fetch to allow for dedup
 
   if (error) {
-    console.warn("[directories] showcase fetch failed:", error.message);
+    console.error("[directories] showcase fetch FAILED:", error.message, error.details, error.hint);
     return [];
   }
+  console.log("[directories] showcase returned:", data?.length ?? 0, "approved rows");
 
   // Deduplicate by handle (keep first occurrence)
   const seen = new Set<string>();
@@ -248,6 +272,7 @@ export async function promoteListToDirectory(
     display_name: string;
     platform: string;
     avatar_url?: string | null;
+    ic_avatar_url?: string | null;
     follower_count?: number | null;
     engagement_rate?: number | null;
     bio?: string | null;

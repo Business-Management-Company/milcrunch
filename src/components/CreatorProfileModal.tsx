@@ -48,7 +48,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
+import { approveForDirectory, detectBranch, extractAvatarFromEnrichment } from "@/lib/featured-creators";
 import CreateListModal from "@/components/CreateListModal";
 
 const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "twitter", "linkedin"];
@@ -257,7 +257,7 @@ export default function CreatorProfileModal({
   const doApproveForDirectory = async () => {
     if (!creator) return null;
     const igData = ig as Record<string, unknown> | undefined;
-    const enrichedAvatar = (igData?.profile_picture_hd as string) ?? (igData?.profile_picture as string) ?? null;
+    const enrichedAvatar = extractAvatarFromEnrichment(enriched) ?? creator.avatar ?? null;
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];

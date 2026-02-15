@@ -68,9 +68,10 @@ export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator
     .order("sort_order", { ascending: true })
     .limit(limit * 2); // over-fetch for dedup
   if (error) {
-    console.warn("[featured-creators] Showcase fetch failed:", error.message);
+    console.error("[featured-creators] Showcase fetch FAILED:", error.message, error.details, error.hint);
     return [];
   }
+  console.log("[featured-creators] Showcase returned:", data?.length ?? 0, "approved rows");
   // Deduplicate by handle+platform
   const seen = new Set<string>();
   const unique: ShowcaseCreator[] = [];
@@ -245,6 +246,57 @@ export async function removeFromDirectory(id: string): Promise<{ error: string |
     .eq("id", id);
   if (error) return { error: error.message };
   return { error: null };
+}
+
+/** Extract the best avatar URL from enrichment data, checking multiple field paths.
+ *  Checks: profile_picture_hd, profile_picture, picture, profile_pic_url, avatar,
+ *  basicInfo.profilePicture — in both instagram-level and top-level locations. */
+export function extractAvatarFromEnrichment(enrichData: unknown): string | null {
+  if (!enrichData || typeof enrichData !== "object") return null;
+  const data = enrichData as Record<string, unknown>;
+
+  const tryFields = (obj: Record<string, unknown> | undefined): string | null => {
+    if (!obj) return null;
+    const url =
+      (obj.profile_picture_hd as string) ||
+      (obj.profile_picture as string) ||
+      (obj.picture as string) ||
+      (obj.profile_pic_url as string) ||
+      (obj.avatar as string) ||
+      null;
+    if (url && typeof url === "string" && url.trim() && !url.includes("ui-avatars.com")) return url;
+    const bi = obj.basicInfo as Record<string, unknown> | undefined;
+    if (bi) {
+      const biUrl = (bi.profilePicture as string) || null;
+      if (biUrl && typeof biUrl === "string" && biUrl.trim() && !biUrl.includes("ui-avatars.com")) return biUrl;
+    }
+    return null;
+  };
+
+  // 1. Instagram-level (most common enrichment path)
+  const ig = data.instagram as Record<string, unknown> | undefined;
+  const igResult = tryFields(ig);
+  if (igResult) return igResult;
+
+  // 2. result.instagram (alternative nesting)
+  const result = data.result as Record<string, unknown> | undefined;
+  if (result) {
+    const resultIg = result.instagram as Record<string, unknown> | undefined;
+    const riResult = tryFields(resultIg);
+    if (riResult) return riResult;
+    // 3. result.profile
+    const profile = result.profile as Record<string, unknown> | undefined;
+    const rpResult = tryFields(profile);
+    if (rpResult) return rpResult;
+  }
+
+  // 4. Top-level profile
+  const topProfile = data.profile as Record<string, unknown> | undefined;
+  const tpResult = tryFields(topProfile);
+  if (tpResult) return tpResult;
+
+  // 5. Top-level fields directly
+  return tryFields(data);
 }
 
 export function formatFollowerCount(n: number | null | undefined): string {
