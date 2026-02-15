@@ -18,7 +18,7 @@ interface EventRow {
   venue: string | null;
   city: string | null;
   state: string | null;
-  cover_image_url: string | null;
+  image_url: string | null;
   status: string | null;
   is_published: boolean | null;
   capacity: number | null;
@@ -58,7 +58,7 @@ const BrandEvents = () => {
     try {
       const { data, error } = await supabase
         .from("events")
-        .select("id, title, description, event_type, start_date, end_date, venue, city, state, cover_image_url, status, is_published, capacity")
+        .select("id, title, description, event_type, start_date, end_date, venue, city, state, image_url, status, is_published, capacity")
         .order("start_date", { ascending: false });
       if (error) throw error;
 
@@ -165,8 +165,8 @@ const BrandEvents = () => {
                 <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden hover:border-pd-blue/50 hover:shadow-md transition-all h-full flex flex-col">
                   {/* Cover image or placeholder */}
                   <div className="h-40 bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20 flex items-center justify-center relative">
-                    {event.cover_image_url ? (
-                      <img src={event.cover_image_url} alt={event.title} className="w-full h-full object-cover" />
+                    {event.image_url ? (
+                      <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
                     ) : (
                       <Calendar className="h-12 w-12 text-pd-blue/40" />
                     )}

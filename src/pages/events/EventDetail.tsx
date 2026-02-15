@@ -23,12 +23,11 @@ interface Event {
   start_date: string | null;
   end_date: string | null;
   venue: string | null;
-  address: string | null;
+  location: string | null;
   city: string | null;
   state: string | null;
-  country: string | null;
   timezone: string | null;
-  cover_image_url: string | null;
+  image_url: string | null;
   capacity: number | null;
   is_published: boolean;
 }
@@ -202,11 +201,11 @@ const EventDetail = () => {
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <div className="relative h-[400px] md:h-[500px] overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: event.cover_image_url 
-              ? `url(${event.cover_image_url})` 
+          style={{
+            backgroundImage: event.image_url
+              ? `url(${event.image_url})`
               : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.7) 100%)'
           }}
         />
@@ -373,7 +372,7 @@ const EventDetail = () => {
                       <div>
                         <h3 className="font-semibold text-foreground text-lg">{event.venue}</h3>
                         <p className="text-muted-foreground">
-                          {[event.address, event.city, event.state, event.country].filter(Boolean).join(", ")}
+                          {[event.location, event.city, event.state].filter(Boolean).join(", ")}
                         </p>
                         <Button variant="outline" size="sm" className="mt-4">
                           Get Directions

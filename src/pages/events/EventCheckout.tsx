@@ -29,7 +29,6 @@ import { format } from "date-fns";
 interface Event {
   id: string;
   title: string;
-  slug: string;
   start_date: string | null;
   venue: string | null;
   city: string | null;
@@ -175,7 +174,7 @@ const EventCheckout = () => {
       // Fetch event
       const { data: eventData, error: eventError } = await supabase
         .from("events")
-        .select("id, title, slug, start_date, venue, city")
+        .select("id, title, start_date, venue, city")
         .eq("slug", slug)
         .single();
 

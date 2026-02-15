@@ -29,9 +29,9 @@ interface Event {
   venue: string | null;
   city: string | null;
   state: string | null;
-  address: string | null;
+  location: string | null;
   timezone: string | null;
-  cover_image_url: string | null;
+  image_url: string | null;
 }
 
 interface TicketTypeInfo {
@@ -61,7 +61,7 @@ const EventConfirmation = () => {
         .from("orders")
         .select(`
           id, quantity, total, status, created_at, attendee_info,
-          events!inner(id, title, slug, start_date, end_date, venue, city, state, address, timezone, cover_image_url),
+          events!inner(id, title, slug, start_date, end_date, venue, city, state, location, timezone, image_url),
           ticket_types(name, description)
         `)
         .eq("id", orderId)
@@ -95,13 +95,13 @@ const EventConfirmation = () => {
 
     const start = new Date(event.start_date);
     const end = event.end_date ? new Date(event.end_date) : new Date(start.getTime() + 3600000);
-    const location = [event.venue, event.address, event.city, event.state].filter(Boolean).join(", ");
+    const loc = [event.venue, event.location, event.city, event.state].filter(Boolean).join(", ");
 
     if (type === "google") {
-      const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${start.toISOString().replace(/[-:]/g, "").split(".")[0]}Z/${end.toISOString().replace(/[-:]/g, "").split(".")[0]}Z&location=${encodeURIComponent(location)}&details=${encodeURIComponent("Your ticket: " + generateQRValue())}`;
+      const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${start.toISOString().replace(/[-:]/g, "").split(".")[0]}Z/${end.toISOString().replace(/[-:]/g, "").split(".")[0]}Z&location=${encodeURIComponent(loc)}&details=${encodeURIComponent("Your ticket: " + generateQRValue())}`;
       window.open(url, "_blank");
     } else if (type === "outlook") {
-      const url = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(event.title)}&startdt=${start.toISOString()}&enddt=${end.toISOString()}&location=${encodeURIComponent(location)}&body=${encodeURIComponent("Your ticket: " + generateQRValue())}`;
+      const url = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(event.title)}&startdt=${start.toISOString()}&enddt=${end.toISOString()}&location=${encodeURIComponent(loc)}&body=${encodeURIComponent("Your ticket: " + generateQRValue())}`;
       window.open(url, "_blank");
     }
     // Apple Calendar would typically download an .ics file
@@ -156,8 +156,8 @@ const EventConfirmation = () => {
                 <div 
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ 
-                    backgroundImage: event.cover_image_url 
-                      ? `url(${event.cover_image_url})` 
+                    backgroundImage: event.image_url 
+                      ? `url(${event.image_url})` 
                       : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.7) 100%)'
                   }}
                 />

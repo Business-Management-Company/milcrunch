@@ -34,7 +34,7 @@ interface EventRow {
   venue: string | null;
   city: string | null;
   state: string | null;
-  cover_image_url: string | null;
+  image_url: string | null;
   status: string | null;
   is_published: boolean | null;
   capacity: number | null;
@@ -144,7 +144,7 @@ const BrandEventDetail = () => {
       setEditVenue(ev.venue || "");
       setEditCity(ev.city || "");
       setEditState(ev.state || "");
-      setEditCover(ev.cover_image_url || "");
+      setEditCover(ev.image_url || "");
       setEditCapacity(ev.capacity ? String(ev.capacity) : "");
       setAgenda((agRes.data || []) as AgendaRow[]);
       setSpeakers((spkRes.data || []) as SpeakerRow[]);
@@ -175,7 +175,7 @@ const BrandEventDetail = () => {
           venue: editVenue.trim() || null,
           city: editCity.trim() || null,
           state: editState.trim() || null,
-          cover_image_url: editCover.trim() || null,
+          image_url: editCover.trim() || null,
           capacity: editCapacity ? parseInt(editCapacity) : null,
         } as Record<string, unknown>)
         .eq("id", eventId);

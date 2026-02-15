@@ -21,7 +21,6 @@ import { format } from "date-fns";
 interface Event {
   id: string;
   title: string;
-  slug: string;
   event_type: string;
   start_date: string | null;
   end_date: string | null;
@@ -53,7 +52,7 @@ const AdminEvents = () => {
     try {
       const { data, error } = await supabase
         .from("events")
-        .select("id, title, slug, event_type, start_date, end_date, venue, city, is_published")
+        .select("id, title, event_type, start_date, end_date, venue, city, is_published")
         .order("start_date", { ascending: false });
 
       if (error) throw error;
@@ -157,7 +156,7 @@ const AdminEvents = () => {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" asChild>
-                        <Link to={`/events/${event.slug}`}>
+                        <Link to={`/events/${event.id}`}>
                           <Eye className="w-4 h-4 mr-1" />
                           View
                         </Link>
@@ -170,7 +169,7 @@ const AdminEvents = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link to={`/events/${event.slug}`} className="flex items-center">
+                            <Link to={`/events/${event.id}`} className="flex items-center">
                               <ExternalLink className="w-4 h-4 mr-2" />
                               View Public Page
                             </Link>
