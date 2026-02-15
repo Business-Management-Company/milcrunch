@@ -6,9 +6,8 @@ const Footer = () => {
       <div className="container mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <img src="/favicon-32x32.png" alt="" className="h-9 w-auto" />
-              <span className="font-display font-bold text-xl text-foreground tracking-wide">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
+            <div className="flex items-center">
+              <span className="font-bold text-xl text-foreground tracking-tight">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               Where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.

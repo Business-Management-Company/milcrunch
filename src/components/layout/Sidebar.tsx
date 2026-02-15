@@ -276,9 +276,8 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       <div className={cn("p-3 border-t border-gray-200 dark:border-gray-800 space-y-2", collapsed && "flex flex-col items-center")}>
         {!collapsed && (
           <>
-            <div className="flex items-center justify-center gap-1.5 px-2">
-              <img src="/favicon-32x32.png" alt="" className="h-5 w-auto" />
-              <span className="text-sm text-gray-500">RecurrentX</span>
+            <div className="flex items-center justify-center px-2">
+              <span className="text-sm font-bold text-gray-500 tracking-tight">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
             </div>
             <p className="text-[10px] text-muted-foreground/80 text-center">Demo v1.0</p>
           </>

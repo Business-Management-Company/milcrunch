@@ -73,9 +73,8 @@ export default function PodcastsPage() {
           navScrolled ? "bg-white/95 backdrop-blur-md border-b border-gray-200" : "bg-[#0a1628]"
         }`}
       >
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src="/favicon-32x32.png" alt="RecurrentX" className="h-8 w-auto" />
-          <span className={`font-bold text-lg ${navScrolled ? "text-[#000741]" : "text-white"}`}>
+        <Link to="/" className="flex items-center shrink-0">
+          <span className={`font-bold text-lg tracking-tight ${navScrolled ? "text-[#000741]" : "text-white"}`}>
             recurrent<span className="text-[#10B981] font-extrabold">X</span>
           </span>
         </Link>
@@ -201,9 +200,8 @@ export default function PodcastsPage() {
 
       <footer className="border-t border-gray-200 px-4 md:px-8 py-6">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/favicon-32x32.png" alt="RecurrentX" className="h-6 w-auto" />
-            <span className="font-bold text-[#000741]">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
+          <Link to="/" className="flex items-center">
+            <span className="font-bold text-[#000741] tracking-tight">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
           </Link>
           <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>
         </div>

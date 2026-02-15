@@ -87,8 +87,8 @@ export default {
         'primary': '0 4px 20px 0 hsla(228, 87%, 57%, 0.5)',
       },
       fontFamily: {
-        'display': ['Bebas Neue', 'sans-serif'],
-        'headline': ['Bebas Neue', 'sans-serif'],
+        'display': ['Inter', 'system-ui', 'sans-serif'],
+        'headline': ['Inter', 'system-ui', 'sans-serif'],
         'sans': ['Inter', 'system-ui', 'sans-serif'],
         'serif': ['Playfair Display', 'Georgia', 'serif'],
       },

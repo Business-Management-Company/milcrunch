@@ -24,9 +24,8 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur-xl">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2 group">
-            <img src="/favicon-32x32.png" alt="" className="h-9 w-auto" />
-            <span className="font-display font-bold text-xl text-foreground tracking-wide">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
+          <Link to="/" className="flex items-center group">
+            <span className="font-bold text-xl text-foreground tracking-tight">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
