@@ -158,7 +158,7 @@ export default function AIAssistant() {
                   <div className="max-w-[95%] flex flex-col gap-2">
                     <div className="flex items-start gap-2">
                       <img
-                        src="/Parade-Deck-Flag-logo.png"
+                        src="/favicon-32x32.png"
                         alt=""
                         className="h-5 w-5 mt-0.5 shrink-0 object-contain"
                       />
@@ -205,7 +205,7 @@ export default function AIAssistant() {
             ))}
             {isLoading && (
               <div className="flex items-center gap-2 pl-7">
-                <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-5 w-5 shrink-0 object-contain" />
+                <img src="/favicon-32x32.png" alt="" className="h-5 w-5 shrink-0 object-contain" />
                 <div className="rounded-2xl rounded-bl-sm bg-gray-100 dark:bg-[#1A1D27] px-4 py-3 flex gap-1">
                   <span className="w-2 h-2 rounded-full bg-pd-blue animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-2 h-2 rounded-full bg-pd-blue animate-bounce" style={{ animationDelay: "150ms" }} />

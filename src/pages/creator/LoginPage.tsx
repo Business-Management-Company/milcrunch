@@ -101,7 +101,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md bg-white/95 dark:bg-card border-border shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <img src="/Parade-Deck-Flag-logo.png" alt="RecurrentX" className="h-12 w-auto" />
+            <img src="/favicon-32x32.png" alt="RecurrentX" className="h-12 w-auto" />
           </div>
           <CardTitle className="text-2xl font-headline">
             {isForgot ? "Reset Password" : "Welcome Back"}

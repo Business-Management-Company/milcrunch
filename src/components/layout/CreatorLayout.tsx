@@ -142,8 +142,8 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border">
         <Link to="/creator/dashboard" className="flex items-center gap-2 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-[#1B2A4A] flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">PD</span>
+          <div className="w-9 h-9 rounded-xl bg-[#10B981] flex items-center justify-center shrink-0">
+            <span className="text-white font-extrabold text-sm">X</span>
           </div>
           <span className="font-headline font-bold text-foreground truncate">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
         </Link>

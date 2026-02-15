@@ -66,7 +66,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/speakers", label: "Speakers", icon: Mic },
       { href: "/awards", label: "Awards", icon: Trophy },
       { href: "/sponsors", label: "Sponsors", icon: Handshake },
-      { href: "/pdx/create", label: "Create Experience", icon: PlusCircle, tooltip: "A PDX (ParadeDeck Experience) is a branded event package — combining live streaming, virtual events, co-broadcasting, and creator activations into one scalable experience." },
+      { href: "/pdx/create", label: "Create Experience", icon: PlusCircle, tooltip: "A PDX (RecurrentX Experience) is a branded event package — combining live streaming, virtual events, co-broadcasting, and creator activations into one scalable experience." },
     ],
   },
   {
@@ -277,7 +277,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         {!collapsed && (
           <>
             <div className="flex items-center justify-center gap-1.5 px-2">
-              <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-5 w-auto" />
+              <img src="/favicon-32x32.png" alt="" className="h-5 w-auto" />
               <span className="text-sm text-gray-500">RecurrentX</span>
             </div>
             <p className="text-[10px] text-muted-foreground/80 text-center">Demo v1.0</p>

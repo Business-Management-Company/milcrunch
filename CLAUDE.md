@@ -235,7 +235,7 @@ The most complex page. Key details:
 6. **Lists page redesign** — Match Influencers.club style
 7. **Email system** — Credit-based email tool with in-app send/receive
 8. **Tag system** — Create, assign, and search by tags
-9. **Recurrent.io pitch** — Position ParadeDeck as year-round community for Military.com
+9. **Recurrent.io pitch** — Position RecurrentX as year-round community for Military.com
 
 ---
 

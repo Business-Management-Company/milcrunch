@@ -1,285 +1,391 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { fetchCredits } from "@/lib/influencers-club";
+import { useEffect, useState, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
+  Search,
+  ListPlus,
+  ShieldCheck,
   Users,
   Calendar,
-  Mic2,
+  Mic,
   BarChart3,
-  Search,
-  PlusCircle,
-  Radio,
-  TrendingUp,
+  Video,
+  Sparkles,
   ArrowRight,
+  Send,
   MapPin,
+  Clock,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const STATS = [
-  {
-    label: "Total Creators",
-    value: "70,000+",
-    subtext: "Indexed profiles",
-    icon: Users,
-    iconBg: "bg-[#0064B1]/10",
-    iconColor: "text-[#0064B1]",
-  },
-  {
-    label: "Active Events",
-    value: "4",
-    subtext: "Upcoming events",
-    icon: Calendar,
-    iconBg: "bg-[#0064B1]/10",
-    iconColor: "text-[#0064B1]",
-  },
-  {
-    label: "Podcast Network",
-    value: "824",
-    subtext: "Military podcasts",
-    icon: Mic2,
-    iconBg: "bg-[#0064B1]/10",
-    iconColor: "text-[#0064B1]",
-  },
-  {
-    label: "Creator Reach",
-    value: "6M+",
-    subtext: "Combined audience",
-    icon: BarChart3,
-    iconBg: "bg-[#0064B1]/10",
-    iconColor: "text-[#0064B1]",
-  },
-];
+/* ------------------------------------------------------------------ */
+/* Quick-action card definitions                                       */
+/* ------------------------------------------------------------------ */
 
-const QUICK_ACTIONS = [
+const ROW1 = [
   {
-    title: "Discover Creators",
-    description: "Search and filter military & veteran creators",
+    title: "Find Creators",
+    desc: "Search military & veteran creators by niche, branch, engagement",
     href: "/brand/discover",
     icon: Search,
-    accent: "bg-[#0064B1] text-white hover:bg-[#053877]",
-    iconBg: "bg-[#0064B1]/15 text-[#0064B1]",
   },
   {
-    title: "Create Event",
-    description: "Launch a new PDX or event",
+    title: "Build a List",
+    desc: "Curate creator lists for campaigns and outreach",
+    href: "/brand/lists",
+    icon: ListPlus,
+  },
+  {
+    title: "Verify a Creator",
+    desc: "Run military service verification checks",
+    href: "/brand/verification",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Manage Directory",
+    desc: "Review and manage approved creators",
+    href: "/brand/directory",
+    icon: Users,
+  },
+];
+
+const ROW2 = [
+  {
+    title: "Plan an Event",
+    desc: "Create PDX experiences and live events",
     href: "/pdx/create",
-    icon: PlusCircle,
-    accent: "bg-[#F0A71F] text-[#000741] hover:bg-[#e09a1a]",
-    iconBg: "bg-[#F0A71F]/20 text-[#F0A71F]",
+    icon: Calendar,
   },
   {
-    title: "Manage Podcasts",
-    description: "Edit and moderate podcast catalog",
-    href: "/admin/media/podcasts",
-    icon: Radio,
-    accent: "bg-[#6B21A8] text-white hover:bg-[#5B1A8A]",
-    iconBg: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
+    title: "Book a Speaker",
+    desc: "Browse and book military speakers",
+    href: "/speakers",
+    icon: Mic,
   },
   {
-    title: "View Analytics",
-    description: "Campaign performance and reach",
-    href: "/analytics",
-    icon: TrendingUp,
-    accent: "bg-emerald-600 text-white hover:bg-emerald-700",
-    iconBg: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    title: "Sponsor ROI",
+    desc: "Track sponsor performance and analytics",
+    href: "/sponsors",
+    icon: BarChart3,
+  },
+  {
+    title: "Go Live",
+    desc: "Launch a live streaming experience",
+    href: "/pdx/create",
+    icon: Video,
   },
 ];
 
-const UPCOMING_EVENTS = [
-  { name: "Military Times Veterans Summit", date: "Mar 15", location: "Washington, DC" },
-  { name: "PDX at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC" },
-  { name: "MIC 2026", date: "Sep", location: "Washington, DC" },
-  { name: "PDX at VFW National", date: "Aug", location: "Louisville, KY" },
-];
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
 
-const PLATFORM_HIGHLIGHTS = [
-  "AI-powered creator discovery across 340M+ profiles",
-  "Enriched creator profiles with engagement analytics",
-  "PDX event creation wizard with mobile experience",
-  "824+ military & veteran podcasts indexed",
-];
-
-const FEATURED_CREATORS = [
-  { name: "Jason", handle: "savagekingdomboerboels", followers: "359.1K", niche: "Veterans", initials: "JS" },
-  { name: "Kevin", handle: "wheelchairkev", followers: "353.1K", niche: "Motivation", initials: "KW" },
-  { name: "Taylor", handle: "tsyontz", followers: "96.8K", niche: "Military", initials: "TS" },
-  { name: "Jon", handle: "itsjonlynch", followers: "88.6K", niche: "Military", initials: "JO" },
-  { name: "David", handle: "frommilitarytomillionaire", followers: "107.9K", niche: "Military", initials: "DA" },
-  { name: "Ashlee", handle: "thewomanandwarrior", followers: "34.6K", niche: "Military", initials: "AS" },
-];
-
-function formatDate() {
-  return new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
 }
 
+/* ------------------------------------------------------------------ */
+/* Component                                                           */
+/* ------------------------------------------------------------------ */
+
 export default function SummaryDashboard() {
-  const today = formatDate();
-  const [credits, setCredits] = useState<{credits_available:number;credits_used:number}|null>(null);
-  useEffect(()=>{fetchCredits().then(setCredits);},[]);
+  const { user } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [prompt, setPrompt] = useState("");
+
+  // User's first name
+  const fullName =
+    (user?.user_metadata?.full_name as string) ??
+    (user?.user_metadata?.display_name as string) ??
+    "";
+  const firstName = fullName.split(" ")[0] || "there";
+
+  // Network stats
+  const [directoryCount, setDirectoryCount] = useState<number | null>(null);
+  const [totalReach, setTotalReach] = useState<number | null>(null);
+  const [listCount, setListCount] = useState<number | null>(null);
+
+  // Upcoming events
+  const [events, setEvents] = useState<
+    { id: string; name: string; date_label: string; location: string }[]
+  >([]);
+
+  // Recent activity
+  const [activity, setActivity] = useState<
+    { label: string; time: string }[]
+  >([]);
+
+  useEffect(() => {
+    // Directory count + total reach
+    supabase
+      .from("featured_creators")
+      .select("follower_count", { count: "exact" })
+      .then(({ data, count }) => {
+        setDirectoryCount(count ?? 0);
+        const reach = (data ?? []).reduce(
+          (sum, r) => sum + ((r.follower_count as number) ?? 0),
+          0,
+        );
+        setTotalReach(reach);
+      });
+
+    // List count
+    supabase
+      .from("influencer_lists")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }) => setListCount(count ?? 0));
+
+    // Upcoming events (seed data if table doesn't exist yet)
+    supabase
+      .from("events")
+      .select("id, name, date_label, location")
+      .order("created_at", { ascending: false })
+      .limit(3)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setEvents(
+            data.map((e) => ({
+              id: e.id,
+              name: (e as Record<string, unknown>).name as string ?? "Event",
+              date_label: (e as Record<string, unknown>).date_label as string ?? "",
+              location: (e as Record<string, unknown>).location as string ?? "",
+            })),
+          );
+        } else {
+          setEvents([
+            { id: "1", name: "MilSpouseFest San Diego", date_label: "Mar 15", location: "San Diego, CA" },
+            { id: "2", name: "PDX at Fort Liberty", date_label: "Apr 5", location: "Fort Liberty, NC" },
+            { id: "3", name: "MIC 2026", date_label: "Sep 15-17", location: "Washington, DC" },
+          ]);
+        }
+      });
+
+    // Recent activity — placeholder until we have an activity feed
+    setActivity([
+      { label: "Creator directory updated", time: "2 hours ago" },
+      { label: "New list created: Q1 Outreach", time: "Yesterday" },
+      { label: "3 creators added to Fitness list", time: "2 days ago" },
+      { label: "PDX Fort Liberty event created", time: "3 days ago" },
+      { label: "Verification completed for @mattbest11x", time: "4 days ago" },
+    ]);
+  }, []);
+
+  // Submit prompt → navigate to AI assistant (or just open it)
+  const handleSubmit = () => {
+    const q = prompt.trim();
+    if (!q) return;
+    // Dispatch a custom event the AIAssistant can pick up,
+    // or navigate to discover with the query if it seems like a search
+    const searchKeywords = ["find", "search", "discover", "show", "look for", "creators"];
+    const isSearch = searchKeywords.some((k) => q.toLowerCase().includes(k));
+    if (isSearch) {
+      window.location.href = `/brand/discover?q=${encodeURIComponent(q)}`;
+    } else {
+      // Open AI panel with pre-filled message
+      window.dispatchEvent(
+        new CustomEvent("open-ai-assistant", { detail: { message: q } }),
+      );
+    }
+    setPrompt("");
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Top bar */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
-            Welcome to RecurrentX
-          </h1>
-          <p className="text-muted-foreground mt-0.5">Command Center Overview</p>
-        </div>
-        <p className="text-sm text-muted-foreground">{today}</p>
+    <div className="space-y-10 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="text-center pt-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-[#000741] dark:text-white tracking-tight">
+          Welcome back, {firstName}
+        </h1>
+        <p className="text-muted-foreground mt-1 text-lg">
+          What would you like to do today?
+        </p>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {STATS.map((stat) => {
-          const Icon = stat.icon;
+      {/* AI Prompt Bar */}
+      <div className="max-w-2xl mx-auto">
+        <div className="relative flex items-center">
+          <Sparkles className="absolute left-4 h-5 w-5 text-[#10B981]" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Ask me anything about creators, events, sponsors, or campaigns..."
+            className={cn(
+              "w-full pl-12 pr-14 py-4 rounded-2xl text-base",
+              "border border-gray-200 dark:border-gray-700",
+              "bg-white dark:bg-[#1A1D27]",
+              "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#10B981]/30 focus:border-[#10B981]",
+              "outline-none transition-all placeholder:text-gray-400",
+            )}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSubmit();
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!prompt.trim()}
+            className={cn(
+              "absolute right-3 rounded-xl p-2 transition-colors",
+              prompt.trim()
+                ? "bg-[#10B981] text-white hover:bg-[#0D9668]"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-400",
+            )}
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Action Cards — Row 1 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {ROW1.map((card) => {
+          const Icon = card.icon;
           return (
-            <div
-              key={stat.label}
-              className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 shadow-sm"
+            <Link
+              key={card.href + card.title}
+              to={card.href}
+              className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold text-[#000741] dark:text-white mt-1">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{stat.subtext}</p>
-                </div>
-                <div className={cn("rounded-full p-2.5", stat.iconBg, stat.iconColor)}>
-                  <Icon className="h-5 w-5" />
-                </div>
+              <div className="rounded-lg bg-[#10B981]/10 p-2.5 w-fit mb-3">
+                <Icon className="h-5 w-5 text-[#10B981]" />
               </div>
-            </div>
+              <h3 className="font-semibold text-[#000741] dark:text-white text-sm">
+                {card.title}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                {card.desc}
+              </p>
+            </Link>
           );
         })}
       </div>
 
-      {/* API Credits */}
-      {credits && (
-        <div className="flex items-center gap-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">API Credits:</span>
-            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{credits.credits_available.toLocaleString()}</span>
-            <span className="text-sm text-gray-400">available</span>
-          </div>
-          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{credits.credits_used.toLocaleString()}</span>
-            <span className="text-sm text-gray-400">used</span>
-          </div>
-          <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
-          <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-            <div className="h-full rounded-full bg-emerald-500" style={{width:`${Math.round((credits.credits_available/(credits.credits_available+credits.credits_used))*100)}%`}} />
-          </div>
-        </div>
-      )}
-      {/* Quick actions */}
-      <div>
-        <h2 className="text-lg font-semibold text-[#000741] dark:text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link
-                key={action.href}
-                to={action.href}
-                className={cn(
-                  "group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 shadow-sm",
-                  "hover:shadow-md transition-all hover:border-[#0064B1]/30 flex flex-col"
-                )}
-              >
-                <div className={cn("rounded-lg p-2.5 w-fit mb-3", action.iconBg)}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-[#000741] dark:text-white">{action.title}</h3>
-                <p className="text-sm text-muted-foreground mt-0.5 flex-1">{action.description}</p>
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-[#0064B1] mt-3 group-hover:gap-2 transition-all">
-                  Go <ArrowRight className="h-4 w-4" />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+      {/* Quick Action Cards — Row 2 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 -mt-6">
+        {ROW2.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Link
+              key={card.href + card.title}
+              to={card.href}
+              className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              <div className="rounded-lg bg-[#10B981]/10 p-2.5 w-fit mb-3">
+                <Icon className="h-5 w-5 text-[#10B981]" />
+              </div>
+              <h3 className="font-semibold text-[#000741] dark:text-white text-sm">
+                {card.title}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                {card.desc}
+              </p>
+            </Link>
+          );
+        })}
       </div>
 
-      {/* Recent activity — 2 columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-[#000741] dark:text-white mb-4">Upcoming Events</h2>
+      {/* Three-column section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Recent Activity */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5">
+          <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            Recent Activity
+          </h2>
           <ul className="space-y-3">
-            {UPCOMING_EVENTS.map((event) => (
-              <li key={event.name} className="flex items-start gap-3">
-                <span className="shrink-0 rounded-md bg-[#0064B1]/10 text-[#0064B1] text-xs font-semibold px-2.5 py-1">
-                  {event.date}
-                </span>
-                <div>
-                  <p className="font-medium text-[#000741] dark:text-white">{event.name}</p>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" /> {event.location}
+            {activity.map((item, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] mt-2 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm text-[#000741] dark:text-white truncate">
+                    {item.label}
                   </p>
+                  <p className="text-xs text-muted-foreground">{item.time}</p>
                 </div>
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* Upcoming Events */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5">
+          <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            Upcoming Events
+          </h2>
+          {events.length > 0 ? (
+            <ul className="space-y-3">
+              {events.map((event) => (
+                <li key={event.id} className="flex items-start gap-3">
+                  <span className="shrink-0 rounded-md bg-[#10B981]/10 text-[#10B981] text-xs font-semibold px-2 py-1">
+                    {event.date_label}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[#000741] dark:text-white truncate">
+                      {event.name}
+                    </p>
+                    {event.location && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {event.location}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <p className="text-sm">No upcoming events</p>
+              <Link
+                to="/pdx/create"
+                className="text-sm text-[#10B981] hover:underline font-medium mt-1 inline-block"
+              >
+                Create one →
+              </Link>
+            </div>
+          )}
           <Link
             to="/events"
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#0064B1] hover:underline"
+            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#10B981] hover:underline"
           >
-            View All Events <ArrowRight className="h-4 w-4" />
+            View All <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-[#000741] dark:text-white mb-4">Platform Highlights</h2>
-          <ul className="space-y-2.5">
-            {PLATFORM_HIGHLIGHTS.map((highlight, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <span className="text-[#0064B1] mt-0.5">•</span>
-                <span>{highlight}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Featured Creators */}
-      <div>
-        <div className="flex items-end justify-between gap-4 mb-4">
-          <h2 className="text-lg font-semibold text-[#000741] dark:text-white">Featured Creators</h2>
-          <Link
-            to="/brand/discover"
-            className="text-sm font-medium text-[#0064B1] hover:underline inline-flex items-center gap-1"
-          >
-            View All Creators <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-        <div className="overflow-x-auto pb-2 -mx-1">
-          <div className="flex gap-4 min-w-0">
-            {FEATURED_CREATORS.map((c) => (
-              <Link
-                key={c.handle}
-                to="/brand/discover"
-                className="group shrink-0 w-[180px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 shadow-sm hover:shadow-md hover:border-[#0064B1]/30 transition-all"
-              >
-                <div
-                  className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 mx-auto mb-3"
-                  style={{ background: "linear-gradient(135deg, #0064B1 0%, #053877 100%)" }}
-                >
-                  {c.initials}
-                </div>
-                <p className="font-semibold text-[#000741] dark:text-white text-center truncate">{c.name}</p>
-                <p className="text-xs text-muted-foreground text-center truncate">@{c.handle}</p>
-                <p className="text-xs text-muted-foreground text-center mt-0.5">{c.followers} followers</p>
-                <span className="inline-block w-full text-center mt-2 bg-[#0064B1]/10 text-[#0064B1] rounded-full px-2 py-0.5 text-xs font-medium">
-                  {c.niche}
-                </span>
-              </Link>
-            ))}
+        {/* Network Stats */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5">
+          <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            Network Stats
+          </h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Creators in Directory</span>
+              <span className="text-lg font-bold text-[#000741] dark:text-white">
+                {directoryCount != null ? formatCount(directoryCount) : "—"}
+              </span>
+            </div>
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Combined Reach</span>
+              <span className="text-lg font-bold text-[#000741] dark:text-white">
+                {totalReach != null ? formatCount(totalReach) : "—"}
+              </span>
+            </div>
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Active Lists</span>
+              <span className="text-lg font-bold text-[#000741] dark:text-white">
+                {listCount != null ? listCount : "—"}
+              </span>
+            </div>
           </div>
         </div>
       </div>

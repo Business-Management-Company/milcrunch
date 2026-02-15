@@ -117,7 +117,7 @@ const Auth = () => {
       <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/Parade-Deck-Flag-logo.png" alt="RecurrentX" className="h-12 w-auto" />
+            <img src="/favicon-32x32.png" alt="RecurrentX" className="h-12 w-auto" />
           </div>
           <CardTitle className="text-2xl font-display">
             {isForgotPassword ? "Reset Password" : isSignUp ? "Create an Account" : "Welcome Back"}
