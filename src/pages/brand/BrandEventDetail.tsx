@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
-  Search, Download, CheckCircle2, XCircle, Ticket,
+  Search, Download, CheckCircle2, XCircle, Ticket, Globe, Copy, Code, QrCode,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,10 @@ interface EventRow {
   is_published: boolean | null;
   capacity: number | null;
   directory_id: string | null;
+  custom_subdomain: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image_url: string | null;
 }
 interface AgendaRow {
   id: string;
@@ -150,6 +155,13 @@ const BrandEventDetail = () => {
   const [editCover, setEditCover] = useState("");
   const [editCapacity, setEditCapacity] = useState("");
 
+  /* public page fields */
+  const [editSubdomain, setEditSubdomain] = useState("");
+  const [editOgTitle, setEditOgTitle] = useState("");
+  const [editOgDesc, setEditOgDesc] = useState("");
+  const [editOgImage, setEditOgImage] = useState("");
+  const [savingPublic, setSavingPublic] = useState(false);
+
   /* ---- fetch ---- */
   const fetchAll = useCallback(async () => {
     if (!eventId) return;
@@ -176,6 +188,10 @@ const BrandEventDetail = () => {
       setEditState(ev.state || "");
       setEditCover(ev.image_url || "");
       setEditCapacity(ev.capacity ? String(ev.capacity) : "");
+      setEditSubdomain(ev.custom_subdomain || "");
+      setEditOgTitle(ev.og_title || "");
+      setEditOgDesc(ev.og_description || "");
+      setEditOgImage(ev.og_image_url || "");
       setAgenda((agRes.data || []) as AgendaRow[]);
       setSpeakers((spkRes.data || []) as SpeakerRow[]);
       setSponsors((spsRes.data || []) as SponsorRow[]);
@@ -218,6 +234,30 @@ const BrandEventDetail = () => {
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
+    }
+  };
+
+  /* ---- save public page ---- */
+  const savePublicPage = async () => {
+    if (!eventId) return;
+    setSavingPublic(true);
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({
+          custom_subdomain: editSubdomain.trim() || null,
+          og_title: editOgTitle.trim() || null,
+          og_description: editOgDesc.trim() || null,
+          og_image_url: editOgImage.trim() || null,
+        } as Record<string, unknown>)
+        .eq("id", eventId);
+      if (error) throw error;
+      toast.success("Public page settings saved");
+      fetchAll();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSavingPublic(false);
     }
   };
 
@@ -389,6 +429,7 @@ const BrandEventDetail = () => {
             <TabsTrigger value="speakers"><Mic className="h-4 w-4 mr-1.5" />Speakers</TabsTrigger>
             <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
             <TabsTrigger value="registrations"><Ticket className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-emerald-100 text-emerald-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
+            <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
           </TabsList>
 
@@ -748,6 +789,256 @@ const BrandEventDetail = () => {
                       </div>
                     </Card>
                   )}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          {/* ===== PUBLIC PAGE ===== */}
+          <TabsContent value="public-page">
+            {(() => {
+              const publicUrl = `https://milcrunch.com/events/${eventId}`;
+              const registerUrl = `${publicUrl}/register`;
+              const subdomainStatus = event.custom_subdomain ? "active" : "not_configured";
+              const ogTitle = editOgTitle || event.title;
+              const ogDesc = editOgDesc || (event.description || "").slice(0, 160);
+              const ogImage = editOgImage || event.image_url || "";
+
+              const copyToClipboard = (text: string, label: string) => {
+                navigator.clipboard.writeText(text);
+                toast.success(`${label} copied to clipboard`);
+              };
+
+              const downloadQR = () => {
+                const svg = document.getElementById("event-qr-code");
+                if (!svg) return;
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const canvas = document.createElement("canvas");
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext("2d");
+                const img = new Image();
+                img.onload = () => {
+                  ctx?.drawImage(img, 0, 0, 512, 512);
+                  const a = document.createElement("a");
+                  a.download = `event-qr-${eventId}.png`;
+                  a.href = canvas.toDataURL("image/png");
+                  a.click();
+                };
+                img.src = "data:image/svg+xml;base64," + btoa(svgData);
+              };
+
+              const embedCode = `<iframe src="${registerUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:8px;"></iframe>`;
+
+              return (
+                <div className="space-y-6">
+                  {/* Live Preview Link */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-pd-blue" /> Live Preview
+                    </h3>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <code className="text-sm bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg flex-1 truncate block w-full">
+                        {publicUrl}
+                      </code>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(publicUrl, "URL")}>
+                          <Copy className="h-4 w-4 mr-1" /> Copy
+                        </Button>
+                        <Button size="sm" className="bg-pd-blue hover:bg-pd-darkblue text-white" asChild>
+                          <a href={`/events/${eventId}`} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4 mr-1" /> View Public Page
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Custom Domain / Subdomain */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <h3 className="font-semibold mb-1 flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-pd-blue" /> Custom Event URL
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">Set a custom subdomain for your event page.</p>
+
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Current URL</Label>
+                        <p className="text-sm font-mono mt-0.5">{publicUrl}</p>
+                      </div>
+                      <div>
+                        <Label>Custom Subdomain</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            value={editSubdomain}
+                            onChange={(e) => setEditSubdomain(e.target.value)}
+                            placeholder="mic2026"
+                            className="max-w-xs"
+                          />
+                          <span className="text-sm text-muted-foreground">.recurrentx.com</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          e.g., mic2026.recurrentx.com, milspousefest-sandiego.recurrentx.com
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          {subdomainStatus === "active" ? (
+                            <span className="flex items-center gap-1.5 text-sm">
+                              <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                              <span className="text-yellow-600 dark:text-yellow-400 font-medium">Pending Setup</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-sm">
+                              <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                              <span className="text-muted-foreground">Not configured</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/50 p-2 rounded">
+                        Custom domains are configured by the RecurrentX team. Contact support for setup.
+                      </p>
+                    </div>
+                  </Card>
+
+                  {/* SEO & Social Sharing */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <h3 className="font-semibold mb-1 flex items-center gap-2">
+                      <Search className="h-4 w-4 text-pd-blue" /> SEO & Social Sharing
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">Control how your event appears when shared on social media.</p>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-4">
+                        <div>
+                          <Label>OG Title</Label>
+                          <Input
+                            value={editOgTitle}
+                            onChange={(e) => setEditOgTitle(e.target.value)}
+                            placeholder={event.title}
+                            className="mt-1"
+                          />
+                          <p className="text-xs text-muted-foreground mt-0.5">Defaults to event title if blank</p>
+                        </div>
+                        <div>
+                          <Label>OG Description</Label>
+                          <Textarea
+                            value={editOgDesc}
+                            onChange={(e) => setEditOgDesc(e.target.value)}
+                            placeholder={(event.description || "").slice(0, 160)}
+                            rows={3}
+                            className="mt-1"
+                            maxLength={160}
+                          />
+                          <p className="text-xs text-muted-foreground mt-0.5">{editOgDesc.length}/160 characters</p>
+                        </div>
+                        <div>
+                          <Label>OG Image URL</Label>
+                          <Input
+                            value={editOgImage}
+                            onChange={(e) => setEditOgImage(e.target.value)}
+                            placeholder={event.image_url || "https://..."}
+                            className="mt-1"
+                          />
+                          <p className="text-xs text-muted-foreground mt-0.5">Defaults to event cover image if blank</p>
+                        </div>
+                      </div>
+
+                      {/* Social Preview Card */}
+                      <div>
+                        <Label className="mb-2 block">Social Preview</Label>
+                        <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-[#1A1D27]">
+                          {ogImage ? (
+                            <div className="aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                              <img src={ogImage} alt="OG Preview" className="w-full h-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                              <Calendar className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="p-3">
+                            <p className="text-xs text-muted-foreground uppercase">milcrunch.com</p>
+                            <p className="font-semibold text-sm mt-0.5 line-clamp-1">{ogTitle}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{ogDesc || "No description"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Embed Code */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <h3 className="font-semibold mb-1 flex items-center gap-2">
+                      <Code className="h-4 w-4 text-pd-blue" /> Embed Registration on Your Site
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3">Copy the code below to embed the registration form on any website.</p>
+
+                    <div className="relative">
+                      <pre className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                        {embedCode}
+                      </pre>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => copyToClipboard(embedCode, "Embed code")}
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-1" /> Copy
+                      </Button>
+                    </div>
+
+                    <div className="mt-4">
+                      <Label className="mb-2 block text-xs text-muted-foreground">Embed Preview</Label>
+                      <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+                        <div className="bg-white dark:bg-[#1A1D27] rounded border border-gray-200 dark:border-gray-700 p-6 text-center max-w-md mx-auto">
+                          <Calendar className="h-8 w-8 text-pd-blue mx-auto mb-2" />
+                          <p className="font-semibold text-sm">{event.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Registration Form</p>
+                          <div className="mt-3 space-y-2">
+                            <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded w-full" />
+                            <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded w-full" />
+                            <div className="h-8 bg-pd-blue/20 rounded w-full" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* QR Code */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <h3 className="font-semibold mb-1 flex items-center gap-2">
+                      <QrCode className="h-4 w-4 text-pd-blue" /> QR Code
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">Scan to open the public event page. Great for printed materials, signage, and badges.</p>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                      <div className="bg-white p-4 rounded-xl border border-gray-200 dark:border-gray-300 inline-block">
+                        <QRCodeSVG
+                          id="event-qr-code"
+                          value={publicUrl}
+                          size={180}
+                          level="H"
+                          includeMargin={false}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-mono text-muted-foreground">{publicUrl}</p>
+                        <Button variant="outline" size="sm" onClick={downloadQR}>
+                          <Download className="h-4 w-4 mr-1" /> Download QR Code (PNG)
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Save All Button */}
+                  <div className="flex justify-end">
+                    <Button onClick={savePublicPage} disabled={savingPublic} className="bg-pd-blue hover:bg-pd-darkblue text-white">
+                      {savingPublic ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      Save Public Page Settings
+                    </Button>
+                  </div>
                 </div>
               );
             })()}
