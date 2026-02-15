@@ -614,17 +614,62 @@ const BrandDiscover = () => {
       runSearch();
       return;
     }
-    // Apply parsed filters to state (updates dropdowns to reflect what was detected)
+    // Apply parsed filters to UI state (updates dropdowns)
     if (parsed.platform) setPlatform(parsed.platform);
     if (parsed.followersRange) setFollowersRange(parsed.followersRange);
     if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
     if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
     if (parsed.location) setLocationFilter(parsed.location);
-    setSearchQuery(parsed.remainingQuery);
+    // Default to "military" when all text was parsed into filters
+    const effectiveQuery = parsed.remainingQuery.trim() || "military";
+    setSearchQuery(effectiveQuery);
+    searchQueryRef.current = effectiveQuery;
     setSmartFiltersApplied(parsed.appliedLabels);
-    // Trigger search on next render after batched state updates settle
-    pendingAutoSearch.current = true;
-  }, [searchQuery, runSearch]);
+    // Execute search directly with parsed values (don't rely on effect timing)
+    setApiLoading(true);
+    setCurrentPage(1);
+    enrichAbortRef.current?.abort();
+    enrichedSetRef.current = new Set();
+    setEnrichCache({});
+    setEnrichRawCache({});
+    setEnrichingIds(new Set());
+    const effPlatform = parsed.platform || platform;
+    const effFollowers = parsed.followersRange || followersRange;
+    const effEngagement = parsed.engagementMin || engagementMin;
+    const effBranches = parsed.branches.length > 0 ? parsed.branches : Array.from(selectedBranches);
+    const effLocation = parsed.location || locationFilter;
+    const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === effFollowers);
+    const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === effEngagement);
+    const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
+    const kw = [...effBranches, ...bioKeys];
+    const keywords_in_bio = kw.length > 0 ? kw : [""];
+    const options = {
+      platform: effPlatform.toLowerCase(),
+      number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
+      engagement_percent: { min: engagementOpt?.min ?? null, max: null as number | null },
+      keywords_in_bio,
+      sort_by: (sortBy === "confidence" ? "relevancy" : sortBy) as "relevancy" | "followers" | "engagement",
+      location: effLocation?.trim() || undefined,
+      gender: gender !== "any" ? gender : undefined,
+      language: language !== "any" ? language : undefined,
+    };
+    persistLastSearch({
+      searchQuery: effectiveQuery, platform: effPlatform, followersRange: effFollowers,
+      engagementMin: effEngagement, locationFilter: effLocation || "", niche, gender, language,
+      keywordsInBio, sortBy, selectedBranches: effBranches,
+    });
+    searchCreators(effectiveQuery, options)
+      .then((result) => {
+        if (searchQueryRef.current === effectiveQuery) setApiResults(result);
+      })
+      .catch((err) => {
+        if (searchQueryRef.current === effectiveQuery) setApiResults(null);
+        console.warn("[BrandDiscover] Smart search failed:", err);
+      })
+      .finally(() => {
+        if (searchQueryRef.current === effectiveQuery) setApiLoading(false);
+      });
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, gender, language, niche, persistLastSearch, runSearch]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
