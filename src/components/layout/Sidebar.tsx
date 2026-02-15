@@ -8,7 +8,6 @@ import {
   Mic,
   Trophy,
   Handshake,
-  Sparkles,
   PlusCircle,
   Search,
   Users,
@@ -34,12 +33,18 @@ import {
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
   badge?: string;
+  tooltip?: string;
 }
 
 interface NavSection {
@@ -62,8 +67,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/speakers", label: "Speakers", icon: Mic },
       { href: "/awards", label: "Awards", icon: Trophy },
       { href: "/sponsors", label: "Sponsors", icon: Handshake },
-      { href: "/pdx", label: "Experiences", icon: Sparkles },
-      { href: "/pdx/create", label: "Create Experience", icon: PlusCircle },
+      { href: "/pdx/create", label: "Create Experience", icon: PlusCircle, tooltip: "A PDX (ParadeDeck Experience) is a branded event package — combining live streaming, virtual events, co-broadcasting, and creator activations into one scalable experience." },
     ],
   },
   {
@@ -226,31 +230,41 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   {section.items.map((item) => {
                     const isActive = location.pathname === item.href;
                     const Icon = item.icon;
+                    const linkEl = (
+                      <Link
+                        to={item.href}
+                        className={navItemClass(isActive)}
+                        title={collapsed ? item.label : undefined}
+                      >
+                        <Icon
+                          className={cn(
+                            "h-5 w-5 shrink-0",
+                            isActive
+                              ? "text-blue-600"
+                              : "text-gray-500 dark:text-gray-400"
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        {!collapsed && (
+                          <span className="truncate">{item.label}</span>
+                        )}
+                        {!collapsed && item.badge && (
+                          <span className="ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 whitespace-nowrap">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
                     return (
                       <li key={item.href + item.label}>
-                        <Link
-                          to={item.href}
-                          className={navItemClass(isActive)}
-                          title={collapsed ? item.label : undefined}
-                        >
-                          <Icon
-                            className={cn(
-                              "h-5 w-5 shrink-0",
-                              isActive
-                                ? "text-blue-600"
-                                : "text-gray-500 dark:text-gray-400"
-                            )}
-                            strokeWidth={1.75}
-                          />
-                          {!collapsed && (
-                            <span className="truncate">{item.label}</span>
-                          )}
-                          {!collapsed && item.badge && (
-                            <span className="ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 whitespace-nowrap">
-                              {item.badge}
-                            </span>
-                          )}
-                        </Link>
+                        {item.tooltip && !collapsed ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-[260px] text-xs">
+                              {item.tooltip}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : linkEl}
                       </li>
                     );
                   })}
