@@ -157,35 +157,46 @@ const BrandDirectory = () => {
     }
     setBackfillProgress({ current: 0, total: missing.length });
     let updated = 0;
+    let failed = 0;
+    const BATCH_SIZE = 5;
 
-    for (let i = 0; i < missing.length; i++) {
-      const creator = missing[i];
-      setBackfillProgress({ current: i + 1, total: missing.length });
-      try {
-        const result = await searchCreators(creator.handle, {
-          platform: creator.platform || "instagram",
-          page: 1,
-        });
-        const match = result.creators[0];
-        if (match?.avatar && !match.avatar.includes("ui-avatars.com")) {
-          const { error } = await supabase
-            .from("featured_creators")
-            .update({ ic_avatar_url: match.avatar })
-            .eq("id", creator.id);
-          if (!error) {
-            updated++;
-            setCreators((prev) =>
-              prev.map((c) => (c.id === creator.id ? { ...c, ic_avatar_url: match.avatar } : c))
-            );
-          }
+    const fetchOne = async (creator: ShowcaseCreator) => {
+      const result = await searchCreators(creator.handle, {
+        platform: creator.platform || "instagram",
+        page: 1,
+      });
+      const match = result.creators[0];
+      if (match?.avatar && !match.avatar.includes("ui-avatars.com")) {
+        const { error } = await supabase
+          .from("featured_creators")
+          .update({ ic_avatar_url: match.avatar })
+          .eq("id", creator.id);
+        if (!error) {
+          setCreators((prev) =>
+            prev.map((c) => (c.id === creator.id ? { ...c, ic_avatar_url: match.avatar } : c))
+          );
+          return true;
         }
-      } catch (err) {
-        console.warn(`[Backfill] Failed for ${creator.handle}:`, err);
       }
+      return false;
+    };
+
+    for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+      const batch = missing.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(batch.map(fetchOne));
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) updated++;
+        else if (r.status === "rejected") failed++;
+      }
+      setBackfillProgress({ current: Math.min(i + BATCH_SIZE, missing.length), total: missing.length });
     }
 
     setBackfillProgress(null);
-    toast.success(`Updated ${updated} avatar${updated !== 1 ? "s" : ""}`);
+    if (failed > 0) {
+      toast.success(`Updated ${updated} avatar${updated !== 1 ? "s" : ""}, ${failed} failed`);
+    } else {
+      toast.success(`Updated ${updated} avatar${updated !== 1 ? "s" : ""}`);
+    }
   };
 
   return (
@@ -292,7 +303,7 @@ const BrandDirectory = () => {
               {backfillProgress ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  Fetching {backfillProgress.current} of {backfillProgress.total}...
+                  Fetching avatars... {backfillProgress.current} of {backfillProgress.total} complete
                 </>
               ) : (
                 <>
