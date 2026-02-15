@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,11 @@ import {
   ArrowUpDown,
   RefreshCw,
   ImageDown,
+  LayoutGrid,
+  List,
+  Instagram,
+  Youtube,
+  Twitter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -46,6 +51,22 @@ const BRANCH_STYLES: Record<string, string> = {
 };
 
 type SortField = "sort_order" | "followers" | "engagement" | "added";
+type ViewMode = "table" | "cards";
+
+const VIEW_STORAGE_KEY = "pd_directory_view";
+
+const TikTokIcon = ({ className = "h-3.5 w-3.5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
+  </svg>
+);
+
+const PLATFORM_ICON: Record<string, React.ReactNode> = {
+  instagram: <Instagram className="h-3.5 w-3.5" />,
+  tiktok: <TikTokIcon />,
+  youtube: <Youtube className="h-3.5 w-3.5" />,
+  twitter: <Twitter className="h-3.5 w-3.5" />,
+};
 
 const BrandDirectory = () => {
   const navigate = useNavigate();
@@ -57,6 +78,14 @@ const BrandDirectory = () => {
   const [sortField, setSortField] = useState<SortField>("sort_order");
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [backfillProgress, setBackfillProgress] = useState<{ current: number; total: number } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try { return (localStorage.getItem(VIEW_STORAGE_KEY) as ViewMode) || "table"; } catch { return "table"; }
+  });
+
+  const handleViewChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    try { localStorage.setItem(VIEW_STORAGE_KEY, mode); } catch { /* quota */ }
+  };
 
   const loadCreators = async () => {
     setLoading(true);
@@ -313,9 +342,38 @@ const BrandDirectory = () => {
               )}
             </Button>
           )}
+          {/* View toggle */}
+          <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ml-auto">
+            <button
+              type="button"
+              onClick={() => handleViewChange("table")}
+              className={cn(
+                "p-1.5 transition-colors",
+                viewMode === "table"
+                  ? "bg-pd-blue text-white"
+                  : "bg-background text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+              )}
+              title="Table view"
+            >
+              <List className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleViewChange("cards")}
+              className={cn(
+                "p-1.5 transition-colors",
+                viewMode === "cards"
+                  ? "bg-pd-blue text-white"
+                  : "bg-background text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
+              )}
+              title="Card view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
           <Button
             size="sm"
-            className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white ml-auto"
+            className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white"
             onClick={() => navigate("/brand/discover")}
           >
             Add from Discovery
@@ -330,8 +388,111 @@ const BrandDirectory = () => {
           </div>
         )}
 
-        {/* Table */}
-        {!loading && (
+        {/* Card View */}
+        {!loading && viewMode === "cards" && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map((creator) => {
+                const imgSrc = creator.avatar_url || creator.ic_avatar_url || null;
+                const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+                const isToggling = togglingIds.has(creator.id);
+                const platforms = creator.platforms ?? [];
+
+                return (
+                  <Card
+                    key={creator.id}
+                    className={cn(
+                      "p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center",
+                      !creator.approved && "opacity-60"
+                    )}
+                  >
+                    {/* Avatar */}
+                    <div className="w-[72px] h-[72px] rounded-full overflow-hidden mb-3 border border-gray-200 dark:border-gray-700">
+                      {imgSrc ? (
+                        <img src={imgSrc} alt={creator.display_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-lg">
+                          {getInitials(creator.display_name, creator.handle)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Name + handle */}
+                    <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">
+                      {creator.display_name}
+                    </h3>
+                    <p className="text-xs text-[#0064B1] mb-2 truncate max-w-full">@{creator.handle}</p>
+
+                    {/* Branch badge */}
+                    {creator.branch && (
+                      <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>
+                        {creator.branch}
+                      </Badge>
+                    )}
+
+                    {/* Stats row */}
+                    <div className="flex items-center gap-4 text-xs mb-3">
+                      <div>
+                        <span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(creator.follower_count)}</span>
+                        <span className="text-muted-foreground ml-1">followers</span>
+                      </div>
+                      <div>
+                        <span className="font-bold text-[#000741] dark:text-white">
+                          {typeof creator.engagement_rate === "number" ? `${creator.engagement_rate.toFixed(1)}%` : "—"}
+                        </span>
+                        <span className="text-muted-foreground ml-1">eng.</span>
+                      </div>
+                    </div>
+
+                    {/* Platform icons */}
+                    {platforms.length > 0 && (
+                      <div className="flex items-center gap-2 text-gray-400 mb-4">
+                        {platforms.map((p) => (
+                          <span key={p}>{PLATFORM_ICON[p] ?? null}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Public toggle + Remove */}
+                    <div className="flex items-center gap-3 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-muted-foreground font-medium">Public</span>
+                        {isToggling ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Switch
+                            checked={creator.approved}
+                            onCheckedChange={() => handleToggleApproved(creator.id, creator.approved)}
+                          />
+                        )}
+                      </div>
+                      {creator.approved && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg h-7 px-2"
+                          onClick={() => handleRemove(creator.id, creator.display_name)}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+            {filtered.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                {searchQuery || branchFilter !== "all"
+                  ? "No creators match your filters."
+                  : "No creators in the directory yet. Add creators from Discovery."}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Table View */}
+        {!loading && viewMode === "table" && (
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
