@@ -59,30 +59,54 @@ export async function fetchFeaturedGrid(limit = 8): Promise<FeaturedCreator[]> {
   return (data ?? []) as FeaturedCreator[];
 }
 
-/** Showcase grid: 20 active + approved featured creators with branch/status/platforms data. */
+/** Showcase grid: approved creators from ALL public directories (deduplicated). */
 export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator[]> {
   const { data, error } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("*")
-    .eq("is_active", true)
     .eq("approved", true)
     .order("sort_order", { ascending: true })
-    .limit(limit);
+    .limit(limit * 2); // over-fetch for dedup
   if (error) {
     console.warn("[featured-creators] Showcase fetch failed:", error.message);
     return [];
   }
-  return (data ?? []).map((row: Record<string, unknown>) => ({
-    ...(row as FeaturedCreator),
-    branch: (row.branch as string) ?? null,
-    status: (row.status as string) ?? null,
-    bio: (row.bio as string) ?? null,
-    platforms: Array.isArray(row.platforms) ? row.platforms as string[] : [],
-    paradedeck_verified: (row.paradedeck_verified as boolean) ?? false,
-    influencersclub_verified: (row.influencersclub_verified as boolean) ?? false,
-    profile_slug: (row.profile_slug as string) ?? null,
-    ic_avatar_url: (row.ic_avatar_url as string) ?? null,
-  }));
+  // Deduplicate by handle+platform
+  const seen = new Set<string>();
+  const unique: ShowcaseCreator[] = [];
+  for (const row of data ?? []) {
+    const r = row as Record<string, unknown>;
+    const handle = (r.creator_handle as string) ?? "";
+    const platform = (r.platform as string) ?? "instagram";
+    const key = `${handle}:${platform}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push({
+      id: r.id as string,
+      display_name: (r.creator_name as string) ?? "",
+      handle,
+      platform,
+      avatar_url: (r.avatar_url as string) ?? null,
+      follower_count: (r.follower_count as number) ?? null,
+      engagement_rate: (r.engagement_rate as number) ?? null,
+      category: (r.category as string) ?? null,
+      sort_order: (r.sort_order as number) ?? 0,
+      is_active: true,
+      is_verified: false,
+      approved: true,
+      created_at: (r.added_at as string) ?? null,
+      branch: (r.branch as string) ?? null,
+      status: (r.status as string) ?? null,
+      bio: (r.bio as string) ?? null,
+      platforms: Array.isArray(r.platforms) ? r.platforms as string[] : [],
+      paradedeck_verified: (r.paradedeck_verified as boolean) ?? false,
+      influencersclub_verified: (r.influencersclub_verified as boolean) ?? false,
+      profile_slug: (r.profile_slug as string) ?? null,
+      ic_avatar_url: (r.ic_avatar_url as string) ?? null,
+    });
+    if (unique.length >= limit) break;
+  }
+  return unique;
 }
 
 /** Detect military branch from bio text. Returns null if not found. */
@@ -102,7 +126,8 @@ export function detectBranch(bio: string): string | null {
   return null;
 }
 
-/** Upsert a creator into featured_creators with approved = true for directory. */
+/** Upsert a creator into a directory. If directoryId is provided, adds to that directory.
+ *  Otherwise adds to the first public directory found (legacy behavior). */
 export async function approveForDirectory(data: {
   handle: string;
   display_name: string;
@@ -120,21 +145,40 @@ export async function approveForDirectory(data: {
   enrichment_data?: unknown;
   source_list_id?: string | null;
   added_by?: string | null;
+  directory_id?: string | null;
 }): Promise<{ error: string | null }> {
   const handle = data.handle.replace(/^@/, "").trim();
-  // Get max sort_order so new entries go to end
+
+  // Resolve directory ID
+  let dirId = data.directory_id;
+  if (!dirId) {
+    // Fallback: use first public directory
+    const { data: dirs } = await supabase
+      .from("directories")
+      .select("id")
+      .eq("is_public", true)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    dirId = (dirs as { id: string }[] | null)?.[0]?.id ?? null;
+    if (!dirId) return { error: "No directory found. Create a directory first." };
+  }
+
+  // Get max sort_order for this directory
   const { data: maxRow } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("sort_order")
+    .eq("directory_id", dirId)
     .order("sort_order", { ascending: false })
     .limit(1);
-  const nextOrder = (maxRow?.[0]?.sort_order ?? 0) + 1;
+  const nextOrder = ((maxRow as { sort_order: number }[] | null)?.[0]?.sort_order ?? 0) + 1;
 
   const payload: Record<string, unknown> = {
-    display_name: data.display_name,
-    handle,
+    directory_id: dirId,
+    creator_handle: handle,
+    creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: data.avatar_url || null,
+    ic_avatar_url: data.ic_avatar_url || null,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,
@@ -143,21 +187,17 @@ export async function approveForDirectory(data: {
     platforms: data.platforms || [],
     platform_urls: data.platform_urls || {},
     category: data.category || null,
-    ic_avatar_url: data.ic_avatar_url || null,
     approved: true,
-    is_active: true,
     sort_order: nextOrder,
     added_at: new Date().toISOString(),
+    added_by: data.added_by || null,
   };
 
   if (data.enrichment_data) payload.enrichment_data = data.enrichment_data;
-  if (data.source_list_id) payload.source_list_id = data.source_list_id;
-  if (data.added_by) payload.added_by = data.added_by;
 
-  // Upsert by handle + platform
   const { error } = await supabase
-    .from("featured_creators")
-    .upsert(payload, { onConflict: "platform,handle", ignoreDuplicates: false });
+    .from("directory_members")
+    .upsert(payload, { onConflict: "directory_id,creator_handle,platform", ignoreDuplicates: false });
 
   if (error) return { error: error.message };
   return { error: null };
@@ -173,7 +213,8 @@ export async function toggleDirectoryApproval(id: string, approved: boolean): Pr
   return { error: null };
 }
 
-/** Fetch ALL directory creators (both approved and unapproved) for admin management. */
+/** Fetch ALL directory creators (both approved and unapproved) for admin management.
+ * @deprecated Use fetchDirectoryMembers from lib/directories instead. */
 export async function fetchAllDirectoryCreators(): Promise<ShowcaseCreator[]> {
   const { data, error } = await supabase
     .from("featured_creators")

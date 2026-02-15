@@ -210,7 +210,7 @@ const EnrichShimmer = () => (
   <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse inline-block" />
 );
 
-/** If this handle matches a featured_creators row, save the enrichment avatar (fire-and-forget). */
+/** If this handle matches a directory_members row, save the enrichment avatar (fire-and-forget). */
 function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse) {
   try {
     const ig = data.instagram;
@@ -223,12 +223,12 @@ function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse
     if (!avatarUrl) return;
 
     supabase
-      .from("featured_creators")
+      .from("directory_members")
       .update({ avatar_url: avatarUrl })
-      .eq("handle", handle.toLowerCase())
+      .eq("creator_handle", handle.toLowerCase())
       .then(({ error }) => {
-        if (error) return; // row doesn't exist or RLS blocked — fine
-        console.log(`[BrandDiscover] Updated featured_creators avatar for @${handle}`);
+        if (error) return;
+        console.log(`[BrandDiscover] Updated directory_members avatar for @${handle}`);
       });
   } catch {
     // non-critical — ignore
@@ -369,6 +369,19 @@ const BrandDiscover = () => {
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
   const { user, isSuperAdmin } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
+  const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
+
+  // Load directories for "Add to Directory" dropdown
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    (async () => {
+      const { data } = await supabase
+        .from("directories")
+        .select("id, name")
+        .order("created_at", { ascending: true });
+      if (data) setDirectoriesList(data as { id: string; name: string }[]);
+    })();
+  }, [isSuperAdmin]);
 
   // --- Saved searches state ---
   const [savedSearches, setSavedSearches] = useState<SavedSearchRow[]>([]);
@@ -760,7 +773,7 @@ const BrandDiscover = () => {
     };
   };
 
-  const doApproveForDirectory = async (creator: CreatorCard) => {
+  const doApproveForDirectory = async (creator: CreatorCard, directoryId?: string) => {
     const raw = enrichRawCache[creator.id];
     const igData = raw?.instagram as Record<string, unknown> | undefined;
     const enrichedAvatar = (igData?.profile_picture_hd as string) ?? (igData?.profile_picture as string) ?? null;
@@ -783,6 +796,7 @@ const BrandDiscover = () => {
       ic_avatar_url: enrichedAvatar || null,
       enrichment_data: raw || null,
       added_by: user?.id ?? null,
+      directory_id: directoryId || null,
     });
     return error;
   };
@@ -806,14 +820,15 @@ const BrandDiscover = () => {
     }
   };
 
-  const handleStandaloneApprove = async (creator: CreatorCard) => {
+  const handleStandaloneApprove = async (creator: CreatorCard, directoryId?: string) => {
     setApprovingDir(true);
-    const error = await doApproveForDirectory(creator);
+    const error = await doApproveForDirectory(creator, directoryId);
     setApprovingDir(false);
     if (error) {
       toast.error(`Failed to add to directory: ${error}`);
     } else {
-      toast.success(`${creator.name} added to public directory`);
+      const dirName = directoriesList.find((d) => d.id === directoryId)?.name ?? "directory";
+      toast.success(`${creator.name} added to ${dirName}`);
     }
   };
 
@@ -1352,17 +1367,27 @@ const BrandDiscover = () => {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 )}
-                                {isSuperAdmin && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                    title="Add to Directory"
-                                    onClick={() => handleStandaloneApprove(creator)}
-                                    disabled={approvingDir}
-                                  >
-                                    <ShieldCheck className="h-3.5 w-3.5" />
-                                  </Button>
+                                {isSuperAdmin && directoriesList.length > 0 && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                        title="Add to Directory"
+                                        disabled={approvingDir}
+                                      >
+                                        <ShieldCheck className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      {directoriesList.map((dir) => (
+                                        <DropdownMenuItem key={dir.id} onClick={() => handleStandaloneApprove(creator, dir.id)}>
+                                          {dir.name}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 )}
                               </div>
                             </td>
@@ -1559,17 +1584,27 @@ const BrandDiscover = () => {
                             </DropdownMenu>
                           )}
                           <div className="flex gap-2 items-center">
-                            {isSuperAdmin && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-lg flex-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
-                                onClick={() => handleStandaloneApprove(creator)}
-                                disabled={approvingDir}
-                              >
-                                <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-                                Add to Directory
-                              </Button>
+                            {isSuperAdmin && directoriesList.length > 0 && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-lg flex-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
+                                    disabled={approvingDir}
+                                  >
+                                    <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                                    Add to Directory
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-48">
+                                  {directoriesList.map((dir) => (
+                                    <DropdownMenuItem key={dir.id} onClick={() => handleStandaloneApprove(creator, dir.id)}>
+                                      {dir.name}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
                             {instagramUrl ? (
                               <Button
