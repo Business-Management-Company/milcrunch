@@ -156,17 +156,19 @@ export default function AIAssistant() {
                   </div>
                 ) : (
                   <div className="max-w-[95%] flex flex-col gap-2">
-                    <div className="flex items-start gap-2">
-                      <img
-                        src="/favicon-32x32.png"
-                        alt=""
-                        className="h-5 w-5 mt-0.5 shrink-0 object-contain"
-                      />
-                      <div
-                        className="rounded-2xl rounded-bl-sm bg-gray-100 dark:bg-[#1A1D27] px-4 py-2.5 text-sm text-foreground [&_strong]:font-semibold [&_em]:italic"
-                        dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(m.content) }}
-                      />
-                    </div>
+                    {m.content && (
+                      <div className="flex items-start gap-2">
+                        <img
+                          src="/favicon-32x32.png"
+                          alt=""
+                          className="h-5 w-5 mt-0.5 shrink-0 object-contain"
+                        />
+                        <div
+                          className="rounded-2xl rounded-bl-sm bg-gray-100 dark:bg-[#1A1D27] px-4 py-2.5 text-sm text-foreground [&_strong]:font-semibold [&_em]:italic"
+                          dangerouslySetInnerHTML={{ __html: simpleMarkdownToHtml(m.content) }}
+                        />
+                      </div>
+                    )}
                     {m.creators && m.creators.length > 0 && (
                       <div className="flex flex-col gap-2 pl-7">
                         {m.searchParams && (

@@ -15,6 +15,7 @@ import {
   executeSearchCreators,
   type AIMessage,
   type AIMessageRole,
+  type AISearchParams,
 } from "@/lib/ai-assistant";
 import type { CreatorCard } from "@/lib/influencers-club";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const lastSearchCreatorsRef = useRef<CreatorCard[]>([]);
+  const previewMsgIdRef = useRef<string | null>(null);
   const { addCreatorToList, lists, createList } = useLists();
 
   const togglePanel = useCallback(() => setIsOpen((v) => !v), []);
@@ -114,8 +116,28 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
       };
 
       try {
-        const { messages: newMsgs } = await sendMessageWithTools(apiKey, history, executor);
-        setMessages((prev) => [...prev, ...newMsgs]);
+        // Show creator cards immediately when search returns, before Claude's text
+        const onCreatorsFound = (creators: CreatorCard[], searchParams: AISearchParams) => {
+          const id = `ai-preview-${Date.now()}`;
+          previewMsgIdRef.current = id;
+          setMessages((prev) => [...prev, {
+            id,
+            role: "assistant" as const,
+            content: "",
+            creators,
+            searchParams,
+          }]);
+        };
+
+        const { messages: newMsgs } = await sendMessageWithTools(apiKey, history, executor, { onCreatorsFound });
+
+        // Replace the preview message with the final one (which has text + creators)
+        setMessages((prev) => {
+          const previewId = previewMsgIdRef.current;
+          const filtered = previewId ? prev.filter((m) => m.id !== previewId) : prev;
+          previewMsgIdRef.current = null;
+          return [...filtered, ...newMsgs];
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to get response";
         setMessages((prev) => [

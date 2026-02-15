@@ -46,7 +46,9 @@ You have access to the following tools:
 
 When a user asks to find creators, extract their intent and call search_creators with appropriate filters. Always be helpful, concise, and action-oriented. Format creator results as structured data the UI can render as cards.
 
-When returning search results, keep your text response very brief - just 1-2 sentences like "Found 12 military fitness creators with 50K+ followers. Here are the top results:" and then let the creator cards display the details. Do NOT list out every creator's name, followers, and engagement in the text - the UI cards already show that information. Be concise and conversational, not verbose.`;
+When returning search results, keep your text response very brief - just 1-2 sentences like "Found 12 military fitness creators with 50K+ followers. Here are the top results:" and then let the creator cards display the details. Do NOT list out every creator's name, followers, and engagement in the text - the UI cards already show that information. Be concise and conversational, not verbose.
+
+IMPORTANT: When users search for a specific military branch (e.g., "Army creators", "Navy influencers"), always include a brief note at the end of your text response like: "Note: Branch affiliations are detected from public bios and hashtags, not independently verified. Each card shows a match reason below." This helps set expectations — the UI already shows per-card confirmation status.`;
 
 const TOOLS = [
   {
@@ -180,6 +182,11 @@ export type ToolExecutor = {
   addToList: (input: Record<string, unknown>) => Promise<{ summary: string }>;
 };
 
+export interface SendMessageOptions {
+  /** Called as soon as search results arrive, before waiting for Claude's text response. */
+  onCreatorsFound?: (creators: CreatorCard[], searchParams: AISearchParams) => void;
+}
+
 /**
  * Send a user message, run the tool loop, and return the final assistant message(s) + any creators to show.
  * executor.addToList receives (creator_names, list_name) and uses ListContext - pass it from the component.
@@ -187,7 +194,8 @@ export type ToolExecutor = {
 export async function sendMessageWithTools(
   apiKey: string,
   conversationHistory: { role: AIMessageRole; content: string }[],
-  executor: ToolExecutor
+  executor: ToolExecutor,
+  options?: SendMessageOptions
 ): Promise<{ messages: AIMessage[]; creators?: CreatorCard[] }> {
   const newMessages: AIMessage[] = [];
   let apiMessages = buildApiMessages(conversationHistory);
@@ -212,6 +220,8 @@ export async function sendMessageWithTools(
         toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: summary });
         lastCreators = creators;
         lastSearchParams = searchParams;
+        // Surface creator cards to the UI immediately, before Claude's text response
+        options?.onCreatorsFound?.(creators, searchParams);
       } else if (tool.name === "add_to_list") {
         const { summary } = await executor.addToList(tool.input);
         toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: summary });
