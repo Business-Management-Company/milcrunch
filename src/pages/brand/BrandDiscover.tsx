@@ -496,15 +496,7 @@ const BrandDiscover = () => {
       return;
     }
 
-    // Fall back to localStorage
-    try {
-      const raw = localStorage.getItem(LAST_SEARCH_KEY);
-      if (!raw) return;
-      const filters = JSON.parse(raw) as SavedSearchFilters;
-      if (!filters.searchQuery?.trim()) return;
-      applyFilters(filters);
-      pendingAutoSearch.current = true;
-    } catch { /* corrupt data */ }
+    // localStorage auto-load removed — only pre-populate from URL params
   }, [applyFilters, urlSearchParams]);
 
   const runSearch = useCallback(() => {

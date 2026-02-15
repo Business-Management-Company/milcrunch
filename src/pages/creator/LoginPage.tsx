@@ -101,9 +101,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md bg-white/95 dark:bg-card border-border shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <img src="/favicon-32x32.png" alt="RecurrentX" className="h-12 w-auto" />
+            <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">recurrent</span><span className="text-[#10B981] font-extrabold">X</span></span>
           </div>
-          <CardTitle className="text-2xl font-headline">
+          <CardTitle className="text-2xl font-bold">
             {isForgot ? "Reset Password" : "Welcome Back"}
           </CardTitle>
           <CardDescription>
