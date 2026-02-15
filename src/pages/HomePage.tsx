@@ -453,44 +453,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Browse by Category */}
-        <section id="features" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-              <div>
-                <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-2">
-                  DISCOVER CREATORS
-                </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
-                  Browse by Category
-                </h2>
-              </div>
-              <Link to="/brand/discover" className="text-[#0064B1] font-medium hover:underline text-sm">
-                View All →
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {CATEGORIES.map((cat) => (
-                <Link
-                  key={cat.label}
-                  to="/brand/discover"
-                  className="group relative h-[140px] rounded-xl overflow-hidden flex items-end p-4 transition-transform duration-300 hover:scale-[1.03]"
-                >
-                  <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
-                    style={{ backgroundImage: `url("${cat.image}")` }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent group-hover:from-black/70 group-hover:via-black/25 transition-colors" />
-                  <div className="relative flex items-center gap-2 text-white">
-                    <Users className="h-4 w-4 shrink-0 opacity-90" />
-                    <span className="font-semibold text-sm">{cat.label}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Verified Military Creator Showcase */}
         <section id="creators" className="px-4 md:px-8 py-16 md:py-24 bg-gradient-to-b from-gray-50 to-white scroll-mt-20">
           <div className="max-w-6xl mx-auto">
@@ -518,6 +480,44 @@ export default function HomePage() {
                   View All Creators →
                 </Button>
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Browse by Category */}
+        <section id="features" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+              <div>
+                <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-2">
+                  DISCOVER CREATORS
+                </p>
+                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
+                  Browse by Category
+                </h2>
+              </div>
+              <Link to="/brand/discover" className="text-[#0064B1] font-medium hover:underline text-sm">
+                View All →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {CATEGORIES.map((cat) => (
+                <Link
+                  key={cat.label}
+                  to={`/brand/discover?q=${encodeURIComponent(cat.label)}`}
+                  className="group relative h-[200px] rounded-xl overflow-hidden flex items-end p-5 transition-transform duration-300 hover:scale-[1.03]"
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                    style={{ backgroundImage: `url("${cat.image}")` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/5 group-hover:from-black/70 group-hover:via-black/30 transition-colors" />
+                  <div className="relative flex items-center gap-2 text-white">
+                    <Users className="h-5 w-5 shrink-0 opacity-90" />
+                    <span className="font-bold text-base">{cat.label}</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
