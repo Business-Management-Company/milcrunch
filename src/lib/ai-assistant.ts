@@ -9,12 +9,22 @@ function getApiKey(): string {
 
 export type AIMessageRole = "user" | "assistant";
 
+export interface AISearchParams {
+  query: string;
+  platform?: string;
+  min_followers?: number;
+  max_followers?: number;
+  min_engagement?: number;
+}
+
 export interface AIMessage {
   id: string;
   role: AIMessageRole;
   content: string;
   /** Creator cards to show inline (from search_creators tool) */
   creators?: CreatorCard[];
+  /** Search params used (so UI can link to Discovery) */
+  searchParams?: AISearchParams;
 }
 
 /** Claude API content block */
@@ -80,11 +90,11 @@ const TOOLS = [
   },
 ];
 
-/** Execute search_creators tool and return creators + summary for Claude */
-export async function executeSearchCreators(input: Record<string, unknown>): Promise<{ summary: string; creators: CreatorCard[] }> {
+/** Execute search_creators tool and return creators + summary + search params for Claude */
+export async function executeSearchCreators(input: Record<string, unknown>): Promise<{ summary: string; creators: CreatorCard[]; searchParams: AISearchParams }> {
   const query = String(input.query ?? "").trim();
   if (!query) {
-    return { summary: "Error: query is required.", creators: [] };
+    return { summary: "Error: query is required.", creators: [], searchParams: { query: "" } };
   }
   const platform = (input.platform as string) ?? "instagram";
   const minFollowers = typeof input.min_followers === "number" ? input.min_followers : null;
@@ -97,10 +107,15 @@ export async function executeSearchCreators(input: Record<string, unknown>): Pro
     engagement_percent: minEngagement != null ? { min: minEngagement, max: null } : undefined,
   };
 
+  const searchParams: AISearchParams = { query, platform };
+  if (minFollowers != null) searchParams.min_followers = minFollowers;
+  if (maxFollowers != null) searchParams.max_followers = maxFollowers;
+  if (minEngagement != null) searchParams.min_engagement = minEngagement;
+
   const result = await searchCreators(query, options);
   const count = result.creators.length;
   const summary = `Found ${count} creator(s). Total matching: ${result.total}. Creators: ${result.creators.slice(0, 10).map((c) => `${c.name} (@${c.username ?? "n/a"}) - ${c.followers} followers, ${c.engagementRate}% engagement`).join("; ")}${count > 10 ? "..." : ""}`;
-  return { summary, creators: result.creators };
+  return { summary, creators: result.creators, searchParams };
 }
 
 /** Build API messages from our chat history (user + assistant text only; we inject tool_use/tool_result during the loop) */
@@ -161,7 +176,7 @@ async function callClaude(
 }
 
 export type ToolExecutor = {
-  searchCreators: (input: Record<string, unknown>) => Promise<{ summary: string; creators: CreatorCard[] }>;
+  searchCreators: (input: Record<string, unknown>) => Promise<{ summary: string; creators: CreatorCard[]; searchParams: AISearchParams }>;
   addToList: (input: Record<string, unknown>) => Promise<{ summary: string }>;
 };
 
@@ -177,6 +192,7 @@ export async function sendMessageWithTools(
   const newMessages: AIMessage[] = [];
   let apiMessages = buildApiMessages(conversationHistory);
   let lastCreators: CreatorCard[] | undefined;
+  let lastSearchParams: AISearchParams | undefined;
   let combinedText = "";
 
   for (let iter = 0; iter < 10; iter++) {
@@ -192,9 +208,10 @@ export async function sendMessageWithTools(
 
     for (const tool of toolUses) {
       if (tool.name === "search_creators") {
-        const { summary, creators } = await executor.searchCreators(tool.input);
+        const { summary, creators, searchParams } = await executor.searchCreators(tool.input);
         toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: summary });
         lastCreators = creators;
+        lastSearchParams = searchParams;
       } else if (tool.name === "add_to_list") {
         const { summary } = await executor.addToList(tool.input);
         toolResults.push({ type: "tool_result", tool_use_id: tool.id, content: summary });
@@ -227,6 +244,7 @@ export async function sendMessageWithTools(
       role: "assistant",
       content: combinedText,
       creators: lastCreators,
+      searchParams: lastSearchParams,
     });
   }
 

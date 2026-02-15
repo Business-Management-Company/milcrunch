@@ -117,6 +117,9 @@ export async function approveForDirectory(data: {
   platform_urls?: Record<string, string>;
   category?: string | null;
   ic_avatar_url?: string | null;
+  enrichment_data?: unknown;
+  source_list_id?: string | null;
+  added_by?: string | null;
 }): Promise<{ error: string | null }> {
   const handle = data.handle.replace(/^@/, "").trim();
   // Get max sort_order so new entries go to end
@@ -127,7 +130,7 @@ export async function approveForDirectory(data: {
     .limit(1);
   const nextOrder = (maxRow?.[0]?.sort_order ?? 0) + 1;
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     display_name: data.display_name,
     handle,
     platform: data.platform || "instagram",
@@ -144,7 +147,12 @@ export async function approveForDirectory(data: {
     approved: true,
     is_active: true,
     sort_order: nextOrder,
+    added_at: new Date().toISOString(),
   };
+
+  if (data.enrichment_data) payload.enrichment_data = data.enrichment_data;
+  if (data.source_list_id) payload.source_list_id = data.source_list_id;
+  if (data.added_by) payload.added_by = data.added_by;
 
   // Upsert by handle + platform
   const { error } = await supabase
@@ -160,6 +168,39 @@ export async function toggleDirectoryApproval(id: string, approved: boolean): Pr
   const { error } = await supabase
     .from("featured_creators")
     .update({ approved })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+/** Fetch ALL directory creators (both approved and unapproved) for admin management. */
+export async function fetchAllDirectoryCreators(): Promise<ShowcaseCreator[]> {
+  const { data, error } = await supabase
+    .from("featured_creators")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.warn("[featured-creators] Admin fetch failed:", error.message);
+    return [];
+  }
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    ...(row as FeaturedCreator),
+    branch: (row.branch as string) ?? null,
+    status: (row.status as string) ?? null,
+    bio: (row.bio as string) ?? null,
+    platforms: Array.isArray(row.platforms) ? row.platforms as string[] : [],
+    paradedeck_verified: (row.paradedeck_verified as boolean) ?? false,
+    influencersclub_verified: (row.influencersclub_verified as boolean) ?? false,
+    profile_slug: (row.profile_slug as string) ?? null,
+    ic_avatar_url: (row.ic_avatar_url as string) ?? null,
+  }));
+}
+
+/** Soft-remove a creator from directory (set approved = false, keep data). */
+export async function removeFromDirectory(id: string): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from("featured_creators")
+    .update({ approved: false })
     .eq("id", id);
   if (error) return { error: error.message };
   return { error: null };

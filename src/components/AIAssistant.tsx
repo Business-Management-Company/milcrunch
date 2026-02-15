@@ -1,11 +1,39 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Sparkles, Send, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, Sparkles, Send, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import ChatCreatorCard from "@/components/ChatCreatorCard";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import type { CreatorCard } from "@/lib/influencers-club";
+import type { AISearchParams } from "@/lib/ai-assistant";
 import { cn, simpleMarkdownToHtml } from "@/lib/utils";
+
+function buildDiscoveryUrl(params: AISearchParams): string {
+  const sp = new URLSearchParams();
+  if (params.query) sp.set("q", params.query);
+  if (params.platform) sp.set("platform", params.platform);
+  if (params.min_followers != null) sp.set("min_followers", String(params.min_followers));
+  if (params.max_followers != null) sp.set("max_followers", String(params.max_followers));
+  if (params.min_engagement != null) sp.set("min_engagement", String(params.min_engagement));
+  return `/brand/discover?${sp.toString()}`;
+}
+
+function formatSearchCriteria(params: AISearchParams): string {
+  const parts: string[] = [];
+  if (params.query) parts.push(`"${params.query}"`);
+  if (params.platform) parts.push(`platform=${params.platform}`);
+  if (params.min_followers != null) parts.push(`followers>${formatNum(params.min_followers)}`);
+  if (params.max_followers != null) parts.push(`followers<${formatNum(params.max_followers)}`);
+  if (params.min_engagement != null) parts.push(`engagement>${params.min_engagement}%`);
+  return parts.join(", ");
+}
+
+function formatNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
+}
 
 const STARTER_PROMPTS = [
   "Find military fitness creators with 50K+ followers",
@@ -18,6 +46,7 @@ const AI_PANEL_WIDTH = 420;
 
 export default function AIAssistant() {
   const { isOpen, closePanel, messages, isLoading, sendMessage, clearChat } = useAIAssistant();
+  const navigate = useNavigate();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
@@ -140,6 +169,11 @@ export default function AIAssistant() {
                     </div>
                     {m.creators && m.creators.length > 0 && (
                       <div className="flex flex-col gap-2 pl-7">
+                        {m.searchParams && (
+                          <p className="text-[11px] text-muted-foreground px-2 py-1 rounded bg-gray-50 dark:bg-gray-800/50">
+                            Searching: {formatSearchCriteria(m.searchParams)}
+                          </p>
+                        )}
                         {m.creators.slice(0, 15).map((creator) => (
                           <ChatCreatorCard
                             key={creator.id}
@@ -150,10 +184,18 @@ export default function AIAssistant() {
                             }}
                           />
                         ))}
-                        {m.creators.length > 15 && (
-                          <p className="text-xs text-muted-foreground pl-2">
-                            <a href="/brand/discover" className="text-blue-600 hover:underline font-medium">+{m.creators.length - 15} more — See All in Discovery</a>
-                          </p>
+                        {m.searchParams && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closePanel();
+                              navigate(buildDiscoveryUrl(m.searchParams!));
+                            }}
+                            className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium pl-2 py-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            See All in Discovery
+                          </button>
                         )}
                       </div>
                     )}

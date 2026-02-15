@@ -70,7 +70,7 @@ export function AIAssistantProvider({ children }: { children: ReactNode }) {
         searchCreators: async (input: Record<string, unknown>) => {
           const result = await executeSearchCreators(input);
           lastSearchCreatorsRef.current = result.creators;
-          return result;
+          return { summary: result.summary, creators: result.creators, searchParams: result.searchParams };
         },
         addToList: async (input: Record<string, unknown>) => {
           const names = (input.creator_names as string[]) ?? [];
