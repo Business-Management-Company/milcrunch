@@ -326,7 +326,7 @@ export default function HomePage() {
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
           <a href="/#creators" className={`text-sm font-medium ${navLinkClass}`}>Creators</a>
-          <a href="/#events" className={`text-sm font-medium ${navLinkClass}`}>Events</a>
+          <Link to="/events" className={`text-sm font-medium ${navLinkClass}`}>Events</Link>
           <Link to="/swag" className={`text-sm font-medium ${navLinkClass}`}>SWAG</Link>
           <Link to="/speakers" className={`text-sm font-medium ${navLinkClass}`}>Speakers</Link>
           <a href="/#features" className={`text-sm font-medium ${navLinkClass}`}>Features</a>
@@ -609,8 +609,8 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <Link to="/pdx/create" className="text-[#0064B1] font-medium hover:underline">
-              Create Your Own Event →
+            <Link to="/events" className="text-[#0064B1] font-medium hover:underline">
+              View All Events →
             </Link>
           </div>
         </section>
@@ -678,7 +678,7 @@ export default function HomePage() {
               </div>
               <nav className="flex flex-wrap gap-6 text-sm text-gray-600">
                 <a href="/#creators" className="hover:text-[#0064B1]">Community</a>
-                <a href="/#events" className="hover:text-[#0064B1]">Events</a>
+                <Link to="/events" className="hover:text-[#0064B1]">Events</Link>
                 <a href="/#creators" className="hover:text-[#0064B1]">Creators</a>
                 <a href="/#for-brands" className="hover:text-[#0064B1]">For Brands</a>
                 <Link to="/pdx" className="hover:text-[#0064B1]">PDX</Link>

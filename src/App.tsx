@@ -48,6 +48,7 @@ import DemoSponsorships from "./pages/admin/DemoSponsorships";
 import SponsorPortal from "./pages/sponsor/Portal";
 import Demo from "./pages/Demo";
 import EventsCalendar from "./pages/EventsCalendar";
+import PublicEvents from "./pages/PublicEvents";
 import LoginPage from "./pages/creator/LoginPage";
 import SignupPage from "./pages/creator/SignupPage";
 import { CreatorRoute, BrandRoute, SuperAdminRoute } from "./components/auth/ProtectedRoute";
@@ -186,8 +187,8 @@ const App = () => (
               <Route path="/social-monitoring" element={<PlaceholderPage title="Social Monitoring" description="Track mentions and sentiment across social channels." />} />
               <Route path="/swag" element={<PlaceholderPage title="SWAG Store" description="Order branded merchandise and swag for events." />} />
               <Route path="/settings" element={<PlaceholderPage title="Settings" description="Manage your account and platform preferences." />} />
-              <Route path="/events" element={<EventsCalendar />} />
               </Route>
+              <Route path="/events" element={<PublicEvents />} />
               <Route path="/sponsors/demo" element={<DemoSponsorships />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/portal" element={<AttendeePortal />} />

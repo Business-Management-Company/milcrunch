@@ -71,7 +71,7 @@ const Navbar = () => {
             </DropdownMenu>
 
             <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
-              <Link to="/events-calendar">Events Calendar</Link>
+              <Link to="/events">Events Calendar</Link>
             </Button>
             <Button variant="ghost" asChild className="text-muted-foreground hover:text-foreground">
               <Link to="/veteran-podcast-awards">Case Study</Link>
@@ -121,7 +121,7 @@ const Navbar = () => {
               <Link to="/platform/awards" className="px-4 py-2 text-muted-foreground hover:text-foreground">Awards</Link>
               <Link to="/platform/sponsorships" className="px-4 py-2 text-muted-foreground hover:text-foreground">Sponsorships</Link>
               <Link to="/platform/ai-agents" className="px-4 py-2 text-muted-foreground hover:text-foreground">AI Agents</Link>
-              <Link to="/events-calendar" className="px-4 py-2 text-muted-foreground hover:text-foreground">Events Calendar</Link>
+              <Link to="/events" className="px-4 py-2 text-muted-foreground hover:text-foreground">Events Calendar</Link>
               <Link to="/veteran-podcast-awards" className="px-4 py-2 text-muted-foreground hover:text-foreground">Case Study</Link>
               <Link to="/pricing" className="px-4 py-2 text-muted-foreground hover:text-foreground">Pricing</Link>
               <Link to="/resources" className="px-4 py-2 text-muted-foreground hover:text-foreground">Resources</Link>
