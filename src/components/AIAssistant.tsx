@@ -105,7 +105,7 @@ export default function AIAssistant() {
         <header className="flex items-center justify-between shrink-0 h-14 px-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-pd-blue" />
-            <span className="font-bold text-foreground">MilCrunch AI</span>
+            <span className="font-bold text-foreground">RecurrentX AI</span>
           </div>
           <div className="flex items-center gap-1">
             {messages.length > 0 && (

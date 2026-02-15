@@ -93,7 +93,7 @@ const GTM_STEPS = [
 ];
 
 const INVESTOR_SLIDES = [
-  { title: "Cover", bullets: ["MilCrunch: Amplifying the Mil-Vet Voice"] },
+  { title: "Cover", bullets: ["RecurrentX: Amplifying the Mil-Vet Voice"] },
   { title: "Mission & Vision", bullets: ["Mission and vision statements"] },
   { title: "The Problem", bullets: ["Fragmented creators", "Limited monetization", "Scattered audiences"] },
   { title: "The Solution", bullets: ["Dedicated multimedia platform", "Integrated ad tech", "Cross-platform delivery"] },
@@ -146,7 +146,7 @@ export default function BusinessOverview() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-[#000741] dark:text-white">
-                MilCrunch Business Overview
+                RecurrentX Business Overview
               </h1>
               <Badge variant="secondary" className="text-xs font-medium text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-200">
                 Confidential — Internal Use Only
@@ -180,7 +180,7 @@ export default function BusinessOverview() {
           {/* Hero */}
           <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#000741] to-[#053877] text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-2xl font-bold text-white">MilCrunch Business Plan</CardTitle>
+              <CardTitle className="text-2xl font-bold text-white">RecurrentX Business Plan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>

@@ -37,13 +37,13 @@ interface EventItem {
 
 const SEED_EVENTS: EventItem[] = [
   { id: "1", name: "Military Times Veterans Summit", dateLabel: "MAR 15", dateSort: "2026-03-15", location: "San Diego, CA", type: "in_person", description: "Annual gathering of veteran leaders, entrepreneurs, and advocates", attendees: 450, speakers: 24 },
-  { id: "2", name: "PDX at Fort Liberty", dateLabel: "APR 5", dateSort: "2026-04-05", location: "Fort Liberty, NC", type: "in_person", description: "MilCrunch Experience featuring military creators and live entertainment", attendees: 320, speakers: 12 },
+  { id: "2", name: "PDX at Fort Liberty", dateLabel: "APR 5", dateSort: "2026-04-05", location: "Fort Liberty, NC", type: "in_person", description: "RecurrentX Experience featuring military creators and live entertainment", attendees: 320, speakers: 12 },
   { id: "3", name: "MilSpouseFest San Diego", dateLabel: "APR 18", dateSort: "2026-04-18", location: "San Diego, CA", type: "hybrid", description: "The premier military spouse networking and empowerment event", attendees: 280, speakers: 18 },
   { id: "4", name: "Military Influencer Conference (MIC) 2026", dateLabel: "SEP 15-17", dateSort: "2026-09-15", location: "Washington, D.C.", type: "in_person", description: "The largest gathering of military influencers and content creators", attendees: 1200, speakers: 60 },
-  { id: "5", name: "PDX at VFW National Convention", dateLabel: "AUG", dateSort: "2026-08-01", location: "TBD", type: "in_person", description: "MilCrunch Experience at VFW's national convention", attendees: 0, speakers: 8 },
+  { id: "5", name: "PDX at VFW National Convention", dateLabel: "AUG", dateSort: "2026-08-01", location: "TBD", type: "in_person", description: "RecurrentX Experience at VFW's national convention", attendees: 0, speakers: 8 },
   { id: "6", name: "Veteran Entrepreneur Summit", dateLabel: "OCT 10", dateSort: "2026-10-10", location: "Austin, TX", type: "virtual", description: "Connecting veteran entrepreneurs with investors and mentors", attendees: 520, speakers: 20 },
   { id: "7", name: "Military Podcast Live", dateLabel: "JUN 22", dateSort: "2026-06-22", location: "Nashville, TN", type: "hybrid", description: "Live podcast recordings featuring top military content creators", attendees: 180, speakers: 15 },
-  { id: "8", name: "Armed Forces Day PDX", dateLabel: "MAY 16", dateSort: "2026-05-16", location: "Multiple Locations", type: "in_person", description: "Nationwide MilCrunch Experiences celebrating Armed Forces Day", attendees: 800, speakers: 30 },
+  { id: "8", name: "Armed Forces Day PDX", dateLabel: "MAY 16", dateSort: "2026-05-16", location: "Multiple Locations", type: "in_person", description: "Nationwide RecurrentX Experiences celebrating Armed Forces Day", attendees: 800, speakers: 30 },
 ];
 
 const EVENT_TYPE_CONFIG: Record<EventType, { label: string; className: string }> = {

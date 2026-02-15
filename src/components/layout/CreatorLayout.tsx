@@ -145,7 +145,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
           <div className="w-9 h-9 rounded-xl bg-[#1B2A4A] flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-sm">PD</span>
           </div>
-          <span className="font-headline font-bold text-foreground truncate">MilCrunch</span>
+          <span className="font-headline font-bold text-foreground truncate">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
         </Link>
       </div>
       <div className="p-3 border-b border-border flex items-center gap-3 min-w-0">
@@ -219,7 +219,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
               {sidebar}
             </SheetContent>
           </Sheet>
-          <span className="font-headline font-bold text-foreground ml-2">MilCrunch</span>
+          <span className="font-headline font-bold text-foreground ml-2">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
         </div>
       )}
 

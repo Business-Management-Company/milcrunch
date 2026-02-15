@@ -170,7 +170,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
             <TooltipTrigger asChild>
               <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
+            <TooltipContent side="top" className="text-xs">RecurrentX Verified</TooltipContent>
           </Tooltip>
         )}
         {c.influencersclub_verified && (
@@ -320,8 +320,8 @@ export default function HomePage() {
       >
         <Link to="/" className="shrink-0">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className={navScrolled ? "text-[#000741]" : "text-white"}>Mil</span>
-            <span className="text-[#10B981]">Crunch</span>
+            <span className={navScrolled ? "text-[#000741]" : "text-white"}>recurrent</span>
+            <span className="text-[#10B981] font-extrabold">X</span>
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
@@ -376,14 +376,14 @@ export default function HomePage() {
             <div className="flex-1 md:max-w-[65%] text-center md:text-left">
               <div className="inline-flex items-center rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-6">
                 <span className="text-[#F0A71F] text-xs font-semibold uppercase tracking-wide">
-                  ☆ THE MILITARY CREATOR NETWORK
+                  ☆ THE MILITARY CREATOR & EXPERIENCE NETWORK
                 </span>
               </div>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-4">
                 Stop juggling your events, creators, sponsors, and media.
               </h1>
               <p className="text-white/90 text-base md:text-lg max-w-[600px] mb-8">
-                MilCrunch brings it all into one command center — so you can focus on the mission.
+                RecurrentX brings it all into one command center — so you can focus on the mission.
               </p>
               <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
                 {user ? (
@@ -586,7 +586,7 @@ export default function HomePage() {
               Events That Don't End When the Lights Go Off
             </h2>
             <p className="text-gray-600 mb-8 max-w-2xl">
-              MIC. MilSpouseFest. PDX Live. Every event on MilCrunch extends into a year-round community — not just 3 days on Whova.
+              MIC. MilSpouseFest. PDX Live. Every event on RecurrentX extends into a year-round community — not just 3 days on Whova.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {EVENTS.map((event) => (
@@ -665,11 +665,11 @@ export default function HomePage() {
               <div>
                 <Link to="/" className="inline-block mb-4">
                   <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                    <span className="text-[#000741]">Mil</span>
-                    <span className="text-[#10B981]">Crunch</span>
+                    <span className="text-[#000741]">recurrent</span>
+                    <span className="text-[#10B981] font-extrabold">X</span>
                   </span>
                 </Link>
-                <p className="text-sm text-gray-500">© 2026 MilCrunch. All rights reserved.</p>
+                <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>
                 <div className="flex gap-4 mt-2 text-sm text-gray-500">
                   <a href="#" className="hover:text-[#0064B1]">Privacy</a>
                   <a href="#" className="hover:text-[#0064B1]">Terms</a>

@@ -46,9 +46,9 @@ export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Link to="/dashboard" className="flex items-center gap-2 shrink-0" aria-label="MilCrunch home">
+        <Link to="/dashboard" className="flex items-center gap-2 shrink-0" aria-label="RecurrentX home">
           <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-8 w-auto" />
-          <span className="font-display font-bold text-lg text-foreground tracking-wide hidden sm:inline">MilCrunch</span>
+          <span className="font-display font-bold text-lg text-foreground tracking-wide hidden sm:inline">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
         </Link>
       </div>
 

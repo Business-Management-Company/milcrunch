@@ -106,9 +106,9 @@ export default function SignupPage() {
       <Card className="w-full max-w-md bg-white/95 dark:bg-card border-border shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-12 w-auto" />
+            <img src="/Parade-Deck-Flag-logo.png" alt="RecurrentX" className="h-12 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-headline">Join MilCrunch</CardTitle>
+          <CardTitle className="text-2xl font-headline">Join RecurrentX</CardTitle>
           <CardDescription>Create your creator account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

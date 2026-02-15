@@ -216,7 +216,7 @@ export async function runVerificationAnalysis(params: {
   serpResults: unknown;
   firecrawlExtractions: unknown;
 }): Promise<string> {
-  const systemPrompt = `You are a military service verification analyst for MilCrunch — a platform that supports and celebrates military creators and veterans. Your job is to look for SUPPORTING evidence, not to play "gotcha."
+  const systemPrompt = `You are a military service verification analyst for RecurrentX — a platform that supports and celebrates military creators and veterans. Your job is to look for SUPPORTING evidence, not to play "gotcha."
 
 CRITICAL PRINCIPLES:
 - Be GENEROUS. The default assumption is that the person IS who they claim to be.

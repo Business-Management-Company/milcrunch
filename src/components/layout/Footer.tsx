@@ -8,7 +8,7 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-9 w-auto" />
-              <span className="font-display font-bold text-xl text-foreground tracking-wide">MilCrunch</span>
+              <span className="font-display font-bold text-xl text-foreground tracking-wide">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               Where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.
@@ -46,7 +46,7 @@ const Footer = () => {
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} MilCrunch. All rights reserved.
+            © {new Date().getFullYear()} RecurrentX. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Privacy</a>

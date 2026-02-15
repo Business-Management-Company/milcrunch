@@ -128,7 +128,7 @@ export default function SummaryDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
-            Welcome to MilCrunch
+            Welcome to RecurrentX
           </h1>
           <p className="text-muted-foreground mt-0.5">Command Center Overview</p>
         </div>

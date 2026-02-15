@@ -26,7 +26,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2 group">
             <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-9 w-auto" />
-            <span className="font-display font-bold text-xl text-foreground tracking-wide">MilCrunch</span>
+            <span className="font-display font-bold text-xl text-foreground tracking-wide">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1">

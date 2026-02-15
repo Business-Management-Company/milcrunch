@@ -278,7 +278,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           <>
             <div className="flex items-center justify-center gap-1.5 px-2">
               <img src="/Parade-Deck-Flag-logo.png" alt="" className="h-5 w-auto" />
-              <span className="text-sm text-gray-500">MilCrunch</span>
+              <span className="text-sm text-gray-500">RecurrentX</span>
             </div>
             <p className="text-[10px] text-muted-foreground/80 text-center">Demo v1.0</p>
           </>

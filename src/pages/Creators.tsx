@@ -85,7 +85,7 @@ function CreatorCard({ creator: c, inView, index }: { creator: ShowcaseCreator; 
         {c.paradedeck_verified && (
           <Tooltip>
             <TooltipTrigger asChild><ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" /></TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
+            <TooltipContent side="top" className="text-xs">RecurrentX Verified</TooltipContent>
           </Tooltip>
         )}
         {c.influencersclub_verified && (
@@ -138,8 +138,8 @@ export default function Creators() {
       <header className="h-14 flex items-center justify-between px-4 md:px-8 border-b border-gray-200 bg-white sticky top-0 z-40">
         <Link to="/">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-[#000741]">Mil</span>
-            <span className="text-[#10B981]">Crunch</span>
+            <span className="text-[#000741]">recurrent</span>
+            <span className="text-[#10B981] font-extrabold">X</span>
           </span>
         </Link>
         <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export default function Creators() {
 
       <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <p className="text-sm text-gray-500">© 2026 MilCrunch. All rights reserved.</p>
+          <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>
           <Link to="/" className="text-sm text-[#0064B1] hover:underline">Home</Link>
         </div>
       </footer>

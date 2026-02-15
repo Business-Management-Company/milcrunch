@@ -69,7 +69,7 @@ const PDXHome = () => {
       <section className="relative overflow-hidden px-4 py-16 md:py-24">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="text-4xl font-bold tracking-tight text-pd-navy dark:text-white md:text-5xl">
-            The MilCrunch Experience
+            The RecurrentX Experience
           </h1>
           <p className="mt-2 text-2xl font-bold md:text-3xl">
             PD<span className="text-[#ED1C24]">X</span>

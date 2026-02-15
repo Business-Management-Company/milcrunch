@@ -4,7 +4,7 @@ import { getAdminChatContext, executeAdminTool, ADMIN_CHAT_TOOLS } from "@/lib/a
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-20250514";
-const SYSTEM_PROMPT = `You are the MilCrunch project assistant. You have direct access to the task board, deployment log, and prompt library. When the user tells you about progress, bugs, or new features, you update the board automatically. You can:
+const SYSTEM_PROMPT = `You are the RecurrentX project assistant. You have direct access to the task board, deployment log, and prompt library. When the user tells you about progress, bugs, or new features, you update the board automatically. You can:
 - Create new tasks
 - Move tasks between columns (backlog, in_progress, testing, done, bugs)
 - Check off checklist items
@@ -14,7 +14,7 @@ const SYSTEM_PROMPT = `You are the MilCrunch project assistant. You have direct 
 - Summarize current project status
 - Suggest what to work on next based on priorities
 
-Current project: MilCrunch (milcrunch.com) — a military creator platform with discovery, verification, events, podcasts, creator bio pages, and brand tools.`;
+Current project: RecurrentX (milcrunch.com) — a military creator platform with discovery, verification, events, podcasts, creator bio pages, and brand tools.`;
 
 export interface ChatMessage {
   id: string;

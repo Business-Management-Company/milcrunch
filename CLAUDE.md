@@ -1,13 +1,14 @@
-# CLAUDE.md — ParadeDeck Project Context
+# CLAUDE.md — RecurrentX Project Context
 
 ## Project Overview
 
-**ParadeDeck** (milcrunch.com) — a two-sided military creator platform.
+**RecurrentX** (milcrunch.com) — a two-sided military creator & experience platform.
 - **Brands** discover, verify, and manage military/veteran influencers for events, campaigns, and partnerships
 - **Creators** connect socials, get a bio page, schedule content, and track analytics
-- **PDX** (ParadeDeck Experience) — mobile streaming stage for military events
+- **PDX** (RecurrentX Experience) — mobile streaming stage for military events
 
-**Tagline:** "Stop juggling your events, creators, sponsors, and media. ParadeDeck brings it all into one command center — so you can focus on the mission."
+**Tagline:** "Stop juggling your events, creators, sponsors, and media. RecurrentX brings it all into one command center — so you can focus on the mission."
+**Brand:** "recurrent" in black/white + "X" in teal (#10B981) bold. The "X" stands for "Experience".
 
 **Owner:** Andrew Appleton (andrew@podlogix.co)
 **Board Chairman:** Paul Majano
@@ -19,7 +20,7 @@
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS + shadcn/ui
 - **Backend:** Supabase (PostgreSQL + Auth + RLS)
 - **Hosting:** Vercel (auto-deploys on push to main)
-- **Domain:** milcrunch.com + www.milcrunch.com (DNS via GoDaddy)
+- **Domain:** milcrunch.com + www.milcrunch.com (DNS via GoDaddy) — user-facing brand is RecurrentX
 - **Repo:** github.com/Business-Management-Company/Veteran-Network-Hub (main branch)
 - **Vercel Project:** parade-deck-demo (under Podlogix Pro team)
 
