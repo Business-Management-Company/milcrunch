@@ -208,6 +208,31 @@ const EnrichShimmer = () => (
   <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse inline-block" />
 );
 
+/** If this handle matches a featured_creators row, save the enrichment avatar (fire-and-forget). */
+function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse) {
+  try {
+    const ig = data.instagram;
+    const avatarUrl =
+      (ig?.picture as string) ||
+      (ig?.profile_pic_url as string) ||
+      (ig?.profile_pic_url_hd as string) ||
+      (ig?.profile_picture as string) ||
+      null;
+    if (!avatarUrl) return;
+
+    supabase
+      .from("featured_creators")
+      .update({ avatar_url: avatarUrl })
+      .eq("handle", handle.toLowerCase())
+      .then(({ error }) => {
+        if (error) return; // row doesn't exist or RLS blocked — fine
+        console.log(`[BrandDiscover] Updated featured_creators avatar for @${handle}`);
+      });
+  } catch {
+    // non-critical — ignore
+  }
+}
+
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 async function getCachedEnrichment(username: string): Promise<EnrichedProfileResponse | null> {
@@ -615,6 +640,8 @@ const BrandDiscover = () => {
                 setEnrichRawCache((prev) => ({ ...prev, [creator.id]: data }));
                 // Save to Supabase cache (fire-and-forget)
                 setCachedEnrichment(creator.username!, data);
+                // If this handle matches a featured creator, save their avatar
+                maybeUpdateFeaturedAvatar(creator.username!, data);
               }
             } catch (err) {
               if ((err as Error)?.name === "AbortError") throw err;
