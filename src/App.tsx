@@ -73,6 +73,9 @@ import BrandDiscover from "./pages/brand/BrandDiscover";
 import BrandLists from "./pages/brand/BrandLists";
 import BrandDirectory from "./pages/brand/BrandDirectory";
 import BrandCampaigns from "./pages/brand/BrandCampaigns";
+import BrandEvents from "./pages/brand/BrandEvents";
+import BrandEventCreate from "./pages/brand/BrandEventCreate";
+import BrandEventDetail from "./pages/brand/BrandEventDetail";
 import BrandAttribution from "./pages/brand/BrandAttribution";
 import BrandSettings from "./pages/brand/BrandSettings";
 import PDXHome from "./pages/pdx/PDXHome";
@@ -146,6 +149,9 @@ const App = () => (
                 <Route path="/brand/directory" element={<BrandDirectory />} />
                 <Route path="/brand/lists" element={<BrandLists />} />
                 <Route path="/brand/campaigns" element={<BrandCampaigns />} />
+                <Route path="/brand/events" element={<BrandEvents />} />
+                <Route path="/brand/events/create" element={<BrandEventCreate />} />
+                <Route path="/brand/events/:eventId" element={<BrandEventDetail />} />
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />

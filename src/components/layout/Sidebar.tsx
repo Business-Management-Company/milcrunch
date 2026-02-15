@@ -62,7 +62,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
   {
     label: "EVENTS",
     items: [
-      { href: "/events", label: "Events", icon: Calendar },
+      { href: "/brand/events", label: "Events", icon: Calendar },
       { href: "/speakers", label: "Speakers", icon: Mic },
       { href: "/awards", label: "Awards", icon: Trophy },
       { href: "/sponsors", label: "Sponsors", icon: Handshake },
