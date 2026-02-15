@@ -28,6 +28,7 @@ import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment } from "@/lib/featured-creators";
+import { parseSmartQuery } from "@/lib/smart-search-parser";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -345,6 +346,7 @@ const BrandDiscover = () => {
   const [keywordsInBio, setKeywordsInBio] = useState("");
   const [sortBy, setSortBy] = useState<string>("confidence");
   const [selectedBranches, setSelectedBranches] = useState<Set<Branch>>(new Set());
+  const [smartFiltersApplied, setSmartFiltersApplied] = useState<string[]>([]);
   const [apiResults, setApiResults] = useState<{ creators: CreatorCard[]; total: number; rawResponse: unknown } | null>(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -514,7 +516,10 @@ const BrandDiscover = () => {
 
   const runSearch = useCallback(() => {
     const q = searchQuery.trim().replace(/^@/, "");
-    if (!q) {
+    const hasActiveFilters = followersRange !== "any" || engagementMin !== "any" ||
+                             selectedBranches.size > 0 || locationFilter.trim() !== "" ||
+                             keywordsInBio.trim() !== "";
+    if (!q && !hasActiveFilters) {
       setApiResults(null);
       setApiLoading(false);
       return;
@@ -559,11 +564,11 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
-  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, persistLastSearch, getCurrentFilters]);
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, persistLastSearch, getCurrentFilters]);
 
   // Fire search after auto-load applies filters (runs once after state updates)
   useEffect(() => {
-    if (pendingAutoSearch.current && searchQuery.trim()) {
+    if (pendingAutoSearch.current) {
       pendingAutoSearch.current = false;
       runSearch();
     }
@@ -571,7 +576,10 @@ const BrandDiscover = () => {
 
   const loadMore = useCallback(() => {
     const q = searchQuery.trim().replace(/^@/, "");
-    if (!q || !apiResults) return;
+    const hasActiveFilters = followersRange !== "any" || engagementMin !== "any" ||
+                             selectedBranches.size > 0 || locationFilter.trim() !== "" ||
+                             keywordsInBio.trim() !== "";
+    if ((!q && !hasActiveFilters) || !apiResults) return;
     const nextPage = currentPage + 1;
     setLoadingMore(true);
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
@@ -599,10 +607,29 @@ const BrandDiscover = () => {
       .finally(() => setLoadingMore(false));
   }, [searchQuery, apiResults, currentPage, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter]);
 
+  const handleSmartSearch = useCallback(() => {
+    const parsed = parseSmartQuery(searchQuery);
+    if (parsed.appliedLabels.length === 0) {
+      setSmartFiltersApplied([]);
+      runSearch();
+      return;
+    }
+    // Apply parsed filters to state (updates dropdowns to reflect what was detected)
+    if (parsed.platform) setPlatform(parsed.platform);
+    if (parsed.followersRange) setFollowersRange(parsed.followersRange);
+    if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
+    if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
+    if (parsed.location) setLocationFilter(parsed.location);
+    setSearchQuery(parsed.remainingQuery);
+    setSmartFiltersApplied(parsed.appliedLabels);
+    // Trigger search on next render after batched state updates settle
+    pendingAutoSearch.current = true;
+  }, [searchQuery, runSearch]);
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      runSearch();
+      handleSmartSearch();
     }
   };
 
@@ -619,6 +646,7 @@ const BrandDiscover = () => {
     setGender("any");
     setLanguage("any");
     setKeywordsInBio("");
+    setSmartFiltersApplied([]);
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
@@ -1016,13 +1044,28 @@ const BrandDiscover = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search by name, handle, or keyword…"
+              placeholder="Try 'marines with 500K+ followers on tiktok' or search by name..."
               className="pl-12 h-12 rounded-xl border border-border dark:border-gray-700 bg-background dark:bg-[#1A1D27] shadow-sm focus-visible:ring-2 transition-shadow hover:shadow-md"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
             />
           </div>
+
+          {/* Smart search applied filters */}
+          {smartFiltersApplied.length > 0 && (
+            <div className="flex items-center gap-2 text-sm text-pd-blue/80 mb-4">
+              <Search className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-muted-foreground">Smart filters applied:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {smartFiltersApplied.map((label) => (
+                  <Badge key={label} variant="secondary" className="bg-pd-blue/10 text-pd-blue border-pd-blue/20 text-xs font-medium">
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Filter bar */}
           <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -1098,7 +1141,7 @@ const BrandDiscover = () => {
               value={keywordsInBio}
               onChange={(e) => setKeywordsInBio(e.target.value)}
             />
-            <Button onClick={runSearch} className="rounded-lg shrink-0 bg-pd-blue hover:bg-pd-darkblue text-white">
+            <Button onClick={handleSmartSearch} className="rounded-lg shrink-0 bg-pd-blue hover:bg-pd-darkblue text-white">
               Search Creators
             </Button>
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={clearFilters}>
