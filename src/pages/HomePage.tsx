@@ -85,36 +85,6 @@ const HERO_FALLBACK: CreatorRow[] = [
   { id: "3", display_name: "Taylor S.", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 2, created_at: null },
 ];
 
-// Hero creator cards — matching the design mockup (teal pills, photos, stats)
-const heroCreators = [
-  {
-    photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&fit=crop&crop=face",
-    name: "Sofia M.",
-    handle: "@sofiacreates",
-    category: "Lifestyle",
-    categoryColor: "bg-teal-50 text-teal-700 border border-teal-200",
-    followers: "2.4M",
-    engagement: "4.8%",
-  },
-  {
-    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=96&h=96&fit=crop&crop=face",
-    name: "Marcus J.",
-    handle: "@marcusfitpro",
-    category: "Fitness",
-    categoryColor: "bg-teal-50 text-teal-700 border border-teal-200",
-    followers: "890K",
-    engagement: "6.2%",
-  },
-  {
-    photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=96&h=96&fit=crop&crop=face",
-    name: "Lena Park",
-    handle: "@lenaeats",
-    category: "Food",
-    categoryColor: "bg-teal-50 text-teal-700 border border-teal-200",
-    followers: "1.1M",
-    engagement: "5.1%",
-  },
-];
 
 // --- Showcase helpers ---
 const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
@@ -348,10 +318,10 @@ export default function HomePage() {
           navScrolled ? "bg-white/95 backdrop-blur-md border-b border-gray-200" : "bg-transparent"
         }`}
       >
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-8 w-auto" />
-          <span className={`font-bold text-lg ${navScrolled ? "text-[#000741]" : "text-white"}`}>
-            MilCrunch
+        <Link to="/" className="shrink-0">
+          <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <span className={navScrolled ? "text-[#000741]" : "text-white"}>Mil</span>
+            <span className="text-[#10B981]">Crunch</span>
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
@@ -405,11 +375,11 @@ export default function HomePage() {
               backgroundPosition: "center",
             }}
           />
-          {/* Dark blue left → teal-tinted blue right */}
+          {/* Dark overlay — light enough to let the hero photo show through */}
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to right, rgba(27,42,74,0.55) 0%, rgba(25,55,65,0.35) 100%)",
+              background: "linear-gradient(to right, rgba(27,42,74,0.40) 0%, rgba(25,55,65,0.25) 100%)",
             }}
           />
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
@@ -704,9 +674,11 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
               <div>
-                <Link to="/" className="flex items-center gap-2 mb-4">
-                  <img src="/Parade-Deck-Flag-logo.png" alt="MilCrunch" className="h-6 w-auto" />
-                  <span className="font-bold text-[#000741]">MilCrunch</span>
+                <Link to="/" className="inline-block mb-4">
+                  <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    <span className="text-[#000741]">Mil</span>
+                    <span className="text-[#10B981]">Crunch</span>
+                  </span>
                 </Link>
                 <p className="text-sm text-gray-500">© 2026 MilCrunch. All rights reserved.</p>
                 <div className="flex gap-4 mt-2 text-sm text-gray-500">
