@@ -37,6 +37,7 @@ import AttendeePortal from "./pages/attendee/Portal";
 import EventDetail from "./pages/events/EventDetail";
 import EventCheckout from "./pages/events/EventCheckout";
 import EventConfirmation from "./pages/events/EventConfirmation";
+import EventRegister from "./pages/events/EventRegister";
 import EventPageBuilder from "./pages/admin/EventPageBuilder";
 import SponsorshipWizard from "./pages/admin/SponsorshipWizard";
 import TeamManagement from "./pages/admin/TeamManagement";
@@ -191,9 +192,10 @@ const App = () => (
               <Route path="/demo" element={<Demo />} />
               <Route path="/portal" element={<AttendeePortal />} />
               <Route path="/sponsor/portal" element={<SponsorPortal />} />
-              <Route path="/events/:slug" element={<EventDetail />} />
-              <Route path="/events/:slug/checkout" element={<EventCheckout />} />
-              <Route path="/events/:slug/confirmation" element={<EventConfirmation />} />
+              <Route path="/events/:eventId" element={<EventDetail />} />
+              <Route path="/events/:eventId/register" element={<EventRegister />} />
+              <Route path="/events/:eventId/checkout" element={<EventCheckout />} />
+              <Route path="/events/:eventId/confirmation" element={<EventConfirmation />} />
               {/* Creator bio pages (public, with CreatorPixel tracking) */}
               <Route path="/c/:handle" element={<CreatorBioPage />} />
               <Route path="/c/:handle/:eventSlug" element={<CreatorBioPage />} />

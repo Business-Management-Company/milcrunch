@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
+  Search, Download, CheckCircle2, XCircle, Ticket,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,30 @@ interface SponsorRow {
   sort_order: number;
 }
 
+interface RegistrationRow {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  military_branch: string | null;
+  military_status: string | null;
+  registration_code: string | null;
+  status: string | null;
+  checked_in: boolean | null;
+  checked_in_at: string | null;
+  created_at: string | null;
+  ticket_id: string | null;
+}
+interface TicketRow {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number | null;
+  sold: number;
+}
+
 const STATUS_STYLES: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   published: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -109,6 +134,9 @@ const BrandEventDetail = () => {
   const [agenda, setAgenda] = useState<AgendaRow[]>([]);
   const [speakers, setSpeakers] = useState<SpeakerRow[]>([]);
   const [sponsors, setSponsors] = useState<SponsorRow[]>([]);
+  const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
+  const [eventTickets, setEventTickets] = useState<TicketRow[]>([]);
+  const [regSearch, setRegSearch] = useState("");
 
   /* editable overview fields */
   const [editTitle, setEditTitle] = useState("");
@@ -127,11 +155,13 @@ const BrandEventDetail = () => {
     if (!eventId) return;
     setLoading(true);
     try {
-      const [evRes, agRes, spkRes, spsRes] = await Promise.all([
+      const [evRes, agRes, spkRes, spsRes, regRes, tkRes] = await Promise.all([
         supabase.from("events").select("*").eq("id", eventId).single(),
         supabase.from("event_agenda").select("*").eq("event_id", eventId).order("day_number").order("sort_order"),
         supabase.from("event_speakers").select("*").eq("event_id", eventId).order("sort_order"),
         supabase.from("event_sponsors").select("*").eq("event_id", eventId).order("sort_order"),
+        supabase.from("event_registrations").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
+        supabase.from("event_tickets").select("id, name, price, quantity, sold").eq("event_id", eventId).order("sort_order"),
       ]);
       if (evRes.error) throw evRes.error;
       const ev = evRes.data as unknown as EventRow;
@@ -149,6 +179,8 @@ const BrandEventDetail = () => {
       setAgenda((agRes.data || []) as AgendaRow[]);
       setSpeakers((spkRes.data || []) as SpeakerRow[]);
       setSponsors((spsRes.data || []) as SponsorRow[]);
+      setRegistrations((regRes.data || []) as RegistrationRow[]);
+      setEventTickets((tkRes.data || []) as TicketRow[]);
     } catch (err) {
       console.error("Error loading event:", err);
       toast.error("Failed to load event");
@@ -356,6 +388,7 @@ const BrandEventDetail = () => {
             <TabsTrigger value="agenda"><Clock className="h-4 w-4 mr-1.5" />Agenda</TabsTrigger>
             <TabsTrigger value="speakers"><Mic className="h-4 w-4 mr-1.5" />Speakers</TabsTrigger>
             <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
+            <TabsTrigger value="registrations"><Ticket className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-emerald-100 text-emerald-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
           </TabsList>
 
@@ -565,6 +598,159 @@ const BrandEventDetail = () => {
                 No sponsors yet.
               </Card>
             )}
+          </TabsContent>
+
+          {/* ===== REGISTRATIONS ===== */}
+          <TabsContent value="registrations">
+            {(() => {
+              const ticketMap = Object.fromEntries(eventTickets.map((t) => [t.id, t]));
+              const filteredRegs = registrations.filter((r) => {
+                const q = regSearch.toLowerCase();
+                if (!q) return true;
+                return (
+                  r.first_name.toLowerCase().includes(q) ||
+                  r.last_name.toLowerCase().includes(q) ||
+                  r.email.toLowerCase().includes(q) ||
+                  (r.military_branch || "").toLowerCase().includes(q)
+                );
+              });
+              const checkedInCount = registrations.filter((r) => r.checked_in).length;
+
+              const toggleCheckIn = async (reg: RegistrationRow) => {
+                const newVal = !reg.checked_in;
+                await supabase
+                  .from("event_registrations")
+                  .update({
+                    checked_in: newVal,
+                    checked_in_at: newVal ? new Date().toISOString() : null,
+                  } as Record<string, unknown>)
+                  .eq("id", reg.id);
+                fetchAll();
+              };
+
+              const exportCSV = () => {
+                const headers = ["First Name", "Last Name", "Email", "Phone", "Ticket", "Branch", "Status", "Registered", "Checked In"];
+                const rows = registrations.map((r) => [
+                  r.first_name, r.last_name, r.email, r.phone || "",
+                  ticketMap[r.ticket_id || ""]?.name || "—",
+                  r.military_branch || "", r.status || "",
+                  r.created_at ? new Date(r.created_at).toLocaleDateString() : "",
+                  r.checked_in ? "Yes" : "No",
+                ]);
+                const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `registrations-${eventId}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              };
+
+              return (
+                <div className="space-y-4">
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
+                      <p className="text-2xl font-bold text-pd-blue">{registrations.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Registered</p>
+                    </Card>
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
+                      <p className="text-2xl font-bold text-emerald-600">{checkedInCount}</p>
+                      <p className="text-xs text-muted-foreground">Checked In</p>
+                    </Card>
+                    {eventTickets.slice(0, 2).map((t) => (
+                      <Card key={t.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
+                        <p className="text-2xl font-bold text-foreground">
+                          {registrations.filter((r) => r.ticket_id === t.id).length}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{t.name}</p>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Search + Export */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1 max-w-sm">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name, email, branch..."
+                        value={regSearch}
+                        onChange={(e) => setRegSearch(e.target.value)}
+                        className="pl-10 bg-white dark:bg-[#1A1D27]"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={exportCSV}>
+                      <Download className="h-4 w-4 mr-1" /> Export CSV
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/events/${eventId}`} target="_blank">
+                        <ExternalLink className="h-4 w-4 mr-1" /> Public Page
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Table */}
+                  {filteredRegs.length === 0 ? (
+                    <Card className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] p-8 text-center text-muted-foreground">
+                      {registrations.length === 0 ? "No registrations yet." : "No results match your search."}
+                    </Card>
+                  ) : (
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 dark:bg-[#151821] text-left">
+                            <tr>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Email</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Ticket</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Branch</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Registered</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground text-center">Check-in</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {filteredRegs.map((r) => (
+                              <tr key={r.id} className="hover:bg-gray-50/50 dark:hover:bg-[#1E2130]">
+                                <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
+                                  {r.first_name} {r.last_name}
+                                </td>
+                                <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
+                                <td className="px-4 py-3">
+                                  <Badge variant="outline" className="text-xs">
+                                    {ticketMap[r.ticket_id || ""]?.name || "—"}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-muted-foreground">{r.military_branch || "—"}</td>
+                                <td className="px-4 py-3">
+                                  <Badge className={r.status === "confirmed" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}>
+                                    {r.status}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => toggleCheckIn(r)}
+                                    className={r.checked_in ? "text-emerald-600" : "text-gray-300 hover:text-gray-500"}
+                                  >
+                                    {r.checked_in ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              );
+            })()}
           </TabsContent>
 
           {/* ===== SETTINGS ===== */}
