@@ -8,7 +8,6 @@ import {
   Mic,
   Trophy,
   Handshake,
-  PlusCircle,
   Search,
   Users,
   ListChecks,
@@ -66,7 +65,6 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/speakers", label: "Speakers", icon: Mic },
       { href: "/awards", label: "Awards", icon: Trophy },
       { href: "/sponsors", label: "Sponsors", icon: Handshake },
-      { href: "/pdx/create", label: "Create Experience", icon: PlusCircle, tooltip: "A PDX (RecurrentX Experience) is a branded event package — combining live streaming, virtual events, co-broadcasting, and creator activations into one scalable experience." },
     ],
   },
   {

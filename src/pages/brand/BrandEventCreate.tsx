@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Plus, Trash2, GripVertical, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Trash2, GripVertical, Loader2, ClipboardList, Calendar, Mic, Handshake, CheckCircle } from "lucide-react";
+import CityAutocomplete from "@/components/CityAutocomplete";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,7 +60,13 @@ const SESSION_TYPES = ["keynote", "panel", "breakout", "workshop", "networking",
 const SPEAKER_ROLES = ["keynote", "panelist", "moderator", "presenter", "mc"];
 const SPONSOR_TIERS = ["title", "platinum", "gold", "silver", "bronze", "community"];
 
-const STEPS = ["Basics", "Agenda", "Speakers", "Sponsors", "Review"];
+const STEPS = [
+  { label: "Basics", icon: ClipboardList },
+  { label: "Agenda", icon: Calendar },
+  { label: "Speakers", icon: Mic },
+  { label: "Sponsors", icon: Handshake },
+  { label: "Review", icon: CheckCircle },
+];
 
 let keyCounter = 0;
 const nextKey = () => `k-${++keyCounter}`;
@@ -92,6 +99,14 @@ const BrandEventCreate = () => {
 
   /* Step 4 — sponsors */
   const [sponsors, setSponsors] = useState<SponsorItem[]>([]);
+
+  /* ---- date auto-follow: when start date changes, set end date if empty or before start ---- */
+  const handleStartDateChange = (newStart: string) => {
+    setStartDate(newStart);
+    if (newStart && (!endDate || endDate < newStart)) {
+      setEndDate(newStart);
+    }
+  };
 
   /* ---- helpers ---- */
   const addAgendaItem = () =>
@@ -323,22 +338,61 @@ const BrandEventCreate = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-pd-navy dark:text-white">Create Event</h1>
-            <p className="text-sm text-muted-foreground">Step {step + 1} of {STEPS.length}: {STEPS[step]}</p>
+            <p className="text-sm text-muted-foreground">Step {step + 1} of {STEPS.length}: {STEPS[step].label}</p>
           </div>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-1 mb-8">
-          {STEPS.map((label, i) => (
-            <div key={label} className="flex items-center gap-1 flex-1">
-              <div
-                className={cn(
-                  "h-2 rounded-full flex-1 transition-colors",
-                  i <= step ? "bg-pd-blue" : "bg-gray-200 dark:bg-gray-700"
+        {/* Step indicator with icons */}
+        <div className="flex items-center mb-8">
+          {STEPS.map((s, i) => {
+            const StepIcon = s.icon;
+            const isActive = i === step;
+            const isCompleted = i < step;
+            const isClickable = isCompleted;
+            return (
+              <div key={s.label} className="flex items-center flex-1 last:flex-none">
+                <button
+                  type="button"
+                  onClick={() => isClickable && setStep(i)}
+                  disabled={!isClickable && !isActive}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 min-w-[64px] transition-colors",
+                    isClickable && "cursor-pointer",
+                    !isClickable && !isActive && "cursor-default"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
+                      isActive && "bg-teal-500 border-teal-500 text-white",
+                      isCompleted && "bg-teal-500 border-teal-500 text-white",
+                      !isActive && !isCompleted && "bg-transparent border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500"
+                    )}
+                  >
+                    {isCompleted ? <Check className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      isActive && "text-teal-600 dark:text-teal-400",
+                      isCompleted && "text-teal-600 dark:text-teal-400",
+                      !isActive && !isCompleted && "text-gray-400 dark:text-gray-500"
+                    )}
+                  >
+                    {s.label}
+                  </span>
+                </button>
+                {i < STEPS.length - 1 && (
+                  <div
+                    className={cn(
+                      "flex-1 h-0.5 mx-2 mt-[-18px]",
+                      i < step ? "bg-teal-500" : "bg-gray-200 dark:bg-gray-700"
+                    )}
+                  />
                 )}
-              />
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* ===== STEP 1: Basics ===== */}
@@ -370,25 +424,24 @@ const BrandEventCreate = () => {
               </div>
               <div>
                 <Label>Start Date</Label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1" />
+                <Input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="mt-1" />
               </div>
               <div>
                 <Label>End Date</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1" />
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || undefined} className="mt-1" />
               </div>
               <div>
                 <Label>Venue / Location Name</Label>
                 <Input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="Washington Convention Center" className="mt-1" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>City</Label>
-                  <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Washington" className="mt-1" />
-                </div>
-                <div>
-                  <Label>State</Label>
-                  <Input value={state} onChange={(e) => setState(e.target.value)} placeholder="DC" className="mt-1" />
-                </div>
+              <div>
+                <Label>City / State</Label>
+                <CityAutocomplete
+                  value={city ? (state ? `${city}, ${state}` : city) : ""}
+                  onSelect={(c, s) => { setCity(c); setState(s); }}
+                  placeholder="Search city or base..."
+                  className="mt-1"
+                />
               </div>
               <div className="md:col-span-2">
                 <Label>Cover Image URL</Label>
