@@ -4,13 +4,21 @@ import { useLocation } from "react-router-dom";
 import { useContext } from "react";
 import { AdminChatContext } from "@/contexts/AdminChatContext";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Send, X, Loader2 } from "lucide-react";
+import { MessageSquare, Send, X, Loader2, Shield, Calendar, Eye, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+const ROLE_ICONS = {
+  shield: Shield,
+  calendar: Calendar,
+  eye: Eye,
+  building: Building2,
+  megaphone: MessageSquare,
+} as const;
+
 /**
- * Floating chat bubble and slide-over panel on all /admin/* pages.
- * Only rendered when inside AdminChatProvider (super admin layout).
+ * Floating chat bubble and slide-over panel on all /admin/* and /brand/* pages.
+ * Shows role-aware header with icon and access level label.
  */
 export default function FloatingAdminChat() {
   const location = useLocation();
@@ -24,7 +32,9 @@ export default function FloatingAdminChat() {
   }, [open, chat?.messages, chat?.streamingContent]);
 
   if (!chat) return null;
-  const { messages, streamingContent, confirmations, loading, sendMessage } = chat;
+  const { messages, streamingContent, confirmations, loading, sendMessage, roleConfig } = chat;
+
+  const RoleIcon = ROLE_ICONS[roleConfig.icon];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +53,7 @@ export default function FloatingAdminChat() {
         <div className="fixed bottom-6 right-6 z-50">
           <Button
             size="icon"
-            className="h-14 w-14 rounded-full shadow-lg hidden bg-amber-500 hover:bg-amber-600 text-white"
+            className="h-14 w-14 rounded-full shadow-lg bg-emerald-500 hover:bg-emerald-600 text-white"
             onClick={() => setOpen(true)}
             aria-label="Open AI chat"
           >
@@ -57,9 +67,14 @@ export default function FloatingAdminChat() {
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-hidden />
           <div className="relative w-full max-w-md bg-background border-l shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
+            {/* Role-aware header */}
             <div className="flex items-center justify-between p-3 border-b">
-              <Link to="/admin/chat" className="font-semibold flex items-center gap-2" onClick={() => setOpen(false)}>
-                <MessageSquare className="h-5 w-5" /> AI Assistant
+              <Link to="/admin/chat" className="flex items-center gap-2" onClick={() => setOpen(false)}>
+                <RoleIcon className="h-5 w-5 text-emerald-500" />
+                <div>
+                  <span className="font-semibold text-sm">{roleConfig.label}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{roleConfig.sublabel}</span>
+                </div>
               </Link>
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />
@@ -74,7 +89,7 @@ export default function FloatingAdminChat() {
                     m.role === "user" ? "ml-auto bg-primary text-primary-foreground" : "bg-muted/60"
                   )}
                 >
-                  <p className="whitespace-pre-wrap break-words">{m.content.slice(0, 500)}{m.content.length > 500 ? "…" : ""}</p>
+                  <p className="whitespace-pre-wrap break-words">{m.content.slice(0, 500)}{m.content.length > 500 ? "..." : ""}</p>
                   <p className="text-xs opacity-70 mt-0.5">{format(new Date(m.created_at), "HH:mm")}</p>
                 </div>
               ))}

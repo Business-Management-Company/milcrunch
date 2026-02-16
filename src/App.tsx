@@ -94,7 +94,7 @@ import { ListProvider } from "./contexts/ListContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import AppLayout from "./components/layout/AppLayout";
-import { AdminChatProvider } from "./contexts/AdminChatContext";
+import RoleAwareChatProvider from "./components/RoleAwareChatProvider";
 import FloatingAdminChat from "./components/superadmin/FloatingAdminChat";
 import SuperAdminDashboard from "./pages/superadmin/SuperAdminDashboard";
 import AdminTasks from "./pages/superadmin/AdminTasks";
@@ -136,14 +136,14 @@ const App = () => (
               <Route path="/solutions/event-teams" element={<SolutionsEventTeams />} />
               <Route path="/solutions/sponsors" element={<SolutionsSponsors />} />
               {/* Super Admin panel: /admin, /admin/tasks, etc. — only super_admin; others redirect to /brand/dashboard */}
-              <Route path="/admin" element={<SuperAdminRoute><AdminChatProvider><AppLayout /></AdminChatProvider></SuperAdminRoute>}>
+              <Route path="/admin" element={<SuperAdminRoute><RoleAwareChatProvider><AppLayout /></RoleAwareChatProvider></SuperAdminRoute>}>
                 <Route index element={<SuperAdminDashboard />} />
                 <Route path="tasks" element={<AdminTasks />} />
                 <Route path="deployments" element={<AdminDeployments />} />
                 <Route path="prompts" element={<AdminPrompts />} />
                 <Route path="chat" element={<AdminChat />} />
               </Route>
-              <Route element={<BrandRoute><AppLayout /></BrandRoute>}>
+              <Route element={<BrandRoute><RoleAwareChatProvider><AppLayout /></RoleAwareChatProvider></BrandRoute>}>
                 <Route path="/dashboard" element={<SummaryDashboard />} />
                 <Route path="/lists" element={<BrandLists />} />
                 <Route path="/brand/dashboard" element={<BrandDashboard />} />

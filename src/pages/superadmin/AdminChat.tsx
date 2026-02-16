@@ -1,22 +1,25 @@
 import { useRef, useEffect } from "react";
 import { useAdminChatContext } from "@/contexts/AdminChatContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Send, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { MessageSquare, Send, Loader2, Shield, Calendar, Eye, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-const QUICK_ACTIONS = [
-  { label: "📊 Project Status", prompt: "Summarize the current project status and task board. What's in backlog, in progress, testing, done, and bugs? Any recent deployments?" },
-  { label: "🔥 What's next?", prompt: "Based on priorities (critical and high first), what should I work on next? List the top 3–5 tasks and why." },
-  { label: "📋 Generate checklist", prompt: "Generate a testing checklist for the latest changes or for the current in-progress tasks. I'll add it to the board." },
-  { label: "📝 Write prompt", prompt: "Draft a Cursor prompt for the highest-priority in-progress task. I'll paste it into the prompt library." },
-];
+const ROLE_ICONS = {
+  shield: Shield,
+  calendar: Calendar,
+  eye: Eye,
+  building: Building2,
+  megaphone: MessageSquare,
+} as const;
 
 export default function AdminChat() {
-  const { messages, streamingContent, confirmations, loading, loadingHistory, sendMessage, clearConfirmations, hasApiKey } = useAdminChatContext();
+  const { messages, streamingContent, confirmations, loading, loadingHistory, sendMessage, clearConfirmations, hasApiKey, roleConfig } = useAdminChatContext();
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const RoleIcon = ROLE_ICONS[roleConfig.icon];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,10 +55,17 @@ export default function AdminChat() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] max-h-[800px]">
+      {/* Role-aware header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <MessageSquare className="h-7 w-7" /> AI Assistant Chat
-        </h1>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <RoleIcon className="h-6 w-6 text-emerald-500" />
+            <div>
+              <h1 className="text-xl font-bold leading-tight">{roleConfig.label}</h1>
+              <p className="text-xs text-muted-foreground font-medium">{roleConfig.sublabel}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Card className="flex-1 flex flex-col min-h-0">
@@ -68,10 +78,13 @@ export default function AdminChat() {
               </div>
             ) : messages.length === 0 && !streamingContent && !loading ? (
               <div className="text-center text-muted-foreground py-12">
-                <p className="font-medium">RecurrentX project assistant</p>
-                <p className="text-sm mt-1">Ask for status, move tasks, add checklist items, log deployments, or save prompts.</p>
+                <div className="inline-flex items-center gap-2 mb-2">
+                  <RoleIcon className="h-5 w-5 text-emerald-500" />
+                  <p className="font-medium">{roleConfig.label} &middot; {roleConfig.sublabel}</p>
+                </div>
+                <p className="text-sm mt-1">Ask for status, manage events, search creators, or update tasks.</p>
                 <div className="mt-6 flex flex-wrap justify-center gap-2">
-                  {QUICK_ACTIONS.map((a) => (
+                  {roleConfig.quickActions.map((a) => (
                     <Button key={a.label} variant="outline" size="sm" onClick={() => handleQuickAction(a.prompt)}>
                       {a.label}
                     </Button>
@@ -124,7 +137,7 @@ export default function AdminChat() {
 
           {/* Quick actions */}
           <div className="border-t px-4 py-2 flex flex-wrap gap-2">
-            {QUICK_ACTIONS.map((a) => (
+            {roleConfig.quickActions.map((a) => (
               <Button
                 key={a.label}
                 variant="outline"
@@ -144,7 +157,7 @@ export default function AdminChat() {
               <textarea
                 ref={inputRef}
                 className="flex-1 min-h-[44px] max-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
-                placeholder="Ask to update tasks, log a deployment, or summarize status..."
+                placeholder="Ask to update events, manage tasks, search creators..."
                 rows={2}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {

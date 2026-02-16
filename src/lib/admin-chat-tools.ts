@@ -204,6 +204,75 @@ export const ADMIN_CHAT_TOOLS: { name: string; description: string; input_schema
       properties: { status: { type: "string", enum: PROMPT_STATUSES } },
     },
   },
+  // ─── Event Management Tools ──────────────────────────────────
+  {
+    name: "getEvents",
+    description: "Get all events. Optionally filter by is_published status. Returns title, dates, venue, city, registration counts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        published_only: { type: "boolean", description: "If true, only return published events" },
+        limit: { type: "number", description: "Max events to return (default 20)" },
+      },
+    },
+  },
+  {
+    name: "getEventDetail",
+    description: "Get full details of a single event including ticket types, registrations count, and sponsors.",
+    input_schema: {
+      type: "object",
+      properties: { eventId: { type: "string", description: "UUID of the event" } },
+      required: ["eventId"],
+    },
+  },
+  {
+    name: "updateEvent",
+    description: "Update event details. Provide eventId and only the fields to change: title, description, venue, city, state, address, start_date, end_date, capacity, is_published.",
+    input_schema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string", description: "UUID of the event" },
+        fields: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            venue: { type: "string" },
+            city: { type: "string" },
+            state: { type: "string" },
+            address: { type: "string" },
+            start_date: { type: "string", description: "ISO date string" },
+            end_date: { type: "string", description: "ISO date string" },
+            capacity: { type: "number" },
+            is_published: { type: "boolean" },
+          },
+        },
+      },
+      required: ["eventId", "fields"],
+    },
+  },
+  {
+    name: "getEventRegistrations",
+    description: "Get registration/order data for an event. Returns count and recent registrations.",
+    input_schema: {
+      type: "object",
+      properties: {
+        eventId: { type: "string", description: "UUID of the event" },
+        limit: { type: "number", description: "Max registrations to return (default 20)" },
+      },
+      required: ["eventId"],
+    },
+  },
+  {
+    name: "getSponsors",
+    description: "Get all sponsors. Optionally filter by organization.",
+    input_schema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max sponsors to return (default 20)" },
+      },
+    },
+  },
 ];
 
 export async function executeAdminTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
@@ -385,6 +454,78 @@ export async function executeAdminTool(name: string, args: Record<string, unknow
       let q = supabase.from("admin_prompts").select("id, title, status, task_id, created_at").order("created_at", { ascending: false });
       if (status) q = q.eq("status", status);
       const { data } = await q.limit(20);
+      return { result: JSON.stringify(data ?? [], null, 2) };
+    }
+
+    // ─── Event Management Tool Executors ──────────────────────
+    case "getEvents": {
+      const publishedOnly = args.published_only as boolean | undefined;
+      const limit = Math.min(Number(args.limit) || 20, 50);
+      let q = supabase.from("events").select("id, title, venue, city, state, start_date, end_date, is_published, capacity, slug, created_at").order("start_date", { ascending: true }).limit(limit);
+      if (publishedOnly) q = q.eq("is_published", true);
+      const { data: events } = await q;
+      if (!events || events.length === 0) return { result: "No events found." };
+      // Get registration counts per event
+      const eventIds = (events as { id: string }[]).map((e) => e.id);
+      const { data: orders } = await supabase.from("orders").select("event_id, id").in("event_id", eventIds);
+      const regCounts: Record<string, number> = {};
+      for (const o of (orders ?? []) as { event_id: string }[]) {
+        regCounts[o.event_id] = (regCounts[o.event_id] || 0) + 1;
+      }
+      const enriched = (events as Record<string, unknown>[]).map((e) => ({
+        ...e,
+        registrations: regCounts[(e as { id: string }).id] || 0,
+        engagement_365: "Active community — metrics building",
+      }));
+      return { result: JSON.stringify(enriched, null, 2) };
+    }
+
+    case "getEventDetail": {
+      const eventId = args.eventId as string;
+      const { data: event } = await supabase.from("events").select("*").eq("id", eventId).single();
+      if (!event) return { result: "Event not found." };
+      const { data: tickets } = await supabase.from("ticket_types").select("id, name, price, quantity, quantity_sold, is_active").eq("event_id", eventId);
+      const { data: orders } = await supabase.from("orders").select("id, status, total, created_at").eq("event_id", eventId).order("created_at", { ascending: false }).limit(10);
+      const { data: deals } = await supabase.from("sponsorship_deals").select("id, sponsor_id, amount, status").eq("event_id", eventId);
+      const sponsorIds = (deals ?? []).map((d: { sponsor_id: string }) => d.sponsor_id);
+      let sponsors: unknown[] = [];
+      if (sponsorIds.length > 0) {
+        const { data: s } = await supabase.from("sponsors").select("id, name, logo_url").in("id", sponsorIds);
+        sponsors = s ?? [];
+      }
+      return {
+        result: JSON.stringify({
+          event,
+          ticket_types: tickets ?? [],
+          recent_orders: orders ?? [],
+          sponsorship_deals: deals ?? [],
+          sponsors,
+          engagement_365: "Year-round community active — ongoing engagement metrics building",
+        }, null, 2),
+      };
+    }
+
+    case "updateEvent": {
+      const eventId = args.eventId as string;
+      const fields = args.fields as Record<string, unknown>;
+      const { data: before } = await supabase.from("events").select("title").eq("id", eventId).single();
+      const title = (before as { title?: string } | null)?.title ?? "Event";
+      const { error } = await supabase.from("events").update({ ...fields, updated_at: new Date().toISOString() }).eq("id", eventId);
+      if (error) return { result: `Error: ${error.message}` };
+      const changes = Object.entries(fields).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join(", ");
+      return { result: `Updated event "${title}". Changes: ${changes}`, confirmation: `Updated '${title}': ${changes}` };
+    }
+
+    case "getEventRegistrations": {
+      const eventId = args.eventId as string;
+      const limit = Math.min(Number(args.limit) || 20, 50);
+      const { data: orders, count } = await supabase.from("orders").select("id, status, total, quantity, created_at, attendee_info", { count: "exact" }).eq("event_id", eventId).order("created_at", { ascending: false }).limit(limit);
+      return { result: JSON.stringify({ total_registrations: count ?? 0, recent: orders ?? [] }, null, 2) };
+    }
+
+    case "getSponsors": {
+      const limit = Math.min(Number(args.limit) || 20, 50);
+      const { data } = await supabase.from("sponsors").select("id, name, contact_name, contact_email, website, industries, logo_url, created_at").order("created_at", { ascending: false }).limit(limit);
       return { result: JSON.stringify(data ?? [], null, 2) };
     }
 

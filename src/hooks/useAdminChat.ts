@@ -1,20 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminChatContext, executeAdminTool, ADMIN_CHAT_TOOLS } from "@/lib/admin-chat-tools";
+import { getRoleChatConfig, type ChatRole } from "@/lib/ai-chat-roles";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-20250514";
-const SYSTEM_PROMPT = `You are the RecurrentX project assistant. You have direct access to the task board, deployment log, and prompt library. When the user tells you about progress, bugs, or new features, you update the board automatically. You can:
-- Create new tasks
-- Move tasks between columns (backlog, in_progress, testing, done, bugs)
-- Check off checklist items
-- Add notes to tasks
-- Log deployments
-- Save Cursor prompts to the library
-- Summarize current project status
-- Suggest what to work on next based on priorities
-
-Current project: RecurrentX (milcrunch.com) — a military creator platform with discovery, verification, events, podcasts, creator bio pages, and brand tools.`;
 
 export interface ChatMessage {
   id: string;
@@ -24,7 +14,7 @@ export interface ChatMessage {
   created_at: string;
 }
 
-export function useAdminChat() {
+export function useAdminChat(userRole: ChatRole = "super_admin") {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState("");
   const [confirmations, setConfirmations] = useState<string[]>([]);
@@ -32,6 +22,12 @@ export function useAdminChat() {
   const [loadingHistory, setLoadingHistory] = useState(true);
 
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+  const roleConfig = getRoleChatConfig(userRole);
+
+  // Filter tools to only those allowed for the current role
+  const allowedToolDefs = ADMIN_CHAT_TOOLS.filter((t) =>
+    roleConfig.allowedTools.includes(t.name)
+  );
 
   useEffect(() => {
     (async () => {
@@ -68,9 +64,21 @@ export function useAdminChat() {
     async (
       apiMessages: { role: string; content: unknown[] }[],
       systemWithContext: string,
+      tools: typeof ADMIN_CHAT_TOOLS,
       onStreamDelta?: (text: string) => void,
-      onToolUse?: (toolUses: { id: string; name: string; input: Record<string, unknown> }[]) => Promise<{ toolResults: { tool_use_id: string; content: string }[]; confirmations: string[] }>
     ): Promise<{ stopReason: string; text: string; toolUses: { id: string; name: string; input: Record<string, unknown> }[] }> => {
+      const body: Record<string, unknown> = {
+        model: MODEL,
+        max_tokens: 4096,
+        system: systemWithContext,
+        messages: apiMessages,
+        stream: true,
+      };
+      // Only include tools if there are any
+      if (tools.length > 0) {
+        body.tools = tools;
+        body.tool_choice = { type: "auto" };
+      }
       const res = await fetch(ANTHROPIC_URL, {
         method: "POST",
         headers: {
@@ -78,15 +86,7 @@ export function useAdminChat() {
           "x-api-key": apiKey ?? "",
           "anthropic-version": "2023-06-01",
         },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 4096,
-          system: systemWithContext,
-          messages: apiMessages,
-          tools: ADMIN_CHAT_TOOLS,
-          tool_choice: { type: "any" },
-          stream: true,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.text();
@@ -160,7 +160,7 @@ export function useAdminChat() {
       await saveMessage("user", userContent.trim());
 
       const context = await getAdminChatContext();
-      const systemWithContext = `${SYSTEM_PROMPT}\n\n${context}`;
+      const systemWithContext = `${roleConfig.systemPromptAdditions}\n\n${context}`;
 
       const apiMessages: { role: string; content: unknown[] }[] = [
         ...messages.map((m) => ({ role: m.role, content: [{ type: "text", text: m.content }] })),
@@ -175,11 +175,11 @@ export function useAdminChat() {
         const { stopReason, toolUses } = await callAnthropic(
           messagesSoFar,
           systemWithContext,
+          allowedToolDefs,
           (delta) => {
             fullAssistantText += delta;
             setStreamingContent((c) => c + delta);
           },
-          undefined
         );
         toolUsesAccum.push(...toolUses);
 
@@ -187,6 +187,11 @@ export function useAdminChat() {
           const toolResults: { tool_use_id: string; content: string }[] = [];
           const newConfirmations: string[] = [];
           for (const tu of toolUsesAccum) {
+            // Double-check tool is allowed for this role
+            if (!roleConfig.allowedTools.includes(tu.name)) {
+              toolResults.push({ tool_use_id: tu.id, content: `Error: Tool "${tu.name}" is not available for your role.` });
+              continue;
+            }
             try {
               const out = await executeAdminTool(tu.name, tu.input);
               toolResults.push({ tool_use_id: tu.id, content: out.result });
@@ -230,7 +235,7 @@ export function useAdminChat() {
         setLoading(false);
       }
     },
-    [apiKey, loading, messages, saveMessage, callAnthropic]
+    [apiKey, loading, messages, saveMessage, callAnthropic, roleConfig, allowedToolDefs]
   );
 
   const clearConfirmations = useCallback(() => setConfirmations([]), []);
@@ -244,5 +249,6 @@ export function useAdminChat() {
     sendMessage,
     clearConfirmations,
     hasApiKey: !!apiKey,
+    roleConfig,
   };
 }
