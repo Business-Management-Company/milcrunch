@@ -104,7 +104,7 @@ function EventCard({ event, index }: { event: EventRow; index: number }) {
         <h3 className="text-xl font-bold text-white mb-3 leading-snug">
           {event.title}
         </h3>
-        <div className="flex items-center gap-2 text-[#9B51E0] font-semibold text-sm opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+        <div className="flex items-center gap-2 text-[#6C5CE7] font-semibold text-sm opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
           {past ? "View Details" : "Register"} <ArrowRight className="h-4 w-4" />
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function PublicEvents() {
           <Link to="/" className="shrink-0">
             <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               <span className="text-[#000741]">recurrent</span>
-              <span className="text-[#9B51E0] font-extrabold">X</span>
+              <span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
@@ -148,7 +148,7 @@ export default function PublicEvents() {
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Sign In</Link>
-            <Link to="/signup" className="text-sm bg-[#9B51E0] hover:bg-[#8344C4] text-white px-4 py-1.5 rounded-lg font-medium transition-colors">
+            <Link to="/signup" className="text-sm bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-4 py-1.5 rounded-lg font-medium transition-colors">
               Get Started
             </Link>
           </div>
@@ -197,7 +197,7 @@ export default function PublicEvents() {
           <Link to="/">
             <span className="font-bold text-lg" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               <span className="text-[#000741]">recurrent</span>
-              <span className="text-[#9B51E0] font-extrabold">X</span>
+              <span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
           </Link>
           <p className="text-sm text-gray-400">&copy; 2026 RecurrentX. All rights reserved.</p>

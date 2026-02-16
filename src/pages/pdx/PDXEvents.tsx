@@ -11,7 +11,7 @@ const PDXEvents = () => {
           Browse and manage live and virtual PDX experiences.
         </p>
       </div>
-      <Card className="bg-white dark:bg-pd-darkblue border border-gray-200 dark:border-pd-blue/20 p-8 rounded-xl">
+      <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-pd-blue/20 p-8 rounded-xl">
         <p className="text-muted-foreground text-center py-4">
           Coming soon. Live and virtual experience listings will appear here.
         </p>

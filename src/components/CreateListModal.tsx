@@ -63,7 +63,7 @@ export default function CreateListModal({
           <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-lg">
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={!valid} className="rounded-lg bg-[#0064B1] hover:bg-[#053877]">
+          <Button onClick={handleCreate} disabled={!valid} className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]">
             Create
           </Button>
         </DialogFooter>

@@ -77,8 +77,8 @@ const REVENUE_CHART_DATA = [
 ];
 
 const FUNDING_ALLOCATION = [
-  { name: "Platform Dev", value: 40, color: "#0064B1" },
-  { name: "Marketing & Creator Acquisition", value: 25, color: "#053877" },
+  { name: "Platform Dev", value: 40, color: "#6C5CE7" },
+  { name: "Marketing & Creator Acquisition", value: 25, color: "#5B4BD1" },
   { name: "Staff", value: 15, color: "#F0A71F" },
   { name: "Legal", value: 10, color: "#6b7280" },
   { name: "Working Capital", value: 10, color: "#9ca3af" },
@@ -164,13 +164,13 @@ export default function BusinessOverview() {
 
       <Tabs defaultValue="business-plan" className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-2xl bg-muted/50 p-1 rounded-lg">
-          <TabsTrigger value="business-plan" className="rounded-md data-[state=active]:bg-[#0064B1] data-[state=active]:text-white">
+          <TabsTrigger value="business-plan" className="rounded-md data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white">
             Business Plan
           </TabsTrigger>
-          <TabsTrigger value="investor-deck" className="rounded-md data-[state=active]:bg-[#0064B1] data-[state=active]:text-white">
+          <TabsTrigger value="investor-deck" className="rounded-md data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white">
             Investor Deck
           </TabsTrigger>
-          <TabsTrigger value="recurrent" className="rounded-md data-[state=active]:bg-[#0064B1] data-[state=active]:text-white">
+          <TabsTrigger value="recurrent" className="rounded-md data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white">
             Recurrent Partnership
           </TabsTrigger>
         </TabsList>
@@ -178,7 +178,7 @@ export default function BusinessOverview() {
         {/* TAB 1 — Business Plan */}
         <TabsContent value="business-plan" className="mt-6 space-y-8">
           {/* Hero */}
-          <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#000741] to-[#053877] text-white">
+          <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#000741] to-[#5B4BD1] text-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-2xl font-bold text-white">RecurrentX Business Plan</CardTitle>
             </CardHeader>
@@ -209,7 +209,7 @@ export default function BusinessOverview() {
               ].map((stat) => (
                 <Card key={stat.label} className="rounded-xl border border-gray-200 shadow-sm">
                   <CardContent className="pt-6">
-                    <p className="text-2xl font-bold text-[#0064B1] font-mono tabular-nums">{stat.value}</p>
+                    <p className="text-2xl font-bold text-[#6C5CE7] font-mono tabular-nums">{stat.value}</p>
                     <p className="font-medium text-[#000741] dark:text-white mt-1">{stat.label}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>
                   </CardContent>
@@ -272,7 +272,7 @@ export default function BusinessOverview() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Revenue</p>
-                    <p className="text-lg font-bold font-mono tabular-nums text-[#0064B1]">Y1 $1.4M → Y3 $7.6M</p>
+                    <p className="text-lg font-bold font-mono tabular-nums text-[#6C5CE7]">Y1 $1.4M → Y3 $7.6M</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Gross Margin Y3</p>
@@ -290,7 +290,7 @@ export default function BusinessOverview() {
                       <XAxis dataKey="year" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => (v >= 1000 ? `$${(v/1000).toFixed(1)}M` : `$${v}K`)} />
                       <Tooltip formatter={(v: number) => [(v >= 1000 ? `$${(Number(v)/1000).toFixed(1)}M` : `$${v}K`), "Revenue"]} labelFormatter={(l) => l} />
-                      <Bar dataKey="total" fill="#0064B1" radius={[4, 4, 0, 0]} name="Revenue ($K)" />
+                      <Bar dataKey="total" fill="#6C5CE7" radius={[4, 4, 0, 0]} name="Revenue ($K)" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -368,7 +368,7 @@ export default function BusinessOverview() {
               <Card key={i} className="rounded-xl border border-gray-200 shadow-md overflow-hidden">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0064B1] text-white text-sm font-bold shrink-0">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6C5CE7] text-white text-sm font-bold shrink-0">
                       {i + 1}
                     </span>
                     <CardTitle className="text-lg text-[#000741] dark:text-white">{slide.title}</CardTitle>
@@ -394,17 +394,17 @@ export default function BusinessOverview() {
                 key={i}
                 className={cn(
                   "rounded-xl border border-gray-200 shadow-md overflow-hidden",
-                  slide.highlight && "border-l-4 border-l-[#0064B1]"
+                  slide.highlight && "border-l-4 border-l-[#6C5CE7]"
                 )}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0064B1] text-white text-sm font-bold shrink-0">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6C5CE7] text-white text-sm font-bold shrink-0">
                       {i + 1}
                     </span>
                     <CardTitle className="text-lg text-[#000741] dark:text-white">{slide.title}</CardTitle>
                     {slide.highlight && (
-                      <Badge className="bg-[#0064B1]/10 text-[#0064B1] text-xs ml-auto">Key slide</Badge>
+                      <Badge className="bg-[#6C5CE7]/10 text-[#6C5CE7] text-xs ml-auto">Key slide</Badge>
                     )}
                   </div>
                 </CardHeader>

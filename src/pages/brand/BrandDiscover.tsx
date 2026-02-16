@@ -923,6 +923,13 @@ const BrandDiscover = () => {
       }
     }
 
+    console.log("[doApproveForDirectory] Adding to directory:", {
+      handle,
+      name: creator.name,
+      directoryId,
+      platform: creator.platforms?.[0] ?? "instagram",
+    });
+
     const { error } = await approveForDirectory({
       handle,
       display_name: creator.name,
@@ -940,6 +947,10 @@ const BrandDiscover = () => {
       added_by: user?.id ?? null,
       directory_id: directoryId || null,
     });
+
+    if (error) {
+      console.error("[doApproveForDirectory] FAILED for", handle, ":", error);
+    }
     return error;
   };
 
@@ -1059,15 +1070,21 @@ const BrandDiscover = () => {
     setApprovingDir(true);
     let added = 0;
     let failed = 0;
+    let lastError = "";
     for (const c of toAdd) {
       const error = await doApproveForDirectory(c, directoryId);
-      if (error) failed++;
-      else added++;
+      if (error) {
+        failed++;
+        lastError = error;
+        console.error(`[BulkAddToDirectory] Failed for ${c.name}:`, error);
+      } else {
+        added++;
+      }
     }
     setApprovingDir(false);
     const dirName = directoriesList.find((d) => d.id === directoryId)?.name ?? "directory";
     if (failed > 0) {
-      toast.error(`Added ${added}, failed ${failed} to ${dirName}`);
+      toast.error(`Added ${added}, failed ${failed} to ${dirName}: ${lastError}`);
     } else {
       toast.success(`Added ${added} creator${added !== 1 ? "s" : ""} to ${dirName}`);
     }
@@ -1538,7 +1555,7 @@ const BrandDiscover = () => {
                                 <div className="relative shrink-0">
                                   <img src={creator.avatar} alt={creator.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700" />
                                   {creator.isVerified && (
-                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-[#0064B1] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
+                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-[#6C5CE7] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
                                   )}
                                 </div>
                                 <div className="min-w-0">
@@ -1546,7 +1563,7 @@ const BrandDiscover = () => {
                                     {creator.name}
                                     {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
                                   </p>
-                                  <p className="text-xs text-[#0064B1] truncate">{creator.username ? `@${creator.username}` : ""}</p>
+                                  <p className="text-xs text-[#6C5CE7] truncate">{creator.username ? `@${creator.username}` : ""}</p>
                                   {creator.location && (
                                     <p className="text-xs text-gray-400 truncate flex items-center gap-0.5"><MapPin className="h-3 w-3 shrink-0" />{creator.location}</p>
                                   )}
@@ -1690,8 +1707,8 @@ const BrandDiscover = () => {
                         tabIndex={0}
                         className={cn(
                           "relative rounded-xl border p-5 flex flex-col transition-all duration-200 cursor-pointer",
-                          "bg-white border-gray-200 hover:shadow-md hover:border-[#0064B1]/30",
-                          "dark:bg-[#1A1D27] dark:border-gray-800 dark:hover:border-[#0064B1]/30"
+                          "bg-white border-gray-200 hover:shadow-md hover:border-[#6C5CE7]/30",
+                          "dark:bg-[#1A1D27] dark:border-gray-800 dark:hover:border-[#6C5CE7]/30"
                         )}
                         onClick={() => {
                           setProfileCreator(creator);
@@ -1720,7 +1737,7 @@ const BrandDiscover = () => {
                               className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md"
                             />
                             {creator.isVerified && (
-                              <BadgeCheck className="absolute -top-1 -left-1 h-5 w-5 text-[#0064B1] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
+                              <BadgeCheck className="absolute -top-1 -left-1 h-5 w-5 text-[#6C5CE7] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -1730,7 +1747,7 @@ const BrandDiscover = () => {
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available for outreach"><Mail className="h-3 w-3" />Email</span>
                               )}
                             </h3>
-                            <p className="text-sm text-[#0064B1] truncate">
+                            <p className="text-sm text-[#6C5CE7] truncate">
                               {creator.username ? `@${creator.username}` : "\u00A0"}
                             </p>
                             {creator.location && (
@@ -1801,13 +1818,13 @@ const BrandDiscover = () => {
                             {nicheTags.slice(0, 3).map((tag) => (
                               <span
                                 key={tag}
-                                className="inline-flex items-center rounded-full bg-[#0064B1]/10 text-[#0064B1] dark:bg-[#0064B1]/20 dark:text-[#0064B1] text-xs px-2 py-0.5 font-medium"
+                                className="inline-flex items-center rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] dark:bg-[#6C5CE7]/20 dark:text-[#6C5CE7] text-xs px-2 py-0.5 font-medium"
                               >
                                 {tag}
                               </span>
                             ))}
                             {nicheTags.length > 3 && (
-                              <span className="inline-flex items-center rounded-full bg-[#0064B1]/10 text-[#0064B1] dark:bg-[#0064B1]/20 dark:text-[#0064B1] text-xs px-2 py-0.5">
+                              <span className="inline-flex items-center rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] dark:bg-[#6C5CE7]/20 dark:text-[#6C5CE7] text-xs px-2 py-0.5">
                                 +{nicheTags.length - 3}
                               </span>
                             )}
@@ -1844,7 +1861,7 @@ const BrandDiscover = () => {
                           ) : (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" className="w-full rounded-lg bg-[#000741] hover:bg-[#053877] text-white dark:bg-[#000741] dark:hover:bg-[#053877]">
+                                <Button size="sm" className="w-full rounded-lg bg-[#000741] hover:bg-[#5B4BD1] text-white dark:bg-[#000741] dark:hover:bg-[#5B4BD1]">
                                   <ListPlus className="h-4 w-4 mr-2" />
                                   Add to List
                                 </Button>

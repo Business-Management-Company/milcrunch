@@ -658,7 +658,7 @@ export default function CreatorProfileModal({
             <p className="text-lg font-bold text-center text-gray-900 dark:text-white">
               {displayName}
               {isVerified && (
-                <span className="ml-1.5 inline-flex items-center rounded-full bg-[#0064B1]/20 px-1.5 py-0.5 text-xs font-medium text-[#0064B1]">
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-[#6C5CE7]/20 px-1.5 py-0.5 text-xs font-medium text-[#6C5CE7]">
                   Verified
                 </span>
               )}
@@ -668,7 +668,7 @@ export default function CreatorProfileModal({
                 href={platformLink ?? `https://instagram.com/${displayUsername}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-center text-[#0064B1] hover:underline mb-4 block"
+                className="text-sm text-center text-[#6C5CE7] hover:underline mb-4 block"
               >
                 @{displayUsername}
               </a>
@@ -682,7 +682,7 @@ export default function CreatorProfileModal({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      className="w-full bg-[#0064B1] hover:bg-[#053877] text-white rounded-lg"
+                      className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg"
                       disabled={!listCreator}
                     >
                       <ListPlus className="mr-2 h-4 w-4" />
@@ -785,7 +785,7 @@ export default function CreatorProfileModal({
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-[#0064B1] text-white"
+                            ? "bg-[#6C5CE7] text-white"
                             : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
                         )}
                       >
@@ -903,7 +903,7 @@ export default function CreatorProfileModal({
                           href={href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-[#0064B1] hover:text-white transition-colors"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-[#6C5CE7] hover:text-white transition-colors"
                           title={PLATFORM_LABELS[p] ?? p}
                         >
                           {(p === "instagram" && <Instagram className="h-5 w-5" />) ||
@@ -928,7 +928,7 @@ export default function CreatorProfileModal({
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 px-3 py-1 text-sm text-[#0064B1] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate max-w-[220px]"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 px-3 py-1 text-sm text-[#6C5CE7] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate max-w-[220px]"
                           title={url}
                         >
                           <Link className="h-3 w-3 shrink-0" />
@@ -949,19 +949,19 @@ export default function CreatorProfileModal({
                     <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 gap-2 h-auto">
                       <TabsTrigger
                         value="analytics"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#0064B1] data-[state=active]:text-white data-[state=active]:border-[#0064B1] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white data-[state=active]:border-[#6C5CE7] text-gray-600 dark:text-gray-400 py-2.5"
                       >
                         <BarChart3 className="h-4 w-4" /> Analytics
                       </TabsTrigger>
                       <TabsTrigger
                         value="posts"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#0064B1] data-[state=active]:text-white data-[state=active]:border-[#0064B1] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white data-[state=active]:border-[#6C5CE7] text-gray-600 dark:text-gray-400 py-2.5"
                       >
                         <Image className="h-4 w-4" /> Posts
                       </TabsTrigger>
                       <TabsTrigger
                         value="similar"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#0064B1] data-[state=active]:text-white data-[state=active]:border-[#0064B1] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white data-[state=active]:border-[#6C5CE7] text-gray-600 dark:text-gray-400 py-2.5"
                       >
                         <Users className="h-4 w-4" /> Similar Accounts
                       </TabsTrigger>
@@ -990,8 +990,8 @@ export default function CreatorProfileModal({
                           <>
                             <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
                               @{displayUsername || "handle"} generated between{" "}
-                              <span className="font-bold text-[#0064B1]">${formatNum(incomeMin)}</span> and{" "}
-                              <span className="font-bold text-[#0064B1]">${formatNum(incomeMax)}</span> in income in the last 90 days.
+                              <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMin)}</span> and{" "}
+                              <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMax)}</span> in income in the last 90 days.
                             </p>
                             <div className="h-40 w-full max-w-md">
                               <ResponsiveContainer width="100%" height="100%">

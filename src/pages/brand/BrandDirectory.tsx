@@ -551,13 +551,13 @@ const BrandDirectory = () => {
                       {imgSrc ? (
                         <img src={imgSrc} alt={m.creator_name ?? ""} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-lg">
+                        <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
                           {getInitials(m.creator_name ?? "", m.creator_handle)}
                         </div>
                       )}
                     </div>
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
-                    <p className="text-xs text-[#0064B1] mb-2 truncate max-w-full">@{m.creator_handle}</p>
+                    <p className="text-xs text-[#6C5CE7] mb-2 truncate max-w-full">@{m.creator_handle}</p>
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
                     <div className="flex items-center gap-4 text-xs mb-3">
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
@@ -614,14 +614,14 @@ const BrandDirectory = () => {
                             {imgSrc ? (
                               <img src={imgSrc} alt={m.creator_name ?? ""} className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-xs">
+                              <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs">
                                 {getInitials(m.creator_name ?? "", m.creator_handle)}
                               </div>
                             )}
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-[#000741] dark:text-white truncate">{m.creator_name}</p>
-                            <p className="text-xs text-[#0064B1] truncate">@{m.creator_handle}</p>
+                            <p className="text-xs text-[#6C5CE7] truncate">@{m.creator_handle}</p>
                           </div>
                         </div>
                       </td>

@@ -294,15 +294,15 @@ const CreatePDX = () => {
               key={s.id}
               className={cn(
                 "flex items-center gap-1.5",
-                s.id < step && "text-[#0064B1]",
-                s.id === step && "text-[#0064B1] font-medium"
+                s.id < step && "text-[#6C5CE7]",
+                s.id === step && "text-[#6C5CE7] font-medium"
               )}
             >
               <span
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
-                  s.id < step && "bg-[#0064B1] text-white",
-                  s.id === step && "bg-[#0064B1] text-white animate-pulse",
+                  s.id < step && "bg-[#6C5CE7] text-white",
+                  s.id === step && "bg-[#6C5CE7] text-white animate-pulse",
                   s.id > step && "bg-gray-200 dark:bg-gray-700 text-gray-500"
                 )}
               >
@@ -312,7 +312,7 @@ const CreatePDX = () => {
             </div>
           ))}
         </div>
-        <Progress value={progressPct} className="h-2 bg-gray-200 dark:bg-gray-700 [&>div]:bg-[#0064B1]" />
+        <Progress value={progressPct} className="h-2 bg-gray-200 dark:bg-gray-700 [&>div]:bg-[#6C5CE7]" />
       </div>
 
       {/* Step content with slide feel */}
@@ -443,7 +443,7 @@ const CreatePDX = () => {
                         key={slot.id}
                         className={cn(
                           "flex flex-wrap items-center gap-3 rounded-lg border p-3",
-                          idx % 2 === 0 ? "border-[#0064B1]/30 bg-[#0064B1]/5" : "border-[#ED1C24]/30 bg-[#ED1C24]/5"
+                          idx % 2 === 0 ? "border-[#6C5CE7]/30 bg-[#6C5CE7]/5" : "border-[#ED1C24]/30 bg-[#ED1C24]/5"
                         )}
                       >
                         <Input
@@ -515,7 +515,7 @@ const CreatePDX = () => {
                     placeholder="Name, handle, or keyword"
                     className="rounded-lg"
                   />
-                  <Button size="sm" className="rounded-lg bg-[#0064B1] hover:bg-[#005399]" onClick={handleSearchSpeakers} disabled={speakerSearchLoading}>
+                  <Button size="sm" className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]" onClick={handleSearchSpeakers} disabled={speakerSearchLoading}>
                     {speakerSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
                   </Button>
                 </div>
@@ -678,7 +678,7 @@ const CreatePDX = () => {
               </div>
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button className="rounded-lg bg-[#0064B1] hover:bg-[#005399]" onClick={handleLaunch}>
+              <Button className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]" onClick={handleLaunch}>
                 Launch PDX
               </Button>
               <Button variant="outline" className="rounded-lg">
@@ -705,7 +705,7 @@ const CreatePDX = () => {
           {step === 1 ? "Back to PDX" : "Back"}
         </Button>
         {step < 5 && (
-          <Button className="rounded-lg bg-[#0064B1] hover:bg-[#005399]" onClick={() => setStep((s) => s + 1)}>
+          <Button className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]" onClick={() => setStep((s) => s + 1)}>
             Next
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>

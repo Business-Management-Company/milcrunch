@@ -201,7 +201,7 @@ export default function SummaryDashboard() {
       {/* AI Prompt Bar */}
       <div className="max-w-2xl mx-auto">
         <div className="relative flex items-center">
-          <Sparkles className="absolute left-4 h-5 w-5 text-[#9B51E0]" />
+          <Sparkles className="absolute left-4 h-5 w-5 text-[#6C5CE7]" />
           <input
             ref={inputRef}
             type="text"
@@ -210,7 +210,7 @@ export default function SummaryDashboard() {
               "w-full pl-12 pr-14 py-4 rounded-2xl text-base",
               "border border-gray-200 dark:border-gray-700",
               "bg-white dark:bg-[#1A1D27]",
-              "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#9B51E0]/30 focus:border-[#9B51E0]",
+              "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]",
               "outline-none transition-all placeholder:text-gray-400",
             )}
             value={prompt}
@@ -226,7 +226,7 @@ export default function SummaryDashboard() {
             className={cn(
               "absolute right-3 rounded-xl p-2 transition-colors",
               prompt.trim()
-                ? "bg-[#9B51E0] text-white hover:bg-[#8344C4]"
+                ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]"
                 : "bg-gray-100 dark:bg-gray-800 text-gray-400",
             )}
           >
@@ -245,8 +245,8 @@ export default function SummaryDashboard() {
               to={card.href}
               className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
-              <div className="rounded-lg bg-[#9B51E0]/10 p-2.5 w-fit mb-3">
-                <Icon className="h-5 w-5 text-[#9B51E0]" />
+              <div className="rounded-lg bg-[#6C5CE7]/10 p-2.5 w-fit mb-3">
+                <Icon className="h-5 w-5 text-[#6C5CE7]" />
               </div>
               <h3 className="font-semibold text-[#000741] dark:text-white text-sm">
                 {card.title}
@@ -269,8 +269,8 @@ export default function SummaryDashboard() {
               to={card.href}
               className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
             >
-              <div className="rounded-lg bg-[#9B51E0]/10 p-2.5 w-fit mb-3">
-                <Icon className="h-5 w-5 text-[#9B51E0]" />
+              <div className="rounded-lg bg-[#6C5CE7]/10 p-2.5 w-fit mb-3">
+                <Icon className="h-5 w-5 text-[#6C5CE7]" />
               </div>
               <h3 className="font-semibold text-[#000741] dark:text-white text-sm">
                 {card.title}
@@ -294,7 +294,7 @@ export default function SummaryDashboard() {
           <ul className="space-y-3">
             {activity.map((item, i) => (
               <li key={i} className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#9B51E0] mt-2 shrink-0" />
+                <div className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7] mt-2 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm text-[#000741] dark:text-white truncate">
                     {item.label}
@@ -316,7 +316,7 @@ export default function SummaryDashboard() {
             <ul className="space-y-3">
               {events.map((event) => (
                 <li key={event.id} className="flex items-start gap-3">
-                  <span className="shrink-0 rounded-md bg-[#9B51E0]/10 text-[#9B51E0] text-xs font-semibold px-2 py-1">
+                  <span className="shrink-0 rounded-md bg-[#6C5CE7]/10 text-[#6C5CE7] text-xs font-semibold px-2 py-1">
                     {event.date_label}
                   </span>
                   <div className="min-w-0">
@@ -338,7 +338,7 @@ export default function SummaryDashboard() {
               <p className="text-sm">No upcoming events</p>
               <Link
                 to="/pdx/create"
-                className="text-sm text-[#9B51E0] hover:underline font-medium mt-1 inline-block"
+                className="text-sm text-[#6C5CE7] hover:underline font-medium mt-1 inline-block"
               >
                 Create one →
               </Link>
@@ -346,7 +346,7 @@ export default function SummaryDashboard() {
           )}
           <Link
             to="/events"
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#9B51E0] hover:underline"
+            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#6C5CE7] hover:underline"
           >
             View All <ArrowRight className="h-3.5 w-3.5" />
           </Link>

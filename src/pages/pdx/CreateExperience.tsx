@@ -11,7 +11,7 @@ const CreateExperience = () => {
           Create virtual or live experiences that connect brands with military creators.
         </p>
       </div>
-      <Card className="bg-white dark:bg-pd-darkblue border border-gray-200 dark:border-pd-blue/20 p-8 rounded-xl">
+      <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-pd-blue/20 p-8 rounded-xl">
         <p className="text-muted-foreground text-center py-4">
           Coming soon. You’ll be able to create and manage PDX experiences here.
         </p>

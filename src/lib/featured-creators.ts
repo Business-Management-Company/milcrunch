@@ -296,11 +296,22 @@ export async function approveForDirectory(data: {
 
   if (data.enrichment_data) payload.enrichment_data = data.enrichment_data;
 
+  console.log("[approveForDirectory] Upserting to directory_members:", {
+    directory_id: dirId,
+    creator_handle: handle,
+    platform: payload.platform,
+    columns: Object.keys(payload),
+  });
+
   const { error } = await supabase
     .from("directory_members")
     .upsert(payload, { onConflict: "directory_id,creator_handle,platform", ignoreDuplicates: false });
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[approveForDirectory] UPSERT FAILED:", error.message, error.details, error.hint, error.code);
+    return { error: `${error.message}${error.details ? ` (${error.details})` : ""}${error.hint ? ` — hint: ${error.hint}` : ""}` };
+  }
+  console.log("[approveForDirectory] Success:", handle);
   return { error: null };
 }
 

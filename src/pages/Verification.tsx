@@ -236,7 +236,7 @@ function InlineNameEdit({ id, name, onSave }: { id: string; name: string; onSave
 }
 
 function SourceIcon({ category }: { category: string }) {
-  if (category === "Military Service") return <ShieldCheck className="h-4 w-4 text-[#0064B1]" />;
+  if (category === "Military Service") return <ShieldCheck className="h-4 w-4 text-[#6C5CE7]" />;
   if (category === "Criminal Record") return <AlertCircle className="h-4 w-4 text-red-500" />;
   if (category === "Social Media") return <Globe className="h-4 w-4 text-gray-500" />;
   if (category === "News") return <FileText className="h-4 w-4 text-gray-500" />;
@@ -628,7 +628,7 @@ export default function Verification() {
           </div>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#0064B1] hover:bg-[#053877]">
+              <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Verification
               </Button>
@@ -740,7 +740,7 @@ export default function Verification() {
                       const p = phases.find((x) => x.phase === n);
                       return (
                         <div key={n} className="flex items-center gap-2 text-sm">
-                          {p?.status === "done" ? <Check className="h-4 w-4 text-purple-600" /> : p?.status === "running" ? <Loader2 className="h-4 w-4 animate-spin text-[#0064B1]" /> : <span className="w-4" />}
+                          {p?.status === "done" ? <Check className="h-4 w-4 text-purple-600" /> : p?.status === "running" ? <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" /> : <span className="w-4" />}
                           <span className={p?.status === "done" ? "text-muted-foreground" : ""}>
                             Phase {n}: {p?.name ?? ["People Data Labs", "Web Search", "Deep Extraction", "AI Analysis"][n - 1]}
                           </span>
@@ -753,7 +753,7 @@ export default function Verification() {
                 <Button
                   onClick={handleStartVerification}
                   disabled={pipelineRunning || !addForm.fullName.trim()}
-                  className="w-full bg-[#0064B1] hover:bg-[#053877]"
+                  className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]"
                 >
                   {pipelineRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Start Verification
@@ -764,7 +764,7 @@ export default function Verification() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#0064B1]" /></div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" /></div>
           ) : (
             <Table>
               <TableHeader>
@@ -889,7 +889,7 @@ export default function Verification() {
               <Label>Bio</Label>
               <Textarea value={speakerForm.bio} onChange={(e) => setSpeakerForm((f) => ({ ...f, bio: e.target.value }))} rows={3} />
             </div>
-            <Button onClick={handleSaveSpeaker} className="w-full bg-[#0064B1] hover:bg-[#053877]">
+            <Button onClick={handleSaveSpeaker} className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]">
               <UserPlus className="h-4 w-4 mr-2" /> Save Speaker
             </Button>
           </div>
@@ -919,7 +919,7 @@ export default function Verification() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleSendInvite} disabled={!selectedEventId} className="w-full bg-[#0064B1] hover:bg-[#053877]">
+            <Button onClick={handleSendInvite} disabled={!selectedEventId} className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]">
               <Mail className="h-4 w-4 mr-2" /> Send Invitation
             </Button>
           </div>
@@ -1121,7 +1121,7 @@ No markdown formatting, just the JSON array.`;
           <Button
             onClick={handleSearch}
             disabled={searching}
-            className="bg-[#0064B1] hover:bg-[#053877]"
+            className="bg-[#6C5CE7] hover:bg-[#5B4BD1]"
           >
             {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
             Search Videos
@@ -1132,7 +1132,7 @@ No markdown formatting, just the JSON array.`;
           {(searching || filtering) && (
             <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
               <CardContent className="flex items-center gap-3 py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+                <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   {searching ? `Searching YouTube for "${record.person_name}"...` : "AI is filtering results for relevance..."}
                 </p>
@@ -1156,7 +1156,7 @@ No markdown formatting, just the JSON array.`;
                   href={`https://www.youtube.com/watch?v=${v.videoId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group block rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#0064B1] hover:shadow-md transition-all"
+                  className="group block rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#6C5CE7] hover:shadow-md transition-all"
                 >
                   <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
                     {v.thumbnail ? (
@@ -1171,7 +1171,7 @@ No markdown formatting, just the JSON array.`;
                     </div>
                   </div>
                   <div className="p-3">
-                    <p className="text-sm font-medium line-clamp-2 group-hover:text-[#0064B1]">{v.title}</p>
+                    <p className="text-sm font-medium line-clamp-2 group-hover:text-[#6C5CE7]">{v.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">{v.channelTitle}</p>
                     {v.publishedAt && (
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -1187,7 +1187,7 @@ No markdown formatting, just the JSON array.`;
           {!searching && !filtering && !showAll && hiddenCount > 0 && (
             <button
               onClick={() => setShowAll(true)}
-              className="text-sm text-[#0064B1] hover:underline flex items-center gap-1.5"
+              className="text-sm text-[#6C5CE7] hover:underline flex items-center gap-1.5"
             >
               <ChevronDown className="h-4 w-4" />
               See {hiddenCount} more video{hiddenCount !== 1 ? "s" : ""}
@@ -1354,7 +1354,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           <Button
             onClick={handleRunBackgroundReview}
             disabled={searching}
-            className="bg-[#0064B1] hover:bg-[#053877]"
+            className="bg-[#6C5CE7] hover:bg-[#5B4BD1]"
           >
             {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
             Run Background Review
@@ -1365,7 +1365,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           {(searching || aiFiltering) && (
             <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
               <CardContent className="flex items-center gap-3 py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+                <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   {searching ? "Searching public records..." : `AI is analyzing results for relevance to ${personName}...`}
                 </p>
@@ -1403,7 +1403,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
                     <div className="flex items-start gap-3">
                       <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${getConcernDot(r)}`} />
                       <div className="flex-1 min-w-0">
-                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground hover:text-[#0064B1] hover:underline flex items-center gap-1 text-sm">
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground hover:text-[#6C5CE7] hover:underline flex items-center gap-1 text-sm">
                           {r.title} <ExternalLink className="h-3 w-3 text-muted-foreground" />
                         </a>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.snippet}</p>
@@ -1417,7 +1417,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
               {!showAll && hiddenCount > 0 && (
                 <button
                   onClick={() => setShowAll(true)}
-                  className="text-sm text-[#0064B1] hover:underline flex items-center gap-1.5 pt-1"
+                  className="text-sm text-[#6C5CE7] hover:underline flex items-center gap-1.5 pt-1"
                 >
                   <ChevronDown className="h-4 w-4" />
                   Show {hiddenCount} more result{hiddenCount !== 1 ? "s" : ""}
@@ -1536,7 +1536,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
                 checked={!!checked}
                 onChange={isAuto ? undefined : () => handleToggle(item.key)}
                 disabled={isAuto}
-                className="h-4 w-4 rounded border-gray-300 text-[#0064B1] focus:ring-[#0064B1]"
+                className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
               />
               <span className={cn("text-sm flex-1", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
                 {item.label}
@@ -1633,7 +1633,7 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">{p.name}</span>
                   {p.url && (
-                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-[#0064B1] hover:underline">
+                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-[#6C5CE7] hover:underline">
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
@@ -1671,7 +1671,7 @@ function RawSourceCard({ url, markdown }: { url: string; markdown: string }) {
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#0064B1] hover:underline flex items-center gap-1">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#6C5CE7] hover:underline flex items-center gap-1">
             {new URL(url).hostname}{new URL(url).pathname.slice(0, 60)} <ExternalLink className="h-3 w-3" />
           </a>
         </CardTitle>
@@ -1684,7 +1684,7 @@ function RawSourceCard({ url, markdown }: { url: string; markdown: string }) {
         {hasMore && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs text-[#0064B1] hover:underline mt-2 flex items-center gap-1"
+            className="text-xs text-[#6C5CE7] hover:underline mt-2 flex items-center gap-1"
           >
             {expanded ? <><ChevronDown className="h-3 w-3" /> Show less</> : <><ChevronRight className="h-3 w-3" /> Show more ({lines.length - 4} more lines)</>}
           </button>
@@ -1771,7 +1771,7 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
             <p className="text-sm text-muted-foreground mb-4">
               Generate an AI-powered narrative dossier from all collected web sources and analysis.
             </p>
-            <Button onClick={handleGenerate} className="bg-[#0064B1] hover:bg-[#053877]">
+            <Button onClick={handleGenerate} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
               <Loader2 className={cn("h-4 w-4 mr-2", generating ? "animate-spin" : "hidden")} />
               Generate Dossier
             </Button>
@@ -1780,7 +1780,7 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
       ) : generating ? (
         <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
           <CardContent className="flex items-center gap-3 py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+            <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
             <p className="text-sm text-blue-700 dark:text-blue-300">Generating narrative dossier for {record.person_name}...</p>
           </CardContent>
         </Card>
@@ -1788,7 +1788,7 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
         <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#0064B1]" /> Background Dossier
+              <FileText className="h-4 w-4 text-[#6C5CE7]" /> Background Dossier
               {lastAnalyzedAt && (
                 <span className="text-xs font-normal text-muted-foreground ml-auto">Last analyzed: {new Date(lastAnalyzedAt).toLocaleDateString()}</span>
               )}
@@ -1939,13 +1939,13 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
             <div className="text-center py-6">
               <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground mb-4">No PDL data available. Extract career info from web sources using AI.</p>
-              <Button onClick={handleExtract} className="bg-[#0064B1] hover:bg-[#053877]">
+              <Button onClick={handleExtract} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
                 Extract Career Data
               </Button>
             </div>
           ) : extracting ? (
             <div className="flex items-center gap-3 py-6 justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-[#0064B1]" />
+              <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
               <p className="text-sm text-muted-foreground">Extracting career data from web sources...</p>
             </div>
           ) : careerEntries.length === 0 ? (
@@ -2203,12 +2203,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                   </p>
                 )}
                 {record.linkedin_url && (
-                  <a href={record.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#0064B1] hover:underline">
+                  <a href={record.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#6C5CE7] hover:underline">
                     <Link2 className="h-3.5 w-3.5" /> LinkedIn
                   </a>
                 )}
                 {record.website_url && (
-                  <a href={record.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#0064B1] hover:underline">
+                  <a href={record.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#6C5CE7] hover:underline">
                     <Globe className="h-3.5 w-3.5" /> Website
                   </a>
                 )}
@@ -2262,7 +2262,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                   <div className="space-y-2">
                     <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} placeholder="Add notes..." />
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveNotes} className="bg-[#0064B1] hover:bg-[#053877]">
+                      <Button size="sm" onClick={handleSaveNotes} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
                         <Save className="h-3.5 w-3.5 mr-1.5" /> Save
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setNotesOpen(false)}>Cancel</Button>
@@ -2297,7 +2297,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 />
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setAdditionalSearchOpen(false)}>Cancel</Button>
-                  <Button onClick={handleRunAdditionalSearch} disabled={additionalSearching || !additionalQuery.trim()} className="bg-[#0064B1] hover:bg-[#053877]">
+                  <Button onClick={handleRunAdditionalSearch} disabled={additionalSearching || !additionalQuery.trim()} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
                     {additionalSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Search
                   </Button>
@@ -2323,7 +2323,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                       <div className="flex items-start gap-3">
                         <SourceIcon category={s.category} />
                         <div className="flex-1 min-w-0">
-                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0064B1] hover:underline flex items-center gap-1">
+                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#6C5CE7] hover:underline flex items-center gap-1">
                             {s.title} <ExternalLink className="h-3 w-3" />
                           </a>
                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(s.snippet) }} />

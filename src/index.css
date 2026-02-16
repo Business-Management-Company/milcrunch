@@ -16,7 +16,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 234 100% 13%;
 
-    --primary: 207 100% 35%;
+    --primary: 247 74% 63%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -33,12 +33,12 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 207 100% 35%;
+    --ring: 247 74% 63%;
 
     --radius: 0.75rem;
 
-    --parade-blue: 207 100% 35%;
-    --parade-blue-light: 207 100% 45%;
+    --parade-blue: 247 74% 63%;
+    --parade-blue-light: 247 74% 73%;
     --space-deep: 234 100% 13%;
     --space-mid: 211 92% 24%;
     --cosmic-purple: 280 70% 60%;
@@ -46,15 +46,15 @@
 
     --gradient-hero: linear-gradient(135deg, #F8F9FB 0%, #fff 100%);
     --gradient-dark: linear-gradient(135deg, #F8F9FB 0%, #fff 100%);
-    --gradient-primary: linear-gradient(135deg, #0064B1 0%, #053877 100%);
+    --gradient-primary: linear-gradient(135deg, #6C5CE7 0%, #5B4BD1 100%);
     --gradient-accent: linear-gradient(135deg, #F0A71F 0%, #e09a1a 100%);
     --gradient-card: linear-gradient(180deg, #fff 0%, #fff 100%);
-    --gradient-cosmos: linear-gradient(180deg, #0064B1 0%, #053877 50%, #000741 100%);
+    --gradient-cosmos: linear-gradient(180deg, #6C5CE7 0%, #5B4BD1 50%, #000741 100%);
 
-    --shadow-glow: 0 0 60px rgba(0, 100, 177, 0.2);
+    --shadow-glow: 0 0 60px rgba(108, 92, 231, 0.2);
     --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
     --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.12);
-    --shadow-parade: 0 0 80px rgba(0, 100, 177, 0.25);
+    --shadow-parade: 0 0 80px rgba(108, 92, 231, 0.25);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -70,7 +70,7 @@
     --popover: 228 22% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 207 100% 35%;
+    --primary: 247 74% 63%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 15% 11%;
@@ -86,10 +86,10 @@
     --gradient-dark: linear-gradient(135deg, #0F1117 0%, #1A1D27 100%);
     --gradient-card: linear-gradient(180deg, #1A1D27 0%, #1A1D27 100%);
 
-    --shadow-glow: 0 0 60px rgba(0, 100, 177, 0.2);
+    --shadow-glow: 0 0 60px rgba(108, 92, 231, 0.2);
     --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.4);
     --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-    --shadow-parade: 0 0 80px rgba(0, 100, 177, 0.25);
+    --shadow-parade: 0 0 80px rgba(108, 92, 231, 0.25);
   }
 }
 
@@ -129,7 +129,7 @@
   }
 
   .shadow-primary {
-    box-shadow: 0 4px 20px 0 hsla(228, 87%, 57%, 0.5);
+    box-shadow: 0 4px 20px 0 hsla(247, 74%, 63%, 0.5);
   }
 
   .shadow-parade {
@@ -155,8 +155,8 @@
   }
 
   @keyframes pulse-glow {
-    0%, 100% { opacity: 0.6; box-shadow: 0 0 40px hsla(228, 87%, 57%, 0.3); }
-    50% { opacity: 1; box-shadow: 0 0 80px hsla(228, 87%, 57%, 0.5); }
+    0%, 100% { opacity: 0.6; box-shadow: 0 0 40px hsla(247, 74%, 63%, 0.3); }
+    50% { opacity: 1; box-shadow: 0 0 80px hsla(247, 74%, 63%, 0.5); }
   }
 
   .animate-parade-glow {
@@ -164,8 +164,8 @@
   }
 
   @keyframes parade-glow {
-    0%, 100% { filter: drop-shadow(0 0 20px hsla(228, 87%, 57%, 0.6)); }
-    50% { filter: drop-shadow(0 0 40px hsla(228, 87%, 57%, 0.9)); }
+    0%, 100% { filter: drop-shadow(0 0 20px hsla(247, 74%, 63%, 0.6)); }
+    50% { filter: drop-shadow(0 0 40px hsla(247, 74%, 63%, 0.9)); }
   }
 
   .bg-stars {

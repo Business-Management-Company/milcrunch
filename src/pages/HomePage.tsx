@@ -166,7 +166,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               onError={handleImgError}
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
               {getInitials(c.display_name, c.handle)}
             </div>
           )}
@@ -226,29 +226,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   );
 }
 
-// --- Showcase fallback data (used before DB is seeded) ---
-const SHOWCASE_FALLBACK: ShowcaseCreator[] = [
-  { id: "s1", display_name: "MCRD San Diego", handle: "mcrdsd", platform: "instagram", avatar_url: null, follower_count: 487000, engagement_rate: 4.1, category: "Military Life", sort_order: 1, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Active Duty", bio: null, platforms: ["instagram", "tiktok", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "mcrdsd", ic_avatar_url: null },
-  { id: "s2", display_name: "Tabor Robak", handle: "taborrobak", platform: "instagram", avatar_url: null, follower_count: 156000, engagement_rate: 3.5, category: "Lifestyle", sort_order: 2, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "taborrobak", ic_avatar_url: null },
-  { id: "s3", display_name: "USA Born TV", handle: "usaborntv", platform: "instagram", avatar_url: null, follower_count: 892000, engagement_rate: 5.2, category: "Patriotic", sort_order: 3, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "tiktok", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "usaborntv", ic_avatar_url: null },
-  { id: "s4", display_name: "Veteran Style Coach", handle: "veteranstylecoach", platform: "instagram", avatar_url: null, follower_count: 73000, engagement_rate: 4.8, category: "Fashion", sort_order: 4, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "veteranstylecoach", ic_avatar_url: null },
-  { id: "s5", display_name: "Matt Best", handle: "mattbest11x", platform: "instagram", avatar_url: null, follower_count: 1200000, engagement_rate: 6.1, category: "Comedy", sort_order: 5, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "mattbest11x", ic_avatar_url: null },
-  { id: "s6", display_name: "Angry Cops", handle: "angrycops", platform: "instagram", avatar_url: null, follower_count: 2100000, engagement_rate: 5.8, category: "Comedy", sort_order: 6, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "angrycops", ic_avatar_url: null },
-  { id: "s7", display_name: "Jocko Willink", handle: "jockowillink", platform: "instagram", avatar_url: null, follower_count: 3100000, engagement_rate: 3.9, category: "Leadership", sort_order: 7, is_active: true, is_verified: true, created_at: null, branch: "Navy", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "jockowillink", ic_avatar_url: null },
-  { id: "s8", display_name: "Combat Flip Flops", handle: "combatflipflops", platform: "instagram", avatar_url: null, follower_count: 89000, engagement_rate: 3.4, category: "Business", sort_order: 8, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "combatflipflops", ic_avatar_url: null },
-  { id: "s9", display_name: "Donut Operator", handle: "doaboroperator", platform: "instagram", avatar_url: null, follower_count: 1400000, engagement_rate: 5.3, category: "Law & Military", sort_order: 9, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "donutoperator", ic_avatar_url: null },
-  { id: "s10", display_name: "Dakota Meyer", handle: "dakotameyer", platform: "instagram", avatar_url: null, follower_count: 356000, engagement_rate: 4.2, category: "Veteran Life", sort_order: 10, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Veteran", bio: null, platforms: ["instagram", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "dakotameyer", ic_avatar_url: null },
-  { id: "s11", display_name: "Joey Jones", handle: "johnny_joey_jones", platform: "instagram", avatar_url: null, follower_count: 245000, engagement_rate: 4.6, category: "News", sort_order: 11, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Veteran", bio: null, platforms: ["instagram", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "johnny_joey_jones", ic_avatar_url: null },
-  { id: "s12", display_name: "Black Rifle Coffee", handle: "blackriflecoffee", platform: "instagram", avatar_url: null, follower_count: 1800000, engagement_rate: 4.0, category: "Business", sort_order: 12, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "blackriflecoffee", ic_avatar_url: null },
-  { id: "s13", display_name: "Empowered MilSpouse", handle: "empoweredmilspouse", platform: "instagram", avatar_url: null, follower_count: 118000, engagement_rate: 5.7, category: "Lifestyle", sort_order: 13, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Spouse", bio: null, platforms: ["instagram", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "empoweredmilspouse", ic_avatar_url: null },
-  { id: "s14", display_name: "Rachel of Honor", handle: "rachelofhonor", platform: "instagram", avatar_url: null, follower_count: 95000, engagement_rate: 6.3, category: "Family", sort_order: 14, is_active: true, is_verified: true, created_at: null, branch: "Navy", status: "Spouse", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "rachelofhonor", ic_avatar_url: null },
-  { id: "s15", display_name: "SemperFi Fitness", handle: "semperfifitness", platform: "instagram", avatar_url: null, follower_count: 204000, engagement_rate: 5.1, category: "Fitness", sort_order: 15, is_active: true, is_verified: true, created_at: null, branch: "Marines", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "semperfifitness", ic_avatar_url: null },
-  { id: "s16", display_name: "Air Force Amy", handle: "airforceamy", platform: "instagram", avatar_url: null, follower_count: 167000, engagement_rate: 4.4, category: "Lifestyle", sort_order: 16, is_active: true, is_verified: true, created_at: null, branch: "Air Force", status: "Veteran", bio: null, platforms: ["instagram", "tiktok", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "airforceamy", ic_avatar_url: null },
-  { id: "s17", display_name: "Navy Dave", handle: "navydave_", platform: "instagram", avatar_url: null, follower_count: 312000, engagement_rate: 4.7, category: "Military Life", sort_order: 17, is_active: true, is_verified: true, created_at: null, branch: "Navy", status: "Veteran", bio: null, platforms: ["instagram", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "navydave_", ic_avatar_url: null },
-  { id: "s18", display_name: "Coast Guard Katie", handle: "coastguardkatie", platform: "instagram", avatar_url: null, follower_count: 54000, engagement_rate: 6.8, category: "Adventure", sort_order: 18, is_active: true, is_verified: true, created_at: null, branch: "Coast Guard", status: "Active Duty", bio: null, platforms: ["instagram", "tiktok"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "coastguardkatie", ic_avatar_url: null },
-  { id: "s19", display_name: "SpaceForce Steve", handle: "spaceforce_steve", platform: "instagram", avatar_url: null, follower_count: 78000, engagement_rate: 5.5, category: "Tech", sort_order: 19, is_active: true, is_verified: true, created_at: null, branch: "Space Force", status: "Active Duty", bio: null, platforms: ["instagram", "youtube", "twitter"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "spaceforce_steve", ic_avatar_url: null },
-  { id: "s20", display_name: "Military Mama", handle: "militarymama_", platform: "instagram", avatar_url: null, follower_count: 186000, engagement_rate: 5.9, category: "Family", sort_order: 20, is_active: true, is_verified: true, created_at: null, branch: "Army", status: "Spouse", bio: null, platforms: ["instagram", "tiktok", "youtube"], paradedeck_verified: true, influencersclub_verified: true, profile_slug: "militarymama_", ic_avatar_url: null },
-];
+// No hardcoded showcase fallback — homepage always pulls from directory_members
 
 const GRID_FALLBACK: CreatorRow[] = [
   { id: "g1", display_name: "Jason", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 0, created_at: null },
@@ -422,7 +400,7 @@ export default function HomePage() {
       ]);
       setHeroCreatorsDb(hero.length >= 3 ? hero : HERO_FALLBACK);
       setGridCreators(grid.length > 0 ? grid : GRID_FALLBACK);
-      setShowcaseCreators(showcase.length > 0 ? showcase : SHOWCASE_FALLBACK);
+      setShowcaseCreators(showcase);
     })();
   }, []);
 
@@ -445,7 +423,7 @@ export default function HomePage() {
   }, []);
 
   const navLinkClass = navScrolled
-    ? "text-gray-600 hover:text-[#0064B1]"
+    ? "text-gray-600 hover:text-[#6C5CE7]"
     : "text-white/90 hover:text-white";
 
   return (
@@ -459,7 +437,7 @@ export default function HomePage() {
         <Link to="/" className="shrink-0">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className={navScrolled ? "text-[#000741]" : "text-white"}>recurrent</span>
-            <span className="text-[#9B51E0] font-extrabold">X</span>
+            <span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
@@ -601,7 +579,7 @@ export default function HomePage() {
                 key={label}
                 className="flex flex-col items-center cursor-default transition-transform duration-200 hover:scale-110"
               >
-                <Icon className="h-12 w-12 text-[#0064B1] shrink-0" aria-hidden />
+                <Icon className="h-12 w-12 text-[#6C5CE7] shrink-0" aria-hidden />
                 <span className="text-[#000741] font-medium mt-3 text-base">
                   {label}
                 </span>
@@ -614,7 +592,7 @@ export default function HomePage() {
         <section id="creators" className="px-4 md:px-8 py-16 md:py-24 bg-gradient-to-b from-gray-50 to-white scroll-mt-20">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-3">
+              <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-3">
                 TRUSTED BY BRANDS NATIONWIDE
               </p>
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#000741] mb-3">
@@ -626,14 +604,20 @@ export default function HomePage() {
             </div>
 
             <div ref={showcaseRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
-              {showcaseCreators.map((c, i) => (
-                <ShowcaseCard key={c.id} creator={c} index={i} inView={showcaseInView} />
-              ))}
+              {showcaseCreators.length > 0 ? (
+                showcaseCreators.map((c, i) => (
+                  <ShowcaseCard key={c.id} creator={c} index={i} inView={showcaseInView} />
+                ))
+              ) : (
+                <p className="col-span-full text-center text-gray-500 py-12 text-lg">
+                  Creators coming soon — check back shortly.
+                </p>
+              )}
             </div>
 
             <div className="text-center mt-10">
               <Link to="/creators">
-                <Button size="lg" className="rounded-xl bg-[#0064B1] hover:bg-[#053877] text-white px-8 font-semibold shadow-md hover:shadow-lg transition-all">
+                <Button size="lg" className="rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8 font-semibold shadow-md hover:shadow-lg transition-all">
                   View All Creators →
                 </Button>
               </Link>
@@ -646,14 +630,14 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
               <div>
-                <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-2">
+                <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-2">
                   DISCOVER CREATORS
                 </p>
                 <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
                   Browse by Category
                 </h2>
               </div>
-              <Link to="/brand/discover" className="text-[#0064B1] font-medium hover:underline text-sm">
+              <Link to="/brand/discover" className="text-[#6C5CE7] font-medium hover:underline text-sm">
                 View All →
               </Link>
             </div>
@@ -684,7 +668,7 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
               <div>
-                <p className="text-[#0064B1] text-xs font-semibold uppercase tracking-widest mb-2">
+                <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-2">
                   TUNE IN
                 </p>
                 <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
@@ -693,7 +677,7 @@ export default function HomePage() {
                 <p className="text-gray-600 mt-1">Discover the voices of those who served. {podcastTotal != null ? `${podcastTotal} podcasts and counting.` : "Podcasts and counting."}</p>
               </div>
               <Link to="/podcasts">
-                <Button variant="outline" className="rounded-lg border-[#0064B1] text-[#0064B1] hover:bg-[#0064B1]/10">
+                <Button variant="outline" className="rounded-lg border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10">
                   View All Podcasts →
                 </Button>
               </Link>
@@ -751,7 +735,7 @@ export default function HomePage() {
                   key={event.name}
                   className="rounded-xl border border-gray-200 bg-white p-5 flex flex-col"
                 >
-                  <span className="inline-block text-xs font-semibold text-[#0064B1] bg-[#0064B1]/10 rounded-full px-2.5 py-0.5 w-fit mb-3">
+                  <span className="inline-block text-xs font-semibold text-[#6C5CE7] bg-[#6C5CE7]/10 rounded-full px-2.5 py-0.5 w-fit mb-3">
                     {event.tag}
                   </span>
                   <h3 className="font-semibold text-[#000741] mb-1">{event.name}</h3>
@@ -766,7 +750,7 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-            <Link to="/events" className="text-[#0064B1] font-medium hover:underline">
+            <Link to="/events" className="text-[#6C5CE7] font-medium hover:underline">
               View All Events →
             </Link>
           </div>
@@ -787,7 +771,7 @@ export default function HomePage() {
               ))}
             </div>
             <Link to="/brand/discover">
-              <Button size="lg" className="rounded-lg bg-[#0064B1] hover:bg-[#053877] text-white">
+              <Button size="lg" className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">
                 Discover Creators
               </Button>
             </Link>
@@ -802,7 +786,7 @@ export default function HomePage() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link to="/brand/discover">
-                <Button size="lg" className="rounded-lg bg-[#0064B1] hover:bg-[#053877] text-white px-8">
+                <Button size="lg" className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8">
                   Join Free
                 </Button>
               </Link>
@@ -823,23 +807,23 @@ export default function HomePage() {
                 <Link to="/" className="inline-block mb-4">
                   <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     <span className="text-[#000741]">recurrent</span>
-                    <span className="text-[#9B51E0] font-extrabold">X</span>
+                    <span className="text-[#6C5CE7] font-extrabold">X</span>
                   </span>
                 </Link>
                 <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>
                 <div className="flex gap-4 mt-2 text-sm text-gray-500">
-                  <a href="#" className="hover:text-[#0064B1]">Privacy</a>
-                  <a href="#" className="hover:text-[#0064B1]">Terms</a>
-                  <a href="#" className="hover:text-[#0064B1]">Contact</a>
+                  <a href="#" className="hover:text-[#6C5CE7]">Privacy</a>
+                  <a href="#" className="hover:text-[#6C5CE7]">Terms</a>
+                  <a href="#" className="hover:text-[#6C5CE7]">Contact</a>
                 </div>
               </div>
               <nav className="flex flex-wrap gap-6 text-sm text-gray-600">
-                <a href="/#creators" className="hover:text-[#0064B1]">Community</a>
-                <Link to="/events" className="hover:text-[#0064B1]">Events</Link>
-                <a href="/#creators" className="hover:text-[#0064B1]">Creators</a>
-                <a href="/#for-brands" className="hover:text-[#0064B1]">For Brands</a>
-                <Link to="/pdx" className="hover:text-[#0064B1]">PDX</Link>
-                <a href="#" className="hover:text-[#0064B1]">About</a>
+                <a href="/#creators" className="hover:text-[#6C5CE7]">Community</a>
+                <Link to="/events" className="hover:text-[#6C5CE7]">Events</Link>
+                <a href="/#creators" className="hover:text-[#6C5CE7]">Creators</a>
+                <a href="/#for-brands" className="hover:text-[#6C5CE7]">For Brands</a>
+                <Link to="/pdx" className="hover:text-[#6C5CE7]">PDX</Link>
+                <a href="#" className="hover:text-[#6C5CE7]">About</a>
               </nav>
             </div>
           </div>

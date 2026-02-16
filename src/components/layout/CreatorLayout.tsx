@@ -142,7 +142,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border">
         <Link to="/creator/dashboard" className="flex items-center min-w-0">
-          <span className="font-bold text-lg text-foreground tracking-tight truncate">recurrent<span className="text-[#9B51E0] font-extrabold">X</span></span>
+          <span className="font-bold text-lg text-foreground tracking-tight truncate">recurrent<span className="text-[#6C5CE7] font-extrabold">X</span></span>
         </Link>
       </div>
       <div className="p-3 border-b border-border flex items-center gap-3 min-w-0">
@@ -216,7 +216,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
               {sidebar}
             </SheetContent>
           </Sheet>
-          <span className="font-bold text-foreground tracking-tight ml-2">recurrent<span className="text-[#9B51E0] font-extrabold">X</span></span>
+          <span className="font-bold text-foreground tracking-tight ml-2">recurrent<span className="text-[#6C5CE7] font-extrabold">X</span></span>
         </div>
       )}
 

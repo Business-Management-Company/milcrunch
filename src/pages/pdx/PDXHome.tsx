@@ -89,7 +89,7 @@ const PDXHome = () => {
           <Button
             asChild
             size="lg"
-            className="mt-10 bg-[#0064B1] hover:bg-[#005399] text-white px-8 py-6 text-base rounded-xl"
+            className="mt-10 bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8 py-6 text-base rounded-xl"
           >
             <Link to="/pdx/create">Create a PDX</Link>
           </Button>
@@ -108,7 +108,7 @@ const PDXHome = () => {
                 key={item.title}
                 className="flex flex-col items-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 text-center shadow-sm"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0064B1]/10 text-[#0064B1] dark:bg-[#0064B1]/20 dark:text-[#0064B1]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] dark:bg-[#6C5CE7]/20 dark:text-[#6C5CE7]">
                   <item.icon className="h-6 w-6" />
                 </div>
                 <h3 className="mt-3 font-semibold text-pd-navy dark:text-white">{item.title}</h3>
@@ -146,7 +146,7 @@ const PDXHome = () => {
                     {event.detail}
                   </span>
                 </div>
-                <Button variant="outline" size="sm" className="mt-4 rounded-lg border-[#0064B1]/30 text-[#0064B1] hover:bg-[#0064B1]/10">
+                <Button variant="outline" size="sm" className="mt-4 rounded-lg border-[#6C5CE7]/30 text-[#6C5CE7] hover:bg-[#6C5CE7]/10">
                   View Recap
                 </Button>
               </Card>

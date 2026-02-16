@@ -311,7 +311,7 @@ const BrandLists = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 rounded-lg text-[#0064B1] hover:text-[#0064B1] hover:bg-[#0064B1]/10"
+                      className="flex-1 rounded-lg text-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/10"
                       onClick={(e) => {
                         e.stopPropagation();
                         openProfile(creator);

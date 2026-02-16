@@ -91,7 +91,7 @@ export default function EventsCalendar() {
           <h1 className="text-2xl font-bold text-[#000741] dark:text-white">Events</h1>
           <p className="text-muted-foreground mt-0.5">Manage military and veteran community events</p>
         </div>
-        <Button asChild className="bg-[#0064B1] hover:bg-[#053877] text-white rounded-lg shrink-0">
+        <Button asChild className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg shrink-0">
           <Link to="/pdx/create">
             <Plus className="h-4 w-4 mr-2" />
             Create Event
@@ -118,7 +118,7 @@ export default function EventsCalendar() {
               size="sm"
               className={cn(
                 "rounded-full h-8",
-                typeFilter === f && "bg-[#0064B1] hover:bg-[#053877]"
+                typeFilter === f && "bg-[#6C5CE7] hover:bg-[#5B4BD1]"
               )}
               onClick={() => setTypeFilter(f)}
             >
@@ -155,7 +155,7 @@ export default function EventsCalendar() {
           <Calendar className="h-14 w-14 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-[#000741] dark:text-white mb-2">No events yet</h3>
           <p className="text-muted-foreground text-sm mb-4">Create your first event with the PDX wizard.</p>
-          <Button asChild className="bg-[#0064B1] hover:bg-[#053877] text-white rounded-lg">
+          <Button asChild className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg">
             <Link to="/pdx/create">Create Event</Link>
           </Button>
         </Card>
@@ -169,7 +169,7 @@ export default function EventsCalendar() {
                 className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="rounded-lg bg-[#0064B1] text-white text-xs font-bold px-2.5 py-1.5 shrink-0">
+                  <div className="rounded-lg bg-[#6C5CE7] text-white text-xs font-bold px-2.5 py-1.5 shrink-0">
                     {event.dateLabel}
                   </div>
                   <Badge variant="secondary" className={cn("text-xs shrink-0", typeConfig.className)}>

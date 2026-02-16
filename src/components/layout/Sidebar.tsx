@@ -165,7 +165,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       "flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
       "text-gray-700 dark:text-gray-300",
       "hover:bg-gray-50 dark:hover:bg-gray-800",
-      isActive && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400",
+      isActive && "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400",
       collapsed && "justify-center px-2"
     );
 
@@ -191,7 +191,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
             <DashIcon
               className={cn(
                 "h-5 w-5 shrink-0",
-                dashboardActive ? "text-blue-600" : "text-gray-500 dark:text-gray-400"
+                dashboardActive ? "text-purple-600" : "text-gray-500 dark:text-gray-400"
               )}
               strokeWidth={1.75}
             />
@@ -238,7 +238,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                           className={cn(
                             "h-5 w-5 shrink-0",
                             isActive
-                              ? "text-blue-600"
+                              ? "text-purple-600"
                               : "text-gray-500 dark:text-gray-400"
                           )}
                           strokeWidth={1.75}
@@ -277,7 +277,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         {!collapsed && (
           <>
             <div className="flex items-center justify-center px-2">
-              <span className="text-sm font-bold text-gray-500 tracking-tight">recurrent<span className="text-[#9B51E0] font-extrabold">X</span></span>
+              <span className="text-sm font-bold text-gray-500 tracking-tight">recurrent<span className="text-[#6C5CE7] font-extrabold">X</span></span>
             </div>
             <p className="text-[10px] text-muted-foreground/80 text-center">Demo v1.0</p>
           </>

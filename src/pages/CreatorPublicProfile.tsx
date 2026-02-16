@@ -173,7 +173,7 @@ export default function CreatorPublicProfile() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#0064B1]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
       </div>
     );
   }
@@ -185,7 +185,7 @@ export default function CreatorPublicProfile() {
           <Link to="/">
             <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               <span className="text-[#000741]">recurrent</span>
-              <span className="text-[#9B51E0] font-extrabold">X</span>
+              <span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
           </Link>
         </header>
@@ -193,7 +193,7 @@ export default function CreatorPublicProfile() {
           <h1 className="text-3xl font-bold mb-4">Creator Not Found</h1>
           <p className="text-gray-500 mb-8">We couldn't find a creator with that profile.</p>
           <Link to="/creators">
-            <Button className="bg-[#0064B1] hover:bg-[#053877] text-white">Browse All Creators</Button>
+            <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">Browse All Creators</Button>
           </Link>
         </div>
       </div>
@@ -210,11 +210,11 @@ export default function CreatorPublicProfile() {
         <Link to="/">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className="text-[#000741]">recurrent</span>
-            <span className="text-[#9B51E0] font-extrabold">X</span>
+            <span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </Link>
         <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#0064B1]">Sign In</Link>
+          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7]">Sign In</Link>
           <Link to="/signup">
             <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 font-semibold">
               Get Started
@@ -224,14 +224,14 @@ export default function CreatorPublicProfile() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 md:px-8 py-8">
-        <Link to="/creators" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0064B1] mb-6">
+        <Link to="/creators" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6">
           <ArrowLeft className="h-4 w-4" /> Back to Creators
         </Link>
 
         {/* Hero Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Gradient banner */}
-          <div className="h-32 bg-gradient-to-r from-[#000741] via-[#0064B1] to-[#9B51E0]" />
+          <div className="h-32 bg-gradient-to-r from-[#000741] via-[#6C5CE7] to-[#6C5CE7]" />
 
           {/* Profile section */}
           <div className="px-6 md:px-10 pb-8 -mt-16">
@@ -248,7 +248,7 @@ export default function CreatorPublicProfile() {
                     onError={handleImgError}
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-3xl">
+                  <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-3xl">
                     {getInitials(creator.display_name, creator.handle)}
                   </div>
                 )}
@@ -288,7 +288,7 @@ export default function CreatorPublicProfile() {
                     </span>
                   )}
                   {creator.category && (
-                    <span className="text-xs font-medium text-[#0064B1] bg-[#0064B1]/10 px-3 py-1 rounded-full">
+                    <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-3 py-1 rounded-full">
                       {creator.category}
                     </span>
                   )}
@@ -299,7 +299,7 @@ export default function CreatorPublicProfile() {
               <div className="shrink-0">
                 <Button
                   onClick={handleContactClick}
-                  className="bg-[#0064B1] hover:bg-[#053877] text-white px-6 rounded-xl"
+                  className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6 rounded-xl"
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Contact Creator
@@ -312,7 +312,7 @@ export default function CreatorPublicProfile() {
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-4 mt-6">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
-            <Users className="h-5 w-5 text-[#0064B1] mx-auto mb-2" />
+            <Users className="h-5 w-5 text-[#6C5CE7] mx-auto mb-2" />
             <p className="text-2xl font-bold text-[#000741]">{formatFollowerCount(creator.follower_count)}</p>
             <p className="text-xs text-gray-500 mt-1">Followers</p>
           </div>
@@ -353,12 +353,12 @@ export default function CreatorPublicProfile() {
                     href={getPlatformUrl(p)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#0064B1]/30 hover:bg-[#0064B1]/5 transition-colors group"
+                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
                   >
-                    <span className="text-gray-500 group-hover:text-[#0064B1] transition-colors">
+                    <span className="text-gray-500 group-hover:text-[#6C5CE7] transition-colors">
                       {PLATFORM_ICON[p] ?? <Monitor className="h-5 w-5" />}
                     </span>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-[#0064B1]">
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-[#6C5CE7]">
                       {PLATFORM_LABEL[p] ?? p}
                     </span>
                   </a>
@@ -381,14 +381,14 @@ export default function CreatorPublicProfile() {
             <div className="py-4 text-center">
               <p className="text-gray-600 mb-4">Sign in to contact this creator. Enrichment costs 1.03 credits.</p>
               <Link to="/login">
-                <Button className="bg-[#0064B1] hover:bg-[#053877] text-white">Sign In</Button>
+                <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">Sign In</Button>
               </Link>
             </div>
           ) : contactEmail ? (
             <div className="py-4 text-center">
-              <Mail className="h-8 w-8 text-[#0064B1] mx-auto mb-3" />
+              <Mail className="h-8 w-8 text-[#6C5CE7] mx-auto mb-3" />
               <p className="text-sm text-gray-500 mb-1">Public email found:</p>
-              <a href={`mailto:${contactEmail}`} className="text-[#0064B1] font-medium text-lg hover:underline">
+              <a href={`mailto:${contactEmail}`} className="text-[#6C5CE7] font-medium text-lg hover:underline">
                 {contactEmail}
               </a>
             </div>
@@ -405,7 +405,7 @@ export default function CreatorPublicProfile() {
               <Button
                 onClick={handleEnrich}
                 disabled={enriching}
-                className="w-full bg-[#0064B1] hover:bg-[#053877] text-white"
+                className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
               >
                 {enriching ? (
                   <>
@@ -428,7 +428,7 @@ export default function CreatorPublicProfile() {
       <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white mt-12">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <p className="text-sm text-gray-500">&copy; 2026 RecurrentX. All rights reserved.</p>
-          <Link to="/" className="text-sm text-[#0064B1] hover:underline">Home</Link>
+          <Link to="/" className="text-sm text-[#6C5CE7] hover:underline">Home</Link>
         </div>
       </footer>
     </div>

@@ -394,7 +394,7 @@ export default function FeaturedCreators() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-[#0064B1]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
         </div>
       ) : (
         <div className="border rounded-lg overflow-hidden bg-white">
@@ -451,7 +451,7 @@ export default function FeaturedCreators() {
                       />
                     ) : (
                       <div
-                        className="h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#0064B1]"
+                        className="h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#6C5CE7]"
                       >
                         {getInitials(row.display_name, row.handle)}
                       </div>

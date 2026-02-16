@@ -217,32 +217,39 @@ export async function addToDirectory(
     if (uploaded) permanentAvatarUrl = uploaded;
   }
 
+  const payload = {
+    directory_id: directoryId,
+    creator_handle: handle,
+    creator_name: data.display_name,
+    platform: data.platform || "instagram",
+    avatar_url: permanentAvatarUrl,
+    ic_avatar_url: data.ic_avatar_url || null,
+    follower_count: data.follower_count ?? null,
+    engagement_rate: data.engagement_rate ?? null,
+    bio: data.bio || null,
+    branch: data.branch || null,
+    status: data.status || null,
+    platforms: data.platforms || [],
+    platform_urls: data.platform_urls || {},
+    category: data.category || null,
+    enrichment_data: data.enrichment_data || null,
+    approved: true,
+    sort_order: nextOrder,
+    added_by: data.added_by || null,
+    added_at: new Date().toISOString(),
+    profile_slug: slug,
+  };
+
+  console.log("[addToDirectory] Upserting:", { directoryId, handle, columns: Object.keys(payload) });
+
   const { error } = await supabase.from("directory_members").upsert(
-    {
-      directory_id: directoryId,
-      creator_handle: handle,
-      creator_name: data.display_name,
-      platform: data.platform || "instagram",
-      avatar_url: permanentAvatarUrl,
-      ic_avatar_url: data.ic_avatar_url || null,
-      follower_count: data.follower_count ?? null,
-      engagement_rate: data.engagement_rate ?? null,
-      bio: data.bio || null,
-      branch: data.branch || null,
-      status: data.status || null,
-      platforms: data.platforms || [],
-      platform_urls: data.platform_urls || {},
-      category: data.category || null,
-      enrichment_data: data.enrichment_data || null,
-      approved: true,
-      sort_order: nextOrder,
-      added_by: data.added_by || null,
-      added_at: new Date().toISOString(),
-      profile_slug: slug,
-    },
+    payload,
     { onConflict: "directory_id,creator_handle,platform", ignoreDuplicates: false }
   );
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("[addToDirectory] UPSERT FAILED:", error.message, error.details, error.hint, error.code);
+    return { error: `${error.message}${error.details ? ` (${error.details})` : ""}` };
+  }
   return { error: null };
 }
 

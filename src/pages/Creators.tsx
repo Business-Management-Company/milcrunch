@@ -88,7 +88,7 @@ function CreatorCard({ creator: c, inView, index }: { creator: ShowcaseCreator; 
           {showImage ? (
             <img src={imgSrc!} alt={c.display_name} className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#0064B1] to-[#053877] flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
               {getInitials(c.display_name, c.handle)}
             </div>
           )}
@@ -190,11 +190,11 @@ export default function Creators() {
         <Link to="/">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className="text-[#000741]">recurrent</span>
-            <span className="text-[#9B51E0] font-extrabold">X</span>
+            <span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </Link>
         <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#0064B1]">Sign In</Link>
+          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7]">Sign In</Link>
           <Link to="/signup">
             <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 font-semibold">
               Get Started
@@ -205,7 +205,7 @@ export default function Creators() {
 
       <main className="px-4 md:px-8 py-12 md:py-16">
         <div className="max-w-6xl mx-auto">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0064B1] mb-6">
+          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6">
             <ArrowLeft className="h-4 w-4" /> Back to Home
           </Link>
 
@@ -250,8 +250,8 @@ export default function Creators() {
                   onClick={() => setBranchFilter(branchFilter === b ? null : b)}
                   className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
                     branchFilter === b
-                      ? "bg-[#0064B1] text-white border-[#0064B1]"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-[#0064B1]/30 hover:text-[#0064B1]"
+                      ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-[#6C5CE7]/30 hover:text-[#6C5CE7]"
                   }`}
                 >
                   {b}
@@ -269,8 +269,8 @@ export default function Creators() {
                   onClick={() => setPlatformFilter(platformFilter === p ? null : p)}
                   className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${
                     platformFilter === p
-                      ? "bg-[#0064B1] text-white border-[#0064B1]"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-[#0064B1]/30 hover:text-[#0064B1]"
+                      ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-[#6C5CE7]/30 hover:text-[#6C5CE7]"
                   }`}
                 >
                   {PLATFORM_ICON[p]}
@@ -283,7 +283,7 @@ export default function Creators() {
             {hasFilters && (
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                 <span>{filtered.length} creator{filtered.length !== 1 ? "s" : ""} found</span>
-                <button type="button" onClick={clearFilters} className="text-[#0064B1] hover:underline font-medium">
+                <button type="button" onClick={clearFilters} className="text-[#6C5CE7] hover:underline font-medium">
                   Clear filters
                 </button>
               </div>
@@ -313,7 +313,7 @@ export default function Creators() {
               <Button
                 variant="outline"
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-xl border-[#0064B1] text-[#0064B1] hover:bg-[#0064B1]/10 px-8"
+                className="rounded-xl border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-8"
               >
                 Load More ({filtered.length - paged.length} remaining)
               </Button>
@@ -325,7 +325,7 @@ export default function Creators() {
       <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <p className="text-sm text-gray-500">&copy; 2026 RecurrentX. All rights reserved.</p>
-          <Link to="/" className="text-sm text-[#0064B1] hover:underline">Home</Link>
+          <Link to="/" className="text-sm text-[#6C5CE7] hover:underline">Home</Link>
         </div>
       </footer>
     </div>

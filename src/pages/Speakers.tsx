@@ -397,7 +397,7 @@ export default function Speakers() {
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#0064B1]" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
           </div>
         ) : (
           <Table>
@@ -435,8 +435,8 @@ export default function Speakers() {
                         {speaker.photo_url ? (
                           <img src={speaker.photo_url} alt="" className="h-8 w-8 rounded-full object-cover" />
                         ) : (
-                          <div className="h-8 w-8 rounded-full bg-[#0064B1]/10 flex items-center justify-center">
-                            <Mic className="h-4 w-4 text-[#0064B1]" />
+                          <div className="h-8 w-8 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center">
+                            <Mic className="h-4 w-4 text-[#6C5CE7]" />
                           </div>
                         )}
                         <span>{speaker.name}</span>
@@ -540,7 +540,7 @@ export default function Speakers() {
                         <div className="p-6">
                           {expandLoading ? (
                             <div className="flex items-center justify-center py-8">
-                              <Loader2 className="h-6 w-6 animate-spin text-[#0064B1]" />
+                              <Loader2 className="h-6 w-6 animate-spin text-[#6C5CE7]" />
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -587,7 +587,7 @@ export default function Speakers() {
                                       <p className="text-sm text-muted-foreground mb-3">Not yet verified</p>
                                       <Button
                                         size="sm"
-                                        className="bg-[#0064B1] hover:bg-[#053877]"
+                                        className="bg-[#6C5CE7] hover:bg-[#5B4BD1]"
                                         onClick={() => handleStartVerification(speaker)}
                                       >
                                         <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Start Verification
@@ -704,7 +704,7 @@ export default function Speakers() {
                 rows={4}
               />
             </div>
-            <Button onClick={handleSaveEdit} className="w-full bg-[#0064B1] hover:bg-[#053877]">
+            <Button onClick={handleSaveEdit} className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]">
               Save Changes
             </Button>
           </div>
@@ -737,7 +737,7 @@ export default function Speakers() {
                       alreadyAdded
                         ? "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-60 cursor-default"
                         : isSelected
-                          ? "border-[#0064B1] bg-blue-50 dark:bg-blue-950/20"
+                          ? "border-[#6C5CE7] bg-purple-50 dark:bg-purple-950/20"
                           : "border-gray-200 dark:border-gray-800 hover:border-gray-300"
                     )}
                   >
@@ -746,7 +746,7 @@ export default function Speakers() {
                       checked={alreadyAdded || isSelected}
                       disabled={alreadyAdded}
                       onChange={() => !alreadyAdded && handleToggleEvent(ev.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-[#0064B1] focus:ring-[#0064B1]"
+                      className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{ev.title}</p>
@@ -769,7 +769,7 @@ export default function Speakers() {
           <Button
             onClick={handleSaveInvites}
             disabled={selectedEventIds.length === 0 || inviteSaving}
-            className="w-full bg-[#0064B1] hover:bg-[#053877]"
+            className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]"
           >
             {inviteSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Add to {selectedEventIds.length} Event{selectedEventIds.length !== 1 ? "s" : ""}
