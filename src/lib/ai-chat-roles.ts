@@ -117,7 +117,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
     case "super_admin":
       return {
         label: "RecurrentX AI",
-        sublabel: "Full Access",
+        sublabel: "🛡️ Full Access",
         icon: "shield",
         systemPromptAdditions: SUPER_ADMIN_PROMPT,
         allowedTools: SUPER_ADMIN_TOOLS,
@@ -131,7 +131,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
     case "event_planner":
       return {
         label: "RecurrentX AI",
-        sublabel: "Event Management",
+        sublabel: "📅 Event Management",
         icon: "calendar",
         systemPromptAdditions: EVENT_PLANNER_PROMPT,
         allowedTools: EVENT_PLANNER_TOOLS,
@@ -146,7 +146,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
     case "brand_admin":
       return {
         label: "RecurrentX AI",
-        sublabel: "Brand Management",
+        sublabel: "👁️ Brand Management",
         icon: "building",
         systemPromptAdditions: BRAND_ADMIN_PROMPT,
         allowedTools: BRAND_ADMIN_TOOLS,
@@ -157,10 +157,24 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
           { label: "Task Board", prompt: "Summarize the current task board status." },
         ],
       };
+    case "sponsor":
+      return {
+        label: "RecurrentX AI",
+        sublabel: "📊 Sponsor View",
+        icon: "megaphone",
+        systemPromptAdditions: READ_ONLY_PROMPT,
+        allowedTools: READ_ONLY_TOOLS,
+        quickActions: [
+          { label: "My Sponsorships", prompt: "Show me all events I'm sponsoring and their current status." },
+          { label: "Event Overview", prompt: "Show me upcoming events with registration counts and engagement metrics." },
+          { label: "Find Creators", prompt: "Help me search for military veteran creators for our brand campaigns." },
+          { label: "Platform Help", prompt: "What can RecurrentX do? Give me an overview of the platform's features." },
+        ],
+      };
     default:
       return {
         label: "RecurrentX AI",
-        sublabel: "Read Access",
+        sublabel: "👁️ Read Access",
         icon: "eye",
         systemPromptAdditions: READ_ONLY_PROMPT,
         allowedTools: READ_ONLY_TOOLS,

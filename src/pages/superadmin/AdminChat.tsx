@@ -171,6 +171,7 @@ export default function AdminChat() {
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground text-center mt-2">Powered by Claude</p>
           </form>
         </CardContent>
       </Card>
