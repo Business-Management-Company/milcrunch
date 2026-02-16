@@ -1,5 +1,30 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/** Upload a creator's profile image to Supabase storage via the serverless proxy.
+ *  Returns the permanent Supabase public URL, or null if upload fails. */
+export async function uploadCreatorImage(
+  imageUrl: string,
+  handle: string
+): Promise<string | null> {
+  if (!imageUrl || !handle) return null;
+  try {
+    const resp = await fetch("/api/upload-creator-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl, handle }),
+    });
+    if (!resp.ok) {
+      console.warn("[directories] Image upload failed:", resp.status);
+      return null;
+    }
+    const data = await resp.json();
+    return data.url || null;
+  } catch (err) {
+    console.warn("[directories] Image upload error:", err);
+    return null;
+  }
+}
+
 export interface Directory {
   id: string;
   name: string;
@@ -182,13 +207,23 @@ export async function addToDirectory(
     .limit(1);
   const nextOrder = ((maxRow as { sort_order: number }[] | null)?.[0]?.sort_order ?? 0) + 1;
 
+  const slug = generateProfileSlug(data.display_name, handle);
+
+  // Upload profile image to Supabase storage for permanent URL
+  let permanentAvatarUrl = data.avatar_url || null;
+  const sourceImageUrl = data.ic_avatar_url || data.avatar_url;
+  if (sourceImageUrl) {
+    const uploaded = await uploadCreatorImage(sourceImageUrl, handle);
+    if (uploaded) permanentAvatarUrl = uploaded;
+  }
+
   const { error } = await supabase.from("directory_members").upsert(
     {
       directory_id: directoryId,
       creator_handle: handle,
       creator_name: data.display_name,
       platform: data.platform || "instagram",
-      avatar_url: data.avatar_url || null,
+      avatar_url: permanentAvatarUrl,
       ic_avatar_url: data.ic_avatar_url || null,
       follower_count: data.follower_count ?? null,
       engagement_rate: data.engagement_rate ?? null,
@@ -203,6 +238,7 @@ export async function addToDirectory(
       sort_order: nextOrder,
       added_by: data.added_by || null,
       added_at: new Date().toISOString(),
+      profile_slug: slug,
     },
     { onConflict: "directory_id,creator_handle,platform", ignoreDuplicates: false }
   );
@@ -293,6 +329,20 @@ export async function promoteListToDirectory(
     else added++;
   }
   return { added, failed };
+}
+
+// ─── Slug generation ────────────────────────────────────────
+
+/** Generate a URL-safe slug from a display name (e.g. "Jocko Willink" → "jocko-willink") */
+export function generateProfileSlug(displayName: string, handle: string): string {
+  // Prefer slugifying the display name; fall back to handle
+  const source = displayName?.trim() || handle?.trim() || "creator";
+  return source
+    .toLowerCase()
+    .replace(/['']/g, "")           // remove apostrophes
+    .replace(/[^a-z0-9]+/g, "-")    // non-alphanumeric → dash
+    .replace(/^-+|-+$/g, "")        // trim leading/trailing dashes
+    || handle?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "creator";
 }
 
 // ─── Helper ─────────────────────────────────────────────────

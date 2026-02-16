@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { generateProfileSlug, uploadCreatorImage } from "@/lib/directories";
 
 export interface FeaturedCreator {
   id: string;
@@ -257,6 +258,8 @@ export async function approveForDirectory(data: {
     .limit(1);
   const nextOrder = ((maxRow as { sort_order: number }[] | null)?.[0]?.sort_order ?? 0) + 1;
 
+  const slug = generateProfileSlug(data.display_name, handle);
+
   const payload: Record<string, unknown> = {
     directory_id: dirId,
     creator_handle: handle,
@@ -276,6 +279,7 @@ export async function approveForDirectory(data: {
     sort_order: nextOrder,
     added_at: new Date().toISOString(),
     added_by: data.added_by || null,
+    profile_slug: slug,
   };
 
   if (data.enrichment_data) payload.enrichment_data = data.enrichment_data;

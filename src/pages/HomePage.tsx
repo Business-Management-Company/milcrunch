@@ -47,7 +47,7 @@ import {
   type CreatorRow,
 } from "@/lib/creators-db";
 import {
-  fetchShowcaseCreators,
+  fetchShowcaseByDirectoryName,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 
@@ -140,7 +140,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
 
   return (
     <Link
-      to={`/creator/${c.profile_slug || c.handle}`}
+      to={`/creators/${c.profile_slug || c.handle}`}
       className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col items-center text-center"
       style={{
         opacity: inView ? 1 : 0,
@@ -418,7 +418,7 @@ export default function HomePage() {
       const [hero, grid, showcase] = await Promise.all([
         fetchFeaturedHero(3),
         fetchFeaturedGrid(8),
-        fetchShowcaseCreators(20),
+        fetchShowcaseByDirectoryName("Military Creator Network", 25),
       ]);
       setHeroCreatorsDb(hero.length >= 3 ? hero : HERO_FALLBACK);
       setGridCreators(grid.length > 0 ? grid : GRID_FALLBACK);

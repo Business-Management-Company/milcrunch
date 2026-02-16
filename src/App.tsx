@@ -9,6 +9,7 @@ import DevRoleSwitcher from "@/components/DevRoleSwitcher";
 import Index from "./pages/Index";
 import HomePage from "./pages/HomePage";
 import Creators from "./pages/Creators";
+import CreatorPublicProfile from "./pages/CreatorPublicProfile";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Pricing from "./pages/Pricing";
@@ -119,6 +120,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/creators" element={<Creators />} />
+              <Route path="/creators/:handle" element={<CreatorPublicProfile />} />
               <Route path="/home" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<LoginPage />} />

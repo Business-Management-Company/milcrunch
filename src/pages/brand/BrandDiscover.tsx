@@ -903,12 +903,31 @@ const BrandDiscover = () => {
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];
+    const handle = creator.username ?? creator.id;
+
+    // Persist avatar to Supabase storage if it's an external URL
+    let persistedAvatarUrl = enrichedAvatar || creator.avatar || null;
+    if (persistedAvatarUrl && !persistedAvatarUrl.includes("supabase.co")) {
+      try {
+        const resp = await fetch("/api/upload-creator-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: persistedAvatarUrl, handle }),
+        });
+        if (resp.ok) {
+          const { url } = await resp.json();
+          if (url) persistedAvatarUrl = url;
+        }
+      } catch {
+        // Keep original URL if upload fails
+      }
+    }
 
     const { error } = await approveForDirectory({
-      handle: creator.username ?? creator.id,
+      handle,
       display_name: creator.name,
       platform: creator.platforms?.[0] ?? "instagram",
-      avatar_url: enrichedAvatar || creator.avatar || null,
+      avatar_url: persistedAvatarUrl,
       follower_count: creator.followers ?? null,
       engagement_rate: creator.engagementRate ?? null,
       bio: bioText || null,
