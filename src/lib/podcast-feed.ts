@@ -35,7 +35,7 @@ async function fetchRssXml(feedUrl: string): Promise<string> {
   try {
     const proxyUrl =
       typeof window !== "undefined"
-        ? `${window.location.origin}/api/rss-proxy?url=${encodeURIComponent(feedUrl)}`
+        ? `${window.location.origin}/api/parse-rss?url=${encodeURIComponent(feedUrl)}`
         : `${CORS_PROXY}${encodeURIComponent(feedUrl)}`;
     const res = await fetch(proxyUrl, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

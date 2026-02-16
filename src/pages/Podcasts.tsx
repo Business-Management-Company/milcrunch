@@ -5,21 +5,19 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Search, Mic2, Sun } from "lucide-react";
-import { format } from "date-fns";
+import PodcastDetailModal from "@/components/PodcastDetailModal";
 
 type Podcast = Database["public"]["Tables"]["podcasts"]["Row"];
-type Episode = Database["public"]["Tables"]["podcast_episodes"]["Row"];
 
 const CATEGORIES = ["All", "Military", "Veterans", "Fitness", "News & Politics", "Comedy", "Lifestyle", "Education", "Business", "Other"];
 
 export default function PodcastsPage() {
   const [navScrolled, setNavScrolled] = useState(false);
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
-  const [episodesByPodcast, setEpisodesByPodcast] = useState<Record<string, Episode[]>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
 
   useEffect(() => {
     const onScroll = () => setNavScrolled(window.scrollY > 60);
@@ -29,12 +27,11 @@ export default function PodcastsPage() {
 
   useEffect(() => {
     (async () => {
-      const q = supabase
+      const { data, error } = await supabase
         .from("podcasts")
         .select("*")
         .eq("status", "active")
         .order("title", { ascending: true });
-      const { data, error } = await q;
       if (error) {
         console.error(error);
         return;
@@ -43,19 +40,6 @@ export default function PodcastsPage() {
       setLoading(false);
     })();
   }, []);
-
-  useEffect(() => {
-    if (!expandedId) return;
-    (async () => {
-      const { data } = await supabase
-        .from("podcast_episodes")
-        .select("*")
-        .eq("podcast_id", expandedId)
-        .order("published_at", { ascending: false })
-        .limit(10);
-      setEpisodesByPodcast((prev) => ({ ...prev, [expandedId]: data ?? [] }));
-    })();
-  }, [expandedId]);
 
   const filtered = podcasts.filter((p) => {
     if (search && !(p.title ?? "").toLowerCase().includes(search.toLowerCase()) &&
@@ -149,48 +133,32 @@ export default function PodcastsPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {filtered.map((podcast) => (
-                  <div
+                  <button
                     key={podcast.id}
-                    className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-lg transition-shadow"
+                    type="button"
+                    className="rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-lg transition-shadow text-left"
+                    onClick={() => setSelectedPodcast(podcast)}
                   >
-                    <button
-                      type="button"
-                      className="w-full text-left"
-                      onClick={() => setExpandedId(expandedId === podcast.id ? null : podcast.id)}
-                    >
-                      <div className="aspect-square bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
-                        {podcast.artwork_url ? (
-                          <img src={podcast.artwork_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Mic2 className="h-16 w-16 text-white/80" />
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-[#000741] line-clamp-2" title={podcast.title ?? undefined}>
-                          {podcast.title ?? "Untitled"}
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-0.5">{podcast.author ?? "—"}</p>
-                        {podcast.category && (
-                          <span className="inline-block mt-2 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] px-2.5 py-0.5 text-xs font-medium">
-                            {podcast.category}
-                          </span>
-                        )}
-                        <p className="text-xs text-gray-400 mt-2">{podcast.episode_count ?? 0} episodes</p>
-                      </div>
-                    </button>
-                    {expandedId === podcast.id && (
-                      <div className="border-t border-gray-100 bg-gray-50 p-4 space-y-3">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Latest episodes</p>
-                        {(episodesByPodcast[podcast.id] ?? []).length === 0 ? (
-                          <p className="text-sm text-gray-500">No episodes loaded.</p>
-                        ) : (
-                          (episodesByPodcast[podcast.id] ?? []).map((ep) => (
-                            <EpisodeRow key={ep.id} episode={ep} />
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    <div className="aspect-square bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
+                      {podcast.artwork_url ? (
+                        <img src={podcast.artwork_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Mic2 className="h-16 w-16 text-white/80" />
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-[#000741] line-clamp-2" title={podcast.title ?? undefined}>
+                        {podcast.title ?? "Untitled"}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-0.5">{podcast.author ?? "\u2014"}</p>
+                      {podcast.category && (
+                        <span className="inline-block mt-2 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] px-2.5 py-0.5 text-xs font-medium">
+                          {podcast.category}
+                        </span>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">{podcast.episode_count ?? 0} episodes</p>
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -203,27 +171,15 @@ export default function PodcastsPage() {
           <Link to="/" className="flex items-center">
             <span className="font-bold text-[#000741] tracking-tight">recurrent<span className="text-[#6C5CE7] font-extrabold">X</span></span>
           </Link>
-          <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>
+          <p className="text-sm text-gray-500">&copy; 2026 RecurrentX. All rights reserved.</p>
         </div>
       </footer>
-    </div>
-  );
-}
 
-function EpisodeRow({ episode }: { episode: Episode }) {
-  return (
-    <div className="rounded-lg bg-white p-2 border border-gray-100">
-      <div className="flex items-center gap-2">
-        {episode.audio_url && (
-          <audio src={episode.audio_url} controls className="h-8 flex-1 min-w-0" />
-        )}
-      </div>
-      <p className="text-sm font-medium text-[#000741] mt-1 truncate" title={episode.title ?? undefined}>
-        {episode.title ?? "Untitled"}
-      </p>
-      {episode.published_at && (
-        <p className="text-xs text-gray-500">{format(new Date(episode.published_at), "MMM d, yyyy")}</p>
-      )}
+      <PodcastDetailModal
+        podcast={selectedPodcast}
+        open={!!selectedPodcast}
+        onOpenChange={(open) => { if (!open) setSelectedPodcast(null); }}
+      />
     </div>
   );
 }

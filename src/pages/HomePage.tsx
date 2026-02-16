@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import PodcastDetailModal from "@/components/PodcastDetailModal";
 import {
   fetchFeaturedHero,
   fetchFeaturedGrid,
@@ -368,6 +369,7 @@ export default function HomePage() {
   const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
   const [podcastTotal, setPodcastTotal] = useState<number | null>(null);
   const [podcastsLoading, setPodcastsLoading] = useState(true);
+  const [selectedPodcast, setSelectedPodcast] = useState<PodcastRow | null>(null);
   const [heroCreatorsDb, setHeroCreatorsDb] = useState<CreatorRow[]>(HERO_FALLBACK);
   const [gridCreators, setGridCreators] = useState<CreatorRow[]>([]);
   const [showcaseCreators, setShowcaseCreators] = useState<ShowcaseCreator[]>([]);
@@ -697,22 +699,26 @@ export default function HomePage() {
                   <p className="col-span-full text-sm text-gray-500 py-4">No podcasts yet. Check back soon.</p>
                 ) : (
                   podcasts.map((p) => (
-                    <Link
+                    <button
                       key={p.id}
-                      to="/podcasts"
-                      className="group rounded-xl overflow-hidden border border-gray-200 bg-white hover:shadow-lg transition-shadow"
+                      type="button"
+                      onClick={() => setSelectedPodcast(p)}
+                      className="group rounded-xl overflow-hidden border border-gray-200 bg-white hover:shadow-lg transition-shadow text-left"
                     >
-                      <div className="aspect-video bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
+                      <div className="aspect-square bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
                         {p.artwork_url ? (
                           <img src={p.artwork_url} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <Mic2 className="h-12 w-12 text-white/80" />
                         )}
                       </div>
-                      <p className="p-3 text-sm font-medium text-[#000741] truncate" title={p.title ?? undefined}>
-                        {p.title ?? "Untitled"}
-                      </p>
-                    </Link>
+                      <div className="p-3">
+                        <p className="text-sm font-semibold text-[#000741] truncate" title={p.title ?? undefined}>
+                          {p.title ?? "Untitled"}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{p.author ?? ""}</p>
+                      </div>
+                    </button>
                   ))
                 )}
               </div>
@@ -829,6 +835,11 @@ export default function HomePage() {
           </div>
         </footer>
       </main>
+      <PodcastDetailModal
+        podcast={selectedPodcast}
+        open={!!selectedPodcast}
+        onOpenChange={(open) => { if (!open) setSelectedPodcast(null); }}
+      />
     </div>
   );
 }
