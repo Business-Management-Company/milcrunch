@@ -1,11 +1,31 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, FileText, Loader2, Globe, EyeOff, Archive } from "lucide-react";
+import {
+  Plus, Search, FileText, Loader2, Globe, EyeOff, Archive,
+  MoreHorizontal, Trash2, Eye, EyeOffIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 
 interface SitePage {
@@ -57,6 +77,8 @@ const BrandPages = () => {
   const [pages, setPages] = useState<SitePage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<SitePage | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchPages();
@@ -75,6 +97,41 @@ const BrandPages = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateStatus = async (page: SitePage, newStatus: string) => {
+    const payload: Record<string, unknown> = {
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    };
+    if (newStatus === "published" && !page.published_at) {
+      payload.published_at = new Date().toISOString();
+    }
+    const { error } = await supabase
+      .from("site_pages")
+      .update(payload)
+      .eq("id", page.id);
+    if (error) {
+      toast({ title: "Failed to update status", variant: "destructive" });
+      return;
+    }
+    toast({ title: `Page ${newStatus === "published" ? "published" : newStatus === "draft" ? "unpublished" : "archived"}` });
+    fetchPages();
+  };
+
+  const deletePage = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase
+      .from("site_pages")
+      .delete()
+      .eq("id", deleteTarget.id);
+    if (error) {
+      toast({ title: "Failed to delete page", variant: "destructive" });
+    } else {
+      toast({ title: "Page deleted" });
+      fetchPages();
+    }
+    setDeleteTarget(null);
   };
 
   const filtered = pages.filter(
@@ -144,6 +201,7 @@ const BrandPages = () => {
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">SEO Score</th>
                     <th className="px-5 py-3">Last Updated</th>
+                    <th className="px-5 py-3 w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -187,7 +245,51 @@ const BrandPages = () => {
                           </div>
                         </td>
                         <td className="px-5 py-3.5 text-muted-foreground text-xs">
-                          {page.updated_at ? format(new Date(page.updated_at), "MMM d, yyyy h:mm a") : "—"}
+                          {page.updated_at ? format(new Date(page.updated_at), "MMM d, yyyy h:mm a") : "\u2014"}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {page.status !== "published" && (
+                                <DropdownMenuItem onClick={() => updateStatus(page, "published")}>
+                                  <Globe className="h-4 w-4 mr-2" />
+                                  Publish
+                                </DropdownMenuItem>
+                              )}
+                              {page.status === "published" && (
+                                <DropdownMenuItem onClick={() => updateStatus(page, "draft")}>
+                                  <EyeOffIcon className="h-4 w-4 mr-2" />
+                                  Unpublish
+                                </DropdownMenuItem>
+                              )}
+                              {page.status !== "archived" && (
+                                <DropdownMenuItem onClick={() => updateStatus(page, "archived")}>
+                                  <Archive className="h-4 w-4 mr-2" />
+                                  Archive
+                                </DropdownMenuItem>
+                              )}
+                              {page.status === "published" && (
+                                <DropdownMenuItem asChild>
+                                  <a href={`/p${page.slug.startsWith("/") ? page.slug : `/${page.slug}`}`} target="_blank" rel="noopener noreferrer">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Live
+                                  </a>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => setDeleteTarget(page)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     );
@@ -198,6 +300,23 @@ const BrandPages = () => {
           </Card>
         )}
       </div>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete page?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{deleteTarget?.page_name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deletePage} className="bg-red-600 hover:bg-red-700 text-white">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -33,7 +33,7 @@ interface EventRow {
   city: string | null;
   state: string | null;
   timezone: string | null;
-  image_url: string | null;
+  cover_image_url: string | null;
 }
 interface TicketRow {
   id: string;
@@ -95,7 +95,7 @@ const EventRegister = () => {
       const [evRes, tkRes] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, start_date, end_date, venue, city, state, timezone, image_url")
+          .select("id, title, start_date, end_date, venue, city, state, timezone, cover_image_url")
           .eq("id", eventId!)
           .single(),
         supabase

@@ -22,7 +22,7 @@ interface EventRow {
   city: string | null;
   state: string | null;
   timezone: string | null;
-  image_url: string | null;
+  cover_image_url: string | null;
   capacity: number | null;
   is_published: boolean | null;
 }
@@ -96,7 +96,7 @@ const EventDetail = () => {
       const [evRes, agRes, spkRes, spsRes] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, image_url, capacity, is_published")
+          .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published")
           .eq("id", eventId!)
           .single(),
         supabase
@@ -182,10 +182,10 @@ const EventDetail = () => {
     <div className="min-h-screen bg-white">
       {/* ===== HERO ===== */}
       <div className="relative border-b border-gray-200 py-20 md:py-28 overflow-hidden">
-        {event.image_url ? (
+        {event.cover_image_url ? (
           <>
             <img
-              src={event.image_url}
+              src={event.cover_image_url}
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
               referrerPolicy="no-referrer"
@@ -201,25 +201,25 @@ const EventDetail = () => {
           <div className="absolute inset-0 bg-gray-50" />
         )}
         <div className={cn("max-w-3xl mx-auto px-6 text-center relative z-10")}>
-          <h1 className={cn("text-3xl md:text-5xl font-bold mb-5 leading-tight", event.image_url ? "text-white drop-shadow-lg" : "text-[#000741]")}>
+          <h1 className={cn("text-3xl md:text-5xl font-bold mb-5 leading-tight", event.cover_image_url ? "text-white drop-shadow-lg" : "text-[#000741]")}>
             {event.title}
           </h1>
 
-          <div className={cn("flex flex-col sm:flex-row items-center justify-center gap-4 text-base mb-8", event.image_url ? "text-white/90" : "text-gray-600")}>
+          <div className={cn("flex flex-col sm:flex-row items-center justify-center gap-4 text-base mb-8", event.cover_image_url ? "text-white/90" : "text-gray-600")}>
             <span className="flex items-center gap-2">
-              <Calendar className={cn("w-4 h-4", event.image_url ? "text-purple-300" : "text-purple-500")} />
+              <Calendar className={cn("w-4 h-4", event.cover_image_url ? "text-purple-300" : "text-purple-500")} />
               {formatDateRange(event.start_date, event.end_date)}
             </span>
             {(event.venue || event.city) && (
               <span className="flex items-center gap-2">
-                <MapPin className={cn("w-4 h-4", event.image_url ? "text-purple-300" : "text-purple-500")} />
+                <MapPin className={cn("w-4 h-4", event.cover_image_url ? "text-purple-300" : "text-purple-500")} />
                 {[event.venue, event.city, event.state].filter(Boolean).join(" · ")}
               </span>
             )}
           </div>
 
           {isFuture && (
-            <p className={cn("font-medium text-sm mb-6", event.image_url ? "text-purple-200" : "text-purple-600")}>
+            <p className={cn("font-medium text-sm mb-6", event.cover_image_url ? "text-purple-200" : "text-purple-600")}>
               {daysUntil} days until the event
             </p>
           )}

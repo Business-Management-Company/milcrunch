@@ -11,7 +11,7 @@ interface EventRow {
   city: string | null;
   state: string | null;
   venue: string | null;
-  image_url: string | null;
+  cover_image_url: string | null;
   is_published: boolean | null;
   description: string | null;
 }
@@ -54,7 +54,7 @@ function EventCard({ event, index }: { event: EventRow; index: number }) {
   const [imgFailed, setImgFailed] = useState(false);
   const past = isPastEvent(event.end_date, event.start_date);
   const location = getLocationLabel(event.city, event.state);
-  const hasImage = !!event.image_url && !imgFailed;
+  const hasImage = !!event.cover_image_url && !imgFailed;
   const gradient = CARD_GRADIENTS[index % CARD_GRADIENTS.length];
 
   return (
@@ -65,7 +65,7 @@ function EventCard({ event, index }: { event: EventRow; index: number }) {
       {/* Background image or gradient fallback */}
       {hasImage ? (
         <img
-          src={event.image_url!}
+          src={event.cover_image_url!}
           alt={event.title}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           referrerPolicy="no-referrer"
@@ -120,7 +120,7 @@ export default function PublicEvents() {
     (async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("id, title, start_date, end_date, city, state, venue, image_url, is_published, description")
+        .select("id, title, start_date, end_date, city, state, venue, cover_image_url, is_published, description")
         .eq("is_published", true)
         .order("start_date", { ascending: true });
       if (error) console.error("Failed to load events:", error);

@@ -31,7 +31,7 @@ interface Event {
   state: string | null;
   location: string | null;
   timezone: string | null;
-  image_url: string | null;
+  cover_image_url: string | null;
 }
 
 interface TicketTypeInfo {
@@ -61,7 +61,7 @@ const EventConfirmation = () => {
         .from("orders")
         .select(`
           id, quantity, total, status, created_at, attendee_info,
-          events!inner(id, title, slug, start_date, end_date, venue, city, state, location, timezone, image_url),
+          events!inner(id, title, slug, start_date, end_date, venue, city, state, location, timezone, cover_image_url),
           ticket_types(name, description)
         `)
         .eq("id", orderId)
@@ -156,8 +156,8 @@ const EventConfirmation = () => {
                 <div 
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ 
-                    backgroundImage: event.image_url 
-                      ? `url(${event.image_url})` 
+                    backgroundImage: event.cover_image_url
+                      ? `url(${event.cover_image_url})` 
                       : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.7) 100%)'
                   }}
                 />

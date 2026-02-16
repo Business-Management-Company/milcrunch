@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -18,6 +28,9 @@ import {
   Youtube,
   Twitter,
   Play,
+  Pencil,
+  Loader2,
+  Save,
 } from "lucide-react";
 import {
   Tooltip,
@@ -259,6 +272,8 @@ const CONTENT_DEFAULTS: Record<string, string> = {
 
 function useSiteContent(page: string) {
   const [content, setContent] = useState<Record<string, string>>(CONTENT_DEFAULTS);
+  const [version, setVersion] = useState(0);
+
   useEffect(() => {
     (async () => {
       try {
@@ -277,8 +292,95 @@ function useSiteContent(page: string) {
         // fallback to defaults
       }
     })();
-  }, [page]);
-  return content;
+  }, [page, version]);
+
+  const refresh = () => setVersion((v) => v + 1);
+  return { content, refresh };
+}
+
+function HomepageEditor({
+  open,
+  onOpenChange,
+  current,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  current: Record<string, string>;
+  onSaved: () => void;
+}) {
+  const [fields, setFields] = useState<Record<string, string>>(current);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) setFields(current);
+  }, [open, current]);
+
+  const set = (key: string, val: string) => setFields((prev) => ({ ...prev, [key]: val }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      for (const [section, content] of Object.entries(fields)) {
+        await supabase
+          .from("site_content")
+          .upsert(
+            { page: "homepage", section, content, updated_at: new Date().toISOString() },
+            { onConflict: "page,section" },
+          );
+      }
+      onSaved();
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Failed to save homepage content:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const FIELDS: { key: string; label: string; multiline?: boolean }[] = [
+    { key: "hero_title", label: "Hero Title" },
+    { key: "hero_subtitle", label: "Hero Subtitle", multiline: true },
+    { key: "events_title", label: "Events Section Title" },
+    { key: "events_subtitle", label: "Events Section Subtitle", multiline: true },
+    { key: "cta_text", label: "Bottom CTA Text", multiline: true },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Homepage Content</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          {FIELDS.map((f) => (
+            <div key={f.key}>
+              <Label className="text-xs font-medium">{f.label}</Label>
+              {f.multiline ? (
+                <Textarea
+                  value={fields[f.key] || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  rows={3}
+                />
+              ) : (
+                <Input
+                  value={fields[f.key] || ""}
+                  onChange={(e) => set(f.key, e.target.value)}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-pd-blue hover:bg-pd-darkblue text-white">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default function HomePage() {
@@ -293,7 +395,9 @@ export default function HomePage() {
   const [showcaseCreators, setShowcaseCreators] = useState<ShowcaseCreator[]>([]);
   const [showcaseInView, setShowcaseInView] = useState(false);
   const showcaseRef = useRef<HTMLDivElement>(null);
-  const cms = useSiteContent("homepage");
+  const { content: cms, refresh: refreshCms } = useSiteContent("homepage");
+  const [editOpen, setEditOpen] = useState(false);
+  const isSuperAdmin = user?.user_metadata?.role === "super_admin";
 
   useEffect(() => {
     (async () => {
@@ -390,6 +494,26 @@ export default function HomePage() {
           )}
         </div>
       </header>
+
+      {/* Admin: Edit Homepage floating button */}
+      {isSuperAdmin && (
+        <>
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 shadow-lg transition-colors text-sm font-medium"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit Homepage
+          </button>
+          <HomepageEditor
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            current={cms}
+            onSaved={refreshCms}
+          />
+        </>
+      )}
 
       <main>
         {/* Hero — full-width background image + overlay, floating creator cards */}

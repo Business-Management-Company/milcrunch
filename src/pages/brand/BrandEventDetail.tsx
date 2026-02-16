@@ -41,15 +41,9 @@ interface EventRow {
   venue: string | null;
   city: string | null;
   state: string | null;
-  image_url: string | null;
-  status: string | null;
+  cover_image_url: string | null;
   is_published: boolean | null;
   capacity: number | null;
-  directory_id: string | null;
-  custom_subdomain: string | null;
-  og_title: string | null;
-  og_description: string | null;
-  og_image_url: string | null;
   created_at: string | null;
 }
 interface AgendaRow {
@@ -205,12 +199,8 @@ const BrandEventDetail = () => {
       setEditVenue(ev.venue || "");
       setEditCity(ev.city || "");
       setEditState(ev.state || "");
-      setEditCover(ev.image_url || "");
+      setEditCover(ev.cover_image_url || "");
       setEditCapacity(ev.capacity ? String(ev.capacity) : "");
-      setEditSubdomain(ev.custom_subdomain || "");
-      setEditOgTitle(ev.og_title || "");
-      setEditOgDesc(ev.og_description || "");
-      setEditOgImage(ev.og_image_url || "");
       setAgenda((agRes.data || []) as AgendaRow[]);
       setSpeakers((spkRes.data || []) as SpeakerRow[]);
       setSponsors((spsRes.data || []) as SponsorRow[]);
@@ -242,7 +232,7 @@ const BrandEventDetail = () => {
           venue: editVenue.trim() || null,
           city: editCity.trim() || null,
           state: editState.trim() || null,
-          image_url: editCover.trim() || null,
+          cover_image_url: editCover.trim() || null,
           capacity: editCapacity ? parseInt(editCapacity) : null,
         } as Record<string, unknown>)
         .eq("id", eventId);
@@ -264,10 +254,7 @@ const BrandEventDetail = () => {
       const { error } = await supabase
         .from("events")
         .update({
-          custom_subdomain: editSubdomain.trim() || null,
-          og_title: editOgTitle.trim() || null,
-          og_description: editOgDesc.trim() || null,
-          og_image_url: editOgImage.trim() || null,
+          slug: editSubdomain.trim() || null,
         } as Record<string, unknown>)
         .eq("id", eventId);
       if (error) throw error;
@@ -1008,7 +995,7 @@ const BrandEventDetail = () => {
               const subdomainStatus = event.custom_subdomain ? "active" : "not_configured";
               const ogTitle = editOgTitle || event.title;
               const ogDesc = editOgDesc || (event.description || "").slice(0, 160);
-              const ogImage = editOgImage || event.image_url || "";
+              const ogImage = editOgImage || event.cover_image_url || "";
 
               const copyToClipboard = (text: string, label: string) => {
                 navigator.clipboard.writeText(text);
@@ -1116,7 +1103,7 @@ const BrandEventDetail = () => {
                         </div>
                         <div>
                           <Label>OG Image URL</Label>
-                          <Input value={editOgImage} onChange={(e) => setEditOgImage(e.target.value)} placeholder={event.image_url || "https://..."} className="mt-1" />
+                          <Input value={editOgImage} onChange={(e) => setEditOgImage(e.target.value)} placeholder={event.cover_image_url || "https://..."} className="mt-1" />
                         </div>
                       </div>
                       <div>

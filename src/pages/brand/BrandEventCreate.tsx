@@ -231,7 +231,7 @@ const BrandEventCreate = () => {
             venue: venue.trim() || null,
             city: city.trim() || null,
             state: state.trim() || null,
-            image_url: coverUrl.trim() || null,
+            cover_image_url: coverUrl.trim() || null,
             capacity: capacity ? parseInt(capacity) : null,
           } as Record<string, unknown>)
           .eq("id", createdEventId);
@@ -248,11 +248,10 @@ const BrandEventCreate = () => {
             venue: venue.trim() || null,
             city: city.trim() || null,
             state: state.trim() || null,
-            image_url: coverUrl.trim() || null,
+            cover_image_url: coverUrl.trim() || null,
             capacity: capacity ? parseInt(capacity) : null,
-            status: "draft",
             is_published: false,
-            user_id: user?.id || null,
+            created_by: user?.id || null,
           } as Record<string, unknown>)
           .select("id")
           .single();

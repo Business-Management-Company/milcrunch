@@ -4,6 +4,11 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
+interface FaqPair {
+  q: string;
+  a: string;
+}
+
 interface ContentBlock {
   id: string;
   type: "hero" | "text" | "image" | "cta" | "two_column" | "video" | "faq";
@@ -40,6 +45,18 @@ function setMeta(name: string, content: string, attr: "name" | "property" = "nam
     document.head.appendChild(el);
   }
   el.content = content;
+}
+
+function parseFaqPairs(data: Record<string, string>): FaqPair[] {
+  if (data.faq_pairs) {
+    try {
+      return JSON.parse(data.faq_pairs) as FaqPair[];
+    } catch { /* fallback */ }
+  }
+  if (data.question || data.answer) {
+    return [{ q: data.question || "", a: data.answer || "" }];
+  }
+  return [];
 }
 
 function BlockRenderer({ block }: { block: ContentBlock }) {
@@ -107,19 +124,30 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
 
     case "cta":
       return (
-        <section className="px-4 md:px-8 py-10 text-center">
-          <Link to={d.url || "/"}>
-            <Button
-              size="lg"
-              className={`rounded-lg px-8 ${
-                d.style === "secondary"
-                  ? "bg-white border border-gray-300 text-[#000741] hover:bg-gray-50"
-                  : "bg-[#0064B1] hover:bg-[#053877] text-white"
-              }`}
-            >
-              {d.text || "Click Here"}
-            </Button>
-          </Link>
+        <section
+          className="px-4 md:px-8 py-12 md:py-16"
+          style={d.bg_color ? { backgroundColor: d.bg_color } : {}}
+        >
+          <div className="max-w-3xl mx-auto text-center">
+            {d.heading && (
+              <h2 className="text-2xl md:text-3xl font-bold text-[#000741] mb-3">{d.heading}</h2>
+            )}
+            {d.description && (
+              <p className="text-gray-600 mb-6 max-w-xl mx-auto">{d.description}</p>
+            )}
+            <Link to={d.url || "/"}>
+              <Button
+                size="lg"
+                className={`rounded-lg px-8 ${
+                  d.style === "secondary"
+                    ? "bg-white border border-gray-300 text-[#000741] hover:bg-gray-50"
+                    : "bg-[#0064B1] hover:bg-[#053877] text-white"
+                }`}
+              >
+                {d.text || "Click Here"}
+              </Button>
+            </Link>
+          </div>
         </section>
       );
 
@@ -159,15 +187,25 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
         </section>
       );
 
-    case "faq":
+    case "faq": {
+      const pairs = parseFaqPairs(d);
+      if (pairs.length === 0) return null;
       return (
         <section className="px-4 md:px-8 py-6">
-          <div className="max-w-3xl mx-auto border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30">
-            <h3 className="font-semibold text-[#000741] dark:text-white mb-2">{d.question}</h3>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">{d.answer}</p>
+          <div className="max-w-3xl mx-auto space-y-3">
+            {pairs.map((pair, idx) => (
+              <div
+                key={idx}
+                className="border border-gray-200 dark:border-gray-700 rounded-xl p-6 bg-gray-50 dark:bg-gray-900/30"
+              >
+                <h3 className="font-semibold text-[#000741] dark:text-white mb-2">{pair.q}</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">{pair.a}</p>
+              </div>
+            ))}
           </div>
         </section>
       );
+    }
 
     default:
       return null;
