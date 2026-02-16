@@ -181,27 +181,27 @@ const EventDetail = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* ===== HERO ===== */}
-      <div className="bg-gradient-to-br from-gray-900 via-[#000741] to-gray-900 py-20 md:py-28">
+      <div className="bg-gray-50 border-b border-gray-200 py-20 md:py-28">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-5 leading-tight">
+          <h1 className="text-3xl md:text-5xl font-bold text-[#000741] mb-5 leading-tight">
             {event.title}
           </h1>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-gray-300 text-base mb-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-gray-600 text-base mb-8">
             <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-400" />
+              <Calendar className="w-4 h-4 text-emerald-500" />
               {formatDateRange(event.start_date, event.end_date)}
             </span>
             {(event.venue || event.city) && (
               <span className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-emerald-400" />
+                <MapPin className="w-4 h-4 text-emerald-500" />
                 {[event.venue, event.city, event.state].filter(Boolean).join(" · ")}
               </span>
             )}
           </div>
 
           {isFuture && (
-            <p className="text-emerald-400 font-medium text-sm mb-6">
+            <p className="text-emerald-600 font-medium text-sm mb-6">
               {daysUntil} days until the event
             </p>
           )}

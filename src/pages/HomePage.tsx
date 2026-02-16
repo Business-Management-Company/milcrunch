@@ -429,13 +429,12 @@ export default function HomePage() {
 
         {/* Built For Those Who Serve & Create */}
         <section
-          className="relative z-10 py-20 px-8 text-center"
-          style={{ background: "#1B2A4A" }}
+          className="relative z-10 py-20 px-8 text-center bg-gray-50 border-y border-gray-200"
         >
-          <h2 className="text-center text-white font-bold mb-12 text-[2rem]">
+          <h2 className="text-center text-[#000741] font-bold mb-12 text-[2rem]">
             Built For Those Who Serve & Create
           </h2>
-          <p className="text-center text-gray-400 mx-auto mb-12 text-[1.1rem]">
+          <p className="text-center text-gray-500 mx-auto mb-12 text-[1.1rem]">
             Whether you wore the uniform or support those who did
           </p>
           <div className="flex flex-wrap justify-center items-start gap-16">
@@ -444,8 +443,8 @@ export default function HomePage() {
                 key={label}
                 className="flex flex-col items-center cursor-default transition-transform duration-200 hover:scale-110"
               >
-                <Icon className="h-12 w-12 text-[#F0A71F] shrink-0" aria-hidden />
-                <span className="text-white font-medium mt-3 text-base">
+                <Icon className="h-12 w-12 text-[#0064B1] shrink-0" aria-hidden />
+                <span className="text-[#000741] font-medium mt-3 text-base">
                   {label}
                 </span>
               </div>
@@ -638,9 +637,9 @@ export default function HomePage() {
         </section>
 
         {/* Bottom CTA banner */}
-        <section className="px-4 md:px-8 py-14 md:py-20 bg-[#0a1628]">
+        <section className="px-4 md:px-8 py-14 md:py-20 bg-gray-50 border-t border-gray-200">
           <div className="max-w-3xl mx-auto text-center">
-            <p className="text-xl md:text-2xl font-semibold text-white mb-6">
+            <p className="text-xl md:text-2xl font-semibold text-[#000741] mb-6">
               The military community doesn't stop. Neither should your platform.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -650,7 +649,7 @@ export default function HomePage() {
                 </Button>
               </Link>
               <Link to="/pdx/create">
-                <Button size="lg" variant="outline" className="rounded-lg px-8 border-white/50 text-white hover:bg-white/10">
+                <Button size="lg" variant="outline" className="rounded-lg px-8 border-gray-300 text-[#000741] hover:bg-gray-100">
                   Create an Event
                 </Button>
               </Link>
