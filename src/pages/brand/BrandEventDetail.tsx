@@ -4,7 +4,7 @@ import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
   Search, Download, CheckCircle2, XCircle, Ticket, Globe, Copy, Code, QrCode,
-  MessageCircle,
+  MessageCircle, ScanLine, Printer, DollarSign,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -26,6 +27,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import EventCommunityTab from "@/components/EventCommunityTab";
+import CheckInMode from "@/components/CheckInMode";
+import EventBadgePrint from "@/components/EventBadgePrint";
 
 /* ---------- types ---------- */
 interface EventRow {
@@ -91,6 +94,7 @@ interface RegistrationRow {
   military_branch: string | null;
   military_status: string | null;
   registration_code: string | null;
+  qr_code_data: string | null;
   status: string | null;
   checked_in: boolean | null;
   checked_in_at: string | null;
@@ -100,9 +104,14 @@ interface RegistrationRow {
 interface TicketRow {
   id: string;
   name: string;
+  description: string | null;
   price: number;
   quantity: number | null;
   sold: number;
+  event_format: string | null;
+  qr_enabled: boolean | null;
+  is_active: boolean | null;
+  sort_order: number;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -130,6 +139,11 @@ const TIER_COLORS: Record<string, string> = {
   bronze: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
   community: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
 };
+const EVENT_FORMATS = [
+  { value: "in_person", label: "In-Person" },
+  { value: "virtual", label: "Virtual" },
+  { value: "hybrid", label: "Hybrid" },
+];
 
 /* ======================================== */
 const BrandEventDetail = () => {
@@ -145,6 +159,8 @@ const BrandEventDetail = () => {
   const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
   const [eventTickets, setEventTickets] = useState<TicketRow[]>([]);
   const [regSearch, setRegSearch] = useState("");
+  const [checkInMode, setCheckInMode] = useState(false);
+  const [showBadges, setShowBadges] = useState(false);
 
   /* editable overview fields */
   const [editTitle, setEditTitle] = useState("");
@@ -176,7 +192,7 @@ const BrandEventDetail = () => {
         supabase.from("event_speakers").select("*").eq("event_id", eventId).order("sort_order"),
         supabase.from("event_sponsors").select("*").eq("event_id", eventId).order("sort_order"),
         supabase.from("event_registrations").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
-        supabase.from("event_tickets").select("id, name, price, quantity, sold").eq("event_id", eventId).order("sort_order"),
+        supabase.from("event_tickets").select("*").eq("event_id", eventId).order("sort_order"),
       ]);
       if (evRes.error) throw evRes.error;
       const ev = evRes.data as unknown as EventRow;
@@ -324,6 +340,23 @@ const BrandEventDetail = () => {
     else fetchAll();
   };
 
+  /* ---- add ticket ---- */
+  const addTicket = async () => {
+    if (!eventId) return;
+    const { error } = await supabase.from("event_tickets").insert({
+      event_id: eventId,
+      name: "New Ticket",
+      price: 0,
+      quantity: 100,
+      event_format: "in_person",
+      qr_enabled: true,
+      is_active: true,
+      sort_order: eventTickets.length,
+    } as Record<string, unknown>);
+    if (error) toast.error(error.message);
+    else fetchAll();
+  };
+
   /* ---- delete helpers ---- */
   const deleteAgenda = async (id: string) => {
     await supabase.from("event_agenda").delete().eq("id", id);
@@ -337,6 +370,10 @@ const BrandEventDetail = () => {
     await supabase.from("event_sponsors").delete().eq("id", id);
     fetchAll();
   };
+  const deleteTicket = async (id: string) => {
+    await supabase.from("event_tickets").delete().eq("id", id);
+    fetchAll();
+  };
 
   /* ---- inline edit helpers ---- */
   const updateAgendaField = async (id: string, field: string, value: unknown) => {
@@ -347,6 +384,9 @@ const BrandEventDetail = () => {
   };
   const updateSponsorField = async (id: string, field: string, value: unknown) => {
     await supabase.from("event_sponsors").update({ [field]: value } as Record<string, unknown>).eq("id", id);
+  };
+  const updateTicketField = async (id: string, field: string, value: unknown) => {
+    await supabase.from("event_tickets").update({ [field]: value } as Record<string, unknown>).eq("id", id);
   };
 
   /* ---- delete event ---- */
@@ -384,6 +424,44 @@ const BrandEventDetail = () => {
 
   const statusKey = (event.status || "draft") as string;
 
+  /* ---- Check-In Mode overlay ---- */
+  if (checkInMode) {
+    return (
+      <CheckInMode
+        eventId={eventId!}
+        eventTitle={event.title}
+        registrations={registrations}
+        tickets={eventTickets.map((t) => ({ id: t.id, name: t.name }))}
+        onClose={() => { setCheckInMode(false); fetchAll(); }}
+        onRefresh={fetchAll}
+      />
+    );
+  }
+
+  /* ---- Badge Print overlay ---- */
+  if (showBadges) {
+    const ticketMap = Object.fromEntries(eventTickets.map((t) => [t.id, t]));
+    const badgeData = registrations.map((r) => ({
+      id: r.id,
+      first_name: r.first_name,
+      last_name: r.last_name,
+      registration_code: r.registration_code,
+      ticket_name: ticketMap[r.ticket_id || ""]?.name || "General",
+      ticket_color: "default",
+    }));
+    const dateStr = event.start_date ? format(new Date(event.start_date), "MMM d, yyyy") : "";
+    const venueStr = [event.venue, event.city, event.state].filter(Boolean).join(", ");
+    return (
+      <EventBadgePrint
+        eventTitle={event.title}
+        eventDate={dateStr}
+        eventVenue={venueStr}
+        badges={badgeData}
+        onClose={() => setShowBadges(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
       <div className="max-w-5xl mx-auto">
@@ -400,7 +478,7 @@ const BrandEventDetail = () => {
               </div>
               <p className="text-sm text-muted-foreground">
                 {event.start_date ? format(new Date(event.start_date), "MMM d, yyyy") : "No date"}
-                {event.end_date ? ` – ${format(new Date(event.end_date), "MMM d, yyyy")}` : ""}
+                {event.end_date ? ` \u2013 ${format(new Date(event.end_date), "MMM d, yyyy")}` : ""}
                 {event.city ? ` | ${[event.venue, event.city, event.state].filter(Boolean).join(", ")}` : ""}
               </p>
             </div>
@@ -426,12 +504,13 @@ const BrandEventDetail = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="overview">
-          <TabsList className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-lg mb-6">
+          <TabsList className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-lg mb-6 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="overview"><LayoutList className="h-4 w-4 mr-1.5" />Overview</TabsTrigger>
             <TabsTrigger value="agenda"><Clock className="h-4 w-4 mr-1.5" />Agenda</TabsTrigger>
             <TabsTrigger value="speakers"><Mic className="h-4 w-4 mr-1.5" />Speakers</TabsTrigger>
             <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
-            <TabsTrigger value="registrations"><Ticket className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
+            <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-1.5" />Tickets{eventTickets.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{eventTickets.length}</Badge>}</TabsTrigger>
+            <TabsTrigger value="registrations"><Users className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="community"><MessageCircle className="h-4 w-4 mr-1.5" />Community</TabsTrigger>
             <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
@@ -514,7 +593,7 @@ const BrandEventDetail = () => {
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline" className="text-xs capitalize">{a.session_type}</Badge>
                         <span className="text-xs text-muted-foreground">Day {a.day_number}</span>
-                        {a.start_time && <span className="text-xs text-muted-foreground">{a.start_time}–{a.end_time}</span>}
+                        {a.start_time && <span className="text-xs text-muted-foreground">{a.start_time}\u2013{a.end_time}</span>}
                         {a.location_room && <span className="text-xs text-muted-foreground">| {a.location_room}</span>}
                       </div>
                       <Input
@@ -645,6 +724,113 @@ const BrandEventDetail = () => {
             )}
           </TabsContent>
 
+          {/* ===== TICKETS ===== */}
+          <TabsContent value="tickets">
+            {(() => {
+              const totalCapacity = eventTickets.reduce((sum, t) => sum + (t.quantity || 0), 0);
+              const totalSold = eventTickets.reduce((sum, t) => sum + (t.sold || 0), 0);
+              const totalRevenue = eventTickets.reduce((sum, t) => sum + (t.sold || 0) * t.price, 0);
+
+              return (
+                <div className="space-y-4">
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
+                      <p className="text-2xl font-bold text-purple-600">{eventTickets.length}</p>
+                      <p className="text-xs text-muted-foreground">Ticket Types</p>
+                    </Card>
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
+                      <p className="text-2xl font-bold text-pd-blue">{totalCapacity}</p>
+                      <p className="text-xs text-muted-foreground">Total Capacity</p>
+                    </Card>
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
+                      <p className="text-2xl font-bold text-green-600">{totalSold}</p>
+                      <p className="text-xs text-muted-foreground">Total Sold</p>
+                    </Card>
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
+                      <p className="text-2xl font-bold text-foreground">${totalRevenue.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Revenue</p>
+                    </Card>
+                  </div>
+
+                  {/* Add ticket */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">{eventTickets.length} ticket type{eventTickets.length !== 1 ? "s" : ""}</p>
+                    <Button size="sm" variant="outline" onClick={addTicket}>
+                      <Plus className="h-4 w-4 mr-1" /> Add Ticket
+                    </Button>
+                  </div>
+
+                  {/* Ticket list */}
+                  {eventTickets.map((t) => (
+                    <Card key={t.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Input
+                              defaultValue={t.name}
+                              className="font-semibold text-sm max-w-xs"
+                              onBlur={(e) => updateTicketField(t.id, "name", e.target.value)}
+                            />
+                            <Badge variant="outline" className="text-xs capitalize">{(t.event_format || "in_person").replace("_", " ")}</Badge>
+                            {t.qr_enabled && <Badge className="bg-green-100 text-green-700 text-xs">QR Enabled</Badge>}
+                            {!t.is_active && <Badge className="bg-red-100 text-red-700 text-xs">Inactive</Badge>}
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Price</Label>
+                              <Input
+                                type="number"
+                                defaultValue={t.price}
+                                className="h-8 text-sm"
+                                onBlur={(e) => updateTicketField(t.id, "price", parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Quantity</Label>
+                              <Input
+                                type="number"
+                                defaultValue={t.quantity || 0}
+                                className="h-8 text-sm"
+                                onBlur={(e) => updateTicketField(t.id, "quantity", parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Sold</Label>
+                              <p className="text-sm font-medium mt-1">{t.sold || 0}</p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Format</Label>
+                              <Select
+                                defaultValue={t.event_format || "in_person"}
+                                onValueChange={(v) => { updateTicketField(t.id, "event_format", v); fetchAll(); }}
+                              >
+                                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {EVENT_FORMATS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          {t.description && <p className="text-xs text-muted-foreground mt-2 truncate">{t.description}</p>}
+                        </div>
+                        <Button variant="ghost" size="icon" className="shrink-0 text-red-500 hover:text-red-700" onClick={() => deleteTicket(t.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+
+                  {eventTickets.length === 0 && (
+                    <Card className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] p-8 text-center text-muted-foreground">
+                      No tickets configured yet.
+                    </Card>
+                  )}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
           {/* ===== REGISTRATIONS ===== */}
           <TabsContent value="registrations">
             {(() => {
@@ -677,7 +863,7 @@ const BrandEventDetail = () => {
                 const headers = ["First Name", "Last Name", "Email", "Phone", "Ticket", "Branch", "Status", "Registered", "Checked In"];
                 const rows = registrations.map((r) => [
                   r.first_name, r.last_name, r.email, r.phone || "",
-                  ticketMap[r.ticket_id || ""]?.name || "—",
+                  ticketMap[r.ticket_id || ""]?.name || "\u2014",
                   r.military_branch || "", r.status || "",
                   r.created_at ? new Date(r.created_at).toLocaleDateString() : "",
                   r.checked_in ? "Yes" : "No",
@@ -714,8 +900,8 @@ const BrandEventDetail = () => {
                     ))}
                   </div>
 
-                  {/* Search + Export */}
-                  <div className="flex items-center gap-3">
+                  {/* Search + Actions */}
+                  <div className="flex flex-wrap items-center gap-3">
                     <div className="relative flex-1 max-w-sm">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
@@ -725,6 +911,12 @@ const BrandEventDetail = () => {
                         className="pl-10 bg-white dark:bg-[#1A1D27]"
                       />
                     </div>
+                    <Button variant="outline" size="sm" onClick={() => setCheckInMode(true)}>
+                      <ScanLine className="h-4 w-4 mr-1" /> Check-In Mode
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowBadges(true)} disabled={registrations.length === 0}>
+                      <Printer className="h-4 w-4 mr-1" /> Print All Badges
+                    </Button>
                     <Button variant="outline" size="sm" onClick={exportCSV}>
                       <Download className="h-4 w-4 mr-1" /> Export CSV
                     </Button>
@@ -764,17 +956,17 @@ const BrandEventDetail = () => {
                                 <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
                                 <td className="px-4 py-3">
                                   <Badge variant="outline" className="text-xs">
-                                    {ticketMap[r.ticket_id || ""]?.name || "—"}
+                                    {ticketMap[r.ticket_id || ""]?.name || "\u2014"}
                                   </Badge>
                                 </td>
-                                <td className="px-4 py-3 text-muted-foreground">{r.military_branch || "—"}</td>
+                                <td className="px-4 py-3 text-muted-foreground">{r.military_branch || "\u2014"}</td>
                                 <td className="px-4 py-3">
                                   <Badge className={r.status === "confirmed" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}>
                                     {r.status}
                                   </Badge>
                                 </td>
                                 <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : "\u2014"}
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <Button
@@ -874,7 +1066,6 @@ const BrandEventDetail = () => {
                       <Globe className="h-4 w-4 text-pd-blue" /> Custom Event URL
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">Set a custom subdomain for your event page.</p>
-
                     <div className="space-y-3">
                       <div>
                         <Label className="text-xs text-muted-foreground">Current URL</Label>
@@ -883,32 +1074,22 @@ const BrandEventDetail = () => {
                       <div>
                         <Label>Custom Subdomain</Label>
                         <div className="flex items-center gap-2 mt-1">
-                          <Input
-                            value={editSubdomain}
-                            onChange={(e) => setEditSubdomain(e.target.value)}
-                            placeholder="mic2026"
-                            className="max-w-xs"
-                          />
+                          <Input value={editSubdomain} onChange={(e) => setEditSubdomain(e.target.value)} placeholder="mic2026" className="max-w-xs" />
                           <span className="text-sm text-muted-foreground">.recurrentx.com</span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          e.g., mic2026.recurrentx.com, milspousefest-sandiego.recurrentx.com
-                        </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5">
-                          {subdomainStatus === "active" ? (
-                            <span className="flex items-center gap-1.5 text-sm">
-                              <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                              <span className="text-yellow-600 dark:text-yellow-400 font-medium">Pending Setup</span>
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1.5 text-sm">
-                              <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-                              <span className="text-muted-foreground">Not configured</span>
-                            </span>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-1.5">
+                        {subdomainStatus === "active" ? (
+                          <span className="flex items-center gap-1.5 text-sm">
+                            <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                            <span className="text-yellow-600 dark:text-yellow-400 font-medium">Pending Setup</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-sm">
+                            <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                            <span className="text-muted-foreground">Not configured</span>
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/50 p-2 rounded">
                         Custom domains are configured by the RecurrentX team. Contact support for setup.
@@ -922,44 +1103,22 @@ const BrandEventDetail = () => {
                       <Search className="h-4 w-4 text-pd-blue" /> SEO & Social Sharing
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">Control how your event appears when shared on social media.</p>
-
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-4">
                         <div>
                           <Label>OG Title</Label>
-                          <Input
-                            value={editOgTitle}
-                            onChange={(e) => setEditOgTitle(e.target.value)}
-                            placeholder={event.title}
-                            className="mt-1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-0.5">Defaults to event title if blank</p>
+                          <Input value={editOgTitle} onChange={(e) => setEditOgTitle(e.target.value)} placeholder={event.title} className="mt-1" />
                         </div>
                         <div>
                           <Label>OG Description</Label>
-                          <Textarea
-                            value={editOgDesc}
-                            onChange={(e) => setEditOgDesc(e.target.value)}
-                            placeholder={(event.description || "").slice(0, 160)}
-                            rows={3}
-                            className="mt-1"
-                            maxLength={160}
-                          />
+                          <Textarea value={editOgDesc} onChange={(e) => setEditOgDesc(e.target.value)} placeholder={(event.description || "").slice(0, 160)} rows={3} className="mt-1" maxLength={160} />
                           <p className="text-xs text-muted-foreground mt-0.5">{editOgDesc.length}/160 characters</p>
                         </div>
                         <div>
                           <Label>OG Image URL</Label>
-                          <Input
-                            value={editOgImage}
-                            onChange={(e) => setEditOgImage(e.target.value)}
-                            placeholder={event.image_url || "https://..."}
-                            className="mt-1"
-                          />
-                          <p className="text-xs text-muted-foreground mt-0.5">Defaults to event cover image if blank</p>
+                          <Input value={editOgImage} onChange={(e) => setEditOgImage(e.target.value)} placeholder={event.image_url || "https://..."} className="mt-1" />
                         </div>
                       </div>
-
-                      {/* Social Preview Card */}
                       <div>
                         <Label className="mb-2 block">Social Preview</Label>
                         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-[#1A1D27]">
@@ -988,21 +1147,14 @@ const BrandEventDetail = () => {
                       <Code className="h-4 w-4 text-pd-blue" /> Embed Registration on Your Site
                     </h3>
                     <p className="text-sm text-muted-foreground mb-3">Copy the code below to embed the registration form on any website.</p>
-
                     <div className="relative">
                       <pre className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all">
                         {embedCode}
                       </pre>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        onClick={() => copyToClipboard(embedCode, "Embed code")}
-                      >
+                      <Button variant="outline" size="sm" className="absolute top-2 right-2" onClick={() => copyToClipboard(embedCode, "Embed code")}>
                         <Copy className="h-3.5 w-3.5 mr-1" /> Copy
                       </Button>
                     </div>
-
                     <div className="mt-4">
                       <Label className="mb-2 block text-xs text-muted-foreground">Embed Preview</Label>
                       <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
@@ -1025,17 +1177,10 @@ const BrandEventDetail = () => {
                     <h3 className="font-semibold mb-1 flex items-center gap-2">
                       <QrCode className="h-4 w-4 text-pd-blue" /> QR Code
                     </h3>
-                    <p className="text-sm text-muted-foreground mb-4">Scan to open the public event page. Great for printed materials, signage, and badges.</p>
-
+                    <p className="text-sm text-muted-foreground mb-4">Scan to open the public event page.</p>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                       <div className="bg-white p-4 rounded-xl border border-gray-200 dark:border-gray-300 inline-block">
-                        <QRCodeSVG
-                          id="event-qr-code"
-                          value={publicUrl}
-                          size={180}
-                          level="H"
-                          includeMargin={false}
-                        />
+                        <QRCodeSVG id="event-qr-code" value={publicUrl} size={180} level="H" includeMargin={false} />
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm font-mono text-muted-foreground">{publicUrl}</p>
@@ -1046,7 +1191,7 @@ const BrandEventDetail = () => {
                     </div>
                   </Card>
 
-                  {/* Save All Button */}
+                  {/* Save */}
                   <div className="flex justify-end">
                     <Button onClick={savePublicPage} disabled={savingPublic} className="bg-pd-blue hover:bg-pd-darkblue text-white">
                       {savingPublic ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
@@ -1094,7 +1239,7 @@ const BrandEventDetail = () => {
 
               <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
                 <h3 className="font-semibold text-red-600 mb-1">Danger Zone</h3>
-                <p className="text-sm text-muted-foreground mb-3">Permanently delete this event and all its data (agenda, speakers, sponsors).</p>
+                <p className="text-sm text-muted-foreground mb-3">Permanently delete this event and all its data.</p>
                 <Button variant="destructive" size="sm" onClick={deleteEvent} disabled={saving}>
                   <Trash2 className="h-4 w-4 mr-1" /> Delete Event
                 </Button>
