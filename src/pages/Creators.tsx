@@ -17,6 +17,8 @@ import {
   Search,
   X,
 } from "lucide-react";
+import PublicNav from "@/components/layout/PublicNav";
+import PublicFooter from "@/components/layout/PublicFooter";
 import {
   fetchShowcaseByDirectoryName,
   formatFollowerCount,
@@ -184,36 +186,20 @@ export default function Creators() {
   const hasFilters = !!search.trim() || !!branchFilter || !!platformFilter;
 
   return (
-    <div className="min-h-screen bg-white text-[#000741]">
-      {/* Top bar */}
-      <header className="h-14 flex items-center justify-between px-4 md:px-8 border-b border-gray-200 bg-white sticky top-0 z-40">
-        <Link to="/">
-          <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-[#000741]">recurrent</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
-          </span>
-        </Link>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7]">Sign In</Link>
-          <Link to="/signup">
-            <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 font-semibold">
-              Get Started
-            </Button>
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white text-[#1A1A2E]">
+      <PublicNav />
 
-      <main className="px-4 md:px-8 py-12 md:py-16">
+      <main className="px-4 md:px-8 pt-24 pb-12 md:pt-28 md:pb-16">
         <div className="max-w-6xl mx-auto">
           <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6">
             <ArrowLeft className="h-4 w-4" /> Back to Home
           </Link>
 
           <div className="text-center mb-8">
-            <h1 className="font-serif text-3xl md:text-4xl font-bold text-[#000741] mb-3">
+            <h1 className="font-serif text-3xl md:text-4xl font-bold text-[#1A1A2E] mb-3">
               Military Creator Directory
             </h1>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            <p className="text-[#6B7280] text-lg max-w-2xl mx-auto">
               The #1 network for verified military and veteran content creators. Discover authentic voices from those who served.
             </p>
           </div>
@@ -322,12 +308,7 @@ export default function Creators() {
         </div>
       </main>
 
-      <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <p className="text-sm text-gray-500">&copy; 2026 RecurrentX. All rights reserved.</p>
-          <Link to="/" className="text-sm text-[#6C5CE7] hover:underline">Home</Link>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

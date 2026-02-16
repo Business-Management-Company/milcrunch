@@ -40,6 +40,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import PodcastDetailModal from "@/components/PodcastDetailModal";
+import PublicNav from "@/components/layout/PublicNav";
+import PublicFooter from "@/components/layout/PublicFooter";
 import {
   fetchFeaturedHero,
   fetchFeaturedGrid,
@@ -176,7 +178,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
 
       {/* Name + verification badges */}
       <div className="flex items-center gap-1 mb-1.5">
-        <h3 className="font-semibold text-[#000741] text-sm leading-tight truncate max-w-[120px]">
+        <h3 className="font-semibold text-[#1A1A2E] text-sm leading-tight truncate max-w-[120px]">
           {c.display_name}
         </h3>
         {c.paradedeck_verified && (
@@ -210,7 +212,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       </div>
 
       {/* Follower count */}
-      <p className="text-sm font-bold text-[#000741] mb-2">
+      <p className="text-sm font-bold text-[#1A1A2E] mb-2">
         {formatFollowerCount(c.follower_count)}
         <span className="text-xs font-normal text-gray-400 ml-1">followers</span>
       </p>
@@ -365,7 +367,6 @@ function HomepageEditor({
 export default function HomePage() {
   const { user, loading: authLoading, getRedirectPath } = useAuth();
   const navigate = useNavigate();
-  const [navScrolled, setNavScrolled] = useState(false);
   const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
   const [podcastTotal, setPodcastTotal] = useState<number | null>(null);
   const [podcastsLoading, setPodcastsLoading] = useState(true);
@@ -406,12 +407,6 @@ export default function HomePage() {
     })();
   }, []);
 
-  useEffect(() => {
-    const onScroll = () => setNavScrolled(window.scrollY > 60);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   // Intersection Observer for showcase animation
   useEffect(() => {
     const el = showcaseRef.current;
@@ -424,56 +419,9 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, []);
 
-  const navLinkClass = navScrolled
-    ? "text-gray-600 hover:text-[#6C5CE7]"
-    : "text-white/90 hover:text-white";
-
   return (
-    <div className="min-h-screen bg-white text-[#000741]">
-      {/* Nav — transparent on hero, solid white with border on scroll */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 md:px-8 transition-all duration-300 ${
-          navScrolled ? "bg-white/95 backdrop-blur-md border-b border-gray-200" : "bg-transparent"
-        }`}
-      >
-        <Link to="/" className="shrink-0">
-          <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className={navScrolled ? "text-[#000741]" : "text-white"}>recurrent</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
-          </span>
-        </Link>
-        <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
-          <a href="/#creators" className={`text-sm font-medium ${navLinkClass}`}>Creators</a>
-          <Link to="/events" className={`text-sm font-medium ${navLinkClass}`}>Events</Link>
-          <Link to="/swag" className={`text-sm font-medium ${navLinkClass}`}>SWAG</Link>
-          <Link to="/speakers" className={`text-sm font-medium ${navLinkClass}`}>Speakers</Link>
-          <a href="/#features" className={`text-sm font-medium ${navLinkClass}`}>Features</a>
-        </nav>
-        <div className="flex items-center gap-3 shrink-0">
-          <Link to="/login" className={`text-sm font-medium ${navLinkClass}`}>
-            Sign In
-          </Link>
-          {user ? (
-            <Button
-              size="sm"
-              className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 py-2 font-semibold"
-              onClick={() => {
-                const path = getRedirectPath();
-                if (path) navigate(path);
-                else navigate("/creator/dashboard");
-              }}
-            >
-              Get Started →
-            </Button>
-          ) : (
-            <Link to="/signup">
-              <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 py-2 font-semibold">
-                Get Started →
-              </Button>
-            </Link>
-          )}
-        </div>
-      </header>
+    <div className="min-h-screen bg-white text-[#1A1A2E]">
+      <PublicNav />
 
       {/* Admin: Edit Homepage floating button */}
       {isSuperAdmin && (
@@ -569,7 +517,7 @@ export default function HomePage() {
         <section
           className="relative z-10 py-20 px-8 text-center bg-gray-50 border-y border-gray-200"
         >
-          <h2 className="text-center text-[#000741] font-bold mb-12 text-[2rem]">
+          <h2 className="text-center text-[#1A1A2E] font-bold mb-12 text-[2rem]">
             Built For Those Who Serve & Create
           </h2>
           <p className="text-center text-gray-500 mx-auto mb-12 text-[1.1rem]">
@@ -582,7 +530,7 @@ export default function HomePage() {
                 className="flex flex-col items-center cursor-default transition-transform duration-200 hover:scale-110"
               >
                 <Icon className="h-12 w-12 text-[#6C5CE7] shrink-0" aria-hidden />
-                <span className="text-[#000741] font-medium mt-3 text-base">
+                <span className="text-[#1A1A2E] font-medium mt-3 text-base">
                   {label}
                 </span>
               </div>
@@ -597,7 +545,7 @@ export default function HomePage() {
               <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-3">
                 TRUSTED BY BRANDS NATIONWIDE
               </p>
-              <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#000741] mb-3">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1A1A2E] mb-3">
                 Our Verified Military Creator Network
               </h2>
               <p className="text-gray-500 text-lg max-w-2xl mx-auto">
@@ -635,7 +583,7 @@ export default function HomePage() {
                 <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-2">
                   DISCOVER CREATORS
                 </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
+                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E]">
                   Browse by Category
                 </h2>
               </div>
@@ -666,14 +614,14 @@ export default function HomePage() {
         </section>
 
         {/* Podcast Network */}
-        <section className="px-4 md:px-8 py-16 md:py-20">
+        <section className="px-4 md:px-8 py-16 md:py-20 bg-[#F8F9FA]">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
               <div>
                 <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-2">
                   TUNE IN
                 </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741]">
+                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E]">
                   Veteran & Military Podcast Network
                 </h2>
                 <p className="text-gray-600 mt-1">Discover the voices of those who served. {podcastTotal != null ? `${podcastTotal} podcasts and counting.` : "Podcasts and counting."}</p>
@@ -712,7 +660,7 @@ export default function HomePage() {
                         <Mic2 className={`h-12 w-12 text-white/80 ${(p.image_url || p.artwork_url) ? "hidden" : ""}`} />
                       </div>
                       <div className="p-3">
-                        <p className="text-sm font-semibold text-[#000741] truncate" title={p.title ?? undefined}>
+                        <p className="text-sm font-semibold text-[#1A1A2E] truncate" title={p.title ?? undefined}>
                           {p.title ?? "Untitled"}
                         </p>
                         <p className="text-xs text-gray-500 truncate mt-0.5">{p.author ?? ""}</p>
@@ -728,7 +676,7 @@ export default function HomePage() {
         {/* Events */}
         <section id="events" className="px-4 md:px-8 py-16 md:py-20 bg-gray-50 scroll-mt-20">
           <div className="max-w-6xl mx-auto">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741] mb-2">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-2">
               {cms.events_title}
             </h2>
             <p className="text-gray-600 mb-8 max-w-2xl">
@@ -738,12 +686,12 @@ export default function HomePage() {
               {EVENTS.map((event) => (
                 <div
                   key={event.name}
-                  className="rounded-xl border border-gray-200 bg-white p-5 flex flex-col"
+                  className="rounded-xl border border-[#E5E7EB] bg-white p-5 flex flex-col shadow-sm hover:shadow-md transition-shadow"
                 >
                   <span className="inline-block text-xs font-semibold text-[#6C5CE7] bg-[#6C5CE7]/10 rounded-full px-2.5 py-0.5 w-fit mb-3">
                     {event.tag}
                   </span>
-                  <h3 className="font-semibold text-[#000741] mb-1">{event.name}</h3>
+                  <h3 className="font-semibold text-[#1A1A2E] mb-1">{event.name}</h3>
                   <p className="text-sm text-gray-500 mb-1">{event.date}</p>
                   <p className="text-sm text-gray-600 flex items-center gap-1 mb-4">
                     <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -764,13 +712,13 @@ export default function HomePage() {
         {/* For Brands */}
         <section id="for-brands" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
           <div className="max-w-6xl mx-auto">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741] mb-8">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-8">
               Reach the Military Community Year-Round
             </h2>
             <div className="grid md:grid-cols-3 gap-8 mb-10">
               {BRAND_FEATURES.map((f) => (
-                <div key={f.title} className="rounded-xl border border-gray-200 bg-white p-6">
-                  <h3 className="font-semibold text-[#000741] mb-2">{f.title}</h3>
+                <div key={f.title} className="rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-[#1A1A2E] mb-2">{f.title}</h3>
                   <p className="text-sm text-gray-600">{f.desc}</p>
                 </div>
               ))}
@@ -786,7 +734,7 @@ export default function HomePage() {
         {/* Bottom CTA banner */}
         <section className="px-4 md:px-8 py-14 md:py-20 bg-gray-50 border-t border-gray-200">
           <div className="max-w-3xl mx-auto text-center">
-            <p className="text-xl md:text-2xl font-semibold text-[#000741] mb-6">
+            <p className="text-xl md:text-2xl font-semibold text-[#1A1A2E] mb-6">
               {cms.cta_text}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -796,7 +744,7 @@ export default function HomePage() {
                 </Button>
               </Link>
               <Link to="/brand/events/create">
-                <Button size="lg" variant="outline" className="rounded-lg px-8 border-gray-300 text-[#000741] hover:bg-gray-100">
+                <Button size="lg" variant="outline" className="rounded-lg px-8 border-gray-300 text-[#1A1A2E] hover:bg-gray-100">
                   Create an Event
                 </Button>
               </Link>
@@ -804,35 +752,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="px-4 md:px-8 py-10 border-t border-gray-200 bg-white">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
-              <div>
-                <Link to="/" className="inline-block mb-4">
-                  <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                    <span className="text-[#000741]">recurrent</span>
-                    <span className="text-[#6C5CE7] font-extrabold">X</span>
-                  </span>
-                </Link>
-                <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>
-                <div className="flex gap-4 mt-2 text-sm text-gray-500">
-                  <a href="#" className="hover:text-[#6C5CE7]">Privacy</a>
-                  <a href="#" className="hover:text-[#6C5CE7]">Terms</a>
-                  <a href="#" className="hover:text-[#6C5CE7]">Contact</a>
-                </div>
-              </div>
-              <nav className="flex flex-wrap gap-6 text-sm text-gray-600">
-                <a href="/#creators" className="hover:text-[#6C5CE7]">Community</a>
-                <Link to="/events" className="hover:text-[#6C5CE7]">Events</Link>
-                <a href="/#creators" className="hover:text-[#6C5CE7]">Creators</a>
-                <a href="/#for-brands" className="hover:text-[#6C5CE7]">For Brands</a>
-                <Link to="/brand/events" className="hover:text-[#6C5CE7]">Experiences</Link>
-                <a href="#" className="hover:text-[#6C5CE7]">About</a>
-              </nav>
-            </div>
-          </div>
-        </footer>
+        <PublicFooter />
       </main>
       <PodcastDetailModal
         podcast={selectedPodcast}

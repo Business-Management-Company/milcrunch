@@ -6,6 +6,8 @@ import {
   Calendar, MapPin, ChevronRight, AlertCircle, Loader2,
   ExternalLink,
 } from "lucide-react";
+import PublicNav from "@/components/layout/PublicNav";
+import PublicFooter from "@/components/layout/PublicFooter";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -180,8 +182,10 @@ const EventDetail = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <PublicNav />
+
       {/* ===== HERO ===== */}
-      <div className="relative border-b border-gray-200 py-20 md:py-28 overflow-hidden">
+      <div className="relative border-b border-gray-200 pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden">
         {event.cover_image_url ? (
           <>
             <img
@@ -387,6 +391,8 @@ const EventDetail = () => {
           </p>
         </div>
       </section>
+
+      <PublicFooter />
     </div>
   );
 };

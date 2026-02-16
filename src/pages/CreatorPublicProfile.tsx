@@ -20,6 +20,8 @@ import {
   UserCheck,
   Loader2,
 } from "lucide-react";
+import PublicNav from "@/components/layout/PublicNav";
+import PublicFooter from "@/components/layout/PublicFooter";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   fetchDirectoryMemberByHandle,
@@ -139,22 +141,16 @@ export default function CreatorPublicProfile() {
 
   if (notFound || !creator) {
     return (
-      <div className="min-h-screen bg-white text-[#000741]">
-        <header className="h-14 flex items-center justify-between px-4 md:px-8 border-b border-gray-200 bg-white sticky top-0 z-40">
-          <Link to="/">
-            <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              <span className="text-[#000741]">recurrent</span>
-              <span className="text-[#6C5CE7] font-extrabold">X</span>
-            </span>
-          </Link>
-        </header>
-        <div className="flex flex-col items-center justify-center py-32 px-4">
+      <div className="min-h-screen bg-white text-[#1A1A2E]">
+        <PublicNav />
+        <div className="flex flex-col items-center justify-center py-32 pt-28 px-4">
           <h1 className="text-3xl font-bold mb-4">Creator Not Found</h1>
-          <p className="text-gray-500 mb-8">We couldn't find a creator with that profile.</p>
+          <p className="text-[#6B7280] mb-8">We couldn't find a creator with that profile.</p>
           <Link to="/creators">
             <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">Browse All Creators</Button>
           </Link>
         </div>
+        <PublicFooter />
       </div>
     );
   }
@@ -163,26 +159,10 @@ export default function CreatorPublicProfile() {
   const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-100 text-gray-700 border-gray-200";
 
   return (
-    <div className="min-h-screen bg-gray-50 text-[#000741]">
-      {/* Header */}
-      <header className="h-14 flex items-center justify-between px-4 md:px-8 border-b border-gray-200 bg-white sticky top-0 z-40">
-        <Link to="/">
-          <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-[#000741]">recurrent</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
-          </span>
-        </Link>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7]">Sign In</Link>
-          <Link to="/signup">
-            <Button size="sm" className="rounded-lg bg-[#ED1C24] hover:bg-[#ED1C24]/90 text-white px-5 font-semibold">
-              Get Started
-            </Button>
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-50 text-[#1A1A2E]">
+      <PublicNav />
 
-      <main className="max-w-4xl mx-auto px-4 md:px-8 py-8">
+      <main className="max-w-4xl mx-auto px-4 md:px-8 pt-22 pb-8">
         <Link to="/creators" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6">
           <ArrowLeft className="h-4 w-4" /> Back to Creators
         </Link>
@@ -341,13 +321,7 @@ export default function CreatorPublicProfile() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white mt-12">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <p className="text-sm text-gray-500">&copy; 2026 RecurrentX. All rights reserved.</p>
-          <Link to="/" className="text-sm text-[#6C5CE7] hover:underline">Home</Link>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

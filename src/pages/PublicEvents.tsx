@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, MapPin, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import PublicNav from "@/components/layout/PublicNav";
+import PublicFooter from "@/components/layout/PublicFooter";
 
 interface EventRow {
   id: string;
@@ -131,37 +133,15 @@ export default function PublicEvents() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      {/* Nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <Link to="/" className="shrink-0">
-            <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              <span className="text-[#000741]">recurrent</span>
-              <span className="text-[#6C5CE7] font-extrabold">X</span>
-            </span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Home</Link>
-            <Link to="/creators" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Creators</Link>
-            <Link to="/events" className="text-sm text-gray-900 font-medium">Events</Link>
-            <Link to="/podcasts" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Podcasts</Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Sign In</Link>
-            <Link to="/signup" className="text-sm bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-4 py-1.5 rounded-lg font-medium transition-colors">
-              Get Started
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicNav />
 
       {/* Hero */}
-      <section className="pt-28 pb-12 px-4 md:px-8">
+      <section className="pt-28 pb-12 px-4 md:px-8 bg-[#F8F9FA]">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 text-[#000741]">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 text-[#1A1A2E]">
             Upcoming Events
           </h1>
-          <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-[#6B7280] max-w-2xl mx-auto">
             MIC. MilSpouseFest. And more. Join the military community at an event near you.
           </p>
         </div>
@@ -191,18 +171,7 @@ export default function PublicEvents() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 py-8 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <Link to="/">
-            <span className="font-bold text-lg" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              <span className="text-[#000741]">recurrent</span>
-              <span className="text-[#6C5CE7] font-extrabold">X</span>
-            </span>
-          </Link>
-          <p className="text-sm text-gray-400">&copy; 2026 RecurrentX. All rights reserved.</p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
