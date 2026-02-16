@@ -4,6 +4,7 @@ import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
   Search, Download, CheckCircle2, XCircle, Ticket, Globe, Copy, Code, QrCode,
+  MessageCircle,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import EventCommunityTab from "@/components/EventCommunityTab";
 
 /* ---------- types ---------- */
 interface EventRow {
@@ -45,6 +47,7 @@ interface EventRow {
   og_title: string | null;
   og_description: string | null;
   og_image_url: string | null;
+  created_at: string | null;
 }
 interface AgendaRow {
   id: string;
@@ -429,6 +432,7 @@ const BrandEventDetail = () => {
             <TabsTrigger value="speakers"><Mic className="h-4 w-4 mr-1.5" />Speakers</TabsTrigger>
             <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
             <TabsTrigger value="registrations"><Ticket className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-emerald-100 text-emerald-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
+            <TabsTrigger value="community"><MessageCircle className="h-4 w-4 mr-1.5" />Community</TabsTrigger>
             <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
           </TabsList>
@@ -792,6 +796,16 @@ const BrandEventDetail = () => {
                 </div>
               );
             })()}
+          </TabsContent>
+
+          {/* ===== COMMUNITY ===== */}
+          <TabsContent value="community">
+            <EventCommunityTab
+              eventId={eventId!}
+              eventCreatedAt={event.created_at ?? null}
+              eventStartDate={event.start_date}
+              registrationCount={registrations.length}
+            />
           </TabsContent>
 
           {/* ===== PUBLIC PAGE ===== */}
