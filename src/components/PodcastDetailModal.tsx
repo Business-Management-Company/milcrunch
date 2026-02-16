@@ -83,15 +83,15 @@ export default function PodcastDetailModal({
           <DialogHeader>
             <div className="flex gap-4">
               <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center">
-                {podcast.artwork_url ? (
+                {(podcast.image_url || podcast.artwork_url) ? (
                   <img
-                    src={podcast.artwork_url}
+                    src={(podcast.image_url || podcast.artwork_url)!}
                     alt=""
                     className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }}
                   />
-                ) : (
-                  <Mic2 className="h-10 w-10 text-white/80" />
-                )}
+                ) : null}
+                <Mic2 className={`h-10 w-10 text-white/80 ${(podcast.image_url || podcast.artwork_url) ? "hidden" : ""}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <DialogTitle className="text-xl font-bold text-[#000741] leading-tight">

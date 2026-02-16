@@ -229,6 +229,7 @@ export default function AdminPodcasts() {
           description: preview.description || null,
           author: preview.author || null,
           artwork_url: preview.artworkUrl || null,
+          image_url: preview.artworkUrl || null,
           website_url: preview.websiteUrl || null,
           category: null,
           language: preview.language || "en",
@@ -295,6 +296,7 @@ export default function AdminPodcasts() {
               description: parsed.description ?? null,
               author: (parsed.author || row.author) ?? null,
               artwork_url: parsed.artworkUrl ?? null,
+              image_url: parsed.artworkUrl ?? null,
               website_url: parsed.websiteUrl ?? null,
               category: row.category ?? null,
               language: parsed.language || "en",
@@ -346,6 +348,7 @@ export default function AdminPodcasts() {
         description: parsed.description ?? row.description,
         author: parsed.author ?? row.author,
         artwork_url: parsed.artworkUrl ?? row.artwork_url,
+        image_url: parsed.artworkUrl ?? row.image_url ?? row.artwork_url,
         website_url: parsed.websiteUrl ?? row.website_url,
         language: parsed.language || row.language,
         episode_count: parsed.episodeCount,
@@ -404,6 +407,7 @@ export default function AdminPodcasts() {
         description: editForm.description || null,
         category: editForm.category || null,
         artwork_url: editForm.artwork_url || null,
+        image_url: editForm.artwork_url || null,
         website_url: editForm.website_url || null,
         status: editForm.status || "active",
       })
@@ -564,13 +568,12 @@ export default function AdminPodcasts() {
                 {paginated.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>
-                      {row.artwork_url ? (
-                        <img src={row.artwork_url} alt="" className="h-10 w-10 rounded object-cover" />
-                      ) : (
-                        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
-                          <Mic2 className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
+                      {(row.image_url || row.artwork_url) ? (
+                        <img src={(row.image_url || row.artwork_url)!} alt="" className="h-10 w-10 rounded object-cover" onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }} />
+                      ) : null}
+                      <div className={`h-10 w-10 rounded bg-muted flex items-center justify-center ${(row.image_url || row.artwork_url) ? "hidden" : ""}`}>
+                        <Mic2 className="h-5 w-5 text-muted-foreground" />
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium max-w-[200px] truncate" title={row.title ?? undefined}>{row.title ?? "—"}</TableCell>
                     <TableCell className="max-w-[120px] truncate" title={row.author ?? undefined}>{row.author ?? "—"}</TableCell>

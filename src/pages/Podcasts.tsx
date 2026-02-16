@@ -140,11 +140,10 @@ export default function PodcastsPage() {
                     onClick={() => setSelectedPodcast(podcast)}
                   >
                     <div className="aspect-square bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
-                      {podcast.artwork_url ? (
-                        <img src={podcast.artwork_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Mic2 className="h-16 w-16 text-white/80" />
-                      )}
+                      {(podcast.image_url || podcast.artwork_url) ? (
+                        <img src={(podcast.image_url || podcast.artwork_url)!} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }} />
+                      ) : null}
+                      <Mic2 className={`h-16 w-16 text-white/80 ${(podcast.image_url || podcast.artwork_url) ? "hidden" : ""}`} />
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-[#000741] line-clamp-2" title={podcast.title ?? undefined}>

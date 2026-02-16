@@ -706,11 +706,10 @@ export default function HomePage() {
                       className="group rounded-xl overflow-hidden border border-gray-200 bg-white hover:shadow-lg transition-shadow text-left"
                     >
                       <div className="aspect-square bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
-                        {p.artwork_url ? (
-                          <img src={p.artwork_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Mic2 className="h-12 w-12 text-white/80" />
-                        )}
+                        {(p.image_url || p.artwork_url) ? (
+                          <img src={(p.image_url || p.artwork_url)!} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }} />
+                        ) : null}
+                        <Mic2 className={`h-12 w-12 text-white/80 ${(p.image_url || p.artwork_url) ? "hidden" : ""}`} />
                       </div>
                       <div className="p-3">
                         <p className="text-sm font-semibold text-[#000741] truncate" title={p.title ?? undefined}>
