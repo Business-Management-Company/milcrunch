@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAIAssistant } from "@/contexts/AIAssistantContext";
+import { useContext } from "react";
+import { AdminChatContext } from "@/contexts/AdminChatContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
@@ -95,7 +96,7 @@ function formatCount(n: number): string {
 
 export default function SummaryDashboard() {
   const { user } = useAuth();
-  const { openPanel, sendMessage } = useAIAssistant();
+  const adminChat = useContext(AdminChatContext);
   const inputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
 
@@ -177,13 +178,12 @@ export default function SummaryDashboard() {
     ]);
   }, []);
 
-  // Submit prompt → open AI Assistant panel and send message
+  // Submit prompt → send via Admin AI Chat
   const handleSubmit = () => {
     const q = prompt.trim();
-    if (!q) return;
+    if (!q || !adminChat) return;
     setPrompt("");
-    openPanel();
-    sendMessage(q);
+    adminChat.sendMessage(q);
   };
 
   return (

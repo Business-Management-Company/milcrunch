@@ -92,7 +92,6 @@ import Verification from "./pages/Verification";
 import Speakers from "./pages/Speakers";
 import { ListProvider } from "./contexts/ListContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { AIAssistantProvider } from "./contexts/AIAssistantContext";
 import AppLayout from "./components/layout/AppLayout";
 import RoleAwareChatProvider from "./components/RoleAwareChatProvider";
 import FloatingAdminChat from "./components/superadmin/FloatingAdminChat";
@@ -114,7 +113,6 @@ const App = () => (
         <AuthProvider>
           <DevAdminProvider>
             <ListProvider>
-            <AIAssistantProvider>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/creators" element={<Creators />} />
@@ -223,7 +221,6 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <DevRoleSwitcher />
-            </AIAssistantProvider>
             </ListProvider>
           </DevAdminProvider>
         </AuthProvider>

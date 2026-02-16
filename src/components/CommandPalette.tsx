@@ -8,11 +8,9 @@ import {
   Megaphone,
   Sun,
   Moon,
-  Sparkles,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import { cn } from "@/lib/utils";
 
 export interface CommandAction {
@@ -31,7 +29,6 @@ interface CommandPaletteProps {
 export default function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { setMode } = useTheme();
-  const { togglePanel: toggleAI } = useAIAssistant();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -39,12 +36,11 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
     { id: "search-creators", label: "Search Creators", keywords: ["discover", "creator", "search"], icon: Search, run: () => { navigate("/brand/discover"); onOpenChange(false); } },
     { id: "view-lists", label: "View Lists", keywords: ["lists", "list"], icon: List, run: () => { navigate("/brand/lists"); onOpenChange(false); } },
     { id: "manage-events", label: "Manage Events", keywords: ["events", "calendar"], icon: Calendar, run: () => { navigate("/admin/events"); onOpenChange(false); } },
-    { id: "ai-assistant", label: "Open AI Assistant", keywords: ["ai", "assistant", "agent"], icon: Sparkles, run: () => { toggleAI(); onOpenChange(false); } },
     { id: "dark-mode", label: "Switch to Dark Mode", keywords: ["dark", "theme"], icon: Moon, run: () => { setMode("dark"); onOpenChange(false); } },
     { id: "light-mode", label: "Switch to Light Mode", keywords: ["light", "theme"], icon: Sun, run: () => { setMode("light"); onOpenChange(false); } },
     { id: "dashboard", label: "Go to Dashboard", keywords: ["dashboard", "home"], icon: LayoutDashboard, run: () => { navigate("/dashboard"); onOpenChange(false); } },
     { id: "campaigns", label: "Go to Campaigns", keywords: ["campaigns", "campaign"], icon: Megaphone, run: () => { navigate("/brand/campaigns"); onOpenChange(false); } },
-  ], [navigate, onOpenChange, toggleAI, setMode]);
+  ], [navigate, onOpenChange, setMode]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import TopNav from "@/components/layout/TopNav";
 import Sidebar from "@/components/layout/Sidebar";
 import CommandPalette from "@/components/CommandPalette";
-import AIAssistant from "@/components/AIAssistant";
 import FloatingAdminChat from "@/components/superadmin/FloatingAdminChat";
-import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import { AdminChatContext } from "@/contexts/AdminChatContext";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +16,6 @@ export default function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { isOpen: aiPanelOpen, togglePanel: toggleAIPanel } = useAIAssistant();
   const adminChat = useContext(AdminChatContext);
 
   const checkMobile = useCallback(() => {
@@ -39,14 +36,10 @@ export default function AppLayout() {
         e.preventDefault();
         setCommandOpen((o) => !o);
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "j") {
-        e.preventDefault();
-        toggleAIPanel();
-      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleAIPanel]);
+  }, []);
 
   const sidebarWidth = isMobile ? (mobileOpen ? SIDEBAR_WIDTH : SIDEBAR_COLLAPSED_WIDTH) : SIDEBAR_WIDTH;
   const sidebarCollapsed = isMobile ? !mobileOpen : false;
@@ -77,7 +70,6 @@ export default function AppLayout() {
         </div>
       </main>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      <AIAssistant />
       {adminChat && <FloatingAdminChat />}
     </div>
   );

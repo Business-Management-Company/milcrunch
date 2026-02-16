@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
-import { Bell, ChevronDown, Sparkles } from "lucide-react";
+import { Bell, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
-import { useAIAssistant } from "@/contexts/AIAssistantContext";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -28,7 +27,6 @@ interface TopNavProps {
 }
 
 export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
-  const { togglePanel: toggleAIPanel } = useAIAssistant();
   const { user, isSuperAdmin, signOut } = useAuth();
   const displayName = user?.user_metadata?.full_name ?? user?.email ?? "User";
   const initials = getInitials(user?.user_metadata?.full_name as string, user?.email ?? "");
@@ -67,16 +65,6 @@ export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
       </button>
 
       <div className="flex items-center gap-2 shrink-0">
-        <Button
-          variant="default"
-          size="sm"
-          className="gap-2 bg-[#0064B1] hover:bg-[#053877] text-white rounded-full px-4 py-2"
-          onClick={toggleAIPanel}
-          title="AI Assistant (⌘J)"
-        >
-          <Sparkles className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">✨ AI Assistant</span>
-        </Button>
         <ThemeToggle />
         <Button variant="ghost" size="icon" className="rounded-full" aria-label="Notifications">
           <Bell className="h-5 w-5 text-muted-foreground" />
