@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
@@ -19,19 +22,28 @@ export default function ImageUpload({
   value,
   onChange,
   label,
-  bucket = "creator-assets",
-  folder = "cms",
+  bucket = "event-images",
+  folder = "uploads",
   className = "",
 }: ImageUploadProps) {
   const { user } = useAuth();
   const [mode, setMode] = useState<"upload" | "url">(value ? "url" : "upload");
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(
     async (file: File) => {
-      if (!file.type.startsWith("image/")) return;
+      setError(null);
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        setError("Only PNG, JPG, and WEBP files are accepted.");
+        return;
+      }
+      if (file.size > MAX_SIZE) {
+        setError("File must be under 5 MB.");
+        return;
+      }
       setUploading(true);
       try {
         const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -146,7 +158,7 @@ export default function ImageUpload({
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept=".png,.jpg,.jpeg,.webp"
             className="hidden"
             onChange={onFileChange}
           />
@@ -169,6 +181,8 @@ export default function ImageUpload({
           className="text-xs"
         />
       )}
+
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 }

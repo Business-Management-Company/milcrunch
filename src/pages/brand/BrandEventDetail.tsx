@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import ImageUpload from "@/components/cms/ImageUpload";
 import EventCommunityTab from "@/components/EventCommunityTab";
 import CheckInMode from "@/components/CheckInMode";
 import EventBadgePrint from "@/components/EventBadgePrint";
@@ -551,8 +552,12 @@ const BrandEventDetail = () => {
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <Label>Cover Image URL</Label>
-                  <Input value={editCover} onChange={(e) => setEditCover(e.target.value)} className="mt-1" />
+                  <ImageUpload
+                    label="Cover Image"
+                    value={editCover}
+                    onChange={(url) => setEditCover(url)}
+                    folder="events"
+                  />
                 </div>
               </div>
               <div className="flex justify-end pt-2">
@@ -1102,8 +1107,12 @@ const BrandEventDetail = () => {
                           <p className="text-xs text-muted-foreground mt-0.5">{editOgDesc.length}/160 characters</p>
                         </div>
                         <div>
-                          <Label>OG Image URL</Label>
-                          <Input value={editOgImage} onChange={(e) => setEditOgImage(e.target.value)} placeholder={event.cover_image_url || "https://..."} className="mt-1" />
+                          <ImageUpload
+                            label="OG Image"
+                            value={editOgImage}
+                            onChange={(url) => setEditOgImage(url)}
+                            folder="events"
+                          />
                         </div>
                       </div>
                       <div>

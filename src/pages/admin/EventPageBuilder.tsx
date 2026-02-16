@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ImageUpload from "@/components/cms/ImageUpload";
 import {
   ArrowLeft, Eye, Save, Plus, Trash2, GripVertical, Image,
   Type, Users, Calendar, MapPin, HelpCircle, Star, Video,
@@ -744,23 +745,19 @@ const EventPageBuilder = () => {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Logo</Label>
-            <Input
-              value={brandSettings.logoUrl}
-              onChange={(e) => setBrandSettings({ ...brandSettings, logoUrl: e.target.value })}
-              placeholder="Logo URL"
-            />
-          </div>
+          <ImageUpload
+            label="Logo"
+            value={brandSettings.logoUrl}
+            onChange={(url) => setBrandSettings({ ...brandSettings, logoUrl: url })}
+            folder="event-pages"
+          />
 
-          <div className="space-y-3">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Cover Image</Label>
-            <Input
-              value={brandSettings.coverImageUrl}
-              onChange={(e) => setBrandSettings({ ...brandSettings, coverImageUrl: e.target.value })}
-              placeholder="Cover image URL"
-            />
-          </div>
+          <ImageUpload
+            label="Cover Image"
+            value={brandSettings.coverImageUrl}
+            onChange={(url) => setBrandSettings({ ...brandSettings, coverImageUrl: url })}
+            folder="event-pages"
+          />
 
           <Button variant="outline" className="w-full" onClick={handleAIGenerate} disabled={isGenerating}>
             {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}

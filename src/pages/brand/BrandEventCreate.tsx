@@ -5,6 +5,7 @@ import {
   ClipboardList, Calendar, Mic, Handshake, CheckCircle, Ticket,
   MessageCircle, MapPin, LogOut,
 } from "lucide-react";
+import ImageUpload from "@/components/cms/ImageUpload";
 import CityAutocomplete from "@/components/CityAutocomplete";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -649,8 +650,12 @@ const BrandEventCreate = () => {
                 />
               </div>
               <div className="md:col-span-2">
-                <Label>Cover Image URL</Label>
-                <Input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="https://..." className="mt-1" />
+                <ImageUpload
+                  label="Cover Image"
+                  value={coverUrl}
+                  onChange={(url) => setCoverUrl(url)}
+                  folder="events"
+                />
               </div>
             </div>
           </Card>
@@ -829,8 +834,12 @@ const BrandEventCreate = () => {
                         <Input value={s.topic} onChange={(e) => updateSpeaker(s.key, "topic", e.target.value)} placeholder="The Future of Military Creator Economy" className="mt-1" />
                       </div>
                       <div>
-                        <Label className="text-xs">Avatar URL</Label>
-                        <Input value={s.avatar_url} onChange={(e) => updateSpeaker(s.key, "avatar_url", e.target.value)} placeholder="https://..." className="mt-1" />
+                        <ImageUpload
+                          label="Avatar"
+                          value={s.avatar_url}
+                          onChange={(url) => updateSpeaker(s.key, "avatar_url", url)}
+                          folder="speakers"
+                        />
                       </div>
                       <div className="md:col-span-3">
                         <Label className="text-xs">Bio</Label>
@@ -885,8 +894,12 @@ const BrandEventCreate = () => {
                         <Input value={s.website_url} onChange={(e) => updateSponsor(s.key, "website_url", e.target.value)} placeholder="https://usaa.com" className="mt-1" />
                       </div>
                       <div>
-                        <Label className="text-xs">Logo URL</Label>
-                        <Input value={s.logo_url} onChange={(e) => updateSponsor(s.key, "logo_url", e.target.value)} placeholder="https://..." className="mt-1" />
+                        <ImageUpload
+                          label="Logo"
+                          value={s.logo_url}
+                          onChange={(url) => updateSponsor(s.key, "logo_url", url)}
+                          folder="sponsors"
+                        />
                       </div>
                       <div className="md:col-span-2">
                         <Label className="text-xs">Description</Label>

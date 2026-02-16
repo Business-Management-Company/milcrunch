@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ImageUpload from "@/components/cms/ImageUpload";
 import {
   Dialog,
   DialogContent,
@@ -311,12 +312,11 @@ export default function FeaturedCreators() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="avatar_url">Avatar URL</Label>
-        <Input
-          id="avatar_url"
+        <ImageUpload
+          label="Avatar"
           value={form.avatar_url}
-          onChange={(e) => setForm((f) => ({ ...f, avatar_url: e.target.value }))}
-          placeholder="https://..."
+          onChange={(url) => setForm((f) => ({ ...f, avatar_url: url }))}
+          folder="featured-creators"
         />
       </div>
       <div className="grid grid-cols-2 gap-4">
