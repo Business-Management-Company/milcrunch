@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -10,11 +13,13 @@ import {
 } from "@/components/ui/select";
 import {
   Eye, Users, Mic, DollarSign, FileText, Download, Loader2,
-  TrendingUp, ChevronDown, ChevronUp, BarChart3,
+  TrendingUp, ChevronDown, ChevronUp, BarChart3, PieChart as PieChartIcon,
+  LineChart as LineChartIcon, Trophy, Star, Award, ArrowUpRight,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
+  PieChart, Pie, Cell,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -46,9 +51,21 @@ interface ChartDataPoint {
   revenue_attribution?: number;
 }
 
+interface DirectoryCreator {
+  id: string;
+  creator_name: string | null;
+  creator_handle: string;
+  avatar_url: string | null;
+  platform: string;
+  follower_count: number | null;
+  engagement_rate: number | null;
+  profile_slug: string | null;
+}
+
 interface Props {
   eventId: string;
   eventStartDate?: string | null;
+  directoryId?: string | null;
 }
 
 /* ---------- constants ---------- */
@@ -62,15 +79,27 @@ const METRIC_CONFIG: Record<string, { label: string; color: string; icon: typeof
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const PIE_COLORS = ["#6C5CE7", "#0984E3", "#00B894", "#FDCB6E", "#D63031", "#A29BFE"];
+
+const RANK_BADGES: Record<number, { label: string; color: string; bg: string }> = {
+  0: { label: "Gold", color: "text-amber-700", bg: "bg-amber-100 border-amber-300" },
+  1: { label: "Silver", color: "text-gray-600", bg: "bg-gray-100 border-gray-300" },
+  2: { label: "Bronze", color: "text-orange-700", bg: "bg-orange-100 border-orange-300" },
+};
+
 /* ---------- component ---------- */
-export default function EventInsightsTab({ eventId }: Props) {
+export default function EventInsightsTab({ eventId, directoryId }: Props) {
   const [metrics, setMetrics] = useState<EngagementMetric[]>([]);
   const [sponsors, setSponsors] = useState<SponsorOption[]>([]);
+  const [creators, setCreators] = useState<DirectoryCreator[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
   const [selectedSponsor, setSelectedSponsor] = useState("all");
   const [granularity, setGranularity] = useState<"monthly" | "quarterly">("monthly");
+  const [chartType, setChartType] = useState<"line" | "donut">("line");
+  const [pieMetric, setPieMetric] = useState<string>("sponsor_impressions");
+  const [creatorSort, setCreatorSort] = useState<"impact" | "followers" | "engagement">("impact");
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
     sponsor_impressions: true,
     community_growth: true,
@@ -83,6 +112,7 @@ export default function EventInsightsTab({ eventId }: Props) {
   const [showCreators, setShowCreators] = useState(false);
   const [showSponsors, setShowSponsors] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [showImpact, setShowImpact] = useState(false);
 
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -90,7 +120,7 @@ export default function EventInsightsTab({ eventId }: Props) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [metricsRes, sponsorsRes] = await Promise.all([
+      const queries: Promise<unknown>[] = [
         supabase
           .from("event_engagement_metrics")
           .select("*")
@@ -101,18 +131,45 @@ export default function EventInsightsTab({ eventId }: Props) {
           .select("id, sponsor_name")
           .eq("event_id", eventId)
           .order("sort_order"),
-      ]);
-      if (metricsRes.error) throw metricsRes.error;
-      if (sponsorsRes.error) console.error("Failed to load sponsors:", sponsorsRes.error);
+      ];
+
+      // Fetch directory creators if linked
+      if (directoryId) {
+        queries.push(
+          supabase
+            .from("directory_members")
+            .select("id, creator_name, creator_handle, avatar_url, platform, follower_count, engagement_rate, profile_slug")
+            .eq("directory_id", directoryId)
+            .eq("approved", true)
+            .order("follower_count", { ascending: false })
+            .limit(20)
+        );
+      }
+
+      const results = await Promise.all(queries);
+      const [metricsRes, sponsorsRes] = results as [
+        { data: unknown[] | null; error: unknown },
+        { data: unknown[] | null; error: unknown },
+      ];
+
+      if ((metricsRes as { error: unknown }).error) throw (metricsRes as { error: unknown }).error;
+      if ((sponsorsRes as { error: unknown }).error) console.error("Failed to load sponsors:", (sponsorsRes as { error: unknown }).error);
+
       setMetrics((metricsRes.data || []) as unknown as EngagementMetric[]);
       setSponsors((sponsorsRes.data || []) as unknown as SponsorOption[]);
+
+      if (directoryId && results[2]) {
+        const creatorsRes = results[2] as { data: unknown[] | null; error: unknown };
+        if (creatorsRes.error) console.error("Failed to load creators:", creatorsRes.error);
+        setCreators((creatorsRes.data || []) as unknown as DirectoryCreator[]);
+      }
     } catch (err) {
       console.error("Error loading engagement metrics:", err);
       toast.error("Failed to load insights data");
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, directoryId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -150,9 +207,8 @@ export default function EventInsightsTab({ eventId }: Props) {
     };
   }, [metrics]);
 
-  /* ---------- computed: chart data ---------- */
+  /* ---------- computed: chart data (line) ---------- */
   const chartData = useMemo(() => {
-    // Group metrics by month
     const monthMap = new Map<string, ChartDataPoint>();
 
     for (const m of metrics) {
@@ -166,7 +222,6 @@ export default function EventInsightsTab({ eventId }: Props) {
       const point = monthMap.get(key)!;
 
       if (m.metric_type === "sponsor_impressions") {
-        // Filter by sponsor if not "all"
         if (selectedSponsor !== "all") {
           const sid = (m.metadata as Record<string, unknown>)?.sponsor_id;
           if (sid !== selectedSponsor) continue;
@@ -182,7 +237,6 @@ export default function EventInsightsTab({ eventId }: Props) {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([, v]) => v);
 
-    // Quarterly aggregation
     if (granularity === "quarterly" && data.length > 0) {
       const quarters: ChartDataPoint[] = [];
       for (let i = 0; i < data.length; i += 3) {
@@ -192,7 +246,6 @@ export default function EventInsightsTab({ eventId }: Props) {
         for (const key of Object.keys(METRIC_CONFIG) as (keyof typeof METRIC_CONFIG)[]) {
           const vals = chunk.map((c) => (c[key as keyof ChartDataPoint] as number) || 0);
           if (key === "community_growth") {
-            // For cumulative metrics, take the last value
             aggregated[key as keyof Omit<ChartDataPoint, "label">] = vals[vals.length - 1];
           } else {
             aggregated[key as keyof Omit<ChartDataPoint, "label">] = vals.reduce((a, b) => a + b, 0);
@@ -205,6 +258,24 @@ export default function EventInsightsTab({ eventId }: Props) {
 
     return data;
   }, [metrics, selectedSponsor, granularity]);
+
+  /* ---------- computed: pie chart data ---------- */
+  const pieData = useMemo(() => {
+    // For the selected metric, show top 4 months + "Other"
+    const relevantData = chartData
+      .filter((d) => (d[pieMetric as keyof ChartDataPoint] as number) > 0)
+      .map((d) => ({
+        name: d.label,
+        value: Math.round((d[pieMetric as keyof ChartDataPoint] as number) || 0),
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    if (relevantData.length <= 5) return relevantData;
+
+    const top4 = relevantData.slice(0, 4);
+    const otherSum = relevantData.slice(4).reduce((acc, d) => acc + d.value, 0);
+    return [...top4, { name: "Other", value: otherSum }];
+  }, [chartData, pieMetric]);
 
   /* ---------- computed: sponsor breakdown ---------- */
   const sponsorBreakdown = useMemo(() => {
@@ -249,6 +320,24 @@ export default function EventInsightsTab({ eventId }: Props) {
       });
   }, [metrics]);
 
+  /* ---------- computed: ranked creators ---------- */
+  const rankedCreators = useMemo(() => {
+    const withImpact = creators.map((c) => {
+      const followers = c.follower_count || 0;
+      const engagement = c.engagement_rate || 0;
+      const impactScore = Math.round((followers * engagement) / 100);
+      return { ...c, impactScore };
+    });
+
+    return withImpact.sort((a, b) => {
+      if (creatorSort === "followers") return (b.follower_count || 0) - (a.follower_count || 0);
+      if (creatorSort === "engagement") return (b.engagement_rate || 0) - (a.engagement_rate || 0);
+      return b.impactScore - a.impactScore;
+    });
+  }, [creators, creatorSort]);
+
+  const topCreator = rankedCreators[0] || null;
+
   /* ---------- export ---------- */
   const exportChartPNG = async () => {
     if (!chartRef.current) return;
@@ -274,6 +363,12 @@ export default function EventInsightsTab({ eventId }: Props) {
   /* ---------- toggle ---------- */
   const toggleLine = (key: string) => {
     setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const formatNumber = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toLocaleString();
   };
 
   /* ---------- render ---------- */
@@ -357,6 +452,42 @@ export default function EventInsightsTab({ eventId }: Props) {
           </Button>
         </div>
 
+        {/* Chart type toggle */}
+        <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <Button
+            size="sm"
+            variant={chartType === "line" ? "default" : "ghost"}
+            onClick={() => setChartType("line")}
+            className="text-xs h-7"
+          >
+            <LineChartIcon className="h-3.5 w-3.5 mr-1" />
+            Line
+          </Button>
+          <Button
+            size="sm"
+            variant={chartType === "donut" ? "default" : "ghost"}
+            onClick={() => setChartType("donut")}
+            className="text-xs h-7"
+          >
+            <PieChartIcon className="h-3.5 w-3.5 mr-1" />
+            Donut
+          </Button>
+        </div>
+
+        {/* Pie metric selector (only visible in donut mode) */}
+        {chartType === "donut" && (
+          <Select value={pieMetric} onValueChange={setPieMetric}>
+            <SelectTrigger className="w-[200px] bg-white dark:bg-[#1A1D27]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(METRIC_CONFIG).map(([key, { label }]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {/* Export */}
         <Button variant="outline" size="sm" onClick={exportChartPNG} className="ml-auto">
           <Download className="h-4 w-4 mr-1.5" />
@@ -364,86 +495,265 @@ export default function EventInsightsTab({ eventId }: Props) {
         </Button>
       </div>
 
-      {/* ===== METRIC TOGGLES ===== */}
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(METRIC_CONFIG).map(([key, { label, color }]) => (
-          <button
-            key={key}
-            onClick={() => toggleLine(key)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-              visibleLines[key]
-                ? "border-transparent text-white"
-                : "border-gray-300 dark:border-gray-600 text-muted-foreground bg-transparent"
-            }`}
-            style={visibleLines[key] ? { backgroundColor: color } : undefined}
-          >
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* ===== METRIC TOGGLES (line chart only) ===== */}
+      {chartType === "line" && (
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(METRIC_CONFIG).map(([key, { label, color }]) => (
+            <button
+              key={key}
+              onClick={() => toggleLine(key)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                visibleLines[key]
+                  ? "border-transparent text-white"
+                  : "border-gray-300 dark:border-gray-600 text-muted-foreground bg-transparent"
+              }`}
+              style={visibleLines[key] ? { backgroundColor: color } : undefined}
+            >
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ===== CHART ===== */}
       <div ref={chartRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
-        <ResponsiveContainer width="100%" height={350}>
-          <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-            <defs>
-              {Object.entries(METRIC_CONFIG).map(([key, { color }]) => (
-                <linearGradient key={key} id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              ))}
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis
-              dataKey="label"
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickLine={false}
-            />
-            <YAxis
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickLine={false}
-              tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-              formatter={(value: number, name: string) => [
-                value.toLocaleString(),
-                METRIC_CONFIG[name]?.label || name,
-              ]}
-            />
-            <Legend
-              content={() => null}
-            />
-            {Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
-              visibleLines[key] ? (
-                <Area
-                  key={key}
-                  type="monotone"
-                  dataKey={key}
-                  stroke={color}
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill={`url(#grad-${key})`}
-                  dot={{ r: 3, fill: color }}
-                  activeDot={{ r: 5, fill: color }}
+        {chartType === "line" ? (
+          <ResponsiveContainer width="100%" height={350}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+              <defs>
+                {Object.entries(METRIC_CONFIG).map(([key, { color }]) => (
+                  <linearGradient key={key} id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={color} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                dataKey="label"
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={12}
+                tickLine={false}
+              />
+              <YAxis
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={12}
+                tickLine={false}
+                tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                }}
+                formatter={(value: number, name: string) => [
+                  value.toLocaleString(),
+                  METRIC_CONFIG[name]?.label || name,
+                ]}
+              />
+              <Legend content={() => null} />
+              {Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
+                visibleLines[key] ? (
+                  <Area
+                    key={key}
+                    type="monotone"
+                    dataKey={key}
+                    stroke={color}
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill={`url(#grad-${key})`}
+                    dot={{ r: 3, fill: color }}
+                    activeDot={{ r: 5, fill: color }}
+                  />
+                ) : null
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          /* ===== DONUT CHART ===== */
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <ResponsiveContainer width="100%" height={350}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80}
+                  outerRadius={140}
+                  paddingAngle={3}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {pieData.map((_, index) => (
+                    <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                  formatter={(value: number) => [value.toLocaleString(), METRIC_CONFIG[pieMetric]?.label]}
                 />
-              ) : null
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-col gap-2 min-w-[180px]">
+              {pieData.map((entry, i) => (
+                <div key={entry.name} className="flex items-center gap-2 text-sm">
+                  <span
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                  />
+                  <span className="text-muted-foreground">{entry.name}</span>
+                  <span className="ml-auto font-semibold">{entry.value.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ===== CREATOR SPOTLIGHT + IMPACT ===== */}
+      {directoryId && creators.length > 0 && (
+        <>
+          {/* Spotlight Card */}
+          {topCreator && (
+            <div className="rounded-xl overflow-hidden bg-gradient-to-r from-[#6C5CE7] to-[#a29bfe] p-6 text-white">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 border-2 border-white/30">
+                  <AvatarImage src={topCreator.avatar_url || undefined} />
+                  <AvatarFallback className="bg-white/20 text-white text-lg">
+                    {(topCreator.creator_name || topCreator.creator_handle || "?")[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <Trophy className="h-4 w-4 text-amber-300" />
+                    <span className="text-xs font-medium text-white/70 uppercase tracking-wide">Top Creator</span>
+                  </div>
+                  <h3 className="text-xl font-bold truncate">{topCreator.creator_name || topCreator.creator_handle}</h3>
+                  <p className="text-white/70 text-sm">@{topCreator.creator_handle}</p>
+                </div>
+                <div className="text-right hidden sm:block">
+                  <p className="text-3xl font-bold">{formatNumber(topCreator.impactScore)}</p>
+                  <p className="text-xs text-white/70">Impact Score</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                <div>
+                  <span className="text-white/60">Followers</span>
+                  <span className="ml-1.5 font-semibold">{formatNumber(topCreator.follower_count || 0)}</span>
+                </div>
+                <div>
+                  <span className="text-white/60">Engagement</span>
+                  <span className="ml-1.5 font-semibold">{(topCreator.engagement_rate || 0).toFixed(2)}%</span>
+                </div>
+                <div>
+                  <span className="text-white/60">Est. Impressions</span>
+                  <span className="ml-1.5 font-semibold">{formatNumber(Math.round((topCreator.follower_count || 0) * (topCreator.engagement_rate || 0) / 100 * 12))}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Creator Impact Rankings */}
+          <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+            <button
+              onClick={() => setShowImpact(!showImpact)}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-amber-500" />
+                <span className="font-semibold text-sm">Creator Impact Rankings</span>
+                <Badge className="ml-1 bg-purple-100 text-purple-700 text-xs">{creators.length}</Badge>
+              </div>
+              {showImpact ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {showImpact && (
+              <div className="border-t border-gray-200 dark:border-gray-800">
+                {/* Sort dropdown */}
+                <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800/50">
+                  <Select value={creatorSort} onValueChange={(v) => setCreatorSort(v as typeof creatorSort)}>
+                    <SelectTrigger className="w-[180px] h-8 text-xs">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="impact">Impact Score</SelectItem>
+                      <SelectItem value="followers">Followers</SelectItem>
+                      <SelectItem value="engagement">Engagement Rate</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
+                      <th className="text-left p-3 text-muted-foreground font-medium w-12">#</th>
+                      <th className="text-left p-3 text-muted-foreground font-medium">Creator</th>
+                      <th className="text-right p-3 text-muted-foreground font-medium">Followers</th>
+                      <th className="text-right p-3 text-muted-foreground font-medium">Eng. Rate</th>
+                      <th className="text-right p-3 text-muted-foreground font-medium">Platform</th>
+                      <th className="text-right p-3 text-muted-foreground font-medium">Impact</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rankedCreators.map((c, i) => {
+                      const badge = RANK_BADGES[i];
+                      return (
+                        <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                          <td className="p-3">
+                            {badge ? (
+                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold border ${badge.bg} ${badge.color}`}>
+                                {i + 1}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">{i + 1}</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <Link
+                              to={`/creators/${c.profile_slug || c.creator_handle}`}
+                              className="flex items-center gap-2 hover:text-purple-600 transition-colors"
+                            >
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={c.avatar_url || undefined} />
+                                <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
+                                  {(c.creator_name || c.creator_handle || "?")[0].toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate">{c.creator_name || c.creator_handle}</p>
+                                <p className="text-xs text-muted-foreground truncate">@{c.creator_handle}</p>
+                              </div>
+                              <ArrowUpRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            </Link>
+                          </td>
+                          <td className="p-3 text-right font-medium">{formatNumber(c.follower_count || 0)}</td>
+                          <td className="p-3 text-right">{(c.engagement_rate || 0).toFixed(2)}%</td>
+                          <td className="p-3 text-right">
+                            <Badge variant="outline" className="text-xs capitalize">{c.platform}</Badge>
+                          </td>
+                          <td className="p-3 text-right font-bold text-purple-600">{formatNumber(c.impactScore)}</td>
+                        </tr>
+                      );
+                    })}
+                    {rankedCreators.length === 0 && (
+                      <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">No creators in linked directory</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </>
+      )}
 
       {/* ===== DATA TABLES ===== */}
 

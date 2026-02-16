@@ -47,6 +47,7 @@ interface EventRow {
   is_published: boolean | null;
   capacity: number | null;
   created_at: string | null;
+  directory_id: string | null;
 }
 interface AgendaRow {
   id: string;
@@ -999,6 +1000,7 @@ const BrandEventDetail = () => {
             <EventInsightsTab
               eventId={eventId!}
               eventStartDate={event.start_date}
+              directoryId={event.directory_id}
             />
           </TabsContent>
 
