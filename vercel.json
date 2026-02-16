@@ -8,6 +8,7 @@
     {"source": "/api/pdl/:path(.*)", "destination": "/api/pdl"},
     {"source": "/api/anthropic", "destination": "/api/anthropic"},
     {"source": "/api/upload-creator-image", "destination": "/api/upload-creator-image"},
+    {"source": "/api/upload-image", "destination": "/api/upload-image"},
     {"source": "/api/youtube", "destination": "/api/youtube"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"},

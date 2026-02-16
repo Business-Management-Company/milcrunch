@@ -3,7 +3,6 @@ import { Upload, X, Link as LinkIcon, Loader2, ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -46,19 +45,38 @@ export default function ImageUpload({
       }
       setUploading(true);
       try {
-        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const path = `${folder}/${user?.id || "anon"}/${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(path, file, { upsert: true });
-        if (uploadError) {
-          console.error("Upload error:", uploadError.message);
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]); // strip data:…;base64, prefix
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const resp = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileBase64: base64,
+            contentType: file.type,
+            bucket,
+            folder,
+            userId: user?.id,
+          }),
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          console.error("Upload error:", data.error);
+          setError(data.error || "Upload failed");
           return;
         }
-        const { data: urlData } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(path);
-        onChange(urlData.publicUrl);
+        onChange(data.url);
+      } catch (err) {
+        console.error("Upload error:", err);
+        setError("Upload failed. Please try again.");
       } finally {
         setUploading(false);
       }
