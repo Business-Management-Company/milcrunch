@@ -378,13 +378,13 @@ const BrandDiscover = () => {
   const [contactEmails, setContactEmails] = useState<Record<string, string>>({}); // creatorId → email
 
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
-  const { user, isSuperAdmin } = useAuth();
+  const { user } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
 
-  // Load directories for "Add to Directory" dropdown
+  // Load directories for "Add to Directory" dropdown (all brand users)
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (!user) return;
     (async () => {
       const { data } = await supabase
         .from("directories")
@@ -392,7 +392,7 @@ const BrandDiscover = () => {
         .order("created_at", { ascending: true });
       if (data) setDirectoriesList(data as { id: string; name: string }[]);
     })();
-  }, [isSuperAdmin]);
+  }, [user]);
 
   // --- Saved searches state ---
   const [savedSearches, setSavedSearches] = useState<SavedSearchRow[]>([]);
@@ -1034,6 +1034,27 @@ const BrandDiscover = () => {
     toast.success(`Imported and added ${done} creator${done !== 1 ? "s" : ""} to ${list.name}`);
   };
 
+  const handleBulkAddToDirectory = async (directoryId: string) => {
+    const toAdd = selectedCreators;
+    if (toAdd.length === 0) return;
+    setApprovingDir(true);
+    let added = 0;
+    let failed = 0;
+    for (const c of toAdd) {
+      const error = await doApproveForDirectory(c, directoryId);
+      if (error) failed++;
+      else added++;
+    }
+    setApprovingDir(false);
+    const dirName = directoriesList.find((d) => d.id === directoryId)?.name ?? "directory";
+    if (failed > 0) {
+      toast.error(`Added ${added}, failed ${failed} to ${dirName}`);
+    } else {
+      toast.success(`Added ${added} creator${added !== 1 ? "s" : ""} to ${dirName}`);
+    }
+    setSelectedIds(new Set());
+  };
+
   return (
     <>
       {/* Save Search Modal */}
@@ -1596,7 +1617,7 @@ const BrandDiscover = () => {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 )}
-                                {isSuperAdmin && directoriesList.length > 0 && (
+                                {directoriesList.length > 0 && (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button
@@ -1823,7 +1844,7 @@ const BrandDiscover = () => {
                             </DropdownMenu>
                           )}
                           <div className="flex gap-2 items-center">
-                            {isSuperAdmin && directoriesList.length > 0 && (
+                            {directoriesList.length > 0 && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
@@ -1898,6 +1919,8 @@ const BrandDiscover = () => {
         onImportAll={handleImportAll}
         onImportAndAddToList={handleImportAndAddToList}
         onCreateListForImport={() => setCreateListForBulkImportOpen(true)}
+        onAddToDirectory={handleBulkAddToDirectory}
+        directoryOptions={directoriesList}
       />
     </>
   );

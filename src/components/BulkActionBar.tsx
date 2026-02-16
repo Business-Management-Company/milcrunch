@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ListPlus, Star, Download, Trash2, X, ChevronDown } from "lucide-react";
+import { ListPlus, Star, Download, Trash2, X, ChevronDown, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface BulkActionBarProps {
@@ -25,6 +25,9 @@ export interface BulkActionBarProps {
   onCreateListForImport?: () => void;
   /** Remove from List: bulk remove (List view) */
   onRemoveFromList?: () => void;
+  /** Add to Directory: dropdown of directories */
+  onAddToDirectory?: (directoryId: string) => void;
+  directoryOptions?: { id: string; name: string }[];
   /** Which actions to show */
   mode: "directory" | "discovery" | "list";
   className?: string;
@@ -41,12 +44,15 @@ export default function BulkActionBar({
   onImportAndAddToList,
   onCreateListForImport,
   onRemoveFromList,
+  onAddToDirectory,
+  directoryOptions = [],
   mode,
   className,
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
 
   const showAddToList = (mode === "directory" || mode === "discovery") && (onAddToList || onCreateList);
+  const showAddToDir = (mode === "directory" || mode === "discovery") && onAddToDirectory && directoryOptions.length > 0;
   const showFeature = (mode === "directory" || mode === "discovery") && onFeatureHomepage;
   const showImport = mode === "discovery" && onImportAll;
   const showImportAndAdd = mode === "discovery" && (onImportAndAddToList || onCreateListForImport);
@@ -83,6 +89,24 @@ export default function BulkActionBar({
                 <span className="font-medium">+ Create New List</span>
               </DropdownMenuItem>
             )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      {showAddToDir && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30">
+              <ShieldCheck className="h-4 w-4 mr-1.5" />
+              Add to Directory
+              <ChevronDown className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="max-h-[280px] overflow-y-auto">
+            {directoryOptions.map((dir) => (
+              <DropdownMenuItem key={dir.id} onClick={() => onAddToDirectory?.(dir.id)}>
+                {dir.name}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

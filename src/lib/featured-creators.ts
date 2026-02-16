@@ -82,32 +82,116 @@ export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator
     const key = `${handle}:${platform}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    unique.push({
-      id: r.id as string,
-      display_name: (r.creator_name as string) ?? "",
-      handle,
-      platform,
-      avatar_url: (r.avatar_url as string) ?? null,
-      follower_count: (r.follower_count as number) ?? null,
-      engagement_rate: (r.engagement_rate as number) ?? null,
-      category: (r.category as string) ?? null,
-      sort_order: (r.sort_order as number) ?? 0,
-      is_active: true,
-      is_verified: false,
-      approved: true,
-      created_at: (r.added_at as string) ?? null,
-      branch: (r.branch as string) ?? null,
-      status: (r.status as string) ?? null,
-      bio: (r.bio as string) ?? null,
-      platforms: Array.isArray(r.platforms) ? r.platforms as string[] : [],
-      paradedeck_verified: (r.paradedeck_verified as boolean) ?? false,
-      influencersclub_verified: (r.influencersclub_verified as boolean) ?? false,
-      profile_slug: (r.profile_slug as string) ?? null,
-      ic_avatar_url: (r.ic_avatar_url as string) ?? null,
-    });
+    unique.push(mapDirectoryRow(r));
     if (unique.length >= limit) break;
   }
   return unique;
+}
+
+/** Map a raw directory_members row to ShowcaseCreator (shared by multiple fetch functions). */
+function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
+  return {
+    id: r.id as string,
+    display_name: (r.creator_name as string) ?? "",
+    handle: (r.creator_handle as string) ?? "",
+    platform: (r.platform as string) ?? "instagram",
+    avatar_url: (r.avatar_url as string) ?? null,
+    follower_count: (r.follower_count as number) ?? null,
+    engagement_rate: (r.engagement_rate as number) ?? null,
+    category: (r.category as string) ?? null,
+    sort_order: (r.sort_order as number) ?? 0,
+    is_active: true,
+    is_verified: false,
+    approved: true,
+    created_at: (r.added_at as string) ?? null,
+    branch: (r.branch as string) ?? null,
+    status: (r.status as string) ?? null,
+    bio: (r.bio as string) ?? null,
+    platforms: Array.isArray(r.platforms) ? r.platforms as string[] : [],
+    paradedeck_verified: (r.paradedeck_verified as boolean) ?? false,
+    influencersclub_verified: (r.influencersclub_verified as boolean) ?? false,
+    profile_slug: (r.profile_slug as string) ?? null,
+    ic_avatar_url: (r.ic_avatar_url as string) ?? null,
+  };
+}
+
+/** Showcase from a specific directory by name, randomized. Falls back to all directories. */
+export async function fetchShowcaseByDirectoryName(
+  directoryName: string,
+  limit = 25
+): Promise<ShowcaseCreator[]> {
+  // 1. Find directory by name
+  const { data: dirs } = await supabase
+    .from("directories")
+    .select("id")
+    .eq("name", directoryName)
+    .limit(1);
+  const dirId = (dirs as { id: string }[] | null)?.[0]?.id;
+  if (!dirId) {
+    console.warn(`[featured-creators] Directory "${directoryName}" not found, falling back to all`);
+    return fetchShowcaseCreators(limit);
+  }
+
+  // 2. Fetch approved members from that directory
+  const { data, error } = await supabase
+    .from("directory_members")
+    .select("*")
+    .eq("directory_id", dirId)
+    .eq("approved", true)
+    .limit(limit * 3);
+
+  if (error) {
+    console.error("[featured-creators] Directory showcase fetch FAILED:", error.message);
+    return [];
+  }
+
+  // 3. Deduplicate by handle+platform
+  const seen = new Set<string>();
+  const unique: ShowcaseCreator[] = [];
+  for (const row of data ?? []) {
+    const r = row as Record<string, unknown>;
+    const handle = (r.creator_handle as string) ?? "";
+    const platform = (r.platform as string) ?? "instagram";
+    const key = `${handle}:${platform}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(mapDirectoryRow(r));
+  }
+
+  // 4. Fisher-Yates shuffle for random order on each page load
+  for (let i = unique.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [unique[i], unique[j]] = [unique[j], unique[i]];
+  }
+
+  return unique.slice(0, limit);
+}
+
+/** Fetch a single directory member by handle (for profile page). */
+export async function fetchDirectoryMemberByHandle(
+  handle: string
+): Promise<ShowcaseCreator | null> {
+  const h = handle.replace(/^@/, "").trim().toLowerCase();
+
+  // Try by creator_handle
+  const { data: byHandle } = await supabase
+    .from("directory_members")
+    .select("*")
+    .ilike("creator_handle", h)
+    .eq("approved", true)
+    .limit(1);
+  if (byHandle?.length) return mapDirectoryRow(byHandle[0] as Record<string, unknown>);
+
+  // Try by profile_slug
+  const { data: bySlug } = await supabase
+    .from("directory_members")
+    .select("*")
+    .ilike("profile_slug", h)
+    .eq("approved", true)
+    .limit(1);
+  if (bySlug?.length) return mapDirectoryRow(bySlug[0] as Record<string, unknown>);
+
+  return null;
 }
 
 /** Detect military branch from bio text. Returns null if not found. */

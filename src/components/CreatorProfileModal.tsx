@@ -29,7 +29,7 @@ import {
   Loader2,
   Link,
   ShieldCheck,
-  Globe,
+  ChevronDown,
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment } from "@/lib/featured-creators";
@@ -133,10 +134,23 @@ export default function CreatorProfileModal({
   const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
   const [approvingDir, setApprovingDir] = useState(false);
+  const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
   const { addCreatorToList, lists, createList, isCreatorInList } = useLists();
-  const { user, isSuperAdmin } = useAuth();
+  const { user } = useAuth();
 
   const username = creator?.username ?? (creator?.name?.replace(/\s+/g, "_").toLowerCase());
+
+  // Load directories for "Add to Directory" dropdown
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("directories")
+        .select("id, name")
+        .order("created_at", { ascending: true });
+      if (data) setDirectoriesList(data as { id: string; name: string }[]);
+    })();
+  }, [user]);
 
   const controllerRef = useRef<AbortController | null>(null);
   const generationRef = useRef(0);
@@ -254,7 +268,7 @@ export default function CreatorProfileModal({
 
   const addedToList = listCreator ? isCreatorInList(listCreator.id) : false;
 
-  const doApproveForDirectory = async () => {
+  const doApproveForDirectory = async (directoryId?: string) => {
     if (!creator) return null;
     const igData = ig as Record<string, unknown> | undefined;
     const enrichedAvatar = extractAvatarFromEnrichment(enriched) ?? creator.avatar ?? null;
@@ -277,6 +291,7 @@ export default function CreatorProfileModal({
       ic_avatar_url: enrichedAvatar || null,
       enrichment_data: enriched || null,
       added_by: user?.id ?? null,
+      directory_id: directoryId || null,
     });
     return err;
   };
@@ -301,14 +316,15 @@ export default function CreatorProfileModal({
     setCreateListModalOpen(false);
   };
 
-  const handleStandaloneApprove = async () => {
+  const handleStandaloneApprove = async (directoryId?: string) => {
     setApprovingDir(true);
-    const err = await doApproveForDirectory();
+    const err = await doApproveForDirectory(directoryId);
     setApprovingDir(false);
     if (err) {
       toast.error(`Failed to add to directory: ${err}`);
     } else {
-      toast.success(`${creator?.name} added to public directory`);
+      const dirName = directoriesList.find((d) => d.id === directoryId)?.name ?? "directory";
+      toast.success(`${creator?.name} added to ${dirName}`);
     }
   };
 
@@ -689,16 +705,27 @@ export default function CreatorProfileModal({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {isSuperAdmin && (
-                <Button
-                  variant="outline"
-                  className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
-                  onClick={handleStandaloneApprove}
-                  disabled={approvingDir}
-                >
-                  {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Globe className="mr-2 h-4 w-4" />}
-                  Add to Directory
-                </Button>
+              {directoriesList.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
+                      disabled={approvingDir}
+                    >
+                      {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                      Add to Directory
+                      <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {directoriesList.map((dir) => (
+                      <DropdownMenuItem key={dir.id} onClick={() => handleStandaloneApprove(dir.id)}>
+                        {dir.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               <Button
                 variant="outline"
