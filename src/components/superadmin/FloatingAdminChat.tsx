@@ -51,14 +51,30 @@ export default function FloatingAdminChat() {
       {/* FAB - hide when already on full chat page */}
       {!isOnChatPage && (
         <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            size="icon"
-            className="h-14 w-14 rounded-full shadow-lg bg-purple-500 hover:bg-purple-600 text-white"
-            onClick={() => setOpen(true)}
-            aria-label="Open AI chat"
+          <button
+            className={cn(
+              "flex items-center gap-2 px-5 h-12 rounded-full shadow-lg text-white font-medium text-sm transition-all duration-200",
+              "hover:shadow-xl hover:-translate-y-0.5",
+              open
+                ? "bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500"
+                : "bg-gradient-to-r from-[#1a3a2a] to-[#2d5a3f] hover:from-[#234832] hover:to-[#367049]"
+            )}
+            onClick={() => setOpen(o => !o)}
+            aria-label={open ? "Close AI chat" : "Open AI chat"}
+            style={{ minWidth: 180 }}
           >
-            <MessageSquare className="h-6 w-6" />
-          </Button>
+            {open ? (
+              <>
+                <X className="h-5 w-5" />
+                <span>Close</span>
+              </>
+            ) : (
+              <>
+                <MessageSquare className="h-5 w-5" />
+                <span>AI Agent Chat</span>
+              </>
+            )}
+          </button>
         </div>
       )}
 

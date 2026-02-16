@@ -45,6 +45,31 @@ const TYPE_LABELS: Record<string, string> = {
   live: "In-Person",
 };
 
+function BrandEventCover({ event }: { event: EventWithCounts }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const hasImage = !!event.image_url && !imgFailed;
+
+  return (
+    <div className="h-40 bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20 flex items-center justify-center relative">
+      {hasImage ? (
+        <img
+          src={event.image_url!}
+          alt={event.title}
+          className="w-full h-full object-cover"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <Calendar className="h-12 w-12 text-pd-blue/40" />
+      )}
+      <div className="absolute top-3 right-3 flex gap-1.5">
+        <Badge className={STATUS_STYLES[event.status || "draft"] + " text-xs font-medium capitalize"}>
+          {event.status || "draft"}
+        </Badge>
+      </div>
+    </div>
+  );
+}
+
 const BrandEvents = () => {
   const [events, setEvents] = useState<EventWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,18 +189,7 @@ const BrandEvents = () => {
               <Link key={event.id} to={`/brand/events/${event.id}`} className="block group">
                 <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden hover:border-pd-blue/50 hover:shadow-md transition-all h-full flex flex-col">
                   {/* Cover image or placeholder */}
-                  <div className="h-40 bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20 flex items-center justify-center relative">
-                    {event.image_url ? (
-                      <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <Calendar className="h-12 w-12 text-pd-blue/40" />
-                    )}
-                    <div className="absolute top-3 right-3 flex gap-1.5">
-                      <Badge className={STATUS_STYLES[event.status || "draft"] + " text-xs font-medium capitalize"}>
-                        {event.status || "draft"}
-                      </Badge>
-                    </div>
-                  </div>
+                  <BrandEventCover event={event} />
 
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="mb-1 flex items-center gap-2">
