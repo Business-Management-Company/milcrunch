@@ -56,6 +56,7 @@ function BrandEventCover({ event }: { event: EventWithCounts }) {
           src={event.image_url!}
           alt={event.title}
           className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
         />
       ) : (

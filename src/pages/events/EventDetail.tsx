@@ -188,6 +188,7 @@ const EventDetail = () => {
               src={event.image_url}
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
+              referrerPolicy="no-referrer"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
                 e.currentTarget.nextElementSibling?.remove();

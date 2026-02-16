@@ -44,10 +44,11 @@ const FeaturedEventCard = ({
     <Card className="group relative overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-500 hover:shadow-elevated">
       {/* Image with gradient overlay */}
       <div className="relative aspect-[16/10] overflow-hidden">
-        <img 
-          src={image} 
+        <img
+          src={image}
           alt={title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+          referrerPolicy="no-referrer"
         />
         <div className={`absolute inset-0 bg-gradient-to-t ${gradientClasses[gradient]}`} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
