@@ -100,6 +100,9 @@ import AdminTasks from "./pages/superadmin/AdminTasks";
 import AdminDeployments from "./pages/superadmin/AdminDeployments";
 import AdminPrompts from "./pages/superadmin/AdminPrompts";
 import AdminChat from "./pages/superadmin/AdminChat";
+import BrandPages from "./pages/brand/BrandPages";
+import BrandPageEdit from "./pages/brand/BrandPageEdit";
+import DynamicPage from "./pages/DynamicPage";
 
 const queryClient = new QueryClient();
 
@@ -154,6 +157,8 @@ const App = () => (
                 <Route path="/brand/events/:eventId" element={<BrandEventDetail />} />
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
+                <Route path="/brand/pages" element={<BrandPages />} />
+                <Route path="/brand/pages/:id" element={<BrandPageEdit />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/events/create" element={<CreateEvent />} />
@@ -217,6 +222,8 @@ const App = () => (
               <Route path="/creator/leaderboard" element={<CreatorRoute><Leaderboard /></CreatorRoute>} />
               <Route path="/creator/opportunities" element={<CreatorRoute><CreatorOpportunities /></CreatorRoute>} />
               <Route path="/creator/:handle" element={<CreatorBioPage />} />
+              {/* CMS dynamic pages */}
+              <Route path="/p/:slug" element={<DynamicPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
