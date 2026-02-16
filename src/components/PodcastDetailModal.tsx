@@ -13,6 +13,7 @@ import {
   Play,
   Pause,
   Loader2,
+  Volume2,
 } from "lucide-react";
 import { parsePodcastFeed, type ParsedEpisode } from "@/lib/podcast-feed";
 import type { Database } from "@/integrations/supabase/types";
@@ -32,13 +33,16 @@ export default function PodcastDetailModal({
 }: PodcastDetailModalProps) {
   const [episodes, setEpisodes] = useState<ParsedEpisode[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
-  const [playingUrl, setPlayingUrl] = useState<string | null>(null);
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!open || !podcast?.feed_url) {
       setEpisodes([]);
-      setPlayingUrl(null);
+      setPlayingIndex(null);
       return;
     }
     setLoadingEpisodes(true);
@@ -49,32 +53,72 @@ export default function PodcastDetailModal({
   }, [open, podcast?.feed_url]);
 
   useEffect(() => {
-    if (!open) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      setPlayingUrl(null);
+    if (!open && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      setPlayingIndex(null);
+      setCurrentTime(0);
+      setDuration(0);
     }
   }, [open]);
 
-  function handlePlay(audioUrl: string) {
-    if (playingUrl === audioUrl) {
-      audioRef.current?.pause();
-      setPlayingUrl(null);
+  function handlePlay(index: number) {
+    const ep = episodes[index];
+    if (!ep?.audioUrl) return;
+
+    if (playingIndex === index) {
+      if (audioRef.current?.paused) {
+        audioRef.current.play();
+      } else {
+        audioRef.current?.pause();
+      }
       return;
     }
+
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.removeAttribute("src");
     }
-    const audio = new Audio(audioUrl);
-    audio.play();
-    audio.onended = () => setPlayingUrl(null);
+
+    const audio = new Audio(ep.audioUrl);
+    audio.volume = volume;
+    audio.onloadedmetadata = () => setDuration(audio.duration);
+    audio.ontimeupdate = () => setCurrentTime(audio.currentTime);
+    audio.onended = () => {
+      setPlayingIndex(null);
+      setCurrentTime(0);
+      setDuration(0);
+    };
+    audio.play().catch(() => {});
     audioRef.current = audio;
-    setPlayingUrl(audioUrl);
+    setPlayingIndex(index);
+    setCurrentTime(0);
+    setDuration(0);
+  }
+
+  function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
+    const time = Number(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+    setCurrentTime(time);
+  }
+
+  function handleVolume(e: React.ChangeEvent<HTMLInputElement>) {
+    const vol = Number(e.target.value);
+    setVolume(vol);
+    if (audioRef.current) {
+      audioRef.current.volume = vol;
+    }
+  }
+
+  function isPlaying(index: number) {
+    return playingIndex === index && audioRef.current && !audioRef.current.paused;
   }
 
   if (!podcast) return null;
+
+  const nowPlaying = playingIndex !== null ? episodes[playingIndex] : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,15 +195,19 @@ export default function PodcastDetailModal({
               {episodes.map((ep, i) => (
                 <div
                   key={i}
-                  className="rounded-lg border border-gray-100 bg-gray-50 p-3 flex items-start gap-3"
+                  className={`rounded-lg border p-3 flex items-start gap-3 transition-colors ${
+                    playingIndex === i
+                      ? "border-[#6C5CE7]/30 bg-[#6C5CE7]/5"
+                      : "border-gray-100 bg-gray-50"
+                  }`}
                 >
                   {ep.audioUrl ? (
                     <button
                       type="button"
-                      onClick={() => handlePlay(ep.audioUrl)}
+                      onClick={() => handlePlay(i)}
                       className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center hover:bg-[#5A4BD1] transition-colors"
                     >
-                      {playingUrl === ep.audioUrl ? (
+                      {isPlaying(i) ? (
                         <Pause className="h-3.5 w-3.5" />
                       ) : (
                         <Play className="h-3.5 w-3.5 ml-0.5" />
@@ -188,7 +236,7 @@ export default function PodcastDetailModal({
                     </div>
                     {ep.description && (
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                        {stripHtml(ep.description)}
+                        {ep.description}
                       </p>
                     )}
                   </div>
@@ -198,21 +246,50 @@ export default function PodcastDetailModal({
           )}
         </div>
 
-        {playingUrl && (
-          <div className="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-3">
-            <audio
-              src={playingUrl}
-              controls
-              autoPlay
-              className="w-full h-10"
-              style={{
-                accentColor: "#6C5CE7",
-              }}
-              onEnded={() => setPlayingUrl(null)}
-              ref={(el) => {
-                if (el) audioRef.current = el;
-              }}
-            />
+        {nowPlaying && (
+          <div className="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-3 space-y-2">
+            <p className="text-xs font-medium text-[#6C5CE7] truncate">
+              {nowPlaying.title}
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handlePlay(playingIndex!)}
+                className="shrink-0 w-7 h-7 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center hover:bg-[#5A4BD1] transition-colors"
+              >
+                {isPlaying(playingIndex!) ? (
+                  <Pause className="h-3 w-3" />
+                ) : (
+                  <Play className="h-3 w-3 ml-0.5" />
+                )}
+              </button>
+              <span className="text-[10px] text-gray-400 w-10 text-right tabular-nums shrink-0">
+                {formatTime(currentTime)}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={duration || 0}
+                value={currentTime}
+                onChange={handleSeek}
+                className="flex-1 h-1 accent-[#6C5CE7] cursor-pointer"
+              />
+              <span className="text-[10px] text-gray-400 w-10 tabular-nums shrink-0">
+                {formatTime(duration)}
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Volume2 className="h-3.5 w-3.5 text-gray-400" />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={volume}
+                  onChange={handleVolume}
+                  className="w-16 h-1 accent-[#6C5CE7] cursor-pointer"
+                />
+              </div>
+            </div>
           </div>
         )}
       </DialogContent>
@@ -232,7 +309,9 @@ function formatDate(dateStr: string): string {
   }
 }
 
-function stripHtml(html: string): string {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  return doc.body.textContent ?? html;
+function formatTime(seconds: number): string {
+  if (!seconds || !isFinite(seconds)) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }

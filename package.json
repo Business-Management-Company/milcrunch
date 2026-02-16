@@ -48,6 +48,7 @@
     "colorthief": "^2.6.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
+    "fast-xml-parser": "^5.3.6",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "jsqr": "^1.4.0",
