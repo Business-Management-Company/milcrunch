@@ -173,6 +173,7 @@ export type Database = {
           description: string | null
           author: string | null
           artwork_url: string | null
+          image_url: string | null
           website_url: string | null
           category: string | null
           language: string | null
@@ -189,6 +190,7 @@ export type Database = {
           description?: string | null
           author?: string | null
           artwork_url?: string | null
+          image_url?: string | null
           website_url?: string | null
           category?: string | null
           language?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           description?: string | null
           author?: string | null
           artwork_url?: string | null
+          image_url?: string | null
           website_url?: string | null
           category?: string | null
           language?: string | null
