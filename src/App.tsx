@@ -81,8 +81,7 @@ import BrandEventCreate from "./pages/brand/BrandEventCreate";
 import BrandEventDetail from "./pages/brand/BrandEventDetail";
 import BrandAttribution from "./pages/brand/BrandAttribution";
 import BrandSettings from "./pages/brand/BrandSettings";
-import PDXHome from "./pages/pdx/PDXHome";
-import CreatePDX from "./pages/pdx/CreatePDX";
+// PDX pages removed — routes redirect to /brand/events
 import AdminPodcasts from "./pages/admin/media/Podcasts";
 import PDTV from "./pages/admin/media/PDTV";
 import FeaturedCreators from "./pages/admin/FeaturedCreators";
@@ -181,8 +180,8 @@ const App = () => (
               <Route path="/admin/media/pdtv" element={<PDTV />} />
               <Route path="/admin/featured-creators" element={<FeaturedCreators />} />
               <Route path="/admin/business-overview" element={<BusinessOverview />} />
-              <Route path="/pdx" element={<PDXHome />} />
-              <Route path="/pdx/create" element={<CreatePDX />} />
+              <Route path="/pdx" element={<Navigate to="/brand/events" replace />} />
+              <Route path="/pdx/create" element={<Navigate to="/brand/events/create" replace />} />
               {/* Placeholder pages */}
               <Route path="/speakers" element={<Speakers />} />
               <Route path="/awards" element={<PlaceholderPage title="Awards" description="Nominate and manage veteran podcast and creator awards." />} />

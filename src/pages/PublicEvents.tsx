@@ -162,7 +162,7 @@ export default function PublicEvents() {
             Upcoming Events
           </h1>
           <p className="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto">
-            MIC. MilSpouseFest. PDX Live. Join the military community at an event near you.
+            MIC. MilSpouseFest. And more. Join the military community at an event near you.
           </p>
         </div>
       </section>

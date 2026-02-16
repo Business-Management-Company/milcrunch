@@ -103,7 +103,7 @@ export default function CityAutocomplete({ value, onSelect, placeholder = "Searc
               className={cn(
                 "flex items-center gap-2 px-3 py-2 text-sm cursor-pointer",
                 i === highlighted
-                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                  ? "bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
                   : "text-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
               )}
             >

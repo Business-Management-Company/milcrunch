@@ -57,7 +57,7 @@ export default function FloatingAdminChat() {
               "hover:shadow-xl hover:-translate-y-0.5",
               open
                 ? "bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500"
-                : "bg-gradient-to-r from-[#1a3a2a] to-[#2d5a3f] hover:from-[#234832] hover:to-[#367049]"
+                : "bg-gradient-to-r from-[#5B4BD1] to-[#6C5CE7] hover:from-[#5040C0] hover:to-[#6050D8]"
             )}
             onClick={() => setOpen(o => !o)}
             aria-label={open ? "Close AI chat" : "Open AI chat"}

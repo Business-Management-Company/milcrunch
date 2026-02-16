@@ -8,7 +8,7 @@ const PDXEvents = () => {
           Live & Virtual Experiences
         </h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Browse and manage live and virtual PDX experiences.
+          Browse and manage live and virtual experiences.
         </p>
       </div>
       <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-pd-blue/20 p-8 rounded-xl">

@@ -79,14 +79,14 @@ const CATEGORIES: { label: string; image: string }[] = [
 
 const EVENTS = [
   { name: "MilSpouseFest San Diego", date: "Mar 15", location: "San Diego, CA", tag: "MilSpouseFest" },
-  { name: "PDX at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC", tag: "PDX" },
+  { name: "RecurrentX at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC", tag: "Experience" },
   { name: "MIC 2026", date: "Sep", location: "Washington, DC", tag: "MIC" },
-  { name: "PDX at VFW National", date: "Aug", location: "Louisville, KY", tag: "PDX" },
+  { name: "RecurrentX at VFW National", date: "Aug", location: "Louisville, KY", tag: "Experience" },
 ];
 
 const BRAND_FEATURES = [
   { title: "AI Creator Discovery", desc: "Find verified military creators by branch, audience, niche, and engagement." },
-  { title: "Sponsor Events", desc: "Attach your brand to PDX events and get visibility across the community." },
+  { title: "Sponsor Events", desc: "Attach your brand to RecurrentX events and get visibility across the community." },
   { title: "First-Party Data", desc: "Real audience insights from real interactions — not anonymous impressions." },
 ];
 
@@ -244,7 +244,7 @@ const CONTENT_DEFAULTS: Record<string, string> = {
   hero_title: "Stop juggling your events, creators, sponsors, and media.",
   hero_subtitle: "RecurrentX brings it all into one command center — so you can focus on the mission.",
   events_title: "Events That Don't End When the Lights Go Off",
-  events_subtitle: "MIC. MilSpouseFest. PDX Live. Every event on RecurrentX extends into a year-round community — not just 3 days on Whova.",
+  events_subtitle: "MIC. MilSpouseFest. And more. Every event on RecurrentX extends into a year-round community — not just 3 days on Whova.",
   cta_text: "The military community doesn't stop. Neither should your platform.",
 };
 
@@ -790,7 +790,7 @@ export default function HomePage() {
                   Join Free
                 </Button>
               </Link>
-              <Link to="/pdx/create">
+              <Link to="/brand/events/create">
                 <Button size="lg" variant="outline" className="rounded-lg px-8 border-gray-300 text-[#000741] hover:bg-gray-100">
                   Create an Event
                 </Button>
@@ -822,7 +822,7 @@ export default function HomePage() {
                 <Link to="/events" className="hover:text-[#6C5CE7]">Events</Link>
                 <a href="/#creators" className="hover:text-[#6C5CE7]">Creators</a>
                 <a href="/#for-brands" className="hover:text-[#6C5CE7]">For Brands</a>
-                <Link to="/pdx" className="hover:text-[#6C5CE7]">PDX</Link>
+                <Link to="/brand/events" className="hover:text-[#6C5CE7]">Experiences</Link>
                 <a href="#" className="hover:text-[#6C5CE7]">About</a>
               </nav>
             </div>

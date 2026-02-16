@@ -75,7 +75,7 @@ interface LocalResourceItem {
 const EVENT_TYPES = [
   { value: "conference", label: "Conference" },
   { value: "meetup", label: "Meetup" },
-  { value: "pdx_experience", label: "PDX Experience" },
+  { value: "pdx_experience", label: "Experience" },
   { value: "virtual", label: "Virtual" },
   { value: "hybrid", label: "Hybrid" },
 ];

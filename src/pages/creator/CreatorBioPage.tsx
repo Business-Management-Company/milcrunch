@@ -529,7 +529,7 @@ export default function CreatorBioPage() {
           )}
           {activeTab === "events" && (
             <div className="text-sm text-gray-500 text-center py-6">
-              Events section — coming soon. PDX events you&apos;re attending will appear here.
+              Events section — coming soon. Events you&apos;re attending will appear here.
             </div>
           )}
           {activeTab === "content" && (

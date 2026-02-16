@@ -38,7 +38,7 @@ const STATUS_STYLES: Record<string, string> = {
 const TYPE_LABELS: Record<string, string> = {
   conference: "Conference",
   meetup: "Meetup",
-  pdx_experience: "PDX Experience",
+  pdx_experience: "Experience",
   virtual: "Virtual",
   hybrid: "Hybrid",
   live: "In-Person",
@@ -74,6 +74,7 @@ const BrandEvents = () => {
   const [events, setEvents] = useState<EventWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -81,11 +82,19 @@ const BrandEvents = () => {
 
   const fetchEvents = async () => {
     try {
+      setFetchError(null);
       const { data, error } = await supabase
         .from("events")
         .select("id, title, description, event_type, start_date, end_date, venue, city, state, cover_image_url, is_published, capacity")
         .order("start_date", { ascending: false });
-      if (error) throw error;
+
+      if (error) {
+        console.error("[BrandEvents] events query FAILED:", error.message, error.details, error.hint, error.code);
+        setFetchError(`Events query failed: ${error.message}${error.hint ? ` (${error.hint})` : ""}`);
+        return;
+      }
+
+      console.log("[BrandEvents] Loaded", data?.length ?? 0, "events");
 
       // Fetch speaker and sponsor counts
       const eventIds = (data || []).map((e: EventRow) => e.id);
@@ -115,7 +124,9 @@ const BrandEvents = () => {
         }))
       );
     } catch (err) {
-      console.error("Failed to load events:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[BrandEvents] Failed to load events:", msg);
+      setFetchError(`Failed to load events: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -140,7 +151,7 @@ const BrandEvents = () => {
           <div>
             <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-1">Events</h1>
             <p className="text-gray-500 dark:text-gray-400">
-              Create and manage events, conferences, and PDX experiences.
+              Create and manage events, conferences, and experiences.
             </p>
           </div>
           <Button asChild className="bg-pd-blue hover:bg-pd-darkblue text-white">
@@ -160,6 +171,14 @@ const BrandEvents = () => {
             className="pl-10 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700"
           />
         </div>
+
+        {fetchError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-400">
+            <p className="font-medium">Error loading events</p>
+            <p className="mt-1">{fetchError}</p>
+            <p className="mt-2 text-xs text-red-500">Check browser console for details. This may be an RLS policy issue.</p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-16">

@@ -56,8 +56,8 @@ const ROW1 = [
 const ROW2 = [
   {
     title: "Plan an Event",
-    desc: "Create PDX experiences and live events",
-    href: "/pdx/create",
+    desc: "Create experiences and live events",
+    href: "/brand/events/create",
     icon: Calendar,
   },
   {
@@ -75,7 +75,7 @@ const ROW2 = [
   {
     title: "Go Live",
     desc: "Launch a live streaming experience",
-    href: "/pdx/create",
+    href: "/brand/events/create",
     icon: Video,
   },
 ];
@@ -143,26 +143,38 @@ export default function SummaryDashboard() {
       .select("id", { count: "exact", head: true })
       .then(({ count }) => setListCount(count ?? 0));
 
-    // Upcoming events (seed data if table doesn't exist yet)
+    // Upcoming events — use correct column names: title, start_date, city, state
     supabase
       .from("events")
-      .select("id, name, date_label, location")
-      .order("created_at", { ascending: false })
+      .select("id, title, start_date, city, state")
+      .order("start_date", { ascending: true })
       .limit(3)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[SummaryDashboard] events query failed:", error.message);
+        }
         if (data && data.length > 0) {
           setEvents(
-            data.map((e) => ({
-              id: e.id,
-              name: (e as Record<string, unknown>).name as string ?? "Event",
-              date_label: (e as Record<string, unknown>).date_label as string ?? "",
-              location: (e as Record<string, unknown>).location as string ?? "",
-            })),
+            data.map((e) => {
+              const row = e as Record<string, unknown>;
+              const startDate = row.start_date as string | null;
+              let dateLabel = "";
+              if (startDate) {
+                try { dateLabel = new Date(startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+                catch { dateLabel = startDate; }
+              }
+              return {
+                id: row.id as string,
+                name: (row.title as string) ?? "Event",
+                date_label: dateLabel,
+                location: [row.city, row.state].filter(Boolean).join(", "),
+              };
+            }),
           );
         } else {
           setEvents([
             { id: "1", name: "MilSpouseFest San Diego", date_label: "Mar 15", location: "San Diego, CA" },
-            { id: "2", name: "PDX at Fort Liberty", date_label: "Apr 5", location: "Fort Liberty, NC" },
+            { id: "2", name: "RecurrentX at Fort Liberty", date_label: "Apr 5", location: "Fort Liberty, NC" },
             { id: "3", name: "MIC 2026", date_label: "Sep 15-17", location: "Washington, DC" },
           ]);
         }
@@ -173,7 +185,7 @@ export default function SummaryDashboard() {
       { label: "Creator directory updated", time: "2 hours ago" },
       { label: "New list created: Q1 Outreach", time: "Yesterday" },
       { label: "3 creators added to Fitness list", time: "2 days ago" },
-      { label: "PDX Fort Liberty event created", time: "3 days ago" },
+      { label: "Fort Liberty event created", time: "3 days ago" },
       { label: "Verification completed for @mattbest11x", time: "4 days ago" },
     ]);
   }, []);
@@ -337,7 +349,7 @@ export default function SummaryDashboard() {
             <div className="text-center py-6 text-muted-foreground">
               <p className="text-sm">No upcoming events</p>
               <Link
-                to="/pdx/create"
+                to="/brand/events/create"
                 className="text-sm text-[#6C5CE7] hover:underline font-medium mt-1 inline-block"
               >
                 Create one →
