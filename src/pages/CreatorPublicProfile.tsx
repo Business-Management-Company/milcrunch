@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipTrigger,
@@ -23,9 +16,9 @@ import {
   Users,
   TrendingUp,
   Monitor,
-  Mail,
+  UserPlus,
+  UserCheck,
   Loader2,
-  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -34,7 +27,6 @@ import {
   getInitials,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
-import { fullEnrichCreatorProfile } from "@/lib/influencers-club";
 
 const TikTokIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -75,15 +67,11 @@ const PLATFORM_LABEL: Record<string, string> = {
 export default function CreatorPublicProfile() {
   const { handle } = useParams<{ handle: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [creator, setCreator] = useState<ShowcaseCreator | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-
-  // Contact enrichment state
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
-  const [enriching, setEnriching] = useState(false);
-  const [contactEmail, setContactEmail] = useState<string | null>(null);
-  const [enrichError, setEnrichError] = useState<string | null>(null);
+  const [following, setFollowing] = useState(false);
 
   useEffect(() => {
     if (!handle) return;
@@ -101,41 +89,12 @@ export default function CreatorPublicProfile() {
     return () => { document.title = "RecurrentX"; };
   }, [handle]);
 
-  const handleContactClick = () => {
+  const handleFollowClick = () => {
     if (!user) {
-      // Could redirect to login, but for now show dialog with login prompt
-      setContactDialogOpen(true);
+      navigate("/login");
       return;
     }
-    setContactDialogOpen(true);
-  };
-
-  const handleEnrich = async () => {
-    if (!creator) return;
-    setEnriching(true);
-    setEnrichError(null);
-    try {
-      const result = await fullEnrichCreatorProfile(creator.handle);
-      // Try to extract email from enrichment
-      const data = result as Record<string, unknown>;
-      const r = data?.result as Record<string, unknown> | undefined;
-      const ig = r?.instagram as Record<string, unknown> | undefined;
-      const email =
-        (ig?.public_email as string) ||
-        (ig?.email as string) ||
-        (r?.email as string) ||
-        (data?.email as string) ||
-        null;
-      if (email) {
-        setContactEmail(email);
-      } else {
-        setEnrichError("No public email found for this creator. Try reaching out via their social platforms.");
-      }
-    } catch {
-      setEnrichError("Failed to enrich profile. Please try again later.");
-    } finally {
-      setEnriching(false);
-    }
+    setFollowing((prev) => !prev);
   };
 
   // Image fallback
@@ -295,15 +254,26 @@ export default function CreatorPublicProfile() {
                 </div>
               </div>
 
-              {/* Contact button */}
+              {/* Follow button */}
               <div className="shrink-0">
-                <Button
-                  onClick={handleContactClick}
-                  className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6 rounded-xl"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Contact Creator
-                </Button>
+                {following ? (
+                  <Button
+                    onClick={handleFollowClick}
+                    className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6 rounded-xl"
+                  >
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Following
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleFollowClick}
+                    variant="outline"
+                    className="border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-6 rounded-xl"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Follow
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -370,59 +340,6 @@ export default function CreatorPublicProfile() {
           </div>
         </div>
       </main>
-
-      {/* Contact Dialog */}
-      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Contact {creator.display_name}</DialogTitle>
-          </DialogHeader>
-          {!user ? (
-            <div className="py-4 text-center">
-              <p className="text-gray-600 mb-4">Sign in to contact this creator. Enrichment costs 1.03 credits.</p>
-              <Link to="/login">
-                <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">Sign In</Button>
-              </Link>
-            </div>
-          ) : contactEmail ? (
-            <div className="py-4 text-center">
-              <Mail className="h-8 w-8 text-[#6C5CE7] mx-auto mb-3" />
-              <p className="text-sm text-gray-500 mb-1">Public email found:</p>
-              <a href={`mailto:${contactEmail}`} className="text-[#6C5CE7] font-medium text-lg hover:underline">
-                {contactEmail}
-              </a>
-            </div>
-          ) : enrichError ? (
-            <div className="py-4 text-center">
-              <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-3" />
-              <p className="text-sm text-gray-600">{enrichError}</p>
-            </div>
-          ) : (
-            <div className="py-4">
-              <p className="text-sm text-gray-600 mb-4">
-                Run a full enrichment to find this creator's contact email. This uses <strong>1.03 credits</strong>.
-              </p>
-              <Button
-                onClick={handleEnrich}
-                disabled={enriching}
-                className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
-              >
-                {enriching ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Enriching...
-                  </>
-                ) : (
-                  "Find Contact Info (1.03 credits)"
-                )}
-              </Button>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setContactDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Footer */}
       <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white mt-12">
