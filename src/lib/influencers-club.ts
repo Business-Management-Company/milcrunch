@@ -474,14 +474,23 @@ export interface CreditBalance {
 /** Fetch API credit balance */
 export async function fetchCredits(): Promise<CreditBalance | null> {
   const apiKey = getApiKey();
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn("[Credits] No API key, skipping fetch");
+    return null;
+  }
   try {
     const res = await fetch("/api/credits", {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
+    const data = await res.json();
+    console.log("[Credits] Response status:", res.status, "data:", JSON.stringify(data));
+    if (!res.ok) {
+      console.warn("[Credits] Non-OK response:", res.status, data);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.error("[Credits] Fetch error:", err);
     return null;
   }
 }

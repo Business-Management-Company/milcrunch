@@ -5,7 +5,7 @@ import { useLists } from "@/contexts/ListContext";
 import { Loader2, CreditCard, Users, ListChecks } from "lucide-react";
 
 const BrandDashboard = () => {
-  const [credits, setCredits] = useState<{ credits_available: number; credits_used: number } | null>(null);
+  const [credits, setCredits] = useState<{ credits_remaining: number | null; credits_used: number | null; credits_total: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const { lists } = useLists();
 
@@ -33,7 +33,7 @@ const BrandDashboard = () => {
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           ) : (
             <p className="text-2xl font-bold text-[#000741] dark:text-white">
-              {credits?.credits_available?.toLocaleString() ?? "—"}
+              {credits?.credits_remaining != null ? Number(credits.credits_remaining).toLocaleString() : "—"}
             </p>
           )}
         </Card>
@@ -48,7 +48,7 @@ const BrandDashboard = () => {
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           ) : (
             <p className="text-2xl font-bold text-[#000741] dark:text-white">
-              {credits?.credits_used?.toLocaleString() ?? "—"}
+              {credits?.credits_used != null ? Number(credits.credits_used).toLocaleString() : "—"}
             </p>
           )}
         </Card>
