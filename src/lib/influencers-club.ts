@@ -1,7 +1,8 @@
 // Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
 // (Vercel does not inject headers), so we always send Authorization in every fetch.
 const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
-const ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
+const RAW_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/raw/";
+const FULL_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
 
 /**
  * Unified creator card format for display (used by both API and mock data).
@@ -304,10 +305,9 @@ export interface EnrichedProfileResponse {
 }
 
 /**
- * Enrich a creator profile by handle (username).
- * POST to the enrich handle/full endpoint. Returns result + result.instagram, or null if no instagram data.
- * Optional signal supports timeout/abort.
- * Endpoint (via proxy): /api/enrich -> https://api-dashboard.influencers.club/public/v1/creators/enrich/handle/full/
+ * Enrich a creator profile by handle (username) using the RAW endpoint (0.03 credits).
+ * Returns profile data (photo, followers, engagement, bio, platforms) but NOT contact info.
+ * Use fullEnrichCreatorProfile() for email/contact info (1.03 credits).
  */
 export async function enrichCreatorProfile(
   username: string,
@@ -315,7 +315,7 @@ export async function enrichCreatorProfile(
 ): Promise<EnrichedProfileResponse | null> {
   const handle = username.replace(/^@/, "").trim();
 
-  const url = ENRICH_URL;
+  const url = RAW_ENRICH_URL;
   const body = {
     handle,
     platform: "instagram",
@@ -425,8 +425,54 @@ export async function enrichCreatorProfile(
   return { result: result ?? {}, instagram: ig };
 }
 
-/** Fetch API credit usage */
-export async function fetchCredits(): Promise<{ credits_available: number; credits_used: number } | null> {
+/**
+ * Full enrichment by handle (1.03 credits) — returns email and contact details.
+ * Only call after user confirmation via "Get Contact Info" button.
+ */
+export async function fullEnrichCreatorProfile(
+  username: string,
+  signal?: AbortSignal
+): Promise<EnrichedProfileResponse | null> {
+  const handle = username.replace(/^@/, "").trim();
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
+
+  const body = {
+    handle,
+    platform: "instagram",
+    include_lookalikes: false,
+    email_required: "preferred",
+  };
+
+  const res = await fetch(FULL_ENRICH_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Enrich API ${res.status}: ${res.statusText}`, { cause: data });
+
+  const result = (data as Record<string, unknown>)?.result as Record<string, unknown> | undefined;
+  const ig = result?.instagram as Record<string, unknown> | undefined;
+  if (!ig) return null;
+  return { result: result ?? {}, instagram: ig };
+}
+
+/** Credit balance response from the API */
+export interface CreditBalance {
+  credits_remaining?: number;
+  credits_used?: number;
+  credits_total?: number;
+  [key: string]: unknown;
+}
+
+/** Fetch API credit balance */
+export async function fetchCredits(): Promise<CreditBalance | null> {
   const apiKey = getApiKey();
   if (!apiKey) return null;
   try {
@@ -438,4 +484,26 @@ export async function fetchCredits(): Promise<{ credits_available: number; credi
   } catch {
     return null;
   }
+}
+
+/** Log credit usage to Supabase (fire-and-forget, non-blocking) */
+export function logCreditUsage(
+  userId: string,
+  action: "discovery_search" | "raw_enrichment" | "full_enrichment" | "export",
+  creditsUsed: number,
+  metadata?: Record<string, unknown>
+): void {
+  // Dynamic import to avoid circular deps — use the existing supabase singleton
+  import("@/integrations/supabase/client").then(({ supabase }) => {
+    supabase.from("api_credit_log").insert({
+      user_id: userId,
+      action,
+      credits_used: creditsUsed,
+      metadata: metadata ?? null,
+    } as Record<string, unknown>).then(({ error }) => {
+      if (error) console.warn("[CreditLog] Failed to log:", error.message);
+    });
+  }).catch((err) => {
+    console.warn("[CreditLog] Failed to import supabase:", err);
+  });
 }

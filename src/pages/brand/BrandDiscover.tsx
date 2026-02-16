@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { searchCreators, enrichCreatorProfile, type CreatorCard, type EnrichedProfileResponse } from "@/lib/influencers-club";
+import { searchCreators, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
 import { upsertCreator } from "@/lib/creators-db";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import CreateListModal from "@/components/CreateListModal";
@@ -368,6 +368,15 @@ const BrandDiscover = () => {
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
 
+  // Credit balance state
+  const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
+  const [creditLoading, setCreditLoading] = useState(false);
+
+  // "Get Contact Info" state
+  const [contactConfirmCreator, setContactConfirmCreator] = useState<CreatorCard | null>(null);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactEmails, setContactEmails] = useState<Record<string, string>>({}); // creatorId → email
+
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
   const { user, isSuperAdmin } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
@@ -475,8 +484,47 @@ const BrandDiscover = () => {
     pendingAutoSearch.current = true;
   }, [applyFilters]);
 
-  // Load saved searches on mount
-  useEffect(() => { loadSavedSearches(); }, [loadSavedSearches]);
+  // Fetch credit balance
+  const refreshCredits = useCallback(async () => {
+    setCreditLoading(true);
+    const data = await fetchCredits();
+    if (data) setCreditBalance(data);
+    setCreditLoading(false);
+  }, []);
+
+  // Load saved searches and credits on mount
+  useEffect(() => { loadSavedSearches(); refreshCredits(); }, [loadSavedSearches, refreshCredits]);
+
+  // Get Contact Info handler (full enrichment - 1.03 credits)
+  const handleGetContactInfo = async (creator: CreatorCard) => {
+    if (!creator.username) return;
+    setContactLoading(true);
+    try {
+      const data = await fullEnrichCreatorProfile(creator.username);
+      if (data?.result?.email) {
+        setContactEmails((prev) => ({ ...prev, [creator.id]: String(data.result.email) }));
+        toast.success(`Email found for ${creator.name}`);
+      } else {
+        toast.info(`No email found for ${creator.name}`);
+      }
+      // Update the enrichment caches with the richer data
+      if (data) {
+        const partial = extractFromEnrichment(data);
+        setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+        setEnrichRawCache((prev) => ({ ...prev, [creator.id]: data }));
+      }
+      // Log credit usage
+      if (user?.id) {
+        logCreditUsage(user.id, "full_enrichment", 1.03, { handle: creator.username });
+      }
+      refreshCredits();
+    } catch (err) {
+      toast.error(`Failed to get contact info: ${(err as Error).message}`);
+    } finally {
+      setContactLoading(false);
+      setContactConfirmCreator(null);
+    }
+  };
 
   // Auto-load from URL query params (AI handoff) or localStorage on mount
   useEffect(() => {
@@ -556,6 +604,9 @@ const BrandDiscover = () => {
     searchCreators(q, options)
       .then((result) => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(result);
+        // Log credit usage for search
+        if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15, { query: q, results: result.total });
+        refreshCredits();
       })
       .catch((err) => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(null);
@@ -564,7 +615,7 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
-  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, persistLastSearch, getCurrentFilters]);
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, persistLastSearch, getCurrentFilters, user, refreshCredits]);
 
   // Fire search after auto-load applies filters (runs once after state updates)
   useEffect(() => {
@@ -1072,16 +1123,96 @@ const BrandDiscover = () => {
         }}
         onCreate={handleCreateListAndAdd}
       />
+      {/* Get Contact Info Confirmation Dialog */}
+      <Dialog open={!!contactConfirmCreator} onOpenChange={(open) => { if (!open) setContactConfirmCreator(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserSearch className="h-5 w-5 text-purple-600" />
+              Get Contact Info
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              This will use <span className="font-bold text-foreground">1.03 credits</span> to retrieve email and contact details for:
+            </p>
+            {contactConfirmCreator && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <img src={contactConfirmCreator.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                <div>
+                  <p className="font-semibold text-sm">{contactConfirmCreator.name}</p>
+                  <p className="text-xs text-muted-foreground">@{contactConfirmCreator.username}</p>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">Continue?</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setContactConfirmCreator(null)} disabled={contactLoading}>Cancel</Button>
+            <Button
+              onClick={() => contactConfirmCreator && handleGetContactInfo(contactConfirmCreator)}
+              disabled={contactLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {contactLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Mail className="h-4 w-4 mr-1" />}
+              Get Contact Info (1.03 cr)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
-              Discover Creators
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400">
-              Search and filter military and veteran creators by branch, follower range, and
-              specialty. Build lists and invite them to events and campaigns.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
+                Discover Creators
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400">
+                Search and filter military and veteran creators by branch, follower range, and
+                specialty. Build lists and invite them to events and campaigns.
+              </p>
+            </div>
+            {/* Credit Balance Card */}
+            <div className="shrink-0">
+              <div className={cn(
+                "flex items-center gap-3 rounded-xl border px-4 py-3 text-sm",
+                creditBalance && (creditBalance.credits_remaining ?? 0) <= 0
+                  ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
+                  : creditBalance && (creditBalance.credits_remaining ?? 0) < 10
+                  ? "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800"
+                  : "bg-white border-gray-200 dark:bg-[#1A1D27] dark:border-gray-800"
+              )}>
+                <Coins className={cn(
+                  "h-5 w-5 shrink-0",
+                  creditBalance && (creditBalance.credits_remaining ?? 0) <= 0
+                    ? "text-red-500"
+                    : creditBalance && (creditBalance.credits_remaining ?? 0) < 10
+                    ? "text-yellow-500"
+                    : "text-purple-500"
+                )} />
+                <div>
+                  <p className="font-semibold text-foreground">
+                    {creditLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin inline" />
+                    ) : creditBalance ? (
+                      `${Number(creditBalance.credits_remaining ?? creditBalance.credits_total ?? 0).toFixed(2)} credits`
+                    ) : (
+                      "Credits: --"
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Search ~0.15 · Enrich 0.03 · Contact 1.03
+                  </p>
+                </div>
+                {creditBalance && (creditBalance.credits_remaining ?? 0) < 10 && (creditBalance.credits_remaining ?? 0) > 0 && (
+                  <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
+                )}
+                {creditBalance && (creditBalance.credits_remaining ?? 0) <= 0 && (
+                  <span className="text-xs font-medium text-red-600 dark:text-red-400">No credits</span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Search bar */}
@@ -1392,9 +1523,20 @@ const BrandDiscover = () => {
                             </td>
                             <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowers(creator.followers)}</td>
                             <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof creator.engagementRate === "number" ? `${creator.engagementRate.toFixed(2)}%` : "—"}</td>
-                            <td className="p-3 text-center">
-                              {creator.hasEmail ? (
-                                <Mail className="h-4 w-4 text-blue-500 mx-auto" title="Email available" />
+                            <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              {contactEmails[creator.id] ? (
+                                <a href={`mailto:${contactEmails[creator.id]}`} className="text-xs text-blue-600 hover:underline truncate max-w-[140px] inline-block" title={contactEmails[creator.id]}>
+                                  {contactEmails[creator.id]}
+                                </a>
+                              ) : creator.hasEmail ? (
+                                <button
+                                  onClick={() => setContactConfirmCreator(creator)}
+                                  className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                                  title="Get email (1.03 credits)"
+                                >
+                                  <Mail className="h-3.5 w-3.5" />
+                                  Get
+                                </button>
                               ) : pending ? (
                                 <div className="mx-auto"><EnrichShimmer /></div>
                               ) : (
@@ -1544,7 +1686,7 @@ const BrandDiscover = () => {
                           <div className="min-w-0 flex-1">
                             <h3 className="font-bold text-base text-[#000741] dark:text-white truncate flex items-center gap-1.5">
                               {creator.name}
-                              {creator.hasEmail && (
+                              {(creator.hasEmail || contactEmails[creator.id]) && !contactEmails[creator.id] && (
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available for outreach"><Mail className="h-3 w-3" />Email</span>
                               )}
                             </h3>
@@ -1564,14 +1706,24 @@ const BrandDiscover = () => {
                             {socialPlatforms.slice(0, 6).map((platform) => (
                               <PlatformIcon key={platform} platform={platform} username={creator.username} />
                             ))}
-                            {creator.hasEmail && (
-                              <span
-                                className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 dark:bg-blue-900/30"
-                                title="Email available"
+                            {contactEmails[creator.id] ? (
+                              <a
+                                href={`mailto:${contactEmails[creator.id]}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 rounded-md bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-semibold text-green-600 dark:text-green-400 hover:underline"
+                                title={contactEmails[creator.id]}
                               >
-                                <Mail className="h-3.5 w-3.5 text-blue-500" />
-                              </span>
-                            )}
+                                <Mail className="h-3 w-3" />{contactEmails[creator.id]}
+                              </a>
+                            ) : creator.hasEmail ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setContactConfirmCreator(creator); }}
+                                className="inline-flex items-center gap-1 rounded-md bg-purple-50 dark:bg-purple-900/30 px-2 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                                title="Get email (1.03 credits)"
+                              >
+                                <UserSearch className="h-3 w-3" />Get Contact
+                              </button>
+                            ) : null}
                           </div>
                         )}
                         {creator.hashtags && creator.hashtags.length > 0 && (
