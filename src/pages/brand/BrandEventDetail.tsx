@@ -4,7 +4,7 @@ import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
   Search, Download, CheckCircle2, XCircle, Ticket, Globe, Copy, Code, QrCode,
-  MessageCircle, ScanLine, Printer, DollarSign,
+  MessageCircle, ScanLine, Printer, DollarSign, BarChart3,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import ImageUpload from "@/components/cms/ImageUpload";
 import EventCommunityTab from "@/components/EventCommunityTab";
+import EventInsightsTab from "@/components/EventInsightsTab";
 import CheckInMode from "@/components/CheckInMode";
 import EventBadgePrint from "@/components/EventBadgePrint";
 
@@ -500,6 +501,7 @@ const BrandEventDetail = () => {
             <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-1.5" />Tickets{eventTickets.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{eventTickets.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="registrations"><Users className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="community"><MessageCircle className="h-4 w-4 mr-1.5" />Community</TabsTrigger>
+            <TabsTrigger value="insights"><BarChart3 className="h-4 w-4 mr-1.5" />365 Insights</TabsTrigger>
             <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
           </TabsList>
@@ -989,6 +991,14 @@ const BrandEventDetail = () => {
               eventCreatedAt={event.created_at ?? null}
               eventStartDate={event.start_date}
               registrationCount={registrations.length}
+            />
+          </TabsContent>
+
+          {/* ===== 365 INSIGHTS ===== */}
+          <TabsContent value="insights">
+            <EventInsightsTab
+              eventId={eventId!}
+              eventStartDate={event.start_date}
             />
           </TabsContent>
 

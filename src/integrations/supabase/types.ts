@@ -579,6 +579,47 @@ export type Database = {
           },
         ]
       }
+      event_engagement_metrics: {
+        Row: {
+          id: string
+          event_id: string
+          metric_type: string
+          period_start: string
+          period_end: string
+          value: number
+          metadata: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          metric_type: string
+          period_start: string
+          period_end: string
+          value: number
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          metric_type?: string
+          period_start?: string
+          period_end?: string
+          value?: number
+          metadata?: Json | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_engagement_metrics_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_team_members: {
         Row: {
           accepted_at: string | null
