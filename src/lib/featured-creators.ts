@@ -26,6 +26,8 @@ export interface ShowcaseCreator extends FeaturedCreator {
   influencersclub_verified: boolean;
   profile_slug: string | null;
   ic_avatar_url: string | null;
+  platform_urls?: Record<string, string>;
+  enrichment_data?: unknown;
 }
 
 /** For hero: top 3 active + approved featured creators by sort_order. */
@@ -113,6 +115,8 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     influencersclub_verified: (r.influencersclub_verified as boolean) ?? false,
     profile_slug: (r.profile_slug as string) ?? null,
     ic_avatar_url: (r.ic_avatar_url as string) ?? null,
+    platform_urls: (r.platform_urls as Record<string, string>) ?? {},
+    enrichment_data: r.enrichment_data ?? null,
   };
 }
 
@@ -260,12 +264,20 @@ export async function approveForDirectory(data: {
 
   const slug = generateProfileSlug(data.display_name, handle);
 
+  // Upload profile image to Supabase storage for permanent URL
+  let permanentAvatarUrl = data.avatar_url || null;
+  const sourceImageUrl = data.ic_avatar_url || data.avatar_url;
+  if (sourceImageUrl) {
+    const uploaded = await uploadCreatorImage(sourceImageUrl, handle);
+    if (uploaded) permanentAvatarUrl = uploaded;
+  }
+
   const payload: Record<string, unknown> = {
     directory_id: dirId,
     creator_handle: handle,
     creator_name: data.display_name,
     platform: data.platform || "instagram",
-    avatar_url: data.avatar_url || null,
+    avatar_url: permanentAvatarUrl,
     ic_avatar_url: data.ic_avatar_url || null,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,

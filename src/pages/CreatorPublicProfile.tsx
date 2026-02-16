@@ -91,11 +91,14 @@ export default function CreatorPublicProfile() {
     fetchDirectoryMemberByHandle(handle).then((data) => {
       if (data) {
         setCreator(data);
+        document.title = `${data.display_name} | Military Creator | RecurrentX`;
       } else {
         setNotFound(true);
+        document.title = "Creator Not Found | RecurrentX";
       }
       setLoading(false);
     });
+    return () => { document.title = "RecurrentX"; };
   }, [handle]);
 
   const handleContactClick = () => {
@@ -161,8 +164,7 @@ export default function CreatorPublicProfile() {
       if (urls?.[platform]) return urls[platform];
     }
     // Check platform_urls on the directory member directly
-    const memberUrls = (creator as unknown as { platform_urls?: Record<string, string> })?.platform_urls;
-    if (memberUrls?.[platform]) return memberUrls[platform];
+    if (creator?.platform_urls?.[platform]) return creator.platform_urls[platform];
     // Build from handle
     const builder = PLATFORM_URLS[platform];
     return builder ? builder(creator?.handle ?? "") : "#";
