@@ -189,19 +189,19 @@ const EventDetail = () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-gray-600 text-base mb-8">
             <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-500" />
+              <Calendar className="w-4 h-4 text-purple-500" />
               {formatDateRange(event.start_date, event.end_date)}
             </span>
             {(event.venue || event.city) && (
               <span className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-emerald-500" />
+                <MapPin className="w-4 h-4 text-purple-500" />
                 {[event.venue, event.city, event.state].filter(Boolean).join(" · ")}
               </span>
             )}
           </div>
 
           {isFuture && (
-            <p className="text-emerald-600 font-medium text-sm mb-6">
+            <p className="text-purple-600 font-medium text-sm mb-6">
               {daysUntil} days until the event
             </p>
           )}
@@ -209,7 +209,7 @@ const EventDetail = () => {
           <Button
             asChild
             size="lg"
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-10"
+            className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-10"
           >
             <Link to={`/events/${event.id}/register`}>
               Register Now
@@ -357,7 +357,7 @@ const EventDetail = () => {
           <Button
             asChild
             size="lg"
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-10"
+            className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-10"
           >
             <Link to={`/events/${event.id}/register`}>
               Register Now
@@ -365,7 +365,7 @@ const EventDetail = () => {
             </Link>
           </Button>
           <p className="text-xs text-gray-400 mt-6">
-            Powered by <span className="font-semibold text-gray-500">recurrent</span><span className="font-bold text-emerald-500">X</span>
+            Powered by <span className="font-semibold text-gray-500">recurrent</span><span className="font-bold text-purple-500">X</span>
           </p>
         </div>
       </section>

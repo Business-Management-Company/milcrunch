@@ -24,8 +24,8 @@ const availableModules: Module[] = [
   { id: "nominations", title: "Nominations Portal", shortTitle: "Nominations", description: "Collect and manage nominations", icon: Award, category: "awards", color: "bg-accent text-accent-foreground" },
   { id: "judging", title: "Judge Scoring", shortTitle: "Judging", description: "Rubric-based scoring system", icon: Gavel, category: "awards", color: "bg-accent text-accent-foreground" },
   { id: "voting", title: "Public Voting", shortTitle: "Voting", description: "Fan voting campaigns", icon: Vote, category: "awards", color: "bg-accent text-accent-foreground" },
-  { id: "sponsors", title: "Sponsor CRM", shortTitle: "Sponsors", description: "Track sponsor relationships", icon: Users, category: "sponsors", color: "bg-emerald-500 text-white" },
-  { id: "proposals", title: "Proposal Builder", shortTitle: "Proposals", description: "Generate branded proposals", icon: FileText, category: "sponsors", color: "bg-emerald-500 text-white" },
+  { id: "sponsors", title: "Sponsor CRM", shortTitle: "Sponsors", description: "Track sponsor relationships", icon: Users, category: "sponsors", color: "bg-purple-500 text-white" },
+  { id: "proposals", title: "Proposal Builder", shortTitle: "Proposals", description: "Generate branded proposals", icon: FileText, category: "sponsors", color: "bg-purple-500 text-white" },
   { id: "ai-architect", title: "AI Event Architect", shortTitle: "AI Events", description: "Auto-generate event schedules", icon: Bot, category: "ai", color: "bg-cosmic-purple text-white" },
 ];
 

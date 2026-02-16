@@ -162,7 +162,7 @@ function ConfidenceGauge({ score }: { score: number }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-    verified: { label: "Verified", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+    verified: { label: "Verified", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
     pending: { label: "Pending", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300", icon: <Clock className="h-3.5 w-3.5" /> },
     flagged: { label: "Flagged", className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
     denied: { label: "Denied", className: "bg-red-200 text-red-900 dark:bg-red-950 dark:text-red-200", icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -177,13 +177,13 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === "verified") return <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />;
+  if (status === "verified") return <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />;
   if (status === "flagged" || status === "denied") return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
   return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
 }
 
 function NameStatusIcon({ score }: { score: number }) {
-  if (score >= 70) return <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />;
+  if (score >= 70) return <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />;
   if (score >= 40) return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
   return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
 }
@@ -215,7 +215,7 @@ function InlineNameEdit({ id, name, onSave }: { id: string; name: string; onSave
           disabled={saving}
         />
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-emerald-600" />}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-purple-600" />}
         </Button>
       </div>
     );
@@ -597,7 +597,7 @@ export default function Verification() {
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-muted-foreground">Verified</p>
-            <p className="text-2xl font-bold text-emerald-600">{stats.verified}</p>
+            <p className="text-2xl font-bold text-purple-600">{stats.verified}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -740,7 +740,7 @@ export default function Verification() {
                       const p = phases.find((x) => x.phase === n);
                       return (
                         <div key={n} className="flex items-center gap-2 text-sm">
-                          {p?.status === "done" ? <Check className="h-4 w-4 text-emerald-600" /> : p?.status === "running" ? <Loader2 className="h-4 w-4 animate-spin text-[#0064B1]" /> : <span className="w-4" />}
+                          {p?.status === "done" ? <Check className="h-4 w-4 text-purple-600" /> : p?.status === "running" ? <Loader2 className="h-4 w-4 animate-spin text-[#0064B1]" /> : <span className="w-4" />}
                           <span className={p?.status === "done" ? "text-muted-foreground" : ""}>
                             Phase {n}: {p?.name ?? ["People Data Labs", "Web Search", "Deep Extraction", "AI Analysis"][n - 1]}
                           </span>
@@ -749,7 +749,7 @@ export default function Verification() {
                     })}
                   </div>
                 )}
-                {newRecordId && <p className="text-sm text-emerald-600">Verification saved. Redirecting...</p>}
+                {newRecordId && <p className="text-sm text-purple-600">Verification saved. Redirecting...</p>}
                 <Button
                   onClick={handleStartVerification}
                   disabled={pipelineRunning || !addForm.fullName.trim()}
@@ -1322,7 +1322,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     const isStolenValor = /stolen valor|fraud/i.test(r.title + " " + r.snippet + " " + r.reasoning);
     if (r.concern_level === "high" || isStolenValor) return "bg-red-500";
     if (r.concern_level === "medium") return "bg-amber-400";
-    return "bg-emerald-400";
+    return "bg-purple-400";
   };
 
   // Determine overall summary status — only flag "red" if AI confirms a high-relevance, high-concern result about this person
@@ -1376,9 +1376,9 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           {!aiFiltering && !searching && hasSearched && (() => {
             const status = getSummaryStatus();
             if (status === "clear") return (
-              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">No public concerns found for {personName}. Background review complete.</p>
+              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                <CheckCircle2 className="h-5 w-5 text-purple-600 shrink-0" />
+                <p className="text-sm font-medium text-purple-700 dark:text-purple-300">No public concerns found for {personName}. Background review complete.</p>
               </div>
             );
             if (status === "yellow") return (
@@ -1510,7 +1510,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
           <Mic className="h-4 w-4" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           {checkedCount >= 5 ? (
-            <Badge className="ml-auto bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs">CLEARED FOR BOOKING</Badge>
+            <Badge className="ml-auto bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
           ) : checkedCount < 3 ? (
             <Badge className="ml-auto bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
           ) : (
@@ -1617,7 +1617,7 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
         <CardTitle className="text-base flex items-center gap-2">
           <Globe className="h-4 w-4" /> Social Verification
           {militaryPlatformCount > 0 && (
-            <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs">
+            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">
               +{militaryPlatformCount * 5} pts
             </Badge>
           )}
@@ -1638,7 +1638,7 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
                     </a>
                   )}
                   {p.hasMilitary ? (
-                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs gap-1">
+                    <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs gap-1">
                       <Check className="h-3 w-3" /> Military keywords found
                     </Badge>
                   ) : (
@@ -1967,14 +1967,14 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
                   className={cn(
                     "flex gap-4 pl-4 py-3 border-l-4 rounded-r-lg",
                     entry.is_military
-                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
+                      ? "border-purple-500 bg-purple-50/50 dark:bg-purple-950/20"
                       : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20"
                   )}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{entry.org}</p>
-                      {entry.is_military && <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />}
+                      {entry.is_military && <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />}
                     </div>
                     <p className="text-sm text-muted-foreground">{entry.title}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -2241,7 +2241,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onClick={() => handleStatusChange("verified")}>
-                      <ShieldCheck className="h-4 w-4 mr-2 text-emerald-600" /> Verified
+                      <ShieldCheck className="h-4 w-4 mr-2 text-purple-600" /> Verified
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleStatusChange("pending")}>
                       <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending

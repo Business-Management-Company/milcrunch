@@ -70,7 +70,7 @@ function Avatar({ name, url }: { name: string | null; url: string | null }) {
   }
   const initials = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pd-blue to-emerald-500 flex items-center justify-center text-white text-xs font-bold">
+    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pd-blue to-purple-500 flex items-center justify-center text-white text-xs font-bold">
       {initials}
     </div>
   );
@@ -238,8 +238,8 @@ const EventCommunityTab = ({ eventId, eventCreatedAt, eventStartDate, registrati
   return (
     <div className="space-y-5">
       {/* 365 Banner */}
-      <div className="rounded-lg bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3">
-        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+      <div className="rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 px-4 py-3">
+        <p className="text-sm font-medium text-purple-800 dark:text-purple-300">
           <RefreshCw className="inline h-4 w-4 mr-1.5 -mt-0.5" />
           365 Community — This space stays active year-round. Connect before, during, and after the event.
         </p>
@@ -265,7 +265,7 @@ const EventCommunityTab = ({ eventId, eventCreatedAt, eventStartDate, registrati
         <Card className="p-3 text-center bg-white dark:bg-[#1A1D27] border-gray-200 dark:border-gray-800">
           {daysDiff !== null && daysDiff > 0 ? (
             <>
-              <p className="text-xl font-bold text-emerald-600">{daysDiff}</p>
+              <p className="text-xl font-bold text-purple-600">{daysDiff}</p>
               <p className="text-xs text-muted-foreground">Days Until Event</p>
             </>
           ) : daysDiff !== null && daysDiff <= 0 ? (

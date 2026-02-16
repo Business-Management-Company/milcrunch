@@ -27,6 +27,7 @@ import {
   KanbanSquare,
   Rocket,
   MessageSquare,
+  FileText,
   ChevronDown,
   ChevronRight,
   type LucideIcon,
@@ -114,6 +115,7 @@ const SUPER_ADMIN_SECTION: NavSection = {
   items: [
     { href: "/admin/business-overview", label: "Business Overview", icon: Briefcase },
     { href: "/admin/tasks", label: "Task Board", icon: KanbanSquare },
+    { href: "/brand/pages", label: "Pages", icon: FileText },
     { href: "/admin/deployments", label: "Deployments", icon: Rocket },
     { href: "/admin/chat", label: "AI Chat", icon: MessageSquare },
   ],
@@ -275,7 +277,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         {!collapsed && (
           <>
             <div className="flex items-center justify-center px-2">
-              <span className="text-sm font-bold text-gray-500 tracking-tight">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
+              <span className="text-sm font-bold text-gray-500 tracking-tight">recurrent<span className="text-[#9B51E0] font-extrabold">X</span></span>
             </div>
             <p className="text-[10px] text-muted-foreground/80 text-center">Demo v1.0</p>
           </>

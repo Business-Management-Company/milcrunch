@@ -236,7 +236,7 @@ const BrandLists = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-lg text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
+                  className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
                   onClick={handlePromoteAll}
                   disabled={promotingAll}
                 >
@@ -324,7 +324,7 @@ const BrandLists = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-lg text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
+                        className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
                         onClick={(e) => {
                           e.stopPropagation();
                           handlePromoteOne(creator);

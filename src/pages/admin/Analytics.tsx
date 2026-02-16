@@ -35,7 +35,7 @@ const registrationData = [
 const trafficSourceData = [
   { name: "Direct", value: 35, color: "hsl(var(--primary))" },
   { name: "Social Media", value: 28, color: "hsl(var(--accent))" },
-  { name: "Email", value: 22, color: "#10B981" },
+  { name: "Email", value: 22, color: "#9B51E0" },
   { name: "Referral", value: 10, color: "#F59E0B" },
   { name: "Organic", value: 5, color: "#6366F1" },
 ];

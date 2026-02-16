@@ -59,7 +59,7 @@ export default function AdminChat() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <RoleIcon className="h-6 w-6 text-emerald-500" />
+            <RoleIcon className="h-6 w-6 text-purple-500" />
             <div>
               <h1 className="text-xl font-bold leading-tight">{roleConfig.label}</h1>
               <p className="text-xs text-muted-foreground font-medium">{roleConfig.sublabel}</p>
@@ -79,7 +79,7 @@ export default function AdminChat() {
             ) : messages.length === 0 && !streamingContent && !loading ? (
               <div className="text-center text-muted-foreground py-12">
                 <div className="inline-flex items-center gap-2 mb-2">
-                  <RoleIcon className="h-5 w-5 text-emerald-500" />
+                  <RoleIcon className="h-5 w-5 text-purple-500" />
                   <p className="font-medium">{roleConfig.label} &middot; {roleConfig.sublabel}</p>
                 </div>
                 <p className="text-sm mt-1">Ask for status, manage events, search creators, or update tasks.</p>
@@ -109,7 +109,7 @@ export default function AdminChat() {
                 {confirmations.length > 0 && (
                   <div className="space-y-1">
                     {confirmations.map((c, i) => (
-                      <p key={i} className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                      <p key={i} className="text-sm text-purple-600 dark:text-purple-400 font-medium">
                         {c}
                       </p>
                     ))}

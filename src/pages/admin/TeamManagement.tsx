@@ -124,7 +124,7 @@ const ROLES = [
     id: "finance_manager", 
     label: "Finance Manager", 
     icon: DollarSign, 
-    color: "text-emerald-500",
+    color: "text-purple-500",
     description: "Payments, payouts, refunds",
     defaultPermissions: ["manage_finances", "view_analytics"]
   },

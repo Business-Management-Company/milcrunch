@@ -63,7 +63,7 @@ const Index = () => {
       title: "Sponsor Closer",
       description: "Select sponsor types; the agent drafts proposals and follow-up sequences.",
       icon: TrendingUp,
-      gradient: "from-emerald-500 to-teal-500"
+      gradient: "from-purple-500 to-purple-500"
     },
     {
       title: "Attendee Concierge",

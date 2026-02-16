@@ -140,7 +140,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         <div
           className={`w-[72px] h-[72px] rounded-full overflow-hidden ${
             c.paradedeck_verified
-              ? "ring-[3px] ring-emerald-500 ring-offset-2"
+              ? "ring-[3px] ring-purple-500 ring-offset-2"
               : "ring-1 ring-gray-200"
           }`}
         >
@@ -168,7 +168,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         {c.paradedeck_verified && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+              <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">RecurrentX Verified</TooltipContent>
           </Tooltip>
@@ -248,6 +248,39 @@ const GRID_FALLBACK: CreatorRow[] = [
   { id: "g8", display_name: "Kashi", handle: "hopefor22aday_kashi", platform: "instagram", avatar_url: null, follower_count: 42000, engagement_rate: 2.9, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 7, created_at: null },
 ];
 
+// Editable homepage content fallbacks
+const CONTENT_DEFAULTS: Record<string, string> = {
+  hero_title: "Stop juggling your events, creators, sponsors, and media.",
+  hero_subtitle: "RecurrentX brings it all into one command center — so you can focus on the mission.",
+  events_title: "Events That Don't End When the Lights Go Off",
+  events_subtitle: "MIC. MilSpouseFest. PDX Live. Every event on RecurrentX extends into a year-round community — not just 3 days on Whova.",
+  cta_text: "The military community doesn't stop. Neither should your platform.",
+};
+
+function useSiteContent(page: string) {
+  const [content, setContent] = useState<Record<string, string>>(CONTENT_DEFAULTS);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("site_content")
+          .select("section, content")
+          .eq("page", page);
+        if (data && data.length > 0) {
+          const map: Record<string, string> = { ...CONTENT_DEFAULTS };
+          data.forEach((row: { section: string; content: string }) => {
+            map[row.section] = row.content;
+          });
+          setContent(map);
+        }
+      } catch {
+        // fallback to defaults
+      }
+    })();
+  }, [page]);
+  return content;
+}
+
 export default function HomePage() {
   const { user, loading: authLoading, getRedirectPath } = useAuth();
   const navigate = useNavigate();
@@ -260,6 +293,7 @@ export default function HomePage() {
   const [showcaseCreators, setShowcaseCreators] = useState<ShowcaseCreator[]>([]);
   const [showcaseInView, setShowcaseInView] = useState(false);
   const showcaseRef = useRef<HTMLDivElement>(null);
+  const cms = useSiteContent("homepage");
 
   useEffect(() => {
     (async () => {
@@ -321,7 +355,7 @@ export default function HomePage() {
         <Link to="/" className="shrink-0">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className={navScrolled ? "text-[#000741]" : "text-white"}>recurrent</span>
-            <span className="text-[#10B981] font-extrabold">X</span>
+            <span className="text-[#9B51E0] font-extrabold">X</span>
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
@@ -380,16 +414,16 @@ export default function HomePage() {
                 </span>
               </div>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-4">
-                Stop juggling your events, creators, sponsors, and media.
+                {cms.hero_title}
               </h1>
               <p className="text-white/90 text-base md:text-lg max-w-[600px] mb-8">
-                RecurrentX brings it all into one command center — so you can focus on the mission.
+                {cms.hero_subtitle}
               </p>
               <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
                 {user ? (
                   <Button
                     size="lg"
-                    className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold"
+                    className="rounded-lg bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-semibold"
                     onClick={() => {
                       const path = getRedirectPath();
                       if (path) navigate(path);
@@ -400,7 +434,7 @@ export default function HomePage() {
                   </Button>
                 ) : (
                   <Link to="/signup">
-                    <Button size="lg" className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 font-semibold">
+                    <Button size="lg" className="rounded-lg bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-semibold">
                       Get Started →
                     </Button>
                   </Link>
@@ -582,10 +616,10 @@ export default function HomePage() {
         <section id="events" className="px-4 md:px-8 py-16 md:py-20 bg-gray-50 scroll-mt-20">
           <div className="max-w-6xl mx-auto">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#000741] mb-2">
-              Events That Don't End When the Lights Go Off
+              {cms.events_title}
             </h2>
             <p className="text-gray-600 mb-8 max-w-2xl">
-              MIC. MilSpouseFest. PDX Live. Every event on RecurrentX extends into a year-round community — not just 3 days on Whova.
+              {cms.events_subtitle}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {EVENTS.map((event) => (
@@ -640,7 +674,7 @@ export default function HomePage() {
         <section className="px-4 md:px-8 py-14 md:py-20 bg-gray-50 border-t border-gray-200">
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-xl md:text-2xl font-semibold text-[#000741] mb-6">
-              The military community doesn't stop. Neither should your platform.
+              {cms.cta_text}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link to="/brand/discover">
@@ -665,7 +699,7 @@ export default function HomePage() {
                 <Link to="/" className="inline-block mb-4">
                   <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     <span className="text-[#000741]">recurrent</span>
-                    <span className="text-[#10B981] font-extrabold">X</span>
+                    <span className="text-[#9B51E0] font-extrabold">X</span>
                   </span>
                 </Link>
                 <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>

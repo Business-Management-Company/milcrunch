@@ -8,7 +8,7 @@
 - **PDX** (RecurrentX Experience) — mobile streaming stage for military events
 
 **Tagline:** "Stop juggling your events, creators, sponsors, and media. RecurrentX brings it all into one command center — so you can focus on the mission."
-**Brand:** "recurrent" in black/white + "X" in teal (#10B981) bold. The "X" stands for "Experience".
+**Brand:** "recurrent" in black/white + "X" in purple (#9B51E0) bold. The "X" stands for "Experience".
 
 **Owner:** Andrew Appleton (andrew@podlogix.co)
 **Board Chairman:** Paul Majano

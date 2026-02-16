@@ -117,7 +117,7 @@ const Auth = () => {
       <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">recurrent</span><span className="text-[#10B981] font-extrabold">X</span></span>
+            <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">recurrent</span><span className="text-[#9B51E0] font-extrabold">X</span></span>
           </div>
           <CardTitle className="text-2xl font-bold">
             {isForgotPassword ? "Reset Password" : isSignUp ? "Create an Account" : "Welcome Back"}

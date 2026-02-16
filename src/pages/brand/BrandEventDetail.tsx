@@ -431,7 +431,7 @@ const BrandEventDetail = () => {
             <TabsTrigger value="agenda"><Clock className="h-4 w-4 mr-1.5" />Agenda</TabsTrigger>
             <TabsTrigger value="speakers"><Mic className="h-4 w-4 mr-1.5" />Speakers</TabsTrigger>
             <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
-            <TabsTrigger value="registrations"><Ticket className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-emerald-100 text-emerald-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
+            <TabsTrigger value="registrations"><Ticket className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="community"><MessageCircle className="h-4 w-4 mr-1.5" />Community</TabsTrigger>
             <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
@@ -701,7 +701,7 @@ const BrandEventDetail = () => {
                       <p className="text-xs text-muted-foreground">Total Registered</p>
                     </Card>
                     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
-                      <p className="text-2xl font-bold text-emerald-600">{checkedInCount}</p>
+                      <p className="text-2xl font-bold text-purple-600">{checkedInCount}</p>
                       <p className="text-xs text-muted-foreground">Checked In</p>
                     </Card>
                     {eventTickets.slice(0, 2).map((t) => (
@@ -769,7 +769,7 @@ const BrandEventDetail = () => {
                                 </td>
                                 <td className="px-4 py-3 text-muted-foreground">{r.military_branch || "—"}</td>
                                 <td className="px-4 py-3">
-                                  <Badge className={r.status === "confirmed" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}>
+                                  <Badge className={r.status === "confirmed" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}>
                                     {r.status}
                                   </Badge>
                                 </td>
@@ -781,7 +781,7 @@ const BrandEventDetail = () => {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => toggleCheckIn(r)}
-                                    className={r.checked_in ? "text-emerald-600" : "text-gray-300 hover:text-gray-500"}
+                                    className={r.checked_in ? "text-purple-600" : "text-gray-300 hover:text-gray-500"}
                                   >
                                     {r.checked_in ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                                   </Button>

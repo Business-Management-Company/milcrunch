@@ -47,7 +47,7 @@ const SEED_EVENTS: EventItem[] = [
 ];
 
 const EVENT_TYPE_CONFIG: Record<EventType, { label: string; className: string }> = {
-  in_person: { label: "In-Person", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  in_person: { label: "In-Person", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300" },
   virtual: { label: "Virtual", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
   hybrid: { label: "Hybrid", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300" },
 };

@@ -53,7 +53,7 @@ export default function FloatingAdminChat() {
         <div className="fixed bottom-6 right-6 z-50">
           <Button
             size="icon"
-            className="h-14 w-14 rounded-full shadow-lg bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="h-14 w-14 rounded-full shadow-lg bg-purple-500 hover:bg-purple-600 text-white"
             onClick={() => setOpen(true)}
             aria-label="Open AI chat"
           >
@@ -70,7 +70,7 @@ export default function FloatingAdminChat() {
             {/* Role-aware header */}
             <div className="flex items-center justify-between p-3 border-b">
               <Link to="/admin/chat" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <RoleIcon className="h-5 w-5 text-emerald-500" />
+                <RoleIcon className="h-5 w-5 text-purple-500" />
                 <div>
                   <span className="font-semibold text-sm">{roleConfig.label}</span>
                   <span className="text-xs text-muted-foreground ml-2">{roleConfig.sublabel}</span>
@@ -96,7 +96,7 @@ export default function FloatingAdminChat() {
               {confirmations.length > 0 && (
                 <div className="space-y-0.5">
                   {confirmations.slice(-5).map((c, i) => (
-                    <p key={i} className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    <p key={i} className="text-xs text-purple-600 dark:text-purple-400 font-medium">
                       {c}
                     </p>
                   ))}

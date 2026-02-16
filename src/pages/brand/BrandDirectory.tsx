@@ -356,7 +356,7 @@ const BrandDirectory = () => {
                         <span>creators</span>
                       </div>
                       {dir.is_public ? (
-                        <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 dark:text-emerald-400">
+                        <Badge variant="outline" className="text-[10px] border-purple-300 text-purple-700 dark:text-purple-400">
                           <Eye className="h-3 w-3 mr-1" /> Public
                         </Badge>
                       ) : (
@@ -450,8 +450,8 @@ const BrandDirectory = () => {
           </Card>
           <Card className="p-4 bg-white dark:bg-[#1A1D27] border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <Eye className="h-5 w-5 text-emerald-600" />
+              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-purple-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.active}</p>

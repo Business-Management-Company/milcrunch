@@ -121,7 +121,7 @@ function MiniGauge({ score }: { score: number }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-    verified: { label: "Verified", className: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+    verified: { label: "Verified", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
     pending: { label: "Pending", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300", icon: <Clock className="h-3.5 w-3.5" /> },
     flagged: { label: "Flagged", className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
     denied: { label: "Denied", className: "bg-red-200 text-red-900 dark:bg-red-950 dark:text-red-200", icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -370,7 +370,7 @@ export default function Speakers() {
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-muted-foreground">Verified</p>
-            <p className="text-2xl font-bold text-emerald-600">
+            <p className="text-2xl font-bold text-purple-600">
               {speakers.filter((s) => s.verification_status === "verified").length}
             </p>
           </CardContent>
@@ -441,7 +441,7 @@ export default function Speakers() {
                         )}
                         <span>{speaker.name}</span>
                         {speaker.verification_status === "verified" && (
-                          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />
                         )}
                         {speaker.verification_status === "pending" && speaker.verification_id && (
                           <Clock className="h-4 w-4 text-amber-500 shrink-0" />
@@ -459,7 +459,7 @@ export default function Speakers() {
                     <TableCell>
                       {speaker.verification_id ? (
                         speaker.verification_status === "verified"
-                          ? <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                          ? <ShieldCheck className="h-4 w-4 text-purple-600" />
                           : speaker.verification_status === "flagged"
                             ? <AlertTriangle className="h-4 w-4 text-red-500" />
                             : <Clock className="h-4 w-4 text-amber-500" />

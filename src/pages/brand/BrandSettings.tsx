@@ -69,17 +69,17 @@ const BrandSettings = () => {
           <ul className="space-y-2 text-sm">
             <li className="flex items-center justify-between">
               <span>Supabase</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium">Connected</span>
+              <span className="text-purple-600 dark:text-purple-400 font-medium">Connected</span>
             </li>
             <li className="flex items-center justify-between">
               <span>Influencers.club</span>
-              <span className={hasInfluencersClub ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}>
+              <span className={hasInfluencersClub ? "text-purple-600 dark:text-purple-400 font-medium" : "text-muted-foreground"}>
                 {hasInfluencersClub ? "Configured" : "Not configured"}
               </span>
             </li>
             <li className="flex items-center justify-between">
               <span>Anthropic (AI)</span>
-              <span className={hasAnthropic ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-muted-foreground"}>
+              <span className={hasAnthropic ? "text-purple-600 dark:text-purple-400 font-medium" : "text-muted-foreground"}>
                 {hasAnthropic ? "Configured" : "Not configured"}
               </span>
             </li>

@@ -70,7 +70,7 @@ function CreatorCard({ creator: c, inView, index }: { creator: ShowcaseCreator; 
       }}
     >
       <div className="relative mb-3">
-        <div className={`w-[72px] h-[72px] rounded-full overflow-hidden ${c.paradedeck_verified ? "ring-[3px] ring-emerald-500 ring-offset-2" : "ring-1 ring-gray-200"}`}>
+        <div className={`w-[72px] h-[72px] rounded-full overflow-hidden ${c.paradedeck_verified ? "ring-[3px] ring-purple-500 ring-offset-2" : "ring-1 ring-gray-200"}`}>
           {showImage ? (
             <img src={imgSrc!} alt={c.display_name} className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
           ) : (
@@ -84,7 +84,7 @@ function CreatorCard({ creator: c, inView, index }: { creator: ShowcaseCreator; 
         <h3 className="font-semibold text-[#000741] text-sm leading-tight truncate max-w-[120px]">{c.display_name}</h3>
         {c.paradedeck_verified && (
           <Tooltip>
-            <TooltipTrigger asChild><ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" /></TooltipTrigger>
+            <TooltipTrigger asChild><ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" /></TooltipTrigger>
             <TooltipContent side="top" className="text-xs">RecurrentX Verified</TooltipContent>
           </Tooltip>
         )}
@@ -139,7 +139,7 @@ export default function Creators() {
         <Link to="/">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className="text-[#000741]">recurrent</span>
-            <span className="text-[#10B981] font-extrabold">X</span>
+            <span className="text-[#9B51E0] font-extrabold">X</span>
           </span>
         </Link>
         <div className="flex items-center gap-3">

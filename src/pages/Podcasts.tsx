@@ -75,7 +75,7 @@ export default function PodcastsPage() {
       >
         <Link to="/" className="flex items-center shrink-0">
           <span className={`font-bold text-lg tracking-tight ${navScrolled ? "text-[#000741]" : "text-white"}`}>
-            recurrent<span className="text-[#10B981] font-extrabold">X</span>
+            recurrent<span className="text-[#9B51E0] font-extrabold">X</span>
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
@@ -201,7 +201,7 @@ export default function PodcastsPage() {
       <footer className="border-t border-gray-200 px-4 md:px-8 py-6">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <Link to="/" className="flex items-center">
-            <span className="font-bold text-[#000741] tracking-tight">recurrent<span className="text-[#10B981] font-extrabold">X</span></span>
+            <span className="font-bold text-[#000741] tracking-tight">recurrent<span className="text-[#9B51E0] font-extrabold">X</span></span>
           </Link>
           <p className="text-sm text-gray-500">© 2026 RecurrentX. All rights reserved.</p>
         </div>

@@ -364,8 +364,8 @@ const BrandEventCreate = () => {
                   <div
                     className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
-                      isActive && "bg-teal-500 border-teal-500 text-white",
-                      isCompleted && "bg-teal-500 border-teal-500 text-white",
+                      isActive && "bg-purple-500 border-purple-500 text-white",
+                      isCompleted && "bg-purple-500 border-purple-500 text-white",
                       !isActive && !isCompleted && "bg-transparent border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500"
                     )}
                   >
@@ -374,8 +374,8 @@ const BrandEventCreate = () => {
                   <span
                     className={cn(
                       "text-xs font-medium",
-                      isActive && "text-teal-600 dark:text-teal-400",
-                      isCompleted && "text-teal-600 dark:text-teal-400",
+                      isActive && "text-purple-600 dark:text-purple-400",
+                      isCompleted && "text-purple-600 dark:text-purple-400",
                       !isActive && !isCompleted && "text-gray-400 dark:text-gray-500"
                     )}
                   >
@@ -386,7 +386,7 @@ const BrandEventCreate = () => {
                   <div
                     className={cn(
                       "flex-1 h-0.5 mx-2 mt-[-18px]",
-                      i < step ? "bg-teal-500" : "bg-gray-200 dark:bg-gray-700"
+                      i < step ? "bg-purple-500" : "bg-gray-200 dark:bg-gray-700"
                     )}
                   />
                 )}

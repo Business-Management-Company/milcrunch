@@ -692,7 +692,7 @@ export default function CreatorProfileModal({
               {isSuperAdmin && (
                 <Button
                   variant="outline"
-                  className="w-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 rounded-lg"
+                  className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
                   onClick={handleStandaloneApprove}
                   disabled={approvingDir}
                 >
@@ -702,7 +702,7 @@ export default function CreatorProfileModal({
               )}
               <Button
                 variant="outline"
-                className="w-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 rounded-lg"
+                className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
                 onClick={handleVerifyMilitary}
               >
                 <ShieldCheck className="mr-2 h-4 w-4" />

@@ -24,8 +24,8 @@ const BrandDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
         <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-              <CreditCard className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+              <CreditCard className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Credits Available</p>
           </div>

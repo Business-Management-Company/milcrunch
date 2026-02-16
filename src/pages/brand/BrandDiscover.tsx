@@ -811,7 +811,7 @@ const BrandDiscover = () => {
     return { level: level as "high" | "medium" | "low", score, matches: allMatches };
   }, [searchQuery, niche, selectedBranches, keywordsInBio]);
   const confidenceColors = {
-    high: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    high: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
     medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     low: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
     none: "hidden",
@@ -1460,7 +1460,7 @@ const BrandDiscover = () => {
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                        className="h-7 w-7 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                                         title="Add to Directory"
                                         disabled={approvingDir}
                                       >
@@ -1677,7 +1677,7 @@ const BrandDiscover = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="rounded-lg flex-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
+                                    className="rounded-lg flex-1 text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
                                     disabled={approvingDir}
                                   >
                                     <ShieldCheck className="h-3.5 w-3.5 mr-1" />
