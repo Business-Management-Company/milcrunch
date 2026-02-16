@@ -11,7 +11,7 @@ interface EventRow {
   city: string | null;
   state: string | null;
   venue: string | null;
-  cover_image_url: string | null;
+  image_url: string | null;
   is_published: boolean | null;
   description: string | null;
 }
@@ -45,11 +45,12 @@ export default function PublicEvents() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("events")
-        .select("id, title, start_date, end_date, city, state, venue, cover_image_url, is_published, description")
+        .select("id, title, start_date, end_date, city, state, venue, image_url, is_published, description")
         .eq("is_published", true)
         .order("start_date", { ascending: true });
+      if (error) console.error("Failed to load events:", error);
       setEvents((data as EventRow[] | null) ?? []);
       setLoading(false);
     })();
@@ -112,7 +113,7 @@ export default function PublicEvents() {
               {events.map((event) => {
                 const past = isPastEvent(event.end_date, event.start_date);
                 const location = getLocationLabel(event.city, event.state);
-                const hasImage = !!event.cover_image_url;
+                const hasImage = !!event.image_url;
 
                 return (
                   <Link
@@ -123,7 +124,7 @@ export default function PublicEvents() {
                     {/* Background image or gradient */}
                     {hasImage ? (
                       <img
-                        src={event.cover_image_url!}
+                        src={event.image_url!}
                         alt={event.title}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
