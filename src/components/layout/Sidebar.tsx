@@ -89,7 +89,6 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     items: [
       { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
       { href: "/brand/streaming", label: "Streaming", icon: Monitor },
-      { href: "/brand/connectors", label: "Connectors", icon: Link2 },
       { href: "/brand/pages", label: "Pages", icon: FileText },
     ],
   },
@@ -115,6 +114,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     defaultCollapsed: true,
     items: [
       { href: "/brand/settings", label: "Company Profile", icon: Building2 },
+      { href: "/brand/integrations", label: "Integrations", icon: Link2 },
       { href: "/settings", label: "Team Members", icon: Users },
     ],
   },

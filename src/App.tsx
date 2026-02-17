@@ -116,7 +116,7 @@ import ShopProduct from "./pages/ShopProduct";
 import SwagPackages from "./pages/SwagPackages";
 import MerchAdmin from "./pages/brand/shop/MerchAdmin";
 import SwagAdmin from "./pages/brand/shop/SwagAdmin";
-import Connectors from "./pages/brand/Connectors";
+import Integrations from "./pages/brand/Integrations";
 import StreamingDashboard from "./pages/brand/Streaming";
 
 const queryClient = new QueryClient();
@@ -185,7 +185,8 @@ const App = () => (
                 <Route path="/brand/sponsors/decks" element={<SponsorDecks />} />
                 <Route path="/brand/shop/merch" element={<MerchAdmin />} />
                 <Route path="/brand/shop/swag" element={<SwagAdmin />} />
-                <Route path="/brand/connectors" element={<Connectors />} />
+                <Route path="/brand/integrations" element={<Integrations />} />
+                <Route path="/brand/connectors" element={<Navigate to="/brand/integrations" replace />} />
                 <Route path="/brand/streaming" element={<StreamingDashboard />} />
                 <Route path="/brand/streaming/:id" element={<StreamingDashboard />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />
