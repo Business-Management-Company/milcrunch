@@ -710,9 +710,10 @@ export default function HomePage() {
                 const tag = event.event_type ?? event.tag ?? "";
 
                 return (
-                  <div
+                  <Link
+                    to={`/events/${event.id}`}
                     key={event.id ?? title}
-                    className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                    className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
                   >
                     {/* Cover image with fallback */}
                     {imgSrc && (
@@ -746,11 +747,11 @@ export default function HomePage() {
                           {location}
                         </p>
                       )}
-                      <Button size="sm" className="rounded-lg mt-auto w-full">
+                      <Button size="sm" className="rounded-lg mt-auto w-full pointer-events-none">
                         Join Event
                       </Button>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
