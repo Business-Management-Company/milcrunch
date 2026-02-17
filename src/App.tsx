@@ -103,6 +103,7 @@ import AdminChat from "./pages/superadmin/AdminChat";
 import BrandPages from "./pages/brand/BrandPages";
 import BrandPageEdit from "./pages/brand/BrandPageEdit";
 import DynamicPage from "./pages/DynamicPage";
+import PlansPage from "./pages/PlansPage";
 
 const queryClient = new QueryClient();
 
@@ -125,6 +126,7 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/plans" element={<PlansPage />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/veteran-podcast-awards" element={<VeteranPodcastAwards />} />
               <Route path="/national-military-podcast-day" element={<NationalMilitaryPodcastDay />} />
