@@ -496,52 +496,97 @@ export async function fetchCredits(): Promise<CreditBalance | null> {
 }
 
 /**
- * Search by exact username via Influencers.club API.
- * Calls /api/search-username serverless proxy.
+ * Username / lookalike search via the SAME working proxy used by keyword search.
+ * POSTs to /api/influencers/public/v1/discovery/ (proxied to api-dashboard.influencers.club).
+ * For username: uses filters.search_by_handle. For lookalike: uses filters.lookalike_handle.
+ * Falls back to ai_search with the handle if the dedicated filter returns nothing.
  */
-export async function searchByUsername(
-  username: string,
-  platform: string = "instagram"
+async function searchViaDiscoveryProxy(
+  handle: string,
+  platform: string,
+  searchType: "username" | "lookalike"
 ): Promise<SearchCreatorsResult> {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
-  const handle = username.replace(/^@/, "").trim();
-  if (!handle) throw new Error("Username is required");
 
-  const res = await fetch(
-    `/api/search-username?username=${encodeURIComponent(handle)}&platform=${encodeURIComponent(platform)}&search_type=username`,
-    {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    }
-  );
+  const platformValue = platform.toLowerCase();
+
+  // Build body — same shape as keyword search but with handle-specific filter
+  const body: Record<string, unknown> = {
+    platform: platformValue,
+    paging: { limit: 25, page: 1 },
+    sort: { sort_by: "relevancy", sort_order: "desc" },
+    filters: searchType === "lookalike"
+      ? { lookalike_handle: handle }
+      : { search_by_handle: handle },
+  };
+
+  console.log(`[${searchType}Search] POSTing to discovery proxy:`, JSON.stringify(body));
+
+  const res = await fetch(DISCOVERY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
 
   const rawResponse = await res.json();
-  console.log("[UsernameSearch] Response:", rawResponse);
+  console.log(`[${searchType}Search] Response status:`, res.status, "keys:", Object.keys(rawResponse as object));
 
   if (!res.ok) {
-    throw new Error(`Username search ${res.status}: ${res.statusText}`, { cause: rawResponse });
+    // If the handle-specific filter isn't supported, fall back to ai_search
+    console.log(`[${searchType}Search] Primary filter failed (${res.status}), falling back to ai_search`);
+    const fallbackBody = {
+      platform: platformValue,
+      paging: { limit: 25, page: 1 },
+      sort: { sort_by: "relevancy", sort_order: "desc" },
+      filters: {
+        ai_search: handle,
+        keywords_in_bio: [""],
+      },
+    };
+
+    const fallbackRes = await fetch(DISCOVERY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(fallbackBody),
+    });
+
+    const fallbackRaw = await fallbackRes.json();
+    console.log(`[${searchType}Search] Fallback response:`, fallbackRes.status);
+
+    if (!fallbackRes.ok) {
+      throw new Error(`${searchType} search ${fallbackRes.status}: ${fallbackRes.statusText}`, { cause: fallbackRaw });
+    }
+
+    const accounts = (fallbackRaw as { accounts?: ApiAccount[] }).accounts ?? [];
+    const list = Array.isArray(accounts) ? accounts : [];
+    const total = Number((fallbackRaw as { total?: number }).total ?? list.length);
+    return { creators: list.map((acc, i) => mapAccountToCard(acc, i)), total, rawResponse: fallbackRaw };
   }
 
-  // The API may return accounts[] (same as discovery) or a single profile result
-  const accounts = (rawResponse as Record<string, unknown>).accounts as ApiAccount[] | undefined;
-  const result = (rawResponse as Record<string, unknown>).result as Record<string, unknown> | undefined;
+  // Parse accounts from response (may be accounts[], lookalikes[], similar_creators[], or result{})
+  const raw = rawResponse as Record<string, unknown>;
+  const accounts = raw.accounts ?? raw.lookalikes ?? raw.similar_creators;
+  const result = raw.result as Record<string, unknown> | undefined;
 
   let creators: CreatorCard[] = [];
   let total = 0;
 
   if (Array.isArray(accounts) && accounts.length > 0) {
-    creators = accounts.map((acc, i) => mapAccountToCard(acc, i));
-    total = Number((rawResponse as Record<string, unknown>).total ?? creators.length);
+    creators = (accounts as ApiAccount[]).map((acc, i) => mapAccountToCard(acc, i));
+    total = Number(raw.total ?? creators.length);
   } else if (result && typeof result === "object") {
-    // Single profile result — wrap in CreatorCard
     const p = (result.instagram ?? result.profile ?? result) as ApiProfile;
-    const card = mapAccountToCard({ user_id: p.username ?? handle, profile: p }, 0);
-    creators = [card];
+    creators = [mapAccountToCard({ user_id: p.username ?? handle, profile: p }, 0)];
     total = 1;
-  } else if (rawResponse && typeof rawResponse === "object" && (rawResponse as Record<string, unknown>).username) {
-    // Direct profile object
-    const card = mapAccountToCard({ user_id: handle, profile: rawResponse as ApiProfile }, 0);
-    creators = [card];
+  } else if (raw.username) {
+    creators = [mapAccountToCard({ user_id: handle, profile: raw as unknown as ApiProfile }, 0)];
     total = 1;
   }
 
@@ -549,47 +594,27 @@ export async function searchByUsername(
 }
 
 /**
- * Find lookalike creators via Influencers.club API.
- * Calls /api/search-lookalike serverless proxy.
+ * Search by exact username via the working discovery proxy.
+ */
+export async function searchByUsername(
+  username: string,
+  platform: string = "instagram"
+): Promise<SearchCreatorsResult> {
+  const handle = username.replace(/^@/, "").trim();
+  if (!handle) throw new Error("Username is required");
+  return searchViaDiscoveryProxy(handle, platform, "username");
+}
+
+/**
+ * Find lookalike creators via the working discovery proxy.
  */
 export async function searchLookalike(
   username: string,
   platform: string = "instagram"
 ): Promise<SearchCreatorsResult> {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
   const handle = username.replace(/^@/, "").trim();
   if (!handle) throw new Error("Username is required");
-
-  const res = await fetch(
-    `/api/search-username?username=${encodeURIComponent(handle)}&platform=${encodeURIComponent(platform)}&search_type=lookalike`,
-    {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    }
-  );
-
-  const rawResponse = await res.json();
-  console.log("[LookalikeSearch] Response:", rawResponse);
-
-  if (!res.ok) {
-    throw new Error(`Lookalike search ${res.status}: ${res.statusText}`, { cause: rawResponse });
-  }
-
-  // Response may have accounts[], lookalikes[], or similar_creators[]
-  const accounts =
-    (rawResponse as Record<string, unknown>).accounts ??
-    (rawResponse as Record<string, unknown>).lookalikes ??
-    (rawResponse as Record<string, unknown>).similar_creators;
-
-  let creators: CreatorCard[] = [];
-  let total = 0;
-
-  if (Array.isArray(accounts) && accounts.length > 0) {
-    creators = (accounts as ApiAccount[]).map((acc, i) => mapAccountToCard(acc, i));
-    total = Number((rawResponse as Record<string, unknown>).total ?? creators.length);
-  }
-
-  return { creators, total, rawResponse };
+  return searchViaDiscoveryProxy(handle, platform, "lookalike");
 }
 
 /** Log credit usage to Supabase (fire-and-forget, non-blocking) */

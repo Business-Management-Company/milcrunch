@@ -12,7 +12,10 @@ export default async function handler(req, res) {
     }
 
     const cleanUsername = username.replace('@', '').trim();
-    const apiKey = process.env.INFLUENCERS_CLUB_API_KEY;
+    const apiKey =
+      req.headers.authorization?.replace('Bearer ', '') ||
+      process.env.INFLUENCERS_CLUB_API_KEY ||
+      process.env.VITE_INFLUENCERS_CLUB_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({ error: 'API key not configured' });
@@ -20,31 +23,49 @@ export default async function handler(req, res) {
 
     console.log('Searching:', cleanUsername, platform, searchType);
 
-    const response = await fetch('https://api.influencers.club/public/v1/search', {
+    // Use the same base URL that the working /api/influencers proxy uses
+    const response = await fetch('https://api-dashboard.influencers.club/public/v1/discovery/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
+        'Authorization': 'Bearer ' + apiKey,
       },
       body: JSON.stringify({
         platform: platform,
-        search_type: searchType,
-        search_value: cleanUsername
-      })
+        paging: { limit: 25, page: 1 },
+        sort: { sort_by: 'relevancy', sort_order: 'desc' },
+        filters: searchType === 'lookalike'
+          ? { lookalike_handle: cleanUsername }
+          : { search_by_handle: cleanUsername },
+      }),
     });
 
     const text = await response.text();
     console.log('API response status:', response.status);
     console.log('API response body:', text.substring(0, 500));
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      return res.status(500).json({ error: 'Invalid JSON from API', body: text.substring(0, 200) });
+    // If handle-specific filter not supported, fall back to ai_search
+    if (!response.ok) {
+      console.log('Handle filter failed, falling back to ai_search');
+      const fallback = await fetch('https://api-dashboard.influencers.club/public/v1/discovery/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify({
+          platform: platform,
+          paging: { limit: 25, page: 1 },
+          sort: { sort_by: 'relevancy', sort_order: 'desc' },
+          filters: { ai_search: cleanUsername, keywords_in_bio: [''] },
+        }),
+      });
+      const fbText = await fallback.text();
+      console.log('Fallback status:', fallback.status);
+      return res.status(fallback.status).setHeader('Content-Type', 'application/json').send(fbText);
     }
 
-    return res.status(response.status).json(data);
+    return res.status(response.status).setHeader('Content-Type', 'application/json').send(text);
   } catch (error) {
     console.error('Search error:', error.message, error.stack);
     return res.status(500).json({ error: error.message });
