@@ -5,10 +5,11 @@ import { Menu, X, Calendar, MapPin, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const NAV_LINKS = [
-  { label: "Creator Directory", to: "/creators" },
+  { label: "Influencers", to: "/creators" },
   { label: "Podcast Network", to: "/podcasts" },
   { label: "Shop", to: "/shop" },
   { label: "Events", to: "/events" },
+  { label: "Your Path", to: "/plans" },
 ];
 
 type UpcomingEvent = {
