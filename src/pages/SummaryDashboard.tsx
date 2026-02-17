@@ -1,9 +1,8 @@
-import { Link } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useContext } from "react";
-import { AdminChatContext } from "@/contexts/AdminChatContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Search,
   ListPlus,
@@ -18,8 +17,10 @@ import {
   Send,
   MapPin,
   Clock,
+  ShoppingBag,
+  Headphones,
+  CheckCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -81,6 +82,24 @@ const ROW2 = [
 ];
 
 /* ------------------------------------------------------------------ */
+/* Pill button quick actions                                           */
+/* ------------------------------------------------------------------ */
+
+const PILLS_ROW1 = [
+  { label: "Find Military Creators", icon: "🔍", href: "/brand/discover" },
+  { label: "Build a Creator List", icon: "📋", href: "/brand/lists" },
+  { label: "Browse Podcast Network", icon: "🎙️", href: "/brand/podcasts" },
+  { label: "View Event Analytics", icon: "📊", href: "/brand/events" },
+];
+
+const PILLS_ROW2 = [
+  { label: "Find Keynote Speakers", icon: "🎤", href: "/brand/discover" },
+  { label: "Verify a Creator", icon: "✅", href: "/brand/discover" },
+  { label: "Manage Events", icon: "📅", href: "/brand/events" },
+  { label: "SWAG Store", icon: "🏪", href: "/swag" },
+];
+
+/* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -96,8 +115,7 @@ function formatCount(n: number): string {
 
 export default function SummaryDashboard() {
   const { user } = useAuth();
-  const adminChat = useContext(AdminChatContext);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
   const [prompt, setPrompt] = useState("");
 
   // User's first name
@@ -143,7 +161,7 @@ export default function SummaryDashboard() {
       .select("id", { count: "exact", head: true })
       .then(({ count }) => setListCount(count ?? 0));
 
-    // Upcoming events — use correct column names: title, start_date, city, state
+    // Upcoming events
     supabase
       .from("events")
       .select("id, title, start_date, city, state")
@@ -190,12 +208,27 @@ export default function SummaryDashboard() {
     ]);
   }, []);
 
-  // Submit prompt → send via Admin AI Chat
+  // Smart command router
   const handleSubmit = () => {
-    const q = prompt.trim();
-    if (!q || !adminChat) return;
+    const q = prompt.trim().toLowerCase();
+    if (!q) return;
     setPrompt("");
-    adminChat.sendMessage(q);
+
+    if (q.includes("creator") || q.includes("influencer")) {
+      navigate("/brand/discover");
+    } else if (q.includes("event")) {
+      navigate("/brand/events");
+    } else if (q.includes("podcast")) {
+      navigate("/brand/podcasts");
+    } else if (q.includes("sponsor")) {
+      navigate("/brand/events");
+    } else if (q.includes("analytics") || q.includes("report")) {
+      navigate("/brand/attribution");
+    } else if (q.includes("list") || q.includes("directory")) {
+      navigate("/brand/directory");
+    } else {
+      toast("I can help with creators, events, podcasts, sponsors, and analytics. Try asking about one of those!");
+    }
   };
 
   return (
@@ -206,7 +239,7 @@ export default function SummaryDashboard() {
           Welcome back, {firstName}
         </h1>
         <p className="text-muted-foreground mt-1 text-lg">
-          What would you like to do today?
+          What can I help you with?
         </p>
       </div>
 
@@ -215,14 +248,13 @@ export default function SummaryDashboard() {
         <div className="relative flex items-center">
           <Sparkles className="absolute left-4 h-5 w-5 text-[#6C5CE7]" />
           <input
-            ref={inputRef}
             type="text"
-            placeholder="Ask me anything about creators, events, sponsors, or campaigns..."
+            placeholder="Ask me anything about creators, events, or campaigns..."
             className={cn(
               "w-full pl-12 pr-14 py-4 rounded-2xl text-base",
-              "border border-gray-200 dark:border-gray-700",
+              "border-2 border-purple-200 dark:border-purple-800 focus:border-[#6C5CE7]",
               "bg-white dark:bg-[#1A1D27]",
-              "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]",
+              "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#6C5CE7]/30",
               "outline-none transition-all placeholder:text-gray-400",
             )}
             value={prompt}
@@ -244,6 +276,42 @@ export default function SummaryDashboard() {
           >
             <Send className="h-4 w-4" />
           </button>
+        </div>
+
+        {/* Pill Quick Actions */}
+        <div className="mt-5 space-y-3">
+          <div className="flex flex-wrap justify-center gap-2.5">
+            {PILLS_ROW1.map((pill) => (
+              <Link
+                key={pill.label}
+                to={pill.href}
+                className={cn(
+                  "flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300",
+                  "hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-900/20",
+                  "transition-all",
+                )}
+              >
+                <span>{pill.icon}</span>
+                {pill.label}
+              </Link>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-center gap-2.5">
+            {PILLS_ROW2.map((pill) => (
+              <Link
+                key={pill.label}
+                to={pill.href}
+                className={cn(
+                  "flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300",
+                  "hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-900/20",
+                  "transition-all",
+                )}
+              >
+                <span>{pill.icon}</span>
+                {pill.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
