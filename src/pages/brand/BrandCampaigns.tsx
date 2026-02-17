@@ -20,6 +20,9 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  Plus,
+  X,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,11 +73,16 @@ interface SponsorOption {
   name: string;
 }
 
+interface TagGroup {
+  name: string;
+  hashtags: string;
+}
+
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
 /* ------------------------------------------------------------------ */
 
-const GOALS = ["Pre-Event Hype", "Day-Of Coverage", "Post-Event Recap", "Full Campaign"] as const;
+const GOALS = ["Custom", "Pre-Event Hype", "Day-Of Coverage", "Post-Event Recap", "Full Campaign"] as const;
 const DURATIONS = [30, 60, 90] as const;
 const PLATFORMS = [
   { key: "instagram", label: "Instagram", icon: Instagram },
@@ -107,39 +115,64 @@ const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-20250514";
+const TAG_STORAGE_KEY = "rx_campaign_tag_groups";
 
 /* ------------------------------------------------------------------ */
-/* Pill Select                                                         */
+/* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-function PillSelect<T extends string | number>({
-  options,
-  value,
-  onChange,
-  renderLabel,
+function loadTagGroups(): TagGroup[] {
+  try {
+    const raw = localStorage.getItem(TAG_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTagGroups(groups: TagGroup[]) {
+  localStorage.setItem(TAG_STORAGE_KEY, JSON.stringify(groups));
+}
+
+function sponsorHandle(name: string): string {
+  return "@" + name.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function sponsorHashtag(name: string): string {
+  return "#" + name.replace(/[^a-zA-Z0-9]+/g, "");
+}
+
+function daysBetween(a: string, b: string): number {
+  const ms = new Date(b).getTime() - new Date(a).getTime();
+  return Math.max(1, Math.round(ms / 86400000));
+}
+
+/* ------------------------------------------------------------------ */
+/* Section Wrapper                                                     */
+/* ------------------------------------------------------------------ */
+
+function FormSection({
+  number,
+  title,
+  children,
 }: {
-  options: readonly T[];
-  value: T;
-  onChange: (v: T) => void;
-  renderLabel?: (v: T) => string;
+  number: number;
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((opt) => (
-        <button
-          key={String(opt)}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={cn(
-            "px-4 py-2 rounded-full text-sm font-medium border transition-all",
-            value === opt
-              ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-              : "bg-white text-gray-600 border-gray-200 hover:border-[#6C5CE7]/40"
-          )}
-        >
-          {renderLabel ? renderLabel(opt) : String(opt)}
-        </button>
-      ))}
+    <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
+      <div className="border-l-4 border-[#6C5CE7] p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="w-7 h-7 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] text-xs font-bold flex items-center justify-center shrink-0">
+            {number}
+          </span>
+          <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+            {title}
+          </h3>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
@@ -171,7 +204,7 @@ function PlatformToggles({
             "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all",
             selected.includes(key)
               ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-              : "bg-white text-gray-600 border-gray-200 hover:border-[#6C5CE7]/40"
+              : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
           )}
         >
           <Icon className="h-4 w-4" />
@@ -183,7 +216,7 @@ function PlatformToggles({
 }
 
 /* ------------------------------------------------------------------ */
-/* Sponsor Multi-Select                                                */
+/* Sponsor Multi-Select with handles/hashtags                          */
 /* ------------------------------------------------------------------ */
 
 function SponsorMultiSelect({
@@ -199,9 +232,11 @@ function SponsorMultiSelect({
     return <p className="text-sm text-gray-400 italic">No sponsors linked to this event.</p>;
   }
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="space-y-2">
       {sponsors.map((s) => {
         const active = selected.includes(s.id);
+        const handle = sponsorHandle(s.name);
+        const tag = sponsorHashtag(s.name);
         return (
           <button
             key={s.id}
@@ -210,16 +245,104 @@ function SponsorMultiSelect({
               onChange(active ? selected.filter((id) => id !== s.id) : [...selected, s.id])
             }
             className={cn(
-              "px-3 py-1.5 rounded-full text-sm font-medium border transition-all",
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
               active
-                ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                : "bg-white text-gray-600 border-gray-200 hover:border-[#6C5CE7]/40"
+                ? "bg-[#6C5CE7]/5 border-[#6C5CE7]/30"
+                : "bg-white dark:bg-[#0F1117] border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
             )}
           >
-            {s.name}
+            <div
+              className={cn(
+                "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                active
+                  ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                  : "border-gray-300 dark:border-gray-600"
+              )}
+            >
+              {active && <CheckCircle2 className="h-3 w-3 text-white" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={cn("text-sm font-medium", active ? "text-[#6C5CE7]" : "text-gray-700 dark:text-gray-300")}>
+                {s.name}
+              </p>
+              <p className="text-xs text-gray-400">
+                {handle} &middot; {tag}
+              </p>
+            </div>
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tag Group Modal                                                     */
+/* ------------------------------------------------------------------ */
+
+function TagGroupModal({
+  onSave,
+  onClose,
+}: {
+  onSave: (g: TagGroup) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [tags, setTags] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-[#1A1D27] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 w-full max-w-md mx-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900 dark:text-white">New Tag Group</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Group Name
+            </Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder='e.g. "MIC 2026"'
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Hashtags
+            </Label>
+            <textarea
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="#MIC2026 #MilitaryInfluencer #VeteranCreators"
+              rows={3}
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!name.trim() || !tags.trim()}
+              onClick={() => {
+                onSave({ name: name.trim(), hashtags: tags.trim() });
+                onClose();
+              }}
+              className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+            >
+              Save Group
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -238,7 +361,7 @@ function PostCard({
   scheduling: boolean;
 }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-[#1A1D27] border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-1 rounded-full">
@@ -250,7 +373,7 @@ function PostCard({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">
+          <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-50 dark:bg-[#0F1117] px-2 py-1 rounded-full">
             {CONTENT_TYPE_ICONS[post.content_type] ?? <Type className="h-3.5 w-3.5" />}
             {post.content_type}
           </span>
@@ -261,7 +384,7 @@ function PostCard({
         </div>
       </div>
 
-      <p className="text-sm text-gray-800 mb-2 leading-relaxed">{post.caption}</p>
+      <p className="text-sm text-gray-800 dark:text-gray-200 mb-2 leading-relaxed">{post.caption}</p>
 
       {post.hashtags && (
         <p className="text-xs text-[#6C5CE7] font-medium mb-2">{post.hashtags}</p>
@@ -302,13 +425,19 @@ export default function BrandCampaigns() {
   // Form state
   const [events, setEvents] = useState<EventOption[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
-  const [goal, setGoal] = useState<(typeof GOALS)[number]>("Full Campaign");
+  const [goal, setGoal] = useState<(typeof GOALS)[number]>("Custom");
   const [duration, setDuration] = useState<(typeof DURATIONS)[number]>(30);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [speakers, setSpeakers] = useState("");
   const [sponsors, setSponsors] = useState<SponsorOption[]>([]);
   const [selectedSponsors, setSelectedSponsors] = useState<string[]>([]);
   const [hashtags, setHashtags] = useState("");
   const [platforms, setPlatforms] = useState<string[]>(["instagram", "tiktok"]);
+
+  // Tag groups
+  const [tagGroups, setTagGroups] = useState<TagGroup[]>(loadTagGroups);
+  const [showTagModal, setShowTagModal] = useState(false);
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -321,6 +450,30 @@ export default function BrandCampaigns() {
   const [scheduledPosts, setScheduledPosts] = useState<Set<number>>(new Set());
   const [scheduleAllLoading, setScheduleAllLoading] = useState(false);
   const [scheduleFeedback, setScheduleFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+
+  // Computed: date-based duration
+  const hasDateRange = !!(startDate && endDate && endDate >= startDate);
+  const dateDuration = hasDateRange ? daysBetween(startDate, endDate) : null;
+  const effectiveDuration = dateDuration ?? duration;
+
+  // Auto-append sponsor handles/hashtags when selection changes
+  useEffect(() => {
+    if (selectedSponsors.length === 0) return;
+    const additions: string[] = [];
+    sponsors
+      .filter((s) => selectedSponsors.includes(s.id))
+      .forEach((s) => {
+        const h = sponsorHandle(s.name);
+        const t = sponsorHashtag(s.name);
+        if (!hashtags.includes(h)) additions.push(h);
+        if (!hashtags.includes(t)) additions.push(t);
+      });
+    if (additions.length > 0) {
+      setHashtags((prev) => (prev ? prev + " " + additions.join(" ") : additions.join(" ")));
+    }
+    // Only run when selectedSponsors changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSponsors]);
 
   // Load events
   useEffect(() => {
@@ -358,6 +511,28 @@ export default function BrandCampaigns() {
   // Get selected event details
   const selectedEvent = events.find((e) => e.id === selectedEventId);
 
+  // Handle tag group save
+  const handleSaveTagGroup = (g: TagGroup) => {
+    const updated = [...tagGroups, g];
+    setTagGroups(updated);
+    saveTagGroups(updated);
+  };
+
+  const handleDeleteTagGroup = (idx: number) => {
+    const updated = tagGroups.filter((_, i) => i !== idx);
+    setTagGroups(updated);
+    saveTagGroups(updated);
+  };
+
+  const applyTagGroup = (g: TagGroup) => {
+    setHashtags((prev) => {
+      const combined = prev ? prev + " " + g.hashtags : g.hashtags;
+      // Deduplicate
+      const unique = [...new Set(combined.split(/\s+/).filter(Boolean))];
+      return unique.join(" ");
+    });
+  };
+
   // Generate campaign
   const handleGenerate = useCallback(async () => {
     if (!selectedEventId || platforms.length === 0) return;
@@ -369,6 +544,13 @@ export default function BrandCampaigns() {
       .filter((s) => selectedSponsors.includes(s.id))
       .map((s) => s.name);
 
+    const goalInstruction =
+      goal === "Custom"
+        ? "Create a balanced campaign with a mix of pre-event hype, day-of coverage, and post-event recap. Adjust the mix based on the duration."
+        : goal === "Full Campaign"
+          ? "Include all three phases: Pre-Event, Day-Of, and Post-Event."
+          : `Focus on the ${goal} phase but include brief supporting posts in other phases.`;
+
     const systemPrompt = `You are a military event social media strategist. Generate a complete social media campaign calendar. Return ONLY valid JSON matching the exact schema requested. No markdown, no code fences, no explanation — just the JSON object.`;
 
     const userPrompt = `Generate a social media campaign with the following details:
@@ -376,7 +558,7 @@ export default function BrandCampaigns() {
 Event: ${selectedEvent?.title ?? "Unknown"}
 Event Date: ${selectedEvent?.start_date ?? "TBD"}
 Campaign Goal: ${goal}
-Campaign Duration: ${duration} days
+Campaign Duration: ${effectiveDuration} days${hasDateRange ? ` (${startDate} to ${endDate})` : ""}
 Key Speakers: ${speakers || "None specified"}
 Sponsors to Feature: ${sponsorNames.length > 0 ? sponsorNames.join(", ") : "None specified"}
 Hashtags: ${hashtags || "None specified"}
@@ -405,8 +587,8 @@ Return this exact JSON structure:
   ]
 }
 
-${goal === "Full Campaign" ? "Include all three phases: Pre-Event, Day-Of, and Post-Event." : `Focus on the ${goal} phase but include brief supporting posts in other phases.`}
-Generate posts across the specified platforms, varying content types. Create ${duration <= 30 ? "15-25" : duration <= 60 ? "25-40" : "40-60"} total posts spread across the campaign duration.
+${goalInstruction}
+Generate posts across the specified platforms, varying content types. Create ${effectiveDuration <= 30 ? "15-25" : effectiveDuration <= 60 ? "25-40" : "40-60"} total posts spread across the campaign duration.
 Make the captions authentic and engaging for a military community audience. Reference the speakers and sponsors naturally where appropriate.`;
 
     try {
@@ -420,7 +602,7 @@ Make the captions authentic and engaging for a military community audience. Refe
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 4000,
+          max_tokens: 8000,
           system: systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
         }),
@@ -436,9 +618,28 @@ Make the captions authentic and engaging for a military community audience. Refe
         result.content?.[0]?.text ??
         (typeof result.content === "string" ? result.content : "");
 
-      // Parse JSON — strip markdown fences if present
-      const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
-      const parsed: CampaignData = JSON.parse(cleaned);
+      // Strip markdown code fences if present
+      const cleaned = text
+        .replace(/^[\s\S]*?```(?:json)?\s*/i, "")
+        .replace(/```[\s\S]*$/, "")
+        .trim();
+
+      // Find the JSON object boundaries
+      const jsonStart = cleaned.indexOf("{");
+      const jsonEnd = cleaned.lastIndexOf("}");
+      const jsonStr = jsonStart >= 0 && jsonEnd > jsonStart
+        ? cleaned.slice(jsonStart, jsonEnd + 1)
+        : cleaned;
+
+      let parsed: CampaignData;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        throw new Error(
+          "Campaign generation failed — try selecting fewer platforms or a shorter duration."
+        );
+      }
+
       setCampaign(parsed);
       setActivePhase(0);
 
@@ -451,11 +652,15 @@ Make the captions authentic and engaging for a military community audience. Refe
       });
     } catch (err: any) {
       console.error("Campaign generation failed:", err);
-      setError(err.message || "Failed to generate campaign. Please try again.");
+      setError(
+        err.message?.includes("Campaign generation failed")
+          ? err.message
+          : err.message || "Failed to generate campaign. Please try again."
+      );
     } finally {
       setGenerating(false);
     }
-  }, [selectedEventId, selectedEvent, goal, duration, speakers, sponsors, selectedSponsors, hashtags, platforms, apiKey]);
+  }, [selectedEventId, selectedEvent, goal, effectiveDuration, hasDateRange, startDate, endDate, speakers, sponsors, selectedSponsors, hashtags, platforms, apiKey]);
 
   // Schedule a single post
   const schedulePost = useCallback(
@@ -466,7 +671,6 @@ Make the captions authentic and engaging for a military community audience. Refe
         const eventDate = new Date(selectedEvent.start_date);
         const postDate = new Date(eventDate);
         postDate.setDate(postDate.getDate() + post.day);
-        // Parse best_time for hour
         const timeMatch = post.best_time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
         if (timeMatch) {
           let hour = parseInt(timeMatch[1]);
@@ -564,32 +768,33 @@ Make the captions authentic and engaging for a military community audience. Refe
     return idx + postIdx;
   };
 
+  const isLargeCampaign = goal === "Full Campaign" && effectiveDuration >= 90;
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-[#6C5CE7]/10 flex items-center justify-center">
-            <Megaphone className="h-5 w-5 text-[#6C5CE7]" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">AI Campaign Builder</h1>
-            <p className="text-sm text-gray-500">
-              Generate a complete social media campaign for your event in seconds.
-            </p>
+    <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-[#6C5CE7]/10 flex items-center justify-center">
+              <Megaphone className="h-5 w-5 text-[#6C5CE7]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
+                AI Campaign Builder
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Generate a complete social media campaign for your event in seconds.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* LEFT — Campaign Setup Form */}
-        <div className="space-y-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-5">
-            <h2 className="font-semibold text-gray-900 text-lg">Campaign Setup</h2>
-
-            {/* Event Selector */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Event</Label>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          {/* LEFT — Campaign Setup (sticky) */}
+          <div className="lg:col-span-2 lg:sticky lg:top-20 space-y-4">
+            {/* 1. Event */}
+            <FormSection number={1} title="Event">
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select an event" />
@@ -607,38 +812,102 @@ Make the captions authentic and engaging for a military community audience. Refe
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FormSection>
 
-            {/* Campaign Goal */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Campaign Goal</Label>
-              <PillSelect options={GOALS} value={goal} onChange={setGoal} />
-            </div>
+            {/* 2. Goal & Duration */}
+            <FormSection number={2} title="Goal & Duration">
+              <div>
+                <Label className="text-xs font-medium text-gray-500 mb-1.5 block">Campaign Goal</Label>
+                <div className="flex flex-wrap gap-2">
+                  {GOALS.map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setGoal(g)}
+                      className={cn(
+                        "px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all",
+                        goal === g
+                          ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                          : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
+                      )}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Duration */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Campaign Duration</Label>
-              <PillSelect
-                options={DURATIONS}
-                value={duration}
-                onChange={setDuration}
-                renderLabel={(v) => `${v} days`}
-              />
-            </div>
+              {/* Date range */}
+              <div>
+                <Label className="text-xs font-medium text-gray-500 mb-1.5 block">
+                  Campaign Dates
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-gray-400 mb-0.5 block">Start</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 mb-0.5 block">End</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || undefined}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                    />
+                  </div>
+                </div>
+                {hasDateRange && (
+                  <p className="text-xs text-[#6C5CE7] font-medium mt-1.5">
+                    {dateDuration} days
+                  </p>
+                )}
+              </div>
 
-            {/* Key Speakers */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Key Speakers</Label>
+              {/* Duration pills — only show when no date range */}
+              {!hasDateRange && (
+                <div>
+                  <Label className="text-xs font-medium text-gray-500 mb-1.5 block">
+                    Or select duration
+                  </Label>
+                  <div className="flex gap-2">
+                    {DURATIONS.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDuration(d)}
+                        className={cn(
+                          "px-4 py-1.5 rounded-full text-xs font-medium border transition-all",
+                          duration === d
+                            ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                            : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
+                        )}
+                      >
+                        {d} days
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </FormSection>
+
+            {/* 3. Key Speakers */}
+            <FormSection number={3} title="Key Speakers">
               <Input
                 placeholder="e.g. John Smith, Jane Doe"
                 value={speakers}
                 onChange={(e) => setSpeakers(e.target.value)}
               />
-            </div>
+            </FormSection>
 
-            {/* Sponsors */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Sponsors to Feature</Label>
+            {/* 4. Sponsors */}
+            <FormSection number={4} title="Sponsors to Feature">
               {selectedEventId ? (
                 <SponsorMultiSelect
                   sponsors={sponsors}
@@ -648,168 +917,229 @@ Make the captions authentic and engaging for a military community audience. Refe
               ) : (
                 <p className="text-sm text-gray-400 italic">Select an event first.</p>
               )}
-            </div>
+            </FormSection>
 
-            {/* Hashtags */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Hashtags</Label>
+            {/* 5. Hashtags + Tags */}
+            <FormSection number={5} title="Hashtags">
+              {/* Saved tag groups */}
+              {tagGroups.length > 0 && (
+                <div>
+                  <Label className="text-xs font-medium text-gray-500 mb-1.5 block">
+                    Saved Tags
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tagGroups.map((g, idx) => (
+                      <div key={idx} className="group flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => applyTagGroup(g)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20 hover:bg-[#6C5CE7]/20 transition-colors"
+                        >
+                          <Tag className="h-3 w-3" />
+                          {g.name}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTagGroup(idx)}
+                          className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xs transition-opacity hover:bg-red-200"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTagModal(true)}
+                  className="flex items-center gap-1 text-xs text-[#6C5CE7] hover:underline font-medium"
+                >
+                  <Plus className="h-3 w-3" /> New Tag Group
+                </button>
+              </div>
+
               <Input
                 placeholder="e.g. #MIC2026, #MilSpouseFest"
                 value={hashtags}
                 onChange={(e) => setHashtags(e.target.value)}
               />
-            </div>
+            </FormSection>
 
-            {/* Platforms */}
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Platforms</Label>
+            {/* 6. Platforms */}
+            <FormSection number={6} title="Platforms">
               <PlatformToggles selected={platforms} onChange={setPlatforms} />
-            </div>
+            </FormSection>
 
             {/* Generate Button */}
-            <Button
-              onClick={handleGenerate}
-              disabled={!selectedEventId || platforms.length === 0 || generating}
-              className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold py-3"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Generate Campaign
-                </>
+            <div className="space-y-3">
+              {isLargeCampaign && (
+                <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <p className="text-xs">
+                    Full Campaign with {effectiveDuration}+ days generates 40-60 posts. This may take 15-30 seconds.
+                  </p>
+                </div>
               )}
-            </Button>
 
-            {error && (
-              <div className="flex items-start gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <p className="text-sm">{error}</p>
+              <Button
+                onClick={handleGenerate}
+                disabled={!selectedEventId || platforms.length === 0 || generating}
+                className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold py-3"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate Campaign
+                  </>
+                )}
+              </Button>
+
+              {error && (
+                <div className="flex items-start gap-2 text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <p className="text-sm">{error}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT — Campaign Output */}
+          <div className="lg:col-span-3 min-h-[400px]">
+            {generating && (
+              <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-12">
+                <Loader2 className="h-10 w-10 animate-spin text-[#6C5CE7] mb-4" />
+                <p className="text-gray-600 dark:text-gray-300 font-medium">Generating your campaign...</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {isLargeCampaign
+                    ? "Large campaigns may take 15-30 seconds."
+                    : "This may take a few seconds."}
+                </p>
+              </div>
+            )}
+
+            {!generating && !campaign && (
+              <div className="flex flex-col items-center justify-center h-full bg-gray-50 dark:bg-[#0F1117] border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center">
+                <Megaphone className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+                <p className="text-gray-500 font-medium">Your campaign will appear here</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Fill out the form and click Generate Campaign.
+                </p>
+              </div>
+            )}
+
+            {!generating && campaign && (
+              <div className="space-y-4">
+                {/* Campaign header */}
+                <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">{campaign.campaign_name}</h2>
+                      <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-1 rounded-full">
+                        {campaign.total_posts} posts
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={exportCsv}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Export CSV
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={scheduleAll}
+                        disabled={scheduleAllLoading}
+                        className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+                      >
+                        {scheduleAllLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <CalendarClock className="h-4 w-4 mr-1" />
+                        )}
+                        Schedule All
+                      </Button>
+                    </div>
+                  </div>
+                  {scheduleFeedback && (
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 mt-3 text-sm rounded-lg px-3 py-2",
+                        scheduleFeedback.type === "success"
+                          ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400"
+                          : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400"
+                      )}
+                    >
+                      {scheduleFeedback.type === "success" ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4" />
+                      )}
+                      {scheduleFeedback.msg}
+                    </div>
+                  )}
+                </div>
+
+                {/* Phase tabs */}
+                {campaign.phases.length > 1 && (
+                  <div className="flex gap-1 bg-gray-100 dark:bg-[#0F1117] rounded-lg p-1">
+                    {campaign.phases.map((phase, idx) => (
+                      <button
+                        key={phase.phase}
+                        type="button"
+                        onClick={() => setActivePhase(idx)}
+                        className={cn(
+                          "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
+                          activePhase === idx
+                            ? "bg-white dark:bg-[#1A1D27] text-gray-900 dark:text-white shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                        )}
+                      >
+                        {phase.phase}
+                        <span className="ml-1.5 text-xs text-gray-400">
+                          ({phase.posts.length})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Post cards */}
+                <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+                  {campaign.phases[activePhase]?.posts.map((post, postIdx) => {
+                    const globalIdx = getGlobalIndex(activePhase, postIdx);
+                    return (
+                      <PostCard
+                        key={`${activePhase}-${postIdx}`}
+                        post={post}
+                        onSchedule={() => schedulePost(post, globalIdx)}
+                        scheduling={schedulingPosts.has(globalIdx) || scheduledPosts.has(globalIdx)}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
         </div>
-
-        {/* RIGHT — Campaign Output */}
-        <div className="min-h-[400px]">
-          {generating && (
-            <div className="flex flex-col items-center justify-center h-full bg-white border border-gray-200 rounded-xl p-12">
-              <Loader2 className="h-10 w-10 animate-spin text-[#6C5CE7] mb-4" />
-              <p className="text-gray-600 font-medium">Generating your campaign...</p>
-              <p className="text-sm text-gray-400 mt-1">This may take a few seconds.</p>
-            </div>
-          )}
-
-          {!generating && !campaign && (
-            <div className="flex flex-col items-center justify-center h-full bg-gray-50 border border-dashed border-gray-200 rounded-xl p-12 text-center">
-              <Megaphone className="h-12 w-12 text-gray-300 mb-4" />
-              <p className="text-gray-500 font-medium">Your campaign will appear here</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Fill out the form and click Generate Campaign.
-              </p>
-            </div>
-          )}
-
-          {!generating && campaign && (
-            <div className="space-y-4">
-              {/* Campaign header */}
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">{campaign.campaign_name}</h2>
-                    <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-1 rounded-full">
-                      {campaign.total_posts} posts
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={exportCsv}
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      Export CSV
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={scheduleAll}
-                      disabled={scheduleAllLoading}
-                      className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
-                    >
-                      {scheduleAllLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                      ) : (
-                        <CalendarClock className="h-4 w-4 mr-1" />
-                      )}
-                      Schedule All
-                    </Button>
-                  </div>
-                </div>
-                {scheduleFeedback && (
-                  <div
-                    className={cn(
-                      "flex items-center gap-2 mt-3 text-sm rounded-lg px-3 py-2",
-                      scheduleFeedback.type === "success"
-                        ? "bg-green-50 text-green-700"
-                        : "bg-red-50 text-red-700"
-                    )}
-                  >
-                    {scheduleFeedback.type === "success" ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    {scheduleFeedback.msg}
-                  </div>
-                )}
-              </div>
-
-              {/* Phase tabs */}
-              {campaign.phases.length > 1 && (
-                <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                  {campaign.phases.map((phase, idx) => (
-                    <button
-                      key={phase.phase}
-                      type="button"
-                      onClick={() => setActivePhase(idx)}
-                      className={cn(
-                        "flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all",
-                        activePhase === idx
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-500 hover:text-gray-700"
-                      )}
-                    >
-                      {phase.phase}
-                      <span className="ml-1.5 text-xs text-gray-400">
-                        ({phase.posts.length})
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Post cards */}
-              <div className="space-y-3 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-                {campaign.phases[activePhase]?.posts.map((post, postIdx) => {
-                  const globalIdx = getGlobalIndex(activePhase, postIdx);
-                  return (
-                    <PostCard
-                      key={`${activePhase}-${postIdx}`}
-                      post={post}
-                      onSchedule={() => schedulePost(post, globalIdx)}
-                      scheduling={schedulingPosts.has(globalIdx) || scheduledPosts.has(globalIdx)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Tag Group Modal */}
+      {showTagModal && (
+        <TagGroupModal
+          onSave={handleSaveTagGroup}
+          onClose={() => setShowTagModal(false)}
+        />
+      )}
     </div>
   );
 }
