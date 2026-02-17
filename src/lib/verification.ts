@@ -594,12 +594,17 @@ export interface CareerEntry {
   dates: string;
   location: string;
   is_military: boolean;
+  rank?: string;
+  mos?: string;
+  units?: string[];
+  deployments?: string[];
 }
 
 export interface EducationEntry {
   school: string;
   degree: string;
   dates: string;
+  is_military?: boolean;
 }
 
 export interface AwardEntry {
@@ -607,40 +612,81 @@ export interface AwardEntry {
   context: string;
 }
 
+export interface PostServiceEntry {
+  role: string;
+  org?: string;
+  dates?: string;
+}
+
+export interface MilitaryServiceSummary {
+  branch: string;
+  service_dates: string;
+  rank: string;
+  mos: string;
+  units: string[];
+  deployments: string[];
+  transition_year: string;
+}
+
+export interface EnhancedCareerResult {
+  career: CareerEntry[];
+  education: EducationEntry[];
+  awards: AwardEntry[];
+  military_summary: MilitaryServiceSummary;
+  post_service: PostServiceEntry[];
+}
+
 export async function extractCareerTimeline(params: {
   personName: string;
   firecrawlContent: string;
   serpSnippets: string;
-}): Promise<{
-  career: CareerEntry[];
-  education: EducationEntry[];
-  awards: AwardEntry[];
-}> {
-  const prompt = `Extract structured career, education, and awards data for ${params.personName} from the following web content. Return ONLY a JSON object with this exact structure:
+  claimedBranch?: string;
+  notesField?: string;
+  pdlSummary?: string;
+}): Promise<EnhancedCareerResult> {
+  const prompt = `Extract comprehensive military and civilian career data for ${params.personName}${params.claimedBranch ? ` (claimed branch: ${params.claimedBranch})` : ""} from ALL provided sources. Be thorough — look for rank, MOS/Rate/AFSC, units, deployments, awards, military schools, and post-service career.
+
+Return ONLY a JSON object with this exact structure:
 {
+  "military_summary": {
+    "branch": "US Army",
+    "service_dates": "2010 - 2022",
+    "rank": "Staff Sergeant (E-6)",
+    "mos": "11B Infantry",
+    "units": ["101st Airborne Division", "3rd Infantry Division"],
+    "deployments": ["Afghanistan (2012-2013)", "Iraq (2015)"],
+    "transition_year": "2022"
+  },
   "career": [
-    { "org": "Organization Name", "title": "Job Title", "dates": "2010 - 2015", "location": "City, ST", "is_military": true }
+    { "org": "Organization Name", "title": "Job Title", "dates": "2010 - 2015", "location": "City, ST", "is_military": true, "rank": "SSG", "mos": "11B", "units": ["101st Airborne"], "deployments": ["Afghanistan 2012-2013"] }
   ],
   "education": [
-    { "school": "School Name", "degree": "Degree", "dates": "2005 - 2009" }
+    { "school": "School Name", "degree": "Degree or Course", "dates": "2005 - 2009", "is_military": false }
   ],
   "awards": [
-    { "name": "Award Name", "context": "Brief description" }
+    { "name": "Purple Heart", "context": "Awarded for wounds received in combat" }
+  ],
+  "post_service": [
+    { "role": "Content Creator", "org": "YouTube", "dates": "2022 - Present" }
   ]
 }
 
 Rules:
 - Order career entries from most recent to oldest
-- Set is_military=true for military, DoD, VA, or defense contractor roles
-- If dates are unknown, use ""
-- Only include information clearly supported by the sources
-- Return ONLY the JSON object, no markdown formatting
+- Set is_military=true for military, DoD, VA, National Guard, Reserves, or defense roles
+- For military career entries, include rank, mos (MOS/Rate/AFSC), units, and deployments if mentioned
+- For education, set is_military=true for military schools (Basic Training, AIT, ALC, SLC, Ranger School, War College, BOLC, OCS, etc.)
+- Include ALL military awards and decorations (Purple Heart, CIB, Bronze Star, CAB, ARCOM, AAM, etc.)
+- post_service = civilian career AFTER military service (content creator, speaker, author, consultant, etc.)
+- If a specific data point is not mentioned in any source, use "" for strings and [] for arrays — do NOT guess
+- military_summary aggregates the best data across all sources
+- Return ONLY the JSON object, no markdown formatting, no explanation
 
 WEB CONTENT:
 ${params.firecrawlContent.slice(0, 8000)}
 
 SEARCH SNIPPETS:
-${params.serpSnippets.slice(0, 3000)}`;
+${params.serpSnippets.slice(0, 3000)}${params.notesField ? `\n\nADDITIONAL NOTES/BIO:\n${params.notesField.slice(0, 2000)}` : ""}${params.pdlSummary ? `\n\nPDL PROFILE DATA:\n${params.pdlSummary.slice(0, 2000)}` : ""}`;
 
   try {
     const res = await fetch(ANTHROPIC_URL, {
@@ -648,7 +694,7 @@ ${params.serpSnippets.slice(0, 3000)}`;
       headers: anthropicHeaders(),
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
+        max_tokens: 3000,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -657,26 +703,52 @@ ${params.serpSnippets.slice(0, 3000)}`;
     const text = (data.content?.[0]?.text ?? "").trim();
     const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
     const parsed = JSON.parse(jsonStr);
+    const ms = parsed.military_summary ?? {};
     return {
+      military_summary: {
+        branch: String(ms.branch ?? ""),
+        service_dates: String(ms.service_dates ?? ""),
+        rank: String(ms.rank ?? ""),
+        mos: String(ms.mos ?? ""),
+        units: Array.isArray(ms.units) ? ms.units.map(String) : [],
+        deployments: Array.isArray(ms.deployments) ? ms.deployments.map(String) : [],
+        transition_year: String(ms.transition_year ?? ""),
+      },
       career: (parsed.career ?? []).map((c: Record<string, unknown>) => ({
         org: String(c.org ?? ""),
         title: String(c.title ?? ""),
         dates: String(c.dates ?? ""),
         location: String(c.location ?? ""),
         is_military: !!c.is_military,
+        rank: c.rank ? String(c.rank) : undefined,
+        mos: c.mos ? String(c.mos) : undefined,
+        units: Array.isArray(c.units) ? c.units.map(String) : undefined,
+        deployments: Array.isArray(c.deployments) ? c.deployments.map(String) : undefined,
       })),
       education: (parsed.education ?? []).map((e: Record<string, unknown>) => ({
         school: String(e.school ?? ""),
         degree: String(e.degree ?? ""),
         dates: String(e.dates ?? ""),
+        is_military: !!e.is_military,
       })),
       awards: (parsed.awards ?? []).map((a: Record<string, unknown>) => ({
         name: String(a.name ?? ""),
         context: String(a.context ?? ""),
       })),
+      post_service: (parsed.post_service ?? []).map((p: Record<string, unknown>) => ({
+        role: String(p.role ?? ""),
+        org: p.org ? String(p.org) : undefined,
+        dates: p.dates ? String(p.dates) : undefined,
+      })),
     };
   } catch (e) {
     console.error("[Verification] Career extraction error:", e);
-    return { career: [], education: [], awards: [] };
+    return {
+      career: [],
+      education: [],
+      awards: [],
+      military_summary: { branch: "", service_dates: "", rank: "", mos: "", units: [], deployments: [], transition_year: "" },
+      post_service: [],
+    };
   }
 }

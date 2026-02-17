@@ -63,6 +63,9 @@ import {
   Pencil,
   Video,
   Play,
+  Target,
+  Star,
+  Medal,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -80,6 +83,9 @@ import {
   type CareerEntry,
   type EducationEntry,
   type AwardEntry,
+  type PostServiceEntry,
+  type MilitaryServiceSummary,
+  type EnhancedCareerResult,
 } from "@/lib/verification";
 import {
   DropdownMenu,
@@ -1884,47 +1890,57 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
   const pdlData = record.pdl_data as PDLResponse | null;
   const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
-  const [aiCareer, setAiCareer] = useState<CareerEntry[]>([]);
-  const [aiEducation, setAiEducation] = useState<EducationEntry[]>([]);
-  const [aiAwards, setAiAwards] = useState<AwardEntry[]>([]);
+
+  const [careerResult, setCareerResult] = useState<EnhancedCareerResult | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState(false);
   const [extractError, setExtractError] = useState("");
+  const [lastGenerated, setLastGenerated] = useState<string | null>(null);
 
-  const hasPDL = !!(pdlData?.employment?.length);
   const hasWebSources = firecrawlData.length > 0 || sources.length > 0;
 
-  // Debug logging
+  // Load cached results on mount
   useEffect(() => {
-    console.log("[CareerTrack] pdlData:", pdlData);
-    console.log("[CareerTrack] hasPDL:", hasPDL);
-    console.log("[CareerTrack] firecrawlData:", firecrawlData.length, "pages");
-    console.log("[CareerTrack] evidence_sources:", sources.length, "sources");
-  }, []);
+    (async () => {
+      const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
+      const saved = checks.career_track as { result?: EnhancedCareerResult; generated_at?: string } | undefined;
+      if (saved?.result) {
+        setCareerResult(saved.result);
+        setLastGenerated(saved.generated_at ?? null);
+        setExtracted(true);
+      } else if (hasWebSources) {
+        handleExtract();
+      }
+    })();
+  }, [record.id]);
 
-  // Build PDL career entries
-  const pdlCareer: CareerEntry[] = hasPDL
-    ? ((pdlData!.employment ?? []) as { title?: string; name?: string; organization?: string; company?: string; start_date?: string; end_date?: string; location_names?: string[] }[]).map((job) => {
-        const org = (job.organization ?? job.company ?? "").toLowerCase();
-        const title = (job.title ?? job.name ?? "").toLowerCase();
-        const isMil = MILITARY_EMPLOYERS.some((e) => org.includes(e.toLowerCase())) || MILITARY_TITLES.some((t) => title.includes(t.toLowerCase()));
-        return {
-          org: job.organization ?? job.company ?? "Unknown",
-          title: job.title ?? job.name ?? "",
-          dates: `${job.start_date ?? ""} – ${job.end_date ?? "Present"}`,
-          location: (job.location_names ?? []).join(", "),
-          is_military: isMil,
-        };
-      })
-    : [];
+  const saveResults = async (result: EnhancedCareerResult) => {
+    const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+    const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
+    const now = new Date().toISOString();
+    await supabase.from("verifications").update({
+      manual_checks: { ...existing, career_track: { result, generated_at: now } },
+    }).eq("id", record.id);
+    setLastGenerated(now);
+  };
 
-  const pdlEducation: EducationEntry[] = pdlData?.education?.length
-    ? (pdlData.education as { school?: string; degree?: string; start_date?: string; end_date?: string }[]).map((e) => ({
-        school: e.school ?? "",
-        degree: e.degree ?? "",
-        dates: e.start_date || e.end_date ? `${e.start_date ?? ""} – ${e.end_date ?? ""}` : "",
-      }))
-    : [];
+  // Build PDL summary string to feed into AI extraction for richer context
+  const buildPdlSummary = (): string => {
+    if (!pdlData) return "";
+    const parts: string[] = [];
+    if (pdlData.employment?.length) {
+      const jobs = (pdlData.employment as any[]).map((j) => `${j.title ?? ""} at ${j.organization ?? j.company ?? ""} (${j.start_date ?? "?"} - ${j.end_date ?? "Present"})`);
+      parts.push("Employment: " + jobs.join("; "));
+    }
+    if (pdlData.education?.length) {
+      const eds = (pdlData.education as any[]).map((e) => `${e.degree ?? ""} from ${e.school ?? ""}`);
+      parts.push("Education: " + eds.join("; "));
+    }
+    if ((pdlData as any).summary) parts.push("Summary: " + String((pdlData as any).summary));
+    if ((pdlData as any).headline) parts.push("Headline: " + String((pdlData as any).headline));
+    return parts.join("\n");
+  };
 
   const handleExtract = async () => {
     setExtracting(true);
@@ -1932,17 +1948,17 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
     try {
       const firecrawlContent = firecrawlData.map((f) => f.markdown ?? "").join("\n\n---\n\n");
       const serpSnippets = sources.map((s) => `${s.title}: ${s.snippet}`).join("\n");
-      console.log("[CareerTrack] Extracting with:", { firecrawlContentLen: firecrawlContent.length, serpSnippetsLen: serpSnippets.length });
       const result = await extractCareerTimeline({
         personName: record.person_name,
         firecrawlContent,
         serpSnippets,
+        claimedBranch: record.claimed_branch ?? undefined,
+        notesField: record.notes ?? undefined,
+        pdlSummary: buildPdlSummary() || undefined,
       });
-      console.log("[CareerTrack] Extraction result:", result);
-      setAiCareer(result.career);
-      setAiEducation(result.education);
-      setAiAwards(result.awards);
+      setCareerResult(result);
       setExtracted(true);
+      await saveResults(result);
     } catch (err) {
       console.error("[CareerTrack] Extraction failed:", err);
       setExtractError(err instanceof Error ? err.message : "Extraction failed");
@@ -1952,99 +1968,273 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
     }
   };
 
-  // Auto-extract career data from web sources when no PDL data is available
-  useEffect(() => {
-    if (!hasPDL && !extracted && !extracting && hasWebSources) {
-      handleExtract();
-    }
-  }, []);
+  const handleRegenerate = () => {
+    setCareerResult(null);
+    setExtracted(false);
+    handleExtract();
+  };
 
-  const careerEntries = hasPDL ? pdlCareer : aiCareer;
-  const educationEntries = hasPDL ? pdlEducation : aiEducation;
-  const showExtractButton = !hasPDL && !extracted && !extracting;
+  const ms = careerResult?.military_summary;
+  const careerEntries = careerResult?.career ?? [];
+  const educationEntries = careerResult?.education ?? [];
+  const awards = careerResult?.awards ?? [];
+  const postService = careerResult?.post_service ?? [];
+  const milEducation = educationEntries.filter((e) => e.is_military);
+  const civEducation = educationEntries.filter((e) => !e.is_military);
+
+  const notIdentified = <span className="text-gray-400 italic text-xs">Not identified</span>;
+
+  // Branch color mapping
+  const branchColor = (branch: string) => {
+    const b = branch.toLowerCase();
+    if (b.includes("army")) return "border-green-600";
+    if (b.includes("navy")) return "border-blue-700";
+    if (b.includes("marine")) return "border-red-700";
+    if (b.includes("air force")) return "border-blue-500";
+    if (b.includes("coast guard")) return "border-orange-500";
+    if (b.includes("space")) return "border-gray-700";
+    return "border-purple-500";
+  };
+
+  if (extracting) {
+    return (
+      <div className="flex items-center gap-3 py-12 justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
+        <p className="text-sm text-muted-foreground">Extracting comprehensive career data from all sources...</p>
+      </div>
+    );
+  }
+
+  if (!extracted && !careerResult) {
+    return (
+      <div className="text-center py-12">
+        <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground mb-4">Extract career data from web sources using AI.</p>
+        <Button onClick={handleExtract} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+          Extract Career Data
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Career Timeline */}
+      {/* Regenerate + timestamp header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-xs">AI Extracted</Badge>
+          {lastGenerated && (
+            <span className="text-xs text-muted-foreground">Last generated: {new Date(lastGenerated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+          )}
+        </div>
+        <button onClick={handleRegenerate} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+          <RefreshCw className="h-3 w-3" /> Regenerate
+        </button>
+      </div>
+
+      {/* Military Service Summary Card */}
+      {ms && ms.branch && (
+        <Card className={cn("rounded-xl border-l-4", branchColor(ms.branch))}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-purple-600" /> Military Service
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Rank + MOS line */}
+            <div className="flex items-start gap-6">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</p>
+                <p className="font-semibold text-sm mt-0.5">{ms.rank || notIdentified}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">MOS / Rate / AFSC</p>
+                <p className="font-semibold text-sm mt-0.5">{ms.mos || notIdentified}</p>
+              </div>
+            </div>
+            {/* Branch + Dates */}
+            <div className="flex items-start gap-6">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</p>
+                <p className="text-sm mt-0.5">{ms.branch || notIdentified}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Service Dates</p>
+                <p className="text-sm mt-0.5">{ms.service_dates || notIdentified}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Transition Year</p>
+                <p className="text-sm mt-0.5">{ms.transition_year || notIdentified}</p>
+              </div>
+            </div>
+            {/* Units */}
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Unit(s)</p>
+              {ms.units.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {ms.units.map((u, i) => (
+                    <Badge key={i} variant="secondary" className="text-xs font-normal">{u}</Badge>
+                  ))}
+                </div>
+              ) : notIdentified}
+            </div>
+            {/* Deployments */}
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Deployments</p>
+              {ms.deployments.length > 0 ? (
+                <div className="mt-1 space-y-1">
+                  {ms.deployments.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <Target className="h-3 w-3 text-red-500 shrink-0" />
+                      <span>{d}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : notIdentified}
+            </div>
+            {/* Military Education */}
+            {milEducation.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Military Education</p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {milEducation.map((e, i) => (
+                    <Badge key={i} variant="outline" className="text-xs font-normal">
+                      {e.school}{e.degree ? ` — ${e.degree}` : ""}{e.dates ? ` (${e.dates})` : ""}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Awards & Decorations */}
       <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Briefcase className="h-4 w-4" /> Career Track
-            {hasPDL && <Badge variant="secondary" className="text-xs">PDL Data</Badge>}
-            {!hasPDL && extracted && <Badge variant="secondary" className="text-xs">AI Extracted</Badge>}
+            <Medal className="h-4 w-4 text-amber-500" /> Awards & Decorations
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {showExtractButton ? (
-            <div className="text-center py-6">
-              <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground mb-4">No PDL data available. Extract career info from web sources using AI.</p>
-              <Button onClick={handleExtract} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
-                Extract Career Data
-              </Button>
-            </div>
-          ) : extracting ? (
-            <div className="flex items-center gap-3 py-6 justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
-              <p className="text-sm text-muted-foreground">Extracting career data from web sources...</p>
-            </div>
-          ) : careerEntries.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-sm text-muted-foreground">No career data found.</p>
-              <p className="text-xs text-muted-foreground mt-1">This is normal — many people are not in public databases.</p>
-              {extractError && <p className="text-xs text-red-500 mt-2">Error: {extractError}</p>}
-              {extracted && hasWebSources && (
-                <Button variant="outline" size="sm" className="mt-3" onClick={() => { setExtracted(false); setExtractError(""); handleExtract(); }}>
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry Extraction
-                </Button>
-              )}
+          {awards.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {awards.map((a, i) => (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <Badge className="bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-default dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
+                      <Trophy className="h-3 w-3 mr-1 text-amber-500" />
+                      {a.name}
+                    </Badge>
+                  </TooltipTrigger>
+                  {a.context && <TooltipContent side="bottom"><p className="max-w-xs">{a.context}</p></TooltipContent>}
+                </Tooltip>
+              ))}
             </div>
           ) : (
-            <ul className="space-y-4">
-              {careerEntries.map((entry, i) => (
-                <li
-                  key={i}
-                  className={cn(
-                    "flex gap-4 pl-4 py-3 border-l-4 rounded-r-lg",
-                    entry.is_military
-                      ? "border-purple-500 bg-purple-50/50 dark:bg-purple-950/20"
-                      : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20"
-                  )}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{entry.org}</p>
-                      {entry.is_military && <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{entry.title}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      {entry.dates && <span>{entry.dates}</span>}
-                      {entry.location && (
-                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{entry.location}</span>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <p className="text-gray-400 italic text-sm">No awards or decorations identified</p>
           )}
         </CardContent>
       </Card>
 
-      {/* Education */}
-      {educationEntries.length > 0 && (
+      {/* Career Timeline */}
+      {careerEntries.length > 0 && (
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-          <CardHeader>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Briefcase className="h-4 w-4" /> Career Timeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {careerEntries.map((entry, i) => (
+                <li
+                  key={i}
+                  className={cn(
+                    "pl-4 py-3 border-l-4 rounded-r-lg",
+                    entry.is_military
+                      ? cn("bg-purple-50/50 dark:bg-purple-950/20", branchColor(entry.org))
+                      : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm">{entry.org}</p>
+                    {entry.is_military && <ShieldCheck className="h-3.5 w-3.5 text-purple-600 shrink-0" />}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {entry.rank && <span className="font-medium">{entry.rank} — </span>}
+                    {entry.title}
+                    {entry.mos && <span className="text-xs ml-1 text-gray-500">({entry.mos})</span>}
+                  </p>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    {entry.dates && <span>{entry.dates}</span>}
+                    {entry.location && (
+                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{entry.location}</span>
+                    )}
+                  </div>
+                  {entry.units && entry.units.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {entry.units.map((u, j) => (
+                        <Badge key={j} variant="outline" className="text-[10px] py-0 px-1.5 font-normal">{u}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {entry.deployments && entry.deployments.length > 0 && (
+                    <div className="mt-1.5 space-y-0.5">
+                      {entry.deployments.map((d, j) => (
+                        <span key={j} className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Target className="h-2.5 w-2.5 text-red-400" /> {d}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Post-Service Career */}
+      <Card className="rounded-xl border-l-4 border-[#6C5CE7] border border-gray-200 dark:border-gray-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Star className="h-4 w-4 text-[#6C5CE7]" /> Post-Service Career
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {postService.length > 0 ? (
+            <ul className="space-y-2">
+              {postService.map((ps, i) => (
+                <li key={i} className="flex items-start gap-3 py-1">
+                  <ChevronRight className="h-4 w-4 text-[#6C5CE7] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">{ps.role}{ps.org ? ` — ${ps.org}` : ""}</p>
+                    {ps.dates && <p className="text-xs text-muted-foreground">{ps.dates}</p>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-400 italic text-sm">No post-service career identified</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Civilian Education */}
+      {civEducation.length > 0 && (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <GraduationCap className="h-4 w-4" /> Education
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
-              {educationEntries.map((e, i) => (
+              {civEducation.map((e, i) => (
                 <li key={i} className="flex items-start gap-3 pl-4 border-l-4 border-blue-300 dark:border-blue-700 py-2">
                   <div>
-                    <p className="font-medium">{e.school}</p>
+                    <p className="font-medium text-sm">{e.school}</p>
                     {e.degree && <p className="text-sm text-muted-foreground">{e.degree}</p>}
                     {e.dates && <p className="text-xs text-muted-foreground">{e.dates}</p>}
                   </div>
@@ -2055,28 +2245,8 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         </Card>
       )}
 
-      {/* Awards & Recognition */}
-      {aiAwards.length > 0 && (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Award className="h-4 w-4" /> Awards & Recognition
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {aiAwards.map((a, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <Trophy className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">{a.name}</p>
-                    {a.context && <p className="text-xs text-muted-foreground">{a.context}</p>}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+      {extractError && (
+        <p className="text-xs text-red-500 text-center">Error: {extractError}</p>
       )}
     </div>
   );
