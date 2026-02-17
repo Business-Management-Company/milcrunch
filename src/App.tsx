@@ -49,6 +49,7 @@ import DemoSponsorships from "./pages/admin/DemoSponsorships";
 import SponsorPortal from "./pages/sponsor/Portal";
 import Demo from "./pages/Demo";
 import Prospectus from "./pages/Prospectus";
+import Onboard from "./pages/Onboard";
 import EventsCalendar from "./pages/EventsCalendar";
 import PublicEvents from "./pages/PublicEvents";
 import LoginPage from "./pages/creator/LoginPage";
@@ -237,6 +238,7 @@ const App = () => (
               <Route path="/sponsors/demo" element={<DemoSponsorships />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/prospectus" element={<Prospectus />} />
+              <Route path="/onboard" element={<Onboard />} />
               <Route path="/portal" element={<AttendeePortal />} />
               <Route path="/sponsor/portal" element={<SponsorPortal />} />
               <Route path="/events/:eventId" element={<EventDetail />} />

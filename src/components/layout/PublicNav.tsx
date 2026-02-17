@@ -9,7 +9,7 @@ const NAV_LINKS = [
   { label: "Podcast Network", to: "/podcasts" },
   { label: "Shop", to: "/shop" },
   { label: "Events", to: "/events" },
-  { label: "Your Path", to: "/plans" },
+  { label: "Join as Creator", to: "/onboard" },
 ];
 
 type UpcomingEvent = {
