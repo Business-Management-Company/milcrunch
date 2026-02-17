@@ -493,7 +493,7 @@ function InsightsPreview({ user }: { user: any }) {
         </div>
 
         {/* CTA */}
-        <Link to={user ? "/brand/dashboard" : "/sign-in"}>
+        <Link to={user ? "/brand/dashboard" : "/login"}>
           <Button className="bg-[#6C5CE7] text-white rounded-full px-8 py-3 font-semibold hover:bg-[#5B4BD1]">
             See the full dashboard →
           </Button>

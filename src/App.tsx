@@ -124,6 +124,7 @@ const App = () => (
               <Route path="/home" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/sign-in" element={<Navigate to="/login" replace />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/plans" element={<PlansPage />} />
