@@ -404,6 +404,15 @@ const BrandDiscover = () => {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactEmails, setContactEmails] = useState<Record<string, string>>({}); // creatorId → email
 
+  // Username search fallback state
+  const [usernameNotFound, setUsernameNotFound] = useState<{
+    handle: string;
+    platform: string;
+    fallbackResults: CreatorCard[] | null;
+    foundOnPlatform: string | null;
+    foundOnPlatformResults: CreatorCard[] | null;
+  } | null>(null);
+
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
   const { user } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
@@ -602,6 +611,7 @@ const BrandDiscover = () => {
     }
     setApiLoading(true);
     setCurrentPage(1);
+    setUsernameNotFound(null);
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
@@ -691,13 +701,16 @@ const BrandDiscover = () => {
 
   // Username / Lookalike search handler
   const runModeSearch = useCallback(() => {
-    const q = searchQuery.trim().replace(/^@/, "");
+    // Strip @, trim whitespace, lowercase for case-insensitive matching
+    const q = searchQuery.trim().replace(/^@/, "").toLowerCase();
     if (!q) {
       setApiResults(null);
       return;
     }
+    console.log(`[BrandDiscover] ${searchMode} search — cleaned value: "${q}" (platform: ${platform})`);
     setApiLoading(true);
     setCurrentPage(1);
+    setUsernameNotFound(null);
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
@@ -706,21 +719,70 @@ const BrandDiscover = () => {
     setSmartFiltersApplied([]);
 
     const searchFn = searchMode === "username" ? searchByUsername : searchLookalike;
-    searchFn(q, platform.toLowerCase())
+    const currentPlatform = platform.toLowerCase();
+
+    searchFn(q, currentPlatform)
       .then((result) => {
-        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(result);
+        if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() === q) setApiResults(result);
         if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15, { query: q, mode: searchMode, results: result.total });
         refreshCredits();
       })
-      .catch((err) => {
-        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(null);
+      .catch(async (err) => {
+        if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() !== q) return;
+
         const cause = (err as Error & { cause?: Record<string, unknown> })?.cause;
-        const detail = cause?.error ?? cause?.details ?? cause?.message ?? "";
-        console.warn(`[BrandDiscover] ${searchMode} search failed:`, err, "cause:", cause);
-        toast.error(`Search failed: ${(err as Error).message}${detail ? ` — ${typeof detail === "string" ? detail : JSON.stringify(detail)}` : ""}`);
+        const status = (err as Error).message?.match(/(\d{3})/)?.[1];
+        console.warn(`[BrandDiscover] ${searchMode} search failed (status ${status}):`, err, "cause:", cause);
+
+        // Only do fallback for username mode on 400/404 (user not found)
+        if (searchMode === "username" && (status === "400" || status === "404")) {
+          // Set "not found" state — don't toast an error
+          setApiResults({ creators: [], total: 0, rawResponse: null });
+          const notFoundState: typeof usernameNotFound = {
+            handle: q,
+            platform: currentPlatform,
+            fallbackResults: null,
+            foundOnPlatform: null,
+            foundOnPlatformResults: null,
+          };
+          setUsernameNotFound(notFoundState);
+
+          // Auto-fallback 1: keyword search with same term
+          try {
+            const keywordResult = await searchCreators(q, { platform: currentPlatform });
+            if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() === q) {
+              setUsernameNotFound((prev) => prev ? { ...prev, fallbackResults: keywordResult.creators } : prev);
+            }
+          } catch (kwErr) {
+            console.warn("[BrandDiscover] Keyword fallback also failed:", kwErr);
+          }
+
+          // Auto-fallback 2: try other platforms silently
+          const otherPlatforms = ["instagram", "tiktok", "youtube", "twitter"].filter((p) => p !== currentPlatform);
+          for (const tryPlatform of otherPlatforms) {
+            if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() !== q) break;
+            try {
+              const altResult = await searchByUsername(q, tryPlatform);
+              if (altResult.creators.length > 0) {
+                console.log(`[BrandDiscover] Found @${q} on ${tryPlatform}!`);
+                if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() === q) {
+                  setUsernameNotFound((prev) => prev ? { ...prev, foundOnPlatform: tryPlatform, foundOnPlatformResults: altResult.creators } : prev);
+                }
+                break; // Stop after first match
+              }
+            } catch {
+              // Platform didn't find them either, continue
+            }
+          }
+        } else {
+          // Non-400 error — show toast as before
+          setApiResults(null);
+          const detail = cause?.error ?? cause?.details ?? cause?.message ?? "";
+          toast.error(`Search failed: ${(err as Error).message}${detail ? ` — ${typeof detail === "string" ? detail : JSON.stringify(detail)}` : ""}`);
+        }
       })
       .finally(() => {
-        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
+        if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() === q) setApiLoading(false);
       });
   }, [searchQuery, searchMode, platform, user, refreshCredits]);
 
@@ -836,7 +898,10 @@ const BrandDiscover = () => {
   };
 
   const hasSearched = apiResults !== null;
-  const creators = apiResults?.creators ?? [];
+  // Show fallback keyword results when username search returned 0 direct results
+  const creators = (apiResults?.creators ?? []).length > 0
+    ? (apiResults?.creators ?? [])
+    : (usernameNotFound?.fallbackResults ?? []);
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
   useEffect(() => {
@@ -1622,6 +1687,110 @@ const BrandDiscover = () => {
                 Enter a search term above and click Search Creators or press Enter to find creators by name, handle, or keyword.
               </p>
             </Card>
+          )}
+
+          {/* Username not found — inline fallback UI */}
+          {usernameNotFound && !apiLoading && (
+            <Card className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-6 mb-4">
+              <div className="flex items-start gap-3">
+                <UserSearch className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <p className="text-sm font-medium text-foreground">
+                    No exact match found for <span className="font-bold">@{usernameNotFound.handle}</span> on {usernameNotFound.platform.charAt(0).toUpperCase() + usernameNotFound.platform.slice(1)}
+                  </p>
+
+                  {/* Found on another platform */}
+                  {usernameNotFound.foundOnPlatform && usernameNotFound.foundOnPlatformResults && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                      <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                        Found @{usernameNotFound.handle} on {usernameNotFound.foundOnPlatform.charAt(0).toUpperCase() + usernameNotFound.foundOnPlatform.slice(1)} instead!
+                      </p>
+                      <Button
+                        size="sm"
+                        className="mt-2 bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => {
+                          setPlatform(usernameNotFound.foundOnPlatform!);
+                          setApiResults({ creators: usernameNotFound.foundOnPlatformResults!, total: usernameNotFound.foundOnPlatformResults!.length, rawResponse: null });
+                          setUsernameNotFound(null);
+                        }}
+                      >
+                        Show {usernameNotFound.foundOnPlatform.charAt(0).toUpperCase() + usernameNotFound.foundOnPlatform.slice(1)} results
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Try another platform */}
+                  {!usernameNotFound.foundOnPlatform && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5">Try searching on another platform:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {["instagram", "tiktok", "youtube", "twitter"].filter((p) => p !== usernameNotFound.platform).map((p) => (
+                          <Badge
+                            key={p}
+                            variant="outline"
+                            className="cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 transition-colors capitalize"
+                            onClick={() => {
+                              setPlatform(p);
+                              setUsernameNotFound(null);
+                              // Trigger search on next render via the platform change
+                              setTimeout(() => {
+                                setApiLoading(true);
+                                const cleanQ = searchQuery.trim().replace(/^@/, "").toLowerCase();
+                                searchByUsername(cleanQ, p)
+                                  .then((result) => {
+                                    setApiResults(result);
+                                    if (result.creators.length === 0) {
+                                      setUsernameNotFound({ handle: cleanQ, platform: p, fallbackResults: null, foundOnPlatform: null, foundOnPlatformResults: null });
+                                    }
+                                  })
+                                  .catch(() => {
+                                    setApiResults({ creators: [], total: 0, rawResponse: null });
+                                    setUsernameNotFound({ handle: cleanQ, platform: p, fallbackResults: null, foundOnPlatform: null, foundOnPlatformResults: null });
+                                  })
+                                  .finally(() => setApiLoading(false));
+                              }, 0);
+                            }}
+                          >
+                            {p}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Switch to keyword mode */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5">Or try keyword search instead:</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSearchMode("keyword");
+                        setUsernameNotFound(null);
+                        // Run keyword search with same term
+                        setTimeout(() => {
+                          const cleanQ = searchQuery.trim().replace(/^@/, "");
+                          setSearchQuery(cleanQ);
+                          searchQueryRef.current = cleanQ;
+                        }, 0);
+                      }}
+                    >
+                      <Search className="h-3.5 w-3.5 mr-1.5" />
+                      Search "{usernameNotFound.handle}" as keyword
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Keyword fallback results from username not-found */}
+          {usernameNotFound?.fallbackResults && usernameNotFound.fallbackResults.length > 0 && !apiLoading && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-foreground mb-3">
+                Did you mean one of these? <span className="text-muted-foreground font-normal">Similar creators matching "{usernameNotFound.handle}"</span>
+              </p>
+            </div>
           )}
 
           {/* Results: after search */}

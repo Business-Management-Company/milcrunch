@@ -524,7 +524,7 @@ export async function searchByUsername(
   username: string,
   platform: string = "instagram"
 ): Promise<SearchCreatorsResult> {
-  const handle = username.replace(/^@/, "").trim();
+  const handle = username.replace(/^@/, "").trim().toLowerCase();
   if (!handle) throw new Error("Username is required");
 
   const apiKey = getApiKey();
@@ -537,7 +537,7 @@ export async function searchByUsername(
     email_required: "preferred",
   };
 
-  console.log("[usernameSearch] Enriching handle:", handle);
+  console.log("[usernameSearch] Exact search_value being sent:", handle, "| platform:", platform.toLowerCase());
 
   const res = await fetch(RAW_ENRICH_URL, {
     method: "POST",
@@ -581,7 +581,7 @@ export async function searchLookalike(
   username: string,
   platform: string = "instagram"
 ): Promise<SearchCreatorsResult> {
-  const handle = username.replace(/^@/, "").trim();
+  const handle = username.replace(/^@/, "").trim().toLowerCase();
   if (!handle) throw new Error("Username is required");
 
   const apiKey = getApiKey();
