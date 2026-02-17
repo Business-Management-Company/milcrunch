@@ -204,21 +204,24 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   return (
     <Link
       to={`/creators/${c.profile_slug || c.handle}`}
-      className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col items-center text-center"
+      className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center overflow-hidden"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? "translateY(0)" : "translateY(24px)",
         transition: `opacity 0.5s ease-out ${index * 70}ms, transform 0.5s ease-out ${index * 70}ms, box-shadow 0.3s ease`,
       }}
     >
-      {/* Avatar with green verified ring */}
-      <div className="relative mb-3">
+      {/* Purple gradient banner */}
+      <div className="h-20 w-full bg-gradient-to-r from-[#6C5CE7] to-[#8B7CF7]" />
+
+      {/* Avatar overlapping banner */}
+      <div className="relative -mt-10 mb-3">
         <div
           className={`w-[72px] h-[72px] rounded-full overflow-hidden ${
             c.paradedeck_verified
               ? "ring-[3px] ring-purple-500 ring-offset-2"
-              : "ring-1 ring-gray-200"
-          }`}
+              : "ring-1 ring-gray-200 ring-offset-2"
+          } bg-white`}
         >
           {showImage ? (
             <img
@@ -237,8 +240,8 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       </div>
 
       {/* Name + verification badges */}
-      <div className="flex items-center gap-1 mb-1.5">
-        <h3 className="font-semibold text-[#1A1A2E] text-sm leading-tight truncate max-w-[120px]">
+      <div className="flex items-center gap-1 mb-1.5 px-4">
+        <h3 className="font-semibold text-[#1A1A2E] text-sm leading-tight break-words">
           {c.display_name}
         </h3>
         {c.paradedeck_verified && (
@@ -260,7 +263,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       </div>
 
       {/* Branch badge + Status */}
-      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center px-4">
         {c.branch && (
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${branchStyle}`}>
             {c.branch}
@@ -272,14 +275,14 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       </div>
 
       {/* Follower count */}
-      <p className="text-sm font-bold text-[#1A1A2E] mb-2">
+      <p className="text-sm font-bold text-[#1A1A2E] mb-2 px-4">
         {formatFollowerCount(c.follower_count)}
         <span className="text-xs font-normal text-gray-400 ml-1">followers</span>
       </p>
 
       {/* Platform icons */}
       {platforms.length > 0 && (
-        <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-500 transition-colors">
+        <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-500 transition-colors pb-5">
           {platforms.map((p) => (
             <span key={p}>{PLATFORM_ICON[p] ?? null}</span>
           ))}
