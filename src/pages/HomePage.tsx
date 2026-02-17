@@ -430,11 +430,12 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.15] mb-6">
-                <span className="text-white">Where Community, Events, and Media</span><br />
+                <span className="text-white">Where Community, Events,</span><br />
+                <span className="text-white">and Media </span>
                 <span className="bg-gradient-to-r from-[#6C5CE7] to-[#a855f7] bg-clip-text text-transparent">Intersect</span>
               </h1>
 
-              <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0">
+              <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0 md:whitespace-nowrap">
                 The military &amp; veteran network reaching millions across platforms
               </p>
 
@@ -456,7 +457,7 @@ export default function HomePage() {
             <div className="hidden lg:flex flex-1 justify-center items-center">
               <div className="relative" style={{ animation: "heroFloat 5s ease-in-out infinite" }}>
                 {/* Card 1 — Sofia M. (front) */}
-                <div className="relative z-30 bg-white rounded-2xl shadow-2xl w-[360px] p-4">
+                <div className="relative z-30 bg-white rounded-2xl shadow-2xl border border-gray-100 w-[360px] p-4">
                   <div className="flex items-center gap-3">
                     <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="" className="w-11 h-11 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
@@ -478,7 +479,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 {/* Card 2 — Marcus J. (middle) */}
-                <div className="relative z-20 bg-white rounded-2xl shadow-2xl w-[360px] p-4 mt-[6px] ml-[30px]">
+                <div className="relative z-20 bg-white rounded-2xl shadow-2xl border border-gray-100 w-[360px] p-4 mt-[6px] ml-[30px]">
                   <div className="flex items-center gap-3">
                     <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="" className="w-11 h-11 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
@@ -500,7 +501,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 {/* Card 3 — Lena Park (back) */}
-                <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-[360px] p-4 mt-[6px] ml-[60px]">
+                <div className="relative z-10 bg-white rounded-2xl shadow-2xl border border-gray-100 w-[360px] p-4 mt-[6px] ml-[60px]">
                   <div className="flex items-center gap-3">
                     <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" alt="" className="w-11 h-11 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
