@@ -44,6 +44,7 @@ import {
 } from "@/lib/creators-db";
 import {
   fetchShowcaseByDirectoryName,
+  fetchFeaturedHomepageCreators,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 
@@ -351,6 +352,7 @@ export default function HomePage() {
   const showcaseRef = useRef<HTMLDivElement>(null);
   type EventRow = Database["public"]["Tables"]["events"]["Row"];
   const [dbEvents, setDbEvents] = useState<EventRow[]>([]);
+  const [heroCreators, setHeroCreators] = useState<ShowcaseCreator[]>([]);
   const { content: cms, refresh: refreshCms } = useSiteContent("homepage");
   const [editOpen, setEditOpen] = useState(false);
   const isSuperAdmin = user?.user_metadata?.role === "super_admin";
@@ -378,6 +380,13 @@ export default function HomePage() {
         .order("start_date", { ascending: true })
         .limit(4);
       setDbEvents(data ?? []);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const featured = await fetchFeaturedHomepageCreators();
+      setHeroCreators(featured);
     })();
   }, []);
 
@@ -451,69 +460,64 @@ export default function HomePage() {
             {/* RIGHT — Cascading creator cards */}
             <div className="hidden lg:flex flex-1 justify-center items-center">
               <div className="relative" style={{ animation: "heroFloat 5s ease-in-out infinite" }}>
-                {/* Card 1 — Sofia M. (front) */}
-                <div className="relative z-30 bg-white rounded-2xl shadow-2xl border border-gray-100 w-[420px] px-5 py-2.5 ml-[60px]">
-                  <div className="flex items-center gap-4">
-                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[17px] text-gray-900">Sofia M.</p>
-                      <p className="text-[14px] text-gray-400">@sofiacreates</p>
-                    </div>
-                    <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Lifestyle</span>
-                  </div>
-                  <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-10">
-                    <div>
-                      <p className="text-[20px] font-bold text-gray-900 leading-tight">2.4M</p>
-                      <p className="text-[12px] text-gray-400">Followers</p>
-                    </div>
-                    <div>
-                      <p className="text-[20px] font-bold text-teal-500 leading-tight">4.8%</p>
-                      <p className="text-[12px] text-gray-400">Engagement</p>
-                    </div>
-                  </div>
-                </div>
-                {/* Card 2 — Marcus J. (middle) */}
-                <div className="relative z-20 bg-white rounded-2xl shadow-xl border border-gray-100 w-[420px] px-5 py-2.5 mt-[-10px] ml-[0px]">
-                  <div className="flex items-center gap-4">
-                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[17px] text-gray-900">Marcus J.</p>
-                      <p className="text-[14px] text-gray-400">@marcusfitpro</p>
-                    </div>
-                    <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E3F2FD] text-[#1565C0]">Fitness</span>
-                  </div>
-                  <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-10">
-                    <div>
-                      <p className="text-[20px] font-bold text-gray-900 leading-tight">890K</p>
-                      <p className="text-[12px] text-gray-400">Followers</p>
-                    </div>
-                    <div>
-                      <p className="text-[20px] font-bold text-teal-500 leading-tight">6.2%</p>
-                      <p className="text-[12px] text-gray-400">Engagement</p>
-                    </div>
-                  </div>
-                </div>
-                {/* Card 3 — Lena Park (back) */}
-                <div className="relative z-10 bg-white rounded-2xl shadow-lg border border-gray-100 w-[420px] px-5 py-2.5 mt-[-10px] ml-[60px]">
-                  <div className="flex items-center gap-4">
-                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[17px] text-gray-900">Lena Park</p>
-                      <p className="text-[14px] text-gray-400">@lenaeats</p>
-                    </div>
-                    <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#FFF3E0] text-[#E65100]">Food</span>
-                  </div>
-                  <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-10">
-                    <div>
-                      <p className="text-[20px] font-bold text-gray-900 leading-tight">1.1M</p>
-                      <p className="text-[12px] text-gray-400">Followers</p>
-                    </div>
-                    <div>
-                      <p className="text-[20px] font-bold text-teal-500 leading-tight">5.1%</p>
-                      <p className="text-[12px] text-gray-400">Engagement</p>
-                    </div>
-                  </div>
-                </div>
+                {(() => {
+                  const FALLBACK_CARDS = [
+                    { name: "Sofia M.", handle: "sofiacreates", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face", category: "Lifestyle", badgeBg: "bg-[#E8F5E9]", badgeText: "text-[#2E7D32]", followers: "2.4M", engagement: "4.8%", avgViews: "1.2M", avgLikes: "45.3K" },
+                    { name: "Marcus J.", handle: "marcusfitpro", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face", category: "Fitness", badgeBg: "bg-[#E3F2FD]", badgeText: "text-[#1565C0]", followers: "890K", engagement: "6.2%", avgViews: "340K", avgLikes: "28.1K" },
+                    { name: "Lena Park", handle: "lenaeats", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face", category: "Food", badgeBg: "bg-[#FFF3E0]", badgeText: "text-[#E65100]", followers: "1.1M", engagement: "5.1%", avgViews: "890K", avgLikes: "52.7K" },
+                  ];
+                  const CARD_STYLES = [
+                    { z: "z-30", shadow: "shadow-2xl", mt: "", ml: "ml-[60px]" },
+                    { z: "z-20", shadow: "shadow-xl", mt: "mt-[-10px]", ml: "ml-[0px]" },
+                    { z: "z-10", shadow: "shadow-lg", mt: "mt-[-10px]", ml: "ml-[60px]" },
+                  ];
+
+                  return [0, 1, 2].map((i) => {
+                    const db = heroCreators[i];
+                    const fb = FALLBACK_CARDS[i];
+                    const style = CARD_STYLES[i];
+
+                    const name = db?.display_name || fb.name;
+                    const handle = db?.handle || fb.handle;
+                    const avatar = db?.avatar_url || db?.ic_avatar_url || fb.avatar;
+                    const category = db?.category || fb.category;
+                    const followers = db ? formatFollowerCount(db.follower_count) : fb.followers;
+                    const engagement = db ? (typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : "—") : fb.engagement;
+                    const avgViews = db?.avg_views ?? fb.avgViews;
+                    const avgLikes = db?.avg_likes ?? fb.avgLikes;
+
+                    return (
+                      <div key={i} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
+                        <div className="flex items-center gap-4">
+                          <img src={avatar} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-[17px] text-gray-900">{name}</p>
+                            <p className="text-[14px] text-gray-400">@{handle}</p>
+                          </div>
+                          <span className={`text-[12px] font-medium px-3 py-1.5 rounded-full ${db ? "bg-[#E8F5E9] text-[#2E7D32]" : `${fb.badgeBg} ${fb.badgeText}`}`}>{category}</span>
+                        </div>
+                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-3">
+                          <div>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{followers}</p>
+                            <p className="text-[10px] text-gray-400 uppercase">Followers</p>
+                          </div>
+                          <div>
+                            <p className="text-[16px] font-bold text-teal-500 leading-tight">{engagement}</p>
+                            <p className="text-[10px] text-gray-400 uppercase">Engagement</p>
+                          </div>
+                          <div>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgViews || "—"}</p>
+                            <p className="text-[10px] text-gray-400 uppercase">Avg Views</p>
+                          </div>
+                          <div>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgLikes || "—"}</p>
+                            <p className="text-[10px] text-gray-400 uppercase">Avg Likes</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>

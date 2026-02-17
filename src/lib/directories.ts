@@ -62,6 +62,9 @@ export interface DirectoryMember {
   approved: boolean;
   added_by: string | null;
   added_at: string;
+  featured_homepage: boolean;
+  avg_views: string | null;
+  avg_likes: string | null;
 }
 
 // ─── Directory CRUD ─────────────────────────────────────────
@@ -384,5 +387,8 @@ function mapMemberRow(row: Record<string, unknown>): DirectoryMember {
     approved: (row.approved as boolean) ?? true,
     added_by: (row.added_by as string) ?? null,
     added_at: (row.added_at as string) ?? new Date().toISOString(),
+    featured_homepage: (row.featured_homepage as boolean) ?? false,
+    avg_views: (row.avg_views as string) ?? null,
+    avg_likes: (row.avg_likes as string) ?? null,
   };
 }

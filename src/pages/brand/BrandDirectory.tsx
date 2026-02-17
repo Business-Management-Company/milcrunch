@@ -39,6 +39,8 @@ import {
   FolderOpen,
   Trash2,
   Upload,
+  Star,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -113,6 +115,12 @@ const BrandDirectory = () => {
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [promoteListId, setPromoteListId] = useState("");
   const [promoting, setPromoting] = useState(false);
+
+  // Edit modal state (avg_views, avg_likes)
+  const [editMember, setEditMember] = useState<DirectoryMember | null>(null);
+  const [editAvgViews, setEditAvgViews] = useState("");
+  const [editAvgLikes, setEditAvgLikes] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const handleViewChange = (mode: ViewMode) => {
     setViewMode(mode);
@@ -239,6 +247,57 @@ const BrandDirectory = () => {
     setPromoteListId("");
     toast.success(`Added ${added} creator${added !== 1 ? "s" : ""}${failed > 0 ? `, ${failed} failed` : ""}`);
     loadMembers(selectedDir.id);
+  };
+
+  // ─── Featured on Homepage toggle ────────────────────────────
+
+  const handleToggleFeatured = async (member: DirectoryMember) => {
+    const newValue = !member.featured_homepage;
+    if (newValue) {
+      // Check max 3
+      const currentFeatured = members.filter((m) => m.featured_homepage && m.id !== member.id).length;
+      if (currentFeatured >= 3) {
+        toast.error("Maximum 3 featured creators. Remove one first.");
+        return;
+      }
+    }
+    const { error } = await supabase
+      .from("directory_members")
+      .update({ featured_homepage: newValue })
+      .eq("id", member.id);
+    if (error) {
+      toast.error(`Failed to update: ${error.message}`);
+    } else {
+      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, featured_homepage: newValue } : m)));
+      toast.success(newValue ? `${member.creator_name} featured on homepage` : `${member.creator_name} removed from homepage`);
+    }
+  };
+
+  // ─── Edit avg_views / avg_likes ────────────────────────────
+
+  const openEditModal = (member: DirectoryMember) => {
+    setEditMember(member);
+    setEditAvgViews(member.avg_views ?? "");
+    setEditAvgLikes(member.avg_likes ?? "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editMember) return;
+    setEditSaving(true);
+    const { error } = await supabase
+      .from("directory_members")
+      .update({ avg_views: editAvgViews || null, avg_likes: editAvgLikes || null })
+      .eq("id", editMember.id);
+    setEditSaving(false);
+    if (error) {
+      toast.error(`Failed to save: ${error.message}`);
+    } else {
+      setMembers((prev) => prev.map((m) =>
+        m.id === editMember.id ? { ...m, avg_views: editAvgViews || null, avg_likes: editAvgLikes || null } : m
+      ));
+      toast.success("Stats updated");
+      setEditMember(null);
+    }
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
@@ -575,11 +634,27 @@ const BrandDirectory = () => {
                       <div><span className="font-bold text-[#000741] dark:text-white">{typeof m.engagement_rate === "number" ? `${m.engagement_rate.toFixed(1)}%` : "—"}</span><span className="text-muted-foreground ml-1">eng.</span></div>
                     </div>
                     {platforms.length > 0 && <div className="flex items-center gap-2 text-gray-400 mb-4">{platforms.map((p) => <span key={p}>{PLATFORM_ICON[p] ?? null}</span>)}</div>}
-                    <div className="flex items-center gap-3 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center">
+                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] text-muted-foreground font-medium">Public</span>
                         {isToggling ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Switch checked={m.approved} onCheckedChange={() => handleToggleApproved(m.id, m.approved)} />}
                       </div>
+                      <button
+                        type="button"
+                        title={m.featured_homepage ? "Remove from homepage" : "Feature on homepage"}
+                        className={cn("p-1 rounded transition-colors", m.featured_homepage ? "text-yellow-500 hover:text-yellow-600" : "text-gray-300 hover:text-yellow-400")}
+                        onClick={() => handleToggleFeatured(m)}
+                      >
+                        <Star className={cn("h-4 w-4", m.featured_homepage && "fill-current")} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Edit stats"
+                        className="p-1 rounded text-gray-400 hover:text-pd-blue transition-colors"
+                        onClick={() => openEditModal(m)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
                       {m.approved && (
                         <Button variant="ghost" size="sm" className="text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg h-7 px-2" onClick={() => handleRemove(m.id, m.creator_name ?? "")}>
                           Remove
@@ -609,6 +684,7 @@ const BrandDirectory = () => {
                   <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Followers</th>
                   <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Engagement</th>
                   <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">Public</th>
+                  <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">Hero</th>
                   <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400 w-24">Actions</th>
                 </tr>
               </thead>
@@ -658,11 +734,31 @@ const BrandDirectory = () => {
                         </div>
                       </td>
                       <td className="p-3 text-center">
-                        {m.approved && (
-                          <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg" onClick={() => handleRemove(m.id, m.creator_name ?? "")}>
-                            Remove
-                          </Button>
-                        )}
+                        <button
+                          type="button"
+                          title={m.featured_homepage ? "Remove from homepage" : "Feature on homepage"}
+                          className={cn("p-1 rounded transition-colors", m.featured_homepage ? "text-yellow-500 hover:text-yellow-600" : "text-gray-300 hover:text-yellow-400")}
+                          onClick={() => handleToggleFeatured(m)}
+                        >
+                          <Star className={cn("h-4 w-4", m.featured_homepage && "fill-current")} />
+                        </button>
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            title="Edit stats"
+                            className="p-1 rounded text-gray-400 hover:text-pd-blue transition-colors"
+                            onClick={() => openEditModal(m)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          {m.approved && (
+                            <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg" onClick={() => handleRemove(m.id, m.creator_name ?? "")}>
+                              Remove
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -707,6 +803,48 @@ const BrandDirectory = () => {
               >
                 {promoting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                 Promote All
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Stats Modal */}
+        <Dialog open={!!editMember} onOpenChange={(open) => { if (!open) setEditMember(null); }}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Edit Stats — {editMember?.creator_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label htmlFor="avg-views">Avg Views</Label>
+                <Input
+                  id="avg-views"
+                  placeholder='e.g., "1.2M"'
+                  value={editAvgViews}
+                  onChange={(e) => setEditAvgViews(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="avg-likes">Avg Likes</Label>
+                <Input
+                  id="avg-likes"
+                  placeholder='e.g., "45.3K"'
+                  value={editAvgLikes}
+                  onChange={(e) => setEditAvgLikes(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
+              <Button
+                className="bg-pd-blue hover:bg-pd-darkblue text-white"
+                onClick={handleSaveEdit}
+                disabled={editSaving}
+              >
+                {editSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Save
               </Button>
             </DialogFooter>
           </DialogContent>

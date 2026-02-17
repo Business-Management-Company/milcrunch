@@ -28,6 +28,25 @@ export interface ShowcaseCreator extends FeaturedCreator {
   ic_avatar_url: string | null;
   platform_urls?: Record<string, string>;
   enrichment_data?: unknown;
+  featured_homepage?: boolean;
+  avg_views?: string | null;
+  avg_likes?: string | null;
+}
+
+/** Fetch up to 3 creators flagged as featured_homepage from directory_members. */
+export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]> {
+  const { data, error } = await supabase
+    .from("directory_members")
+    .select("*")
+    .eq("featured_homepage", true)
+    .eq("approved", true)
+    .order("sort_order", { ascending: true })
+    .limit(3);
+  if (error) {
+    console.warn("[featured-creators] Homepage featured fetch failed:", error.message);
+    return [];
+  }
+  return (data ?? []).map((r: Record<string, unknown>) => mapDirectoryRow(r));
 }
 
 /** For hero: top 3 active + approved featured creators by sort_order. */
@@ -117,6 +136,9 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     ic_avatar_url: (r.ic_avatar_url as string) ?? null,
     platform_urls: (r.platform_urls as Record<string, string>) ?? {},
     enrichment_data: r.enrichment_data ?? null,
+    featured_homepage: (r.featured_homepage as boolean) ?? false,
+    avg_views: (r.avg_views as string) ?? null,
+    avg_likes: (r.avg_likes as string) ?? null,
   };
 }
 
