@@ -24,6 +24,9 @@ import {
   ClipboardList,
   ChevronDown,
   ChevronRight,
+  FileSpreadsheet,
+  ExternalLink,
+  Presentation,
   type LucideIcon,
 } from "lucide-react";
 
@@ -57,7 +60,16 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/brand/events", label: "Events", icon: Calendar },
       { href: "/speakers", label: "Speakers", icon: Mic },
       { href: "/awards", label: "Awards", icon: Trophy },
-      { href: "/sponsors", label: "Sponsors", icon: Handshake },
+    ],
+  },
+  {
+    key: "sponsors",
+    label: "SPONSORS",
+    items: [
+      { href: "/brand/sponsors", label: "Sponsor Dashboard", icon: Handshake },
+      { href: "/brand/sponsors/forms", label: "Sponsor Forms", icon: FileSpreadsheet },
+      { href: "/brand/sponsors/pages", label: "Sponsor Pages", icon: ExternalLink },
+      { href: "/brand/sponsors/decks", label: "Sponsor Decks", icon: Presentation },
     ],
   },
   {
@@ -155,7 +167,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
     ? [...SIDEBAR_SECTIONS, SUPER_ADMIN_SECTION]
     : SIDEBAR_SECTIONS;
 
-  const isActive = (href: string) => location.pathname === href;
+  const isActive = (href: string) => location.pathname === href || (href !== "/dashboard" && location.pathname.startsWith(href + "/"));
 
   return (
     <aside

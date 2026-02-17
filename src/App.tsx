@@ -104,6 +104,13 @@ import BrandPages from "./pages/brand/BrandPages";
 import BrandPageEdit from "./pages/brand/BrandPageEdit";
 import DynamicPage from "./pages/DynamicPage";
 import PlansPage from "./pages/PlansPage";
+import SponsorDashboard from "./pages/brand/sponsors/SponsorDashboard";
+import SponsorFormBuilder from "./pages/brand/sponsors/SponsorFormBuilder";
+import SponsorPages from "./pages/brand/sponsors/SponsorPages";
+import SponsorPageEditor from "./pages/brand/sponsors/SponsorPageEditor";
+import SponsorDecks from "./pages/brand/sponsors/SponsorDecks";
+import SponsorApply from "./pages/SponsorApply";
+import PublicSponsorPage from "./pages/PublicSponsorPage";
 
 const queryClient = new QueryClient();
 
@@ -163,6 +170,12 @@ const App = () => (
                 <Route path="/brand/settings" element={<BrandSettings />} />
                 <Route path="/brand/pages" element={<BrandPages />} />
                 <Route path="/brand/pages/:id" element={<BrandPageEdit />} />
+                <Route path="/brand/sponsors" element={<SponsorDashboard />} />
+                <Route path="/brand/sponsors/forms" element={<SponsorFormBuilder />} />
+                <Route path="/brand/sponsors/forms/:id" element={<SponsorFormBuilder />} />
+                <Route path="/brand/sponsors/pages" element={<SponsorPages />} />
+                <Route path="/brand/sponsors/pages/:id" element={<SponsorPageEditor />} />
+                <Route path="/brand/sponsors/decks" element={<SponsorDecks />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/events/create" element={<CreateEvent />} />
@@ -226,6 +239,9 @@ const App = () => (
               <Route path="/creator/leaderboard" element={<CreatorRoute><Leaderboard /></CreatorRoute>} />
               <Route path="/creator/opportunities" element={<CreatorRoute><CreatorOpportunities /></CreatorRoute>} />
               <Route path="/creator/:handle" element={<CreatorBioPage />} />
+              {/* Public sponsor pages */}
+              <Route path="/sponsor-apply/:formId" element={<SponsorApply />} />
+              <Route path="/sponsors/:slug" element={<PublicSponsorPage />} />
               {/* CMS dynamic pages */}
               <Route path="/p/:slug" element={<DynamicPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
