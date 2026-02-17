@@ -5,9 +5,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { imageUrl, handle } = req.body || {};
+  const { imageUrl, handle: h, creatorHandle } = req.body || {};
+  const handle = h || creatorHandle;
   if (!imageUrl || !handle) {
-    return res.status(400).json({ error: "imageUrl and handle are required" });
+    return res.status(400).json({ error: "imageUrl and handle (or creatorHandle) are required" });
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;

@@ -547,14 +547,25 @@ const BrandDirectory = () => {
                 const platforms = m.platforms ?? [];
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center", !m.approved && "opacity-60")}>
-                    <div className="w-[72px] h-[72px] rounded-full overflow-hidden mb-3 border border-gray-200 dark:border-gray-700">
-                      {imgSrc ? (
-                        <img src={imgSrc} alt={m.creator_name ?? ""} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
-                          {getInitials(m.creator_name ?? "", m.creator_handle)}
-                        </div>
+                    <div className="w-[72px] h-[72px] rounded-full overflow-hidden mb-3 border border-gray-200 dark:border-gray-700 relative">
+                      {imgSrc && (
+                        <img
+                          src={imgSrc}
+                          alt={m.creator_name ?? ""}
+                          className="w-full h-full object-cover absolute inset-0"
+                          onError={(e) => {
+                            const el = e.currentTarget;
+                            if (m.ic_avatar_url && el.src !== m.ic_avatar_url && m.avatar_url !== m.ic_avatar_url) {
+                              el.src = m.ic_avatar_url;
+                            } else {
+                              el.style.display = "none";
+                            }
+                          }}
+                        />
                       )}
+                      <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
+                        {getInitials(m.creator_name ?? "", m.creator_handle)}
+                      </div>
                     </div>
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#6C5CE7] mb-2 truncate max-w-full">@{m.creator_handle}</p>
@@ -610,14 +621,25 @@ const BrandDirectory = () => {
                     <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors", !m.approved && "opacity-60")}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
-                            {imgSrc ? (
-                              <img src={imgSrc} alt={m.creator_name ?? ""} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs">
-                                {getInitials(m.creator_name ?? "", m.creator_handle)}
-                              </div>
+                          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 relative">
+                            {imgSrc && (
+                              <img
+                                src={imgSrc}
+                                alt={m.creator_name ?? ""}
+                                className="w-full h-full object-cover absolute inset-0"
+                                onError={(e) => {
+                                  const el = e.currentTarget;
+                                  if (m.ic_avatar_url && el.src !== m.ic_avatar_url && m.avatar_url !== m.ic_avatar_url) {
+                                    el.src = m.ic_avatar_url;
+                                  } else {
+                                    el.style.display = "none";
+                                  }
+                                }}
+                              />
                             )}
+                            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs">
+                              {getInitials(m.creator_name ?? "", m.creator_handle)}
+                            </div>
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-[#000741] dark:text-white truncate">{m.creator_name}</p>

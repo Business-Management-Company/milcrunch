@@ -210,11 +210,16 @@ export async function addToDirectory(
   const slug = generateProfileSlug(data.display_name, handle);
 
   // Upload profile image to Supabase storage for permanent URL
+  // Skip if caller already uploaded (avatar_url is already a Supabase storage URL)
   let permanentAvatarUrl = data.avatar_url || null;
-  const sourceImageUrl = data.ic_avatar_url || data.avatar_url;
-  if (sourceImageUrl) {
-    const uploaded = await uploadCreatorImage(sourceImageUrl, handle);
-    if (uploaded) permanentAvatarUrl = uploaded;
+  if (permanentAvatarUrl && permanentAvatarUrl.includes("supabase.co/storage")) {
+    // Already a permanent URL — no re-upload needed
+  } else {
+    const sourceImageUrl = data.ic_avatar_url || data.avatar_url;
+    if (sourceImageUrl) {
+      const uploaded = await uploadCreatorImage(sourceImageUrl, handle);
+      if (uploaded) permanentAvatarUrl = uploaded;
+    }
   }
 
   const payload = {

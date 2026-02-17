@@ -211,7 +211,8 @@ const EnrichShimmer = () => (
   <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse inline-block" />
 );
 
-/** If this handle matches a directory_members row, save the enrichment avatar (fire-and-forget). */
+/** If this handle matches a directory_members row, upload the enrichment avatar
+ *  to Supabase storage and update the row with the permanent URL (fire-and-forget). */
 function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse) {
   try {
     const ig = data.instagram;
@@ -223,13 +224,26 @@ function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse
       null;
     if (!avatarUrl) return;
 
-    supabase
-      .from("directory_members")
-      .update({ avatar_url: avatarUrl })
-      .eq("creator_handle", handle.toLowerCase())
-      .then(({ error }) => {
-        if (error) return;
-        console.log(`[BrandDiscover] Updated directory_members avatar for @${handle}`);
+    // Upload to Supabase storage first, then update the row with the permanent URL
+    fetch("/api/upload-creator-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: avatarUrl, handle }),
+    })
+      .then((resp) => (resp.ok ? resp.json() : null))
+      .then((result) => {
+        const permanentUrl = result?.url || avatarUrl;
+        supabase
+          .from("directory_members")
+          .update({ avatar_url: permanentUrl, ic_avatar_url: avatarUrl })
+          .eq("creator_handle", handle.toLowerCase())
+          .then(({ error }) => {
+            if (error) return;
+            console.log(`[BrandDiscover] Updated directory_members avatar for @${handle}`);
+          });
+      })
+      .catch(() => {
+        // non-critical — ignore
       });
   } catch {
     // non-critical — ignore
