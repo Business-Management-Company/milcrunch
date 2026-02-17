@@ -3,12 +3,13 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { fetchCredits } from "@/lib/influencers-club";
 import { useLists } from "@/contexts/ListContext";
-import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send } from "lucide-react";
+import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp } from "lucide-react";
 import { getChatResponse } from "@/lib/chat-responses";
 import {
   AreaChart,
   Area,
   XAxis,
+  Tooltip,
   ResponsiveContainer,
 } from "recharts";
 
@@ -67,10 +68,10 @@ const INSIGHTS_CHART_DATA = [
 ];
 
 const INSIGHTS_STATS = [
-  { value: "3.4M", label: "Total Impressions" },
-  { value: "2.4K", label: "Community" },
-  { value: "1.5K", label: "Active Creators" },
-  { value: "+34%", label: "YoY Growth" },
+  { value: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
+  { value: "2,400", label: "Community Members", icon: Users, color: "text-blue-600" },
+  { value: "1,467", label: "Active Creators", icon: Mic, color: "text-green-600" },
+  { value: "+34%", label: "YoY Growth", icon: TrendingUp, color: "text-teal-600" },
 ];
 
 /* ── Component ────────────────────────────────────────────────── */
@@ -83,6 +84,7 @@ const BrandDashboard = () => {
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [chatInput, setChatInput] = useState("");
+  const [typing, setTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -92,7 +94,7 @@ const BrandDashboard = () => {
   // Auto-scroll chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, typing]);
 
   const totalCreators = lists.reduce((sum, l) => sum + l.creators.length, 0);
 
@@ -101,9 +103,11 @@ const BrandDashboard = () => {
     const userMsg: ChatMessage = { role: "user", text: text.trim() };
     setMessages((prev) => [...prev, userMsg]);
     setChatInput("");
+    setTyping(true);
 
     setTimeout(() => {
       setMessages((prev) => [...prev, getAssistantResponse(text)]);
+      setTyping(false);
     }, 600);
   };
 
@@ -200,6 +204,15 @@ const BrandDashboard = () => {
                 </div>
               </div>
             ))}
+            {typing && (
+              <div className="flex justify-start">
+                <div className="bg-gray-50 text-gray-800 rounded-2xl px-4 py-2 max-w-[70%] text-sm flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -245,15 +258,19 @@ const BrandDashboard = () => {
 
         {/* Mini stat cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {INSIGHTS_STATS.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-center"
-            >
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-              <p className="text-xs text-gray-400 mt-1">{stat.label}</p>
-            </div>
-          ))}
+          {INSIGHTS_STATS.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div
+                key={stat.label}
+                className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 text-center"
+              >
+                <Icon className={`h-5 w-5 ${stat.color} mx-auto mb-2`} />
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                <p className="text-xs text-gray-400 mt-1">{stat.label}</p>
+              </div>
+            );
+          })}
         </div>
 
         {/* Mini chart */}
@@ -272,6 +289,10 @@ const BrandDashboard = () => {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13 }}
+                  formatter={(val: number) => [val.toLocaleString(), "Impressions"]}
                 />
                 <Area
                   type="monotone"
