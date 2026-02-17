@@ -1,20 +1,17 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
-  { label: "Home", to: "/" },
-  { label: "Creators", to: "/creators" },
+  { label: "Creator Directory", to: "/creators" },
+  { label: "Podcast Network", to: "/podcasts" },
+  { label: "Shop", to: "/shop" },
   { label: "Events", to: "/events" },
-  { label: "Podcasts", to: "/podcasts" },
 ];
 
 export default function PublicNav() {
-  const { user, getRedirectPath } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (to: string) => {
@@ -49,29 +46,14 @@ export default function PublicNav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3 shrink-0">
-          {user ? (
-            <Button
-              size="sm"
-              className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-5 py-2 font-semibold"
-              onClick={() => {
-                const path = getRedirectPath();
-                navigate(path || "/creator/dashboard");
-              }}
-            >
-              Dashboard
+          <Link to="/sign-in" className="text-sm font-medium text-white hover:text-gray-300 transition-colors">
+            Sign In
+          </Link>
+          <Link to="/plans">
+            <Button size="sm" className="rounded-full bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white px-5 py-2 font-semibold">
+              Sign Up
             </Button>
-          ) : (
-            <>
-              <Link to="/login" className="text-sm font-medium text-[#E0E0E0] hover:text-white transition-colors">
-                Sign In
-              </Link>
-              <Link to="/signup">
-                <Button size="sm" className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-5 py-2 font-semibold">
-                  Get Started
-                </Button>
-              </Link>
-            </>
-          )}
+          </Link>
         </div>
 
         {/* Mobile hamburger */}
@@ -104,34 +86,18 @@ export default function PublicNav() {
             ))}
           </nav>
           <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-white/10">
-            {user ? (
-              <Button
-                size="sm"
-                className="w-full rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold"
-                onClick={() => {
-                  setMobileOpen(false);
-                  const path = getRedirectPath();
-                  navigate(path || "/creator/dashboard");
-                }}
-              >
-                Dashboard
+            <Link
+              to="/sign-in"
+              onClick={() => setMobileOpen(false)}
+              className="text-sm font-medium text-white hover:text-gray-300 px-3 py-2"
+            >
+              Sign In
+            </Link>
+            <Link to="/plans" onClick={() => setMobileOpen(false)}>
+              <Button size="sm" className="w-full rounded-full bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white font-semibold">
+                Sign Up
               </Button>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="text-sm font-medium text-gray-300 hover:text-white px-3 py-2"
-                >
-                  Sign In
-                </Link>
-                <Link to="/signup" onClick={() => setMobileOpen(false)}>
-                  <Button size="sm" className="w-full rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold">
-                    Get Started
-                  </Button>
-                </Link>
-              </>
-            )}
+            </Link>
           </div>
         </div>
       )}

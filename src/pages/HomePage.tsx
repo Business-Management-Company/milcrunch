@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Sun,
   Shield,
   ShieldCheck,
   BadgeCheck,
@@ -23,11 +21,9 @@ import {
   BarChart3,
   Handshake,
   MapPin,
-  Search,
   Instagram,
   Youtube,
   Twitter,
-  Play,
   Pencil,
   Loader2,
   Save,
@@ -43,18 +39,13 @@ import PodcastDetailModal from "@/components/PodcastDetailModal";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 import {
-  fetchFeaturedHero,
-  fetchFeaturedGrid,
   formatFollowerCount,
   getInitials,
-  type CreatorRow,
 } from "@/lib/creators-db";
 import {
   fetchShowcaseByDirectoryName,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
-
-const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 
 // Hero background: clean group photo without baked-in social cards
 const HERO_BG_IMAGE = "/home-hero-creators.png";
@@ -81,10 +72,16 @@ const CATEGORIES: { label: string; image: string }[] = [
 ];
 
 const EVENTS = [
-  { name: "MilSpouseFest San Diego", date: "Mar 15", location: "San Diego, CA", tag: "MilSpouseFest" },
-  { name: "RecurrentX at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC", tag: "Experience" },
-  { name: "MIC 2026", date: "Sep", location: "Washington, DC", tag: "MIC" },
-  { name: "RecurrentX at VFW National", date: "Aug", location: "Louisville, KY", tag: "Experience" },
+  { name: "MilSpouseFest San Diego", date: "Mar 15", location: "San Diego, CA", tag: "MilSpouseFest", image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80" },
+  { name: "RecurrentX at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC", tag: "Experience", image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&q=80" },
+  { name: "MIC 2026", date: "Sep", location: "Washington, DC", tag: "MIC", image: "https://images.unsplash.com/photo-1587825140708-dfaf18c4f2d4?w=600&q=80" },
+  { name: "RecurrentX at VFW National", date: "Aug", location: "Louisville, KY", tag: "Experience", image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80" },
+];
+
+const HERO_CARD_POSITIONS = [
+  { top: "8%", right: "0%", rotate: "rotate-2", delay: "0s" },
+  { top: "34%", right: "5%", rotate: "-rotate-1", delay: "0.5s" },
+  { top: "60%", right: "-2%", rotate: "rotate-1", delay: "1s" },
 ];
 
 const BRAND_FEATURES = [
@@ -95,11 +92,6 @@ const BRAND_FEATURES = [
 
 type PodcastRow = Database["public"]["Tables"]["podcasts"]["Row"];
 
-const HERO_FALLBACK: CreatorRow[] = [
-  { id: "1", display_name: "Jason S.", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 0, created_at: null },
-  { id: "2", display_name: "Kevin W.", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 1, created_at: null },
-  { id: "3", display_name: "Taylor S.", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "hero", featured_sort_order: 2, created_at: null },
-];
 
 
 // --- Showcase helpers ---
@@ -231,16 +223,6 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
 
 // No hardcoded showcase fallback — homepage always pulls from directory_members
 
-const GRID_FALLBACK: CreatorRow[] = [
-  { id: "g1", display_name: "Jason", handle: "savagekingdomboerboels", platform: "instagram", avatar_url: null, follower_count: 359100, engagement_rate: 3.2, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 0, created_at: null },
-  { id: "g2", display_name: "Kevin", handle: "wheelchairkev", platform: "instagram", avatar_url: null, follower_count: 353100, engagement_rate: 4.8, category: "Motivation", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 1, created_at: null },
-  { id: "g3", display_name: "Sven", handle: "badasscounseling", platform: "instagram", avatar_url: null, follower_count: 164600, engagement_rate: 2.5, category: "Lifestyle", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 2, created_at: null },
-  { id: "g4", display_name: "David", handle: "frommilitarytomillionaire", platform: "instagram", avatar_url: null, follower_count: 107900, engagement_rate: 2.8, category: "Military", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 3, created_at: null },
-  { id: "g5", display_name: "Taylor", handle: "tsyontz", platform: "instagram", avatar_url: null, follower_count: 96800, engagement_rate: 2.1, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 4, created_at: null },
-  { id: "g6", display_name: "Jon", handle: "itsjonlynch", platform: "instagram", avatar_url: null, follower_count: 88600, engagement_rate: 3.0, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 5, created_at: null },
-  { id: "g7", display_name: "Chive Charities", handle: "chivecharities", platform: "instagram", avatar_url: null, follower_count: 43100, engagement_rate: 4.1, category: "Veterans", bio: null, location: null, is_verified: true, is_featured: true, featured_section: "grid", featured_sort_order: 6, created_at: null },
-  { id: "g8", display_name: "Kashi", handle: "hopefor22aday_kashi", platform: "instagram", avatar_url: null, follower_count: 42000, engagement_rate: 2.9, category: "Military", bio: null, location: null, is_verified: false, is_featured: true, featured_section: "grid", featured_sort_order: 7, created_at: null },
-];
 
 // Editable homepage content fallbacks
 const CONTENT_DEFAULTS: Record<string, string> = {
@@ -365,14 +347,11 @@ function HomepageEditor({
 }
 
 export default function HomePage() {
-  const { user, loading: authLoading, getRedirectPath } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
   const [podcastTotal, setPodcastTotal] = useState<number | null>(null);
   const [podcastsLoading, setPodcastsLoading] = useState(true);
   const [selectedPodcast, setSelectedPodcast] = useState<PodcastRow | null>(null);
-  const [heroCreatorsDb, setHeroCreatorsDb] = useState<CreatorRow[]>(HERO_FALLBACK);
-  const [gridCreators, setGridCreators] = useState<CreatorRow[]>([]);
   const [showcaseCreators, setShowcaseCreators] = useState<ShowcaseCreator[]>([]);
   const [showcaseInView, setShowcaseInView] = useState(false);
   const showcaseRef = useRef<HTMLDivElement>(null);
@@ -396,13 +375,7 @@ export default function HomePage() {
 
   useEffect(() => {
     (async () => {
-      const [hero, grid, showcase] = await Promise.all([
-        fetchFeaturedHero(3),
-        fetchFeaturedGrid(8),
-        fetchShowcaseByDirectoryName("Military Creator Network", 25),
-      ]);
-      setHeroCreatorsDb(hero.length >= 3 ? hero : HERO_FALLBACK);
-      setGridCreators(grid.length > 0 ? grid : GRID_FALLBACK);
+      const showcase = await fetchShowcaseByDirectoryName("Military Creator Network", 25);
       setShowcaseCreators(showcase);
     })();
   }, []);
@@ -444,73 +417,105 @@ export default function HomePage() {
       )}
 
       <main>
-        {/* Hero — full-width background image + overlay, floating creator cards */}
-        <section className="relative min-h-[95vh] flex flex-col md:flex-row items-center justify-center px-4 md:px-8 pt-20 pb-24 overflow-hidden">
-          {/* Background: full-width photo + dark navy overlay */}
+        {/* Hero */}
+        <section className="relative min-h-[95vh] flex items-center px-4 md:px-8 pt-20 pb-24 overflow-hidden">
+          {/* Background image + dark overlay */}
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url("${HERO_BG_IMAGE}")`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
+            style={{ backgroundImage: `url("${HERO_BG_IMAGE}")` }}
           />
-          {/* ~50% dark overlay for text readability while keeping photo visible */}
-          <div className="absolute inset-0 bg-black/50" />
-          <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-8">
-            {/* Left 60% — badge, headline, subtitle, CTAs, branch chips */}
-            <div className="flex-1 md:max-w-[65%] text-center md:text-left">
-              <div className="inline-flex items-center rounded-full bg-white/10 border border-white/10 px-4 py-1.5 mb-6">
-                <span className="text-[#F0A71F] text-xs font-semibold uppercase tracking-wide">
-                  ☆ THE MILITARY CREATOR & EXPERIENCE NETWORK
-                </span>
+          <div className="absolute inset-0" style={{ background: "rgba(26, 26, 46, 0.7)" }} />
+
+          <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+            {/* LEFT — Text content */}
+            <div className="flex-1 lg:max-w-[55%] text-center lg:text-left">
+              {/* Status pill */}
+              <div className="bg-white/10 backdrop-blur-sm text-white text-sm rounded-full px-4 py-1.5 inline-flex items-center gap-2 mb-8">
+                <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                2,400+ verified military creators
               </div>
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-4">
-                {cms.hero_title}
+
+              <h1 className="text-5xl md:text-6xl font-bold text-white leading-[1.15] mb-6">
+                Welcome home,<br />
+                <span className="bg-gradient-to-r from-[#6C5CE7] to-[#a855f7] bg-clip-text text-transparent">creator.</span>
               </h1>
-              <p className="text-white/90 text-base md:text-lg max-w-[600px] mb-8">
-                {cms.hero_subtitle}
+
+              <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0">
+                The military and veteran network for influencers, podcasters, and the brands that back them.
               </p>
-              <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
-                {user ? (
-                  <Button
-                    size="lg"
-                    className="rounded-lg bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-semibold"
-                    onClick={() => {
-                      const path = getRedirectPath();
-                      if (path) navigate(path);
-                      else navigate("/creator/dashboard");
-                    }}
-                  >
-                    Get Started →
+
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                <Link to="/plans">
+                  <Button size="lg" className="bg-[#6C5CE7] text-white rounded-full px-8 py-3 font-semibold hover:bg-[#5B4BD1]">
+                    Join the Network →
                   </Button>
-                ) : (
-                  <Link to="/signup">
-                    <Button size="lg" className="rounded-lg bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-semibold">
-                      Get Started →
-                    </Button>
-                  </Link>
-                )}
-                <a href="/#creators">
-                  <Button size="lg" variant="outline" className="rounded-lg bg-transparent hover:bg-white/10 border-white/40 text-white px-6 py-3 font-medium inline-flex items-center gap-2">
-                    <Play className="h-4 w-4" />
+                </Link>
+                <Link to="/creators">
+                  <Button size="lg" variant="outline" className="border border-white/30 text-white rounded-full px-8 py-3 font-semibold hover:bg-white/10 bg-transparent">
                     Browse Creators
                   </Button>
-                </a>
+                </Link>
               </div>
-              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                {BRANCHES.map((branch) => (
-                  <button
-                    key={branch}
-                    type="button"
-                    className="rounded-full bg-white/10 border border-white/20 text-white/80 px-4 py-1.5 text-sm font-medium hover:bg-white/15 transition-colors"
+            </div>
+
+            {/* RIGHT — Floating creator cards (from directory_members) */}
+            <div className="hidden lg:block flex-1 relative h-[480px] w-full max-w-[400px]">
+              {showcaseCreators.slice(0, 3).map((c, i) => {
+                const pos = HERO_CARD_POSITIONS[i];
+                const avatarUrl = c.avatar_url || c.ic_avatar_url || null;
+                const badge = c.branch || c.category || "Military";
+                const handle = c.handle.startsWith("@") ? c.handle : `@${c.handle}`;
+                return (
+                  <div
+                    key={c.id}
+                    className="absolute w-72 bg-white rounded-xl shadow-xl p-4"
+                    style={{
+                      top: pos.top,
+                      right: pos.right,
+                      animation: `heroFloat${i} 3s ease-in-out ${pos.delay} infinite`,
+                    }}
                   >
-                    {branch}
-                  </button>
-                ))}
-              </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center shrink-0">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white font-bold text-sm">{getInitials(c.display_name, c.handle)}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#1A1A2E] truncate">{c.display_name}</p>
+                        <p className="text-xs text-gray-400 truncate">{handle}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700">{badge}</span>
+                      <span className="text-xs text-gray-500 ml-auto">{formatFollowerCount(c.follower_count)}</span>
+                      {c.engagement_rate != null && (
+                        <span className="text-xs font-medium text-[#6C5CE7]">{c.engagement_rate.toFixed(1)}%</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            </div>
+          </div>
+
+          {/* Float animation keyframes — each card gets its own rotation baked in */}
+          <style>{`
+            @keyframes heroFloat0 {
+              0%, 100% { transform: rotate(2deg) translateY(0); }
+              50% { transform: rotate(2deg) translateY(-10px); }
+            }
+            @keyframes heroFloat1 {
+              0%, 100% { transform: rotate(-1deg) translateY(0); }
+              50% { transform: rotate(-1deg) translateY(-10px); }
+            }
+            @keyframes heroFloat2 {
+              0%, 100% { transform: rotate(1deg) translateY(0); }
+              50% { transform: rotate(1deg) translateY(-10px); }
+            }
+          `}</style>
         </section>
 
         {/* Built For Those Who Serve & Create */}
@@ -523,7 +528,7 @@ export default function HomePage() {
           <p className="text-center text-gray-500 mx-auto mb-12 text-[1.1rem]">
             Whether you wore the uniform or support those who did
           </p>
-          <div className="flex flex-wrap justify-center items-start gap-16">
+          <div className="flex flex-wrap justify-center items-start gap-16 mb-12">
             {AUDIENCE.map(({ label, icon: Icon }) => (
               <div
                 key={label}
@@ -536,6 +541,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+
         </section>
 
         {/* Verified Military Creator Showcase */}
@@ -613,63 +619,66 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Podcast Network */}
-        <section className="px-4 md:px-8 py-16 md:py-20 bg-[#F8F9FA]">
+        {/* Military Podcast Network */}
+        <section className="px-4 md:px-8 py-16 md:py-20 bg-white">
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
-              <div>
-                <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-2">
-                  TUNE IN
-                </p>
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E]">
-                  Veteran & Military Podcast Network
-                </h2>
-                <p className="text-gray-600 mt-1">Discover the voices of those who served. {podcastTotal != null ? `${podcastTotal} podcasts and counting.` : "Podcasts and counting."}</p>
-              </div>
-              <Link to="/podcasts">
-                <Button variant="outline" className="rounded-lg border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10">
-                  View All Podcasts →
-                </Button>
-              </Link>
-            </div>
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-2">
+              Military Podcast Network
+            </h2>
+            <p className="text-gray-500 text-lg mb-8">
+              825+ military and veteran voices — streaming 24/7
+            </p>
+
             {podcastsLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex gap-4 overflow-x-auto pb-2">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="rounded-xl overflow-hidden border border-gray-200 bg-white">
-                    <Skeleton className="aspect-video w-full" />
-                    <Skeleton className="h-4 w-3/4 m-3" />
-                  </div>
+                  <div key={i} className="w-48 flex-shrink-0 rounded-xl bg-gray-100 animate-pulse h-64" />
                 ))}
               </div>
+            ) : podcasts.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4">No podcasts yet. Check back soon.</p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {podcasts.length === 0 ? (
-                  <p className="col-span-full text-sm text-gray-500 py-4">No podcasts yet. Check back soon.</p>
-                ) : (
-                  podcasts.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setSelectedPodcast(p)}
-                      className="group rounded-xl overflow-hidden border border-gray-200 bg-white hover:shadow-lg transition-shadow text-left"
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {podcasts.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSelectedPodcast(p)}
+                    className="w-48 flex-shrink-0 rounded-xl shadow-sm bg-white border border-gray-100 overflow-hidden hover:shadow-md transition-shadow text-left"
+                  >
+                    {(p.image_url || p.artwork_url) ? (
+                      <img
+                        src={(p.image_url || p.artwork_url)!}
+                        alt=""
+                        className="h-48 w-full object-cover rounded-t-xl"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className={`h-48 w-full rounded-t-xl bg-[#6C5CE7] flex items-center justify-center ${
+                        (p.image_url || p.artwork_url) ? "hidden" : ""
+                      }`}
                     >
-                      <div className="aspect-square bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
-                        {(p.image_url || p.artwork_url) ? (
-                          <img src={(p.image_url || p.artwork_url)!} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }} />
-                        ) : null}
-                        <Mic2 className={`h-12 w-12 text-white/80 ${(p.image_url || p.artwork_url) ? "hidden" : ""}`} />
-                      </div>
-                      <div className="p-3">
-                        <p className="text-sm font-semibold text-[#1A1A2E] truncate" title={p.title ?? undefined}>
-                          {p.title ?? "Untitled"}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">{p.author ?? ""}</p>
-                      </div>
-                    </button>
-                  ))
-                )}
+                      <Mic2 className="h-12 w-12 text-white/80" />
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-semibold text-[#1A1A2E] line-clamp-2" title={p.title ?? undefined}>
+                        {p.title ?? "Untitled"}
+                      </p>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
+
+            <div className="text-center mt-8">
+              <Link to="/podcasts" className="text-[#6C5CE7] font-medium hover:underline">
+                View All Podcasts →
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -686,20 +695,30 @@ export default function HomePage() {
               {EVENTS.map((event) => (
                 <div
                   key={event.name}
-                  className="rounded-xl border border-[#E5E7EB] bg-white p-5 flex flex-col shadow-sm hover:shadow-md transition-shadow"
+                  className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                 >
-                  <span className="inline-block text-xs font-semibold text-[#6C5CE7] bg-[#6C5CE7]/10 rounded-full px-2.5 py-0.5 w-fit mb-3">
-                    {event.tag}
-                  </span>
-                  <h3 className="font-semibold text-[#1A1A2E] mb-1">{event.name}</h3>
-                  <p className="text-sm text-gray-500 mb-1">{event.date}</p>
-                  <p className="text-sm text-gray-600 flex items-center gap-1 mb-4">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    {event.location}
-                  </p>
-                  <Button size="sm" className="rounded-lg mt-auto w-full">
-                    Join Event
-                  </Button>
+                  {/* Cover image */}
+                  {event.image ? (
+                    <img src={event.image} alt={event.name} className="h-36 w-full object-cover rounded-t-xl" />
+                  ) : (
+                    <div className="h-36 w-full bg-gradient-to-r from-[#6C5CE7] to-[#1A1A2E] rounded-t-xl flex items-center justify-center px-4">
+                      <span className="text-white font-semibold text-center text-sm">{event.name}</span>
+                    </div>
+                  )}
+                  <div className="p-4 flex flex-col flex-1">
+                    <span className="inline-block text-xs font-semibold text-[#6C5CE7] bg-[#6C5CE7]/10 rounded-full px-2.5 py-0.5 w-fit mb-2">
+                      {event.tag}
+                    </span>
+                    <h3 className="font-semibold text-[#1A1A2E] mb-1">{event.name}</h3>
+                    <p className="text-sm text-gray-500 mb-1">{event.date}</p>
+                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-4">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" />
+                      {event.location}
+                    </p>
+                    <Button size="sm" className="rounded-lg mt-auto w-full">
+                      Join Event
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
