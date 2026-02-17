@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Calendar, Users, Mic, Building2, User, Bell, Loader2, AlertCircle,
+  Calendar, Mic, Building2, User, Info, Bell, Loader2, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,14 +41,14 @@ export const useAttendeeEvent = () => {
 };
 
 /* ---------- tabs ---------- */
-type TabId = "schedule" | "community" | "speakers" | "sponsors" | "profile";
+type TabId = "schedule" | "speakers" | "sponsors" | "profile" | "info";
 
 const TABS: { id: TabId; label: string; icon: typeof Calendar }[] = [
   { id: "schedule", label: "Schedule", icon: Calendar },
-  { id: "community", label: "Community", icon: Users },
   { id: "speakers", label: "Speakers", icon: Mic },
   { id: "sponsors", label: "Sponsors", icon: Building2 },
   { id: "profile", label: "My Profile", icon: User },
+  { id: "info", label: "Info", icon: Info },
 ];
 
 interface Props {
@@ -161,71 +161,63 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
 
   return (
     <AttendeeContext.Provider value={{ event, eventSlug: eventSlug!, isRegistered, registrationId, refreshRegistration }}>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* ---- Top Header ---- */}
-        <header className="sticky top-0 z-50 bg-white border-b border-gray-200 h-14 flex items-center px-4 gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-gray-900 text-sm truncate">{event.title}</h1>
-            <p className="text-xs text-gray-500 truncate">
-              {event.venue && `${event.venue}`}
-              {event.city && ` · ${event.city}`}
-              {event.state && `, ${event.state}`}
-            </p>
-          </div>
-          <button className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <Bell className="h-5 w-5 text-gray-600" />
-          </button>
-          {user ? (
-            <Link to={`/attend/${eventSlug}/profile`}>
-              <div className="h-8 w-8 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white text-xs font-bold">
-                {(user.user_metadata?.full_name || user.email || "?")[0].toUpperCase()}
-              </div>
-            </Link>
-          ) : (
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/login">Sign In</Link>
-            </Button>
-          )}
-        </header>
+      {/* Phone-frame wrapper for desktop */}
+      <div className="min-h-screen bg-gray-200 flex justify-center">
+        <div className="w-full max-w-[430px] min-h-screen bg-gray-50 flex flex-col shadow-2xl relative">
+          {/* ---- Top Header (dark navy) ---- */}
+          <header className="sticky top-0 z-50 bg-[#0A0F1E] h-14 flex items-center px-4 gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="font-bold text-white text-sm truncate">{event.title}</h1>
+              <p className="text-xs text-gray-400 truncate">
+                {event.venue && `${event.venue}`}
+                {event.city && ` · ${event.city}`}
+                {event.state && `, ${event.state}`}
+              </p>
+            </div>
+            <span className="text-xs font-bold text-white tracking-tight shrink-0">
+              recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+            </span>
+          </header>
 
-        {/* ---- Content ---- */}
-        <main className="flex-1 overflow-y-auto pb-20">
-          <div className="max-w-lg mx-auto w-full">
-            {children}
-          </div>
-        </main>
+          {/* ---- Content ---- */}
+          <main className="flex-1 overflow-y-auto pb-20">
+            <div className="w-full">
+              {children}
+            </div>
+          </main>
 
-        {/* ---- Bottom Tab Bar ---- */}
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 h-16 flex items-center justify-around px-2 safe-area-pb">
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabClick(tab.id)}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-colors"
-              >
-                <tab.icon
-                  className={cn(
-                    "h-5 w-5 transition-colors",
-                    isActive ? "text-[#6C5CE7]" : "text-gray-400"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "text-[10px] font-medium transition-colors",
-                    isActive ? "text-[#6C5CE7]" : "text-gray-400"
-                  )}
+          {/* ---- Bottom Tab Bar ---- */}
+          <nav className="sticky bottom-0 z-50 bg-white border-t border-gray-200 h-16 flex items-center justify-around px-2">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id)}
+                  className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-colors"
                 >
-                  {tab.label}
-                </span>
-                {isActive && (
-                  <div className="w-1 h-1 rounded-full bg-[#6C5CE7] mt-0.5" />
-                )}
-              </button>
-            );
-          })}
-        </nav>
+                  <tab.icon
+                    className={cn(
+                      "h-5 w-5 transition-colors",
+                      isActive ? "text-[#6C5CE7]" : "text-gray-400"
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium transition-colors",
+                      isActive ? "text-[#6C5CE7]" : "text-gray-400"
+                    )}
+                  >
+                    {tab.label}
+                  </span>
+                  {isActive && (
+                    <div className="w-1 h-1 rounded-full bg-[#6C5CE7] mt-0.5" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       </div>
     </AttendeeContext.Provider>
   );

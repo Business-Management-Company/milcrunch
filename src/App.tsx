@@ -119,6 +119,7 @@ import AttendeeSchedule from "./pages/attendee/AttendeeSchedule";
 import AttendeeSpeakers from "./pages/attendee/AttendeeSpeakers";
 import AttendeeSponsors from "./pages/attendee/AttendeeSponsors";
 import AttendeeCommunityPage from "./pages/attendee/AttendeeCommunityPage";
+import AttendeeInfoPage from "./pages/attendee/AttendeeInfo";
 import AttendeeProfilePage from "./pages/attendee/AttendeeProfilePage";
 import AttendeeRegister from "./pages/attendee/AttendeeRegister";
 import SponsorApply from "./pages/SponsorApply";
@@ -257,6 +258,7 @@ const App = () => (
               <Route path="/attend/:eventSlug/speakers" element={<AttendeeSpeakers />} />
               <Route path="/attend/:eventSlug/sponsors" element={<AttendeeSponsors />} />
               <Route path="/attend/:eventSlug/profile" element={<AttendeeProfilePage />} />
+              <Route path="/attend/:eventSlug/info" element={<AttendeeInfoPage />} />
               <Route path="/attend/:eventSlug/register" element={<AttendeeRegister />} />
               {/* Creator bio pages (public, with CreatorPixel tracking) */}
               <Route path="/c/:handle" element={<CreatorBioPage />} />
