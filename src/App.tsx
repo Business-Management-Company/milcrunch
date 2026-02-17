@@ -110,6 +110,7 @@ import SponsorPages from "./pages/brand/sponsors/SponsorPages";
 import SponsorPageEditor from "./pages/brand/sponsors/SponsorPageEditor";
 import SponsorDecks from "./pages/brand/sponsors/SponsorDecks";
 import SocialMonitoring from "./pages/brand/SocialMonitoring";
+import AttendeeApp from "./pages/attendee/AttendeeApp";
 import SponsorApply from "./pages/SponsorApply";
 import PublicSponsorPage from "./pages/PublicSponsorPage";
 import Shop from "./pages/Shop";
@@ -235,6 +236,7 @@ const App = () => (
               <Route path="/events/:eventId/register" element={<EventRegister />} />
               <Route path="/events/:eventId/checkout" element={<EventCheckout />} />
               <Route path="/events/:eventId/confirmation" element={<EventConfirmation />} />
+              <Route path="/attend/:eventSlug" element={<AttendeeApp />} />
               {/* Creator bio pages (public, with CreatorPixel tracking) */}
               <Route path="/c/:handle" element={<CreatorBioPage />} />
               <Route path="/c/:handle/:eventSlug" element={<CreatorBioPage />} />
