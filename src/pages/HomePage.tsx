@@ -430,9 +430,8 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.15] mb-6">
-                <span className="text-white">Where Community, Events,</span><br />
-                <span className="text-white">and </span>
-                <span className="bg-gradient-to-r from-[#6C5CE7] to-[#a855f7] bg-clip-text text-transparent">Media Intersect</span>
+                <span className="text-white">Where Community, Events, and Media</span><br />
+                <span className="bg-gradient-to-r from-[#6C5CE7] to-[#a855f7] bg-clip-text text-transparent">Intersect</span>
               </h1>
 
               <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0">
@@ -457,68 +456,68 @@ export default function HomePage() {
             <div className="hidden lg:flex flex-1 justify-center items-center">
               <div className="relative" style={{ animation: "heroFloat 5s ease-in-out infinite" }}>
                 {/* Card 1 — Sofia M. (front) */}
-                <div className="relative z-30 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-[280px] p-5">
+                <div className="relative z-30 bg-white rounded-2xl shadow-2xl w-[340px] p-5">
                   <div className="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[15px] text-gray-900">Sofia M.</p>
                       <p className="text-[13px] text-gray-400">@sofiacreates</p>
                     </div>
-                    <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Lifestyle</span>
+                    <span className="text-[11px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Lifestyle</span>
                   </div>
                   <div className="border-t border-gray-100 my-3" />
-                  <div className="flex gap-8">
+                  <div className="flex items-center gap-10">
                     <div>
                       <p className="text-[18px] font-bold text-gray-900">2.4M</p>
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Followers</p>
+                      <p className="text-[11px] text-gray-400">Followers</p>
                     </div>
                     <div>
                       <p className="text-[18px] font-bold text-[#2E7D32]">4.8%</p>
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Engagement</p>
+                      <p className="text-[11px] text-gray-400">Engagement</p>
                     </div>
                   </div>
                 </div>
                 {/* Card 2 — Marcus J. (middle) */}
-                <div className="relative z-20 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl w-[280px] p-5 mt-[-30px] ml-[15px]">
+                <div className="relative z-20 bg-white rounded-2xl shadow-2xl w-[340px] p-5 mt-[-30px] ml-[15px]">
                   <div className="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[15px] text-gray-900">Marcus J.</p>
                       <p className="text-[13px] text-gray-400">@marcusfitpro</p>
                     </div>
-                    <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Fitness</span>
+                    <span className="text-[11px] font-medium px-3 py-1.5 rounded-full bg-[#E3F2FD] text-[#1565C0]">Fitness</span>
                   </div>
                   <div className="border-t border-gray-100 my-3" />
-                  <div className="flex gap-8">
+                  <div className="flex items-center gap-10">
                     <div>
                       <p className="text-[18px] font-bold text-gray-900">890K</p>
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Followers</p>
+                      <p className="text-[11px] text-gray-400">Followers</p>
                     </div>
                     <div>
                       <p className="text-[18px] font-bold text-[#2E7D32]">6.2%</p>
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Engagement</p>
+                      <p className="text-[11px] text-gray-400">Engagement</p>
                     </div>
                   </div>
                 </div>
                 {/* Card 3 — Lena Park (back) */}
-                <div className="relative z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg w-[280px] p-5 mt-[-30px] ml-[30px]">
+                <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-[340px] p-5 mt-[-30px] ml-[30px]">
                   <div className="flex items-center gap-3">
-                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[15px] text-gray-900">Lena Park</p>
                       <p className="text-[13px] text-gray-400">@lenaeats</p>
                     </div>
-                    <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Food</span>
+                    <span className="text-[11px] font-medium px-3 py-1.5 rounded-full bg-[#FFF3E0] text-[#E65100]">Food</span>
                   </div>
                   <div className="border-t border-gray-100 my-3" />
-                  <div className="flex gap-8">
+                  <div className="flex items-center gap-10">
                     <div>
                       <p className="text-[18px] font-bold text-gray-900">1.1M</p>
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Followers</p>
+                      <p className="text-[11px] text-gray-400">Followers</p>
                     </div>
                     <div>
                       <p className="text-[18px] font-bold text-[#2E7D32]">5.1%</p>
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Engagement</p>
+                      <p className="text-[11px] text-gray-400">Engagement</p>
                     </div>
                   </div>
                 </div>
