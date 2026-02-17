@@ -171,7 +171,13 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     partial.socialPlatforms = platforms;
   }
 
-  const hashtags = instagram.hashtags;
+  // Hashtags: try direct field (FULL endpoint), then aggregate from post_data (RAW endpoint)
+  let hashtags = instagram.hashtags;
+  if (!Array.isArray(hashtags) || hashtags.length === 0) {
+    const posts = Array.isArray(instagram.post_data) ? (instagram.post_data as Record<string, unknown>[]) : [];
+    const postTags = posts.flatMap((p) => Array.isArray(p.hashtags) ? p.hashtags as string[] : []);
+    if (postTags.length > 0) hashtags = postTags;
+  }
   if (Array.isArray(hashtags) && hashtags.length > 0) {
     const mapped = hashtags.map((t: unknown) => {
       if (typeof t === "string") return t.replace(/^#/, "");

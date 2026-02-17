@@ -61,6 +61,51 @@ const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
 };
 
+/**
+ * Compute analytics from post_data when the RAW enrich endpoint is used.
+ * The RAW endpoint (0.03 credits) returns post_data with per-post engagement
+ * but no computed averages — those are only in the FULL endpoint (1.03 credits).
+ */
+function computeFromPostData(igRecord: Record<string, unknown> | undefined, followerCount: number) {
+  const posts = Array.isArray(igRecord?.post_data) ? (igRecord.post_data as Record<string, unknown>[]) : [];
+  if (posts.length === 0) return { avgLikes: 0, avgComments: 0, avgViews: 0, engagement: 0, postsPerMonth: 0 };
+
+  let totalLikes = 0;
+  let totalComments = 0;
+  let totalViews = 0;
+  let videoCount = 0;
+  const dates: number[] = [];
+
+  for (const p of posts) {
+    const eng = p.engagement as Record<string, unknown> | undefined;
+    if (eng) {
+      totalLikes += Number(eng.likes ?? 0);
+      totalComments += Number(eng.comments ?? 0);
+      const vc = Number(eng.view_count ?? 0);
+      if (vc > 0) {
+        totalViews += vc;
+        videoCount++;
+      }
+    }
+    const d = new Date(p.created_at as string);
+    if (!isNaN(d.getTime())) dates.push(d.getTime());
+  }
+
+  const avgLikes = totalLikes / posts.length;
+  const avgComments = totalComments / posts.length;
+  const avgViews = videoCount > 0 ? totalViews / videoCount : 0;
+  const engagement = followerCount > 0 ? ((avgLikes + avgComments) / followerCount) * 100 : 0;
+
+  let postsPerMonth = 0;
+  if (dates.length >= 2) {
+    dates.sort((a, b) => a - b);
+    const daySpan = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
+    if (daySpan > 0) postsPerMonth = (dates.length / daySpan) * 30;
+  }
+
+  return { avgLikes, avgComments, avgViews, engagement, postsPerMonth };
+}
+
 /** Format numbers for display (9.4k, 1.2M). */
 function formatNumber(n: number | undefined | null): string {
   if (n != null && n !== 0 && !Number.isFinite(n)) return "—";
@@ -397,12 +442,13 @@ export default function CreatorProfileModal({
   useEffect(() => {
     if (enriched && ig) {
       const igObj = ig as Record<string, unknown>;
-      console.log("[CreatorProfileModal] IG analytics keys:", {
-        avg_likes: igObj.avg_likes, avg_like_count: igObj.avg_like_count,
-        avg_comments: igObj.avg_comments, avg_comment_count: igObj.avg_comment_count,
-        media_count: igObj.media_count, posting_frequency: igObj.posting_frequency_recent_months,
-        reels: typeof igObj.reels === "object" ? Object.keys(igObj.reels as object) : igObj.reels,
-        avg_views: igObj.avg_views, avg_view_count: igObj.avg_view_count,
+      const posts = Array.isArray(igObj.post_data) ? igObj.post_data as unknown[] : [];
+      console.log("[CreatorProfileModal] IG data:", {
+        keys: Object.keys(igObj).sort(),
+        media_count: igObj.media_count,
+        post_data_count: posts.length,
+        has_direct_analytics: !!(igObj.avg_likes || igObj.avg_like_count),
+        computed_from_posts: posts.length > 0 ? "yes" : "no",
       });
     }
   }, [enriched, ig]);
@@ -477,15 +523,18 @@ export default function CreatorProfileModal({
         avgViews: Number(twitterData.avg_views ?? twitterData.avg_view_count ?? twitterData.avg_impressions ?? 0),
       };
     }
+    // RAW endpoint: compute from post_data. FULL endpoint: use direct fields.
+    const fc = Number(igRecord?.follower_count ?? creator?.followers ?? 0);
+    const computed = computeFromPostData(igRecord, fc);
     return {
-      followers: Number(igRecord?.follower_count ?? creator?.followers ?? 0),
-      engagement: Number(igRecord?.engagement_percent ?? creator?.engagementRate ?? 0),
-      mediaCount: Number(igRecord?.media_count ?? igRecord?.post_count ?? 0),
-      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? igRecord?.posting_frequency ?? 0),
-      avgLikes: Number(igRecord?.avg_likes ?? igRecord?.avg_like_count ?? 0),
-      avgComments: Number(igRecord?.avg_comments ?? igRecord?.avg_comment_count ?? 0),
+      followers: fc,
+      engagement: Number(igRecord?.engagement_percent ?? 0) || computed.engagement || Number(creator?.engagementRate ?? 0),
+      mediaCount: Number(igRecord?.media_count ?? 0),
+      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? 0) || computed.postsPerMonth,
+      avgLikes: Number(igRecord?.avg_likes ?? igRecord?.avg_like_count ?? 0) || computed.avgLikes,
+      avgComments: Number(igRecord?.avg_comments ?? igRecord?.avg_comment_count ?? 0) || computed.avgComments,
       avgSpecial: Number(reelsObj?.avg_like_count ?? reelsObj?.avg_likes ?? 0),
-      avgViews: Number(reelsObj?.avg_view_count ?? reelsObj?.avg_views ?? igRecord?.avg_reel_plays ?? igRecord?.avg_views ?? igRecord?.avg_view_count ?? 0),
+      avgViews: Number(reelsObj?.avg_view_count ?? igRecord?.avg_views ?? igRecord?.avg_view_count ?? 0) || computed.avgViews,
     };
   }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, reelsObj, creator]);
 
