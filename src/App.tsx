@@ -229,7 +229,7 @@ const App = () => (
               <Route path="/sponsors" element={<PlaceholderPage title="Sponsors" description="Partner with brands and manage sponsorship opportunities." />} />
               <Route path="/verification" element={<Verification />} />
               <Route path="/analytics" element={<PlaceholderPage title="Analytics" description="View campaign performance, reach, and engagement metrics." />} />
-              <Route path="/social-monitoring" element={<SocialMonitoring />} />
+              <Route path="/brand/social-monitoring" element={<SocialMonitoring />} />
               {/* /swag moved to public routes */}
               <Route path="/settings" element={<PlaceholderPage title="Settings" description="Manage your account and platform preferences." />} />
               </Route>
