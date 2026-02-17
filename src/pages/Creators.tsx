@@ -133,19 +133,19 @@ function CreatorCard({
   return (
     <Link
       to={`/creators/${c.profile_slug || c.handle}`}
-      className="group bg-white rounded-2xl shadow-md hover:shadow-xl hover:scale-[1.02] transform transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
+      className="group bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden cursor-pointer flex flex-col"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? "none" : "translateY(24px)",
-        transition: `opacity 0.5s ease-out ${Math.min(index, 20) * 40}ms, transform 0.5s ease-out ${Math.min(index, 20) * 40}ms, box-shadow 0.3s ease`,
+        transition: `opacity 0.5s ease-out ${Math.min(index, 20) * 40}ms, transform 0.5s ease-out ${Math.min(index, 20) * 40}ms`,
       }}
     >
       {/* Banner */}
-      <div className={cn("h-24 w-full", bannerClass)} />
+      <div className={cn("h-20 w-full", bannerClass)} />
 
       {/* Avatar overlapping banner */}
-      <div className="flex justify-center -mt-10">
-        <div className="w-20 h-20 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
+      <div className="flex justify-center -mt-8">
+        <div className="w-16 h-16 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
           {showImage ? (
             <img
               src={imgSrc!}
@@ -155,7 +155,7 @@ function CreatorCard({
               onError={handleImgError}
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xl">
+            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-base">
               {getInitials(c.display_name, c.handle)}
             </div>
           )}
@@ -163,14 +163,14 @@ function CreatorCard({
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-4 pt-2 flex flex-col items-center flex-1">
+      <div className="p-4 flex flex-col items-center flex-1">
         {/* Name */}
-        <h3 className="text-lg font-bold text-gray-900 text-center mt-1 leading-snug">
+        <h3 className="font-semibold text-gray-900 text-sm text-center leading-snug">
           {c.display_name}
         </h3>
 
         {/* Handle */}
-        <p className="text-sm text-gray-400 text-center">@{c.handle}</p>
+        <p className="text-xs text-gray-400 text-center">@{c.handle}</p>
 
         {/* Badges */}
         <div className="flex items-center gap-1.5 mt-2 flex-wrap justify-center">
