@@ -473,7 +473,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 {/* Card 2 — Marcus J. (middle) */}
-                <div className="relative z-20 bg-white rounded-2xl shadow-xl border border-gray-100 w-[400px] px-5 py-3 mt-[-20px] ml-[25px]">
+                <div className="relative z-20 bg-white rounded-2xl shadow-xl border border-gray-100 w-[400px] px-5 py-3 mt-[-6px] ml-[25px]">
                   <div className="flex items-center gap-3">
                     <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="" className="w-11 h-11 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
@@ -494,7 +494,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 {/* Card 3 — Lena Park (back) */}
-                <div className="relative z-10 bg-white rounded-2xl shadow-lg border border-gray-100 w-[400px] px-5 py-3 mt-[-20px] ml-[50px]">
+                <div className="relative z-10 bg-white rounded-2xl shadow-lg border border-gray-100 w-[400px] px-5 py-3 mt-[-6px] ml-[50px]">
                   <div className="flex items-center gap-3">
                     <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" alt="" className="w-11 h-11 rounded-full object-cover" />
                     <div className="flex-1 min-w-0">
