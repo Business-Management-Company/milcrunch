@@ -282,6 +282,41 @@ const BrandEventCreate = () => {
   const updateScheduleItem = (key: string, field: string, value: string) =>
     setProductionSchedule((prev) => prev.map((s) => (s.key === key ? { ...s, [field]: value } : s)));
 
+  /* ---- resolve org + brand (required FK columns on events) ---- */
+  const resolveOrgAndBrand = async (): Promise<{ orgId: string; brandId: string } | null> => {
+    // Try to find an existing organization
+    const { data: orgs } = await supabase.from("organizations").select("id").limit(1);
+    let orgId = orgs?.[0]?.id;
+
+    if (!orgId) {
+      const { data: newOrg } = await supabase
+        .from("organizations")
+        .insert({ name: "My Organization", slug: `org-${Date.now()}` } as Record<string, unknown>)
+        .select("id")
+        .single();
+      orgId = newOrg?.id;
+    }
+
+    if (!orgId) return null;
+
+    // Try to find an existing brand
+    const { data: brands } = await supabase.from("brands").select("id").limit(1);
+    let brandId = brands?.[0]?.id;
+
+    if (!brandId) {
+      const { data: newBrand } = await supabase
+        .from("brands")
+        .insert({ name: "My Brand", slug: `brand-${Date.now()}`, organization_id: orgId } as Record<string, unknown>)
+        .select("id")
+        .single();
+      brandId = newBrand?.id;
+    }
+
+    if (!brandId) return null;
+
+    return { orgId, brandId };
+  };
+
   /* ---- save step 0: basics ---- */
   const saveBasics = async () => {
     if (!title.trim()) {
@@ -308,6 +343,12 @@ const BrandEventCreate = () => {
           .eq("id", createdEventId);
         if (error) throw error;
       } else {
+        const resolved = await resolveOrgAndBrand();
+        if (!resolved) {
+          toast.error("Could not resolve organization/brand. Check your account permissions.");
+          return false;
+        }
+
         const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
         const { data, error } = await supabase
@@ -326,6 +367,8 @@ const BrandEventCreate = () => {
             capacity: capacity ? parseInt(capacity) : null,
             is_published: false,
             created_by: user?.id || null,
+            organization_id: resolved.orgId,
+            brand_id: resolved.brandId,
           } as Record<string, unknown>)
           .select("id")
           .single();

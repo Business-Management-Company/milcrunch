@@ -116,7 +116,7 @@ const CreatorOnboarding = () => {
       // Get or create a default organization and brand
       const { data: orgs } = await supabase.from("organizations").select("id").limit(1);
       let orgId = orgs?.[0]?.id;
-      
+
       if (!orgId) {
         const { data: newOrg } = await supabase.from("organizations").insert({
           name: "My Organization",
@@ -125,9 +125,11 @@ const CreatorOnboarding = () => {
         orgId = newOrg?.id;
       }
 
+      if (!orgId) throw new Error("Could not resolve organization. Check your account permissions.");
+
       const { data: brands } = await supabase.from("brands").select("id").limit(1);
       let brandId = brands?.[0]?.id;
-      
+
       if (!brandId) {
         const { data: newBrand } = await supabase.from("brands").insert({
           name: "My Brand",
@@ -137,8 +139,10 @@ const CreatorOnboarding = () => {
         brandId = newBrand?.id;
       }
 
+      if (!brandId) throw new Error("Could not resolve brand. Check your account permissions.");
+
       const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      
+
       const { data: event, error } = await supabase.from("events").insert({
         title: eventName,
         slug: `${slug}-${Date.now()}`,
