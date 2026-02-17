@@ -185,6 +185,7 @@ const App = () => (
                 <Route path="/brand/sponsors/decks" element={<SponsorDecks />} />
                 <Route path="/brand/shop/merch" element={<MerchAdmin />} />
                 <Route path="/brand/shop/swag" element={<SwagAdmin />} />
+                <Route path="/brand/verification" element={<Verification />} />
                 <Route path="/brand/integrations" element={<Integrations />} />
                 <Route path="/brand/connectors" element={<Navigate to="/brand/integrations" replace />} />
                 <Route path="/brand/streaming" element={<StreamingDashboard />} />

@@ -24,6 +24,7 @@ import {
   KanbanSquare,
   FolderOpen,
   ClipboardList,
+  ShieldCheck,
   ChevronDown,
   ChevronRight,
   FileSpreadsheet,
@@ -81,6 +82,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/brand/discover", label: "Discovery", icon: Search },
       { href: "/brand/directories", label: "Directories", icon: FolderOpen, tooltip: "Manage your verified creator database. Add, edit, and organize creators by branch, platform, and specialty." },
       { href: "/brand/lists", label: "Lists", icon: ClipboardList, tooltip: "Build curated lists for campaigns and outreach. Group creators by event, sponsor, or project." },
+      { href: "/brand/verification", label: "Verification", icon: ShieldCheck },
     ],
   },
   {
