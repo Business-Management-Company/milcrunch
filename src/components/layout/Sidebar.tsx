@@ -18,6 +18,7 @@ import {
   Building2,
   Users,
   Plug,
+  Package,
   Briefcase,
   KanbanSquare,
   FolderOpen,
@@ -91,12 +92,19 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     ],
   },
   {
+    key: "shop",
+    label: "SHOP",
+    items: [
+      { href: "/brand/shop/merch", label: "Merch Store", icon: ShoppingBag },
+      { href: "/brand/shop/swag", label: "SWAG Packages", icon: Package },
+    ],
+  },
+  {
     key: "analytics",
     label: "ANALYTICS",
     items: [
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/social-monitoring", label: "Social Monitoring", icon: Radio },
-      { href: "/swag", label: "SWAG Store", icon: ShoppingBag },
     ],
   },
   {

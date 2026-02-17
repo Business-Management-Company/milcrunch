@@ -111,6 +111,11 @@ import SponsorPageEditor from "./pages/brand/sponsors/SponsorPageEditor";
 import SponsorDecks from "./pages/brand/sponsors/SponsorDecks";
 import SponsorApply from "./pages/SponsorApply";
 import PublicSponsorPage from "./pages/PublicSponsorPage";
+import Shop from "./pages/Shop";
+import ShopProduct from "./pages/ShopProduct";
+import SwagPackages from "./pages/SwagPackages";
+import MerchAdmin from "./pages/brand/shop/MerchAdmin";
+import SwagAdmin from "./pages/brand/shop/SwagAdmin";
 
 const queryClient = new QueryClient();
 
@@ -176,6 +181,8 @@ const App = () => (
                 <Route path="/brand/sponsors/pages" element={<SponsorPages />} />
                 <Route path="/brand/sponsors/pages/:id" element={<SponsorPageEditor />} />
                 <Route path="/brand/sponsors/decks" element={<SponsorDecks />} />
+                <Route path="/brand/shop/merch" element={<MerchAdmin />} />
+                <Route path="/brand/shop/swag" element={<SwagAdmin />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/events/create" element={<CreateEvent />} />
@@ -205,9 +212,12 @@ const App = () => (
               <Route path="/verification" element={<Verification />} />
               <Route path="/analytics" element={<PlaceholderPage title="Analytics" description="View campaign performance, reach, and engagement metrics." />} />
               <Route path="/social-monitoring" element={<PlaceholderPage title="Social Monitoring" description="Track mentions and sentiment across social channels." />} />
-              <Route path="/swag" element={<PlaceholderPage title="SWAG Store" description="Order branded merchandise and swag for events." />} />
+              {/* /swag moved to public routes */}
               <Route path="/settings" element={<PlaceholderPage title="Settings" description="Manage your account and platform preferences." />} />
               </Route>
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/shop/:id" element={<ShopProduct />} />
+              <Route path="/swag" element={<SwagPackages />} />
               <Route path="/events" element={<PublicEvents />} />
               <Route path="/sponsors/demo" element={<DemoSponsorships />} />
               <Route path="/demo" element={<Demo />} />

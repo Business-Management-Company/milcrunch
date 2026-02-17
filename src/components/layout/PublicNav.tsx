@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Calendar, MapPin, ChevronRight } from "lucide-react";
+import { Menu, X, Calendar, MapPin, ChevronRight, ShoppingBag, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const NAV_LINKS = [
@@ -34,6 +34,32 @@ function formatEventDate(dateStr: string | null) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function ShopDropdown() {
+  return (
+    <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2">
+      <div className="relative">
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-l border-t border-gray-100 z-10" />
+        <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-2 min-w-[200px] relative z-20">
+          <Link
+            to="/shop"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors text-gray-700 hover:text-gray-900"
+          >
+            <ShoppingBag className="h-4 w-4 text-[#6C5CE7]" />
+            <span className="text-sm font-medium">Merch Store</span>
+          </Link>
+          <Link
+            to="/swag"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors text-gray-700 hover:text-gray-900"
+          >
+            <Package className="h-4 w-4 text-[#6C5CE7]" />
+            <span className="text-sm font-medium">SWAG Packages</span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function EventsDropdown({ events }: { events: UpcomingEvent[] }) {
@@ -104,8 +130,10 @@ export default function PublicNav() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const eventsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     supabase
@@ -132,6 +160,15 @@ export default function PublicNav() {
 
   const handleEventsLeave = () => {
     eventsTimeoutRef.current = setTimeout(() => setEventsOpen(false), 150);
+  };
+
+  const handleShopEnter = () => {
+    if (shopTimeoutRef.current) clearTimeout(shopTimeoutRef.current);
+    setShopOpen(true);
+  };
+
+  const handleShopLeave = () => {
+    shopTimeoutRef.current = setTimeout(() => setShopOpen(false), 150);
   };
 
   return (
@@ -164,6 +201,25 @@ export default function PublicNav() {
                   {link.label}
                 </Link>
                 {eventsOpen && <EventsDropdown events={upcomingEvents} />}
+              </div>
+            ) : link.label === "Shop" ? (
+              <div
+                key={link.to}
+                className="relative"
+                onMouseEnter={handleShopEnter}
+                onMouseLeave={handleShopLeave}
+              >
+                <Link
+                  to={link.to}
+                  className={`text-sm font-medium transition-colors ${
+                    isActive(link.to) || isActive("/swag")
+                      ? "text-white font-bold"
+                      : "text-[#E0E0E0] hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+                {shopOpen && <ShopDropdown />}
               </div>
             ) : (
               <Link
@@ -206,20 +262,44 @@ export default function PublicNav() {
       {mobileOpen && (
         <div className="md:hidden bg-[#1A1A2E] border-t border-white/10 px-4 pb-4">
           <nav className="flex flex-col gap-1 pt-2">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileOpen(false)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(link.to)
-                    ? "text-white bg-white/10"
-                    : "text-gray-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {NAV_LINKS.map((link) =>
+              link.label === "Shop" ? (
+                <div key={link.to} className="flex flex-col">
+                  <span className="px-3 py-2 text-sm font-medium text-gray-400 uppercase tracking-wide">Shop</span>
+                  <Link
+                    to="/shop"
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      isActive("/shop") ? "text-white bg-white/10" : "text-gray-300 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <ShoppingBag className="h-4 w-4" /> Merch Store
+                  </Link>
+                  <Link
+                    to="/swag"
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      isActive("/swag") ? "text-white bg-white/10" : "text-gray-300 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Package className="h-4 w-4" /> SWAG Packages
+                  </Link>
+                </div>
+              ) : (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setMobileOpen(false)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(link.to)
+                      ? "text-white bg-white/10"
+                      : "text-gray-300 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
           </nav>
           <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-white/10">
             <Link
