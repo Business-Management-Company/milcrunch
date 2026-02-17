@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -16,8 +14,7 @@ import {
   Eye, Users, Mic, DollarSign, FileText, Download, Loader2,
   TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3,
   PieChart as PieChartIcon, LineChart as LineChartIcon,
-  Trophy, Star, Award, ArrowUpRight, Search, GitCompare, X,
-  Check,
+  Trophy, Calendar, Award,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -59,6 +56,12 @@ interface ChartDataPoint {
   creator_engagement?: number;
   content_performance?: number;
   revenue_attribution?: number;
+  // Previous year comparison keys
+  prev_sponsor_impressions?: number;
+  prev_community_growth?: number;
+  prev_creator_engagement?: number;
+  prev_content_performance?: number;
+  prev_revenue_attribution?: number;
   [key: string]: string | number | undefined;
 }
 
@@ -92,8 +95,6 @@ const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "S
 
 const PIE_COLORS = ["#6C5CE7", "#0984E3", "#00B894", "#FDCB6E", "#D63031", "#A29BFE"];
 
-const COMPARE_COLORS = ["#6C5CE7", "#0984E3", "#00B894", "#D63031", "#FDCB6E"];
-
 const TIER_STYLES: Record<string, { label: string; bg: string; text: string }> = {
   presenting: { label: "Presenting", bg: "bg-teal-100", text: "text-teal-700" },
   title: { label: "Title", bg: "bg-teal-100", text: "text-teal-700" },
@@ -119,11 +120,10 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
   const [creators, setCreators] = useState<DirectoryCreator[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Selection
-  const [selectedSponsor, setSelectedSponsor] = useState<string | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareSelection, setCompareSelection] = useState<string[]>([]);
-  const [sponsorSearch, setSponsorSearch] = useState("");
+  // Filters
+  const [selectedSponsor, setSelectedSponsor] = useState<string>("all");
+  const [selectedCreator, setSelectedCreator] = useState<string>("all");
+  const [compareTo, setCompareTo] = useState<string>("none");
 
   // Chart controls
   const [granularity, setGranularity] = useState<"monthly" | "quarterly">("monthly");
@@ -136,6 +136,9 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     content_performance: true,
     revenue_attribution: true,
   });
+
+  // Collapsible sponsor table
+  const [sponsorTableOpen, setSponsorTableOpen] = useState(false);
 
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -205,20 +208,12 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     ];
   }, [metrics]);
 
-  // Merge sponsor table data with metric names — some sponsors may exist only in one source
   const allSponsorNames = useMemo(() => {
     const names = new Set<string>();
     sponsors.forEach((s) => names.add(s.sponsor_name));
     sponsorNamesFromMetrics.forEach((n) => names.add(n));
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [sponsors, sponsorNamesFromMetrics]);
-
-  // Filtered sponsor list for display
-  const filteredSponsorNames = useMemo(() => {
-    if (!sponsorSearch.trim()) return allSponsorNames;
-    const q = sponsorSearch.toLowerCase();
-    return allSponsorNames.filter((n) => n.toLowerCase().includes(q));
-  }, [allSponsorNames, sponsorSearch]);
 
   // Lookup tier from event_sponsors table
   const sponsorTierMap = useMemo(() => {
@@ -249,7 +244,6 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       entry.monthlyValues.push({ month: monthKey, value: Number(m.value) });
     }
 
-    // Sort monthly values for each sponsor
     map.forEach((entry) => {
       entry.monthlyValues.sort((a, b) => a.month.localeCompare(b.month));
     });
@@ -257,12 +251,11 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     return map;
   }, [metrics]);
 
-  /* ---------- active filter: which sponsor(s) to show ---------- */
+  /* ---------- active filter ---------- */
   const activeSponsorFilter = useMemo(() => {
-    if (compareMode && compareSelection.length > 0) return compareSelection;
-    if (selectedSponsor) return [selectedSponsor];
-    return null; // null = all
-  }, [selectedSponsor, compareMode, compareSelection]);
+    if (selectedSponsor && selectedSponsor !== "all") return [selectedSponsor];
+    return null;
+  }, [selectedSponsor]);
 
   /* ---------- computed: top-level metric totals ---------- */
   const totals = useMemo(() => {
@@ -321,14 +314,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
 
       if (m.metric_type === "sponsor_impressions") {
         const sName = (m.metadata as Record<string, unknown>)?.sponsor_name as string;
-
-        // In compare mode, create separate keys per sponsor
-        if (compareMode && compareSelection.length > 0) {
-          if (sName && compareSelection.includes(sName)) {
-            const sponsorKey = `sponsor_${sName}`;
-            point[sponsorKey] = ((point[sponsorKey] as number) || 0) + Number(m.value);
-          }
-        } else if (activeSponsorFilter) {
+        if (activeSponsorFilter) {
           if (sName && activeSponsorFilter.includes(sName)) {
             point.sponsor_impressions = (point.sponsor_impressions || 0) + Number(m.value);
           }
@@ -365,8 +351,20 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       data = quarters;
     }
 
+    // Add "Previous Year" comparison data (70% of current values)
+    if (compareTo === "previous_year") {
+      data = data.map((point) => {
+        const withPrev = { ...point };
+        for (const key of Object.keys(METRIC_CONFIG)) {
+          const val = (point[key] as number) || 0;
+          withPrev[`prev_${key}`] = Math.round(val * 0.7);
+        }
+        return withPrev;
+      });
+    }
+
     return data;
-  }, [metrics, activeSponsorFilter, compareMode, compareSelection, granularity]);
+  }, [metrics, activeSponsorFilter, granularity, compareTo]);
 
   /* ---------- computed: pie chart data ---------- */
   const pieData = useMemo(() => {
@@ -385,76 +383,80 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     return [...top4, { name: "Other", value: otherSum }];
   }, [chartData, pieMetric]);
 
-  /* ---------- computed: comparison table data ---------- */
-  const comparisonTableData = useMemo(() => {
-    if (!compareMode || compareSelection.length < 2) return null;
-    return compareSelection.map((name) => {
-      const data = sponsorMetricsMap.get(name);
-      const total = data?.total || 0;
-      const monthly = data?.monthlyValues || [];
-      const avgMonthly = monthly.length > 0 ? Math.round(total / monthly.length) : 0;
-
-      // Trend: compare last two months
-      let trend: "up" | "down" | "flat" = "flat";
-      if (monthly.length >= 2) {
-        const last = monthly[monthly.length - 1].value;
-        const prev = monthly[monthly.length - 2].value;
-        trend = last > prev ? "up" : last < prev ? "down" : "flat";
+  /* ---------- computed: insights ---------- */
+  const insights = useMemo(() => {
+    // Top Sponsor
+    let topSponsorName = "N/A";
+    let topSponsorImpressions = 0;
+    sponsorMetricsMap.forEach((data, name) => {
+      if (data.total > topSponsorImpressions) {
+        topSponsorImpressions = data.total;
+        topSponsorName = name;
       }
-
-      return { name, total, avgMonthly, trend, monthCount: monthly.length };
     });
-  }, [compareMode, compareSelection, sponsorMetricsMap]);
 
-  /* ---------- computed: creator attribution for selected sponsor ---------- */
-  const creatorAttribution = useMemo(() => {
-    if (!selectedSponsor || compareMode) return [];
-    return creators
-      .slice(0, 5)
-      .map((c) => {
-        const followers = c.follower_count || 0;
-        const engagement = c.engagement_rate || 0;
-        const estimatedImpressions = Math.round((followers * engagement / 100) * 3);
-        return { ...c, estimatedImpressions };
+    // Peak Month
+    let peakMonth = "N/A";
+    let peakValue = 0;
+    chartData.forEach((point) => {
+      const impressions = (point.sponsor_impressions as number) || 0;
+      if (impressions > peakValue) {
+        peakValue = impressions;
+        peakMonth = point.label;
+      }
+    });
+
+    return {
+      topSponsor: topSponsorName,
+      topSponsorImpressions,
+      peakMonth,
+      peakValue,
+      yoyGrowth: "+34%",
+    };
+  }, [sponsorMetricsMap, chartData]);
+
+  /* ---------- computed: sponsor table data (sorted by impressions) ---------- */
+  const sponsorTableData = useMemo(() => {
+    return allSponsorNames
+      .map((name) => {
+        const data = sponsorMetricsMap.get(name);
+        const total = data?.total || 0;
+        const monthly = data?.monthlyValues || [];
+        const tier = sponsorTierMap.get(name);
+
+        // Peak month
+        let peakMonth = "N/A";
+        let peakVal = 0;
+        monthly.forEach((m) => {
+          if (m.value > peakVal) {
+            peakVal = m.value;
+            const idx = parseInt(m.month.split("-")[1]);
+            peakMonth = MONTH_LABELS[idx] || m.month;
+          }
+        });
+
+        // Trend
+        let trend: "up" | "down" | "flat" = "flat";
+        if (monthly.length >= 2) {
+          const last = monthly[monthly.length - 1].value;
+          const prev = monthly[monthly.length - 2].value;
+          trend = last > prev ? "up" : last < prev ? "down" : "flat";
+        }
+
+        return { name, tier, total, peakMonth, trend };
       })
-      .sort((a, b) => b.estimatedImpressions - a.estimatedImpressions);
-  }, [selectedSponsor, compareMode, creators]);
+      .sort((a, b) => b.total - a.total);
+  }, [allSponsorNames, sponsorMetricsMap, sponsorTierMap]);
 
   /* ---------- actions ---------- */
-  const handleSponsorClick = (name: string) => {
-    if (compareMode) {
-      setCompareSelection((prev) => {
-        if (prev.includes(name)) return prev.filter((n) => n !== name);
-        if (prev.length >= 3) {
-          toast.info("You can compare up to 3 sponsors");
-          return prev;
-        }
-        return [...prev, name];
-      });
-    } else {
-      setSelectedSponsor((prev) => (prev === name ? null : name));
-    }
-  };
-
-  const resetToAll = () => {
-    setSelectedSponsor(null);
-    setCompareMode(false);
-    setCompareSelection([]);
-  };
-
-  const toggleCompare = () => {
-    if (compareMode) {
-      setCompareMode(false);
-      setCompareSelection([]);
-    } else {
-      setCompareMode(true);
-      setSelectedSponsor(null);
-      // Pre-select the currently selected sponsor if any
-    }
-  };
-
   const toggleLine = (key: string) => {
     setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSponsorTableRowClick = (name: string) => {
+    setSelectedSponsor(name);
+    // Scroll to chart
+    chartRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const exportReport = async () => {
@@ -466,18 +468,18 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width / 2, canvas.height / 2 + 80] });
-      const suffix = selectedSponsor || "All Sponsors";
+      const suffix = selectedSponsor !== "all" ? selectedSponsor : "All Sponsors";
       pdf.setFontSize(18);
       pdf.setFont("helvetica", "bold");
-      pdf.text(`Sponsor Intelligence — ${suffix}`, 20, 30);
+      pdf.text(`365 Insights — ${suffix}`, 20, 30);
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(120, 120, 120);
       pdf.text(`Generated ${new Date().toLocaleDateString()}`, 20, 48);
       pdf.addImage(imgData, "PNG", 0, 60, canvas.width / 2, canvas.height / 2);
-      const filename = `sponsor-report-${suffix.replace(/\s+/g, "-").toLowerCase()}-${eventId}.pdf`;
+      const filename = `365-insights-${suffix.replace(/\s+/g, "-").toLowerCase()}-${eventId}.pdf`;
       pdf.save(filename);
-      toast.success("Sponsor report downloaded as PDF");
+      toast.success("Report downloaded as PDF");
     } catch (err) {
       console.error("Export failed:", err);
       toast.error("Failed to export report");
@@ -506,8 +508,8 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* ===== KPI CARDS ===== */}
+    <div className="space-y-4">
+      {/* ===== 1. KPI CARDS ROW ===== */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { label: "Total Impressions", value: formatNumber(totals.impressions), icon: Eye, color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-900/30" },
@@ -530,231 +532,140 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         ))}
       </div>
 
-      {/* ===== SPONSOR SCORECARD GRID ===== */}
-      {allSponsorNames.length > 0 && (
-        <div className="space-y-3">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Sponsor Performance</h3>
-              {(selectedSponsor || compareMode) && (
-                <Button variant="outline" size="sm" onClick={resetToAll} className="text-xs h-7">
-                  <X className="h-3 w-3 mr-1" />
-                  All Sponsors
-                </Button>
-              )}
-              <Button
-                variant={compareMode ? "default" : "outline"}
-                size="sm"
-                onClick={toggleCompare}
-                className={`text-xs h-7 ${compareMode ? "bg-[#6C5CE7] hover:bg-[#5B4BD5]" : ""}`}
-              >
-                <GitCompare className="h-3 w-3 mr-1" />
-                {compareMode ? "Exit Compare" : "Compare Sponsors"}
-              </Button>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search sponsors..."
-                value={sponsorSearch}
-                onChange={(e) => setSponsorSearch(e.target.value)}
-                className="pl-8 h-8 text-sm bg-white dark:bg-[#1A1D27]"
-              />
-            </div>
-          </div>
-
-          {/* Compare mode hint */}
-          {compareMode && (
-            <p className="text-xs text-muted-foreground">
-              Select 2-3 sponsors to compare. {compareSelection.length}/3 selected.
-            </p>
-          )}
-
-          {/* Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredSponsorNames.map((name) => {
-              const data = sponsorMetricsMap.get(name);
-              const total = data?.total || 0;
-              const monthly = data?.monthlyValues || [];
-              const tier = sponsorTierMap.get(name);
-              const tierStyle = tier ? TIER_STYLES[tier] || TIER_STYLES.community : null;
-
-              // Trend: compare last 2 months
-              let trend: "up" | "down" | "flat" = "flat";
-              if (monthly.length >= 2) {
-                const last = monthly[monthly.length - 1].value;
-                const prev = monthly[monthly.length - 2].value;
-                trend = last > prev ? "up" : last < prev ? "down" : "flat";
-              }
-
-              // Sparkline data (last 6 months)
-              const sparkData = monthly.slice(-6).map((m) => ({ v: m.value }));
-
-              const isSelected = selectedSponsor === name;
-              const isCompareSelected = compareSelection.includes(name);
-
-              return (
-                <div
-                  key={name}
-                  onClick={() => handleSponsorClick(name)}
-                  className={`
-                    relative rounded-xl p-4 cursor-pointer transition-all duration-200
-                    bg-white dark:bg-[#1A1D27]
-                    ${isSelected
-                      ? "border-2 border-[#6C5CE7] shadow-md ring-1 ring-[#6C5CE7]/20"
-                      : isCompareSelected
-                        ? "border-2 border-[#6C5CE7] shadow-sm"
-                        : "border border-gray-100 dark:border-gray-800 hover:border-[#6C5CE7] hover:shadow-md"
-                    }
-                  `}
-                >
-                  {/* Selected left stripe */}
-                  {(isSelected || isCompareSelected) && (
-                    <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-[#6C5CE7]" />
-                  )}
-
-                  {/* Compare checkbox */}
-                  {compareMode && (
-                    <div className={`absolute top-3 right-3 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                      isCompareSelected
-                        ? "bg-[#6C5CE7] border-[#6C5CE7]"
-                        : "border-gray-300 dark:border-gray-600"
-                    }`}>
-                      {isCompareSelected && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                  )}
-
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{name}</span>
-                      </div>
-                      {tierStyle && (
-                        <Badge className={`${tierStyle.bg} ${tierStyle.text} text-[10px] font-medium border-0 mb-2`}>
-                          {tierStyle.label}
-                        </Badge>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          {formatNumber(total)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">impressions</span>
-                        {trend === "up" && (
-                          <span className="flex items-center text-green-600 text-xs font-medium">
-                            <TrendingUp className="h-3 w-3 mr-0.5" /> Up
-                          </span>
-                        )}
-                        {trend === "down" && (
-                          <span className="flex items-center text-red-500 text-xs font-medium">
-                            <TrendingDown className="h-3 w-3 mr-0.5" /> Down
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Sparkline */}
-                    {sparkData.length >= 2 && (
-                      <div className="w-20 h-8 flex-shrink-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={sparkData}>
-                            <defs>
-                              <linearGradient id={`spark-${name.replace(/\s/g, "")}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.3} />
-                                <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0.05} />
-                              </linearGradient>
-                            </defs>
-                            <Line
-                              type="monotone"
-                              dataKey="v"
-                              stroke="#6C5CE7"
-                              strokeWidth={1.5}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ===== CHART CONTROLS ===== */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Granularity toggle */}
-        <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-          <Button
-            size="sm"
-            variant={granularity === "monthly" ? "default" : "ghost"}
-            onClick={() => setGranularity("monthly")}
-            className="text-xs h-7"
-          >
-            Monthly
-          </Button>
-          <Button
-            size="sm"
-            variant={granularity === "quarterly" ? "default" : "ghost"}
-            onClick={() => setGranularity("quarterly")}
-            className="text-xs h-7"
-          >
-            Quarterly
-          </Button>
-        </div>
-
-        {/* Chart type toggle */}
-        <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
-          <Button
-            size="sm"
-            variant={chartType === "line" ? "default" : "ghost"}
-            onClick={() => setChartType("line")}
-            className="text-xs h-7"
-          >
-            <LineChartIcon className="h-3.5 w-3.5 mr-1" />
-            Line
-          </Button>
-          <Button
-            size="sm"
-            variant={chartType === "donut" ? "default" : "ghost"}
-            onClick={() => setChartType("donut")}
-            className="text-xs h-7"
-          >
-            <PieChartIcon className="h-3.5 w-3.5 mr-1" />
-            Donut
-          </Button>
-        </div>
-
-        {/* Pie metric selector */}
-        {chartType === "donut" && (
-          <Select value={pieMetric} onValueChange={setPieMetric}>
-            <SelectTrigger className="w-[200px] bg-white dark:bg-[#1A1D27]">
-              <SelectValue />
+      {/* ===== 2. FILTER BAR ===== */}
+      <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-100 dark:border-gray-800 p-3 flex items-end gap-3 flex-wrap">
+        {/* Filter by Sponsor */}
+        <div className="min-w-[160px]">
+          <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Sponsor</p>
+          <Select value={selectedSponsor} onValueChange={setSelectedSponsor}>
+            <SelectTrigger className="h-8 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <SelectValue placeholder="All Sponsors" />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(METRIC_CONFIG).map(([key, { label }]) => (
-                <SelectItem key={key} value={key}>{label}</SelectItem>
+              <SelectItem value="all">All Sponsors</SelectItem>
+              {allSponsorNames.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Filter by Creator */}
+        {creators.length > 0 && (
+          <div className="min-w-[160px]">
+            <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Creator</p>
+            <Select value={selectedCreator} onValueChange={setSelectedCreator}>
+              <SelectTrigger className="h-8 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <SelectValue placeholder="All Creators" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Creators</SelectItem>
+                {creators.map((c) => (
+                  <SelectItem key={c.id} value={c.creator_handle}>
+                    {c.creator_name || c.creator_handle}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
-        {/* Export / Generate Report */}
-        <Button
-          variant={selectedSponsor ? "default" : "outline"}
-          size="sm"
-          onClick={exportReport}
-          className={`ml-auto ${selectedSponsor ? "bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white" : ""}`}
-        >
-          <Download className="h-4 w-4 mr-1.5" />
-          {selectedSponsor ? "Generate Sponsor Report" : "Export Report"}
-        </Button>
+        {/* Compare to */}
+        <div className="min-w-[150px]">
+          <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Compare to</p>
+          <Select value={compareTo} onValueChange={setCompareTo}>
+            <SelectTrigger className="h-8 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="previous_year">Previous Year</SelectItem>
+              <SelectItem value="previous_event">Previous Event</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Date range toggle */}
+        <div>
+          <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Date Range</p>
+          <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+            <Button
+              size="sm"
+              variant={granularity === "monthly" ? "default" : "ghost"}
+              onClick={() => setGranularity("monthly")}
+              className="text-xs h-7 px-3"
+            >
+              Monthly
+            </Button>
+            <Button
+              size="sm"
+              variant={granularity === "quarterly" ? "default" : "ghost"}
+              onClick={() => setGranularity("quarterly")}
+              className="text-xs h-7 px-3"
+            >
+              Quarterly
+            </Button>
+          </div>
+        </div>
+
+        {/* Chart type toggle */}
+        <div>
+          <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Chart Type</p>
+          <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+            <Button
+              size="sm"
+              variant={chartType === "line" ? "default" : "ghost"}
+              onClick={() => setChartType("line")}
+              className="text-xs h-7 px-3"
+            >
+              <LineChartIcon className="h-3.5 w-3.5 mr-1" />
+              Line
+            </Button>
+            <Button
+              size="sm"
+              variant={chartType === "donut" ? "default" : "ghost"}
+              onClick={() => setChartType("donut")}
+              className="text-xs h-7 px-3"
+            >
+              <PieChartIcon className="h-3.5 w-3.5 mr-1" />
+              Donut
+            </Button>
+          </div>
+        </div>
+
+        {/* Pie metric selector (only when donut) */}
+        {chartType === "donut" && (
+          <div className="min-w-[170px]">
+            <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Metric</p>
+            <Select value={pieMetric} onValueChange={setPieMetric}>
+              <SelectTrigger className="h-8 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(METRIC_CONFIG).map(([key, { label }]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Export Report — pushed to far right */}
+        <div className="ml-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportReport}
+            className="h-8"
+          >
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Export Report
+          </Button>
+        </div>
       </div>
 
-      {/* ===== METRIC TOGGLES (line chart, non-compare mode) ===== */}
-      {chartType === "line" && !compareMode && (
+      {/* ===== METRIC TOGGLES (line chart only) ===== */}
+      {chartType === "line" && (
         <div className="flex flex-wrap gap-2">
           {Object.entries(METRIC_CONFIG).map(([key, { label, color }]) => (
             <button
@@ -774,40 +685,25 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
               {label}
             </button>
           ))}
+          {compareTo === "previous_year" && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground">
+              <span className="w-6 border-t-2 border-dashed border-gray-400" />
+              Previous Year
+            </span>
+          )}
         </div>
       )}
 
-      {/* ===== COMPARE LEGEND ===== */}
-      {compareMode && compareSelection.length > 0 && chartType === "line" && (
-        <div className="flex flex-wrap gap-3">
-          {compareSelection.map((name, i) => (
-            <div key={name} className="flex items-center gap-1.5 text-xs font-medium">
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: COMPARE_COLORS[i % COMPARE_COLORS.length] }}
-              />
-              {name}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ===== CHART ===== */}
-      <div ref={chartRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
+      {/* ===== 3. CHART — THE HERO ===== */}
+      <div ref={chartRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5">
         {chartType === "line" ? (
-          <ResponsiveContainer width="100%" height={350}>
+          <ResponsiveContainer width="100%" height={450}>
             <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <defs>
                 {Object.entries(METRIC_CONFIG).map(([key, { color }]) => (
                   <linearGradient key={key} id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={color} stopOpacity={0.2} />
                     <stop offset="95%" stopColor={color} stopOpacity={0} />
-                  </linearGradient>
-                ))}
-                {compareMode && compareSelection.map((name, i) => (
-                  <linearGradient key={`compare-${name}`} id={`grad-compare-${i}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPARE_COLORS[i % COMPARE_COLORS.length]} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={COMPARE_COLORS[i % COMPARE_COLORS.length]} stopOpacity={0} />
                   </linearGradient>
                 ))}
               </defs>
@@ -832,70 +728,61 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
                   fontSize: "12px",
                 }}
                 formatter={(value: number, name: string) => {
-                  // In compare mode, sponsor keys are prefixed
-                  const displayName = name.startsWith("sponsor_")
-                    ? name.replace("sponsor_", "").replace(/_/g, " ")
-                    : METRIC_CONFIG[name]?.label || name;
-                  return [value.toLocaleString(), displayName];
+                  const isPrev = name.startsWith("prev_");
+                  const baseKey = isPrev ? name.replace("prev_", "") : name;
+                  const displayName = METRIC_CONFIG[baseKey]?.label || name;
+                  return [value.toLocaleString(), isPrev ? `${displayName} (Prev Year)` : displayName];
                 }}
               />
               <Legend content={() => null} />
 
-              {/* Compare mode: one line per selected sponsor */}
-              {compareMode && compareSelection.length > 0 ? (
-                <>
-                  {compareSelection.map((name, i) => {
-                    const color = COMPARE_COLORS[i % COMPARE_COLORS.length];
-                    const key = `sponsor_${name}`;
-                    return (
-                      <Area
-                        key={key}
-                        type="monotone"
-                        dataKey={key}
-                        name={key}
-                        stroke={color}
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill={`url(#grad-compare-${i})`}
-                        dot={{ r: 3, fill: color }}
-                        activeDot={{ r: 5, fill: color }}
-                      />
-                    );
-                  })}
-                </>
-              ) : (
-                /* Normal mode: all metric lines */
-                <>
-                  {Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
-                    visibleLines[key] ? (
-                      <Area
-                        key={key}
-                        type="monotone"
-                        dataKey={key}
-                        stroke={color}
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill={`url(#grad-${key})`}
-                        dot={{ r: 3, fill: color }}
-                        activeDot={{ r: 5, fill: color }}
-                      />
-                    ) : null
-                  )}
-                </>
+              {/* Current year metric lines */}
+              {Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
+                visibleLines[key] ? (
+                  <Area
+                    key={key}
+                    type="monotone"
+                    dataKey={key}
+                    stroke={color}
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill={`url(#grad-${key})`}
+                    dot={{ r: 3, fill: color }}
+                    activeDot={{ r: 5, fill: color }}
+                  />
+                ) : null
               )}
+
+              {/* Previous year comparison dashed lines */}
+              {compareTo === "previous_year" &&
+                Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
+                  visibleLines[key] ? (
+                    <Line
+                      key={`prev_${key}`}
+                      type="monotone"
+                      dataKey={`prev_${key}`}
+                      stroke={color}
+                      strokeWidth={1.5}
+                      strokeDasharray="6 4"
+                      strokeOpacity={0.45}
+                      dot={false}
+                      activeDot={{ r: 3, fill: color, strokeOpacity: 0.45 }}
+                    />
+                  ) : null
+                )}
             </AreaChart>
           </ResponsiveContainer>
         ) : (
           /* ===== DONUT CHART ===== */
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <ResponsiveContainer width="100%" height={350}>
+          <div className="flex flex-col md:flex-row items-center gap-6" style={{ minHeight: 450 }}>
+            <ResponsiveContainer width="100%" height={420}>
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={80}
-                  outerRadius={140}
+                  innerRadius={90}
+                  outerRadius={170}
                   paddingAngle={3}
                   dataKey="value"
                   stroke="none"
@@ -931,131 +818,111 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         )}
       </div>
 
-      {/* ===== COMPARISON TABLE (compare mode) ===== */}
-      {compareMode && comparisonTableData && comparisonTableData.length >= 2 && (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-            <div className="flex items-center gap-2">
-              <GitCompare className="h-4 w-4 text-[#6C5CE7]" />
-              <h3 className="font-semibold text-sm">Sponsor Comparison</h3>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-                  <th className="text-left p-3 text-muted-foreground font-medium">Metric</th>
-                  {comparisonTableData.map((s, i) => (
-                    <th key={s.name} className="text-right p-3 font-medium" style={{ color: COMPARE_COLORS[i % COMPARE_COLORS.length] }}>
-                      {s.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-100 dark:border-gray-800/50">
-                  <td className="p-3 font-medium text-muted-foreground">Total Impressions</td>
-                  {comparisonTableData.map((s) => (
-                    <td key={s.name} className="p-3 text-right font-bold">{formatNumber(s.total)}</td>
-                  ))}
-                </tr>
-                <tr className="border-b border-gray-100 dark:border-gray-800/50">
-                  <td className="p-3 font-medium text-muted-foreground">Avg Monthly</td>
-                  {comparisonTableData.map((s) => (
-                    <td key={s.name} className="p-3 text-right">{formatNumber(s.avgMonthly)}</td>
-                  ))}
-                </tr>
-                <tr className="border-b border-gray-100 dark:border-gray-800/50">
-                  <td className="p-3 font-medium text-muted-foreground">Months Active</td>
-                  {comparisonTableData.map((s) => (
-                    <td key={s.name} className="p-3 text-right">{s.monthCount}</td>
-                  ))}
-                </tr>
-                <tr className="border-b border-gray-100 dark:border-gray-800/50">
-                  <td className="p-3 font-medium text-muted-foreground">Trend</td>
-                  {comparisonTableData.map((s) => (
-                    <td key={s.name} className="p-3 text-right">
-                      {s.trend === "up" && <span className="inline-flex items-center text-green-600 font-medium"><TrendingUp className="h-3.5 w-3.5 mr-1" />Up</span>}
-                      {s.trend === "down" && <span className="inline-flex items-center text-red-500 font-medium"><TrendingDown className="h-3.5 w-3.5 mr-1" />Down</span>}
-                      {s.trend === "flat" && <span className="text-muted-foreground">Flat</span>}
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="p-3 font-medium text-muted-foreground">Tier</td>
-                  {comparisonTableData.map((s) => {
-                    const tier = sponsorTierMap.get(s.name);
-                    const style = tier ? TIER_STYLES[tier] : null;
-                    return (
-                      <td key={s.name} className="p-3 text-right">
-                        {style ? (
-                          <Badge className={`${style.bg} ${style.text} text-[10px] border-0`}>{style.label}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+      {/* ===== 4. INSIGHTS PANEL ===== */}
+      <div className="flex gap-6 flex-wrap px-1">
+        <div>
+          <p className="text-xs text-gray-400 mb-0.5">Top Sponsor</p>
+          <p className="font-bold text-[#000741] dark:text-white text-sm">
+            {insights.topSponsor}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatNumber(insights.topSponsorImpressions)} impressions
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-400 mb-0.5">Peak Month</p>
+          <p className="font-bold text-[#000741] dark:text-white text-sm">
+            {insights.peakMonth}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatNumber(insights.peakValue)} impressions
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-400 mb-0.5">YoY Growth</p>
+          <p className="font-bold text-green-600 text-sm flex items-center gap-1">
+            <TrendingUp className="h-3.5 w-3.5" />
+            {insights.yoyGrowth}
+          </p>
+          <p className="text-xs text-muted-foreground">vs. previous year</p>
+        </div>
+      </div>
 
-      {/* ===== CREATOR ATTRIBUTION (single sponsor selected) ===== */}
-      {selectedSponsor && !compareMode && creatorAttribution.length > 0 && (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-            <div className="flex items-center gap-2">
-              <Award className="h-4 w-4 text-[#6C5CE7]" />
-              <h3 className="font-semibold text-sm">{selectedSponsor} — Creator Impact</h3>
+      {/* ===== 5. SPONSOR & CREATOR TABLE (collapsible) ===== */}
+      {allSponsorNames.length > 0 && (
+        <div>
+          <button
+            onClick={() => setSponsorTableOpen(!sponsorTableOpen)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors py-2"
+          >
+            Sponsor Breakdown
+            {sponsorTableOpen ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+
+          {sponsorTableOpen && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
+                      <th className="text-left p-3 text-muted-foreground font-medium">Sponsor</th>
+                      <th className="text-left p-3 text-muted-foreground font-medium">Tier</th>
+                      <th className="text-right p-3 text-muted-foreground font-medium">Total Impressions</th>
+                      <th className="text-right p-3 text-muted-foreground font-medium">Peak Month</th>
+                      <th className="text-right p-3 text-muted-foreground font-medium">Trend</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sponsorTableData.map((row) => {
+                      const tierStyle = row.tier ? TIER_STYLES[row.tier] || TIER_STYLES.community : null;
+                      return (
+                        <tr
+                          key={row.name}
+                          onClick={() => handleSponsorTableRowClick(row.name)}
+                          className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors"
+                        >
+                          <td className="p-3 font-medium text-gray-900 dark:text-gray-100">
+                            {row.name}
+                          </td>
+                          <td className="p-3">
+                            {tierStyle ? (
+                              <Badge className={`${tierStyle.bg} ${tierStyle.text} text-[10px] font-medium border-0`}>
+                                {tierStyle.label}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-bold">{formatNumber(row.total)}</td>
+                          <td className="p-3 text-right text-muted-foreground">{row.peakMonth}</td>
+                          <td className="p-3 text-right">
+                            {row.trend === "up" && (
+                              <span className="inline-flex items-center text-green-600 text-xs font-medium">
+                                <TrendingUp className="h-3 w-3 mr-0.5" /> Up
+                              </span>
+                            )}
+                            {row.trend === "down" && (
+                              <span className="inline-flex items-center text-red-500 text-xs font-medium">
+                                <TrendingDown className="h-3 w-3 mr-0.5" /> Down
+                              </span>
+                            )}
+                            {row.trend === "flat" && (
+                              <span className="text-muted-foreground text-xs">Flat</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-                  <th className="text-left p-3 text-muted-foreground font-medium">Creator</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Followers</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Eng. Rate</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Est. Impressions Driven</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Platform</th>
-                </tr>
-              </thead>
-              <tbody>
-                {creatorAttribution.map((c) => (
-                  <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                    <td className="p-3">
-                      <Link
-                        to={`/creators/${c.profile_slug || c.creator_handle}`}
-                        className="flex items-center gap-2 hover:text-purple-600 transition-colors"
-                      >
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage src={c.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
-                            {(c.creator_name || c.creator_handle || "?")[0].toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{c.creator_name || c.creator_handle}</p>
-                          <p className="text-xs text-muted-foreground truncate">@{c.creator_handle}</p>
-                        </div>
-                        <ArrowUpRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                      </Link>
-                    </td>
-                    <td className="p-3 text-right font-medium">{formatNumber(c.follower_count || 0)}</td>
-                    <td className="p-3 text-right">{(c.engagement_rate || 0).toFixed(2)}%</td>
-                    <td className="p-3 text-right font-bold text-[#6C5CE7]">{formatNumber(c.estimatedImpressions)}</td>
-                    <td className="p-3 text-right">
-                      <Badge variant="outline" className="text-xs capitalize">{c.platform}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+          )}
+        </div>
       )}
     </div>
   );

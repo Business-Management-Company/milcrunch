@@ -699,8 +699,10 @@ const BrandDiscover = () => {
       })
       .catch((err) => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(null);
-        console.warn(`[BrandDiscover] ${searchMode} search failed:`, err);
-        toast.error(`Search failed: ${(err as Error).message}`);
+        const cause = (err as Error & { cause?: Record<string, unknown> })?.cause;
+        const detail = cause?.error ?? cause?.details ?? cause?.message ?? "";
+        console.warn(`[BrandDiscover] ${searchMode} search failed:`, err, "cause:", cause);
+        toast.error(`Search failed: ${(err as Error).message}${detail ? ` — ${typeof detail === "string" ? detail : JSON.stringify(detail)}` : ""}`);
       })
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
