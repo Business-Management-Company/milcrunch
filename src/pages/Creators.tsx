@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipTrigger,
@@ -14,8 +13,10 @@ import {
   Youtube,
   Twitter,
   ArrowLeft,
+  ArrowRight,
   Search,
   X,
+  ChevronDown,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
@@ -25,6 +26,11 @@ import {
   getInitials,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
+import { cn } from "@/lib/utils";
+
+/* ------------------------------------------------------------------ */
+/* Icons                                                               */
+/* ------------------------------------------------------------------ */
 
 const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -32,35 +38,91 @@ const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
   </svg>
 );
 
+/* ------------------------------------------------------------------ */
+/* Constants                                                           */
+/* ------------------------------------------------------------------ */
+
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 const PLATFORMS = ["instagram", "tiktok", "youtube", "twitter"];
 const PAGE_SIZE = 50;
 
-const BRANCH_STYLES: Record<string, string> = {
-  Army: "bg-green-800/10 text-green-800",
-  Navy: "bg-blue-900/10 text-blue-900",
-  "Air Force": "bg-sky-600/10 text-sky-700",
-  Marines: "bg-red-700/10 text-red-700",
-  "Coast Guard": "bg-orange-600/10 text-orange-700",
-  "Space Force": "bg-indigo-600/10 text-indigo-700",
+type SortKey = "followers" | "engagement" | "recent" | "name";
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "followers", label: "Followers" },
+  { value: "engagement", label: "Engagement" },
+  { value: "recent", label: "Recently Added" },
+  { value: "name", label: "Name A–Z" },
+];
+
+/* Branch banner gradients */
+const BRANCH_BANNER: Record<string, string> = {
+  Army: "bg-gradient-to-r from-green-700 to-green-500",
+  Navy: "bg-gradient-to-r from-blue-800 to-blue-500",
+  "Air Force": "bg-gradient-to-r from-blue-600 to-sky-400",
+  Marines: "bg-gradient-to-r from-red-700 to-red-500",
+  "Coast Guard": "bg-gradient-to-r from-orange-600 to-orange-400",
+  "Space Force": "bg-gradient-to-r from-indigo-700 to-indigo-400",
+};
+const DEFAULT_BANNER = "bg-gradient-to-r from-[#6C5CE7] to-[#a855f7]";
+
+/* Branch filter badge colors (selected state) */
+const BRANCH_SELECTED: Record<string, string> = {
+  Army: "bg-green-700 border-green-700 text-white",
+  Navy: "bg-blue-800 border-blue-800 text-white",
+  "Air Force": "bg-blue-600 border-blue-600 text-white",
+  Marines: "bg-red-700 border-red-700 text-white",
+  "Coast Guard": "bg-orange-600 border-orange-600 text-white",
+  "Space Force": "bg-indigo-600 border-indigo-600 text-white",
+};
+
+/* Branch badge pill colors (on card) */
+const BRANCH_BADGE: Record<string, string> = {
+  Army: "bg-green-100 text-green-800",
+  Navy: "bg-blue-100 text-blue-900",
+  "Air Force": "bg-sky-100 text-sky-700",
+  Marines: "bg-red-100 text-red-700",
+  "Coast Guard": "bg-orange-100 text-orange-700",
+  "Space Force": "bg-indigo-100 text-indigo-700",
 };
 
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
-  instagram: <Instagram className="h-3.5 w-3.5" />,
-  tiktok: <TikTokIcon className="h-3.5 w-3.5" />,
-  youtube: <Youtube className="h-3.5 w-3.5" />,
-  twitter: <Twitter className="h-3.5 w-3.5" />,
+  instagram: <Instagram className="h-4 w-4" />,
+  tiktok: <TikTokIcon className="h-4 w-4" />,
+  youtube: <Youtube className="h-4 w-4" />,
+  twitter: <Twitter className="h-4 w-4" />,
+};
+
+const PLATFORM_COLOR: Record<string, string> = {
+  instagram: "text-pink-500",
+  tiktok: "text-gray-900 dark:text-white",
+  youtube: "text-red-600",
+  twitter: "text-gray-700",
 };
 
 const PLATFORM_LABEL: Record<string, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
   youtube: "YouTube",
-  twitter: "X / Twitter",
+  twitter: "X",
 };
 
-function CreatorCard({ creator: c, inView, index }: { creator: ShowcaseCreator; inView: boolean; index: number }) {
-  const [imgSrc, setImgSrc] = useState<string | null>(c.avatar_url || c.ic_avatar_url || null);
+/* ------------------------------------------------------------------ */
+/* Creator Card                                                        */
+/* ------------------------------------------------------------------ */
+
+function CreatorCard({
+  creator: c,
+  inView,
+  index,
+}: {
+  creator: ShowcaseCreator;
+  inView: boolean;
+  index: number;
+}) {
+  const [imgSrc, setImgSrc] = useState<string | null>(
+    c.avatar_url || c.ic_avatar_url || null,
+  );
   const [imgFailed, setImgFailed] = useState(false);
 
   const handleImgError = () => {
@@ -73,60 +135,134 @@ function CreatorCard({ creator: c, inView, index }: { creator: ShowcaseCreator; 
 
   const showImage = !!imgSrc && !imgFailed;
   const platforms = c.platforms ?? [];
-  const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
+  const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
+  const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
   return (
     <Link
       to={`/creators/${c.profile_slug || c.handle}`}
-      className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col items-center text-center"
+      className="group bg-white rounded-2xl shadow-md hover:shadow-xl hover:scale-[1.02] transform transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
       style={{
         opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(24px)",
-        transition: `opacity 0.5s ease-out ${Math.min(index, 20) * 50}ms, transform 0.5s ease-out ${Math.min(index, 20) * 50}ms, box-shadow 0.3s ease`,
+        transform: inView ? "none" : "translateY(24px)",
+        transition: `opacity 0.5s ease-out ${Math.min(index, 20) * 40}ms, transform 0.5s ease-out ${Math.min(index, 20) * 40}ms, box-shadow 0.3s ease`,
       }}
     >
-      <div className="relative mb-3">
-        <div className={`w-[72px] h-[72px] rounded-full overflow-hidden ${c.paradedeck_verified ? "ring-[3px] ring-purple-500 ring-offset-2" : "ring-1 ring-gray-200"}`}>
+      {/* Banner */}
+      <div className={cn("h-24 w-full", bannerClass)} />
+
+      {/* Avatar overlapping banner */}
+      <div className="flex justify-center -mt-10">
+        <div className="w-20 h-20 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
           {showImage ? (
-            <img src={imgSrc!} alt={c.display_name} className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
+            <img
+              src={imgSrc!}
+              alt={c.display_name}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={handleImgError}
+            />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xl">
               {getInitials(c.display_name, c.handle)}
             </div>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1 mb-1.5">
-        <h3 className="font-semibold text-[#000741] text-sm leading-tight truncate max-w-[120px]">{c.display_name}</h3>
-        {c.paradedeck_verified && (
-          <Tooltip>
-            <TooltipTrigger asChild><ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" /></TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">RecurrentX Verified</TooltipContent>
-          </Tooltip>
-        )}
-        {c.influencersclub_verified && (
-          <Tooltip>
-            <TooltipTrigger asChild><BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" /></TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">Creator Verified</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
-        {c.branch && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${branchStyle}`}>{c.branch}</span>}
-        {c.status && <span className="text-[10px] text-gray-500 font-medium">{c.status}</span>}
-      </div>
-      <p className="text-sm font-bold text-[#000741] mb-2">
-        {formatFollowerCount(c.follower_count)}
-        <span className="text-xs font-normal text-gray-400 ml-1">followers</span>
-      </p>
-      {platforms.length > 0 && (
-        <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-500 transition-colors">
-          {platforms.map((p) => <span key={p}>{PLATFORM_ICON[p] ?? null}</span>)}
+
+      {/* Content */}
+      <div className="px-4 pb-4 pt-2 flex flex-col items-center flex-1">
+        {/* Name */}
+        <h3 className="text-lg font-bold text-gray-900 text-center mt-1 leading-snug">
+          {c.display_name}
+        </h3>
+
+        {/* Handle */}
+        <p className="text-sm text-gray-400 text-center">@{c.handle}</p>
+
+        {/* Badges */}
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap justify-center">
+          {c.branch && (
+            <span className={cn("text-[11px] font-semibold px-2.5 py-0.5 rounded-full", badgeClass)}>
+              {c.branch}
+            </span>
+          )}
+          {c.status && (
+            <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700">
+              {c.status}
+            </span>
+          )}
+          {c.paradedeck_verified && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                RecurrentX Verified
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {c.influencersclub_verified && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Creator Verified
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
-      )}
+
+        {/* Stats */}
+        <div className="flex items-center justify-center gap-6 mt-3">
+          <div className="text-center">
+            <p className="text-sm font-bold text-gray-900">
+              {formatFollowerCount(c.follower_count)}
+            </p>
+            <p className="text-[11px] text-gray-400">Followers</p>
+          </div>
+          {c.engagement_rate != null && c.engagement_rate > 0 && (
+            <div className="text-center">
+              <p className="text-sm font-bold text-[#6C5CE7]">
+                {c.engagement_rate.toFixed(1)}%
+              </p>
+              <p className="text-[11px] text-gray-400">Engagement</p>
+            </div>
+          )}
+        </div>
+
+        {/* Platform icons */}
+        {platforms.length > 0 && (
+          <div className="flex items-center justify-center gap-2.5 mt-2.5">
+            {platforms.map((p) => (
+              <span
+                key={p}
+                className={cn(
+                  "transition-colors",
+                  PLATFORM_COLOR[p] ?? "text-gray-400",
+                )}
+              >
+                {PLATFORM_ICON[p] ?? null}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* View Profile link */}
+        <div className="border-t border-gray-100 mt-3 pt-3 w-full">
+          <span className="flex items-center justify-center gap-1 text-sm font-medium text-[#6C5CE7] group-hover:gap-2 transition-all">
+            View Profile <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </div>
     </Link>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Main Page                                                           */
+/* ------------------------------------------------------------------ */
 
 export default function Creators() {
   const [allCreators, setAllCreators] = useState<ShowcaseCreator[]>([]);
@@ -134,45 +270,88 @@ export default function Creators() {
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState<string | null>(null);
   const [platformFilter, setPlatformFilter] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>("followers");
+  const [sortOpen, setSortOpen] = useState(false);
   const [page, setPage] = useState(1);
   const gridRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Fetch ALL members from Military Creator Network (large limit, no shuffle for directory page)
-    fetchShowcaseByDirectoryName("Military Creator Network", 500).then((data) => setAllCreators(data));
+    fetchShowcaseByDirectoryName("Military Creator Network", 500).then((data) =>
+      setAllCreators(data),
+    );
   }, []);
 
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setInView(true); },
-      { threshold: 0.05 }
+      ([entry]) => {
+        if (entry.isIntersecting) setInView(true);
+      },
+      { threshold: 0.05 },
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  // Reset page on filter change
-  useEffect(() => { setPage(1); }, [search, branchFilter, platformFilter]);
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Reset page on filter/sort change
+  useEffect(() => {
+    setPage(1);
+  }, [search, branchFilter, platformFilter, sortBy]);
 
   const filtered = useMemo(() => {
     let list = allCreators;
+
+    // Text search
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((c) =>
-        c.display_name.toLowerCase().includes(q) ||
-        c.handle.toLowerCase().includes(q)
+      list = list.filter(
+        (c) =>
+          c.display_name.toLowerCase().includes(q) ||
+          c.handle.toLowerCase().includes(q),
       );
     }
+
+    // Branch filter
     if (branchFilter) {
       list = list.filter((c) => c.branch === branchFilter);
     }
+
+    // Platform filter
     if (platformFilter) {
       list = list.filter((c) => (c.platforms ?? []).includes(platformFilter));
     }
+
+    // Sort
+    list = [...list].sort((a, b) => {
+      switch (sortBy) {
+        case "followers":
+          return (b.follower_count ?? 0) - (a.follower_count ?? 0);
+        case "engagement":
+          return (b.engagement_rate ?? 0) - (a.engagement_rate ?? 0);
+        case "recent":
+          return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+        case "name":
+          return a.display_name.localeCompare(b.display_name);
+        default:
+          return 0;
+      }
+    });
+
     return list;
-  }, [allCreators, search, branchFilter, platformFilter]);
+  }, [allCreators, search, branchFilter, platformFilter, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(0, page * PAGE_SIZE);
@@ -186,40 +365,51 @@ export default function Creators() {
   const hasFilters = !!search.trim() || !!branchFilter || !!platformFilter;
 
   return (
-    <div className="min-h-screen bg-white text-[#1A1A2E]">
+    <div className="min-h-screen bg-gray-50 text-[#1A1A2E]">
       <PublicNav />
 
       <main className="px-4 md:px-8 pt-24 pb-12 md:pt-28 md:pb-16">
-        <div className="max-w-6xl mx-auto">
-          <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6">
+        <div className="max-w-7xl mx-auto">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6"
+          >
             <ArrowLeft className="h-4 w-4" /> Back to Home
           </Link>
 
-          <div className="text-center mb-8">
+          {/* Header */}
+          <div className="text-center mb-10">
             <h1 className="font-serif text-3xl md:text-4xl font-bold text-[#1A1A2E] mb-3">
-              Military Creator Directory
+              Military Influencer Network
             </h1>
             <p className="text-[#6B7280] text-lg max-w-2xl mx-auto">
-              The #1 network for verified military and veteran content creators. Discover authentic voices from those who served.
+              The #1 network for verified military and veteran content creators.
+              Discover authentic voices from those who served.
             </p>
           </div>
 
           {/* Search + Filters */}
           <div className="mb-8 space-y-4">
             {/* Search bar */}
-            <div className="relative max-w-md mx-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
+            <div className="relative max-w-lg mx-auto">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
                 placeholder="Search by name or handle..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 pr-10 rounded-xl border-gray-200"
+                className={cn(
+                  "w-full pl-11 pr-10 py-3 rounded-full text-sm",
+                  "border border-gray-200 bg-white shadow-sm",
+                  "focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]",
+                  "placeholder:text-gray-400 transition-all",
+                )}
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -228,55 +418,127 @@ export default function Creators() {
 
             {/* Branch filter chips */}
             <div className="flex flex-wrap items-center gap-2 justify-center">
-              <span className="text-xs font-medium text-gray-500 mr-1">Branch:</span>
-              {BRANCHES.map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  onClick={() => setBranchFilter(branchFilter === b ? null : b)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
-                    branchFilter === b
-                      ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-[#6C5CE7]/30 hover:text-[#6C5CE7]"
-                  }`}
-                >
-                  {b}
-                </button>
-              ))}
+              <span className="text-xs font-medium text-gray-500 mr-1">
+                Branch:
+              </span>
+              {BRANCHES.map((b) => {
+                const isActive = branchFilter === b;
+                return (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => setBranchFilter(isActive ? null : b)}
+                    className={cn(
+                      "text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
+                      isActive
+                        ? BRANCH_SELECTED[b] ?? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300",
+                    )}
+                  >
+                    {b}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Platform filter chips */}
             <div className="flex flex-wrap items-center gap-2 justify-center">
-              <span className="text-xs font-medium text-gray-500 mr-1">Platform:</span>
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPlatformFilter(platformFilter === p ? null : p)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${
-                    platformFilter === p
-                      ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-[#6C5CE7]/30 hover:text-[#6C5CE7]"
-                  }`}
-                >
-                  {PLATFORM_ICON[p]}
-                  {PLATFORM_LABEL[p] ?? p}
-                </button>
-              ))}
+              <span className="text-xs font-medium text-gray-500 mr-1">
+                Platform:
+              </span>
+              {PLATFORMS.map((p) => {
+                const isActive = platformFilter === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPlatformFilter(isActive ? null : p)}
+                    className={cn(
+                      "text-xs font-medium px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5",
+                      isActive
+                        ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300",
+                    )}
+                  >
+                    <span className={isActive ? "text-white" : PLATFORM_COLOR[p]}>
+                      {PLATFORM_ICON[p]}
+                    </span>
+                    {PLATFORM_LABEL[p] ?? p}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Active filter summary */}
             {hasFilters && (
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                <span>{filtered.length} creator{filtered.length !== 1 ? "s" : ""} found</span>
-                <button type="button" onClick={clearFilters} className="text-[#6C5CE7] hover:underline font-medium">
+                <span>
+                  {filtered.length} creator{filtered.length !== 1 ? "s" : ""}{" "}
+                  found
+                </span>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-[#6C5CE7] hover:underline font-medium"
+                >
                   Clear filters
                 </button>
               </div>
             )}
           </div>
 
-          <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+          {/* Sort bar */}
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-sm text-gray-500">
+              {filtered.length} creator{filtered.length !== 1 ? "s" : ""}
+            </p>
+            <div ref={sortRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setSortOpen(!sortOpen)}
+                className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm transition-colors"
+              >
+                Sort by:{" "}
+                <span className="font-medium">
+                  {SORT_OPTIONS.find((o) => o.value === sortBy)?.label}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 transition-transform",
+                    sortOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              {sortOpen && (
+                <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setSortBy(opt.value);
+                        setSortOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-sm transition-colors",
+                        sortBy === opt.value
+                          ? "bg-purple-50 text-[#6C5CE7] font-medium"
+                          : "text-gray-600 hover:bg-gray-50",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Grid */}
+          <div
+            ref={gridRef}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          >
             {paged.map((c, i) => (
               <CreatorCard key={c.id} creator={c} inView={inView} index={i} />
             ))}
@@ -299,7 +561,7 @@ export default function Creators() {
               <Button
                 variant="outline"
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-xl border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-8"
+                className="rounded-full border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-8"
               >
                 Load More ({filtered.length - paged.length} remaining)
               </Button>
