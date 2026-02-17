@@ -196,17 +196,6 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo */}
-      {!collapsed && (
-        <div className="px-5 py-5 border-b border-gray-100">
-          <Link to="/" className="flex items-center">
-            <span className="font-bold text-lg tracking-tight text-[#1A1A2E]">
-              recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
-            </span>
-          </Link>
-        </div>
-      )}
-
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
         {sections.map((section, idx) => {
