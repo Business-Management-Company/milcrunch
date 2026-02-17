@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, ExternalLink, Copy, FileText, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Copy, FileText, X, Loader2, Download } from "lucide-react";
 import { getSponsorDecks, upsertSponsorDeck, deleteSponsorDeck } from "@/lib/sponsor-db";
 import type { SponsorDeck } from "@/lib/sponsor-types";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import FileUpload, { getFileIcon } from "@/components/FileUpload";
 
 interface EventOption { id: string; title: string }
 
@@ -39,7 +40,7 @@ export default function SponsorDecks() {
   }, []);
 
   const handleAdd = async () => {
-    if (!title.trim() || !fileUrl.trim()) { toast({ title: "Title and URL required", variant: "destructive" }); return; }
+    if (!title.trim() || !fileUrl.trim()) { toast({ title: "Title and file are required", variant: "destructive" }); return; }
     setSaving(true);
     const result = await upsertSponsorDeck({ title, file_url: fileUrl, event_id: eventId || null });
     setSaving(false);
@@ -90,14 +91,10 @@ export default function SponsorDecks() {
       {showAdd && (
         <Card className="p-5 border-[#6C5CE7]/20 bg-[#6C5CE7]/5 space-y-4">
           <h3 className="font-semibold text-sm text-gray-700">Add Sponsorship Deck</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs text-gray-500">Title *</Label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1" placeholder="MIC 2026 Sponsor Deck" />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500">File URL *</Label>
-              <Input value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} className="mt-1" placeholder="https://drive.google.com/..." />
             </div>
             <div>
               <Label className="text-xs text-gray-500">Event (optional)</Label>
@@ -107,7 +104,17 @@ export default function SponsorDecks() {
               </select>
             </div>
           </div>
-          <Button onClick={handleAdd} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+          <FileUpload
+            value={fileUrl}
+            onChange={setFileUrl}
+            accept=".pdf,.ppt,.pptx,.doc,.docx"
+            maxSize={50}
+            bucket="uploads"
+            folder="decks"
+            label="Deck File *"
+            description="PDF, PPT, PPTX, DOC, DOCX up to 50MB"
+          />
+          <Button onClick={handleAdd} disabled={saving || !title.trim() || !fileUrl.trim()} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             {saving ? "Saving..." : "Save Deck"}
           </Button>
@@ -142,7 +149,7 @@ export default function SponsorDecks() {
                 <tr key={deck.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-purple-500" />
+                      {getFileIcon(deck.file_url)}
                       <span className="font-medium text-gray-900">{deck.title}</span>
                     </div>
                   </td>
@@ -158,15 +165,20 @@ export default function SponsorDecks() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={deck.file_url} target="_blank" rel="noreferrer" title="Preview">
+                      <Button variant="ghost" size="sm" asChild title="Preview">
+                        <a href={deck.file_url} target="_blank" rel="noreferrer">
                           <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                      <Button variant="ghost" size="sm" asChild title="Download">
+                        <a href={deck.file_url} download rel="noreferrer">
+                          <Download className="h-3.5 w-3.5" />
                         </a>
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => copyLink(deck.file_url)} title="Copy link">
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => handleDelete(deck.id)}>
+                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => handleDelete(deck.id)} title="Delete">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
