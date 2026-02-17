@@ -4,7 +4,7 @@ import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
   Search, Download, CheckCircle2, XCircle, Ticket, Globe, Copy, Code, QrCode,
-  MessageCircle, ScanLine, Printer, DollarSign, BarChart3,
+  MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -111,6 +111,18 @@ interface TicketRow {
   sort_order: number;
 }
 
+interface StreamRow {
+  id: string;
+  title: string | null;
+  status: string | null;
+  stream_key: string | null;
+  recording_url: string | null;
+  viewer_count: number | null;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string | null;
+}
+
 const STATUS_STYLES: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   published: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -158,6 +170,7 @@ const BrandEventDetail = () => {
   const [regSearch, setRegSearch] = useState("");
   const [checkInMode, setCheckInMode] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
+  const [eventStreams, setEventStreams] = useState<StreamRow[]>([]);
 
   /* editable overview fields */
   const [editTitle, setEditTitle] = useState("");
@@ -209,6 +222,15 @@ const BrandEventDetail = () => {
       setSponsors((spsRes.data || []) as SponsorRow[]);
       setRegistrations((regRes.data || []) as RegistrationRow[]);
       setEventTickets((tkRes.data || []) as TicketRow[]);
+      // Fetch streams separately — table may not exist yet
+      try {
+        const stRes = await supabase
+          .from("event_streams")
+          .select("*")
+          .eq("event_id", eventId)
+          .order("created_at", { ascending: false });
+        setEventStreams((stRes.data || []) as StreamRow[]);
+      } catch { setEventStreams([]); }
     } catch (err) {
       console.error("Error loading event:", err);
       toast.error("Failed to load event");
@@ -503,6 +525,7 @@ const BrandEventDetail = () => {
               <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
               <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-1.5" />Tickets{eventTickets.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{eventTickets.length}</Badge>}</TabsTrigger>
               <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
+              <TabsTrigger value="streaming"><Radio className="h-4 w-4 mr-1.5" />Streaming</TabsTrigger>
               <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
             </div>
             {/* Divider */}
@@ -1218,6 +1241,198 @@ const BrandEventDetail = () => {
                       Save Public Page Settings
                     </Button>
                   </div>
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          {/* ===== STREAMING ===== */}
+          <TabsContent value="streaming">
+            {(() => {
+              const rtmpUrl = "rtmp://stream.recurrentx.com/live";
+              const streamKey = eventId || "";
+              const liveStream = eventStreams.find((s) => s.status === "live");
+              const endedStreams = eventStreams.filter((s) => s.status === "ended");
+
+              const copyToClipboard = (text: string, label: string) => {
+                navigator.clipboard.writeText(text);
+                toast.success(`${label} copied to clipboard`);
+              };
+
+              const formatDuration = (start: string | null, end: string | null) => {
+                if (!start) return "\u2014";
+                const s = new Date(start).getTime();
+                const e = end ? new Date(end).getTime() : Date.now();
+                const secs = Math.floor((e - s) / 1000);
+                const h = Math.floor(secs / 3600);
+                const m = Math.floor((secs % 3600) / 60);
+                const sec = secs % 60;
+                return h > 0 ? `${h}h ${m}m ${sec}s` : `${m}m ${sec}s`;
+              };
+
+              return (
+                <div className="space-y-6">
+                  {/* RTMP Settings */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <Radio className="h-4 w-4 text-pd-blue" /> RTMP Settings
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">RTMP Ingest URL</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <code className="text-sm bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg flex-1 truncate block font-mono">
+                            {rtmpUrl}
+                          </code>
+                          <Button variant="outline" size="sm" onClick={() => copyToClipboard(rtmpUrl, "RTMP URL")}>
+                            <Copy className="h-3.5 w-3.5 mr-1" /> Copy
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Stream Key</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <code className="text-sm bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg flex-1 truncate block font-mono">
+                            {streamKey}
+                          </code>
+                          <Button variant="outline" size="sm" onClick={() => copyToClipboard(streamKey, "Stream Key")}>
+                            <Copy className="h-3.5 w-3.5 mr-1" /> Copy
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Setup Instructions */}
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">How to connect your A/V:</p>
+                        <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5 list-decimal list-inside">
+                          <li>Open your streaming software (OBS, vMix, Wirecast, or hardware encoder)</li>
+                          <li>Go to Stream Settings</li>
+                          <li>Server: <code className="bg-white dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs font-mono">{rtmpUrl}</code></li>
+                          <li>Stream Key: <span className="text-gray-500">[shown above]</span></li>
+                          <li>Click Start Streaming in your encoder</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Stream Preview Frame */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2">
+                      <Video className="h-4 w-4 text-pd-blue" /> Stream Preview
+                    </h3>
+                    <div className="bg-gray-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
+                      {liveStream ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                              <Radio className="h-8 w-8 text-red-500" />
+                            </div>
+                            <p className="text-white font-semibold">Live Now</p>
+                            <p className="text-gray-400 text-sm mt-1">{liveStream.title || "Untitled Stream"}</p>
+                          </div>
+                        </div>
+                      ) : endedStreams.length > 0 && endedStreams[0].recording_url ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                              <Play className="h-8 w-8 text-purple-400" />
+                            </div>
+                            <p className="text-white font-semibold">Recording Available</p>
+                            <p className="text-gray-400 text-sm mt-1">{endedStreams[0].title || "Untitled Stream"}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                            <Play className="h-8 w-8 text-gray-600" />
+                          </div>
+                          <p className="text-gray-500 text-sm">Stream will appear here when live</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-3">
+                      <Badge className={
+                        liveStream
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                      }>
+                        {liveStream ? "Live" : eventStreams.some((s) => s.status === "ended") ? "Ended" : "Idle"}
+                      </Badge>
+                      {liveStream && (
+                        <>
+                          <span className="text-sm text-muted-foreground">
+                            Duration: {formatDuration(liveStream.started_at, null)}
+                          </span>
+                          {liveStream.viewer_count != null && (
+                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Eye className="h-3.5 w-3.5" /> {liveStream.viewer_count} viewers
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </Card>
+
+                  {/* Linked Streams */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <LayoutList className="h-4 w-4 text-pd-blue" /> Linked Streams
+                      </h3>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/brand/streaming?event=${eventId}`)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Live Stream
+                      </Button>
+                    </div>
+
+                    {eventStreams.length === 0 ? (
+                      <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 text-center text-muted-foreground">
+                        <Video className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm">No streams linked to this event yet.</p>
+                        <p className="text-xs text-muted-foreground mt-1">Use your streaming software with the RTMP settings above to go live.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 dark:bg-[#151821] text-left">
+                            <tr>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Title</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Date</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Viewers</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground">Duration</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {eventStreams.map((s) => (
+                              <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-[#1E2130]">
+                                <td className="px-4 py-3 font-medium">{s.title || "Untitled Stream"}</td>
+                                <td className="px-4 py-3">
+                                  <Badge className={
+                                    s.status === "live"
+                                      ? "bg-red-100 text-red-700"
+                                      : s.status === "ended"
+                                      ? "bg-gray-100 text-gray-600"
+                                      : "bg-yellow-100 text-yellow-700"
+                                  }>
+                                    {s.status || "idle"}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                                  {s.created_at ? format(new Date(s.created_at), "MMM d, yyyy") : "\u2014"}
+                                </td>
+                                <td className="px-4 py-3 text-muted-foreground">{s.viewer_count ?? "\u2014"}</td>
+                                <td className="px-4 py-3 text-muted-foreground">{formatDuration(s.started_at, s.ended_at)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
                 </div>
               );
             })()}

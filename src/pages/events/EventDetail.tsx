@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Calendar, MapPin, ChevronRight, AlertCircle, Loader2,
-  ExternalLink,
+  ExternalLink, Eye, Radio, Play,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -58,6 +59,14 @@ interface SponsorRow {
   description: string | null;
 }
 
+interface StreamRow {
+  id: string;
+  title: string | null;
+  status: string | null;
+  recording_url: string | null;
+  viewer_count: number | null;
+}
+
 const TIER_ORDER = ["title", "platinum", "gold", "silver", "bronze", "community"];
 
 /* ---- countdown (days only) ---- */
@@ -85,6 +94,7 @@ const EventDetail = () => {
   const [agenda, setAgenda] = useState<AgendaRow[]>([]);
   const [speakers, setSpeakers] = useState<SpeakerRow[]>([]);
   const [sponsors, setSponsors] = useState<SponsorRow[]>([]);
+  const [streams, setStreams] = useState<StreamRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const daysUntil = useDaysUntil(event?.start_date ?? null);
@@ -124,6 +134,14 @@ const EventDetail = () => {
       setAgenda((agRes.data || []) as AgendaRow[]);
       setSpeakers((spkRes.data || []) as SpeakerRow[]);
       setSponsors((spsRes.data || []) as SponsorRow[]);
+      // Fetch streams separately — table may not exist yet
+      try {
+        const stRes = await supabase
+          .from("event_streams")
+          .select("id, title, status, recording_url, viewer_count")
+          .eq("event_id", eventId!);
+        setStreams((stRes.data || []) as StreamRow[]);
+      } catch { setStreams([]); }
     } catch (err) {
       console.error("Error loading event:", err);
     } finally {
@@ -180,12 +198,84 @@ const EventDetail = () => {
 
   const isFuture = event.start_date && new Date(event.start_date).getTime() > Date.now();
 
+  const liveStream = streams.find((s) => s.status === "live");
+  const endedWithRecording = streams.find((s) => s.status === "ended" && s.recording_url);
+
   return (
     <div className="min-h-screen bg-white">
       <PublicNav />
 
+      {/* ===== LIVE STREAM BANNER ===== */}
+      {liveStream && (
+        <div className="pt-14">
+          {/* Red LIVE NOW banner */}
+          <div className="bg-red-600 text-white py-2 text-center font-bold animate-pulse flex items-center justify-center gap-2">
+            <Radio className="h-4 w-4" /> LIVE NOW
+          </div>
+
+          {/* Embedded video player */}
+          <div className="bg-black">
+            <div className="max-w-4xl mx-auto">
+              <div className="aspect-video bg-gray-900 flex items-center justify-center relative">
+                <div className="text-center">
+                  <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                    <Radio className="h-10 w-10 text-red-500" />
+                  </div>
+                  <p className="text-white text-lg font-semibold">{liveStream.title || "Live Stream"}</p>
+                  <p className="text-gray-400 text-sm mt-1">Currently streaming: {liveStream.title || "Main Stage"}</p>
+                </div>
+              </div>
+
+              {/* Stream info bar */}
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-900">
+                <div className="flex items-center gap-3">
+                  {liveStream.viewer_count != null && (
+                    <span className="text-gray-300 text-sm flex items-center gap-1.5">
+                      <Eye className="h-4 w-4" /> {liveStream.viewer_count.toLocaleString()} watching
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-red-600 text-white text-xs">LIVE</Badge>
+                </div>
+              </div>
+
+              {/* Event title below player */}
+              <div className="px-4 py-3 bg-gray-950 border-b border-gray-800">
+                <p className="text-white font-semibold">{event.title}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== WATCH RECORDING (if no live stream but ended streams with recordings exist) ===== */}
+      {!liveStream && endedWithRecording && (
+        <div className="pt-14">
+          <div className="bg-purple-600 text-white py-2 text-center font-semibold flex items-center justify-center gap-2">
+            <Play className="h-4 w-4" /> Watch Recording
+          </div>
+          <div className="bg-black">
+            <div className="max-w-4xl mx-auto">
+              <div className="aspect-video bg-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
+                    <Play className="h-10 w-10 text-purple-400" />
+                  </div>
+                  <p className="text-white text-lg font-semibold">{endedWithRecording.title || "Event Recording"}</p>
+                  <p className="text-gray-400 text-sm mt-1">Recording available</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== HERO ===== */}
-      <div className="relative border-b border-gray-200 pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden">
+      <div className={cn(
+        "relative border-b border-gray-200 pb-20 md:pb-28 overflow-hidden",
+        liveStream || endedWithRecording ? "pt-12 md:pt-16" : "pt-28 md:pt-36"
+      )}>
         {event.cover_image_url ? (
           <>
             <img

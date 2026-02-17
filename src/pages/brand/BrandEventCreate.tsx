@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Check, Plus, Trash2, GripVertical, Loader2,
   ClipboardList, Calendar, Mic, Handshake, CheckCircle, Ticket,
-  MessageCircle, MapPin, LogOut,
+  MessageCircle, MapPin, LogOut, Radio,
 } from "lucide-react";
 import ImageUpload from "@/components/cms/ImageUpload";
 import CityAutocomplete from "@/components/CityAutocomplete";
@@ -137,6 +137,7 @@ const BrandEventCreate = () => {
   const [state, setState] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [streamingEnabled, setStreamingEnabled] = useState(false);
 
   /* Step 1 — tickets */
   const [tickets, setTickets] = useState<TicketItem[]>([
@@ -234,6 +235,7 @@ const BrandEventCreate = () => {
             state: state.trim() || null,
             cover_image_url: coverUrl.trim() || null,
             capacity: capacity ? parseInt(capacity) : null,
+            streaming_enabled: streamingEnabled,
           } as Record<string, unknown>)
           .eq("id", createdEventId);
         if (error) throw error;
@@ -251,6 +253,7 @@ const BrandEventCreate = () => {
             state: state.trim() || null,
             cover_image_url: coverUrl.trim() || null,
             capacity: capacity ? parseInt(capacity) : null,
+            streaming_enabled: streamingEnabled,
             is_published: false,
             created_by: user?.id || null,
           } as Record<string, unknown>)
@@ -657,6 +660,32 @@ const BrandEventCreate = () => {
                   folder="events"
                 />
               </div>
+
+              {/* Live Streaming Toggle */}
+              <div className="md:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                      <Radio className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <Label className="text-base font-semibold">Live Streaming</Label>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Enable RTMP streaming for this event
+                      </p>
+                    </div>
+                  </div>
+                  <Switch checked={streamingEnabled} onCheckedChange={setStreamingEnabled} />
+                </div>
+                {streamingEnabled && (
+                  <div className="mt-3 ml-[52px] bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      RTMP credentials will be auto-generated after saving. You can configure streaming
+                      settings and connect destinations from the Streaming tab in the event detail page.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
         )}
@@ -1050,6 +1079,7 @@ const BrandEventCreate = () => {
                 <div className="flex justify-between"><span className="text-muted-foreground">Location</span><span className="font-medium">{[venue, city, state].filter(Boolean).join(", ") || "\u2014"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Capacity</span><span className="font-medium">{capacity || "\u2014"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Community</span><span className="font-medium">{communityEnabled ? "Enabled" : "Disabled"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Live Streaming</span><span className="font-medium">{streamingEnabled ? "Enabled" : "Disabled"}</span></div>
               </div>
             </Card>
 
