@@ -67,6 +67,16 @@ interface SavedSearchRow {
   created_at: string;
 }
 
+const CREATOR_TYPES = [
+  { value: "all", label: "All Creators", icon: "", keywords: [] as string[], links: [] as string[], platformOverride: null as string | null },
+  { value: "podcasters", label: "Podcasters", icon: "🎙️", keywords: ["podcast", "podcaster", "host", "episodes", "spotify", "apple podcasts"], links: ["spotify", "podcasts.apple", "anchor.fm", "buzzsprout", "podbean"], platformOverride: null },
+  { value: "speakers", label: "Keynote Speakers", icon: "🎤", keywords: ["keynote", "speaker", "motivational speaker", "public speaker", "TEDx", "conference speaker"], links: ["speakerflow", "speaking", "keynote"], platformOverride: null },
+  { value: "authors", label: "Authors", icon: "📚", keywords: ["author", "bestselling", "book", "writer", "published", "novelist", "nonfiction"], links: ["amazon.com/author", "goodreads", "barnesandnoble"], platformOverride: null },
+  { value: "youtube", label: "YouTube Creators", icon: "▶️", keywords: ["youtuber", "youtube", "creator", "vlogger", "content creator"], links: [], platformOverride: "youtube" },
+  { value: "tiktok", label: "TikTok Creators", icon: "🎵", keywords: [], links: [], platformOverride: "tiktok" },
+  { value: "ambassadors", label: "Brand Ambassadors", icon: "🤝", keywords: ["ambassador", "partner", "sponsored", "affiliate", "brand rep", "collab"], links: [], platformOverride: null },
+] as const;
+
 const PLATFORM_URLS: Record<string, (u: string) => string> = {
   instagram: (u) => `https://instagram.com/${u}`,
   tiktok: (u) => `https://tiktok.com/@${u}`,
@@ -351,6 +361,7 @@ const BrandDiscover = () => {
   const [urlSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"keyword" | "username" | "lookalike">("keyword");
+  const [creatorType, setCreatorType] = useState<string>("all");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [platform, setPlatform] = useState<string>("instagram");
   const [followersRange, setFollowersRange] = useState<string>("any");
@@ -580,9 +591,10 @@ const BrandDiscover = () => {
 
   const runSearch = useCallback(() => {
     const q = searchQuery.trim().replace(/^@/, "");
+    const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
     const hasActiveFilters = followersRange !== "any" || engagementMin !== "any" ||
                              selectedBranches.size > 0 || locationFilter.trim() !== "" ||
-                             keywordsInBio.trim() !== "";
+                             keywordsInBio.trim() !== "" || creatorType !== "all";
     if (!q && !hasActiveFilters) {
       setApiResults(null);
       setApiLoading(false);
@@ -599,9 +611,12 @@ const BrandDiscover = () => {
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
     const branchKeys = selectedBranches.size > 0 ? Array.from(selectedBranches) : [];
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
-    const keywords_in_bio = [...branchKeys, ...bioKeys].length > 0 ? [...branchKeys, ...bioKeys] : [""];
+    const ctKeywords = ctConfig?.keywords ?? [];
+    const allBioKeys = [...branchKeys, ...bioKeys, ...ctKeywords];
+    const keywords_in_bio = allBioKeys.length > 0 ? allBioKeys : [""];
+    const effectivePlatform = ctConfig?.platformOverride ?? platform;
     const options = {
-      platform: platform.toLowerCase(),
+      platform: effectivePlatform.toLowerCase(),
       number_of_followers: {
         min: followerOpt?.min ?? null,
         max: followerOpt?.max ?? null,
@@ -631,7 +646,7 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
-  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, persistLastSearch, getCurrentFilters, user, refreshCredits]);
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, user, refreshCredits]);
 
   // Fire search after auto-load applies filters (runs once after state updates)
   useEffect(() => {
@@ -741,7 +756,8 @@ const BrandDiscover = () => {
     setEnrichCache({});
     setEnrichRawCache({});
     setEnrichingIds(new Set());
-    const effPlatform = parsed.platform || platform;
+    const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
+    const effPlatform = ctConfig?.platformOverride ?? (parsed.platform || platform);
     const effFollowers = parsed.followersRange || followersRange;
     const effEngagement = parsed.engagementMin || engagementMin;
     const effBranches = parsed.branches.length > 0 ? parsed.branches : Array.from(selectedBranches);
@@ -749,7 +765,8 @@ const BrandDiscover = () => {
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === effFollowers);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === effEngagement);
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
-    const kw = [...effBranches, ...bioKeys];
+    const ctKeywords = ctConfig?.keywords ?? [];
+    const kw = [...effBranches, ...bioKeys, ...ctKeywords];
     const keywords_in_bio = kw.length > 0 ? kw : [""];
     const options = {
       platform: effPlatform.toLowerCase(),
@@ -777,7 +794,7 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current === effectiveQuery) setApiLoading(false);
       });
-  }, [searchQuery, searchMode, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, gender, language, niche, persistLastSearch, runSearch, runModeSearch]);
+  }, [searchQuery, searchMode, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, gender, language, niche, persistLastSearch, runSearch, runModeSearch]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -789,6 +806,7 @@ const BrandDiscover = () => {
   const clearFilters = () => {
     setSearchQuery("");
     setSearchMode("keyword");
+    setCreatorType("all");
     setPlatform("instagram");
     setFollowersRange("any");
     setEngagementMin("any");
@@ -1367,6 +1385,21 @@ const BrandDiscover = () => {
                 </SelectItem>
               </SelectContent>
             </Select>
+            <Select value={creatorType} onValueChange={setCreatorType}>
+              <SelectTrigger className="w-[180px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Creator Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {CREATOR_TYPES.map((ct) => (
+                  <SelectItem key={ct.value} value={ct.value}>
+                    <span className="flex items-center gap-2">
+                      {ct.icon && <span>{ct.icon}</span>}
+                      {ct.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="relative flex-1 min-w-[200px] max-w-xl">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
@@ -1396,18 +1429,35 @@ const BrandDiscover = () => {
             </Button>
           </div>
 
-          {/* Smart search applied filters */}
-          {smartFiltersApplied.length > 0 && (
-            <div className="flex items-center gap-2 text-sm text-pd-blue/80 mb-4">
-              <Search className="h-3.5 w-3.5 shrink-0" />
-              <span className="text-muted-foreground">Smart filters applied:</span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {smartFiltersApplied.map((label) => (
-                  <Badge key={label} variant="secondary" className="bg-pd-blue/10 text-pd-blue border-pd-blue/20 text-xs font-medium">
-                    {label}
+          {/* Active creator type pill + smart search applied filters */}
+          {(creatorType !== "all" || smartFiltersApplied.length > 0) && (
+            <div className="flex items-center gap-2 text-sm mb-4 flex-wrap">
+              {creatorType !== "all" && (() => {
+                const ct = CREATOR_TYPES.find((t) => t.value === creatorType);
+                return ct ? (
+                  <Badge variant="secondary" className="bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/20 text-xs font-medium gap-1.5 pr-1">
+                    {ct.icon && <span>{ct.icon}</span>}
+                    Filtering: {ct.label}
+                    <button
+                      onClick={() => setCreatorType("all")}
+                      className="ml-1 hover:bg-[#6C5CE7]/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold"
+                    >
+                      ✕
+                    </button>
                   </Badge>
-                ))}
-              </div>
+                ) : null;
+              })()}
+              {smartFiltersApplied.length > 0 && (
+                <>
+                  <Search className="h-3.5 w-3.5 shrink-0 text-pd-blue/80" />
+                  <span className="text-muted-foreground">Smart filters:</span>
+                  {smartFiltersApplied.map((label) => (
+                    <Badge key={label} variant="secondary" className="bg-pd-blue/10 text-pd-blue border-pd-blue/20 text-xs font-medium">
+                      {label}
+                    </Badge>
+                  ))}
+                </>
+              )}
             </div>
           )}
 
