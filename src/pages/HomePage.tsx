@@ -715,24 +715,22 @@ export default function HomePage() {
                     className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                   >
                     {/* Cover image with fallback */}
-                    <div className="relative">
-                      {imgSrc && (
-                        <img
-                          src={imgSrc}
-                          alt={title}
-                          className="h-48 w-full object-cover rounded-t-xl"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                            (e.currentTarget.nextElementSibling as HTMLElement | null)!.style.display = "flex";
-                          }}
-                        />
-                      )}
-                      <div
-                        className="h-48 w-full bg-gradient-to-r from-[#6C5CE7] to-[#1A1A2E] rounded-t-xl items-center justify-center px-4"
-                        style={{ display: imgSrc ? "none" : "flex" }}
-                      >
-                        <span className="text-white font-semibold text-center text-sm">{title}</span>
-                      </div>
+                    {imgSrc && (
+                      <img
+                        src={imgSrc}
+                        alt={title}
+                        className="h-52 w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          (e.currentTarget.nextElementSibling as HTMLElement | null)!.style.display = "flex";
+                        }}
+                      />
+                    )}
+                    <div
+                      className="h-52 w-full bg-gradient-to-r from-[#6C5CE7] to-[#1A1A2E] items-center justify-center px-4"
+                      style={{ display: imgSrc ? "none" : "flex" }}
+                    >
+                      <span className="text-white font-semibold text-center text-sm">{title}</span>
                     </div>
                     <div className="p-4 flex flex-col flex-1">
                       {tag && (
