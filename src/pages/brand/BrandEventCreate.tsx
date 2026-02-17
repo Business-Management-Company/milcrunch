@@ -235,7 +235,6 @@ const BrandEventCreate = () => {
             state: state.trim() || null,
             cover_image_url: coverUrl.trim() || null,
             capacity: capacity ? parseInt(capacity) : null,
-            streaming_enabled: streamingEnabled,
           } as Record<string, unknown>)
           .eq("id", createdEventId);
         if (error) throw error;
@@ -253,7 +252,6 @@ const BrandEventCreate = () => {
             state: state.trim() || null,
             cover_image_url: coverUrl.trim() || null,
             capacity: capacity ? parseInt(capacity) : null,
-            streaming_enabled: streamingEnabled,
             is_published: false,
             created_by: user?.id || null,
           } as Record<string, unknown>)
