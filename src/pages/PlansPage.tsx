@@ -75,17 +75,8 @@ export default function PlansPage() {
               {PLANS.map((plan) => (
                 <div
                   key={plan.title}
-                  className={`relative bg-white rounded-xl shadow-md p-8 flex flex-col text-left ${
-                    plan.popular
-                      ? "border-2 border-[#6C5CE7] ring-1 ring-[#6C5CE7]/20"
-                      : "border border-gray-200"
-                  }`}
+                  className="relative bg-white rounded-xl shadow-md p-8 flex flex-col text-left border border-gray-200"
                 >
-                  {plan.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#6C5CE7] text-white text-[11px] font-bold tracking-wider uppercase px-4 py-1 rounded-full">
-                      Most Popular
-                    </span>
-                  )}
 
                   <div className="w-12 h-12 rounded-xl bg-[#6C5CE7]/10 text-[#6C5CE7] flex items-center justify-center mb-5">
                     {plan.icon}
