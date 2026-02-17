@@ -452,7 +452,7 @@ export default function HomePage() {
             <div className="hidden lg:flex flex-1 justify-center items-center">
               <div className="relative" style={{ animation: "heroFloat 5s ease-in-out infinite" }}>
                 {/* Card 1 — Sofia M. (front) */}
-                <div className="relative z-30 bg-white rounded-2xl shadow-2xl border border-gray-100 w-[420px] p-5 ml-[60px]">
+                <div className="relative z-30 bg-white rounded-2xl shadow-2xl border border-gray-100 w-[420px] px-5 py-2.5 ml-[60px]">
                   <div className="flex items-center gap-4">
                     <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
                     <div className="flex-1 min-w-0">
@@ -461,7 +461,7 @@ export default function HomePage() {
                     </div>
                     <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Lifestyle</span>
                   </div>
-                  <div className="border-t border-gray-100 mt-3 pt-3 flex items-center gap-10">
+                  <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-10">
                     <div>
                       <p className="text-[20px] font-bold text-gray-900 leading-tight">2.4M</p>
                       <p className="text-[12px] text-gray-400">Followers</p>
@@ -473,7 +473,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 {/* Card 2 — Marcus J. (middle) */}
-                <div className="relative z-20 bg-white rounded-2xl shadow-xl border border-gray-100 w-[420px] p-5 mt-[-10px] ml-[0px]">
+                <div className="relative z-20 bg-white rounded-2xl shadow-xl border border-gray-100 w-[420px] px-5 py-2.5 mt-[-10px] ml-[0px]">
                   <div className="flex items-center gap-4">
                     <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
                     <div className="flex-1 min-w-0">
@@ -482,7 +482,7 @@ export default function HomePage() {
                     </div>
                     <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E3F2FD] text-[#1565C0]">Fitness</span>
                   </div>
-                  <div className="border-t border-gray-100 mt-3 pt-3 flex items-center gap-10">
+                  <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-10">
                     <div>
                       <p className="text-[20px] font-bold text-gray-900 leading-tight">890K</p>
                       <p className="text-[12px] text-gray-400">Followers</p>
@@ -494,7 +494,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 {/* Card 3 — Lena Park (back) */}
-                <div className="relative z-10 bg-white rounded-2xl shadow-lg border border-gray-100 w-[420px] p-5 mt-[-10px] ml-[60px]">
+                <div className="relative z-10 bg-white rounded-2xl shadow-lg border border-gray-100 w-[420px] px-5 py-2.5 mt-[-10px] ml-[60px]">
                   <div className="flex items-center gap-4">
                     <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
                     <div className="flex-1 min-w-0">
@@ -503,7 +503,7 @@ export default function HomePage() {
                     </div>
                     <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#FFF3E0] text-[#E65100]">Food</span>
                   </div>
-                  <div className="border-t border-gray-100 mt-3 pt-3 flex items-center gap-10">
+                  <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-10">
                     <div>
                       <p className="text-[20px] font-bold text-gray-900 leading-tight">1.1M</p>
                       <p className="text-[12px] text-gray-400">Followers</p>
