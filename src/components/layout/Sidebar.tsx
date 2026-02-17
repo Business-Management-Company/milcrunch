@@ -20,8 +20,7 @@ import {
   Plug,
   Briefcase,
   KanbanSquare,
-  Rocket,
-  MessageSquare,
+  Globe,
   ChevronDown,
   ChevronRight,
   type LucideIcon,
@@ -47,7 +46,6 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "MAIN",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/brand/discover", label: "Creator Discovery", icon: Search },
     ],
   },
   {
@@ -58,6 +56,15 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/speakers", label: "Speakers", icon: Mic },
       { href: "/awards", label: "Awards", icon: Trophy },
       { href: "/sponsors", label: "Sponsors", icon: Handshake },
+    ],
+  },
+  {
+    key: "creators",
+    label: "CREATORS & CONTENT",
+    items: [
+      { href: "/brand/discover", label: "Creator Discovery", icon: Search },
+      { href: "/brand/directory", label: "Creator Directory", icon: Users },
+      { href: "/creators", label: "Creator Network", icon: Globe },
     ],
   },
   {
@@ -93,11 +100,10 @@ const SIDEBAR_SECTIONS: NavSection[] = [
 const SUPER_ADMIN_SECTION: NavSection = {
   key: "superadmin",
   label: "SUPER ADMIN",
+  defaultCollapsed: true,
   items: [
     { href: "/admin/business-overview", label: "Business Overview", icon: Briefcase },
     { href: "/admin/tasks", label: "Task Board", icon: KanbanSquare },
-    { href: "/admin/deployments", label: "Deployments", icon: Rocket },
-    { href: "/admin/chat", label: "AI Chat", icon: MessageSquare },
   ],
 };
 
