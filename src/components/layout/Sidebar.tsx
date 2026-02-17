@@ -33,6 +33,7 @@ import {
   Ear,
   Send,
   Megaphone,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 
@@ -102,6 +103,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "SOCIAL",
     items: [
       { href: "/brand/campaigns", label: "Campaigns", icon: Megaphone },
+      { href: "/brand/tags", label: "Tags", icon: Tags },
       { href: "/brand/social-monitoring", label: "Social Listening", icon: Ear },
       { href: "/brand/posting", label: "Posting", icon: Send },
     ],
