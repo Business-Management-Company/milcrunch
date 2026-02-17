@@ -496,34 +496,50 @@ export async function fetchCredits(): Promise<CreditBalance | null> {
 }
 
 /**
- * Username / lookalike search via the SAME working proxy used by keyword search.
- * POSTs to /api/influencers/public/v1/discovery/ (proxied to api-dashboard.influencers.club).
- * For username: uses filters.search_by_handle. For lookalike: uses filters.lookalike_handle.
- * Falls back to ai_search with the handle if the dedicated filter returns nothing.
+ * Helper: merge cross-platform flags from enrichment result into a profile object
+ * so that mapAccountToCard can pick them up.
  */
-async function searchViaDiscoveryProxy(
-  handle: string,
-  platform: string,
-  searchType: "username" | "lookalike"
+function mergeEnrichFlags(
+  profile: Record<string, unknown>,
+  result: Record<string, unknown>
+): void {
+  const creatorHas = result.creator_has as Record<string, boolean> | undefined;
+  if (creatorHas && typeof creatorHas === "object") {
+    if (creatorHas.tiktok) profile.has_tiktok = true;
+    if (creatorHas.youtube) profile.has_youtube = true;
+    if (creatorHas.twitter) profile.has_twitter = true;
+    if (creatorHas.facebook) profile.has_facebook = true;
+    if (creatorHas.linkedin) profile.has_linkedin = true;
+    if (creatorHas.twitch) profile.has_twitch = true;
+    if (creatorHas.podcast) profile.has_podcast = true;
+  }
+  if (result.email) profile.has_email = true;
+}
+
+/**
+ * Search by exact username via the enrichment API.
+ * Uses the raw enrich endpoint (0.03 credits) to look up the exact profile by handle.
+ */
+export async function searchByUsername(
+  username: string,
+  platform: string = "instagram"
 ): Promise<SearchCreatorsResult> {
+  const handle = username.replace(/^@/, "").trim();
+  if (!handle) throw new Error("Username is required");
+
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
 
-  const platformValue = platform.toLowerCase();
-
-  // Build body — same shape as keyword search but with handle-specific filter
-  const body: Record<string, unknown> = {
-    platform: platformValue,
-    paging: { limit: 25, page: 1 },
-    sort: { sort_by: "relevancy", sort_order: "desc" },
-    filters: searchType === "lookalike"
-      ? { lookalike_handle: handle }
-      : { search_by_handle: handle },
+  const body = {
+    handle,
+    platform: platform.toLowerCase(),
+    include_lookalikes: false,
+    email_required: "preferred",
   };
 
-  console.log(`[${searchType}Search] POSTing to discovery proxy:`, JSON.stringify(body));
+  console.log("[usernameSearch] Enriching handle:", handle);
 
-  const res = await fetch(DISCOVERY_URL, {
+  const res = await fetch(RAW_ENRICH_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -533,80 +549,33 @@ async function searchViaDiscoveryProxy(
   });
 
   const rawResponse = await res.json();
-  console.log(`[${searchType}Search] Response status:`, res.status, "keys:", Object.keys(rawResponse as object));
+  console.log("[usernameSearch] Response status:", res.status, "keys:", Object.keys(rawResponse as object));
 
   if (!res.ok) {
-    // If the handle-specific filter isn't supported, fall back to ai_search
-    console.log(`[${searchType}Search] Primary filter failed (${res.status}), falling back to ai_search`);
-    const fallbackBody = {
-      platform: platformValue,
-      paging: { limit: 25, page: 1 },
-      sort: { sort_by: "relevancy", sort_order: "desc" },
-      filters: {
-        ai_search: handle,
-        keywords_in_bio: [""],
-      },
-    };
-
-    const fallbackRes = await fetch(DISCOVERY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(fallbackBody),
-    });
-
-    const fallbackRaw = await fallbackRes.json();
-    console.log(`[${searchType}Search] Fallback response:`, fallbackRes.status);
-
-    if (!fallbackRes.ok) {
-      throw new Error(`${searchType} search ${fallbackRes.status}: ${fallbackRes.statusText}`, { cause: fallbackRaw });
-    }
-
-    const accounts = (fallbackRaw as { accounts?: ApiAccount[] }).accounts ?? [];
-    const list = Array.isArray(accounts) ? accounts : [];
-    const total = Number((fallbackRaw as { total?: number }).total ?? list.length);
-    return { creators: list.map((acc, i) => mapAccountToCard(acc, i)), total, rawResponse: fallbackRaw };
+    throw new Error(`Username search ${res.status}: ${res.statusText}`, { cause: rawResponse });
   }
 
-  // Parse accounts from response (may be accounts[], lookalikes[], similar_creators[], or result{})
-  const raw = rawResponse as Record<string, unknown>;
-  const accounts = raw.accounts ?? raw.lookalikes ?? raw.similar_creators;
-  const result = raw.result as Record<string, unknown> | undefined;
+  const result = (rawResponse as Record<string, unknown>)?.result as Record<string, unknown> | undefined;
+  const ig = result?.instagram as Record<string, unknown> | undefined;
 
-  let creators: CreatorCard[] = [];
-  let total = 0;
-
-  if (Array.isArray(accounts) && accounts.length > 0) {
-    creators = (accounts as ApiAccount[]).map((acc, i) => mapAccountToCard(acc, i));
-    total = Number(raw.total ?? creators.length);
-  } else if (result && typeof result === "object") {
-    const p = (result.instagram ?? result.profile ?? result) as ApiProfile;
-    creators = [mapAccountToCard({ user_id: p.username ?? handle, profile: p }, 0)];
-    total = 1;
-  } else if (raw.username) {
-    creators = [mapAccountToCard({ user_id: handle, profile: raw as unknown as ApiProfile }, 0)];
-    total = 1;
+  if (!ig || typeof ig !== "object") {
+    console.log("[usernameSearch] No instagram data found for handle:", handle);
+    return { creators: [], total: 0, rawResponse };
   }
 
-  return { creators, total, rawResponse };
+  // Map enrichment response to a CreatorCard via the same mapper used for discovery
+  const profile = { ...ig } as Record<string, unknown>;
+  if (result) mergeEnrichFlags(profile, result);
+  const card = mapAccountToCard(
+    { user_id: (ig.username as string) ?? handle, profile: profile as unknown as ApiProfile },
+    0
+  );
+
+  return { creators: [card], total: 1, rawResponse };
 }
 
 /**
- * Search by exact username via the working discovery proxy.
- */
-export async function searchByUsername(
-  username: string,
-  platform: string = "instagram"
-): Promise<SearchCreatorsResult> {
-  const handle = username.replace(/^@/, "").trim();
-  if (!handle) throw new Error("Username is required");
-  return searchViaDiscoveryProxy(handle, platform, "username");
-}
-
-/**
- * Find lookalike creators via the working discovery proxy.
+ * Find lookalike creators via the enrichment API with include_lookalikes: true.
  */
 export async function searchLookalike(
   username: string,
@@ -614,7 +583,51 @@ export async function searchLookalike(
 ): Promise<SearchCreatorsResult> {
   const handle = username.replace(/^@/, "").trim();
   if (!handle) throw new Error("Username is required");
-  return searchViaDiscoveryProxy(handle, platform, "lookalike");
+
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
+
+  const body = {
+    handle,
+    platform: platform.toLowerCase(),
+    include_lookalikes: true,
+    email_required: "preferred",
+  };
+
+  console.log("[lookalikeSearch] Enriching handle with lookalikes:", handle);
+
+  const res = await fetch(RAW_ENRICH_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const rawResponse = await res.json();
+  console.log("[lookalikeSearch] Response status:", res.status);
+
+  if (!res.ok) {
+    throw new Error(`Lookalike search ${res.status}: ${res.statusText}`, { cause: rawResponse });
+  }
+
+  const result = (rawResponse as Record<string, unknown>)?.result as Record<string, unknown> | undefined;
+  const lookalikes = result?.lookalikes as Array<Record<string, unknown>> | undefined;
+
+  if (!Array.isArray(lookalikes) || lookalikes.length === 0) {
+    console.log("[lookalikeSearch] No lookalikes found for handle:", handle);
+    return { creators: [], total: 0, rawResponse };
+  }
+
+  // Map each lookalike to a CreatorCard
+  const creators: CreatorCard[] = lookalikes.map((la, i) => {
+    const profile = (la.profile ?? la) as unknown as ApiProfile;
+    const userId = (la.user_id ?? la.username ?? profile.username ?? `lookalike-${i}`) as string;
+    return mapAccountToCard({ user_id: userId, profile }, i);
+  });
+
+  return { creators, total: creators.length, rawResponse };
 }
 
 /** Log credit usage to Supabase (fire-and-forget, non-blocking) */
