@@ -7,6 +7,7 @@ import {
   MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
   Film, Sparkles, Target, Type, Clapperboard, Palette, Captions, Scissors,
   Monitor, Youtube, Facebook, Twitter, Twitch, Linkedin, Wifi, CheckCircle,
+  Pencil, ShieldCheck,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -33,6 +34,8 @@ import EventCommunityTab from "@/components/EventCommunityTab";
 import EventInsightsTab from "@/components/EventInsightsTab";
 import CheckInMode from "@/components/CheckInMode";
 import EventBadgePrint from "@/components/EventBadgePrint";
+import AddSpeakerModal, { SPEAKER_TYPES, SPEAKER_TYPE_COLORS } from "@/components/brand/AddSpeakerModal";
+import EditSpeakerModal from "@/components/brand/EditSpeakerModal";
 
 /* ---------- types ---------- */
 interface EventRow {
@@ -140,7 +143,7 @@ const EVENT_TYPES = [
   { value: "live", label: "In-Person" },
 ];
 const SESSION_TYPES = ["keynote", "panel", "breakout", "workshop", "networking", "meal", "pdx_experience"];
-const SPEAKER_ROLES = ["keynote", "panelist", "moderator", "presenter", "mc"];
+const SPEAKER_ROLES = SPEAKER_TYPES.map((t) => t.value);
 const SPONSOR_TIERS = ["title", "platinum", "gold", "silver", "bronze", "community"];
 const TIER_COLORS: Record<string, string> = {
   title: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
@@ -173,6 +176,9 @@ const BrandEventDetail = () => {
   const [checkInMode, setCheckInMode] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
   const [eventStreams, setEventStreams] = useState<StreamRow[]>([]);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [showAddSpeaker, setShowAddSpeaker] = useState(false);
+  const [editingSpeaker, setEditingSpeaker] = useState<SpeakerRow | null>(null);
 
   /* editable overview fields */
   const [editTitle, setEditTitle] = useState("");
@@ -327,18 +333,18 @@ const BrandEventDetail = () => {
     else fetchAll();
   };
 
-  /* ---- add speaker ---- */
-  const addSpeaker = async () => {
+  /* ---- add speaker (opens modal) ---- */
+  const addSpeaker = () => setShowAddSpeaker(true);
+
+  /* ---- refresh speakers only (preserves tab) ---- */
+  const refreshSpeakers = async () => {
     if (!eventId) return;
-    const { error } = await supabase.from("event_speakers").insert({
-      event_id: eventId,
-      creator_name: "New Speaker",
-      role: "presenter",
-      sort_order: speakers.length,
-      added_by: user?.id || null,
-    });
-    if (error) toast.error(error.message);
-    else fetchAll();
+    const { data } = await supabase
+      .from("event_speakers")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("sort_order");
+    setSpeakers((data || []) as SpeakerRow[]);
   };
 
   /* ---- add sponsor ---- */
@@ -378,7 +384,7 @@ const BrandEventDetail = () => {
   };
   const deleteSpeaker = async (id: string) => {
     await supabase.from("event_speakers").delete().eq("id", id);
-    fetchAll();
+    refreshSpeakers();
   };
   const deleteSponsor = async (id: string) => {
     await supabase.from("event_sponsors").delete().eq("id", id);
@@ -517,7 +523,7 @@ const BrandEventDetail = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="overview">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-lg mb-6 h-auto p-1 flex flex-col items-stretch gap-0">
             {/* Row 1 — Build */}
             <div className="flex flex-wrap justify-center gap-1">
@@ -663,46 +669,81 @@ const BrandEventDetail = () => {
               </Button>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              {speakers.map((s) => (
-                <Card key={s.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 rounded-full bg-pd-blue/10 flex items-center justify-center shrink-0 overflow-hidden">
-                      {s.avatar_url ? (
-                        <img src={s.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <Mic className="h-5 w-5 text-pd-blue" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <Input
-                        defaultValue={s.creator_name || ""}
-                        className="font-semibold text-sm mb-1"
-                        onBlur={(e) => updateSpeakerField(s.id, "creator_name", e.target.value)}
-                      />
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="text-xs capitalize">{s.role}</Badge>
-                        {s.creator_handle && <span className="text-xs text-muted-foreground">@{s.creator_handle}</span>}
-                        {s.confirmed && <Badge className="bg-green-100 text-green-700 text-xs">Confirmed</Badge>}
+              {speakers.map((s) => {
+                const typeLabel = SPEAKER_TYPES.find((t) => t.value === s.role)?.label || s.role || "Speaker";
+                const typeColor = SPEAKER_TYPE_COLORS[s.role || ""] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+                const initials = (s.creator_name || "?")
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
+                return (
+                  <Card key={s.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-full bg-pd-blue/10 flex items-center justify-center shrink-0 overflow-hidden">
+                        {s.avatar_url ? (
+                          <img src={s.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-semibold text-pd-blue">{initials}</span>
+                        )}
                       </div>
-                      <Input
-                        defaultValue={s.topic || ""}
-                        placeholder="Topic..."
-                        className="text-xs text-muted-foreground"
-                        onBlur={(e) => updateSpeakerField(s.id, "topic", e.target.value || null)}
-                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-sm truncate">{s.creator_name || "Unnamed"}</span>
+                          {s.confirmed && <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <Badge className={`text-xs ${typeColor}`}>{typeLabel}</Badge>
+                          {s.creator_handle && (
+                            <span className="text-xs text-muted-foreground truncate">{s.creator_handle}</span>
+                          )}
+                        </div>
+                        {s.topic && (
+                          <p className="text-xs text-muted-foreground line-clamp-1 mb-1">{s.topic}</p>
+                        )}
+                        {s.bio && (
+                          <p className="text-xs text-muted-foreground/70 line-clamp-2">{s.bio}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setEditingSpeaker(s)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" onClick={() => deleteSpeaker(s.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="shrink-0 text-red-500 hover:text-red-700" onClick={() => deleteSpeaker(s.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
             {speakers.length === 0 && (
               <Card className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] p-8 text-center text-muted-foreground">
-                No speakers yet.
+                No speakers yet. Click "Add Speaker" to get started.
               </Card>
             )}
+
+            {/* Add Speaker Modal */}
+            {eventId && (
+              <AddSpeakerModal
+                open={showAddSpeaker}
+                onOpenChange={setShowAddSpeaker}
+                eventId={eventId}
+                userId={user?.id}
+                currentCount={speakers.length}
+                onAdded={refreshSpeakers}
+              />
+            )}
+
+            {/* Edit Speaker Modal */}
+            <EditSpeakerModal
+              open={!!editingSpeaker}
+              onOpenChange={(open) => !open && setEditingSpeaker(null)}
+              speaker={editingSpeaker}
+              onSaved={refreshSpeakers}
+            />
           </TabsContent>
 
           {/* ===== SPONSORS ===== */}
