@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
-import { getConnectedAccounts } from "@/lib/upload-post-sync";
+import { useUploadPostConnect } from "@/hooks/useUploadPostConnect";
 import {
   Check,
   Instagram,
@@ -18,6 +18,8 @@ import {
   Share2,
   Sparkles,
   ExternalLink,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,7 +41,7 @@ export default function CreatorOnboard() {
   const { user, creatorProfile, refetchCreatorProfile } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [connected, setConnected] = useState<{ platform: string; username?: string }[]>([]);
+  const { accounts, connectLoading, syncing, openConnectPopup, syncAccounts } = useUploadPostConnect();
   const [displayName, setDisplayName] = useState("");
   const [handle, setHandle] = useState("");
   const [bio, setBio] = useState("");
@@ -88,13 +90,6 @@ export default function CreatorOnboard() {
       )
       .then(() => refetchCreatorProfile());
   }, [user?.id, creatorProfile, refetchCreatorProfile]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    getConnectedAccounts(user.id).then((accounts) => {
-      setConnected(accounts.map((a) => ({ platform: a.platform, username: a.platform_username ?? undefined })));
-    });
-  }, [user?.id]);
 
   useEffect(() => {
     if (creatorProfile) {
@@ -207,7 +202,7 @@ export default function CreatorOnboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               {PLATFORMS.map((p) => {
-                const connectedAccount = connected.find((c) => c.platform === p.id);
+                const connectedAccount = accounts.find((a) => a.platform === p.id);
                 return (
                   <div
                     key={p.id}
@@ -217,16 +212,27 @@ export default function CreatorOnboard() {
                     {connectedAccount ? (
                       <span className="flex items-center gap-2 text-sm text-green-600">
                         <Check className="h-4 w-4" />
-                        {connectedAccount.username ? `@${connectedAccount.username}` : "Connected"}
+                        {connectedAccount.platform_username ? `@${connectedAccount.platform_username}` : "Connected"}
                       </span>
                     ) : (
-                      <Button size="sm" variant="outline" asChild>
-                        <a href="/creator/socials">Connect</a>
+                      <Button size="sm" variant="outline" onClick={openConnectPopup} disabled={connectLoading}>
+                        {connectLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                        Connect
                       </Button>
                     )}
                   </div>
                 );
               })}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => syncAccounts()}
+                disabled={syncing}
+                className="w-full"
+              >
+                {syncing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                Refresh connected accounts
+              </Button>
               <div className="flex gap-3 pt-4">
                 <Button onClick={() => setStep(2)}>
                   Continue

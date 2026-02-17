@@ -74,3 +74,49 @@ export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boo
   if (result.error) return { ok: false, error: result.error };
   return { ok: true };
 }
+
+/** Sync aggregated stats from connected_accounts into directory_members rows for this creator. */
+export async function syncDirectoryMemberStats(userId: string): Promise<void> {
+  // Get creator handle
+  const { data: profile } = await supabase
+    .from("creator_profiles")
+    .select("handle")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const handle = (profile as { handle?: string } | null)?.handle;
+  if (!handle) return;
+
+  // Get connected accounts
+  const accounts = await getConnectedAccounts(userId);
+  if (accounts.length === 0) return;
+
+  // Aggregate stats
+  const totalFollowers = accounts.reduce((sum, a) => sum + (a.followers_count ?? 0), 0);
+  const platforms = accounts.map((a) => a.platform);
+  const platformUrls: Record<string, string> = {};
+  for (const acc of accounts) {
+    if (acc.platform_username) {
+      const p = acc.platform.toLowerCase();
+      if (p.includes("instagram")) platformUrls.instagram = `https://instagram.com/${acc.platform_username}`;
+      else if (p.includes("tiktok")) platformUrls.tiktok = `https://tiktok.com/@${acc.platform_username}`;
+      else if (p.includes("youtube")) platformUrls.youtube = `https://youtube.com/@${acc.platform_username}`;
+      else if (p === "x" || p.includes("twitter")) platformUrls.x = `https://x.com/${acc.platform_username}`;
+      else if (p.includes("facebook")) platformUrls.facebook = `https://facebook.com/${acc.platform_username}`;
+      else if (p.includes("linkedin")) platformUrls.linkedin = `https://linkedin.com/in/${acc.platform_username}`;
+    }
+  }
+  // Best avatar: first account with a profile image
+  const bestAvatar = accounts.find((a) => a.profile_image_url)?.profile_image_url ?? null;
+
+  // Update directory_members matching this creator handle (don't create new rows)
+  await supabase
+    .from("directory_members")
+    .update({
+      follower_count: totalFollowers > 0 ? totalFollowers : null,
+      platforms,
+      platform_urls: platformUrls,
+      avatar_url: bestAvatar,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("creator_handle", handle);
+}

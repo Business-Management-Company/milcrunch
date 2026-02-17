@@ -448,10 +448,11 @@ export default function CreatorBioPage() {
                     acc.platform
                   )
                 }
-                className="p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                className="relative p-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
                 aria-label={acc.platform}
               >
                 {socialIcon(acc.platform, "h-5 w-5")}
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" aria-label="Verified" />
               </a>
             ))
           ) : (
