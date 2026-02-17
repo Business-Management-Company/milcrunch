@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
-import { Bell, ChevronDown } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Bell, ChevronDown, TrendingUp, Star, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,10 +27,27 @@ interface TopNavProps {
   onOpenCommandPalette: () => void;
 }
 
+const ALERT_ICONS: Record<string, React.ReactNode> = {
+  spike: <TrendingUp className="h-3.5 w-3.5 text-purple-500" />,
+  influencer: <Star className="h-3.5 w-3.5 text-amber-500" />,
+  milestone: <Target className="h-3.5 w-3.5 text-green-500" />,
+};
+
+const MOCK_ALERTS = [
+  { id: "a1", message: "#MIC2026 mentions up 340% this week", type: "spike", is_read: false },
+  { id: "a2", message: "@johnny_marines (168K) mentioned #MIC2026", type: "influencer", is_read: false },
+  { id: "a3", message: "#MilSpouseFest hit 500 total mentions", type: "milestone", is_read: true },
+];
+
 export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
   const { user, isSuperAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
   const displayName = user?.user_metadata?.full_name ?? user?.email ?? "User";
   const initials = getInitials(user?.user_metadata?.full_name as string, user?.email ?? "");
+  const [alerts, setAlerts] = useState(MOCK_ALERTS);
+  const unreadCount = alerts.filter((a) => !a.is_read).length;
+
+  const markAllRead = () => setAlerts((prev) => prev.map((a) => ({ ...a, is_read: true })));
 
   const handleSignOut = async () => {
     await signOut();
@@ -66,9 +84,45 @@ export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
 
       <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle />
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Notifications">
-          <Bell className="h-5 w-5 text-muted-foreground" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="rounded-full relative" aria-label="Notifications">
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  {unreadCount}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-sm font-semibold">Notifications</span>
+              {unreadCount > 0 && (
+                <button onClick={markAllRead} className="text-xs text-[#6C5CE7] hover:underline">Mark all read</button>
+              )}
+            </div>
+            <DropdownMenuSeparator />
+            {alerts.map((a) => (
+              <DropdownMenuItem
+                key={a.id}
+                className={cn("flex items-start gap-2 px-3 py-2.5 cursor-pointer", !a.is_read && "bg-purple-50/50 dark:bg-purple-900/10")}
+                onClick={() => {
+                  setAlerts((prev) => prev.map((x) => x.id === a.id ? { ...x, is_read: true } : x));
+                  navigate("/social-monitoring");
+                }}
+              >
+                <span className="mt-0.5 shrink-0">{ALERT_ICONS[a.type] || ALERT_ICONS.spike}</span>
+                <span className={cn("text-xs", a.is_read ? "text-muted-foreground" : "text-foreground font-medium")}>{a.message}</span>
+                {!a.is_read && <span className="ml-auto w-2 h-2 rounded-full bg-[#6C5CE7] shrink-0 mt-1" />}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-center justify-center text-xs text-[#6C5CE7] cursor-pointer" onClick={() => navigate("/social-monitoring")}>
+              View all in Social Monitoring
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1.5">

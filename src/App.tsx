@@ -109,6 +109,7 @@ import SponsorFormBuilder from "./pages/brand/sponsors/SponsorFormBuilder";
 import SponsorPages from "./pages/brand/sponsors/SponsorPages";
 import SponsorPageEditor from "./pages/brand/sponsors/SponsorPageEditor";
 import SponsorDecks from "./pages/brand/sponsors/SponsorDecks";
+import SocialMonitoring from "./pages/brand/SocialMonitoring";
 import SponsorApply from "./pages/SponsorApply";
 import PublicSponsorPage from "./pages/PublicSponsorPage";
 import Shop from "./pages/Shop";
@@ -218,7 +219,7 @@ const App = () => (
               <Route path="/sponsors" element={<PlaceholderPage title="Sponsors" description="Partner with brands and manage sponsorship opportunities." />} />
               <Route path="/verification" element={<Verification />} />
               <Route path="/analytics" element={<PlaceholderPage title="Analytics" description="View campaign performance, reach, and engagement metrics." />} />
-              <Route path="/social-monitoring" element={<PlaceholderPage title="Social Monitoring" description="Track mentions and sentiment across social channels." />} />
+              <Route path="/social-monitoring" element={<SocialMonitoring />} />
               {/* /swag moved to public routes */}
               <Route path="/settings" element={<PlaceholderPage title="Settings" description="Manage your account and platform preferences." />} />
               </Route>
