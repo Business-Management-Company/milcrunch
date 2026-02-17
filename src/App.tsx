@@ -104,6 +104,7 @@ import AdminTasks from "./pages/superadmin/AdminTasks";
 import AdminDeployments from "./pages/superadmin/AdminDeployments";
 import AdminPrompts from "./pages/superadmin/AdminPrompts";
 import AdminChat from "./pages/superadmin/AdminChat";
+import ProspectusAccess from "./pages/admin/ProspectusAccess";
 import BrandPages from "./pages/brand/BrandPages";
 import BrandPageEdit from "./pages/brand/BrandPageEdit";
 import DynamicPage from "./pages/DynamicPage";
@@ -223,6 +224,7 @@ const App = () => (
               <Route path="/admin/media/pdtv" element={<PDTV />} />
               <Route path="/admin/featured-creators" element={<FeaturedCreators />} />
               <Route path="/admin/business-overview" element={<BusinessOverview />} />
+              <Route path="/admin/prospectus-access" element={<ProspectusAccess />} />
               <Route path="/pdx" element={<Navigate to="/brand/events" replace />} />
               <Route path="/pdx/create" element={<Navigate to="/brand/events/create" replace />} />
               {/* Placeholder pages */}

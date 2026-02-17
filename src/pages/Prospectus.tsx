@@ -1,20 +1,15 @@
 import { useState, useEffect } from "react";
 import {
   Lock, Play, Share2, Check, Calendar, Users, BarChart3, Video,
-  Zap, Shield, ArrowRight, Mail,
+  Zap, Shield, ArrowRight, Mail, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
 /* ------------------------------------------------------------------ */
 
-const APPROVED_EMAILS = [
-  "andrew@recurrentx.com",
-  "paul@recurrentx.com",
-  "kelly@recurrentx.com",
-  "jamie@recurrentx.com",
-];
 const SESSION_KEY = "prospectus_access";
 
 const TABS = [
@@ -86,9 +81,19 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
+  const [checking, setChecking] = useState(false);
 
-  const submit = () => {
-    if (APPROVED_EMAILS.includes(email.trim().toLowerCase())) {
+  const submit = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+    setChecking(true);
+    const { data } = await supabase
+      .from("prospectus_access")
+      .select("id")
+      .eq("email", trimmed)
+      .limit(1) as { data: { id: string }[] | null };
+    setChecking(false);
+    if (data && data.length > 0) {
       sessionStorage.setItem(SESSION_KEY, "1");
       onAccess();
     } else {
@@ -154,9 +159,10 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
           <button
             type="button"
             onClick={submit}
-            className="w-full mt-4 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold text-sm transition-colors"
+            disabled={checking}
+            className="w-full mt-4 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            Request Access
+            {checking ? <><Loader2 className="h-4 w-4 animate-spin" /> Checking...</> : "Request Access"}
           </button>
         </div>
 
