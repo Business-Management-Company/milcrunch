@@ -170,37 +170,44 @@ export default function CreatorPublicProfile() {
         {/* Hero Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Gradient banner */}
-          <div className="h-32 bg-gradient-to-r from-[#000741] via-[#6C5CE7] to-[#6C5CE7]" />
+          <div className="h-32 w-full bg-gradient-to-r from-[#6C5CE7] to-[#8B7CF7]" />
 
-          {/* Profile section */}
-          <div className="px-6 md:px-10 pb-8 -mt-16">
-            <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
-              {/* Avatar */}
-              <div className={`w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg shrink-0 ${
-                creator.paradedeck_verified ? "ring-[3px] ring-purple-500 ring-offset-2" : ""
-              }`}>
-                {showImage ? (
-                  <img
-                    src={imgSrc!}
-                    alt={creator.display_name}
-                    className="w-full h-full object-cover"
-                    onError={handleImgError}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-3xl">
-                    {getInitials(creator.display_name, creator.handle)}
-                  </div>
-                )}
-              </div>
+          {/* Avatar overlapping banner */}
+          <div className="mt-[-48px] ml-8">
+            <div className={`w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg ${
+              creator.paradedeck_verified ? "ring-[3px] ring-purple-500 ring-offset-2" : ""
+            }`}>
+              {showImage ? (
+                <img
+                  src={imgSrc!}
+                  alt={creator.display_name}
+                  className="w-full h-full object-cover"
+                  onError={handleImgError}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl">
+                  {getInitials(creator.display_name, creator.handle)}
+                </div>
+              )}
+            </div>
+          </div>
 
-              {/* Name + badges */}
-              <div className="flex-1 text-center md:text-left pb-2">
-                <div className="flex items-center gap-2 justify-center md:justify-start mb-1">
-                  <h1 className="text-2xl md:text-3xl font-bold text-[#000741]">{creator.display_name}</h1>
+          {/* Name, handle, badges — in white content area */}
+          <div className="p-6 pt-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{creator.display_name}</h1>
+                <p className="text-base text-gray-400 mt-1">@{creator.handle}</p>
+                <div className="flex items-center gap-2 flex-wrap mt-3">
+                  {creator.branch && (
+                    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${branchStyle}`}>
+                      {creator.branch}
+                    </span>
+                  )}
                   {creator.paradedeck_verified && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <ShieldCheck className="h-6 w-6 text-purple-500 shrink-0" />
+                        <ShieldCheck className="h-5 w-5 text-purple-500 shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>RecurrentX Verified</TooltipContent>
                     </Tooltip>
@@ -208,18 +215,10 @@ export default function CreatorPublicProfile() {
                   {creator.influencersclub_verified && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <BadgeCheck className="h-6 w-6 text-blue-500 shrink-0" />
+                        <BadgeCheck className="h-5 w-5 text-blue-500 shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>Creator Verified</TooltipContent>
                     </Tooltip>
-                  )}
-                </div>
-                <p className="text-gray-500 text-sm mb-3">@{creator.handle}</p>
-                <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
-                  {creator.branch && (
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${branchStyle}`}>
-                      {creator.branch}
-                    </span>
                   )}
                   {creator.status && (
                     <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">

@@ -55,16 +55,8 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name A–Z" },
 ];
 
-/* Branch banner gradients */
-const BRANCH_BANNER: Record<string, string> = {
-  Army: "bg-gradient-to-r from-green-700 to-green-500",
-  Navy: "bg-gradient-to-r from-blue-800 to-blue-500",
-  "Air Force": "bg-gradient-to-r from-blue-600 to-sky-400",
-  Marines: "bg-gradient-to-r from-red-700 to-red-500",
-  "Coast Guard": "bg-gradient-to-r from-orange-600 to-orange-400",
-  "Space Force": "bg-gradient-to-r from-indigo-700 to-indigo-400",
-};
-const DEFAULT_BANNER = "bg-gradient-to-r from-[#6C5CE7] to-[#a855f7]";
+/* Unified soft purple banner for all cards */
+const DEFAULT_BANNER = "bg-gradient-to-r from-[#6C5CE7] to-[#8B7CF7]";
 
 /* Branch filter badge colors (selected state) */
 const BRANCH_SELECTED: Record<string, string> = {
@@ -135,7 +127,7 @@ function CreatorCard({
 
   const showImage = !!imgSrc && !imgFailed;
   const platforms = c.platforms ?? [];
-  const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
+  const bannerClass = DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
   return (
@@ -224,7 +216,7 @@ function CreatorCard({
           </div>
           {c.engagement_rate != null && c.engagement_rate > 0 && (
             <div className="text-center">
-              <p className="text-sm font-bold text-[#6C5CE7]">
+              <p className="text-sm font-bold text-teal-600">
                 {c.engagement_rate.toFixed(1)}%
               </p>
               <p className="text-[11px] text-gray-400">Engagement</p>
