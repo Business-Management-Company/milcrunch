@@ -153,7 +153,7 @@ const App = () => (
                 <Route path="/lists" element={<BrandLists />} />
                 <Route path="/brand/dashboard" element={<BrandDashboard />} />
                 <Route path="/brand/discover" element={<BrandDiscover />} />
-                <Route path="/brand/directory" element={<BrandDirectory />} />
+                <Route path="/brand/directories" element={<BrandDirectory />} />
                 <Route path="/brand/lists" element={<BrandLists />} />
                 <Route path="/brand/campaigns" element={<BrandCampaigns />} />
                 <Route path="/brand/events" element={<BrandEvents />} />

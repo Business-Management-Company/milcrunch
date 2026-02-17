@@ -49,7 +49,7 @@ const ROW1 = [
   {
     title: "Manage Directory",
     desc: "Review and manage approved creators",
-    href: "/brand/directory",
+    href: "/brand/directories",
     icon: Users,
   },
 ];

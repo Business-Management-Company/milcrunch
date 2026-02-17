@@ -1250,7 +1250,7 @@ const BrandEventDetail = () => {
                   <h3 className="font-semibold mb-1">Linked Directory</h3>
                   <p className="text-sm text-muted-foreground mb-2">This event has an auto-created creator directory.</p>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to="/brand/directory">
+                    <Link to="/brand/directories">
                       <Users className="h-4 w-4 mr-1" /> View Directory
                     </Link>
                   </Button>

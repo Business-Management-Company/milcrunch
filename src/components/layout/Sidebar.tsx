@@ -20,7 +20,8 @@ import {
   Plug,
   Briefcase,
   KanbanSquare,
-  Globe,
+  FolderOpen,
+  ClipboardList,
   ChevronDown,
   ChevronRight,
   type LucideIcon,
@@ -31,6 +32,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   badge?: string;
+  tooltip?: string;
 }
 
 interface NavSection {
@@ -60,11 +62,11 @@ const SIDEBAR_SECTIONS: NavSection[] = [
   },
   {
     key: "creators",
-    label: "CREATORS & CONTENT",
+    label: "CREATORS",
     items: [
-      { href: "/brand/discover", label: "Creator Discovery", icon: Search },
-      { href: "/brand/directory", label: "Creator Directory", icon: Users },
-      { href: "/creators", label: "Creator Network", icon: Globe },
+      { href: "/brand/discover", label: "Discovery", icon: Search },
+      { href: "/brand/directories", label: "Directories", icon: FolderOpen, tooltip: "Manage your verified creator database. Add, edit, and organize creators by branch, platform, and specialty." },
+      { href: "/brand/lists", label: "Lists", icon: ClipboardList, tooltip: "Build curated lists for campaigns and outreach. Group creators by event, sponsor, or project." },
     ],
   },
   {
@@ -204,7 +206,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                     const active = isActive(item.href);
                     const Icon = item.icon;
                     return (
-                      <li key={item.href + item.label}>
+                      <li key={item.href + item.label} className="relative group/nav">
                         <Link
                           to={item.href}
                           title={collapsed ? item.label : undefined}
@@ -232,6 +234,16 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                             </span>
                           )}
                         </Link>
+                        {/* Custom tooltip */}
+                        {!collapsed && item.tooltip && (
+                          <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 opacity-0 group-hover/nav:opacity-100 transition-opacity delay-200 z-50">
+                            <div className="relative bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg max-w-[200px]">
+                              {/* Arrow pointing left */}
+                              <div className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-gray-900" />
+                              {item.tooltip}
+                            </div>
+                          </div>
+                        )}
                       </li>
                     );
                   })}
