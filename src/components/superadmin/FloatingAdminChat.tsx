@@ -4,32 +4,14 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Send, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { getChatResponse } from "@/lib/chat-responses";
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
   cta?: { label: string; link: string };
-}
-
-function getResponse(input: string): { text: string; cta?: { label: string; link: string } } {
-  const lower = input.toLowerCase();
-  if (lower.match(/creator|influencer|find|discover/))
-    return { text: "I can help you find military creators! We have 2,400+ verified influencers across all branches.", cta: { label: "Open Creator Discovery →", link: "/brand/discover" } };
-  if (lower.match(/list|directory|build/))
-    return { text: "Let's build a targeted creator list for your campaign.", cta: { label: "Build a List →", link: "/brand/directories" } };
-  if (lower.match(/podcast|audio|listen/))
-    return { text: "Browse 825+ military and veteran podcasts in our network.", cta: { label: "Browse Podcasts →", link: "/brand/podcasts" } };
-  if (lower.match(/event|conference|mic/))
-    return { text: "Manage events, speakers, and track engagement year-round.", cta: { label: "View Events →", link: "/brand/events" } };
-  if (lower.match(/analytics|report|sponsor|insight|365|roi/))
-    return { text: "Track sponsor ROI and community growth with 365 Insights.", cta: { label: "Open 365 Insights →", link: "/brand/events" } };
-  if (lower.match(/speaker|keynote/))
-    return { text: "Find military keynote speakers by branch, topic, and audience size. Use our Discovery tool with the 'Keynote Speakers' filter.", cta: { label: "Find Speakers →", link: "/brand/discover" } };
-  if (lower.match(/verify|verification/))
-    return { text: "Run military service verification on any creator.", cta: { label: "Verify a Creator →", link: "/brand/discover" } };
-  if (lower.match(/swag|store|merch/))
-    return { text: "Manage your SWAG store and merchandise.", cta: { label: "Open SWAG Store →", link: "/brand/swag-store" } };
-  return { text: "I can help with finding creators, building lists, browsing podcasts, managing events, viewing analytics, and more. What would you like to do?" };
+  followUp?: string;
 }
 
 function getQuickPrompts(pathname: string): string[] {
@@ -71,8 +53,8 @@ export default function FloatingAdminChat() {
     setMessages((prev) => [...prev, userMsg]);
 
     setTimeout(() => {
-      const response = getResponse(input);
-      const assistantMsg: ChatMessage = { id: makeId(), role: "assistant", text: response.text, cta: response.cta };
+      const response = getChatResponse(input);
+      const assistantMsg: ChatMessage = { id: makeId(), role: "assistant", text: response.text, cta: response.cta, followUp: response.followUp };
       setMessages((prev) => [...prev, assistantMsg]);
     }, 500);
   };
@@ -186,6 +168,9 @@ export default function FloatingAdminChat() {
                     >
                       {m.cta.label}
                     </button>
+                  )}
+                  {m.followUp && (
+                    <p className="text-xs text-gray-400 mt-2">{m.followUp}</p>
                   )}
                 </div>
               ))}

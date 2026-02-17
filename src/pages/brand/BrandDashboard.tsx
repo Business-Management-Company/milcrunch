@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { fetchCredits } from "@/lib/influencers-club";
 import { useLists } from "@/contexts/ListContext";
 import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send } from "lucide-react";
+import { getChatResponse } from "@/lib/chat-responses";
 import {
   AreaChart,
   Area,
@@ -17,6 +18,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   text: string;
   cta?: { label: string; to: string };
+  followUp?: string;
 };
 
 const WELCOME_MESSAGE: ChatMessage = {
@@ -25,46 +27,12 @@ const WELCOME_MESSAGE: ChatMessage = {
 };
 
 function getAssistantResponse(input: string): ChatMessage {
-  const q = input.toLowerCase();
-  if (/creator|influencer|find/.test(q))
-    return {
-      role: "assistant",
-      text: "We have 2,400+ verified military influencers. Search by name, niche, or find lookalikes.",
-      cta: { label: "Open Creator Discovery →", to: "/brand/discover" },
-    };
-  if (/list|directory|build/.test(q))
-    return {
-      role: "assistant",
-      text: "Let's build a targeted creator list for your campaign.",
-      cta: { label: "Build a List →", to: "/brand/directories" },
-    };
-  if (/podcast|audio/.test(q))
-    return {
-      role: "assistant",
-      text: "Browse 825+ military podcasts, listen to episodes, and connect with hosts.",
-      cta: { label: "Browse Podcasts →", to: "/brand/podcasts" },
-    };
-  if (/event|conference|mic/.test(q))
-    return {
-      role: "assistant",
-      text: "Manage speakers, and track sponsor engagement.",
-      cta: { label: "View Events →", to: "/brand/events" },
-    };
-  if (/analytics|report|sponsor|insight|365/.test(q))
-    return {
-      role: "assistant",
-      text: "Track sponsor ROI and community growth year-round with 365 Insights.",
-      cta: { label: "Open 365 Insights →", to: "/brand/events" },
-    };
-  if (/speaker|keynote/.test(q))
-    return {
-      role: "assistant",
-      text: "Find military keynote speakers by branch and topic.",
-      cta: { label: "Find Speakers →", to: "/brand/discover" },
-    };
+  const r = getChatResponse(input);
   return {
     role: "assistant",
-    text: "I can help with creators, events, podcasts, analytics, and more. What would you like to do?",
+    text: r.text,
+    cta: r.cta ? { label: r.cta.label, to: r.cta.link } : undefined,
+    followUp: r.followUp,
   };
 }
 
@@ -225,6 +193,9 @@ const BrandDashboard = () => {
                     >
                       {msg.cta.label}
                     </Link>
+                  )}
+                  {msg.followUp && (
+                    <p className="text-xs text-gray-400 mt-2">{msg.followUp}</p>
                   )}
                 </div>
               </div>
