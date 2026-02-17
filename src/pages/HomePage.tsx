@@ -78,12 +78,6 @@ const EVENTS = [
   { name: "RecurrentX at VFW National", date: "Aug", location: "Louisville, KY", tag: "Experience", image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80" },
 ];
 
-const HERO_CARD_POSITIONS = [
-  { top: "8%", right: "0%", rotate: "rotate-2", delay: "0s" },
-  { top: "34%", right: "5%", rotate: "-rotate-1", delay: "0.5s" },
-  { top: "60%", right: "-2%", rotate: "rotate-1", delay: "1s" },
-];
-
 const BRAND_FEATURES = [
   { title: "AI Creator Discovery", desc: "Find verified military creators by branch, audience, niche, and engagement." },
   { title: "Sponsor Events", desc: "Attach your brand to RecurrentX events and get visibility across the community." },
@@ -435,13 +429,14 @@ export default function HomePage() {
                 2,400+ verified military creators
               </div>
 
-              <h1 className="text-5xl md:text-6xl font-bold text-white leading-[1.15] mb-6">
-                Welcome home,<br />
-                <span className="bg-gradient-to-r from-[#6C5CE7] to-[#a855f7] bg-clip-text text-transparent">creator.</span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.15] mb-6">
+                <span className="text-white">Where Community, Events,</span><br />
+                <span className="text-white">and </span>
+                <span className="bg-gradient-to-r from-[#6C5CE7] to-[#a855f7] bg-clip-text text-transparent">Media Intersect</span>
               </h1>
 
               <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0">
-                The military and veteran network for influencers, podcasters, and the brands that back them.
+                The military &amp; veteran network reaching millions across platforms
               </p>
 
               <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
@@ -458,62 +453,83 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* RIGHT — Floating creator cards (from directory_members) */}
-            <div className="hidden lg:block flex-1 relative h-[480px] w-full max-w-[400px]">
-              {showcaseCreators.slice(0, 3).map((c, i) => {
-                const pos = HERO_CARD_POSITIONS[i];
-                const avatarUrl = c.avatar_url || c.ic_avatar_url || null;
-                const badge = c.branch || c.category || "Military";
-                const handle = c.handle.startsWith("@") ? c.handle : `@${c.handle}`;
-                return (
-                  <div
-                    key={c.id}
-                    className="absolute w-72 bg-white rounded-xl shadow-xl p-4"
-                    style={{
-                      top: pos.top,
-                      right: pos.right,
-                      animation: `heroFloat${i} 3s ease-in-out ${pos.delay} infinite`,
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center shrink-0">
-                        {avatarUrl ? (
-                          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-white font-bold text-sm">{getInitials(c.display_name, c.handle)}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[#1A1A2E] truncate">{c.display_name}</p>
-                        <p className="text-xs text-gray-400 truncate">{handle}</p>
-                      </div>
+            {/* RIGHT — Cascading creator cards */}
+            <div className="hidden lg:flex flex-1 justify-center items-center">
+              <div className="relative" style={{ animation: "heroFloat 5s ease-in-out infinite" }}>
+                {/* Card 1 — Sofia M. (front) */}
+                <div className="relative z-30 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl w-[280px] p-5">
+                  <div className="flex items-center gap-3">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[15px] text-gray-900">Sofia M.</p>
+                      <p className="text-[13px] text-gray-400">@sofiacreates</p>
                     </div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700">{badge}</span>
-                      <span className="text-xs text-gray-500 ml-auto">{formatFollowerCount(c.follower_count)}</span>
-                      {c.engagement_rate != null && (
-                        <span className="text-xs font-medium text-[#6C5CE7]">{c.engagement_rate.toFixed(1)}%</span>
-                      )}
+                    <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Lifestyle</span>
+                  </div>
+                  <div className="border-t border-gray-100 my-3" />
+                  <div className="flex gap-8">
+                    <div>
+                      <p className="text-[18px] font-bold text-gray-900">2.4M</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Followers</p>
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-bold text-[#2E7D32]">4.8%</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Engagement</p>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+                {/* Card 2 — Marcus J. (middle) */}
+                <div className="relative z-20 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl w-[280px] p-5 mt-[-30px] ml-[15px]">
+                  <div className="flex items-center gap-3">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[15px] text-gray-900">Marcus J.</p>
+                      <p className="text-[13px] text-gray-400">@marcusfitpro</p>
+                    </div>
+                    <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Fitness</span>
+                  </div>
+                  <div className="border-t border-gray-100 my-3" />
+                  <div className="flex gap-8">
+                    <div>
+                      <p className="text-[18px] font-bold text-gray-900">890K</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Followers</p>
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-bold text-[#2E7D32]">6.2%</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Engagement</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Card 3 — Lena Park (back) */}
+                <div className="relative z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg w-[280px] p-5 mt-[-30px] ml-[30px]">
+                  <div className="flex items-center gap-3">
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face" alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[15px] text-gray-900">Lena Park</p>
+                      <p className="text-[13px] text-gray-400">@lenaeats</p>
+                    </div>
+                    <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-[#E8F5E9] text-[#2E7D32]">Food</span>
+                  </div>
+                  <div className="border-t border-gray-100 my-3" />
+                  <div className="flex gap-8">
+                    <div>
+                      <p className="text-[18px] font-bold text-gray-900">1.1M</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Followers</p>
+                    </div>
+                    <div>
+                      <p className="text-[18px] font-bold text-[#2E7D32]">5.1%</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wide">Engagement</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Float animation keyframes — each card gets its own rotation baked in */}
           <style>{`
-            @keyframes heroFloat0 {
-              0%, 100% { transform: rotate(2deg) translateY(0); }
-              50% { transform: rotate(2deg) translateY(-10px); }
-            }
-            @keyframes heroFloat1 {
-              0%, 100% { transform: rotate(-1deg) translateY(0); }
-              50% { transform: rotate(-1deg) translateY(-10px); }
-            }
-            @keyframes heroFloat2 {
-              0%, 100% { transform: rotate(1deg) translateY(0); }
-              50% { transform: rotate(1deg) translateY(-10px); }
+            @keyframes heroFloat {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-10px); }
             }
           `}</style>
         </section>

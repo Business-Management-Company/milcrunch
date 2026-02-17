@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Calendar, MapPin, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const NAV_LINKS = [
   { label: "Creator Directory", to: "/creators" },
@@ -10,13 +11,126 @@ const NAV_LINKS = [
   { label: "Events", to: "/events" },
 ];
 
+type UpcomingEvent = {
+  id: string;
+  title: string;
+  start_date: string | null;
+  city: string | null;
+  state: string | null;
+  event_type: "live" | "virtual" | "hybrid";
+};
+
+const EVENT_TYPE_BADGE: Record<string, { label: string; className: string }> = {
+  live: { label: "Live", className: "bg-purple-100 text-purple-700" },
+  virtual: { label: "Virtual", className: "bg-blue-100 text-blue-700" },
+  hybrid: { label: "Hybrid", className: "bg-amber-100 text-amber-700" },
+};
+
+function formatEventDate(dateStr: string | null) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function EventsDropdown({ events }: { events: UpcomingEvent[] }) {
+  return (
+    <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2">
+      {/* Arrow */}
+      <div className="relative">
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-l border-t border-gray-100 z-10" />
+        <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-4 w-80 relative z-20">
+          {events.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-2">No upcoming events</p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {events.map((event) => {
+                const badge = EVENT_TYPE_BADGE[event.event_type] || EVENT_TYPE_BADGE.live;
+                const location = [event.city, event.state].filter(Boolean).join(", ");
+                return (
+                  <Link
+                    key={event.id}
+                    to={`/events/${event.id}`}
+                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900 text-sm truncate">
+                          {event.title}
+                        </span>
+                        <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                        {event.start_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatEventDate(event.start_date)}
+                          </span>
+                        )}
+                        {location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+          <div className="border-t border-gray-100 mt-2 pt-2">
+            <Link
+              to="/events"
+              className="flex items-center justify-between text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors px-2 py-1 rounded-lg hover:bg-purple-50"
+            >
+              View All Events
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PublicNav() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [eventsOpen, setEventsOpen] = useState(false);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const eventsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("events")
+      .select("id, title, start_date, city, state, event_type")
+      .eq("is_published", true)
+      .gte("start_date", new Date().toISOString())
+      .order("start_date", { ascending: true })
+      .limit(5)
+      .then(({ data }) => {
+        if (data) setUpcomingEvents(data as UpcomingEvent[]);
+      });
+  }, []);
 
   const isActive = (to: string) => {
     if (to === "/") return location.pathname === "/";
     return location.pathname.startsWith(to);
+  };
+
+  const handleEventsEnter = () => {
+    if (eventsTimeoutRef.current) clearTimeout(eventsTimeoutRef.current);
+    setEventsOpen(true);
+  };
+
+  const handleEventsLeave = () => {
+    eventsTimeoutRef.current = setTimeout(() => setEventsOpen(false), 150);
   };
 
   return (
@@ -30,19 +144,40 @@ export default function PublicNav() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className={`text-sm font-medium transition-colors ${
-                isActive(link.to)
-                  ? "text-white font-bold"
-                  : "text-[#E0E0E0] hover:text-white"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {NAV_LINKS.map((link) =>
+            link.label === "Events" ? (
+              <div
+                key={link.to}
+                className="relative"
+                onMouseEnter={handleEventsEnter}
+                onMouseLeave={handleEventsLeave}
+              >
+                <Link
+                  to={link.to}
+                  className={`text-sm font-medium transition-colors ${
+                    isActive(link.to)
+                      ? "text-white font-bold"
+                      : "text-[#E0E0E0] hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+                {eventsOpen && <EventsDropdown events={upcomingEvents} />}
+              </div>
+            ) : (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`text-sm font-medium transition-colors ${
+                  isActive(link.to)
+                    ? "text-white font-bold"
+                    : "text-[#E0E0E0] hover:text-white"
+                }`}
+              >
+                {link.label}
+              </Link>
+            )
+          )}
         </nav>
 
         <div className="hidden md:flex items-center gap-3 shrink-0">

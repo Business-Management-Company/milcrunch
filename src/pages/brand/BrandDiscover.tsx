@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { searchCreators, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
+import { searchCreators, searchByUsername, searchLookalike, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
 import { upsertCreator } from "@/lib/creators-db";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import CreateListModal from "@/components/CreateListModal";
@@ -350,6 +350,8 @@ function formatFollowers(count: number): string {
 const BrandDiscover = () => {
   const [urlSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"keyword" | "username" | "lookalike">("keyword");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [platform, setPlatform] = useState<string>("instagram");
   const [followersRange, setFollowersRange] = useState<string>("any");
   const [engagementMin, setEngagementMin] = useState<string>("any");
@@ -672,7 +674,46 @@ const BrandDiscover = () => {
       .finally(() => setLoadingMore(false));
   }, [searchQuery, apiResults, currentPage, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter]);
 
+  // Username / Lookalike search handler
+  const runModeSearch = useCallback(() => {
+    const q = searchQuery.trim().replace(/^@/, "");
+    if (!q) {
+      setApiResults(null);
+      return;
+    }
+    setApiLoading(true);
+    setCurrentPage(1);
+    enrichAbortRef.current?.abort();
+    enrichedSetRef.current = new Set();
+    setEnrichCache({});
+    setEnrichRawCache({});
+    setEnrichingIds(new Set());
+    setSmartFiltersApplied([]);
+
+    const searchFn = searchMode === "username" ? searchByUsername : searchLookalike;
+    searchFn(q, platform.toLowerCase())
+      .then((result) => {
+        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(result);
+        if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15, { query: q, mode: searchMode, results: result.total });
+        refreshCredits();
+      })
+      .catch((err) => {
+        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(null);
+        console.warn(`[BrandDiscover] ${searchMode} search failed:`, err);
+        toast.error(`Search failed: ${(err as Error).message}`);
+      })
+      .finally(() => {
+        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
+      });
+  }, [searchQuery, searchMode, platform, user, refreshCredits]);
+
   const handleSmartSearch = useCallback(() => {
+    // Route to username/lookalike handler when not in keyword mode
+    if (searchMode !== "keyword") {
+      runModeSearch();
+      return;
+    }
+
     const parsed = parseSmartQuery(searchQuery);
     if (parsed.appliedLabels.length === 0) {
       setSmartFiltersApplied([]);
@@ -734,7 +775,7 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current === effectiveQuery) setApiLoading(false);
       });
-  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, gender, language, niche, persistLastSearch, runSearch]);
+  }, [searchQuery, searchMode, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, gender, language, niche, persistLastSearch, runSearch, runModeSearch]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -745,6 +786,7 @@ const BrandDiscover = () => {
 
   const clearFilters = () => {
     setSearchQuery("");
+    setSearchMode("keyword");
     setPlatform("instagram");
     setFollowersRange("any");
     setEngagementMin("any");
@@ -1286,17 +1328,70 @@ const BrandDiscover = () => {
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="relative max-w-2xl mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Try 'marines with 500K+ followers on tiktok' or search by name..."
-              className="pl-12 h-12 rounded-xl border border-border dark:border-gray-700 bg-background dark:bg-[#1A1D27] shadow-sm focus-visible:ring-2 transition-shadow hover:shadow-md"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-            />
+          {/* Search bar row: Platform + Mode + Input + Search */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <Select value={platform} onValueChange={setPlatform}>
+              <SelectTrigger className="w-[140px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue placeholder="Platform" />
+              </SelectTrigger>
+              <SelectContent>
+                {PLATFORMS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={searchMode} onValueChange={(v) => setSearchMode(v as "keyword" | "username" | "lookalike")}>
+              <SelectTrigger className="w-[150px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="keyword">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-3.5 w-3.5" />
+                    Keyword
+                  </div>
+                </SelectItem>
+                <SelectItem value="username">
+                  <div className="flex items-center gap-2">
+                    <UserSearch className="h-3.5 w-3.5" />
+                    Username
+                  </div>
+                </SelectItem>
+                <SelectItem value="lookalike">
+                  <div className="flex items-center gap-2">
+                    <UserSearch className="h-3.5 w-3.5" />
+                    Lookalike
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative flex-1 min-w-[200px] max-w-xl">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder={
+                  searchMode === "username"
+                    ? "Enter exact username (e.g. tonitrucks)"
+                    : searchMode === "lookalike"
+                    ? "Find creators similar to (e.g. tonitrucks)"
+                    : "Search military creators, fitness, lifestyle..."
+                }
+                className="pl-12 h-12 rounded-xl border border-border dark:border-gray-700 bg-background dark:bg-[#1A1D27] shadow-sm focus-visible:ring-2 transition-shadow hover:shadow-md"
+                value={searchQuery}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSearchQuery(v);
+                  if (v.startsWith("@") && searchMode === "keyword") {
+                    setSearchMode("username");
+                  }
+                }}
+                onKeyDown={handleSearchKeyDown}
+              />
+            </div>
+            <Button onClick={handleSmartSearch} className="h-12 rounded-lg shrink-0 bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6">
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
           </div>
 
           {/* Smart search applied filters */}
@@ -1314,20 +1409,16 @@ const BrandDiscover = () => {
             </div>
           )}
 
-          {/* Filter bar */}
-          <div className="flex flex-wrap items-end gap-3 mb-4">
-            <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Platform" />
-              </SelectTrigger>
-              <SelectContent>
-                {PLATFORMS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Filter bar — primary filters always visible */}
+          <div className="flex flex-wrap items-end gap-3 mb-2">
+            <Input
+              placeholder="Location"
+              className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+            />
             <Select value={followersRange} onValueChange={setFollowersRange}>
-              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue placeholder="Followers" />
               </SelectTrigger>
               <SelectContent>
@@ -1337,7 +1428,7 @@ const BrandDiscover = () => {
               </SelectContent>
             </Select>
             <Select value={engagementMin} onValueChange={setEngagementMin}>
-              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue placeholder="Engagement" />
               </SelectTrigger>
               <SelectContent>
@@ -1346,24 +1437,8 @@ const BrandDiscover = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              placeholder="Location"
-              className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-            />
-            <Select value={niche} onValueChange={setNiche}>
-              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Niche" />
-              </SelectTrigger>
-              <SelectContent>
-                {NICHE_OPTIONS.map((n) => (
-                  <SelectItem key={n} value={n}>{n}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={gender} onValueChange={setGender}>
-              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+              <SelectTrigger className="w-[130px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue placeholder="Gender" />
               </SelectTrigger>
               <SelectContent>
@@ -1372,24 +1447,14 @@ const BrandDiscover = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Keywords in bio (comma separated)"
-              className="w-[300px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
-              value={keywordsInBio}
-              onChange={(e) => setKeywordsInBio(e.target.value)}
-            />
-            <Button onClick={handleSmartSearch} className="rounded-lg shrink-0 bg-pd-blue hover:bg-pd-darkblue text-white">
-              Search Creators
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setShowMoreFilters((v) => !v)}
+            >
+              <ChevronDown className={cn("h-3.5 w-3.5 mr-1 transition-transform", showMoreFilters && "rotate-180")} />
+              {showMoreFilters ? "Less Filters" : "More Filters"}
             </Button>
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={clearFilters}>
               Clear Filters
@@ -1429,6 +1494,38 @@ const BrandDiscover = () => {
               </DropdownMenu>
             )}
           </div>
+
+          {/* Collapsible extra filters */}
+          {showMoreFilters && (
+            <div className="flex flex-wrap items-end gap-3 mb-4 pl-0 animate-in slide-in-from-top-2 duration-200">
+              <Select value={niche} onValueChange={setNiche}>
+                <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                  <SelectValue placeholder="Niche" />
+                </SelectTrigger>
+                <SelectContent>
+                  {NICHE_OPTIONS.map((n) => (
+                    <SelectItem key={n} value={n}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger className="w-[150px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Keywords in bio (comma separated)"
+                className="w-[280px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
+                value={keywordsInBio}
+                onChange={(e) => setKeywordsInBio(e.target.value)}
+              />
+            </div>
+          )}
 
           {/* Military Branch */}
           <div className="mb-6">

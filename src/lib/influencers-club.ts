@@ -495,6 +495,103 @@ export async function fetchCredits(): Promise<CreditBalance | null> {
   }
 }
 
+/**
+ * Search by exact username via Influencers.club API.
+ * Calls /api/search-username serverless proxy.
+ */
+export async function searchByUsername(
+  username: string,
+  platform: string = "instagram"
+): Promise<SearchCreatorsResult> {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
+  const handle = username.replace(/^@/, "").trim();
+  if (!handle) throw new Error("Username is required");
+
+  const res = await fetch(
+    `/api/search-username?username=${encodeURIComponent(handle)}&platform=${encodeURIComponent(platform)}&search_type=username`,
+    {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    }
+  );
+
+  const rawResponse = await res.json();
+  console.log("[UsernameSearch] Response:", rawResponse);
+
+  if (!res.ok) {
+    throw new Error(`Username search ${res.status}: ${res.statusText}`, { cause: rawResponse });
+  }
+
+  // The API may return accounts[] (same as discovery) or a single profile result
+  const accounts = (rawResponse as Record<string, unknown>).accounts as ApiAccount[] | undefined;
+  const result = (rawResponse as Record<string, unknown>).result as Record<string, unknown> | undefined;
+
+  let creators: CreatorCard[] = [];
+  let total = 0;
+
+  if (Array.isArray(accounts) && accounts.length > 0) {
+    creators = accounts.map((acc, i) => mapAccountToCard(acc, i));
+    total = Number((rawResponse as Record<string, unknown>).total ?? creators.length);
+  } else if (result && typeof result === "object") {
+    // Single profile result — wrap in CreatorCard
+    const p = (result.instagram ?? result.profile ?? result) as ApiProfile;
+    const card = mapAccountToCard({ user_id: p.username ?? handle, profile: p }, 0);
+    creators = [card];
+    total = 1;
+  } else if (rawResponse && typeof rawResponse === "object" && (rawResponse as Record<string, unknown>).username) {
+    // Direct profile object
+    const card = mapAccountToCard({ user_id: handle, profile: rawResponse as ApiProfile }, 0);
+    creators = [card];
+    total = 1;
+  }
+
+  return { creators, total, rawResponse };
+}
+
+/**
+ * Find lookalike creators via Influencers.club API.
+ * Calls /api/search-lookalike serverless proxy.
+ */
+export async function searchLookalike(
+  username: string,
+  platform: string = "instagram"
+): Promise<SearchCreatorsResult> {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
+  const handle = username.replace(/^@/, "").trim();
+  if (!handle) throw new Error("Username is required");
+
+  const res = await fetch(
+    `/api/search-username?username=${encodeURIComponent(handle)}&platform=${encodeURIComponent(platform)}&search_type=lookalike`,
+    {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    }
+  );
+
+  const rawResponse = await res.json();
+  console.log("[LookalikeSearch] Response:", rawResponse);
+
+  if (!res.ok) {
+    throw new Error(`Lookalike search ${res.status}: ${res.statusText}`, { cause: rawResponse });
+  }
+
+  // Response may have accounts[], lookalikes[], or similar_creators[]
+  const accounts =
+    (rawResponse as Record<string, unknown>).accounts ??
+    (rawResponse as Record<string, unknown>).lookalikes ??
+    (rawResponse as Record<string, unknown>).similar_creators;
+
+  let creators: CreatorCard[] = [];
+  let total = 0;
+
+  if (Array.isArray(accounts) && accounts.length > 0) {
+    creators = (accounts as ApiAccount[]).map((acc, i) => mapAccountToCard(acc, i));
+    total = Number((rawResponse as Record<string, unknown>).total ?? creators.length);
+  }
+
+  return { creators, total, rawResponse };
+}
+
 /** Log credit usage to Supabase (fire-and-forget, non-blocking) */
 export function logCreditUsage(
   userId: string,

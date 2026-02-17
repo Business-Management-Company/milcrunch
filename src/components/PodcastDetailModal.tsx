@@ -14,6 +14,7 @@ import {
   Pause,
   Loader2,
   Volume2,
+  AlertCircle,
 } from "lucide-react";
 import { parsePodcastFeed, type ParsedEpisode } from "@/lib/podcast-feed";
 import type { Database } from "@/integrations/supabase/types";
@@ -33,6 +34,7 @@ export default function PodcastDetailModal({
 }: PodcastDetailModalProps) {
   const [episodes, setEpisodes] = useState<ParsedEpisode[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -40,16 +42,41 @@ export default function PodcastDetailModal({
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!open || !podcast?.feed_url) {
+    if (!open || !podcast) {
       setEpisodes([]);
       setPlayingIndex(null);
+      setFetchError(null);
       return;
     }
-    setLoadingEpisodes(true);
-    parsePodcastFeed(podcast.feed_url).then((feed) => {
-      setEpisodes(feed?.episodes.slice(0, 20) ?? []);
-      setLoadingEpisodes(false);
+
+    console.log("[PodcastModal] Podcast object:", {
+      id: podcast.id,
+      title: podcast.title,
+      feed_url: podcast.feed_url,
     });
+
+    if (!podcast.feed_url) {
+      setFetchError("No RSS feed URL configured for this podcast.");
+      setEpisodes([]);
+      return;
+    }
+
+    setLoadingEpisodes(true);
+    setFetchError(null);
+    parsePodcastFeed(podcast.feed_url)
+      .then((feed) => {
+        setEpisodes(feed?.episodes.slice(0, 20) ?? []);
+        if (feed && feed.episodes.length === 0) {
+          setFetchError("Feed loaded but contains no episodes.");
+        }
+        setLoadingEpisodes(false);
+      })
+      .catch((err) => {
+        console.error("[PodcastModal] Feed fetch failed:", err);
+        setFetchError(err?.message || "Failed to load episodes.");
+        setEpisodes([]);
+        setLoadingEpisodes(false);
+      });
   }, [open, podcast?.feed_url]);
 
   useEffect(() => {
@@ -187,6 +214,11 @@ export default function PodcastDetailModal({
             <div className="flex items-center justify-center py-8 text-gray-400">
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
               Loading episodes...
+            </div>
+          ) : fetchError ? (
+            <div className="flex items-start gap-2 py-4 px-3 rounded-lg bg-red-50 border border-red-100">
+              <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
+              <p className="text-sm text-red-600">{fetchError}</p>
             </div>
           ) : episodes.length === 0 ? (
             <p className="text-sm text-gray-500 py-4">No episodes available.</p>

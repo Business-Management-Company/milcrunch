@@ -28,19 +28,39 @@ export interface ParsedPodcastFeed {
 export async function parsePodcastFeed(
   feedUrl: string
 ): Promise<ParsedPodcastFeed | null> {
+  console.log("[parsePodcastFeed] Fetching feed:", feedUrl);
   try {
     const proxyUrl = `/api/parse-rss?url=${encodeURIComponent(feedUrl)}`;
+    console.log("[parsePodcastFeed] Proxy URL:", proxyUrl);
     const res = await fetch(proxyUrl);
     if (!res.ok) {
-      console.error("[parsePodcastFeed] API error:", res.status);
-      return null;
+      const errorText = await res.text().catch(() => "");
+      console.error("[parsePodcastFeed] API error:", res.status, errorText);
+      throw new Error(`RSS API returned ${res.status}`);
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("[parsePodcastFeed] Response is not JSON:", text.slice(0, 200));
+      throw new Error("RSS API returned non-JSON response");
+    }
+
+    console.log("[parsePodcastFeed] Got response:", {
+      episodeCount: data.episodes?.length ?? 0,
+      title: data.title,
+      error: data.error,
+    });
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
 
     if (!data.episodes || !Array.isArray(data.episodes)) {
-      console.error("[parsePodcastFeed] No episodes array in response");
-      return null;
+      console.error("[parsePodcastFeed] No episodes array in response:", data);
+      throw new Error("No episodes found in feed");
     }
 
     const episodes: ParsedEpisode[] = data.episodes.map((ep: any) => ({
@@ -65,6 +85,6 @@ export async function parsePodcastFeed(
     };
   } catch (err) {
     console.error("[parsePodcastFeed] Failed for", feedUrl, err);
-    return null;
+    throw err;
   }
 }

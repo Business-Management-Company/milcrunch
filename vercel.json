@@ -3,6 +3,8 @@
     {"source": "/api/influencers/:path(.*)", "destination": "/api/influencers"},
     {"source": "/api/enrich/:path(.*)", "destination": "/api/enrich"},
     {"source": "/api/credits", "destination": "/api/credits"},
+    {"source": "/api/search-username", "destination": "/api/search-username"},
+    {"source": "/api/search-lookalike", "destination": "/api/search-lookalike"},
     {"source": "/api/serp/:path(.*)", "destination": "/api/serp"},
     {"source": "/api/firecrawl/:path(.*)", "destination": "/api/firecrawl"},
     {"source": "/api/pdl/:path(.*)", "destination": "/api/pdl"},
