@@ -3,63 +3,55 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
-  BarChart3,
+  LayoutDashboard,
+  Search,
   Calendar,
   Mic,
   Trophy,
   Handshake,
-  Search,
-  Users,
-  ListChecks,
-  ShieldCheck,
-  BarChart,
-  TrendingUp,
+  Headphones,
+  Monitor,
+  FileText,
+  BarChart3,
   Radio,
   ShoppingBag,
-  PenSquare,
-  Clock,
-  Headphones,
-  Video,
   Building2,
-  UserCog,
+  Users,
   Plug,
   Briefcase,
   KanbanSquare,
   Rocket,
   MessageSquare,
-  FileText,
   ChevronDown,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 
 interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
   badge?: string;
-  tooltip?: string;
 }
 
 interface NavSection {
+  key: string;
   label: string;
   items: NavItem[];
+  defaultCollapsed?: boolean;
 }
-
-// Dashboard is a standalone top-level link, not a collapsible section
-const DASHBOARD_ITEM: NavItem = {
-  href: "/dashboard",
-  label: "Dashboard",
-  icon: BarChart3,
-};
 
 const SIDEBAR_SECTIONS: NavSection[] = [
   {
+    key: "main",
+    label: "MAIN",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/brand/discover", label: "Creator Discovery", icon: Search },
+    ],
+  },
+  {
+    key: "events",
     label: "EVENTS",
     items: [
       { href: "/brand/events", label: "Events", icon: Calendar },
@@ -69,53 +61,41 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "CREATORS & CONTENT",
+    key: "content",
+    label: "CONTENT",
     items: [
-      { href: "/brand/discover", label: "Discovery", icon: Search },
-      { href: "/brand/directory", label: "Directories", icon: Users },
-      { href: "/lists", label: "Influencer Lists", icon: ListChecks },
-      { href: "/verification", label: "Verification", icon: ShieldCheck },
-      { href: "/brand/attribution", label: "Creator Attribution", icon: BarChart },
+      { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
+      { href: "/admin/media/pdtv", label: "Streaming", icon: Monitor, badge: "Soon" },
+      { href: "/brand/pages", label: "Pages", icon: FileText },
     ],
   },
   {
-    label: "MARKETING & ANALYTICS",
+    key: "analytics",
+    label: "ANALYTICS",
     items: [
-      { href: "/analytics", label: "Analytics", icon: TrendingUp },
+      { href: "/analytics", label: "Analytics", icon: BarChart3 },
       { href: "/social-monitoring", label: "Social Monitoring", icon: Radio },
       { href: "/swag", label: "SWAG Store", icon: ShoppingBag },
     ],
   },
   {
-    label: "SOCIAL MEDIA",
-    items: [
-      { href: "/creator/post/new", label: "Create Post", icon: PenSquare },
-      { href: "/creator/posts", label: "Scheduled Posts", icon: Clock },
-    ],
-  },
-  {
-    label: "MEDIA",
-    items: [
-      { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
-      { href: "/admin/media/pdtv", label: "Streaming", icon: Video, badge: "Coming Soon" },
-    ],
-  },
-  {
+    key: "settings",
     label: "SETTINGS",
+    defaultCollapsed: true,
     items: [
       { href: "/brand/settings", label: "Company Profile", icon: Building2 },
-      { href: "/settings", label: "Team Members", icon: UserCog },
+      { href: "/settings", label: "Team Members", icon: Users },
       { href: "/settings", label: "Connectors", icon: Plug },
     ],
   },
 ];
 
 const SUPER_ADMIN_SECTION: NavSection = {
+  key: "superadmin",
   label: "SUPER ADMIN",
   items: [
     { href: "/admin/business-overview", label: "Business Overview", icon: Briefcase },
     { href: "/admin/tasks", label: "Task Board", icon: KanbanSquare },
-    { href: "/brand/pages", label: "Pages", icon: FileText },
     { href: "/admin/deployments", label: "Deployments", icon: Rocket },
     { href: "/admin/chat", label: "AI Chat", icon: MessageSquare },
   ],
@@ -123,12 +103,12 @@ const SUPER_ADMIN_SECTION: NavSection = {
 
 const STORAGE_KEY = "pd_sidebar_collapsed";
 
-function loadCollapsedSections(): Record<string, boolean> {
+function loadCollapsedSections(defaults: Record<string, boolean>): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
   } catch { /* corrupt */ }
-  return {};
+  return defaults;
 }
 
 function saveCollapsedSections(state: Record<string, boolean>) {
@@ -146,11 +126,18 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
   const { isSuperAdmin } = useAuth();
 
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(loadCollapsedSections);
+  const defaults: Record<string, boolean> = {};
+  for (const s of SIDEBAR_SECTIONS) {
+    if (s.defaultCollapsed) defaults[s.key] = true;
+  }
 
-  const toggleSection = useCallback((label: string) => {
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(
+    () => loadCollapsedSections(defaults)
+  );
+
+  const toggleSection = useCallback((key: string) => {
     setCollapsedSections((prev) => {
-      const next = { ...prev, [label]: !prev[label] };
+      const next = { ...prev, [key]: !prev[key] };
       saveCollapsedSections(next);
       return next;
     });
@@ -160,109 +147,85 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
     ? [...SIDEBAR_SECTIONS, SUPER_ADMIN_SECTION]
     : SIDEBAR_SECTIONS;
 
-  const navItemClass = (isActive: boolean) =>
-    cn(
-      "flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-      "text-gray-700 dark:text-gray-300",
-      "hover:bg-gray-50 dark:hover:bg-gray-800",
-      isActive && "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400",
-      collapsed && "justify-center px-2"
-    );
-
-  const dashboardActive = location.pathname === DASHBOARD_ITEM.href;
-  const DashIcon = DASHBOARD_ITEM.icon;
+  const isActive = (href: string) => location.pathname === href;
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-14 bottom-0 z-30 flex flex-col border-r border-gray-200 dark:border-gray-800 transition-[width] duration-200",
-        "bg-white dark:bg-[#0F1117]",
+        "fixed left-0 top-14 bottom-0 z-30 flex flex-col border-r border-gray-200 bg-white transition-[width] duration-200",
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <nav className="flex-1 overflow-y-auto py-4 px-3">
-        {/* Dashboard — standalone top-level link */}
-        <div className={cn(collapsed && "flex flex-col items-center")}>
-          <Link
-            to={DASHBOARD_ITEM.href}
-            className={navItemClass(dashboardActive)}
-            title={collapsed ? DASHBOARD_ITEM.label : undefined}
-          >
-            <DashIcon
-              className={cn(
-                "h-5 w-5 shrink-0",
-                dashboardActive ? "text-purple-600" : "text-gray-500 dark:text-gray-400"
-              )}
-              strokeWidth={1.75}
-            />
-            {!collapsed && <span className="truncate">{DASHBOARD_ITEM.label}</span>}
+      {/* Logo */}
+      {!collapsed && (
+        <div className="px-5 py-5 border-b border-gray-100">
+          <Link to="/" className="flex items-center">
+            <span className="font-bold text-lg tracking-tight text-[#1A1A2E]">
+              recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+            </span>
           </Link>
         </div>
+      )}
 
-        {/* Collapsible sections */}
-        {sections.map((section) => {
-          const isSectionCollapsed = !!collapsedSections[section.label];
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-4">
+        {sections.map((section, idx) => {
+          const isSectionCollapsed = !!collapsedSections[section.key];
           const Chevron = isSectionCollapsed ? ChevronRight : ChevronDown;
 
           return (
-            <div
-              key={section.label}
-              className={cn("mb-6 pt-4 border-t border-gray-100 dark:border-gray-800/60", collapsed && "flex flex-col items-center")}
-            >
+            <div key={section.key} className={cn(idx > 0 && "mt-5")}>
+              {/* Section header */}
               {!collapsed ? (
                 <button
                   type="button"
-                  onClick={() => toggleSection(section.label)}
-                  className="flex items-center justify-between w-full px-3 mb-1.5 group"
+                  onClick={() => toggleSection(section.key)}
+                  className="flex items-center justify-between w-full px-5 mb-2 group"
                 >
-                  <span className="text-[11px] font-medium tracking-widest uppercase text-gray-400 dark:text-gray-500">
+                  <span className="text-xs font-semibold tracking-wider uppercase text-gray-400">
                     {section.label}
                   </span>
-                  <Chevron className="h-4 w-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
+                  <Chevron className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-500 transition-colors" />
                 </button>
               ) : (
-                <div className="mt-1" />
+                <div className="h-px bg-gray-100 mx-3 mb-2" />
               )}
+
+              {/* Section items */}
               {(!isSectionCollapsed || collapsed) && (
                 <ul className="space-y-0.5">
                   {section.items.map((item) => {
-                    const isActive = location.pathname === item.href;
+                    const active = isActive(item.href);
                     const Icon = item.icon;
-                    const linkEl = (
-                      <Link
-                        to={item.href}
-                        className={navItemClass(isActive)}
-                        title={collapsed ? item.label : undefined}
-                      >
-                        <Icon
-                          className={cn(
-                            "h-5 w-5 shrink-0",
-                            isActive
-                              ? "text-purple-600"
-                              : "text-gray-500 dark:text-gray-400"
-                          )}
-                          strokeWidth={1.75}
-                        />
-                        {!collapsed && (
-                          <span className="truncate">{item.label}</span>
-                        )}
-                        {!collapsed && item.badge && (
-                          <span className="ml-auto text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5 whitespace-nowrap">
-                            {item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    );
                     return (
                       <li key={item.href + item.label}>
-                        {item.tooltip && !collapsed ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-[260px] text-xs">
-                              {item.tooltip}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : linkEl}
+                        <Link
+                          to={item.href}
+                          title={collapsed ? item.label : undefined}
+                          className={cn(
+                            "flex items-center gap-3 mx-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                            active
+                              ? "bg-purple-50 text-[#6C5CE7] border-l-[3px] border-[#6C5CE7] pl-[9px]"
+                              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                            collapsed && "justify-center px-2 mx-1"
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              "h-[18px] w-[18px] shrink-0",
+                              active ? "text-[#6C5CE7]" : "text-gray-400"
+                            )}
+                            strokeWidth={1.75}
+                          />
+                          {!collapsed && (
+                            <span className="truncate">{item.label}</span>
+                          )}
+                          {!collapsed && item.badge && (
+                            <span className="ml-auto text-[10px] font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap">
+                              {item.badge}
+                            </span>
+                          )}
+                        </Link>
                       </li>
                     );
                   })}
@@ -273,16 +236,14 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         })}
       </nav>
 
-      <div className={cn("p-3 border-t border-gray-200 dark:border-gray-800 space-y-2", collapsed && "flex flex-col items-center")}>
-        {!collapsed && (
-          <>
-            <div className="flex items-center justify-center px-2">
-              <span className="text-sm font-bold text-gray-500 tracking-tight">recurrent<span className="text-[#6C5CE7] font-extrabold">X</span></span>
-            </div>
-            <p className="text-[10px] text-muted-foreground/80 text-center">Demo v1.0</p>
-          </>
-        )}
-      </div>
+      {/* Footer */}
+      {!collapsed && (
+        <div className="px-5 py-4 border-t border-gray-100">
+          <p className="text-[10px] text-gray-400 text-center">
+            recurrent<span className="text-[#6C5CE7] font-bold">X</span> &middot; v1.0
+          </p>
+        </div>
+      )}
     </aside>
   );
 }
