@@ -54,10 +54,10 @@ import {
   Pencil,
   Eye,
   Plus,
-  Check,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TYPE_OPTIONS } from "@/types/verification";
+import { SPEAKER_TYPES } from "@/components/brand/AddSpeakerModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -158,7 +158,9 @@ export default function Speakers() {
   const [inviteSpeaker, setInviteSpeaker] = useState<Speaker | null>(null);
   const [allEvents, setAllEvents] = useState<EventInfo[]>([]);
   const [existingEventIds, setExistingEventIds] = useState<string[]>([]);
-  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedRole, setSelectedRole] = useState("presenter");
+  const [selectedTopic, setSelectedTopic] = useState("");
   const [inviteSaving, setInviteSaving] = useState(false);
 
   const fetchSpeakers = async () => {
@@ -209,14 +211,14 @@ export default function Speakers() {
       setExpandedVerification(data as VerificationInfo | null);
     }
 
-    // Fetch events this speaker is assigned to
-    const { data: invitations } = await supabase
-      .from("event_invitations")
+    // Fetch events this speaker is assigned to via event_speakers
+    const { data: speakerLinks } = await supabase
+      .from("event_speakers")
       .select("event_id")
-      .eq("person_name", speaker.name);
+      .eq("creator_name", speaker.name);
 
-    if (invitations?.length) {
-      const eventIds = invitations.map((i: { event_id: string }) => i.event_id);
+    if (speakerLinks?.length) {
+      const eventIds = speakerLinks.map((i: { event_id: string }) => i.event_id);
       const { data: events } = await supabase
         .from("events")
         .select("id, title, start_date")
@@ -272,7 +274,9 @@ export default function Speakers() {
 
   const handleOpenInvite = async (speaker: Speaker) => {
     setInviteSpeaker(speaker);
-    setSelectedEventIds([]);
+    setSelectedEventId("");
+    setSelectedRole("presenter");
+    setSelectedTopic("");
 
     const { data: events } = await supabase
       .from("events")
@@ -281,46 +285,52 @@ export default function Speakers() {
       .limit(100);
     setAllEvents((events ?? []) as EventInfo[]);
 
+    // Find events this speaker is already linked to via event_speakers
     const { data: existing } = await supabase
-      .from("event_invitations")
+      .from("event_speakers")
       .select("event_id")
-      .eq("person_name", speaker.name);
+      .eq("creator_name", speaker.name);
     setExistingEventIds((existing ?? []).map((e: { event_id: string }) => e.event_id));
 
     setInviteOpen(true);
   };
 
-  const handleToggleEvent = (eventId: string) => {
-    setSelectedEventIds((prev) =>
-      prev.includes(eventId)
-        ? prev.filter((id) => id !== eventId)
-        : [...prev, eventId]
-    );
-  };
-
-  const handleSaveInvites = async () => {
-    if (!inviteSpeaker || selectedEventIds.length === 0) return;
+  const handleSaveInvite = async () => {
+    if (!inviteSpeaker || !selectedEventId) return;
     setInviteSaving(true);
-    const records = selectedEventIds.map((eventId) => ({
-      event_id: eventId,
-      person_name: inviteSpeaker.name,
-      verification_id: inviteSpeaker.verification_id,
-      status: "invited",
-    }));
-    const { error } = await supabase.from("event_invitations").insert(records);
+
+    // Get current speaker count for sort_order
+    const { data: existingSpeakers } = await supabase
+      .from("event_speakers")
+      .select("id")
+      .eq("event_id", selectedEventId);
+    const sortOrder = existingSpeakers?.length ?? 0;
+
+    const { error } = await supabase.from("event_speakers").insert({
+      event_id: selectedEventId,
+      creator_name: inviteSpeaker.name,
+      avatar_url: inviteSpeaker.photo_url,
+      bio: inviteSpeaker.bio,
+      role: selectedRole,
+      topic: selectedTopic.trim() || null,
+      sort_order: sortOrder,
+      confirmed: false,
+    });
+
     if (error) {
-      toast.error("Failed to add to events: " + error.message);
+      toast.error("Failed to add to event: " + error.message);
     } else {
-      toast.success(`Added ${inviteSpeaker.name} to ${selectedEventIds.length} event(s)`);
+      const eventTitle = allEvents.find((e) => e.id === selectedEventId)?.title ?? "event";
+      toast.success(`Added ${inviteSpeaker.name} to ${eventTitle}`);
       setInviteOpen(false);
       // Refresh expanded events if this speaker is expanded
       if (expandedId === inviteSpeaker.id) {
-        const { data: inv } = await supabase
-          .from("event_invitations")
+        const { data: links } = await supabase
+          .from("event_speakers")
           .select("event_id")
-          .eq("person_name", inviteSpeaker.name);
-        if (inv?.length) {
-          const ids = inv.map((i: { event_id: string }) => i.event_id);
+          .eq("creator_name", inviteSpeaker.name);
+        if (links?.length) {
+          const ids = links.map((i: { event_id: string }) => i.event_id);
           const { data: evts } = await supabase.from("events").select("id, title, start_date").in("id", ids);
           setExpandedEvents((evts ?? []) as EventInfo[]);
         }
@@ -720,59 +730,66 @@ export default function Speakers() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Select events for <strong>{inviteSpeaker?.name}</strong>.
+            Add <strong>{inviteSpeaker?.name}</strong> as a speaker to an event.
           </p>
-          <div className="max-h-64 overflow-y-auto space-y-2">
-            {allEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No events found.</p>
-            ) : (
-              allEvents.map((ev) => {
-                const alreadyAdded = existingEventIds.includes(ev.id);
-                const isSelected = selectedEventIds.includes(ev.id);
-                return (
-                  <label
-                    key={ev.id}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                      alreadyAdded
-                        ? "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 opacity-60 cursor-default"
-                        : isSelected
-                          ? "border-[#6C5CE7] bg-purple-50 dark:bg-purple-950/20"
-                          : "border-gray-200 dark:border-gray-800 hover:border-gray-300"
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={alreadyAdded || isSelected}
-                      disabled={alreadyAdded}
-                      onChange={() => !alreadyAdded && handleToggleEvent(ev.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{ev.title}</p>
-                      {ev.start_date && (
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(ev.start_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    {alreadyAdded && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Check className="h-3 w-3" /> Already added
-                      </span>
-                    )}
-                  </label>
-                );
-              })
-            )}
+          <div className="space-y-4">
+            <div>
+              <Label>Event</Label>
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger><SelectValue placeholder="Select an event" /></SelectTrigger>
+                <SelectContent>
+                  {allEvents.length === 0 ? (
+                    <SelectItem value="__none" disabled>No events found</SelectItem>
+                  ) : (
+                    allEvents.map((ev) => {
+                      const alreadyAdded = existingEventIds.includes(ev.id);
+                      return (
+                        <SelectItem key={ev.id} value={ev.id} disabled={alreadyAdded}>
+                          <span className="flex items-center gap-2">
+                            {ev.title}
+                            {ev.start_date && (
+                              <span className="text-xs text-muted-foreground">
+                                — {new Date(ev.start_date).toLocaleDateString()}
+                              </span>
+                            )}
+                            {alreadyAdded && (
+                              <span className="text-xs text-muted-foreground ml-1">(already added)</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      );
+                    })
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Role</Label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SPEAKER_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Topic</Label>
+              <Input
+                value={selectedTopic}
+                onChange={(e) => setSelectedTopic(e.target.value)}
+                placeholder="Talk topic or panel name"
+              />
+            </div>
           </div>
           <Button
-            onClick={handleSaveInvites}
-            disabled={selectedEventIds.length === 0 || inviteSaving}
-            className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]"
+            onClick={handleSaveInvite}
+            disabled={!selectedEventId || inviteSaving}
+            className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] mt-2"
           >
             {inviteSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            Add to {selectedEventIds.length} Event{selectedEventIds.length !== 1 ? "s" : ""}
+            Add to Event
           </Button>
         </DialogContent>
       </Dialog>
