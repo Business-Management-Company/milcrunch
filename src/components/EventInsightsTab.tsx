@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
@@ -13,17 +14,21 @@ import {
 } from "@/components/ui/select";
 import {
   Eye, Users, Mic, DollarSign, FileText, Download, Loader2,
-  TrendingUp, ChevronDown, ChevronUp, BarChart3, PieChart as PieChartIcon,
-  LineChart as LineChartIcon, Trophy, Star, Award, ArrowUpRight,
+  TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3,
+  PieChart as PieChartIcon, LineChart as LineChartIcon,
+  Trophy, Star, Award, ArrowUpRight, Search, GitCompare, X,
+  Check,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
+  LineChart, Line,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 /* ---------- types ---------- */
 interface EngagementMetric {
@@ -37,9 +42,14 @@ interface EngagementMetric {
   created_at: string | null;
 }
 
-interface SponsorOption {
+interface SponsorRow {
   id: string;
   sponsor_name: string;
+  logo_url: string | null;
+  website_url: string | null;
+  tier: string | null;
+  description: string | null;
+  sort_order: number;
 }
 
 interface ChartDataPoint {
@@ -49,6 +59,7 @@ interface ChartDataPoint {
   creator_engagement?: number;
   content_performance?: number;
   revenue_attribution?: number;
+  [key: string]: string | number | undefined;
 }
 
 interface DirectoryCreator {
@@ -81,25 +92,43 @@ const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "S
 
 const PIE_COLORS = ["#6C5CE7", "#0984E3", "#00B894", "#FDCB6E", "#D63031", "#A29BFE"];
 
-const RANK_BADGES: Record<number, { label: string; color: string; bg: string }> = {
-  0: { label: "Gold", color: "text-amber-700", bg: "bg-amber-100 border-amber-300" },
-  1: { label: "Silver", color: "text-gray-600", bg: "bg-gray-100 border-gray-300" },
-  2: { label: "Bronze", color: "text-orange-700", bg: "bg-orange-100 border-orange-300" },
+const COMPARE_COLORS = ["#6C5CE7", "#0984E3", "#00B894", "#D63031", "#FDCB6E"];
+
+const TIER_STYLES: Record<string, { label: string; bg: string; text: string }> = {
+  presenting: { label: "Presenting", bg: "bg-teal-100", text: "text-teal-700" },
+  title: { label: "Title", bg: "bg-teal-100", text: "text-teal-700" },
+  diamond: { label: "Diamond", bg: "bg-blue-100", text: "text-blue-700" },
+  platinum: { label: "Platinum", bg: "bg-gray-100", text: "text-gray-700" },
+  gold: { label: "Gold", bg: "bg-amber-100", text: "text-amber-700" },
+  silver: { label: "Silver", bg: "bg-gray-100", text: "text-gray-400" },
+  bronze: { label: "Bronze", bg: "bg-orange-100", text: "text-orange-700" },
+  community: { label: "Community", bg: "bg-purple-100", text: "text-purple-700" },
+};
+
+/* ---------- helpers ---------- */
+const formatNumber = (n: number) => {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString();
 };
 
 /* ---------- component ---------- */
 export default function EventInsightsTab({ eventId, directoryId }: Props) {
   const [metrics, setMetrics] = useState<EngagementMetric[]>([]);
-  const [sponsors, setSponsors] = useState<SponsorOption[]>([]);
+  const [sponsors, setSponsors] = useState<SponsorRow[]>([]);
   const [creators, setCreators] = useState<DirectoryCreator[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
-  const [selectedSponsor, setSelectedSponsor] = useState("all");
+  // Selection
+  const [selectedSponsor, setSelectedSponsor] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelection, setCompareSelection] = useState<string[]>([]);
+  const [sponsorSearch, setSponsorSearch] = useState("");
+
+  // Chart controls
   const [granularity, setGranularity] = useState<"monthly" | "quarterly">("monthly");
   const [chartType, setChartType] = useState<"line" | "donut">("line");
   const [pieMetric, setPieMetric] = useState<string>("sponsor_impressions");
-  const [creatorSort, setCreatorSort] = useState<"impact" | "followers" | "engagement">("impact");
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
     sponsor_impressions: true,
     community_growth: true,
@@ -107,12 +136,6 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     content_performance: true,
     revenue_attribution: true,
   });
-
-  // Collapsible sections
-  const [showCreators, setShowCreators] = useState(false);
-  const [showSponsors, setShowSponsors] = useState(false);
-  const [showContent, setShowContent] = useState(false);
-  const [showImpact, setShowImpact] = useState(false);
 
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -128,12 +151,11 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
           .order("period_start", { ascending: true }),
         supabase
           .from("event_sponsors")
-          .select("id, sponsor_name")
+          .select("*")
           .eq("event_id", eventId)
           .order("sort_order"),
       ];
 
-      // Fetch directory creators if linked
       if (directoryId) {
         queries.push(
           supabase
@@ -147,21 +169,19 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       }
 
       const results = await Promise.all(queries);
-      const [metricsRes, sponsorsRes] = results as [
-        { data: unknown[] | null; error: unknown },
-        { data: unknown[] | null; error: unknown },
-      ];
+      const metricsRes = results[0] as { data: EngagementMetric[] | null; error: unknown };
+      const sponsorsRes = results[1] as { data: SponsorRow[] | null; error: unknown };
 
-      if ((metricsRes as { error: unknown }).error) throw (metricsRes as { error: unknown }).error;
-      if ((sponsorsRes as { error: unknown }).error) console.error("Failed to load sponsors:", (sponsorsRes as { error: unknown }).error);
+      if (metricsRes.error) throw metricsRes.error;
+      if (sponsorsRes.error) console.error("Failed to load sponsors:", sponsorsRes.error);
 
-      setMetrics((metricsRes.data || []) as unknown as EngagementMetric[]);
-      setSponsors((sponsorsRes.data || []) as unknown as SponsorOption[]);
+      setMetrics(metricsRes.data || []);
+      setSponsors((sponsorsRes.data || []) as SponsorRow[]);
 
       if (directoryId && results[2]) {
-        const creatorsRes = results[2] as { data: unknown[] | null; error: unknown };
+        const creatorsRes = results[2] as { data: DirectoryCreator[] | null; error: unknown };
         if (creatorsRes.error) console.error("Failed to load creators:", creatorsRes.error);
-        setCreators((creatorsRes.data || []) as unknown as DirectoryCreator[]);
+        setCreators((creatorsRes.data || []) as DirectoryCreator[]);
       }
     } catch (err) {
       console.error("Error loading engagement metrics:", err);
@@ -173,11 +193,89 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  /* ---------- derived: sponsor names from metrics ---------- */
+  const sponsorNamesFromMetrics = useMemo(() => {
+    return [
+      ...new Set(
+        metrics
+          .filter((m) => m.metric_type === "sponsor_impressions")
+          .map((m) => (m.metadata as Record<string, unknown>)?.sponsor_name as string)
+          .filter(Boolean)
+      ),
+    ];
+  }, [metrics]);
+
+  // Merge sponsor table data with metric names — some sponsors may exist only in one source
+  const allSponsorNames = useMemo(() => {
+    const names = new Set<string>();
+    sponsors.forEach((s) => names.add(s.sponsor_name));
+    sponsorNamesFromMetrics.forEach((n) => names.add(n));
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [sponsors, sponsorNamesFromMetrics]);
+
+  // Filtered sponsor list for display
+  const filteredSponsorNames = useMemo(() => {
+    if (!sponsorSearch.trim()) return allSponsorNames;
+    const q = sponsorSearch.toLowerCase();
+    return allSponsorNames.filter((n) => n.toLowerCase().includes(q));
+  }, [allSponsorNames, sponsorSearch]);
+
+  // Lookup tier from event_sponsors table
+  const sponsorTierMap = useMemo(() => {
+    const map = new Map<string, string>();
+    sponsors.forEach((s) => {
+      if (s.tier) map.set(s.sponsor_name, s.tier);
+    });
+    return map;
+  }, [sponsors]);
+
+  /* ---------- computed: per-sponsor metrics ---------- */
+  const sponsorMetricsMap = useMemo(() => {
+    const map = new Map<string, { total: number; monthlyValues: { month: string; value: number }[] }>();
+
+    for (const m of metrics) {
+      if (m.metric_type !== "sponsor_impressions") continue;
+      const name = (m.metadata as Record<string, unknown>)?.sponsor_name as string;
+      if (!name) continue;
+
+      const d = new Date(m.period_start + "T00:00:00");
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+
+      if (!map.has(name)) {
+        map.set(name, { total: 0, monthlyValues: [] });
+      }
+      const entry = map.get(name)!;
+      entry.total += Number(m.value);
+      entry.monthlyValues.push({ month: monthKey, value: Number(m.value) });
+    }
+
+    // Sort monthly values for each sponsor
+    map.forEach((entry) => {
+      entry.monthlyValues.sort((a, b) => a.month.localeCompare(b.month));
+    });
+
+    return map;
+  }, [metrics]);
+
+  /* ---------- active filter: which sponsor(s) to show ---------- */
+  const activeSponsorFilter = useMemo(() => {
+    if (compareMode && compareSelection.length > 0) return compareSelection;
+    if (selectedSponsor) return [selectedSponsor];
+    return null; // null = all
+  }, [selectedSponsor, compareMode, compareSelection]);
+
   /* ---------- computed: top-level metric totals ---------- */
   const totals = useMemo(() => {
+    const filterByActiveSponsor = (m: EngagementMetric) => {
+      if (m.metric_type !== "sponsor_impressions") return true;
+      if (!activeSponsorFilter) return true;
+      const sName = (m.metadata as Record<string, unknown>)?.sponsor_name as string;
+      return activeSponsorFilter.includes(sName);
+    };
+
     const sum = (type: string) =>
       metrics
-        .filter((m) => m.metric_type === type)
+        .filter((m) => m.metric_type === type && filterByActiveSponsor(m))
         .reduce((acc, m) => acc + Number(m.value), 0);
 
     const communityVals = metrics
@@ -205,9 +303,9 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       roi: roiScore,
       content: Math.round(sum("content_performance")),
     };
-  }, [metrics]);
+  }, [metrics, activeSponsorFilter]);
 
-  /* ---------- computed: chart data (line) ---------- */
+  /* ---------- computed: chart data ---------- */
   const chartData = useMemo(() => {
     const monthMap = new Map<string, ChartDataPoint>();
 
@@ -222,11 +320,21 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       const point = monthMap.get(key)!;
 
       if (m.metric_type === "sponsor_impressions") {
-        if (selectedSponsor !== "all") {
-          const sid = (m.metadata as Record<string, unknown>)?.sponsor_id;
-          if (sid !== selectedSponsor) continue;
+        const sName = (m.metadata as Record<string, unknown>)?.sponsor_name as string;
+
+        // In compare mode, create separate keys per sponsor
+        if (compareMode && compareSelection.length > 0) {
+          if (sName && compareSelection.includes(sName)) {
+            const sponsorKey = `sponsor_${sName}`;
+            point[sponsorKey] = ((point[sponsorKey] as number) || 0) + Number(m.value);
+          }
+        } else if (activeSponsorFilter) {
+          if (sName && activeSponsorFilter.includes(sName)) {
+            point.sponsor_impressions = (point.sponsor_impressions || 0) + Number(m.value);
+          }
+        } else {
+          point.sponsor_impressions = (point.sponsor_impressions || 0) + Number(m.value);
         }
-        point.sponsor_impressions = (point.sponsor_impressions || 0) + Number(m.value);
       } else {
         const val = Number(m.value);
         point[m.metric_type as keyof Omit<ChartDataPoint, "label">] = val;
@@ -243,12 +351,13 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         const chunk = data.slice(i, i + 3);
         const qLabel = `Q${Math.floor(i / 3) + 1}`;
         const aggregated: ChartDataPoint = { label: qLabel };
-        for (const key of Object.keys(METRIC_CONFIG) as (keyof typeof METRIC_CONFIG)[]) {
-          const vals = chunk.map((c) => (c[key as keyof ChartDataPoint] as number) || 0);
+        for (const key of Object.keys(chunk[0])) {
+          if (key === "label") continue;
+          const vals = chunk.map((c) => (c[key] as number) || 0);
           if (key === "community_growth") {
-            aggregated[key as keyof Omit<ChartDataPoint, "label">] = vals[vals.length - 1];
+            aggregated[key] = vals[vals.length - 1];
           } else {
-            aggregated[key as keyof Omit<ChartDataPoint, "label">] = vals.reduce((a, b) => a + b, 0);
+            aggregated[key] = vals.reduce((a, b) => a + b, 0);
           }
         }
         quarters.push(aggregated);
@@ -257,11 +366,10 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     }
 
     return data;
-  }, [metrics, selectedSponsor, granularity]);
+  }, [metrics, activeSponsorFilter, compareMode, compareSelection, granularity]);
 
   /* ---------- computed: pie chart data ---------- */
   const pieData = useMemo(() => {
-    // For the selected metric, show top 4 months + "Other"
     const relevantData = chartData
       .filter((d) => (d[pieMetric as keyof ChartDataPoint] as number) > 0)
       .map((d) => ({
@@ -277,98 +385,103 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     return [...top4, { name: "Other", value: otherSum }];
   }, [chartData, pieMetric]);
 
-  /* ---------- computed: sponsor breakdown ---------- */
-  const sponsorBreakdown = useMemo(() => {
-    const map = new Map<string, { name: string; total: number; months: number }>();
-    for (const m of metrics.filter((m) => m.metric_type === "sponsor_impressions")) {
-      const name = ((m.metadata as Record<string, unknown>)?.sponsor_name as string) || "Unknown";
-      const existing = map.get(name) || { name, total: 0, months: 0 };
-      existing.total += Number(m.value);
-      existing.months += 1;
-      map.set(name, existing);
+  /* ---------- computed: comparison table data ---------- */
+  const comparisonTableData = useMemo(() => {
+    if (!compareMode || compareSelection.length < 2) return null;
+    return compareSelection.map((name) => {
+      const data = sponsorMetricsMap.get(name);
+      const total = data?.total || 0;
+      const monthly = data?.monthlyValues || [];
+      const avgMonthly = monthly.length > 0 ? Math.round(total / monthly.length) : 0;
+
+      // Trend: compare last two months
+      let trend: "up" | "down" | "flat" = "flat";
+      if (monthly.length >= 2) {
+        const last = monthly[monthly.length - 1].value;
+        const prev = monthly[monthly.length - 2].value;
+        trend = last > prev ? "up" : last < prev ? "down" : "flat";
+      }
+
+      return { name, total, avgMonthly, trend, monthCount: monthly.length };
+    });
+  }, [compareMode, compareSelection, sponsorMetricsMap]);
+
+  /* ---------- computed: creator attribution for selected sponsor ---------- */
+  const creatorAttribution = useMemo(() => {
+    if (!selectedSponsor || compareMode) return [];
+    return creators
+      .slice(0, 5)
+      .map((c) => {
+        const followers = c.follower_count || 0;
+        const engagement = c.engagement_rate || 0;
+        const estimatedImpressions = Math.round((followers * engagement / 100) * 3);
+        return { ...c, estimatedImpressions };
+      })
+      .sort((a, b) => b.estimatedImpressions - a.estimatedImpressions);
+  }, [selectedSponsor, compareMode, creators]);
+
+  /* ---------- actions ---------- */
+  const handleSponsorClick = (name: string) => {
+    if (compareMode) {
+      setCompareSelection((prev) => {
+        if (prev.includes(name)) return prev.filter((n) => n !== name);
+        if (prev.length >= 3) {
+          toast.info("You can compare up to 3 sponsors");
+          return prev;
+        }
+        return [...prev, name];
+      });
+    } else {
+      setSelectedSponsor((prev) => (prev === name ? null : name));
     }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total);
-  }, [metrics]);
+  };
 
-  /* ---------- computed: content by month ---------- */
-  const contentByMonth = useMemo(() => {
-    return metrics
-      .filter((m) => m.metric_type === "content_performance")
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6)
-      .map((m) => {
-        const d = new Date(m.period_start + "T00:00:00");
-        return {
-          month: `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`,
-          views: Math.round(Number(m.value)),
-        };
-      });
-  }, [metrics]);
+  const resetToAll = () => {
+    setSelectedSponsor(null);
+    setCompareMode(false);
+    setCompareSelection([]);
+  };
 
-  /* ---------- computed: creator engagement top months ---------- */
-  const creatorTopMonths = useMemo(() => {
-    return metrics
-      .filter((m) => m.metric_type === "creator_engagement")
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6)
-      .map((m) => {
-        const d = new Date(m.period_start + "T00:00:00");
-        return {
-          month: `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`,
-          posts: Math.round(Number(m.value)),
-        };
-      });
-  }, [metrics]);
+  const toggleCompare = () => {
+    if (compareMode) {
+      setCompareMode(false);
+      setCompareSelection([]);
+    } else {
+      setCompareMode(true);
+      setSelectedSponsor(null);
+      // Pre-select the currently selected sponsor if any
+    }
+  };
 
-  /* ---------- computed: ranked creators ---------- */
-  const rankedCreators = useMemo(() => {
-    const withImpact = creators.map((c) => {
-      const followers = c.follower_count || 0;
-      const engagement = c.engagement_rate || 0;
-      const impactScore = Math.round((followers * engagement) / 100);
-      return { ...c, impactScore };
-    });
+  const toggleLine = (key: string) => {
+    setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
-    return withImpact.sort((a, b) => {
-      if (creatorSort === "followers") return (b.follower_count || 0) - (a.follower_count || 0);
-      if (creatorSort === "engagement") return (b.engagement_rate || 0) - (a.engagement_rate || 0);
-      return b.impactScore - a.impactScore;
-    });
-  }, [creators, creatorSort]);
-
-  const topCreator = rankedCreators[0] || null;
-
-  /* ---------- export ---------- */
-  const exportChartPNG = async () => {
+  const exportReport = async () => {
     if (!chartRef.current) return;
     try {
       const canvas = await html2canvas(chartRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
       });
-      const url = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `365-insights-${eventId}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast.success("Chart exported as PNG");
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width / 2, canvas.height / 2 + 80] });
+      const suffix = selectedSponsor || "All Sponsors";
+      pdf.setFontSize(18);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`Sponsor Intelligence — ${suffix}`, 20, 30);
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(`Generated ${new Date().toLocaleDateString()}`, 20, 48);
+      pdf.addImage(imgData, "PNG", 0, 60, canvas.width / 2, canvas.height / 2);
+      const filename = `sponsor-report-${suffix.replace(/\s+/g, "-").toLowerCase()}-${eventId}.pdf`;
+      pdf.save(filename);
+      toast.success("Sponsor report downloaded as PDF");
     } catch (err) {
       console.error("Export failed:", err);
-      toast.error("Failed to export chart");
+      toast.error("Failed to export report");
     }
-  };
-
-  /* ---------- toggle ---------- */
-  const toggleLine = (key: string) => {
-    setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const formatNumber = (n: number) => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-    return n.toLocaleString();
   };
 
   /* ---------- render ---------- */
@@ -394,14 +507,14 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* ===== METRIC CARDS ===== */}
+      {/* ===== KPI CARDS ===== */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: "Total Impressions", value: totals.impressions.toLocaleString(), icon: Eye, color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-900/30" },
-          { label: "Community Members", value: totals.community.toLocaleString(), icon: Users, color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
-          { label: "Active Creators", value: totals.creators.toLocaleString(), icon: Mic, color: "text-green-600", bg: "bg-green-100 dark:bg-green-900/30" },
+          { label: "Total Impressions", value: formatNumber(totals.impressions), icon: Eye, color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-900/30" },
+          { label: "Community Members", value: formatNumber(totals.community), icon: Users, color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
+          { label: "Active Creators", value: formatNumber(totals.creators), icon: Mic, color: "text-green-600", bg: "bg-green-100 dark:bg-green-900/30" },
           { label: "Sponsor ROI", value: `${totals.roi}x`, icon: DollarSign, color: "text-red-600", bg: "bg-red-100 dark:bg-red-900/30" },
-          { label: "Content Views", value: totals.content.toLocaleString(), icon: FileText, color: "text-orange-600", bg: "bg-orange-100 dark:bg-orange-900/30" },
+          { label: "Content Views", value: formatNumber(totals.content), icon: FileText, color: "text-orange-600", bg: "bg-orange-100 dark:bg-orange-900/30" },
         ].map((card) => (
           <Card key={card.label} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
             <div className="flex items-start justify-between">
@@ -417,21 +530,161 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         ))}
       </div>
 
-      {/* ===== CONTROLS ===== */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Sponsor dropdown */}
-        <Select value={selectedSponsor} onValueChange={setSelectedSponsor}>
-          <SelectTrigger className="w-[200px] bg-white dark:bg-[#1A1D27]">
-            <SelectValue placeholder="All Sponsors" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Sponsors</SelectItem>
-            {sponsors.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.sponsor_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* ===== SPONSOR SCORECARD GRID ===== */}
+      {allSponsorNames.length > 0 && (
+        <div className="space-y-3">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">Sponsor Performance</h3>
+              {(selectedSponsor || compareMode) && (
+                <Button variant="outline" size="sm" onClick={resetToAll} className="text-xs h-7">
+                  <X className="h-3 w-3 mr-1" />
+                  All Sponsors
+                </Button>
+              )}
+              <Button
+                variant={compareMode ? "default" : "outline"}
+                size="sm"
+                onClick={toggleCompare}
+                className={`text-xs h-7 ${compareMode ? "bg-[#6C5CE7] hover:bg-[#5B4BD5]" : ""}`}
+              >
+                <GitCompare className="h-3 w-3 mr-1" />
+                {compareMode ? "Exit Compare" : "Compare Sponsors"}
+              </Button>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search sponsors..."
+                value={sponsorSearch}
+                onChange={(e) => setSponsorSearch(e.target.value)}
+                className="pl-8 h-8 text-sm bg-white dark:bg-[#1A1D27]"
+              />
+            </div>
+          </div>
 
+          {/* Compare mode hint */}
+          {compareMode && (
+            <p className="text-xs text-muted-foreground">
+              Select 2-3 sponsors to compare. {compareSelection.length}/3 selected.
+            </p>
+          )}
+
+          {/* Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredSponsorNames.map((name) => {
+              const data = sponsorMetricsMap.get(name);
+              const total = data?.total || 0;
+              const monthly = data?.monthlyValues || [];
+              const tier = sponsorTierMap.get(name);
+              const tierStyle = tier ? TIER_STYLES[tier] || TIER_STYLES.community : null;
+
+              // Trend: compare last 2 months
+              let trend: "up" | "down" | "flat" = "flat";
+              if (monthly.length >= 2) {
+                const last = monthly[monthly.length - 1].value;
+                const prev = monthly[monthly.length - 2].value;
+                trend = last > prev ? "up" : last < prev ? "down" : "flat";
+              }
+
+              // Sparkline data (last 6 months)
+              const sparkData = monthly.slice(-6).map((m) => ({ v: m.value }));
+
+              const isSelected = selectedSponsor === name;
+              const isCompareSelected = compareSelection.includes(name);
+
+              return (
+                <div
+                  key={name}
+                  onClick={() => handleSponsorClick(name)}
+                  className={`
+                    relative rounded-xl p-4 cursor-pointer transition-all duration-200
+                    bg-white dark:bg-[#1A1D27]
+                    ${isSelected
+                      ? "border-2 border-[#6C5CE7] shadow-md ring-1 ring-[#6C5CE7]/20"
+                      : isCompareSelected
+                        ? "border-2 border-[#6C5CE7] shadow-sm"
+                        : "border border-gray-100 dark:border-gray-800 hover:border-[#6C5CE7] hover:shadow-md"
+                    }
+                  `}
+                >
+                  {/* Selected left stripe */}
+                  {(isSelected || isCompareSelected) && (
+                    <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-[#6C5CE7]" />
+                  )}
+
+                  {/* Compare checkbox */}
+                  {compareMode && (
+                    <div className={`absolute top-3 right-3 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      isCompareSelected
+                        ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                        : "border-gray-300 dark:border-gray-600"
+                    }`}>
+                      {isCompareSelected && <Check className="h-3 w-3 text-white" />}
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{name}</span>
+                      </div>
+                      {tierStyle && (
+                        <Badge className={`${tierStyle.bg} ${tierStyle.text} text-[10px] font-medium border-0 mb-2`}>
+                          {tierStyle.label}
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {formatNumber(total)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">impressions</span>
+                        {trend === "up" && (
+                          <span className="flex items-center text-green-600 text-xs font-medium">
+                            <TrendingUp className="h-3 w-3 mr-0.5" /> Up
+                          </span>
+                        )}
+                        {trend === "down" && (
+                          <span className="flex items-center text-red-500 text-xs font-medium">
+                            <TrendingDown className="h-3 w-3 mr-0.5" /> Down
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sparkline */}
+                    {sparkData.length >= 2 && (
+                      <div className="w-20 h-8 flex-shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={sparkData}>
+                            <defs>
+                              <linearGradient id={`spark-${name.replace(/\s/g, "")}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.3} />
+                                <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0.05} />
+                              </linearGradient>
+                            </defs>
+                            <Line
+                              type="monotone"
+                              dataKey="v"
+                              stroke="#6C5CE7"
+                              strokeWidth={1.5}
+                              dot={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ===== CHART CONTROLS ===== */}
+      <div className="flex flex-wrap items-center gap-3">
         {/* Granularity toggle */}
         <div className="flex gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
           <Button
@@ -474,7 +727,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
           </Button>
         </div>
 
-        {/* Pie metric selector (only visible in donut mode) */}
+        {/* Pie metric selector */}
         {chartType === "donut" && (
           <Select value={pieMetric} onValueChange={setPieMetric}>
             <SelectTrigger className="w-[200px] bg-white dark:bg-[#1A1D27]">
@@ -488,15 +741,20 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
           </Select>
         )}
 
-        {/* Export */}
-        <Button variant="outline" size="sm" onClick={exportChartPNG} className="ml-auto">
+        {/* Export / Generate Report */}
+        <Button
+          variant={selectedSponsor ? "default" : "outline"}
+          size="sm"
+          onClick={exportReport}
+          className={`ml-auto ${selectedSponsor ? "bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white" : ""}`}
+        >
           <Download className="h-4 w-4 mr-1.5" />
-          Export as PDF
+          {selectedSponsor ? "Generate Sponsor Report" : "Export Report"}
         </Button>
       </div>
 
-      {/* ===== METRIC TOGGLES (line chart only) ===== */}
-      {chartType === "line" && (
+      {/* ===== METRIC TOGGLES (line chart, non-compare mode) ===== */}
+      {chartType === "line" && !compareMode && (
         <div className="flex flex-wrap gap-2">
           {Object.entries(METRIC_CONFIG).map(([key, { label, color }]) => (
             <button
@@ -519,6 +777,21 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         </div>
       )}
 
+      {/* ===== COMPARE LEGEND ===== */}
+      {compareMode && compareSelection.length > 0 && chartType === "line" && (
+        <div className="flex flex-wrap gap-3">
+          {compareSelection.map((name, i) => (
+            <div key={name} className="flex items-center gap-1.5 text-xs font-medium">
+              <span
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: COMPARE_COLORS[i % COMPARE_COLORS.length] }}
+              />
+              {name}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ===== CHART ===== */}
       <div ref={chartRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
         {chartType === "line" ? (
@@ -529,6 +802,12 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
                   <linearGradient key={key} id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={color} stopOpacity={0.2} />
                     <stop offset="95%" stopColor={color} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+                {compareMode && compareSelection.map((name, i) => (
+                  <linearGradient key={`compare-${name}`} id={`grad-compare-${i}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COMPARE_COLORS[i % COMPARE_COLORS.length]} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={COMPARE_COLORS[i % COMPARE_COLORS.length]} stopOpacity={0} />
                   </linearGradient>
                 ))}
               </defs>
@@ -552,26 +831,57 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
-                formatter={(value: number, name: string) => [
-                  value.toLocaleString(),
-                  METRIC_CONFIG[name]?.label || name,
-                ]}
+                formatter={(value: number, name: string) => {
+                  // In compare mode, sponsor keys are prefixed
+                  const displayName = name.startsWith("sponsor_")
+                    ? name.replace("sponsor_", "").replace(/_/g, " ")
+                    : METRIC_CONFIG[name]?.label || name;
+                  return [value.toLocaleString(), displayName];
+                }}
               />
               <Legend content={() => null} />
-              {Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
-                visibleLines[key] ? (
-                  <Area
-                    key={key}
-                    type="monotone"
-                    dataKey={key}
-                    stroke={color}
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill={`url(#grad-${key})`}
-                    dot={{ r: 3, fill: color }}
-                    activeDot={{ r: 5, fill: color }}
-                  />
-                ) : null
+
+              {/* Compare mode: one line per selected sponsor */}
+              {compareMode && compareSelection.length > 0 ? (
+                <>
+                  {compareSelection.map((name, i) => {
+                    const color = COMPARE_COLORS[i % COMPARE_COLORS.length];
+                    const key = `sponsor_${name}`;
+                    return (
+                      <Area
+                        key={key}
+                        type="monotone"
+                        dataKey={key}
+                        name={key}
+                        stroke={color}
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill={`url(#grad-compare-${i})`}
+                        dot={{ r: 3, fill: color }}
+                        activeDot={{ r: 5, fill: color }}
+                      />
+                    );
+                  })}
+                </>
+              ) : (
+                /* Normal mode: all metric lines */
+                <>
+                  {Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
+                    visibleLines[key] ? (
+                      <Area
+                        key={key}
+                        type="monotone"
+                        dataKey={key}
+                        stroke={color}
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill={`url(#grad-${key})`}
+                        dot={{ r: 3, fill: color }}
+                        activeDot={{ r: 5, fill: color }}
+                      />
+                    ) : null
+                  )}
+                </>
               )}
             </AreaChart>
           </ResponsiveContainer>
@@ -621,258 +931,132 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         )}
       </div>
 
-      {/* ===== CREATOR SPOTLIGHT + IMPACT ===== */}
-      {directoryId && creators.length > 0 && (
-        <>
-          {/* Spotlight Card */}
-          {topCreator && (
-            <div className="rounded-xl overflow-hidden bg-gradient-to-r from-[#6C5CE7] to-[#a29bfe] p-6 text-white">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 border-2 border-white/30">
-                  <AvatarImage src={topCreator.avatar_url || undefined} />
-                  <AvatarFallback className="bg-white/20 text-white text-lg">
-                    {(topCreator.creator_name || topCreator.creator_handle || "?")[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <Trophy className="h-4 w-4 text-amber-300" />
-                    <span className="text-xs font-medium text-white/70 uppercase tracking-wide">Top Creator</span>
-                  </div>
-                  <h3 className="text-xl font-bold truncate">{topCreator.creator_name || topCreator.creator_handle}</h3>
-                  <p className="text-white/70 text-sm">@{topCreator.creator_handle}</p>
-                </div>
-                <div className="text-right hidden sm:block">
-                  <p className="text-3xl font-bold">{formatNumber(topCreator.impactScore)}</p>
-                  <p className="text-xs text-white/70">Impact Score</p>
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                <div>
-                  <span className="text-white/60">Followers</span>
-                  <span className="ml-1.5 font-semibold">{formatNumber(topCreator.follower_count || 0)}</span>
-                </div>
-                <div>
-                  <span className="text-white/60">Engagement</span>
-                  <span className="ml-1.5 font-semibold">{(topCreator.engagement_rate || 0).toFixed(2)}%</span>
-                </div>
-                <div>
-                  <span className="text-white/60">Est. Impressions</span>
-                  <span className="ml-1.5 font-semibold">{formatNumber(Math.round((topCreator.follower_count || 0) * (topCreator.engagement_rate || 0) / 100 * 12))}</span>
-                </div>
-              </div>
+      {/* ===== COMPARISON TABLE (compare mode) ===== */}
+      {compareMode && comparisonTableData && comparisonTableData.length >= 2 && (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <GitCompare className="h-4 w-4 text-[#6C5CE7]" />
+              <h3 className="font-semibold text-sm">Sponsor Comparison</h3>
             </div>
-          )}
-
-          {/* Creator Impact Rankings */}
-          <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-            <button
-              onClick={() => setShowImpact(!showImpact)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-amber-500" />
-                <span className="font-semibold text-sm">Creator Impact Rankings</span>
-                <Badge className="ml-1 bg-purple-100 text-purple-700 text-xs">{creators.length}</Badge>
-              </div>
-              {showImpact ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-            </button>
-            {showImpact && (
-              <div className="border-t border-gray-200 dark:border-gray-800">
-                {/* Sort dropdown */}
-                <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800/50">
-                  <Select value={creatorSort} onValueChange={(v) => setCreatorSort(v as typeof creatorSort)}>
-                    <SelectTrigger className="w-[180px] h-8 text-xs">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="impact">Impact Score</SelectItem>
-                      <SelectItem value="followers">Followers</SelectItem>
-                      <SelectItem value="engagement">Engagement Rate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-                      <th className="text-left p-3 text-muted-foreground font-medium w-12">#</th>
-                      <th className="text-left p-3 text-muted-foreground font-medium">Creator</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Followers</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Eng. Rate</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Platform</th>
-                      <th className="text-right p-3 text-muted-foreground font-medium">Impact</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rankedCreators.map((c, i) => {
-                      const badge = RANK_BADGES[i];
-                      return (
-                        <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                          <td className="p-3">
-                            {badge ? (
-                              <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold border ${badge.bg} ${badge.color}`}>
-                                {i + 1}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">{i + 1}</span>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <Link
-                              to={`/creators/${c.profile_slug || c.creator_handle}`}
-                              className="flex items-center gap-2 hover:text-purple-600 transition-colors"
-                            >
-                              <Avatar className="h-7 w-7">
-                                <AvatarImage src={c.avatar_url || undefined} />
-                                <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
-                                  {(c.creator_name || c.creator_handle || "?")[0].toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0">
-                                <p className="font-medium text-sm truncate">{c.creator_name || c.creator_handle}</p>
-                                <p className="text-xs text-muted-foreground truncate">@{c.creator_handle}</p>
-                              </div>
-                              <ArrowUpRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            </Link>
-                          </td>
-                          <td className="p-3 text-right font-medium">{formatNumber(c.follower_count || 0)}</td>
-                          <td className="p-3 text-right">{(c.engagement_rate || 0).toFixed(2)}%</td>
-                          <td className="p-3 text-right">
-                            <Badge variant="outline" className="text-xs capitalize">{c.platform}</Badge>
-                          </td>
-                          <td className="p-3 text-right font-bold text-purple-600">{formatNumber(c.impactScore)}</td>
-                        </tr>
-                      );
-                    })}
-                    {rankedCreators.length === 0 && (
-                      <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">No creators in linked directory</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        </>
-      )}
-
-      {/* ===== DATA TABLES ===== */}
-
-      {/* Top Creators (by engagement) */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-        <button
-          onClick={() => setShowCreators(!showCreators)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Mic className="h-4 w-4 text-green-600" />
-            <span className="font-semibold text-sm">Top Creator Engagement Months</span>
           </div>
-          {showCreators ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-        </button>
-        {showCreators && (
-          <div className="border-t border-gray-200 dark:border-gray-800">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-                  <th className="text-left p-3 text-muted-foreground font-medium">Month</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Posts</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Trend</th>
+                  <th className="text-left p-3 text-muted-foreground font-medium">Metric</th>
+                  {comparisonTableData.map((s, i) => (
+                    <th key={s.name} className="text-right p-3 font-medium" style={{ color: COMPARE_COLORS[i % COMPARE_COLORS.length] }}>
+                      {s.name}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {creatorTopMonths.map((row, i) => (
-                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800/50">
-                    <td className="p-3 font-medium">{row.month}</td>
-                    <td className="p-3 text-right">{row.posts.toLocaleString()}</td>
+                <tr className="border-b border-gray-100 dark:border-gray-800/50">
+                  <td className="p-3 font-medium text-muted-foreground">Total Impressions</td>
+                  {comparisonTableData.map((s) => (
+                    <td key={s.name} className="p-3 text-right font-bold">{formatNumber(s.total)}</td>
+                  ))}
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/50">
+                  <td className="p-3 font-medium text-muted-foreground">Avg Monthly</td>
+                  {comparisonTableData.map((s) => (
+                    <td key={s.name} className="p-3 text-right">{formatNumber(s.avgMonthly)}</td>
+                  ))}
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/50">
+                  <td className="p-3 font-medium text-muted-foreground">Months Active</td>
+                  {comparisonTableData.map((s) => (
+                    <td key={s.name} className="p-3 text-right">{s.monthCount}</td>
+                  ))}
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/50">
+                  <td className="p-3 font-medium text-muted-foreground">Trend</td>
+                  {comparisonTableData.map((s) => (
+                    <td key={s.name} className="p-3 text-right">
+                      {s.trend === "up" && <span className="inline-flex items-center text-green-600 font-medium"><TrendingUp className="h-3.5 w-3.5 mr-1" />Up</span>}
+                      {s.trend === "down" && <span className="inline-flex items-center text-red-500 font-medium"><TrendingDown className="h-3.5 w-3.5 mr-1" />Down</span>}
+                      {s.trend === "flat" && <span className="text-muted-foreground">Flat</span>}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="p-3 font-medium text-muted-foreground">Tier</td>
+                  {comparisonTableData.map((s) => {
+                    const tier = sponsorTierMap.get(s.name);
+                    const style = tier ? TIER_STYLES[tier] : null;
+                    return (
+                      <td key={s.name} className="p-3 text-right">
+                        {style ? (
+                          <Badge className={`${style.bg} ${style.text} text-[10px] border-0`}>{style.label}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* ===== CREATOR ATTRIBUTION (single sponsor selected) ===== */}
+      {selectedSponsor && !compareMode && creatorAttribution.length > 0 && (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-[#6C5CE7]" />
+              <h3 className="font-semibold text-sm">{selectedSponsor} — Creator Impact</h3>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
+                  <th className="text-left p-3 text-muted-foreground font-medium">Creator</th>
+                  <th className="text-right p-3 text-muted-foreground font-medium">Followers</th>
+                  <th className="text-right p-3 text-muted-foreground font-medium">Eng. Rate</th>
+                  <th className="text-right p-3 text-muted-foreground font-medium">Est. Impressions Driven</th>
+                  <th className="text-right p-3 text-muted-foreground font-medium">Platform</th>
+                </tr>
+              </thead>
+              <tbody>
+                {creatorAttribution.map((c) => (
+                  <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                    <td className="p-3">
+                      <Link
+                        to={`/creators/${c.profile_slug || c.creator_handle}`}
+                        className="flex items-center gap-2 hover:text-purple-600 transition-colors"
+                      >
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={c.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
+                            {(c.creator_name || c.creator_handle || "?")[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{c.creator_name || c.creator_handle}</p>
+                          <p className="text-xs text-muted-foreground truncate">@{c.creator_handle}</p>
+                        </div>
+                        <ArrowUpRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      </Link>
+                    </td>
+                    <td className="p-3 text-right font-medium">{formatNumber(c.follower_count || 0)}</td>
+                    <td className="p-3 text-right">{(c.engagement_rate || 0).toFixed(2)}%</td>
+                    <td className="p-3 text-right font-bold text-[#6C5CE7]">{formatNumber(c.estimatedImpressions)}</td>
                     <td className="p-3 text-right">
-                      <TrendingUp className="h-4 w-4 text-green-500 inline" />
+                      <Badge variant="outline" className="text-xs capitalize">{c.platform}</Badge>
                     </td>
                   </tr>
                 ))}
-                {creatorTopMonths.length === 0 && (
-                  <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">No data</td></tr>
-                )}
               </tbody>
             </table>
           </div>
-        )}
-      </Card>
-
-      {/* Sponsor Breakdown */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-        <button
-          onClick={() => setShowSponsors(!showSponsors)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Eye className="h-4 w-4 text-purple-600" />
-            <span className="font-semibold text-sm">Sponsor Breakdown</span>
-          </div>
-          {showSponsors ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-        </button>
-        {showSponsors && (
-          <div className="border-t border-gray-200 dark:border-gray-800">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-                  <th className="text-left p-3 text-muted-foreground font-medium">Sponsor</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Total Impressions</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Avg Monthly</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sponsorBreakdown.map((row, i) => (
-                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800/50">
-                    <td className="p-3 font-medium">{row.name}</td>
-                    <td className="p-3 text-right">{Math.round(row.total).toLocaleString()}</td>
-                    <td className="p-3 text-right">{row.months > 0 ? Math.round(row.total / row.months).toLocaleString() : "—"}</td>
-                  </tr>
-                ))}
-                {sponsorBreakdown.length === 0 && (
-                  <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">No sponsor data</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-
-      {/* Content Highlights */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-        <button
-          onClick={() => setShowContent(!showContent)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-orange-600" />
-            <span className="font-semibold text-sm">Content Highlights</span>
-          </div>
-          {showContent ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-        </button>
-        {showContent && (
-          <div className="border-t border-gray-200 dark:border-gray-800">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-                  <th className="text-left p-3 text-muted-foreground font-medium">Month</th>
-                  <th className="text-right p-3 text-muted-foreground font-medium">Total Views</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contentByMonth.map((row, i) => (
-                  <tr key={i} className="border-b border-gray-100 dark:border-gray-800/50">
-                    <td className="p-3 font-medium">{row.month}</td>
-                    <td className="p-3 text-right">{row.views.toLocaleString()}</td>
-                  </tr>
-                ))}
-                {contentByMonth.length === 0 && (
-                  <tr><td colSpan={2} className="p-4 text-center text-muted-foreground">No content data</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
