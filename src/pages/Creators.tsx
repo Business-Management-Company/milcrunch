@@ -165,7 +165,7 @@ function CreatorCard({
       {/* Content */}
       <div className="p-4 flex flex-col items-center flex-1">
         {/* Name */}
-        <h3 className="font-semibold text-gray-900 text-sm text-center leading-snug">
+        <h3 className="font-semibold text-gray-900 text-sm text-center leading-snug break-words w-full">
           {c.display_name}
         </h3>
 
