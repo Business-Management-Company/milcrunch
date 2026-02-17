@@ -83,6 +83,7 @@ import BrandEventCreate from "./pages/brand/BrandEventCreate";
 import BrandEventDetail from "./pages/brand/BrandEventDetail";
 import BrandAttribution from "./pages/brand/BrandAttribution";
 import BrandSettings from "./pages/brand/BrandSettings";
+import BrandPosting from "./pages/brand/BrandPosting";
 // PDX pages removed — routes redirect to /brand/events
 import AdminPodcasts from "./pages/admin/media/Podcasts";
 import PDTV from "./pages/admin/media/PDTV";
@@ -184,6 +185,7 @@ const App = () => (
                 <Route path="/brand/events/:eventId" element={<BrandEventDetail />} />
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
+                <Route path="/brand/posting" element={<BrandPosting />} />
                 <Route path="/brand/pages" element={<BrandPages />} />
                 <Route path="/brand/pages/:id" element={<BrandPageEdit />} />
                 <Route path="/brand/sponsors" element={<SponsorDashboard />} />
