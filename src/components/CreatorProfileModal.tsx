@@ -394,20 +394,18 @@ export default function CreatorProfileModal({
   const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
   const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
 
-  // Debug: log full enrichment response to verify platform data structure
   useEffect(() => {
-    if (enriched) {
-      console.log("[CreatorProfileModal] FULL ENRICHMENT:", JSON.stringify(enriched, null, 2));
-      console.log("[CreatorProfileModal] resultTop keys:", Object.keys(resultTop));
-      console.log("[CreatorProfileModal] Platform data:", {
-        instagram: ig ? Object.keys(ig as object) : null,
-        tiktok: tiktokData ? Object.keys(tiktokData) : null,
-        youtube: youtubeData ? Object.keys(youtubeData) : null,
-        twitter: twitterData ? Object.keys(twitterData) : null,
-        creator_has: resultTop.creator_has,
+    if (enriched && ig) {
+      const igObj = ig as Record<string, unknown>;
+      console.log("[CreatorProfileModal] IG analytics keys:", {
+        avg_likes: igObj.avg_likes, avg_like_count: igObj.avg_like_count,
+        avg_comments: igObj.avg_comments, avg_comment_count: igObj.avg_comment_count,
+        media_count: igObj.media_count, posting_frequency: igObj.posting_frequency_recent_months,
+        reels: typeof igObj.reels === "object" ? Object.keys(igObj.reels as object) : igObj.reels,
+        avg_views: igObj.avg_views, avg_view_count: igObj.avg_view_count,
       });
     }
-  }, [enriched]);
+  }, [enriched, ig]);
   // growthObj and incomeObj are computed per-platform in the analytics useMemo below
 
   const displayUsername =
@@ -482,12 +480,12 @@ export default function CreatorProfileModal({
     return {
       followers: Number(igRecord?.follower_count ?? creator?.followers ?? 0),
       engagement: Number(igRecord?.engagement_percent ?? creator?.engagementRate ?? 0),
-      mediaCount: Number(igRecord?.media_count ?? 0),
-      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? 0),
-      avgLikes: Number(igRecord?.avg_likes ?? 0),
-      avgComments: Number(igRecord?.avg_comments ?? 0),
-      avgSpecial: Number(reelsObj?.avg_like_count ?? 0),
-      avgViews: Number(reelsObj?.avg_view_count ?? 0),
+      mediaCount: Number(igRecord?.media_count ?? igRecord?.post_count ?? 0),
+      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? igRecord?.posting_frequency ?? 0),
+      avgLikes: Number(igRecord?.avg_likes ?? igRecord?.avg_like_count ?? 0),
+      avgComments: Number(igRecord?.avg_comments ?? igRecord?.avg_comment_count ?? 0),
+      avgSpecial: Number(reelsObj?.avg_like_count ?? reelsObj?.avg_likes ?? 0),
+      avgViews: Number(reelsObj?.avg_view_count ?? reelsObj?.avg_views ?? igRecord?.avg_reel_plays ?? igRecord?.avg_views ?? igRecord?.avg_view_count ?? 0),
     };
   }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, reelsObj, creator]);
 
@@ -746,18 +744,22 @@ export default function CreatorProfileModal({
             <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
             <div className="space-y-0 text-sm">
               {[
-                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—" },
-                { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : "—" },
-                { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : "—" },
-                { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : "—" },
-                { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : "—" },
-                { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : "—" },
-                { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : "—" },
-                { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : "—" },
-              ].map(({ label, value }) => (
+                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—", alwaysShow: true },
+                { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : "—", alwaysShow: true },
+                { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : null },
+                { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : null },
+                { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : null },
+                { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : null },
+                { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : null },
+                { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : null },
+              ].map(({ label, value, alwaysShow }) => (
                 <div key={label} className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">{label}</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{value}</span>
+                  {showEnrichmentLoading && !value && !alwaysShow ? (
+                    <Skeleton className="h-4 w-12" />
+                  ) : (
+                    <span className="font-semibold text-gray-900 dark:text-white">{value ?? "—"}</span>
+                  )}
                 </div>
               ))}
             </div>

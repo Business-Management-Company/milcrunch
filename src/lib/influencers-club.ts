@@ -366,59 +366,20 @@ export async function enrichCreatorProfile(
     throw new Error("Enrich API returned invalid JSON", { cause: parseErr });
   }
 
-  // === VERY VISIBLE: full response for debugging mapping / "Data not available" ===
   const dataRecord = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
-  console.log(JSON.stringify(data, null, 2));
-  if (dataRecord.data) {
-  }
-  if (dataRecord.result) {
-    console.log("data.result KEYS:", Object.keys(dataRecord.result as object));
-  }
-  if (dataRecord.report) {
-    console.log("data.report KEYS:", Object.keys(dataRecord.report as object));
-  }
-  if (dataRecord.error || dataRecord.message || dataRecord.status) {
-    console.log("ERROR/MESSAGE/STATUS:", dataRecord.error, dataRecord.message, dataRecord.status);
-  }
-  // === END full response log ===
-
-  const dataObj = dataRecord;
-  console.log("[Enrich] TOP-LEVEL KEYS:", Object.keys(dataObj));
-  console.log("[Enrich] FULL DATA:", JSON.stringify(data, null, 2));
-  if (dataObj && dataObj.profile && typeof dataObj.profile === "object") {
-    console.log("[Enrich] profile keys:", Object.keys(dataObj.profile as object));
-  }
-  if (dataObj.statistics && typeof dataObj.statistics === "object") {
-    console.log("[Enrich] statistics keys:", Object.keys(dataObj.statistics as object));
-  }
-  if (dataObj.user_profile && typeof dataObj.user_profile === "object") {
-    console.log("[Enrich] user_profile keys:", Object.keys(dataObj.user_profile as object));
-  }
-  if (dataObj.result && typeof dataObj.result === "object") {
-    console.log("[Enrich] result keys:", Object.keys(dataObj.result as object));
-  }
-  if (dataObj.data != null && typeof dataObj.data === "object") {
-    console.log("[Enrich] data keys:", Object.keys(dataObj.data as object));
-  }
 
   if (!res.ok) {
-    console.error("[Enrich] Step 5: API error (non-2xx):", res.status, res.statusText, data);
+    console.error("[Enrich] API error:", res.status, res.statusText, dataRecord.error ?? dataRecord.message ?? "");
     throw new Error(`Enrich API ${res.status}: ${res.statusText}`, { cause: data });
   }
 
-  const result = (data as Record<string, unknown>)?.result as Record<string, unknown> | undefined;
+  const result = (dataRecord).result as Record<string, unknown> | undefined;
   const ig = result && typeof result === "object" ? (result.instagram as Record<string, unknown> | undefined) : undefined;
 
-  console.log("[Enrich] Response received, platforms:", result ? Object.keys(result) : []);
-  console.log("[Enrich] Instagram data:", ig ? "YES" : "NO");
-  console.log("[Enrich] Bio:", ig?.biography != null ? String(ig.biography).substring(0, 50) : undefined);
-  console.log("[Enrich] Followers:", ig?.follower_count);
-  console.log("[Enrich] Cross-platform:", result?.creator_has);
-  console.log("[Enrich] Email:", result?.email);
-  console.log("[Enrich] Lookalikes:", Array.isArray(result?.lookalikes) ? result.lookalikes.length : 0);
+  console.log("[Enrich] OK for", handle, "— ig:", !!ig, "platforms:", result?.creator_has);
 
   if (!ig || typeof ig !== "object") {
-    console.log("[Enrich] No instagram data in result");
+    console.warn("[Enrich] No instagram data in result for", handle);
     return null;
   }
 
