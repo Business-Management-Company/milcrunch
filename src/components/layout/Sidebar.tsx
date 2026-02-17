@@ -30,6 +30,8 @@ import {
   FileSpreadsheet,
   ExternalLink,
   Presentation,
+  Ear,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 
@@ -77,7 +79,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
   },
   {
     key: "creators",
-    label: "CREATORS",
+    label: "INFLUENCERS",
     items: [
       { href: "/brand/discover", label: "Discovery", icon: Search },
       { href: "/brand/directories", label: "Directories", icon: FolderOpen, tooltip: "Manage your verified creator database. Add, edit, and organize creators by branch, platform, and specialty." },
@@ -87,11 +89,19 @@ const SIDEBAR_SECTIONS: NavSection[] = [
   },
   {
     key: "content",
-    label: "CONTENT",
+    label: "MEDIA",
     items: [
       { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
       { href: "/brand/streaming", label: "Streaming", icon: Monitor },
       { href: "/brand/pages", label: "Pages", icon: FileText },
+    ],
+  },
+  {
+    key: "social",
+    label: "SOCIAL",
+    items: [
+      { href: "/brand/social-monitoring", label: "Social Listening", icon: Ear },
+      { href: "/brand/posting", label: "Posting", icon: Send },
     ],
   },
   {
@@ -107,7 +117,6 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "ANALYTICS",
     items: [
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
-      { href: "/social-monitoring", label: "Social Monitoring", icon: Radio },
     ],
   },
   {
