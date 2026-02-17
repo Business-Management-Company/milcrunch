@@ -1,54 +1,107 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useLocation } from "react-router-dom";
-import { useContext } from "react";
-import { AdminChatContext } from "@/contexts/AdminChatContext";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Send, X, Loader2, Shield, Calendar, Eye, Building2 } from "lucide-react";
-import { format } from "date-fns";
+import { MessageSquare, Send, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ROLE_ICONS = {
-  shield: Shield,
-  calendar: Calendar,
-  eye: Eye,
-  building: Building2,
-  megaphone: MessageSquare,
-} as const;
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  cta?: { label: string; link: string };
+}
 
-/**
- * Floating chat bubble and slide-over panel on all /admin/* and /brand/* pages.
- * Shows role-aware header with icon and access level label.
- */
+function getResponse(input: string): { text: string; cta?: { label: string; link: string } } {
+  const lower = input.toLowerCase();
+  if (lower.match(/creator|influencer|find|discover/))
+    return { text: "I can help you find military creators! We have 2,400+ verified influencers across all branches.", cta: { label: "Open Creator Discovery →", link: "/brand/discover" } };
+  if (lower.match(/list|directory|build/))
+    return { text: "Let's build a targeted creator list for your campaign.", cta: { label: "Build a List →", link: "/brand/directories" } };
+  if (lower.match(/podcast|audio|listen/))
+    return { text: "Browse 825+ military and veteran podcasts in our network.", cta: { label: "Browse Podcasts →", link: "/brand/podcasts" } };
+  if (lower.match(/event|conference|mic/))
+    return { text: "Manage events, speakers, and track engagement year-round.", cta: { label: "View Events →", link: "/brand/events" } };
+  if (lower.match(/analytics|report|sponsor|insight|365|roi/))
+    return { text: "Track sponsor ROI and community growth with 365 Insights.", cta: { label: "Open 365 Insights →", link: "/brand/events" } };
+  if (lower.match(/speaker|keynote/))
+    return { text: "Find military keynote speakers by branch, topic, and audience size. Use our Discovery tool with the 'Keynote Speakers' filter.", cta: { label: "Find Speakers →", link: "/brand/discover" } };
+  if (lower.match(/verify|verification/))
+    return { text: "Run military service verification on any creator.", cta: { label: "Verify a Creator →", link: "/brand/discover" } };
+  if (lower.match(/swag|store|merch/))
+    return { text: "Manage your SWAG store and merchandise.", cta: { label: "Open SWAG Store →", link: "/brand/swag-store" } };
+  return { text: "I can help with finding creators, building lists, browsing podcasts, managing events, viewing analytics, and more. What would you like to do?" };
+}
+
+function getQuickPrompts(pathname: string): string[] {
+  if (pathname.startsWith("/brand/discover") || pathname.startsWith("/admin/discover"))
+    return ["🎤 Find keynote speakers", "🎙️ Find podcasters", "📚 Find authors", "👥 Find brand ambassadors"];
+  if (pathname.startsWith("/brand/events") || pathname.startsWith("/admin/events"))
+    return ["📊 View 365 Insights", "🎤 Book a speaker", "💰 Sponsor report"];
+  if (pathname.startsWith("/brand/podcasts") || pathname.startsWith("/admin/podcasts"))
+    return ["🔍 Search podcasts", "📈 Top military podcasts", "🎙️ Submit a podcast"];
+  if (pathname.startsWith("/brand/dashboard") || pathname.startsWith("/admin/dashboard") || pathname === "/brand" || pathname === "/admin")
+    return ["📊 Show my analytics", "🔍 Find creators", "📅 Upcoming events"];
+  return ["🔍 Find creators", "🎙️ Browse podcasts", "📅 View events", "📊 Analytics"];
+}
+
+let idCounter = 0;
+function makeId() {
+  return `msg-${++idCounter}-${Date.now()}`;
+}
+
 export default function FloatingAdminChat() {
   const location = useLocation();
-  const chat = useContext(AdminChatContext);
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { id: makeId(), role: "assistant", text: "👋 Hi! I'm your RecurrentX AI assistant. How can I help today?" },
+  ]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [open, chat?.messages, chat?.streamingContent]);
+    if (open) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open, messages]);
 
-  if (!chat) return null;
-  const { messages, streamingContent, confirmations, loading, sendMessage, roleConfig } = chat;
+  const addResponse = (input: string) => {
+    const userMsg: ChatMessage = { id: makeId(), role: "user", text: input };
+    setMessages((prev) => [...prev, userMsg]);
 
-  const RoleIcon = ROLE_ICONS[roleConfig.icon];
+    setTimeout(() => {
+      const response = getResponse(input);
+      const assistantMsg: ChatMessage = { id: makeId(), role: "assistant", text: response.text, cta: response.cta };
+      setMessages((prev) => [...prev, assistantMsg]);
+    }, 500);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = inputRef.current?.value?.trim();
-    if (!text || loading) return;
+    if (!text) return;
     inputRef.current!.value = "";
-    sendMessage(text);
+    addResponse(text);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const text = inputRef.current?.value?.trim();
+      if (text) {
+        inputRef.current!.value = "";
+        addResponse(text);
+      }
+    }
   };
 
   const isOnChatPage = location.pathname === "/admin/chat";
+  const quickPrompts = getQuickPrompts(location.pathname);
 
   return (
     <>
-      {/* FAB - hide when already on full chat page */}
+      {/* Floating button */}
       {!isOnChatPage && (
         <div className="fixed bottom-6 right-6 z-50">
           <button
@@ -59,7 +112,7 @@ export default function FloatingAdminChat() {
                 ? "bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500"
                 : "bg-gradient-to-r from-[#5B4BD1] to-[#6C5CE7] hover:from-[#5040C0] hover:to-[#6050D8]"
             )}
-            onClick={() => setOpen(o => !o)}
+            onClick={() => setOpen((o) => !o)}
             aria-label={open ? "Close AI chat" : "Open AI chat"}
             style={{ minWidth: 180 }}
           >
@@ -83,75 +136,74 @@ export default function FloatingAdminChat() {
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-hidden />
           <div className="relative w-full max-w-md bg-background border-l shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
-            {/* Role-aware header */}
-            <div className="flex items-center justify-between p-3 border-b">
-              <Link to="/admin/chat" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-                <RoleIcon className="h-5 w-5 text-purple-500" />
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-[#6C5CE7]/5 to-transparent">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-[#6C5CE7]" />
                 <div>
-                  <span className="font-semibold text-sm">{roleConfig.label}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{roleConfig.sublabel}</span>
+                  <span className="font-semibold text-sm">RecurrentX AI</span>
+                  <span className="text-xs text-muted-foreground ml-2">Assistant</span>
                 </div>
-              </Link>
+              </div>
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
-              {messages.slice(-20).map((m) => (
+
+            {/* Quick prompt pills */}
+            <div className="px-3 pt-3 pb-1 flex flex-wrap gap-1.5">
+              {quickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => addResponse(prompt)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/20 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+              {messages.map((m) => (
                 <div
                   key={m.id}
                   className={cn(
-                    "rounded-lg px-2 py-1.5 text-sm max-w-[90%]",
-                    m.role === "user" ? "ml-auto bg-primary text-primary-foreground" : "bg-muted/60"
+                    "rounded-2xl px-4 py-2 text-sm max-w-[80%]",
+                    m.role === "user"
+                      ? "bg-[#6C5CE7] text-white rounded-br-sm ml-auto"
+                      : "bg-white text-gray-800 rounded-bl-sm mr-auto shadow-sm dark:bg-gray-800 dark:text-gray-100"
                   )}
                 >
-                  <p className="whitespace-pre-wrap break-words">{m.content.slice(0, 500)}{m.content.length > 500 ? "..." : ""}</p>
-                  <p className="text-xs opacity-70 mt-0.5">{format(new Date(m.created_at), "HH:mm")}</p>
+                  <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                  {m.cta && (
+                    <button
+                      onClick={() => {
+                        navigate(m.cta!.link);
+                        setOpen(false);
+                      }}
+                      className="block mt-2 bg-[#6C5CE7] text-white text-xs px-4 py-2 rounded-full hover:bg-[#5A4BD5] transition-colors"
+                    >
+                      {m.cta.label}
+                    </button>
+                  )}
                 </div>
               ))}
-              {confirmations.length > 0 && (
-                <div className="space-y-0.5">
-                  {confirmations.slice(-5).map((c, i) => (
-                    <p key={i} className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                      {c}
-                    </p>
-                  ))}
-                </div>
-              )}
-              {streamingContent && (
-                <div className="rounded-lg px-2 py-1.5 bg-muted/60 text-sm">
-                  <p className="whitespace-pre-wrap break-words">{streamingContent}</p>
-                </div>
-              )}
-              {loading && !streamingContent && (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Thinking...</span>
-                </div>
-              )}
               <div ref={bottomRef} />
             </div>
+
+            {/* Input */}
             <form onSubmit={handleSubmit} className="p-3 border-t">
               <div className="flex gap-2">
                 <textarea
                   ref={inputRef}
-                  className="flex-1 min-h-[40px] max-h-[100px] rounded-md border border-input bg-background px-2 py-1.5 text-sm resize-none"
-                  placeholder="Message..."
+                  className="flex-1 min-h-[40px] max-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]"
+                  placeholder="Ask me anything..."
                   rows={1}
-                  onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    const t = inputRef.current;
-                    if (t?.value.trim()) {
-                      sendMessage(t.value.trim());
-                      t.value = "";
-                    }
-                  }
-                }}
-                  disabled={loading}
+                  onKeyDown={handleKeyDown}
                 />
-                <Button type="submit" size="icon" disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Button type="submit" size="icon" className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+                  <Send className="h-4 w-4" />
                 </Button>
               </div>
               <p className="text-[10px] text-muted-foreground text-center mt-2">Powered by Claude</p>
