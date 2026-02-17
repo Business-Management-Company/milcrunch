@@ -349,6 +349,8 @@ export default function HomePage() {
   const [showcaseCreators, setShowcaseCreators] = useState<ShowcaseCreator[]>([]);
   const [showcaseInView, setShowcaseInView] = useState(false);
   const showcaseRef = useRef<HTMLDivElement>(null);
+  type EventRow = Database["public"]["Tables"]["events"]["Row"];
+  const [dbEvents, setDbEvents] = useState<EventRow[]>([]);
   const { content: cms, refresh: refreshCms } = useSiteContent("homepage");
   const [editOpen, setEditOpen] = useState(false);
   const isSuperAdmin = user?.user_metadata?.role === "super_admin";
@@ -364,6 +366,18 @@ export default function HomePage() {
       setPodcasts(data ?? []);
       setPodcastTotal(count ?? 0);
       setPodcastsLoading(false);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .eq("is_published", true)
+        .order("start_date", { ascending: true })
+        .limit(4);
+      setDbEvents(data ?? []);
     })();
   }, []);
 
@@ -686,35 +700,61 @@ export default function HomePage() {
               {cms.events_subtitle}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {EVENTS.map((event) => (
-                <div
-                  key={event.name}
-                  className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                >
-                  {/* Cover image */}
-                  {event.image ? (
-                    <img src={event.image} alt={event.name} className="h-36 w-full object-cover rounded-t-xl" />
-                  ) : (
-                    <div className="h-36 w-full bg-gradient-to-r from-[#6C5CE7] to-[#1A1A2E] rounded-t-xl flex items-center justify-center px-4">
-                      <span className="text-white font-semibold text-center text-sm">{event.name}</span>
+              {(dbEvents.length > 0 ? dbEvents : EVENTS).map((event: any) => {
+                const title = event.title ?? event.name;
+                const imgSrc = event.cover_image_url || event.image_url || event.image || null;
+                const dateStr = event.start_date
+                  ? new Date(event.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                  : event.date ?? "";
+                const location = [event.city, event.state].filter(Boolean).join(", ") || event.location || "";
+                const tag = event.event_type ?? event.tag ?? "";
+
+                return (
+                  <div
+                    key={event.id ?? title}
+                    className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                  >
+                    {/* Cover image with fallback */}
+                    <div className="relative">
+                      {imgSrc && (
+                        <img
+                          src={imgSrc}
+                          alt={title}
+                          className="h-48 w-full object-cover rounded-t-xl"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            (e.currentTarget.nextElementSibling as HTMLElement | null)!.style.display = "flex";
+                          }}
+                        />
+                      )}
+                      <div
+                        className="h-48 w-full bg-gradient-to-r from-[#6C5CE7] to-[#1A1A2E] rounded-t-xl items-center justify-center px-4"
+                        style={{ display: imgSrc ? "none" : "flex" }}
+                      >
+                        <span className="text-white font-semibold text-center text-sm">{title}</span>
+                      </div>
                     </div>
-                  )}
-                  <div className="p-4 flex flex-col flex-1">
-                    <span className="inline-block text-xs font-semibold text-[#6C5CE7] bg-[#6C5CE7]/10 rounded-full px-2.5 py-0.5 w-fit mb-2">
-                      {event.tag}
-                    </span>
-                    <h3 className="font-semibold text-[#1A1A2E] mb-1">{event.name}</h3>
-                    <p className="text-sm text-gray-500 mb-1">{event.date}</p>
-                    <p className="text-sm text-gray-600 flex items-center gap-1 mb-4">
-                      <MapPin className="h-3.5 w-3.5 shrink-0" />
-                      {event.location}
-                    </p>
-                    <Button size="sm" className="rounded-lg mt-auto w-full">
-                      Join Event
-                    </Button>
+                    <div className="p-4 flex flex-col flex-1">
+                      {tag && (
+                        <span className="inline-block text-xs font-semibold text-[#6C5CE7] bg-[#6C5CE7]/10 rounded-full px-2.5 py-0.5 w-fit mb-2">
+                          {tag}
+                        </span>
+                      )}
+                      <h3 className="font-semibold text-[#1A1A2E] mb-1">{title}</h3>
+                      {dateStr && <p className="text-sm text-gray-500 mb-1">{dateStr}</p>}
+                      {location && (
+                        <p className="text-sm text-gray-600 flex items-center gap-1 mb-4">
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          {location}
+                        </p>
+                      )}
+                      <Button size="sm" className="rounded-lg mt-auto w-full">
+                        Join Event
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <Link to="/events" className="text-[#6C5CE7] font-medium hover:underline">
               View All Events →
