@@ -18,6 +18,7 @@ import {
   Building2,
   Users,
   Plug,
+  Link2,
   Package,
   Briefcase,
   KanbanSquare,
@@ -87,7 +88,8 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "CONTENT",
     items: [
       { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
-      { href: "/admin/media/pdtv", label: "Streaming", icon: Monitor, badge: "Soon" },
+      { href: "/brand/streaming", label: "Streaming", icon: Monitor },
+      { href: "/brand/connectors", label: "Connectors", icon: Link2 },
       { href: "/brand/pages", label: "Pages", icon: FileText },
     ],
   },
@@ -114,7 +116,6 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     items: [
       { href: "/brand/settings", label: "Company Profile", icon: Building2 },
       { href: "/settings", label: "Team Members", icon: Users },
-      { href: "/settings", label: "Connectors", icon: Plug },
     ],
   },
 ];
