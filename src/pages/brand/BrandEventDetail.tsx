@@ -5,6 +5,8 @@ import {
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
   Search, Download, CheckCircle2, XCircle, Ticket, Globe, Copy, Code, QrCode,
   MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
+  Film, Sparkles, Target, Type, Clapperboard, Palette, Captions, Scissors,
+  Monitor, Youtube, Facebook, Twitter, Twitch, Linkedin, Wifi, CheckCircle,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -525,7 +527,7 @@ const BrandEventDetail = () => {
               <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
               <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-1.5" />Tickets{eventTickets.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{eventTickets.length}</Badge>}</TabsTrigger>
               <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
-              <TabsTrigger value="streaming"><Radio className="h-4 w-4 mr-1.5" />Streaming</TabsTrigger>
+              <TabsTrigger value="media"><Film className="h-4 w-4 mr-1.5" />Media</TabsTrigger>
               <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
             </div>
             {/* Divider */}
@@ -1246,8 +1248,8 @@ const BrandEventDetail = () => {
             })()}
           </TabsContent>
 
-          {/* ===== STREAMING ===== */}
-          <TabsContent value="streaming">
+          {/* ===== MEDIA ===== */}
+          <TabsContent value="media">
             {(() => {
               const rtmpUrl = "rtmp://stream.recurrentx.com/live";
               const streamKey = eventId || "";
@@ -1270,8 +1272,266 @@ const BrandEventDetail = () => {
                 return h > 0 ? `${h}h ${m}m ${sec}s` : `${m}m ${sec}s`;
               };
 
+              const AI_FEATURES_DETAIL = [
+                { id: "auto_frame", icon: Target, title: "Auto-Frame Speakers", desc: "AI automatically crops and follows active speakers" },
+                { id: "lower_thirds", icon: Type, title: "Lower Thirds", desc: "Auto-generate name titles when speakers are detected" },
+                { id: "broll", icon: Clapperboard, title: "B-Roll Insertion", desc: "AI inserts relevant b-roll during transitions" },
+                { id: "brand_overlay", icon: Palette, title: "Brand Overlay", desc: "Add sponsor logos and event branding as overlays" },
+                { id: "captions", icon: Captions, title: "Live Captions", desc: "Real-time AI-generated closed captions" },
+                { id: "highlights", icon: Scissors, title: "Auto-Highlights", desc: "AI clips key moments for social media post-event" },
+              ];
+
+              // Determine event status for conditional rendering
+              const isUpcoming = !liveStream && endedStreams.length === 0;
+              const isLive = !!liveStream;
+              const isEnded = !liveStream && endedStreams.length > 0;
+
               return (
                 <div className="space-y-6">
+                  {/* Stream Preview / Live Player */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold flex items-center gap-2">
+                        <Video className="h-4 w-4 text-pd-blue" /> Stream Preview
+                      </h3>
+                      {isUpcoming && (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => toast.success("Test stream starting... (preview only)")}>
+                            <Play className="h-3.5 w-3.5 mr-1" /> Test Stream
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 rounded-full"
+                            onClick={() => navigate(`/brand/streaming?event=${eventId}`)}
+                          >
+                            <Radio className="h-3.5 w-3.5 mr-1" /> Go Live
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-gray-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
+                      {isLive ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                              <Radio className="h-8 w-8 text-red-500" />
+                            </div>
+                            <p className="text-white font-semibold">Live Now</p>
+                            <p className="text-gray-400 text-sm mt-1">{liveStream!.title || "Untitled Stream"}</p>
+                          </div>
+                        </div>
+                      ) : isEnded && endedStreams[0].recording_url ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                              <Play className="h-8 w-8 text-purple-400" />
+                            </div>
+                            <p className="text-white font-semibold">Recording Available</p>
+                            <p className="text-gray-400 text-sm mt-1">{endedStreams[0].title || "Untitled Stream"}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                            <Play className="h-8 w-8 text-gray-600" />
+                          </div>
+                          <p className="text-gray-500 text-sm">Stream will appear here when live</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-3">
+                      <Badge className={
+                        isLive
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                      }>
+                        {isLive ? "LIVE" : isEnded ? "Ended" : "Upcoming"}
+                      </Badge>
+                      {isLive && liveStream && (
+                        <>
+                          <span className="text-sm text-muted-foreground">
+                            Duration: {formatDuration(liveStream.started_at, null)}
+                          </span>
+                          {liveStream.viewer_count != null && (
+                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Eye className="h-3.5 w-3.5" /> {liveStream.viewer_count} viewers
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Live AI Production Panel */}
+                    {isLive && (
+                      <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Sparkles className="h-4 w-4 text-purple-500" />
+                          <h4 className="text-sm font-semibold">AI Production Panel</h4>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          <div className="bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 rounded-lg p-3 border-l-4 border-l-purple-500">
+                            <p className="text-xs text-muted-foreground">Active Speaker</p>
+                            <p className="text-sm font-medium">Detecting...</p>
+                          </div>
+                          <div className="bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 rounded-lg p-3 border-l-4 border-l-purple-500">
+                            <p className="text-xs text-muted-foreground">Auto-Frame</p>
+                            <p className="text-sm font-medium text-green-600">ON</p>
+                          </div>
+                          <div className="bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 rounded-lg p-3 border-l-4 border-l-purple-500">
+                            <p className="text-xs text-muted-foreground">Captions</p>
+                            <p className="text-sm font-medium text-green-600">Active</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-3">
+                          <Button size="sm" variant="outline" onClick={() => toast.success("B-Roll inserted")}>
+                            <Clapperboard className="h-3.5 w-3.5 mr-1" /> Insert B-Roll
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => toast.success("Caption added")}>
+                            <Captions className="h-3.5 w-3.5 mr-1" /> Add Caption
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Stream controls bar (sticky) during live */}
+                    {isLive && (
+                      <div className="mt-4 bg-gray-900/95 backdrop-blur rounded-xl px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-white text-sm">
+                          <span className="flex items-center gap-1.5"><Eye className="h-4 w-4" /> {liveStream!.viewer_count ?? 0} viewers</span>
+                          <Badge className="bg-green-600 text-white text-xs">Healthy</Badge>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 rounded-full"
+                          onClick={() => toast.success("End stream confirmation would appear")}
+                        >
+                          End Stream
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* AI Production Features */}
+                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      <h3 className="font-semibold">AI Production Features</h3>
+                      <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs ml-auto">
+                        The Differentiator
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      StreamYard charges $50/mo and you still need to edit your recordings. RecurrentX streams to every platform AND our AI handles production in real-time.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {AI_FEATURES_DETAIL.map((f) => {
+                        const FIcon = f.icon;
+                        return (
+                          <div
+                            key={f.id}
+                            className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 border-l-4 border-l-purple-500"
+                          >
+                            <FIcon className="h-5 w-5 text-purple-600 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{f.title}</p>
+                              <p className="text-xs text-muted-foreground">{f.desc}</p>
+                            </div>
+                            <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+
+                  {/* Pre-Stream Checklist (before event) */}
+                  {isUpcoming && (
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                      <h3 className="font-semibold mb-4 flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-pd-blue" /> Pre-Stream Checklist
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          { label: "Social accounts connected", done: false },
+                          { label: "Stream destinations selected", done: false },
+                          { label: "Camera/mic tested", done: false },
+                          { label: "Lower thirds configured", done: false },
+                          { label: "Brand overlays uploaded", done: false },
+                        ].map((item) => (
+                          <div key={item.label} className="flex items-center gap-3 text-sm">
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${item.done ? "bg-green-500 border-green-500" : "border-gray-300 dark:border-gray-600"}`}>
+                              {item.done && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                            <span className={item.done ? "text-muted-foreground line-through" : ""}>{item.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Post-Event: Recordings & Clips */}
+                  {isEnded && (
+                    <>
+                      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                        <h3 className="font-semibold mb-4 flex items-center gap-2">
+                          <Video className="h-4 w-4 text-pd-blue" /> Recordings & Clips
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Card className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
+                            <Video className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+                            <p className="text-sm font-medium">Full Recording</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {endedStreams[0]?.recording_url ? "Available" : "Processing..."}
+                            </p>
+                            <Button size="sm" variant="outline" className="mt-3 w-full" disabled={!endedStreams[0]?.recording_url}>
+                              <Download className="h-3.5 w-3.5 mr-1" /> Download
+                            </Button>
+                          </Card>
+                          <Card className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
+                            <Scissors className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+                            <p className="text-sm font-medium">Highlight Reel</p>
+                            <p className="text-xs text-muted-foreground mt-1">AI-generated 2-5 min highlight</p>
+                            <Button size="sm" variant="outline" className="mt-3 w-full" disabled>
+                              <Download className="h-3.5 w-3.5 mr-1" /> Processing...
+                            </Button>
+                          </Card>
+                          <Card className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
+                            <Film className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+                            <p className="text-sm font-medium">Social Clips</p>
+                            <p className="text-xs text-muted-foreground mt-1">Vertical clips for TikTok/Reels</p>
+                            <Button size="sm" variant="outline" className="mt-3 w-full" disabled>
+                              <Download className="h-3.5 w-3.5 mr-1" /> Processing...
+                            </Button>
+                          </Card>
+                        </div>
+                      </Card>
+
+                      {/* Analytics */}
+                      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+                        <h3 className="font-semibold mb-4 flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-pd-blue" /> Stream Analytics
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-purple-600">{endedStreams.reduce((sum, s) => sum + (s.viewer_count || 0), 0)}</p>
+                            <p className="text-xs text-muted-foreground">Total Viewers</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-pd-blue">{Math.max(...endedStreams.map((s) => s.viewer_count || 0), 0)}</p>
+                            <p className="text-xs text-muted-foreground">Peak Concurrent</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-pd-blue">{formatDuration(endedStreams[0]?.started_at || null, endedStreams[0]?.ended_at || null)}</p>
+                            <p className="text-xs text-muted-foreground">Duration</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-pd-blue">{endedStreams.length}</p>
+                            <p className="text-xs text-muted-foreground">Total Streams</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </>
+                  )}
+
                   {/* RTMP Settings */}
                   <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
                     <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -1300,8 +1560,6 @@ const BrandEventDetail = () => {
                           </Button>
                         </div>
                       </div>
-
-                      {/* Setup Instructions */}
                       <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">How to connect your A/V:</p>
                         <ol className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5 list-decimal list-inside">
@@ -1315,69 +1573,11 @@ const BrandEventDetail = () => {
                     </div>
                   </Card>
 
-                  {/* Stream Preview Frame */}
-                  <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Video className="h-4 w-4 text-pd-blue" /> Stream Preview
-                    </h3>
-                    <div className="bg-gray-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
-                      {liveStream ? (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
-                              <Radio className="h-8 w-8 text-red-500" />
-                            </div>
-                            <p className="text-white font-semibold">Live Now</p>
-                            <p className="text-gray-400 text-sm mt-1">{liveStream.title || "Untitled Stream"}</p>
-                          </div>
-                        </div>
-                      ) : endedStreams.length > 0 && endedStreams[0].recording_url ? (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
-                              <Play className="h-8 w-8 text-purple-400" />
-                            </div>
-                            <p className="text-white font-semibold">Recording Available</p>
-                            <p className="text-gray-400 text-sm mt-1">{endedStreams[0].title || "Untitled Stream"}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-3">
-                            <Play className="h-8 w-8 text-gray-600" />
-                          </div>
-                          <p className="text-gray-500 text-sm">Stream will appear here when live</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-3">
-                      <Badge className={
-                        liveStream
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                      }>
-                        {liveStream ? "Live" : eventStreams.some((s) => s.status === "ended") ? "Ended" : "Idle"}
-                      </Badge>
-                      {liveStream && (
-                        <>
-                          <span className="text-sm text-muted-foreground">
-                            Duration: {formatDuration(liveStream.started_at, null)}
-                          </span>
-                          {liveStream.viewer_count != null && (
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Eye className="h-3.5 w-3.5" /> {liveStream.viewer_count} viewers
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </Card>
-
                   {/* Linked Streams */}
                   <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <LayoutList className="h-4 w-4 text-pd-blue" /> Linked Streams
+                        <LayoutList className="h-4 w-4 text-pd-blue" /> Stream History
                       </h3>
                       <Button
                         size="sm"

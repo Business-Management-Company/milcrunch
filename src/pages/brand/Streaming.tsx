@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Monitor,
   Play,
@@ -17,7 +18,6 @@ import {
   Radio,
   Youtube,
   Facebook,
-  Instagram,
   Twitter,
   Twitch,
   Linkedin,
@@ -25,6 +25,10 @@ import {
   Plus,
   AlertTriangle,
   X,
+  Calendar,
+  Film,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +51,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 // -- Types --
 
@@ -62,12 +68,23 @@ interface LiveStream {
   id: string;
   title: string;
   event: string;
+  eventId: string;
   description: string;
   destinations: string[];
   sourceType: "external" | "browser";
   startedAt: Date;
   viewerCount: number;
   health: "good" | "fair" | "poor";
+}
+
+interface EventStreamItem {
+  id: string;
+  title: string;
+  start_date: string | null;
+  end_date: string | null;
+  venue: string | null;
+  city: string | null;
+  status: string;
 }
 
 // -- Constants --
@@ -80,13 +97,6 @@ const MOCK_DESTINATIONS: StreamDestination[] = [
   { id: "tiktok", name: "TikTok Live", icon: <Wifi className="w-4 h-4" />, color: "text-gray-900", connected: false },
 ];
 
-const MOCK_EVENTS = [
-  { id: "1", name: "MIC 2026 - Main Stage" },
-  { id: "2", name: "Veterans Day Special" },
-  { id: "3", name: "Creator Spotlight Series" },
-];
-
-const GENERATED_STREAM_KEY = "rxs_" + Math.random().toString(36).slice(2, 14);
 const INGEST_URL = "rtmp://stream.recurrentx.com/live";
 
 // -- Helpers --
@@ -114,6 +124,11 @@ function HealthDot({ health }: { health: "good" | "fair" | "poor" }) {
 
 export default function Streaming() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Events from Supabase
+  const [events, setEvents] = useState<EventStreamItem[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
   // Stream state
   const [liveStream, setLiveStream] = useState<LiveStream | null>(null);
@@ -129,6 +144,7 @@ export default function Streaming() {
   const [sourceType, setSourceType] = useState<"external" | "browser">("external");
   const [resolution, setResolution] = useState("720p");
   const [copied, setCopied] = useState<string | null>(null);
+  const [generatedStreamKey] = useState(() => "rxs_" + Math.random().toString(36).slice(2, 14));
 
   // Browser source
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
@@ -146,6 +162,36 @@ export default function Streaming() {
 
   // Stream summary
   const [summary, setSummary] = useState<{ duration: string; peakViewers: number } | null>(null);
+
+  // Load events from Supabase
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const { data } = await supabase
+          .from("events")
+          .select("id, title, start_date, end_date, venue, city, status")
+          .order("start_date", { ascending: false });
+        setEvents((data || []) as EventStreamItem[]);
+      } catch {
+        // Silently fail — events list is supplementary
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    loadEvents();
+  }, []);
+
+  // Categorize events
+  const now = new Date();
+  const upcomingEvents = events.filter((e) => {
+    if (!e.start_date) return false;
+    return new Date(e.start_date) > now;
+  });
+  const pastEvents = events.filter((e) => {
+    if (!e.end_date && !e.start_date) return false;
+    const endDate = e.end_date ? new Date(e.end_date) : new Date(e.start_date!);
+    return endDate < now;
+  });
 
   // Duration timer
   useEffect(() => {
@@ -229,10 +275,12 @@ export default function Streaming() {
     if (!title.trim()) return;
     if (selectedDests.length === 0) return;
 
+    const selectedEvent = events.find((e) => e.id === event);
     const stream: LiveStream = {
       id: Date.now().toString(),
       title,
-      event: MOCK_EVENTS.find((e) => e.id === event)?.name || "",
+      event: selectedEvent?.title || "",
+      eventId: event,
       description,
       destinations: selectedDests,
       sourceType,
@@ -272,7 +320,7 @@ export default function Streaming() {
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{liveStream.title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{liveStream.title}</h1>
             {liveStream.event && (
               <p className="text-sm text-gray-500">{liveStream.event}</p>
             )}
@@ -308,11 +356,11 @@ export default function Streaming() {
               <Badge className="bg-red-600 text-white text-xs px-2 py-1 rounded-full animate-pulse">
                 LIVE
               </Badge>
-              <span className="flex items-center gap-1.5 text-sm text-gray-600">
+              <span className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                 <Clock className="w-4 h-4" />
                 {elapsed}
               </span>
-              <span className="flex items-center gap-1.5 text-sm text-gray-600">
+              <span className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                 <Eye className="w-4 h-4" />
                 {liveStream.viewerCount.toLocaleString()} viewers
               </span>
@@ -320,7 +368,7 @@ export default function Streaming() {
             </div>
 
             {/* Controls */}
-            <div className="bg-gray-900/90 backdrop-blur rounded-xl px-4 py-3 flex items-center justify-between">
+            <div className="bg-gray-900/95 backdrop-blur rounded-xl px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -347,7 +395,7 @@ export default function Streaming() {
               </div>
               <Button
                 size="sm"
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-full text-lg"
                 onClick={() => setShowEndConfirm(true)}
               >
                 <Square className="w-4 h-4 mr-1.5" />
@@ -356,10 +404,10 @@ export default function Streaming() {
             </div>
           </div>
 
-          {/* Right Sidebar - Destinations */}
+          {/* Right Sidebar */}
           <div className="space-y-3">
             <Card className="p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Active Destinations</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Active Destinations</h3>
               <div className="space-y-2">
                 {liveStream.destinations.map((destId) => {
                   const dest = MOCK_DESTINATIONS.find((d) => d.id === destId);
@@ -368,24 +416,44 @@ export default function Streaming() {
                     <div key={destId} className="flex items-center justify-between py-1.5">
                       <div className="flex items-center gap-2">
                         <span className={dest.color}>{dest.icon}</span>
-                        <span className="text-sm text-gray-700">{dest.name}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{dest.name}</span>
                       </div>
                       <div className="w-2 h-2 rounded-full bg-green-500" />
                     </div>
                   );
                 })}
               </div>
-              <Button variant="outline" size="sm" className="w-full mt-3">
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Add Destination
-              </Button>
+            </Card>
+
+            {/* AI Production Status */}
+            <Card className="p-4 border-purple-200 dark:border-purple-800 bg-gradient-to-b from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27]">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                AI Production
+              </h3>
+              <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+                <p className="flex items-center justify-between">Auto-Frame <span className="text-green-600 font-medium">Active</span></p>
+                <p className="flex items-center justify-between">Lower Thirds <span className="text-green-600 font-medium">Active</span></p>
+                <p className="flex items-center justify-between">Captions <span className="text-green-600 font-medium">Active</span></p>
+                <p className="flex items-center justify-between">Highlights <span className="text-yellow-600 font-medium">Recording</span></p>
+              </div>
             </Card>
 
             <Card className="p-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Stream Info</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Stream Info</h3>
               <div className="space-y-1.5 text-xs text-gray-500">
                 <p>Source: {liveStream.sourceType === "browser" ? "Browser" : "External Encoder"}</p>
                 <p>Started: {liveStream.startedAt.toLocaleTimeString()}</p>
+                {liveStream.eventId && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-xs text-purple-600"
+                    onClick={() => navigate(`/brand/events/${liveStream.eventId}`)}
+                  >
+                    View Event <ExternalLink className="w-3 h-3 ml-1" />
+                  </Button>
+                )}
               </div>
             </Card>
           </div>
@@ -400,7 +468,7 @@ export default function Streaming() {
                 End Live Stream?
               </DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               This will stop broadcasting to all {liveStream.destinations.length} destination(s). This action cannot be undone.
             </p>
             <div className="flex gap-2 mt-4">
@@ -425,12 +493,12 @@ export default function Streaming() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Monitor className="w-7 h-7 text-purple-600" />
             Streaming
           </h1>
-          <p className="text-gray-500 mt-1">
-            Go live to multiple platforms simultaneously from one dashboard.
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
+            Go live to multiple platforms simultaneously. AI handles production in real-time.
           </p>
         </div>
         <Button
@@ -447,11 +515,11 @@ export default function Streaming() {
 
       {/* Summary Card (after stream ends) */}
       {summary && (
-        <Card className="p-6 border-green-200 bg-green-50/50">
+        <Card className="p-6 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-gray-900">Last Stream Summary</h3>
-              <div className="flex gap-6 mt-2 text-sm text-gray-600">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Last Stream Summary</h3>
+              <div className="flex gap-6 mt-2 text-sm text-gray-600 dark:text-gray-400">
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4" /> Duration: {summary.duration}
                 </span>
@@ -475,9 +543,9 @@ export default function Streaming() {
 
       {/* Active Streams / Empty State */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Active Streams</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Active Streams</h2>
         <Card className="p-12 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
             <Radio className="w-8 h-8 text-gray-400" />
           </div>
           <p className="text-gray-500 font-medium">No active streams</p>
@@ -497,9 +565,100 @@ export default function Streaming() {
         </Card>
       </div>
 
+      {/* Upcoming Streams (from events) */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-purple-600" />
+          Upcoming Events with Streaming
+        </h2>
+        {loadingEvents ? (
+          <Card className="p-8 text-center text-muted-foreground text-sm">Loading events...</Card>
+        ) : upcomingEvents.length === 0 ? (
+          <Card className="p-8 text-center text-muted-foreground">
+            <Calendar className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+            <p className="text-sm">No upcoming events.</p>
+            <p className="text-xs mt-1">Create an event and enable streaming in the Media step.</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {upcomingEvents.slice(0, 6).map((ev) => (
+              <Card
+                key={ev.id}
+                className="p-4 cursor-pointer hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+                onClick={() => navigate(`/brand/events/${ev.id}`)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{ev.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {ev.start_date ? format(new Date(ev.start_date), "MMM d, yyyy") : "No date"}
+                    </p>
+                    {(ev.venue || ev.city) && (
+                      <p className="text-xs text-muted-foreground">{[ev.venue, ev.city].filter(Boolean).join(", ")}</p>
+                    )}
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs shrink-0 ml-2">
+                    Upcoming
+                  </Badge>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 w-full text-xs"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/brand/events/${ev.id}`); }}
+                >
+                  <Film className="w-3.5 h-3.5 mr-1" /> Open Media Tab
+                </Button>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Past Streams */}
+      {pastEvents.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <Video className="w-5 h-5 text-gray-500" />
+            Past Streams
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pastEvents.slice(0, 6).map((ev) => (
+              <Card
+                key={ev.id}
+                className="p-4 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+                onClick={() => navigate(`/brand/events/${ev.id}`)}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{ev.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {ev.start_date ? format(new Date(ev.start_date), "MMM d, yyyy") : "No date"}
+                    </p>
+                  </div>
+                  <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 text-xs shrink-0 ml-2">
+                    Ended
+                  </Badge>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-xs"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/brand/events/${ev.id}`); }}
+                  >
+                    <Film className="w-3.5 h-3.5 mr-1" /> View Recordings
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Connected Platforms Quick View */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Connected Platforms</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Connected Platforms</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {MOCK_DESTINATIONS.map((dest) => (
             <Card
@@ -507,12 +666,23 @@ export default function Streaming() {
               className={`p-3 flex items-center gap-2 ${!dest.connected ? "opacity-50" : ""}`}
             >
               <span className={dest.color}>{dest.icon}</span>
-              <span className="text-sm font-medium text-gray-700">{dest.name}</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{dest.name}</span>
               {dest.connected && <div className="w-2 h-2 rounded-full bg-green-500 ml-auto" />}
             </Card>
           ))}
         </div>
       </div>
+
+      {/* AI Pitch Banner */}
+      <Card className="p-6 bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border-purple-200 dark:border-purple-800">
+        <div className="flex items-center gap-3 mb-2">
+          <Sparkles className="w-5 h-5 text-purple-500" />
+          <h3 className="font-semibold text-gray-900 dark:text-white">AI-Powered Production</h3>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          StreamYard charges $50/mo and you still need to edit your recordings. RecurrentX streams to every platform AND our AI handles production in real-time. Your A/V team just clicks Go Live.
+        </p>
+      </Card>
 
       {/* ===================== */}
       {/* SETUP MODAL           */}
@@ -575,9 +745,9 @@ export default function Streaming() {
                     <SelectValue placeholder="Select an event (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_EVENTS.map((e) => (
+                    {events.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
-                        {e.name}
+                        {e.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -620,13 +790,13 @@ export default function Streaming() {
                       onClick={() => toggleDest(dest.id)}
                       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                         selected
-                          ? "border-purple-300 bg-purple-50"
-                          : "border-gray-200 hover:bg-gray-50"
+                          ? "border-purple-300 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20"
+                          : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                     >
                       <Checkbox checked={selected} />
                       <span className={dest.color}>{dest.icon}</span>
-                      <span className="text-sm font-medium text-gray-700">{dest.name}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{dest.name}</span>
                       {selected && (
                         <Check className="w-4 h-4 text-purple-600 ml-auto" />
                       )}
@@ -664,11 +834,11 @@ export default function Streaming() {
                   onClick={() => setSourceType("external")}
                   className={`p-3 rounded-lg border cursor-pointer text-center transition-colors ${
                     sourceType === "external"
-                      ? "border-purple-300 bg-purple-50"
-                      : "border-gray-200 hover:bg-gray-50"
+                      ? "border-purple-300 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20"
+                      : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
-                  <Monitor className="w-6 h-6 mx-auto mb-1 text-gray-700" />
+                  <Monitor className="w-6 h-6 mx-auto mb-1 text-gray-700 dark:text-gray-300" />
                   <p className="text-sm font-medium">External Encoder</p>
                   <p className="text-xs text-gray-400">OBS, vMix, hardware</p>
                 </div>
@@ -676,11 +846,11 @@ export default function Streaming() {
                   onClick={() => setSourceType("browser")}
                   className={`p-3 rounded-lg border cursor-pointer text-center transition-colors ${
                     sourceType === "browser"
-                      ? "border-purple-300 bg-purple-50"
-                      : "border-gray-200 hover:bg-gray-50"
+                      ? "border-purple-300 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20"
+                      : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
-                  <Video className="w-6 h-6 mx-auto mb-1 text-gray-700" />
+                  <Video className="w-6 h-6 mx-auto mb-1 text-gray-700 dark:text-gray-300" />
                   <p className="text-sm font-medium">Stream from Browser</p>
                   <p className="text-xs text-gray-400">Camera & microphone</p>
                 </div>
@@ -688,11 +858,11 @@ export default function Streaming() {
 
               {/* External Encoder */}
               {sourceType === "external" && (
-                <div className="space-y-3 bg-gray-50 rounded-lg p-4">
+                <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                   <div className="space-y-2">
                     <Label className="text-xs text-gray-500 uppercase tracking-wide">RTMP URL</Label>
                     <div className="flex gap-2">
-                      <Input value={INGEST_URL} readOnly className="font-mono text-sm bg-white" />
+                      <Input value={INGEST_URL} readOnly className="font-mono text-sm bg-white dark:bg-gray-900" />
                       <Button
                         variant="outline"
                         size="sm"
@@ -705,20 +875,20 @@ export default function Streaming() {
                   <div className="space-y-2">
                     <Label className="text-xs text-gray-500 uppercase tracking-wide">Stream Key</Label>
                     <div className="flex gap-2">
-                      <Input value={GENERATED_STREAM_KEY} readOnly className="font-mono text-sm bg-white" />
+                      <Input value={generatedStreamKey} readOnly className="font-mono text-sm bg-white dark:bg-gray-900" />
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => copyText(GENERATED_STREAM_KEY, "Stream Key")}
+                        onClick={() => copyText(generatedStreamKey, "Stream Key")}
                       >
                         {copied === "Stream Key" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
                   </div>
-                  <div className="mt-3 p-3 bg-white rounded-lg border text-sm text-gray-600 space-y-1">
-                    <p className="font-medium text-gray-800 mb-2">Setup Instructions:</p>
+                  <div className="mt-3 p-3 bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <p className="font-medium text-gray-800 dark:text-gray-200 mb-2">Setup Instructions:</p>
                     <p>1. Open your streaming software (OBS, vMix, etc.)</p>
-                    <p>2. Set Server to: <code className="bg-gray-100 px-1 rounded text-xs">{INGEST_URL}</code></p>
+                    <p>2. Set Server to: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">{INGEST_URL}</code></p>
                     <p>3. Set Stream Key to the key above</p>
                     <p>4. Click Start Streaming in your software</p>
                   </div>
@@ -795,11 +965,11 @@ export default function Streaming() {
                   Back
                 </Button>
                 <Button
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-full text-lg"
                   onClick={handleStartStream}
                 >
                   <Play className="w-4 h-4 mr-2" />
-                  Start Stream
+                  Go Live
                 </Button>
               </div>
             </div>
