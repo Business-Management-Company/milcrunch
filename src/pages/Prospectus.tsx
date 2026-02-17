@@ -9,7 +9,12 @@ import { cn } from "@/lib/utils";
 /* Constants                                                           */
 /* ------------------------------------------------------------------ */
 
-const ACCESS_CODE = "RECURRENTX2026";
+const APPROVED_EMAILS = [
+  "andrew@recurrentx.com",
+  "paul@recurrentx.com",
+  "kelly@recurrentx.com",
+  "jamie@recurrentx.com",
+];
 const SESSION_KEY = "prospectus_access";
 
 const TABS = [
@@ -78,12 +83,12 @@ const TAB_PLACEHOLDERS: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 
 function AccessGate({ onAccess }: { onAccess: () => void }) {
-  const [code, setCode] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
 
   const submit = () => {
-    if (code.trim().toUpperCase() === ACCESS_CODE) {
+    if (APPROVED_EMAILS.includes(email.trim().toLowerCase())) {
       sessionStorage.setItem(SESSION_KEY, "1");
       onAccess();
     } else {
@@ -108,10 +113,10 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             <Lock className="h-6 w-6 text-[#6C5CE7]" />
           </div>
           <h1 className="text-xl font-bold text-white mb-2">
-            Business Prospectus
+            Investor & Partner Preview
           </h1>
           <p className="text-sm text-gray-400 mb-6">
-            Enter the access code to view this document.
+            Enter your email address to view this document.
           </p>
 
           <div
@@ -121,18 +126,18 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             )}
           >
             <input
-              type="text"
-              value={code}
+              type="email"
+              value={email}
               onChange={(e) => {
-                setCode(e.target.value);
+                setEmail(e.target.value);
                 setError(false);
               }}
               onKeyDown={(e) => e.key === "Enter" && submit()}
-              placeholder="Access code"
+              placeholder="Email address"
               autoFocus
               className={cn(
-                "w-full px-4 py-3 rounded-xl bg-white/[0.06] border text-white text-center text-lg tracking-widest font-mono",
-                "placeholder:text-gray-500 placeholder:tracking-normal placeholder:font-sans",
+                "w-full px-4 py-3 rounded-xl bg-white/[0.06] border text-white text-sm",
+                "placeholder:text-gray-500",
                 "focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/50 transition-all",
                 error
                   ? "border-red-500/60"
@@ -141,7 +146,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             />
             {error && (
               <p className="text-red-400 text-sm mt-2">
-                Invalid access code. Please try again.
+                This email isn't on the approved list. Contact andrew@recurrentx.com to request access.
               </p>
             )}
           </div>
@@ -151,7 +156,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             onClick={submit}
             className="w-full mt-4 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold text-sm transition-colors"
           >
-            View Prospectus
+            Request Access
           </button>
         </div>
 
