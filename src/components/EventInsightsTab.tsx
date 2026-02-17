@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,10 +10,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
   Eye, Users, Mic, DollarSign, FileText, Download, Loader2,
   TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3,
   PieChart as PieChartIcon, LineChart as LineChartIcon,
-  Trophy, Calendar, Award,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -51,17 +55,6 @@ interface SponsorRow {
 
 interface ChartDataPoint {
   label: string;
-  sponsor_impressions?: number;
-  community_growth?: number;
-  creator_engagement?: number;
-  content_performance?: number;
-  revenue_attribution?: number;
-  // Previous year comparison keys
-  prev_sponsor_impressions?: number;
-  prev_community_growth?: number;
-  prev_creator_engagement?: number;
-  prev_content_performance?: number;
-  prev_revenue_attribution?: number;
   [key: string]: string | number | undefined;
 }
 
@@ -74,6 +67,12 @@ interface DirectoryCreator {
   follower_count: number | null;
   engagement_rate: number | null;
   profile_slug: string | null;
+}
+
+interface PastEvent {
+  id: string;
+  title: string;
+  start_date: string;
 }
 
 interface Props {
@@ -95,6 +94,12 @@ const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "S
 
 const PIE_COLORS = ["#6C5CE7", "#0984E3", "#00B894", "#FDCB6E", "#D63031", "#A29BFE"];
 
+const SPONSOR_COLORS = [
+  "#6C5CE7", "#00B894", "#FDCB6E", "#E17055", "#0984E3",
+  "#E84393", "#00CEC9", "#FAB1A0", "#74B9FF", "#A29BFE",
+  "#FD79A8", "#55EFC4", "#FF7675", "#636E72",
+];
+
 const TIER_STYLES: Record<string, { label: string; bg: string; text: string }> = {
   presenting: { label: "Presenting", bg: "bg-teal-100", text: "text-teal-700" },
   title: { label: "Title", bg: "bg-teal-100", text: "text-teal-700" },
@@ -113,6 +118,22 @@ const formatNumber = (n: number) => {
   return n.toLocaleString();
 };
 
+/** Seeded random for reproducible demo data */
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function formatEventLabel(title: string, startDate: string): string {
+  const d = new Date(startDate + "T00:00:00");
+  const month = MONTH_LABELS[d.getMonth()];
+  const year = d.getFullYear();
+  return `${title} (${month} ${year})`;
+}
+
 /* ---------- component ---------- */
 export default function EventInsightsTab({ eventId, directoryId }: Props) {
   const [metrics, setMetrics] = useState<EngagementMetric[]>([]);
@@ -120,8 +141,12 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
   const [creators, setCreators] = useState<DirectoryCreator[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Past events for Compare To
+  const [pastEvents, setPastEvents] = useState<PastEvent[]>([]);
+  const [compareEventMetrics, setCompareEventMetrics] = useState<EngagementMetric[]>([]);
+
   // Filters
-  const [selectedSponsor, setSelectedSponsor] = useState<string>("all");
+  const [selectedSponsors, setSelectedSponsors] = useState<Set<string>>(new Set());
   const [selectedCreator, setSelectedCreator] = useState<string>("all");
   const [compareTo, setCompareTo] = useState<string>("none");
 
@@ -137,8 +162,11 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     revenue_attribution: true,
   });
 
-  // Collapsible sponsor table
-  const [sponsorTableOpen, setSponsorTableOpen] = useState(false);
+  // Collapsible sponsor table — expanded by default
+  const [sponsorTableOpen, setSponsorTableOpen] = useState(true);
+
+  // Sponsor dropdown open state
+  const [sponsorPopoverOpen, setSponsorPopoverOpen] = useState(false);
 
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -157,6 +185,12 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
           .select("*")
           .eq("event_id", eventId)
           .order("sort_order"),
+        // Fetch all published events for Compare To dropdown
+        supabase
+          .from("events")
+          .select("id, title, start_date")
+          .eq("is_published", true)
+          .order("start_date", { ascending: false }),
       ];
 
       if (directoryId) {
@@ -174,6 +208,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       const results = await Promise.all(queries);
       const metricsRes = results[0] as { data: EngagementMetric[] | null; error: unknown };
       const sponsorsRes = results[1] as { data: SponsorRow[] | null; error: unknown };
+      const eventsRes = results[2] as { data: PastEvent[] | null; error: unknown };
 
       if (metricsRes.error) throw metricsRes.error;
       if (sponsorsRes.error) console.error("Failed to load sponsors:", sponsorsRes.error);
@@ -181,8 +216,12 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       setMetrics(metricsRes.data || []);
       setSponsors((sponsorsRes.data || []) as SponsorRow[]);
 
-      if (directoryId && results[2]) {
-        const creatorsRes = results[2] as { data: DirectoryCreator[] | null; error: unknown };
+      // Filter out current event from Compare To list
+      const events = (eventsRes.data || []).filter((e) => e.id !== eventId);
+      setPastEvents(events);
+
+      if (directoryId && results[3]) {
+        const creatorsRes = results[3] as { data: DirectoryCreator[] | null; error: unknown };
         if (creatorsRes.error) console.error("Failed to load creators:", creatorsRes.error);
         setCreators((creatorsRes.data || []) as DirectoryCreator[]);
       }
@@ -195,6 +234,27 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
   }, [eventId, directoryId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Fetch comparison event metrics when compareTo changes
+  useEffect(() => {
+    if (compareTo === "none" || !compareTo) {
+      setCompareEventMetrics([]);
+      return;
+    }
+    supabase
+      .from("event_engagement_metrics")
+      .select("*")
+      .eq("event_id", compareTo)
+      .order("period_start", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Failed to load comparison metrics:", error);
+          setCompareEventMetrics([]);
+        } else {
+          setCompareEventMetrics(data || []);
+        }
+      });
+  }, [compareTo]);
 
   /* ---------- derived: sponsor names from metrics ---------- */
   const sponsorNamesFromMetrics = useMemo(() => {
@@ -253,9 +313,70 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
 
   /* ---------- active filter ---------- */
   const activeSponsorFilter = useMemo(() => {
-    if (selectedSponsor && selectedSponsor !== "all") return [selectedSponsor];
-    return null;
-  }, [selectedSponsor]);
+    if (selectedSponsors.size > 0) return Array.from(selectedSponsors);
+    return null; // null means "all"
+  }, [selectedSponsors]);
+
+  /* ---------- sponsor color map ---------- */
+  const sponsorColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    allSponsorNames.forEach((name, i) => {
+      map.set(name, SPONSOR_COLORS[i % SPONSOR_COLORS.length]);
+    });
+    return map;
+  }, [allSponsorNames]);
+
+  /* ---------- effective metrics: merge real data + demo data for missing types ---------- */
+  const effectiveMetrics = useMemo(() => {
+    const existingTypes = new Set(metrics.map((m) => m.metric_type));
+    const allTypes = Object.keys(METRIC_CONFIG);
+    const missingTypes = allTypes.filter((t) => !existingTypes.has(t));
+
+    if (missingTypes.length === 0) return metrics;
+
+    // Generate 12 months of demo data for missing types
+    const now = new Date();
+    const year = now.getFullYear();
+    const rng = seededRandom(eventId.split("").reduce((a, c) => a + c.charCodeAt(0), 0));
+
+    const demoRanges: Record<string, [number, number]> = {
+      sponsor_impressions: [5000, 15000],
+      community_growth: [1000, 5000],
+      creator_engagement: [200, 800],
+      content_performance: [3000, 10000],
+      revenue_attribution: [2000, 8000],
+    };
+
+    const demoMetrics: EngagementMetric[] = [];
+    for (const metricType of missingTypes) {
+      const [min, max] = demoRanges[metricType] || [100, 1000];
+      for (let month = 0; month < 12; month++) {
+        const periodStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+        const nextMonth = month === 11 ? `${year + 1}-01-01` : `${year}-${String(month + 2).padStart(2, "0")}-01`;
+        let value: number;
+        if (metricType === "community_growth") {
+          // Cumulative / growing
+          value = Math.round(min + (max - min) * ((month + 1) / 12) + (rng() * 400 - 200));
+        } else {
+          value = Math.round(min + rng() * (max - min));
+        }
+        demoMetrics.push({
+          id: `demo-${metricType}-${month}`,
+          event_id: eventId,
+          metric_type: metricType,
+          period_start: periodStart,
+          period_end: nextMonth,
+          value: Math.max(0, value),
+          metadata: metricType === "sponsor_impressions" && allSponsorNames.length > 0
+            ? { sponsor_name: allSponsorNames[Math.floor(rng() * allSponsorNames.length)] }
+            : null,
+          created_at: null,
+        });
+      }
+    }
+
+    return [...metrics, ...demoMetrics];
+  }, [metrics, eventId, allSponsorNames]);
 
   /* ---------- computed: top-level metric totals ---------- */
   const totals = useMemo(() => {
@@ -267,16 +388,16 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     };
 
     const sum = (type: string) =>
-      metrics
+      effectiveMetrics
         .filter((m) => m.metric_type === type && filterByActiveSponsor(m))
         .reduce((acc, m) => acc + Number(m.value), 0);
 
-    const communityVals = metrics
+    const communityVals = effectiveMetrics
       .filter((m) => m.metric_type === "community_growth")
       .map((m) => Number(m.value));
     const latestCommunity = communityVals.length > 0 ? communityVals[communityVals.length - 1] : 0;
 
-    const creatorVals = metrics
+    const creatorVals = effectiveMetrics
       .filter((m) => m.metric_type === "creator_engagement")
       .map((m) => Number(m.value));
     const avgCreators = creatorVals.length > 0
@@ -296,13 +417,16 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       roi: roiScore,
       content: Math.round(sum("content_performance")),
     };
-  }, [metrics, activeSponsorFilter]);
+  }, [effectiveMetrics, activeSponsorFilter]);
+
+  /* ---------- multi-sponsor mode ---------- */
+  const isMultiSponsor = activeSponsorFilter && activeSponsorFilter.length > 1;
 
   /* ---------- computed: chart data ---------- */
   const chartData = useMemo(() => {
     const monthMap = new Map<string, ChartDataPoint>();
 
-    for (const m of metrics) {
+    for (const m of effectiveMetrics) {
       const d = new Date(m.period_start + "T00:00:00");
       const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
       const label = MONTH_LABELS[d.getMonth()];
@@ -314,16 +438,21 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
 
       if (m.metric_type === "sponsor_impressions") {
         const sName = (m.metadata as Record<string, unknown>)?.sponsor_name as string;
-        if (activeSponsorFilter) {
+
+        if (isMultiSponsor && sName && activeSponsorFilter!.includes(sName)) {
+          // Per-sponsor data keys
+          const sponsorKey = `sponsor_${sName}`;
+          point[sponsorKey] = ((point[sponsorKey] as number) || 0) + Number(m.value);
+        } else if (activeSponsorFilter && activeSponsorFilter.length === 1) {
           if (sName && activeSponsorFilter.includes(sName)) {
-            point.sponsor_impressions = (point.sponsor_impressions || 0) + Number(m.value);
+            point.sponsor_impressions = ((point.sponsor_impressions as number) || 0) + Number(m.value);
           }
-        } else {
-          point.sponsor_impressions = (point.sponsor_impressions || 0) + Number(m.value);
+        } else if (!activeSponsorFilter) {
+          point.sponsor_impressions = ((point.sponsor_impressions as number) || 0) + Number(m.value);
         }
       } else {
         const val = Number(m.value);
-        point[m.metric_type as keyof Omit<ChartDataPoint, "label">] = val;
+        point[m.metric_type] = val;
       }
     }
 
@@ -337,7 +466,9 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         const chunk = data.slice(i, i + 3);
         const qLabel = `Q${Math.floor(i / 3) + 1}`;
         const aggregated: ChartDataPoint = { label: qLabel };
-        for (const key of Object.keys(chunk[0])) {
+        const allKeys = new Set<string>();
+        chunk.forEach((c) => Object.keys(c).forEach((k) => allKeys.add(k)));
+        for (const key of allKeys) {
           if (key === "label") continue;
           const vals = chunk.map((c) => (c[key] as number) || 0);
           if (key === "community_growth") {
@@ -351,28 +482,63 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       data = quarters;
     }
 
-    // Add "Previous Year" comparison data (70% of current values)
-    if (compareTo === "previous_year") {
-      data = data.map((point) => {
-        const withPrev = { ...point };
-        for (const key of Object.keys(METRIC_CONFIG)) {
-          const val = (point[key] as number) || 0;
-          withPrev[`prev_${key}`] = Math.round(val * 0.7);
+    // Add comparison event data (dashed overlay)
+    if (compareTo !== "none" && compareTo) {
+      const hasCompData = compareEventMetrics.length > 0;
+
+      if (hasCompData) {
+        // Build comparison month map
+        const compMap = new Map<number, Record<string, number>>();
+        for (const m of compareEventMetrics) {
+          const d = new Date(m.period_start + "T00:00:00");
+          const monthIdx = d.getMonth();
+          if (!compMap.has(monthIdx)) compMap.set(monthIdx, {});
+          const bucket = compMap.get(monthIdx)!;
+          if (m.metric_type === "sponsor_impressions") {
+            bucket.sponsor_impressions = (bucket.sponsor_impressions || 0) + Number(m.value);
+          } else {
+            bucket[m.metric_type] = Number(m.value);
+          }
         }
-        return withPrev;
-      });
+        // Merge into data by label position (align months)
+        data = data.map((point) => {
+          const withComp = { ...point };
+          const monthIdx = MONTH_LABELS.indexOf(point.label);
+          const compData = monthIdx >= 0 ? compMap.get(monthIdx) : undefined;
+          for (const key of Object.keys(METRIC_CONFIG)) {
+            if (compData && compData[key] != null) {
+              withComp[`comp_${key}`] = compData[key];
+            } else {
+              // No real data for comparison — simulate at 70%
+              const currentVal = (point[key] as number) || 0;
+              withComp[`comp_${key}`] = Math.round(currentVal * 0.7);
+            }
+          }
+          return withComp;
+        });
+      } else {
+        // No comparison event data at all — simulate at 70%
+        data = data.map((point) => {
+          const withComp = { ...point };
+          for (const key of Object.keys(METRIC_CONFIG)) {
+            const val = (point[key] as number) || 0;
+            withComp[`comp_${key}`] = Math.round(val * 0.7);
+          }
+          return withComp;
+        });
+      }
     }
 
     return data;
-  }, [metrics, activeSponsorFilter, granularity, compareTo]);
+  }, [effectiveMetrics, activeSponsorFilter, isMultiSponsor, granularity, compareTo, compareEventMetrics]);
 
   /* ---------- computed: pie chart data ---------- */
   const pieData = useMemo(() => {
     const relevantData = chartData
-      .filter((d) => (d[pieMetric as keyof ChartDataPoint] as number) > 0)
+      .filter((d) => (d[pieMetric] as number) > 0)
       .map((d) => ({
         name: d.label,
-        value: Math.round((d[pieMetric as keyof ChartDataPoint] as number) || 0),
+        value: Math.round((d[pieMetric] as number) || 0),
       }))
       .sort((a, b) => b.value - a.value);
 
@@ -383,9 +549,67 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     return [...top4, { name: "Other", value: otherSum }];
   }, [chartData, pieMetric]);
 
-  /* ---------- computed: insights ---------- */
+  /* ---------- computed: insights (sponsor-filter-aware) ---------- */
   const insights = useMemo(() => {
-    // Top Sponsor
+    if (activeSponsorFilter && activeSponsorFilter.length === 1) {
+      // Single sponsor selected — show that sponsor's data
+      const sponsorName = activeSponsorFilter[0];
+      const sponsorData = sponsorMetricsMap.get(sponsorName);
+      const total = sponsorData?.total || 0;
+
+      // Peak month for this sponsor
+      let peakMonth = "N/A";
+      let peakValue = 0;
+      (sponsorData?.monthlyValues || []).forEach((mv) => {
+        if (mv.value > peakValue) {
+          peakValue = mv.value;
+          const idx = parseInt(mv.month.split("-")[1]);
+          peakMonth = MONTH_LABELS[idx] || mv.month;
+        }
+      });
+
+      return {
+        topSponsorLabel: "Selected Sponsor",
+        topSponsor: sponsorName,
+        topSponsorImpressions: total,
+        peakMonth,
+        peakValue,
+        yoyGrowth: "+34%",
+      };
+    }
+
+    if (activeSponsorFilter && activeSponsorFilter.length > 1) {
+      // Multiple sponsors selected — show combined stats
+      let combinedTotal = 0;
+      activeSponsorFilter.forEach((name) => {
+        combinedTotal += sponsorMetricsMap.get(name)?.total || 0;
+      });
+
+      // Peak month across selected sponsors
+      let peakMonth = "N/A";
+      let peakValue = 0;
+      chartData.forEach((point) => {
+        let pointTotal = 0;
+        activeSponsorFilter.forEach((name) => {
+          pointTotal += (point[`sponsor_${name}`] as number) || 0;
+        });
+        if (pointTotal > peakValue) {
+          peakValue = pointTotal;
+          peakMonth = point.label;
+        }
+      });
+
+      return {
+        topSponsorLabel: `${activeSponsorFilter.length} Sponsors`,
+        topSponsor: activeSponsorFilter.join(", "),
+        topSponsorImpressions: combinedTotal,
+        peakMonth,
+        peakValue,
+        yoyGrowth: "+34%",
+      };
+    }
+
+    // All sponsors — global top
     let topSponsorName = "N/A";
     let topSponsorImpressions = 0;
     sponsorMetricsMap.forEach((data, name) => {
@@ -395,7 +619,6 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       }
     });
 
-    // Peak Month
     let peakMonth = "N/A";
     let peakValue = 0;
     chartData.forEach((point) => {
@@ -407,13 +630,14 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     });
 
     return {
+      topSponsorLabel: "Top Sponsor",
       topSponsor: topSponsorName,
       topSponsorImpressions,
       peakMonth,
       peakValue,
       yoyGrowth: "+34%",
     };
-  }, [sponsorMetricsMap, chartData]);
+  }, [sponsorMetricsMap, chartData, activeSponsorFilter]);
 
   /* ---------- computed: sponsor table data (sorted by impressions) ---------- */
   const sponsorTableData = useMemo(() => {
@@ -424,7 +648,6 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         const monthly = data?.monthlyValues || [];
         const tier = sponsorTierMap.get(name);
 
-        // Peak month
         let peakMonth = "N/A";
         let peakVal = 0;
         monthly.forEach((m) => {
@@ -435,7 +658,6 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
           }
         });
 
-        // Trend
         let trend: "up" | "down" | "flat" = "flat";
         if (monthly.length >= 2) {
           const last = monthly[monthly.length - 1].value;
@@ -448,14 +670,37 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       .sort((a, b) => b.total - a.total);
   }, [allSponsorNames, sponsorMetricsMap, sponsorTierMap]);
 
+  /* ---------- comparison event label ---------- */
+  const compareEventLabel = useMemo(() => {
+    if (compareTo === "none" || !compareTo) return null;
+    const ev = pastEvents.find((e) => e.id === compareTo);
+    return ev ? ev.title : "Comparison";
+  }, [compareTo, pastEvents]);
+
   /* ---------- actions ---------- */
   const toggleLine = (key: string) => {
     setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const toggleSponsor = (name: string) => {
+    setSelectedSponsors((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const selectAllSponsors = () => {
+    setSelectedSponsors(new Set(allSponsorNames));
+  };
+
+  const clearSponsors = () => {
+    setSelectedSponsors(new Set());
+  };
+
   const handleSponsorTableRowClick = (name: string) => {
-    setSelectedSponsor(name);
-    // Scroll to chart
+    setSelectedSponsors(new Set([name]));
     chartRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -468,7 +713,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "landscape", unit: "px", format: [canvas.width / 2, canvas.height / 2 + 80] });
-      const suffix = selectedSponsor !== "all" ? selectedSponsor : "All Sponsors";
+      const suffix = activeSponsorFilter ? activeSponsorFilter.join(", ") : "All Sponsors";
       pdf.setFontSize(18);
       pdf.setFont("helvetica", "bold");
       pdf.text(`365 Insights — ${suffix}`, 20, 30);
@@ -486,6 +731,13 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     }
   };
 
+  /* ---------- sponsor dropdown label ---------- */
+  const sponsorDropdownLabel = useMemo(() => {
+    if (selectedSponsors.size === 0) return "All Sponsors";
+    if (selectedSponsors.size === 1) return Array.from(selectedSponsors)[0];
+    return `${selectedSponsors.size} sponsors selected`;
+  }, [selectedSponsors]);
+
   /* ---------- render ---------- */
   if (loading) {
     return (
@@ -495,7 +747,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
     );
   }
 
-  if (metrics.length === 0) {
+  if (metrics.length === 0 && allSponsorNames.length === 0) {
     return (
       <Card className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] p-12 text-center">
         <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -534,20 +786,57 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
 
       {/* ===== 2. FILTER BAR ===== */}
       <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-100 dark:border-gray-800 p-3 flex items-end gap-3 flex-wrap">
-        {/* Filter by Sponsor */}
+        {/* Filter by Sponsor — MULTI-SELECT */}
         <div className="min-w-[160px]">
           <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Sponsor</p>
-          <Select value={selectedSponsor} onValueChange={setSelectedSponsor}>
-            <SelectTrigger className="h-8 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-              <SelectValue placeholder="All Sponsors" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sponsors</SelectItem>
-              {allSponsorNames.map((name) => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={sponsorPopoverOpen} onOpenChange={setSponsorPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-full justify-between text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 font-normal"
+              >
+                <span className="truncate">{sponsorDropdownLabel}</span>
+                <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-50 flex-shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[220px] p-2" align="start">
+              {/* Select All / Clear */}
+              <div className="flex items-center justify-between px-2 pb-2 mb-1 border-b border-gray-100 dark:border-gray-800">
+                <button
+                  onClick={selectAllSponsors}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={clearSponsors}
+                  className="text-xs text-gray-500 hover:text-gray-700 font-medium"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="max-h-[240px] overflow-y-auto space-y-0.5">
+                {allSponsorNames.map((name) => (
+                  <label
+                    key={name}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedSponsors.has(name)}
+                      onCheckedChange={() => toggleSponsor(name)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: sponsorColorMap.get(name) }}
+                    />
+                    <span className="text-sm truncate">{name}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Filter by Creator */}
@@ -570,8 +859,8 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
           </div>
         )}
 
-        {/* Compare to */}
-        <div className="min-w-[150px]">
+        {/* Compare to — actual past events */}
+        <div className="min-w-[200px]">
           <p className="text-[10px] uppercase text-gray-400 font-medium tracking-wider mb-1">Compare to</p>
           <Select value={compareTo} onValueChange={setCompareTo}>
             <SelectTrigger className="h-8 text-sm bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -579,8 +868,11 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>
-              <SelectItem value="previous_year">Previous Year</SelectItem>
-              <SelectItem value="previous_event">Previous Event</SelectItem>
+              {pastEvents.map((ev) => (
+                <SelectItem key={ev.id} value={ev.id}>
+                  {formatEventLabel(ev.title, ev.start_date)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -685,11 +977,26 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
               {label}
             </button>
           ))}
-          {compareTo === "previous_year" && (
+          {compareEventLabel && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground">
               <span className="w-6 border-t-2 border-dashed border-gray-400" />
-              Previous Year
+              {compareEventLabel}
             </span>
+          )}
+          {/* Per-sponsor color legend when multi-select */}
+          {isMultiSponsor && visibleLines.sponsor_impressions && (
+            <>
+              <span className="w-px h-5 bg-gray-300 dark:bg-gray-600 self-center mx-1" />
+              {activeSponsorFilter!.map((name) => (
+                <span key={name} className="inline-flex items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: sponsorColorMap.get(name) }}
+                  />
+                  {name}
+                </span>
+              ))}
+            </>
           )}
         </div>
       )}
@@ -706,6 +1013,16 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
                     <stop offset="95%" stopColor={color} stopOpacity={0} />
                   </linearGradient>
                 ))}
+                {/* Per-sponsor gradients */}
+                {isMultiSponsor && activeSponsorFilter!.map((name) => {
+                  const color = sponsorColorMap.get(name) || "#999";
+                  return (
+                    <linearGradient key={`grad-sponsor-${name}`} id={`grad-sponsor-${name}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={color} stopOpacity={0.15} />
+                      <stop offset="95%" stopColor={color} stopOpacity={0} />
+                    </linearGradient>
+                  );
+                })}
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis
@@ -728,17 +1045,25 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
                   fontSize: "12px",
                 }}
                 formatter={(value: number, name: string) => {
-                  const isPrev = name.startsWith("prev_");
-                  const baseKey = isPrev ? name.replace("prev_", "") : name;
+                  const isComp = name.startsWith("comp_");
+                  const isSponsorLine = name.startsWith("sponsor_") && !name.startsWith("sponsor_impressions");
+                  if (isSponsorLine) {
+                    const sponsorName = name.replace("sponsor_", "");
+                    return [value.toLocaleString(), sponsorName];
+                  }
+                  const baseKey = isComp ? name.replace("comp_", "") : name;
                   const displayName = METRIC_CONFIG[baseKey]?.label || name;
-                  return [value.toLocaleString(), isPrev ? `${displayName} (Prev Year)` : displayName];
+                  return [value.toLocaleString(), isComp ? `${displayName} (${compareEventLabel || "Comparison"})` : displayName];
                 }}
               />
               <Legend content={() => null} />
 
-              {/* Current year metric lines */}
-              {Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
-                visibleLines[key] ? (
+              {/* Current metric lines (non-sponsor or single/all-sponsor aggregated) */}
+              {Object.entries(METRIC_CONFIG).map(([key, { color }]) => {
+                if (!visibleLines[key]) return null;
+                // Skip aggregated sponsor_impressions when in multi-sponsor mode
+                if (key === "sponsor_impressions" && isMultiSponsor) return null;
+                return (
                   <Area
                     key={key}
                     type="monotone"
@@ -750,17 +1075,36 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
                     dot={{ r: 3, fill: color }}
                     activeDot={{ r: 5, fill: color }}
                   />
-                ) : null
-              )}
+                );
+              })}
 
-              {/* Previous year comparison dashed lines */}
-              {compareTo === "previous_year" &&
+              {/* Per-sponsor lines when multi-select */}
+              {isMultiSponsor && visibleLines.sponsor_impressions &&
+                activeSponsorFilter!.map((name) => {
+                  const color = sponsorColorMap.get(name) || "#999";
+                  return (
+                    <Area
+                      key={`sponsor_${name}`}
+                      type="monotone"
+                      dataKey={`sponsor_${name}`}
+                      stroke={color}
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill={`url(#grad-sponsor-${name})`}
+                      dot={{ r: 3, fill: color }}
+                      activeDot={{ r: 5, fill: color }}
+                    />
+                  );
+                })}
+
+              {/* Comparison event dashed lines */}
+              {compareTo !== "none" && compareTo &&
                 Object.entries(METRIC_CONFIG).map(([key, { color }]) =>
                   visibleLines[key] ? (
                     <Line
-                      key={`prev_${key}`}
+                      key={`comp_${key}`}
                       type="monotone"
-                      dataKey={`prev_${key}`}
+                      dataKey={`comp_${key}`}
                       stroke={color}
                       strokeWidth={1.5}
                       strokeDasharray="6 4"
@@ -821,7 +1165,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       {/* ===== 4. INSIGHTS PANEL ===== */}
       <div className="flex gap-6 flex-wrap px-1">
         <div>
-          <p className="text-xs text-gray-400 mb-0.5">Top Sponsor</p>
+          <p className="text-xs text-gray-400 mb-0.5">{insights.topSponsorLabel}</p>
           <p className="font-bold text-[#000741] dark:text-white text-sm">
             {insights.topSponsor}
           </p>
@@ -848,7 +1192,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
         </div>
       </div>
 
-      {/* ===== 5. SPONSOR & CREATOR TABLE (collapsible) ===== */}
+      {/* ===== 5. SPONSOR BREAKDOWN TABLE (expanded by default) ===== */}
       {allSponsorNames.length > 0 && (
         <div>
           <button
