@@ -27,7 +27,16 @@ import {
   Pencil,
   Loader2,
   Save,
+  Eye,
+  Mic,
+  TrendingUp,
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  ResponsiveContainer,
+} from "recharts";
 import {
   Tooltip,
   TooltipTrigger,
@@ -86,6 +95,70 @@ const BRAND_FEATURES = [
 ];
 
 type PodcastRow = Database["public"]["Tables"]["podcasts"]["Row"];
+
+// --- 365 Insights Preview data ---
+const INSIGHTS_CHART_DATA = [
+  { month: "Sep", value: 350 },
+  { month: "Oct", value: 520 },
+  { month: "Nov", value: 640 },
+  { month: "Dec", value: 600 },
+  { month: "Jan", value: 500 },
+  { month: "Feb", value: 380 },
+  { month: "Mar", value: 50 },
+  { month: "Apr", value: 60 },
+  { month: "May", value: 70 },
+  { month: "Jun", value: 80 },
+  { month: "Jul", value: 100 },
+  { month: "Aug", value: 120 },
+];
+
+const INSIGHTS_KPIS = [
+  { value: 3400000, display: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
+  { value: 2400, display: "2,400", label: "Community Members", icon: Users, color: "text-blue-500" },
+  { value: 1467, display: "1,467", label: "Active Creators", icon: Mic, color: "text-green-500" },
+  { value: 34, display: "+34%", label: "Year over Year Growth", icon: TrendingUp, color: "text-teal-500" },
+];
+
+function AnimatedCounter({ target, display, inView }: { target: number; display: string; inView: boolean }) {
+  const [current, setCurrent] = useState("0");
+
+  useEffect(() => {
+    if (!inView) return;
+    const duration = 1500;
+    const startTime = performance.now();
+    let raf: number;
+
+    const isPercentage = display.startsWith("+") && display.endsWith("%");
+    const hasM = display.includes("M");
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      if (isPercentage) {
+        const num = Math.round(eased * target);
+        setCurrent(`+${num}%`);
+      } else if (hasM) {
+        const num = (eased * target / 1000000).toFixed(1);
+        setCurrent(`${num}M`);
+      } else {
+        const num = Math.round(eased * target);
+        setCurrent(num.toLocaleString());
+      }
+
+      if (progress < 1) {
+        raf = requestAnimationFrame(animate);
+      }
+    };
+
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, target, display]);
+
+  return <span>{current}</span>;
+}
 
 
 
@@ -338,6 +411,98 @@ function HomepageEditor({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function InsightsPreview({ user }: { user: any }) {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true); },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section className="bg-gray-50 py-20 px-6">
+      <div ref={sectionRef} className="max-w-6xl mx-auto text-center">
+        {/* Badge */}
+        <span className="inline-block bg-purple-100 text-[#6C5CE7] text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-5">
+          365 INSIGHTS
+        </span>
+
+        {/* Heading */}
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Your events don't end when the lights go off.
+        </h2>
+        <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-12">
+          Track sponsor ROI, creator engagement, and community growth — 365 days a year.
+        </p>
+
+        {/* KPI Cards */}
+        <div className="flex gap-4 overflow-x-auto pb-2 mb-10 justify-center">
+          {INSIGHTS_KPIS.map((kpi) => {
+            const Icon = kpi.icon;
+            return (
+              <div
+                key={kpi.label}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 text-center min-w-[180px] flex-shrink-0"
+              >
+                <Icon className={`h-6 w-6 mx-auto mb-2 ${kpi.color}`} />
+                <p className="text-2xl font-bold text-gray-900">
+                  <AnimatedCounter target={kpi.value} display={kpi.display} inView={inView} />
+                </p>
+                <p className="text-sm text-gray-500 mt-1">{kpi.label}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Mini Chart */}
+        <div className="max-w-4xl mx-auto h-[250px] rounded-2xl bg-white shadow-sm border border-gray-100 p-6 mb-10">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={INSIGHTS_CHART_DATA} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="insightsPurple" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: "#9CA3AF" }}
+              />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke="#6C5CE7"
+                strokeWidth={2.5}
+                fill="url(#insightsPurple)"
+                dot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* CTA */}
+        <Link to={user ? "/brand/dashboard" : "/sign-in"}>
+          <Button className="bg-[#6C5CE7] text-white rounded-full px-8 py-3 font-semibold hover:bg-[#5B4BD1]">
+            See the full dashboard →
+          </Button>
+        </Link>
+        <p className="text-sm text-gray-400 mt-4">
+          Powering insights for MIC, MilSpouseFest, and 10+ military events
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -764,6 +929,9 @@ export default function HomePage() {
             </Link>
           </div>
         </section>
+
+        {/* 365 Insights Preview */}
+        <InsightsPreview user={user} />
 
         {/* For Brands */}
         <section id="for-brands" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
