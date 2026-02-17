@@ -7,7 +7,7 @@ import {
   MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
   Film, Sparkles, Target, Type, Clapperboard, Palette, Captions, Scissors,
   Monitor, Youtube, Facebook, Twitter, Twitch, Linkedin, Wifi, CheckCircle,
-  Pencil, ShieldCheck,
+  Pencil, ShieldCheck, Megaphone, Send,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -158,6 +158,74 @@ const EVENT_FORMATS = [
   { value: "virtual", label: "Virtual" },
   { value: "hybrid", label: "Hybrid" },
 ];
+
+/* ---------- Send Notification Card ---------- */
+function SendNotificationCard({ eventId }: { eventId: string }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [type, setType] = useState("announcement");
+  const [sending, setSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!title.trim()) { toast.error("Title is required"); return; }
+    setSending(true);
+    const { error } = await supabase.from("event_notifications").insert({
+      event_id: eventId,
+      title: title.trim(),
+      body: body.trim(),
+      type,
+    } as Record<string, unknown>);
+    setSending(false);
+    if (error) {
+      toast.error("Failed to send notification");
+      return;
+    }
+    toast.success("Notification sent to all attendees!");
+    setTitle("");
+    setBody("");
+    setType("announcement");
+    setOpen(false);
+  };
+
+  return (
+    <Card className="p-4 mb-4">
+      {!open ? (
+        <Button onClick={() => setOpen(true)} className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2">
+          <Megaphone className="h-4 w-4" /> Send Notification to Attendees
+        </Button>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Megaphone className="h-4 w-4 text-[#6C5CE7]" /> Send Notification
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+          </div>
+          <div className="flex gap-2">
+            {(["announcement", "schedule", "reminder"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setType(t)}
+                className={`text-xs px-3 py-1 rounded-full font-medium capitalize transition-colors ${
+                  type === t ? "bg-[#6C5CE7] text-white" : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <Input placeholder="Notification title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Textarea placeholder="Message body (optional)" value={body} onChange={(e) => setBody(e.target.value)} rows={2} />
+          <Button onClick={handleSend} disabled={sending} className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Send to All Attendees
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 /* ======================================== */
 const BrandEventDetail = () => {
@@ -1065,6 +1133,8 @@ const BrandEventDetail = () => {
 
           {/* ===== COMMUNITY ===== */}
           <TabsContent value="community">
+            {/* Send Notification */}
+            <SendNotificationCard eventId={eventId!} />
             <EventCommunityTab
               eventId={eventId!}
               eventCreatedAt={event.created_at ?? null}

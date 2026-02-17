@@ -3,10 +3,11 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Calendar, Mic, Building2, User, Info, Bell, Loader2, AlertCircle,
+  Calendar, Mic, Building2, User, MessageCircle, Bell, Loader2, AlertCircle, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import AttendeeNotifications from "@/pages/attendee/AttendeeNotifications";
 
 /* ---------- types ---------- */
 export interface AttendeeEvent {
@@ -41,14 +42,14 @@ export const useAttendeeEvent = () => {
 };
 
 /* ---------- tabs ---------- */
-type TabId = "schedule" | "speakers" | "sponsors" | "profile" | "info";
+type TabId = "schedule" | "community" | "speakers" | "sponsors" | "profile";
 
 const TABS: { id: TabId; label: string; icon: typeof Calendar }[] = [
   { id: "schedule", label: "Schedule", icon: Calendar },
+  { id: "community", label: "Community", icon: MessageCircle },
   { id: "speakers", label: "Speakers", icon: Mic },
   { id: "sponsors", label: "Sponsors", icon: Building2 },
   { id: "profile", label: "My Profile", icon: User },
-  { id: "info", label: "Info", icon: Info },
 ];
 
 interface Props {
@@ -68,18 +69,20 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
 
+  /* notifications */
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3);
+
   useEffect(() => {
     if (eventSlug) fetchEvent();
   }, [eventSlug]);
 
   const fetchEvent = async () => {
     try {
-      // Try slug first, fall back to ID
       let query = supabase
         .from("events")
         .select("id, title, slug, description, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published");
 
-      // If it looks like a UUID, query by ID
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventSlug!);
       if (isUUID) {
         query = query.eq("id", eventSlug!);
@@ -94,10 +97,11 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
       }
       setEvent(data as unknown as AttendeeEvent);
 
-      // Check registration
       if (user) {
         await checkRegistration(data.id);
       }
+
+      fetchUnreadCount(data.id);
     } catch {
       setError(true);
     } finally {
@@ -123,6 +127,46 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
       // Silent
     }
   };
+
+  const fetchUnreadCount = async (eventId: string) => {
+    try {
+      const { count } = await supabase
+        .from("event_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId);
+      if (count !== null && count > 0) {
+        if (user) {
+          const { count: readCount } = await supabase
+            .from("notification_reads")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id);
+          setUnreadCount(Math.max(0, (count || 0) - (readCount || 0)));
+        } else {
+          setUnreadCount(count || 0);
+        }
+      }
+    } catch {
+      // Tables may not exist yet — keep mock default
+    }
+  };
+
+  /* Realtime for new notifications */
+  useEffect(() => {
+    if (!event) return;
+    const channel = supabase
+      .channel(`notif-${event.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "event_notifications",
+        filter: `event_id=eq.${event.id}`,
+      }, () => {
+        setUnreadCount((prev) => prev + 1);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [event?.id]);
 
   const refreshRegistration = async () => {
     if (event) await checkRegistration(event.id);
@@ -174,10 +218,42 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
                 {event.state && `, ${event.state}`}
               </p>
             </div>
+            <button
+              className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
+              onClick={() => setNotifOpen(!notifOpen)}
+            >
+              <Bell className={cn("h-5 w-5", notifOpen ? "text-[#6C5CE7]" : "text-gray-300")} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
             <span className="text-xs font-bold text-white tracking-tight shrink-0">
               recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
           </header>
+
+          {/* ---- Notification Panel ---- */}
+          {notifOpen && (
+            <div className="absolute top-14 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-lg max-h-[70vh] overflow-y-auto">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="font-bold text-base">Notifications</h2>
+                  <button
+                    onClick={() => setNotifOpen(false)}
+                    className="p-1 rounded-full hover:bg-gray-100"
+                  >
+                    <X className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
+                <AttendeeNotifications
+                  eventId={event.id}
+                  onClearBadge={() => setUnreadCount(0)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* ---- Content ---- */}
           <main className="flex-1 overflow-y-auto pb-20">

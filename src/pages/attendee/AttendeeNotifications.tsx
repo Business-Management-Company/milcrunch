@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bell, Calendar, UserCheck, MessageCircle, Megaphone, Clock,
-  AlertTriangle, CheckCircle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 /* ---------- types ---------- */
@@ -55,7 +55,7 @@ function mockDate(daysAgo: number, hoursAgo = 0): string {
 const MOCK_NOTIFICATIONS: Notification[] = [
   { id: "n1", type: "reminder", title: "Opening Keynote starts in 15 minutes", body: "Head to Main Stage, Hall A. Florent Groberg: Leadership from Battlefield to Boardroom.", is_read: false, created_at: mockDate(0, 0) },
   { id: "n2", type: "connection", title: "Sarah Mitchell accepted your connection", body: "You can now see each other's contact info. Send her a message!", is_read: false, created_at: mockDate(0, 2) },
-  { id: "n3", type: "community", title: "Someone replied to your post", body: "Ranger Fitness replied: \"Welcome Johnny! 🙌 Full-time creator here too. Let's connect at the networking dinner!\"", is_read: false, created_at: mockDate(0, 3) },
+  { id: "n3", type: "community", title: "Someone replied to your post", body: "Ranger Fitness replied: \"Welcome Johnny! Full-time creator here too. Let's connect at the networking dinner!\"", is_read: false, created_at: mockDate(0, 3) },
   { id: "n4", type: "announcement", title: "Don't miss tonight's VIP reception!", body: "Join us at the Rooftop Lounge, 7 PM. Open bar and networking. VIP badge required.", is_read: true, created_at: mockDate(0, 6) },
   { id: "n5", type: "schedule", title: "Keynote moved to 10:00 AM", body: "The opening keynote has been moved from 9:30 AM to 10:00 AM due to a schedule adjustment.", is_read: true, created_at: mockDate(0, 8) },
   { id: "n6", type: "community", title: "Your post got 45 likes!", body: "Your introduction post \"Hey everyone! Johnny Marines here...\" is trending in the community.", is_read: true, created_at: mockDate(1, 2) },
@@ -67,19 +67,85 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 
 /* ======================================== */
 export default function AttendeeNotifications({ eventId, onClearBadge }: Props) {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [eventId]);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("event_notifications")
+        .select("*")
+        .eq("event_id", eventId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // Fetch read status
+        let userReadIds = new Set<string>();
+        if (user) {
+          const { data: reads } = await supabase
+            .from("notification_reads")
+            .select("notification_id")
+            .eq("user_id", user.id);
+          if (reads) {
+            userReadIds = new Set(reads.map((r: { notification_id: string }) => r.notification_id));
+          }
+        }
+        setReadIds(userReadIds);
+
+        const mapped: Notification[] = (data as { id: string; type: string; title: string; body: string; created_at: string }[]).map((n) => ({
+          id: n.id,
+          type: (n.type || "announcement") as Notification["type"],
+          title: n.title,
+          body: n.body || "",
+          is_read: userReadIds.has(n.id),
+          created_at: n.created_at,
+        }));
+        setNotifications(mapped);
+      } else {
+        setNotifications(MOCK_NOTIFICATIONS);
+      }
+    } catch {
+      setNotifications(MOCK_NOTIFICATIONS);
+    }
+  };
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     onClearBadge();
     toast.success("All notifications marked as read");
+
+    // Persist read status
+    if (user) {
+      const unreadNotifs = notifications.filter((n) => !n.is_read && !n.id.startsWith("n"));
+      if (unreadNotifs.length > 0) {
+        const inserts = unreadNotifs.map((n) => ({
+          notification_id: n.id,
+          user_id: user.id,
+        }));
+        await supabase.from("notification_reads").insert(inserts as Record<string, unknown>[]).then();
+      }
+    }
   };
 
-  const markRead = (id: string) => {
+  const markRead = async (id: string) => {
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+
+    if (user && !id.startsWith("n")) {
+      await supabase.from("notification_reads").insert({
+        notification_id: id,
+        user_id: user.id,
+      } as Record<string, unknown>).then();
+    }
   };
 
   const togglePush = (enabled: boolean) => {
@@ -96,7 +162,6 @@ export default function AttendeeNotifications({ eventId, onClearBadge }: Props) 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-bold text-lg">Notifications</h2>
           {unreadCount > 0 && (
             <p className="text-xs text-muted-foreground">{unreadCount} unread</p>
           )}
