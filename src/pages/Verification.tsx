@@ -177,15 +177,46 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === "verified") return <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />;
-  if (status === "flagged" || status === "denied") return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
-  return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
+  const map: Record<string, { icon: React.ReactNode; tip: string }> = {
+    verified: { icon: <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />, tip: "Verified — Military service confirmed" },
+    flagged: { icon: <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />, tip: "Needs Review — Conflicting information found" },
+    denied: { icon: <XCircle className="h-4 w-4 text-red-500 shrink-0" />, tip: "Unverified — Could not confirm military service" },
+    pending: { icon: <Clock className="h-4 w-4 text-amber-500 shrink-0" />, tip: "Pending — Verification in progress, awaiting additional sources" },
+  };
+  const s = map[status] ?? map.pending;
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild><span className="inline-flex">{s.icon}</span></TooltipTrigger>
+        <TooltipContent className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+          {s.tip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 function NameStatusIcon({ score }: { score: number }) {
-  if (score >= 70) return <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />;
-  if (score >= 40) return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
-  return <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
+  const icon = score >= 70
+    ? <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />
+    : score >= 40
+      ? <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+      : <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
+  const tip = score >= 70
+    ? "Verified — Military service confirmed"
+    : score >= 40
+      ? "Pending — Verification in progress"
+      : "Needs Review — Low confidence score";
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild><span className="inline-flex">{icon}</span></TooltipTrigger>
+        <TooltipContent className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+          {tip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 function InlineNameEdit({ id, name, onSave }: { id: string; name: string; onSave: () => void }) {
@@ -633,7 +664,7 @@ export default function Verification() {
                 Add Verification
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>New Verification</DialogTitle>
               </DialogHeader>
@@ -801,10 +832,19 @@ export default function Verification() {
                       <TableCell>{row.claimed_type ?? "—"}</TableCell>
                       <TableCell><StatusIcon status={row.status ?? "pending"} /></TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={row.verification_score ?? 0} className="h-2 w-20" />
-                          <span className="text-xs text-muted-foreground">{row.verification_score ?? 0}%</span>
-                        </div>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 cursor-default">
+                                <Progress value={row.verification_score ?? 0} className="h-2 w-20" />
+                                <span className="text-xs text-muted-foreground">{row.verification_score ?? 0}%</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg max-w-xs">
+                              Confidence Score: Based on {(row.evidence_sources as EvidenceSource[] | null)?.length ?? 0} verified sources. Higher scores indicate stronger verification evidence.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell>{(row.evidence_sources as EvidenceSource[] | null)?.length ?? 0}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">
