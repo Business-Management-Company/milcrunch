@@ -1,16 +1,3 @@
-// SQL for Andrew to run in Supabase:
-// CREATE TABLE social_connections (
-//   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-//   user_id uuid,
-//   platform text,
-//   account_name text,
-//   account_id text,
-//   access_token_ref text,
-//   avatar_url text,
-//   is_active boolean DEFAULT true,
-//   created_at timestamptz DEFAULT now()
-// );
-
 import { useState, useEffect, useCallback } from "react";
 import {
   Link2,
@@ -27,19 +14,21 @@ import {
   Video,
   X,
   Loader2,
+  RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { generateConnectUrl } from "@/services/upload-post";
+import {
+  syncConnectedAccountsFromUploadPost,
+  getConnectedAccounts,
+  ensureUploadPostProfile,
+  type ConnectedAccountRow,
+} from "@/lib/upload-post-sync";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -51,18 +40,7 @@ interface SocialPlatform {
   icon: React.ReactNode;
   color: string;
   bgColor: string;
-  uploadPostPlatform?: string; // platform id for Upload-Post SDK
-}
-
-interface SocialConnection {
-  platformId: string;
-  accountName: string;
-  accountId: string;
-  avatarUrl?: string;
-  connectedAt: string;
-  // Fallback RTMP fields (when Upload-Post unavailable)
-  rtmpUrl?: string;
-  streamKey?: string;
+  uploadPostPlatform: string; // platform id for Upload-Post matching
 }
 
 interface OtherIntegration {
@@ -119,7 +97,7 @@ const SOCIAL_PLATFORMS: SocialPlatform[] = [
     icon: <Twitter className="w-7 h-7" />,
     color: "text-gray-900",
     bgColor: "bg-gray-100",
-    uploadPostPlatform: "twitter",
+    uploadPostPlatform: "x",
   },
   {
     id: "facebook",
@@ -191,149 +169,114 @@ const OTHER_INTEGRATIONS: OtherIntegration[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  Upload-Post SDK helpers                                            */
-/* ------------------------------------------------------------------ */
-
-const UPLOAD_POST_API_KEY = import.meta.env.VITE_UPLOAD_POST_API_KEY;
-
-function isUploadPostAvailable(): boolean {
-  return !!(UPLOAD_POST_API_KEY && (window as any).UploadPost);
-}
-
-function loadUploadPostSDK(): Promise<void> {
-  return new Promise((resolve) => {
-    if ((window as any).UploadPost) {
-      resolve();
-      return;
-    }
-    const existing = document.querySelector('script[src*="upload-post"]');
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://sdk.upload-post.com/upload-post.js";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => resolve(); // resolve anyway — we'll fallback
-    document.head.appendChild(script);
-  });
-}
-
-/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 export default function Integrations() {
   const { toast } = useToast();
-  const [connections, setConnections] = useState<SocialConnection[]>([]);
-  const [sdkReady, setSdkReady] = useState(false);
-  const [connecting, setConnecting] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
 
-  // Fallback manual RTMP modal
-  const [manualModal, setManualModal] = useState<SocialPlatform | null>(null);
-  const [manualRtmp, setManualRtmp] = useState("");
-  const [manualKey, setManualKey] = useState("");
+  const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [connectUrl, setConnectUrl] = useState<string | null>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
-  // Load Upload-Post SDK on mount
-  useEffect(() => {
-    if (UPLOAD_POST_API_KEY) {
-      loadUploadPostSDK().then(() => {
-        setSdkReady(isUploadPostAvailable());
-      });
-    }
-  }, []);
+  /* ---- Load connected accounts from Supabase ---- */
+  const loadAccounts = useCallback(async () => {
+    if (!userId) return;
+    const list = await getConnectedAccounts(userId);
+    setAccounts(list);
+  }, [userId]);
 
-  /* ---- Connect via Upload-Post SDK ---- */
-  const handleConnect = useCallback(
-    async (platform: SocialPlatform) => {
-      if (!sdkReady) {
-        // Fallback: open manual modal
-        setManualRtmp("");
-        setManualKey("");
-        setManualModal(platform);
+  /* ---- Ensure Upload-Post profile & get connect URL ---- */
+  const ensureProfileAndGetUrl = useCallback(async () => {
+    if (!userId) return;
+    setConnectLoading(true);
+    try {
+      const ensured = await ensureUploadPostProfile(userId);
+      if (!ensured.ok) {
+        toast({
+          title: "Profile error",
+          description: ensured.error ?? "Could not create Upload-Post profile.",
+          variant: "destructive",
+        });
         return;
       }
-
-      setConnecting(platform.id);
-      try {
-        const up = (window as any).UploadPost;
-        if (!up) throw new Error("SDK not loaded");
-
-        const client = up.init({ apiKey: UPLOAD_POST_API_KEY });
-        const result = await client.connect(platform.uploadPostPlatform);
-
-        setConnections((prev) => [
-          ...prev.filter((c) => c.platformId !== platform.id),
-          {
-            platformId: platform.id,
-            accountName: result?.accountName || result?.username || platform.name,
-            accountId: result?.accountId || result?.id || "",
-            avatarUrl: result?.avatarUrl || result?.avatar || undefined,
-            connectedAt: new Date().toISOString(),
-          },
-        ]);
+      const res = await generateConnectUrl(userId);
+      if (res.access_url) {
+        setConnectUrl(res.access_url);
+      } else {
         toast({
-          title: "Connected",
-          description: `${platform.name} has been connected successfully.`,
+          title: "Connect URL error",
+          description: res.error ?? "Could not generate connect link.",
+          variant: "destructive",
         });
-      } catch (err: any) {
-        if (err?.message?.includes("cancelled") || err?.message?.includes("closed")) {
-          // user closed popup
-        } else {
-          toast({
-            title: "Connection failed",
-            description: err?.message || "Could not connect. Try again.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        setConnecting(null);
       }
-    },
-    [sdkReady, toast]
-  );
+    } finally {
+      setConnectLoading(false);
+    }
+  }, [userId, toast]);
 
-  /* ---- Manual fallback save ---- */
-  const handleManualSave = () => {
-    if (!manualModal) return;
-    if (!manualRtmp.trim() || !manualKey.trim()) {
+  /* ---- Sync from Upload-Post → Supabase ---- */
+  const syncAccounts = useCallback(async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      const synced = await syncConnectedAccountsFromUploadPost(userId);
+      setAccounts(synced);
       toast({
-        title: "Missing fields",
-        description: "Please fill in both RTMP URL and Stream Key.",
+        title: "Synced",
+        description:
+          synced.length > 0
+            ? `${synced.length} account${synced.length !== 1 ? "s" : ""} synced from Upload-Post.`
+            : "No connected accounts yet. Connect platforms above.",
+      });
+    } catch {
+      toast({
+        title: "Sync failed",
+        description: "Could not sync accounts. Try again.",
         variant: "destructive",
       });
+    } finally {
+      setSyncing(false);
+    }
+  }, [userId, toast]);
+
+  /* ---- Init on mount ---- */
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
       return;
     }
-    setConnections((prev) => [
-      ...prev.filter((c) => c.platformId !== manualModal.id),
-      {
-        platformId: manualModal.id,
-        accountName: manualModal.name,
-        accountId: "",
-        connectedAt: new Date().toISOString(),
-        rtmpUrl: manualRtmp.trim(),
-        streamKey: manualKey.trim(),
-      },
-    ]);
-    toast({
-      title: "Connected",
-      description: `${manualModal.name} stream key saved.`,
-    });
-    setManualModal(null);
+    setLoading(true);
+    (async () => {
+      await ensureProfileAndGetUrl();
+      await loadAccounts();
+    })().finally(() => setLoading(false));
+  }, [userId, ensureProfileAndGetUrl, loadAccounts]);
+
+  /* ---- Open Upload-Post connect popup ---- */
+  const openConnectPopup = () => {
+    if (connectUrl) {
+      window.open(connectUrl, "uploadpost-connect", "width=600,height=700");
+    } else {
+      toast({
+        title: "Not ready",
+        description: "Connect link is still loading. Please wait.",
+        variant: "destructive",
+      });
+    }
   };
 
-  /* ---- Disconnect ---- */
-  const handleDisconnect = (platformId: string) => {
-    setConnections((prev) => prev.filter((c) => c.platformId !== platformId));
-    const p = SOCIAL_PLATFORMS.find((p) => p.id === platformId);
-    toast({
-      title: "Disconnected",
-      description: `${p?.name} has been removed.`,
-    });
-  };
-
-  const getConnection = (id: string) => connections.find((c) => c.platformId === id);
+  /* ---- Check if platform is connected ---- */
+  const getConnectionForPlatform = (platform: SocialPlatform): ConnectedAccountRow | undefined =>
+    accounts.find(
+      (acc) =>
+        acc.platform === platform.uploadPostPlatform ||
+        acc.platform === platform.id
+    );
 
   return (
     <div className="p-6 space-y-8 max-w-5xl">
@@ -355,21 +298,43 @@ export default function Integrations() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Social Media Accounts</h2>
           <p className="text-sm text-gray-500">
-            Connect accounts to post content and stream events.
-            {!sdkReady && UPLOAD_POST_API_KEY && (
-              <span className="ml-1 text-xs text-amber-600">(SDK loading...)</span>
-            )}
-            {!UPLOAD_POST_API_KEY && (
-              <span className="ml-1 text-xs text-gray-400">(Manual stream key mode)</span>
-            )}
+            Connect accounts via Upload-Post to post content and stream events.
           </p>
         </div>
 
+        {/* Action bar */}
+        <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={openConnectPopup}
+            disabled={connectLoading || !connectUrl}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            {connectLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <ExternalLink className="w-4 h-4 mr-2" />
+            )}
+            Connect Accounts
+          </Button>
+          <Button
+            variant="outline"
+            onClick={syncAccounts}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Sync Accounts
+          </Button>
+        </div>
+
+        {/* Platform cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {SOCIAL_PLATFORMS.map((platform) => {
-            const conn = getConnection(platform.id);
+            const conn = getConnectionForPlatform(platform);
             const isConnected = !!conn;
-            const isLoading = connecting === platform.id;
 
             return (
               <Card key={platform.id} className="p-5 flex items-center justify-between">
@@ -385,8 +350,20 @@ export default function Integrations() {
                       <div className="flex items-center gap-2 mt-0.5">
                         <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                         <span className="text-xs text-green-600 font-medium truncate">
-                          {conn.accountName}
+                          {conn.platform_username
+                            ? `@${conn.platform_username}`
+                            : "Connected"}
                         </span>
+                        {conn.followers_count != null && conn.followers_count > 0 && (
+                          <span className="text-xs text-gray-400">
+                            {conn.followers_count >= 1_000_000
+                              ? `${(conn.followers_count / 1_000_000).toFixed(1)}M`
+                              : conn.followers_count >= 1_000
+                                ? `${(conn.followers_count / 1_000).toFixed(1)}K`
+                                : conn.followers_count}{" "}
+                            followers
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400">Not connected</span>
@@ -396,23 +373,17 @@ export default function Integrations() {
 
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   {isConnected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDisconnect(platform.id)}
-                    >
-                      <X className="w-3.5 h-3.5 mr-1" />
-                      Disconnect
-                    </Button>
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0">
+                      Connected
+                    </Badge>
                   ) : (
                     <Button
                       size="sm"
                       className="bg-purple-600 hover:bg-purple-700"
-                      onClick={() => handleConnect(platform)}
-                      disabled={isLoading}
+                      onClick={openConnectPopup}
+                      disabled={connectLoading || !connectUrl}
                     >
-                      {isLoading ? (
+                      {connectLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-1" />
                       ) : null}
                       Connect
@@ -423,6 +394,13 @@ export default function Integrations() {
             );
           })}
         </div>
+
+        {loading && (
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading connections...
+          </div>
+        )}
       </div>
 
       {/* ============================================================ */}
@@ -459,69 +437,6 @@ export default function Integrations() {
           ))}
         </div>
       </div>
-
-      {/* ============================================================ */}
-      {/*  Manual RTMP fallback modal                                   */}
-      {/* ============================================================ */}
-      <Dialog open={!!manualModal} onOpenChange={() => setManualModal(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {manualModal && (
-                <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center ${manualModal.bgColor} ${manualModal.color}`}
-                >
-                  {manualModal.icon}
-                </div>
-              )}
-              Connect {manualModal?.name}
-            </DialogTitle>
-          </DialogHeader>
-
-          <p className="text-sm text-gray-500">
-            Enter your stream key to connect manually. OAuth connections will be available soon.
-          </p>
-
-          <div className="space-y-4 mt-2">
-            <div className="space-y-2">
-              <Label>RTMP URL</Label>
-              <Input
-                value={manualRtmp}
-                onChange={(e) => setManualRtmp(e.target.value)}
-                placeholder="rtmp://..."
-                className="font-mono text-sm"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Stream Key</Label>
-              <Input
-                type="password"
-                value={manualKey}
-                onChange={(e) => setManualKey(e.target.value)}
-                placeholder="Enter your stream key"
-                className="font-mono text-sm"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setManualModal(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700"
-                onClick={handleManualSave}
-              >
-                Save & Connect
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
