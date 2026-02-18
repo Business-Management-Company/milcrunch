@@ -34,6 +34,11 @@ import {
   Send,
   Megaphone,
   Tags,
+  Mail,
+  ContactRound,
+  LayoutTemplate,
+  FormInput,
+  Settings2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -107,6 +112,17 @@ const SIDEBAR_SECTIONS: NavSection[] = [
       { href: "/brand/tags", label: "Tags", icon: Tags },
       { href: "/brand/social-monitoring", label: "Social Listening", icon: Ear },
       { href: "/brand/posting", label: "Posting", icon: Send },
+    ],
+  },
+  {
+    key: "email",
+    label: "EMAIL",
+    items: [
+      { href: "/brand/email/campaigns", label: "Campaigns", icon: Mail },
+      { href: "/brand/email/lists", label: "Lists", icon: ContactRound },
+      { href: "/brand/email/templates", label: "Templates", icon: LayoutTemplate },
+      { href: "/brand/email/forms", label: "Forms", icon: FormInput },
+      { href: "/brand/email/settings", label: "Settings", icon: Settings2 },
     ],
   },
   {

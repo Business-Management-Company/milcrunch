@@ -132,6 +132,13 @@ import MerchAdmin from "./pages/brand/shop/MerchAdmin";
 import SwagAdmin from "./pages/brand/shop/SwagAdmin";
 import Integrations from "./pages/brand/Integrations";
 import StreamingDashboard from "./pages/brand/Streaming";
+import EmailCampaigns from "./pages/brand/email/EmailCampaigns";
+import EmailLists from "./pages/brand/email/EmailLists";
+import EmailTemplates from "./pages/brand/email/EmailTemplates";
+import EmailForms from "./pages/brand/email/EmailForms";
+import EmailSettingsPage from "./pages/brand/email/EmailSettings";
+import EmailSubscribe from "./pages/public/EmailSubscribe";
+import EmailUnsubscribe from "./pages/public/EmailUnsubscribe";
 
 const queryClient = new QueryClient();
 
@@ -207,6 +214,13 @@ const App = () => (
                 <Route path="/brand/streaming" element={<StreamingDashboard />} />
                 <Route path="/brand/streaming/:id" element={<StreamingDashboard />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />
+                <Route path="/brand/email/campaigns" element={<EmailCampaigns />} />
+                <Route path="/brand/email/campaigns/new" element={<EmailCampaigns />} />
+                <Route path="/brand/email/lists" element={<EmailLists />} />
+                <Route path="/brand/email/lists/:listId" element={<EmailLists />} />
+                <Route path="/brand/email/templates" element={<EmailTemplates />} />
+                <Route path="/brand/email/forms" element={<EmailForms />} />
+                <Route path="/brand/email/settings" element={<EmailSettingsPage />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/events/create" element={<CreateEvent />} />
               <Route path="/admin/awards" element={<AdminAwards />} />
@@ -244,6 +258,8 @@ const App = () => (
               <Route path="/shop/:id" element={<ShopProduct />} />
               <Route path="/swag" element={<SwagPackages />} />
               <Route path="/events" element={<PublicEvents />} />
+              <Route path="/subscribe/:slug" element={<EmailSubscribe />} />
+              <Route path="/unsubscribe/:contactId" element={<EmailUnsubscribe />} />
               <Route path="/sponsors/demo" element={<DemoSponsorships />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/prospectus" element={<Prospectus />} />
