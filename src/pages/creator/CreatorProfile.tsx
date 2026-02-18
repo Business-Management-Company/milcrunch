@@ -33,34 +33,23 @@ export default function CreatorProfile() {
       setLoading(false);
       return;
     }
+    // Load from profiles table + user_metadata
     supabase
-      .from("creator_profiles")
-      .select(
-        "handle, display_name, bio, hero_image_url, hero_image_format, hero_dominant_color, bio_page_theme, custom_links"
-      )
+      .from("profiles")
+      .select("full_name, bio")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
-        const row = data as {
-          handle?: string;
-          display_name?: string;
-          bio?: string;
-          hero_image_url?: string | null;
-          hero_image_format?: HeroImageFormat;
-          hero_dominant_color?: string | null;
-          bio_page_theme?: BioPageTheme;
-          custom_links?: Record<string, unknown>;
-        } | null;
-        if (row) {
-          setHandle(row.handle ?? "");
-          setDisplayName(row.display_name ?? "");
-          setBio(row.bio ?? "");
-          setHeroImageUrl(row.hero_image_url ?? null);
-          setHeroImageFormat(row.hero_image_format ?? "landscape");
-          setHeroDominantColor(row.hero_dominant_color ?? null);
-          setBioPageTheme(row.bio_page_theme ?? "light");
-          setCustomLinks(typeof row.custom_links === "object" && row.custom_links ? row.custom_links : {});
-        }
+        const meta = user.user_metadata ?? {};
+        setHandle((meta.handle as string) ?? "");
+        setDisplayName((data?.full_name as string) ?? (meta.full_name as string) ?? "");
+        setBio((data?.bio as string) ?? "");
+        setHeroImageUrl((meta.hero_image_url as string) ?? null);
+        setHeroImageFormat((meta.hero_image_format as HeroImageFormat) ?? "landscape");
+        setHeroDominantColor((meta.hero_dominant_color as string) ?? null);
+        setBioPageTheme((meta.bio_page_theme as BioPageTheme) ?? "light");
+        const cl = meta.custom_links;
+        setCustomLinks(typeof cl === "object" && cl ? cl as Record<string, unknown> : {});
       })
       .finally(() => setLoading(false));
   }, [user?.id]);
@@ -73,24 +62,36 @@ export default function CreatorProfile() {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("creator_profiles").upsert(
+    // Save basic fields to profiles table
+    const { error: profileErr } = await supabase.from("profiles").upsert(
       {
         user_id: user.id,
-        handle: h,
-        display_name: displayName.trim() || null,
+        full_name: displayName.trim() || null,
         bio: bio.trim() || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+    if (profileErr) {
+      setSaving(false);
+      toast.error(profileErr.message);
+      return;
+    }
+    // Save extra fields to user_metadata
+    const { error: metaErr } = await supabase.auth.updateUser({
+      data: {
+        handle: h,
+        full_name: displayName.trim() || null,
         hero_image_url: heroImageUrl || null,
         hero_image_format: heroImageFormat,
         hero_dominant_color: heroDominantColor || null,
         bio_page_theme: bioPageTheme,
         custom_links: Object.keys(customLinks).length ? customLinks : null,
-        updated_at: new Date().toISOString(),
       },
-      { onConflict: "user_id" }
-    );
+    });
     setSaving(false);
-    if (error) {
-      toast.error(error.message);
+    if (metaErr) {
+      toast.error(metaErr.message);
       return;
     }
     toast.success("Profile saved.");

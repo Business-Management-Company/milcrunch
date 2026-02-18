@@ -19,9 +19,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  /** Set after loading when user exists; from creator_profiles or null if brand/admin/no row */
+  /** Set after loading when user exists; from profiles table + user_metadata */
   creatorProfile: CreatorProfileRow | null;
-  /** Resolved role from creator_profiles or user_metadata (includes super_admin). */
+  /** Resolved role from profiles or user_metadata (includes super_admin). */
   role: UserRole | null;
   isSuperAdmin: boolean;
   refetchCreatorProfile: () => Promise<void>;
@@ -44,13 +44,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function fetchCreatorProfile(userId: string): Promise<CreatorProfileRow | null> {
+async function fetchCreatorProfile(userId: string, userMeta: Record<string, unknown> = {}): Promise<CreatorProfileRow | null> {
   const { data } = await supabase
-    .from("creator_profiles")
-    .select("id, user_id, handle, display_name, role, onboarding_step, onboarding_completed")
+    .from("profiles")
+    .select("id, user_id, full_name, bio, military_branch")
     .eq("user_id", userId)
     .maybeSingle();
-  return data as CreatorProfileRow | null;
+
+  // Build profile from profiles table + user_metadata
+  // Even without a profiles row, user_metadata may have role/onboarding data
+  const meta = userMeta ?? {};
+  if (!data && !meta.role && !meta.onboarding_step) return null;
+
+  return {
+    id: (data?.id as string) ?? userId,
+    user_id: userId,
+    handle: (meta.handle as string) ?? null,
+    display_name: (data?.full_name as string) ?? (meta.full_name as string) ?? null,
+    role: (meta.role as UserRole) ?? "creator",
+    onboarding_step: (meta.onboarding_step as number) ?? 0,
+    onboarding_completed: (meta.onboarding_completed as boolean) ?? false,
+  };
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -65,9 +79,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCreatorProfile(null);
       return;
     }
-    const profile = await fetchCreatorProfile(user.id);
+    // Refresh user to get latest metadata
+    const { data: { user: freshUser } } = await supabase.auth.getUser();
+    const meta = freshUser?.user_metadata ?? user.user_metadata ?? {};
+    const profile = await fetchCreatorProfile(user.id, meta);
     setCreatorProfile(profile);
-  }, [user?.id]);
+  }, [user?.id, user?.user_metadata]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -95,7 +112,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     setProfileLoaded(false);
-    fetchCreatorProfile(user.id).then((profile) => {
+    const meta = user.user_metadata ?? {};
+    fetchCreatorProfile(user.id, meta).then((profile) => {
       setCreatorProfile(profile);
       setProfileLoaded(true);
     });
@@ -141,15 +159,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     if (authError) return { error: authError };
     if (authData.user) {
-      await supabase.from("creator_profiles").upsert(
+      await supabase.from("profiles").upsert(
         {
           user_id: authData.user.id,
-          display_name: opts.displayName.trim() || null,
-          role: "creator",
-          audience_type: opts.audienceType || null,
-          branch: opts.branch || null,
-          onboarding_step: 0,
-          onboarding_completed: false,
+          full_name: opts.displayName.trim() || null,
+          military_branch: opts.branch || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -192,7 +206,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Wait for profile fetch to finish before deciding
     if (!profileLoaded) return null;
 
-    // Check both user_metadata and creator_profiles for role — metadata may be unset
+    // Check both user_metadata and profiles for role — metadata may be unset
     const role: UserRole =
       (user.user_metadata?.role as UserRole) ||
       creatorProfile?.role ||

@@ -96,19 +96,17 @@ export default function CreatorOnboard() {
 
   useEffect(() => {
     if (!user?.id || creatorProfile !== null) return;
-    supabase
-      .from("creator_profiles")
-      .upsert(
-        {
-          user_id: user.id,
-          role: "creator",
-          onboarding_step: 0,
-          onboarding_completed: false,
-          updated_at: new Date().toISOString(),
-        },
+    // Ensure profiles row exists and set onboarding metadata
+    (async () => {
+      await supabase.from("profiles").upsert(
+        { user_id: user.id, updated_at: new Date().toISOString() },
         { onConflict: "user_id" }
-      )
-      .then(() => refetchCreatorProfile());
+      );
+      await supabase.auth.updateUser({
+        data: { role: "creator", onboarding_step: 0, onboarding_completed: false },
+      });
+      await refetchCreatorProfile();
+    })();
   }, [user?.id, creatorProfile, refetchCreatorProfile]);
 
   useEffect(() => {
@@ -121,27 +119,34 @@ export default function CreatorOnboard() {
   const saveStep2 = async () => {
     if (!user?.id) return;
     setSaving(true);
-    const { error } = await supabase.from("creator_profiles").upsert(
+    // Save basic fields to profiles table
+    const { error } = await supabase.from("profiles").upsert(
       {
         user_id: user.id,
-        display_name: displayName.trim() || null,
-        handle: handle.replace(/^@/, "").trim().toLowerCase() || null,
+        full_name: displayName.trim() || null,
         bio: bio.trim() || null,
-        branch: branch || null,
-        status: status || null,
-        rank: rank || null,
-        years_of_service: yearsOfService || null,
-        category_tags: categories.length ? categories : null,
-        onboarding_step: 2,
+        military_branch: branch || null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }
     );
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast.error(error.message);
       return;
     }
+    // Save extra fields to user_metadata
+    await supabase.auth.updateUser({
+      data: {
+        handle: handle.replace(/^@/, "").trim().toLowerCase() || null,
+        full_name: displayName.trim() || null,
+        rank: rank || null,
+        years_of_service: yearsOfService || null,
+        category_tags: categories.length ? categories : null,
+        onboarding_step: 2,
+      },
+    });
+    setSaving(false);
     await refetchCreatorProfile();
     setStep(2);
   };
@@ -157,15 +162,10 @@ export default function CreatorOnboard() {
       ],
       links: links.filter((l) => l.url.trim()).map((l) => ({ label: l.label, url: l.url.trim() })),
     };
-    const { error } = await supabase.from("creator_profiles").upsert(
-      {
-        user_id: user.id,
-        custom_links: customLinks,
-        onboarding_step: 3,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
+    // custom_links and onboarding_step go in user_metadata
+    const { error } = await supabase.auth.updateUser({
+      data: { custom_links: customLinks, onboarding_step: 3 },
+    });
     setSaving(false);
     if (error) {
       toast.error(error.message);
@@ -177,15 +177,9 @@ export default function CreatorOnboard() {
   const completeOnboarding = async () => {
     if (!user?.id) return;
     setSaving(true);
-    const { error } = await supabase.from("creator_profiles").upsert(
-      {
-        user_id: user.id,
-        onboarding_step: 4,
-        onboarding_completed: true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
+    const { error } = await supabase.auth.updateUser({
+      data: { onboarding_step: 4, onboarding_completed: true },
+    });
     setSaving(false);
     if (error) {
       toast.error(error.message);

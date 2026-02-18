@@ -85,14 +85,10 @@ export default function LoginPage() {
       return;
     }
 
-    // Check profile table for role (user_metadata may be unset for admin accounts)
-    const { data: profile } = await supabase
-      .from("creator_profiles")
-      .select("role, onboarding_completed")
-      .eq("user_id", user?.id)
-      .maybeSingle();
-
-    const role = user?.user_metadata?.role || profile?.role || "creator";
+    // Role comes from user_metadata (profiles table doesn't store role)
+    const role = user?.user_metadata?.role || "creator";
+    const onboardingCompleted = user?.user_metadata?.onboarding_completed ?? false;
+    console.log("[LoginPage handleLogin] User:", user?.email, "| role:", role, "| onboarding_completed:", onboardingCompleted);
 
     if (role === "super_admin") {
       navigate("/admin", { replace: true });
@@ -103,7 +99,7 @@ export default function LoginPage() {
       return;
     }
     // Only creators hit onboarding check
-    if (!profile || !profile.onboarding_completed) {
+    if (!onboardingCompleted) {
       navigate("/creator/onboard", { replace: true });
     } else {
       navigate("/creator/dashboard", { replace: true });

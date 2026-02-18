@@ -74,9 +74,9 @@ export default function SummaryDashboard() {
   >([]);
 
   useEffect(() => {
-    // Directory count + total reach (from directory_members)
+    // Directory count + total reach (from featured_creators)
     supabase
-      .from("directory_members")
+      .from("featured_creators")
       .select("follower_count", { count: "exact" })
       .eq("approved", true)
       .then(({ data, count }) => {

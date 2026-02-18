@@ -314,12 +314,12 @@ function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse
       .then((result) => {
         const permanentUrl = result?.url || avatarUrl;
         supabase
-          .from("directory_members")
+          .from("featured_creators")
           .update({ avatar_url: permanentUrl, ic_avatar_url: avatarUrl })
-          .eq("creator_handle", handle.toLowerCase())
+          .eq("handle", handle.toLowerCase())
           .then(({ error }) => {
             if (error) return;
-            console.log(`[BrandDiscover] Updated directory_members avatar for @${handle}`);
+            console.log(`[BrandDiscover] Updated featured_creators avatar for @${handle}`);
           });
       })
       .catch(() => {

@@ -87,7 +87,7 @@ export async function fetchDirectoriesWithCounts(): Promise<Directory[]> {
 
   // Batch-fetch member counts
   const { data: counts, error: countErr } = await supabase
-    .from("directory_members")
+    .from("featured_creators")
     .select("directory_id")
     .in("directory_id", dirs.map((d) => d.id));
 
@@ -157,7 +157,7 @@ export async function fetchDirectoryMembers(directoryId: string): Promise<Direct
   });
 
   const { data, error } = await supabase
-    .from("directory_members")
+    .from("featured_creators")
     .select("*")
     .eq("directory_id", directoryId)
     .order("sort_order", { ascending: true });
@@ -171,7 +171,7 @@ export async function fetchDirectoryMembers(directoryId: string): Promise<Direct
   if ((data?.length ?? 0) === 0) {
     // RLS debug: try a count without directory filter to see if ANY rows are readable
     const { count, error: countErr } = await supabase
-      .from("directory_members")
+      .from("featured_creators")
       .select("*", { count: "exact", head: true });
     console.warn("[directories] RLS DEBUG — total readable rows across all directories:", count, countErr?.message ?? "OK");
   }
@@ -203,7 +203,7 @@ export async function addToDirectory(
 
   // Get max sort_order for this directory
   const { data: maxRow } = await supabase
-    .from("directory_members")
+    .from("featured_creators")
     .select("sort_order")
     .eq("directory_id", directoryId)
     .order("sort_order", { ascending: false })
@@ -250,7 +250,7 @@ export async function addToDirectory(
 
   console.log("[addToDirectory] Upserting:", { directoryId, handle, columns: Object.keys(payload) });
 
-  const { error } = await supabase.from("directory_members").upsert(
+  const { error } = await supabase.from("featured_creators").upsert(
     payload,
     { onConflict: "directory_id,creator_handle,platform", ignoreDuplicates: false }
   );
@@ -266,7 +266,7 @@ export async function toggleMemberApproval(
   approved: boolean
 ): Promise<{ error: string | null }> {
   const { error } = await supabase
-    .from("directory_members")
+    .from("featured_creators")
     .update({ approved })
     .eq("id", id);
   if (error) return { error: error.message };
@@ -275,7 +275,7 @@ export async function toggleMemberApproval(
 
 export async function removeMember(id: string): Promise<{ error: string | null }> {
   const { error } = await supabase
-    .from("directory_members")
+    .from("featured_creators")
     .update({ approved: false })
     .eq("id", id);
   if (error) return { error: error.message };
@@ -287,7 +287,7 @@ export async function removeMember(id: string): Promise<{ error: string | null }
 export async function fetchShowcaseFromDirectories(limit = 40): Promise<DirectoryMember[]> {
   // Fetch approved members from all public directories, deduplicated by handle
   const { data, error } = await supabase
-    .from("directory_members")
+    .from("featured_creators")
     .select("*")
     .eq("approved", true)
     .order("sort_order", { ascending: true })

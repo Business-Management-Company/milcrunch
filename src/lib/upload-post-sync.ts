@@ -81,15 +81,11 @@ export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boo
   return { ok: true };
 }
 
-/** Sync aggregated stats from connected_accounts into directory_members rows for this creator. */
+/** Sync aggregated stats from connected_accounts into featured_creators rows for this creator. */
 export async function syncDirectoryMemberStats(userId: string): Promise<void> {
-  // Get creator handle
-  const { data: profile } = await supabase
-    .from("creator_profiles")
-    .select("handle")
-    .eq("user_id", userId)
-    .maybeSingle();
-  const handle = (profile as { handle?: string } | null)?.handle;
+  // Get creator handle from auth user metadata
+  const { data: { user } } = await supabase.auth.getUser();
+  const handle = (user?.user_metadata?.handle as string) ?? null;
   if (!handle) return;
 
   // Get connected accounts
@@ -116,13 +112,12 @@ export async function syncDirectoryMemberStats(userId: string): Promise<void> {
 
   // Update directory_members matching this creator handle (don't create new rows)
   await supabase
-    .from("directory_members")
+    .from("featured_creators")
     .update({
       follower_count: totalFollowers > 0 ? totalFollowers : null,
       platforms,
       platform_urls: platformUrls,
       avatar_url: bestAvatar,
-      updated_at: new Date().toISOString(),
     })
-    .eq("creator_handle", handle);
+    .eq("handle", handle);
 }

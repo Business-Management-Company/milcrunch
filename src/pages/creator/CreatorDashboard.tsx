@@ -44,12 +44,7 @@ export default function CreatorDashboard() {
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
-      const { data: profile } = await supabase
-        .from("creator_profiles")
-        .select("handle")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const h = (profile as { handle?: string } | null)?.handle ?? null;
+      const h = (user.user_metadata?.handle as string) ?? null;
       setHandle(h);
       if (!h) return;
       const { data: ev } = await supabase

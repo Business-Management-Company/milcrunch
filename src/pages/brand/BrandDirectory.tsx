@@ -308,7 +308,7 @@ const BrandDirectory = () => {
       }
     }
     const { error } = await supabase
-      .from("directory_members")
+      .from("featured_creators")
       .update({ featured_homepage: newValue })
       .eq("id", member.id);
     if (error) {
@@ -332,7 +332,7 @@ const BrandDirectory = () => {
     if (!editMember) return;
     setEditSaving(true);
     const { error } = await supabase
-      .from("directory_members")
+      .from("featured_creators")
       .update({ avg_views: editAvgViews || null, avg_likes: editAvgLikes || null })
       .eq("id", editMember.id);
     setEditSaving(false);
@@ -380,7 +380,7 @@ const BrandDirectory = () => {
         if (uploaded) permanentUrl = uploaded;
 
         const { error } = await supabase
-          .from("directory_members")
+          .from("featured_creators")
           .update({ avatar_url: permanentUrl, ic_avatar_url: avatarUrl })
           .eq("id", m.id);
 

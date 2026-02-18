@@ -196,9 +196,8 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       if (directoryId) {
         queries.push(
           supabase
-            .from("directory_members")
-            .select("id, creator_name, creator_handle, avatar_url, platform, follower_count, engagement_rate, profile_slug")
-            .eq("directory_id", directoryId)
+            .from("featured_creators")
+            .select("id, display_name, handle, avatar_url, platform, follower_count, engagement_rate, profile_slug")
             .eq("approved", true)
             .order("follower_count", { ascending: false })
             .limit(20)

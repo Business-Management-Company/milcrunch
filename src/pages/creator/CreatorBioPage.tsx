@@ -68,7 +68,7 @@ interface BioCreator {
   service_line: string | null;
 }
 
-/** Resolve creator by handle: creators table or creator_profiles (with bio layout). */
+/** Resolve creator by handle: creators table or featured_creators (with bio layout). */
 async function resolveCreator(handle: string): Promise<BioCreator | null> {
   const h = handle.replace(/^@/, "").trim().toLowerCase();
   if (!h) return null;
@@ -99,53 +99,33 @@ async function resolveCreator(handle: string): Promise<BioCreator | null> {
     };
   }
 
+  // Try featured_creators by handle
   const { data: profile } = await supabase
-    .from("creator_profiles")
-    .select(
-      "display_name, bio, custom_links, handle, user_id, hero_image_url, hero_image_format, hero_dominant_color, bio_page_theme, branch, is_verified_veteran, service_line"
-    )
-    .eq("handle", h)
+    .from("featured_creators")
+    .select("display_name, bio, handle, platform, avatar_url, branch")
+    .ilike("handle", h)
+    .limit(1)
     .maybeSingle();
 
   if (!profile) return null;
 
-  const customLinks = normalizeCustomLinks(profile.custom_links);
-  const tabs = (customLinks.tabs ?? DEFAULT_TABS).filter((t) => t.visible).sort((a, b) => a.order - b.order);
-  const links = customLinks.links ?? [];
-
-  let socialAccounts: SocialAccount[] = [];
-  const userId = (profile as { user_id?: string }).user_id;
-  if (userId) {
-    const { data: accounts } = await supabase
-      .from("connected_accounts")
-      .select("platform, platform_username, profile_image_url")
-      .eq("user_id", userId);
-    socialAccounts = (accounts ?? []) as SocialAccount[];
-  }
-
-  const heroFormat = (profile.hero_image_format as HeroImageFormat) || "landscape";
-  const heroImage =
-    (profile.hero_image_url as string) ||
-    (socialAccounts[0] as { profile_image_url?: string } | undefined)?.profile_image_url ||
-    null;
-
   return {
     display_name: (profile.display_name as string) ?? handle,
-    avatar_url: (socialAccounts[0] as { profile_image_url?: string } | undefined)?.profile_image_url ?? null,
-    hero_image_url: heroImage,
-    hero_image_format: heroFormat,
-    hero_dominant_color: (profile.hero_dominant_color as string) || null,
-    bio_page_theme: (profile.bio_page_theme as string) || "light",
+    avatar_url: (profile.avatar_url as string) ?? null,
+    hero_image_url: (profile.avatar_url as string) ?? null,
+    hero_image_format: "landscape" as HeroImageFormat,
+    hero_dominant_color: null,
+    bio_page_theme: "light",
     bio: (profile.bio as string) || null,
     category: null,
     follower_count: null,
     is_verified: false,
-    links,
-    tabs,
-    socialAccounts,
+    links: [],
+    tabs: DEFAULT_TABS.filter((t) => t.visible).sort((a, b) => a.order - b.order),
+    socialAccounts: [],
     branch: (profile.branch as string) || null,
-    is_verified_veteran: Boolean(profile.is_verified_veteran),
-    service_line: (profile.service_line as string) || null,
+    is_verified_veteran: false,
+    service_line: null,
   };
 }
 
