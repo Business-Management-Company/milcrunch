@@ -119,8 +119,8 @@ const BrandDashboard = () => {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">Brand Dashboard</h1>
-        <p className="text-gray-500 dark:text-gray-400">Community and campaign stats at a glance.</p>
+        <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">Welcome back, Andrew</h1>
+        <p className="text-gray-500 dark:text-gray-400">Here's what's happening across your network today.</p>
       </div>
 
       {/* Stat cards */}
