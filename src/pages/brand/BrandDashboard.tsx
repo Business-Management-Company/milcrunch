@@ -236,19 +236,22 @@ const BrandDashboard = () => {
           </form>
         </div>
 
-        {/* Quick Action Pills */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-          {QUICK_ACTIONS.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={() => sendMessage(action.label)}
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 text-center hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-purple-50 cursor-pointer transition flex items-center justify-center gap-2"
-            >
-              <span>{action.emoji}</span>
-              {action.label}
-            </button>
-          ))}
+        {/* Quick Action Pills — 4x2 grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => sendMessage(action.label)}
+                className="h-11 bg-white border border-gray-200 rounded-lg px-3 text-xs font-medium text-gray-600 hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-purple-50 transition flex items-center justify-center gap-1.5"
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{action.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
