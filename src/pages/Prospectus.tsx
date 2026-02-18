@@ -8,6 +8,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer,
+} from "recharts";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -1605,6 +1609,602 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Tab: Creator Network                                                */
+/* ------------------------------------------------------------------ */
+
+const CREATOR_BULLETS = [
+  "Filter by niche, platform, followers, and engagement rate",
+  "AI-powered military verification with confidence scoring",
+  "One-click list building and campaign outreach",
+  "Cross-platform analytics — Instagram, TikTok, YouTube, X",
+  "Brand safety and audience quality scoring",
+  "Creator profile pages with linked social accounts",
+];
+
+function CreatorNetworkTab({ dark }: { dark: boolean }) {
+  const kbSlug = TAB_KB_CATEGORY["Creator Network"];
+
+  return (
+    <div>
+      {/* Deep Dive link */}
+      {kbSlug && (
+        <div className="flex justify-end mb-2">
+          <a
+            href={`/kb/${kbSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
+              dark
+                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
+                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+            )}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Deep Dive
+          </a>
+        </div>
+      )}
+
+      {/* Video placeholder */}
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
+          <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
+        </div>
+        <h3
+          className={cn(
+            "text-xl font-bold mb-2 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          Creator Network
+        </h3>
+        <p
+          className={cn(
+            "text-sm max-w-md transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
+          Explore our verified military creator marketplace — discovery, vetting, and campaign management in one place.
+        </p>
+        <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
+      </div>
+
+      {/* Description paragraph */}
+      <div className="max-w-[680px] mx-auto mt-6">
+        <p
+          className={cn(
+            "text-base leading-relaxed text-center transition-colors duration-300",
+            dark ? "text-gray-300" : "text-[#374151]"
+          )}
+        >
+          RecurrentX connects event organizers and brands to a searchable database of millions of
+          creator profiles — filterable by niche, platform, follower range, engagement rate,
+          location, and military affiliation. Vetted creators build full media profiles, link their
+          social channels, and get discovered for brand partnerships, speaking opportunities, and
+          event activations.
+        </p>
+      </div>
+
+      {/* Bullet grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mt-8">
+        {CREATOR_BULLETS.map((bullet) => (
+          <div key={bullet} className="flex items-start gap-2.5">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+            <p
+              className={cn(
+                "text-sm leading-relaxed transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              {bullet}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Discovery screenshot mockup */}
+      <div className="max-w-4xl mx-auto mt-12">
+        <div
+          className={cn(
+            "rounded-xl overflow-hidden border shadow-lg transition-colors duration-300",
+            dark
+              ? "border-white/[0.08] shadow-black/30"
+              : "border-[#E5E7EB] shadow-gray-300/40"
+          )}
+        >
+          {/* Browser chrome */}
+          <div
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 border-b transition-colors duration-300",
+              dark
+                ? "bg-[#1a1f2e] border-white/[0.08]"
+                : "bg-[#F3F4F6] border-[#E5E7EB]"
+            )}
+          >
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-400/80" />
+              <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
+              <div className="w-3 h-3 rounded-full bg-green-400/80" />
+            </div>
+            <div
+              className={cn(
+                "flex-1 mx-4 px-3 py-1 rounded-md text-xs text-center transition-colors duration-300",
+                dark
+                  ? "bg-white/[0.06] text-gray-500"
+                  : "bg-white text-[#9CA3AF]"
+              )}
+            >
+              milcrunch.com/brand/discover
+            </div>
+          </div>
+
+          {/* Screenshot body — simulated discovery UI */}
+          <div
+            className={cn(
+              "p-6 transition-colors duration-300",
+              dark ? "bg-[#111827]" : "bg-white"
+            )}
+          >
+            {/* Search bar */}
+            <div className="flex items-center gap-3 mb-6">
+              <div
+                className={cn(
+                  "flex-1 flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors duration-300",
+                  dark ? "bg-white/[0.04] border-white/[0.08]" : "bg-[#F9FAFB] border-[#E5E7EB]"
+                )}
+              >
+                <Search className={cn("h-4 w-4", dark ? "text-gray-500" : "text-[#9CA3AF]")} />
+                <span className={cn("text-sm", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+                  Search military creators by keyword, niche, or handle...
+                </span>
+              </div>
+              <div className="px-4 py-2.5 rounded-lg bg-[#6C5CE7] text-white text-sm font-medium">
+                Search
+              </div>
+            </div>
+
+            {/* Filter pills */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {["Instagram", "10K–100K Followers", "Military & Veteran", "Fitness", "United States"].map((f) => (
+                <span
+                  key={f}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium transition-colors duration-300",
+                    dark ? "bg-[#6C5CE7]/15 text-[#6C5CE7]" : "bg-[#6C5CE7]/10 text-[#6C5CE7]"
+                  )}
+                >
+                  {f}
+                </span>
+              ))}
+            </div>
+
+            {/* Creator cards grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { name: "Marcus Cole", handle: "@marcus.vet", followers: "48.2K", eng: "4.8%", color: "#6C5CE7" },
+                { name: "Jen Rivera", handle: "@jenrivera_mil", followers: "92.1K", eng: "3.2%", color: "#10B981" },
+                { name: "Devon Brooks", handle: "@devonbrooks", followers: "31.5K", eng: "6.1%", color: "#3B82F6" },
+                { name: "Taylor Kim", handle: "@taylork_usmc", followers: "67.8K", eng: "5.5%", color: "#F59E0B" },
+              ].map((c) => (
+                <div
+                  key={c.handle}
+                  className={cn(
+                    "rounded-lg p-3 border transition-colors duration-300",
+                    dark ? "bg-white/[0.04] border-white/[0.06]" : "bg-[#F9FAFB] border-[#E5E7EB]"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                      style={{ backgroundColor: c.color }}
+                    >
+                      {c.name.split(" ").map((n) => n[0]).join("")}
+                    </div>
+                    <div>
+                      <p className={cn("text-xs font-semibold", dark ? "text-white" : "text-[#111827]")}>{c.name}</p>
+                      <p className={cn("text-[10px]", dark ? "text-gray-500" : "text-[#9CA3AF]")}>{c.handle}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className={cn("text-[10px]", dark ? "text-gray-400" : "text-[#6B7280]")}>{c.followers}</span>
+                    <span className="text-[10px] text-emerald-400 font-medium">{c.eng}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <p className={cn("text-xs text-center mt-3", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+          Creator Discovery Dashboard — search, filter, and build lists
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab: 365 Insights                                                   */
+/* ------------------------------------------------------------------ */
+
+const INSIGHTS_CHART_DATA = [
+  { month: "Jan", value: 12400 },
+  { month: "Feb", value: 18200 },
+  { month: "Mar", value: 24800 },
+  { month: "Apr", value: 21300 },
+  { month: "May", value: 31500 },
+  { month: "Jun", value: 28700 },
+  { month: "Jul", value: 35200 },
+  { month: "Aug", value: 42100 },
+  { month: "Sep", value: 68500 },
+  { month: "Oct", value: 45300 },
+  { month: "Nov", value: 38900 },
+  { month: "Dec", value: 29400 },
+];
+
+const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: string; color: string }[]> = {
+  Jan: [
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+  ],
+  Feb: [
+    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+  ],
+  Mar: [
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+  ],
+  Apr: [
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+  ],
+  May: [
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
+  ],
+  Jun: [
+    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+  ],
+  Jul: [
+    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
+    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+  ],
+  Aug: [
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
+    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
+    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+  ],
+  Sep: [
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
+  ],
+  Oct: [
+    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+  ],
+  Nov: [
+    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
+    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
+    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
+  ],
+  Dec: [
+    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
+    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
+  ],
+};
+
+const TOP_CREATORS = [
+  { name: "Marcus Cole", handle: "@marcus.vet", role: "Fitness & Veteran Lifestyle", impressions: "1.2M", engagement: "5.1%", initials: "MC", color: "#6C5CE7" },
+  { name: "Jen Rivera", handle: "@jenrivera_mil", role: "Military Spouse Advocate", impressions: "892K", engagement: "4.3%", initials: "JR", color: "#10B981" },
+  { name: "Devon Brooks", handle: "@devonbrooks", role: "Transition & Career Coach", impressions: "764K", engagement: "6.2%", initials: "DB", color: "#3B82F6" },
+  { name: "Taylor Kim", handle: "@taylork_usmc", role: "USMC Content Creator", impressions: "631K", engagement: "5.8%", initials: "TK", color: "#F59E0B" },
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function InsightsCustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  const month = label as string;
+  const value = payload[0].value as number;
+  const creators = INSIGHTS_CREATORS_BY_MONTH[month] ?? [];
+
+  return (
+    <div className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 shadow-xl min-w-[200px]">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-white text-sm font-bold">{month} 2025</span>
+        <span className="text-[#6C5CE7] text-sm font-bold">{value.toLocaleString()}</span>
+      </div>
+      <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-2">Top Creators</p>
+      <div className="space-y-1.5">
+        {creators.map((c) => (
+          <div key={c.initials} className="flex items-center gap-2">
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
+              style={{ backgroundColor: c.color }}
+            >
+              {c.initials}
+            </div>
+            <span className="text-gray-300 text-xs">{c.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InsightsTab({ dark }: { dark: boolean }) {
+  const kbSlug = TAB_KB_CATEGORY["365 Insights"];
+
+  return (
+    <div>
+      {/* Deep Dive link */}
+      {kbSlug && (
+        <div className="flex justify-end mb-2">
+          <a
+            href={`/kb/${kbSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
+              dark
+                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
+                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+            )}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Deep Dive
+          </a>
+        </div>
+      )}
+
+      {/* Hero */}
+      <section className="text-center max-w-3xl mx-auto pt-4 mb-12">
+        <div className="w-14 h-14 rounded-2xl bg-[#6C5CE7]/15 flex items-center justify-center mx-auto mb-5">
+          <TrendingUp className="h-7 w-7 text-[#6C5CE7]" />
+        </div>
+        <h2
+          className={cn(
+            "text-3xl md:text-4xl font-extrabold leading-tight mb-3 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          365{" "}
+          <span className="text-[#6C5CE7]">Insights</span>
+        </h2>
+        <p
+          className={cn(
+            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
+          Year-round sponsor analytics that turn event spend into a measurable, data-driven
+          asset — giving sponsors the ROI story they need to renew every year.
+        </p>
+      </section>
+
+      {/* Engagement Chart */}
+      <section className="max-w-4xl mx-auto">
+        <div
+          className={cn(
+            "rounded-2xl p-6 md:p-8 border transition-colors duration-300",
+            dark
+              ? "bg-[#111827] border-white/[0.08]"
+              : "bg-white border-[#E5E7EB]"
+          )}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3
+                className={cn(
+                  "text-lg font-bold transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                Community Engagement
+              </h3>
+              <p
+                className={cn(
+                  "text-sm transition-colors duration-300",
+                  dark ? "text-gray-500" : "text-[#9CA3AF]"
+                )}
+              >
+                Total impressions across all creator activations
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium",
+                  dark ? "bg-[#6C5CE7]/15 text-[#6C5CE7]" : "bg-[#6C5CE7]/10 text-[#6C5CE7]"
+                )}
+              >
+                2025
+              </span>
+            </div>
+          </div>
+
+          <div className="h-[320px] w-full" style={{ paddingLeft: 4 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={INSIGHTS_CHART_DATA}
+                margin={{ top: 10, right: 20, left: 20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="insightsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6C5CE7" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#6C5CE7" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: dark ? "#6B7280" : "#9CA3AF", fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: dark ? "#6B7280" : "#9CA3AF", fontSize: 12 }}
+                  tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
+                  width={45}
+                />
+                <RechartsTooltip content={<InsightsCustomTooltip />} cursor={{ stroke: "#6C5CE7", strokeWidth: 1, strokeDasharray: "4 4" }} />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#6C5CE7"
+                  strokeWidth={2.5}
+                  fill="url(#insightsGrad)"
+                  dot={{ fill: "#6C5CE7", stroke: dark ? "#111827" : "#fff", strokeWidth: 2, r: 4 }}
+                  activeDot={{ fill: "#6C5CE7", stroke: "#fff", strokeWidth: 2, r: 6 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-inherit">
+            {[
+              { label: "Total Impressions", value: "396.3K" },
+              { label: "Peak Month", value: "Sep — 68.5K" },
+              { label: "Avg. Engagement", value: "4.8%" },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <p className={cn("text-xs transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+                  {s.label}
+                </p>
+                <p className={cn("text-lg font-bold mt-1 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                  {s.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Top Creators This Period */}
+      <section className="max-w-4xl mx-auto mt-12">
+        <p
+          className={cn(
+            "text-[11px] font-semibold tracking-[0.15em] uppercase mb-6 transition-colors duration-300",
+            dark ? "text-gray-500" : "text-[#9CA3AF]"
+          )}
+        >
+          TOP CREATORS THIS PERIOD
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {TOP_CREATORS.map((c) => (
+            <div
+              key={c.handle}
+              className={cn(
+                "rounded-xl p-5 border transition-colors duration-300",
+                dark
+                  ? "bg-white/[0.04] border-white/[0.08]"
+                  : "bg-white border-[#E5E7EB]"
+              )}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                  style={{ backgroundColor: c.color }}
+                >
+                  {c.initials}
+                </div>
+                <div>
+                  <p className={cn("text-sm font-bold transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                    {c.name}
+                  </p>
+                  <p className={cn("text-xs transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+                    {c.handle}
+                  </p>
+                </div>
+              </div>
+              <p className={cn("text-xs mb-3 transition-colors duration-300", dark ? "text-gray-400" : "text-[#6B7280]")}>
+                {c.role}
+              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={cn("text-[10px] uppercase tracking-wider transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+                    Impressions
+                  </p>
+                  <p className={cn("text-sm font-bold transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                    {c.impressions}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className={cn("text-[10px] uppercase tracking-wider transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+                    Engagement
+                  </p>
+                  <p className="text-sm font-bold text-emerald-400">
+                    {c.engagement}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Sponsor ROI summary */}
+      <section className="max-w-4xl mx-auto mt-12">
+        <div
+          className={cn(
+            "rounded-2xl p-6 md:p-8 border transition-colors duration-300",
+            dark
+              ? "bg-[#6C5CE7]/[0.08] border-[#6C5CE7]/20"
+              : "bg-[#6C5CE7]/[0.04] border-[#6C5CE7]/15"
+          )}
+        >
+          <h3
+            className={cn(
+              "text-lg font-bold mb-2 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            Why 365 Insights Drives Renewals
+          </h3>
+          <p
+            className={cn(
+              "text-sm leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-300" : "text-[#374151]"
+            )}
+          >
+            Instead of a single post-event PDF, sponsors see their ROI accumulate in real time —
+            week over week, month over month. When renewal conversations start, the data is already
+            there: total impressions, creator activations, audience demographics, and year-over-year
+            comparisons. Sponsors don&rsquo;t ask &ldquo;what did I get?&rdquo; — they already know.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Tab: Placeholder                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -1864,7 +2464,13 @@ export default function Prospectus() {
         {activeTab === "Events & Attendee App" && (
           <EventsAttendeeTab dark={darkMode} />
         )}
-        {activeTab !== "Overview" && activeTab !== "PDX Experience" && activeTab !== "Events & Attendee App" && (
+        {activeTab === "Creator Network" && (
+          <CreatorNetworkTab dark={darkMode} />
+        )}
+        {activeTab === "365 Insights" && (
+          <InsightsTab dark={darkMode} />
+        )}
+        {activeTab !== "Overview" && activeTab !== "PDX Experience" && activeTab !== "Events & Attendee App" && activeTab !== "Creator Network" && activeTab !== "365 Insights" && (
           <PlaceholderTab
             title={activeTab}
             description={TAB_PLACEHOLDERS[activeTab] ?? "Content coming soon."}
