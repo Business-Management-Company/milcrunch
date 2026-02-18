@@ -81,7 +81,7 @@ const PHASES = [
 ];
 
 const BLOCK_TYPES = ["Keynote", "Panel", "Sponsor Segment", "Break", "Entertainment", "Other"];
-const BLOCK_COLORS: Record<string, string> = { Keynote: "bg-[#6C5CE7]/20 border-[#6C5CE7]/40 text-[#6C5CE7]", Panel: "bg-blue-500/20 border-blue-500/40 text-blue-400", "Sponsor Segment": "bg-emerald-500/20 border-emerald-500/40 text-emerald-400", Break: "bg-gray-500/20 border-gray-500/40 text-gray-400", Entertainment: "bg-amber-500/20 border-amber-500/40 text-amber-400", Other: "bg-white/10 border-white/20 text-gray-300" };
+const BLOCK_COLORS: Record<string, string> = { Keynote: "bg-[#6C5CE7]/10 border-[#6C5CE7]/30 text-[#6C5CE7]", Panel: "bg-blue-50 border-blue-200 text-blue-700", "Sponsor Segment": "bg-emerald-50 border-emerald-200 text-emerald-700", Break: "bg-gray-50 border-gray-200 text-gray-600", Entertainment: "bg-amber-50 border-amber-200 text-amber-700", Other: "bg-gray-50 border-gray-200 text-gray-600" };
 const TIERS = ["Presenting", "Gold", "Silver", "Bronze"];
 const PLATFORMS = ["Instagram", "YouTube", "TikTok", "Twitter", "Podcast", "Other"];
 const CHECKLIST_ITEMS = ["A/V Team confirmed", "Producers briefed on ROS", "Stage handler assigned", "Assistant producer assigned", "Streaming platform tested", "Sponsor overlays loaded", "Creator briefings complete", "Step-and-repeat installed", "Social listening active"];
@@ -166,9 +166,9 @@ export default function PdxWizard() {
     setTimeout(() => w.print(), 300);
   };
 
-  const cardCls = "bg-white/[0.04] border border-white/[0.08] rounded-xl p-5";
-  const inputCls = "bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600";
-  const labelCls = "text-sm font-medium text-gray-300";
+  const cardCls = "bg-white border border-[#E5E7EB] rounded-xl p-5";
+  const inputCls = "bg-white border-[#D1D5DB] text-[#111827] placeholder:text-gray-400";
+  const labelCls = "text-sm font-medium text-[#111827]";
 
   /* ── Phase 1 ─────────────────────────────────────────────────────── */
   const renderPhase1 = () => (
@@ -183,11 +183,11 @@ export default function PdxWizard() {
         <div><Label className={labelCls}>Expected Attendance</Label><Input className={inputCls} type="number" value={d.attendance || ""} onChange={e => up({ attendance: Number(e.target.value) })} /></div>
       </div>
       <div className={cardCls}>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Organization Contacts</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-4">Organization Contacts</p>
         <div className="grid md:grid-cols-2 gap-4">
           {([["Event Planner", "plannerName", "plannerEmail"], ["Social Media", "socialName", "socialEmail"], ["Marketing", "marketingName", "marketingEmail"]] as const).map(([role, nk, ek]) => (
             <div key={role} className="space-y-2">
-              <p className="text-xs text-gray-400">{role}</p>
+              <p className="text-xs text-[#6B7280]">{role}</p>
               <Input className={inputCls} placeholder="Name" value={(d.orgContacts as any)[nk]} onChange={e => up({ orgContacts: { ...d.orgContacts, [nk]: e.target.value } })} />
               <Input className={inputCls} placeholder="Email" type="email" value={(d.orgContacts as any)[ek]} onChange={e => up({ orgContacts: { ...d.orgContacts, [ek]: e.target.value } })} />
             </div>
@@ -195,7 +195,7 @@ export default function PdxWizard() {
         </div>
       </div>
       <div className={cardCls}>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">PDX Team Assignment</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-4">PDX Team Assignment</p>
         <div className="grid md:grid-cols-3 gap-4">
           <div><Label className={labelCls}>Event Planner</Label><Input className={inputCls} value={d.pdxTeam.planner} onChange={e => up({ pdxTeam: { ...d.pdxTeam, planner: e.target.value } })} /></div>
           <div><Label className={labelCls}>A/V Producer</Label><Input className={inputCls} value={d.pdxTeam.avProducer} onChange={e => up({ pdxTeam: { ...d.pdxTeam, avProducer: e.target.value } })} /></div>
@@ -221,12 +221,12 @@ export default function PdxWizard() {
 
     return (
       <div className="space-y-6">
-        {days.length === 0 && <p className="text-gray-500 text-sm">Set event dates in Phase 1 to enable the ROS builder.</p>}
+        {days.length === 0 && <p className="text-[#6B7280] text-sm">Set event dates in Phase 1 to enable the ROS builder.</p>}
         {days.length > 0 && (
           <>
             <div className="flex gap-2 flex-wrap">
               {days.map(day => (
-                <button key={day} type="button" onClick={() => setRosDay(day)} className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all", (activeDay === day) ? "bg-[#6C5CE7] text-white" : "bg-white/[0.04] text-gray-400 border border-white/[0.08] hover:text-white")}>
+                <button key={day} type="button" onClick={() => setRosDay(day)} className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all", (activeDay === day) ? "bg-[#6C5CE7] text-white" : "bg-white text-[#6B7280] border border-[#E5E7EB] hover:text-[#111827]")}>
                   {new Date(day + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </button>
               ))}
@@ -238,7 +238,7 @@ export default function PdxWizard() {
                 const colorCls = BLOCK_COLORS[block.type] || BLOCK_COLORS.Other;
                 return (
                   <div key={globalIdx} className={cn("border rounded-xl p-4 space-y-3", colorCls)}>
-                    {conflict && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40"><AlertTriangle className="h-3 w-3 mr-1" />Potential conflict with main stage</Badge>}
+                    {conflict && <Badge className="bg-amber-50 text-amber-700 border-amber-200"><AlertTriangle className="h-3 w-3 mr-1" />Potential conflict with main stage</Badge>}
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                       <Input className={inputCls} type="time" value={block.startTime} onChange={e => updateBlock(globalIdx, { startTime: e.target.value })} />
                       <Input className={inputCls} type="time" value={block.endTime} onChange={e => updateBlock(globalIdx, { endTime: e.target.value })} />
@@ -248,7 +248,7 @@ export default function PdxWizard() {
                       </select>
                       <div className="flex gap-2">
                         <Input className={cn(inputCls, "flex-1")} placeholder="Speaker" value={block.speaker} onChange={e => updateBlock(globalIdx, { speaker: e.target.value })} />
-                        <Button variant="ghost" size="icon" onClick={() => removeBlock(globalIdx)} className="text-red-400 hover:text-red-300"><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => removeBlock(globalIdx)} className="text-red-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
                   </div>
@@ -257,7 +257,7 @@ export default function PdxWizard() {
             </div>
             <div className="flex gap-3">
               <Button onClick={addBlock} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"><Plus className="h-4 w-4 mr-1" />Add Time Block</Button>
-              <Button variant="outline" onClick={exportRos} className="border-white/10 text-gray-300 hover:bg-white/[0.06] hover:text-white"><Download className="h-4 w-4 mr-1" />Export ROS as PDF</Button>
+              <Button variant="outline" onClick={exportRos} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]"><Download className="h-4 w-4 mr-1" />Export ROS as PDF</Button>
             </div>
           </>
         )}
@@ -277,7 +277,7 @@ export default function PdxWizard() {
     return (
       <div className="space-y-6">
         <div className={cardCls}>
-          <div className="grid grid-cols-[1fr_120px_120px_40px] gap-2 mb-2 text-xs text-gray-500 font-medium uppercase tracking-wider px-1">
+          <div className="grid grid-cols-[1fr_120px_120px_40px] gap-2 mb-2 text-xs text-[#6B7280] font-medium uppercase tracking-wider px-1">
             <span>Description</span><span className="text-right">Estimated</span><span className="text-right">Actual</span><span />
           </div>
           {d.budget.map((b, i) => (
@@ -285,16 +285,16 @@ export default function PdxWizard() {
               <Input className={inputCls} value={b.description} onChange={e => updateBudget(i, "description", e.target.value)} />
               <Input className={cn(inputCls, "text-right")} type="number" value={b.estimated || ""} onChange={e => updateBudget(i, "estimated", e.target.value)} />
               <Input className={cn(inputCls, "text-right")} type="number" value={b.actual || ""} onChange={e => updateBudget(i, "actual", e.target.value)} />
-              <Button variant="ghost" size="icon" onClick={() => removeRow(i)} className="text-red-400 hover:text-red-300"><Trash2 className="h-3 w-3" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => removeRow(i)} className="text-red-500 hover:text-red-600"><Trash2 className="h-3 w-3" /></Button>
             </div>
           ))}
-          <div className="grid grid-cols-[1fr_120px_120px_40px] gap-2 mt-3 pt-3 border-t border-white/[0.08]">
-            <span className="text-sm font-bold text-white px-1">Totals</span>
-            <span className="text-sm font-bold text-white text-right">{fmt(estTotal)}</span>
-            <span className="text-sm font-bold text-white text-right">{fmt(actTotal)}</span>
+          <div className="grid grid-cols-[1fr_120px_120px_40px] gap-2 mt-3 pt-3 border-t border-[#E5E7EB]">
+            <span className="text-sm font-bold text-[#111827] px-1">Totals</span>
+            <span className="text-sm font-bold text-[#111827] text-right">{fmt(estTotal)}</span>
+            <span className="text-sm font-bold text-[#111827] text-right">{fmt(actTotal)}</span>
             <span />
           </div>
-          <Button variant="ghost" size="sm" onClick={addRow} className="mt-3 text-gray-400"><Plus className="h-3 w-3 mr-1" />Add Row</Button>
+          <Button variant="ghost" size="sm" onClick={addRow} className="mt-3 text-[#6B7280]"><Plus className="h-3 w-3 mr-1" />Add Row</Button>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
           <div className={cardCls}>
@@ -302,9 +302,9 @@ export default function PdxWizard() {
             <Input className={cn(inputCls, "text-lg font-bold mt-1")} type="number" value={d.contractedPrice || ""} onChange={e => up({ contractedPrice: Number(e.target.value) || 0 })} />
           </div>
           <div className={cardCls}>
-            <p className="text-xs text-gray-500 mb-1">Margin</p>
-            <p className={cn("text-2xl font-extrabold", margin >= 0 ? "text-[#10B981]" : "text-red-400")}>{fmt(margin)}</p>
-            <p className="text-xs text-gray-500 mt-1">{d.contractedPrice > 0 ? Math.round(margin / d.contractedPrice * 100) : 0}% margin</p>
+            <p className="text-xs text-[#6B7280] mb-1">Margin</p>
+            <p className={cn("text-2xl font-extrabold", margin >= 0 ? "text-[#10B981]" : "text-red-500")}>{fmt(margin)}</p>
+            <p className="text-xs text-[#6B7280] mt-1">{d.contractedPrice > 0 ? Math.round(margin / d.contractedPrice * 100) : 0}% margin</p>
           </div>
           <div className={cardCls}>
             <Label className={labelCls}>Sponsor Contributions</Label>
@@ -326,14 +326,14 @@ export default function PdxWizard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div><p className="text-sm text-gray-400">Total Sponsor Revenue</p><p className="text-2xl font-extrabold text-[#10B981]">{fmt(sponsorRevenue)}</p></div>
+          <div><p className="text-sm text-[#6B7280]">Total Sponsor Revenue</p><p className="text-2xl font-extrabold text-[#10B981]">{fmt(sponsorRevenue)}</p></div>
           <Button onClick={addSponsor} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"><Plus className="h-4 w-4 mr-1" />Add Sponsor</Button>
         </div>
         {d.sponsors.map((sp, i) => (
           <div key={i} className={cn(cardCls, "space-y-4")}>
             <div className="flex justify-between items-start">
-              <p className="text-sm font-bold text-white">{sp.company || `Sponsor ${i + 1}`}</p>
-              <Button variant="ghost" size="icon" onClick={() => removeSponsor(i)} className="text-red-400"><Trash2 className="h-4 w-4" /></Button>
+              <p className="text-sm font-bold text-[#111827]">{sp.company || `Sponsor ${i + 1}`}</p>
+              <Button variant="ghost" size="icon" onClick={() => removeSponsor(i)} className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
             </div>
             <div className="grid md:grid-cols-3 gap-3">
               <Input className={inputCls} placeholder="Company" value={sp.company} onChange={e => updateSponsor(i, { company: e.target.value })} />
@@ -347,8 +347,8 @@ export default function PdxWizard() {
             <Textarea className={inputCls} placeholder="Deliverables" rows={2} value={sp.deliverables} onChange={e => updateSponsor(i, { deliverables: e.target.value })} />
             <div className="flex flex-wrap gap-3">
               {OBLIGATIONS.map(ob => (
-                <label key={ob} className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                  <input type="checkbox" checked={!!sp.obligations[ob]} onChange={e => updateSponsor(i, { obligations: { ...sp.obligations, [ob]: e.target.checked } })} className="rounded border-gray-600" />{ob}
+                <label key={ob} className="flex items-center gap-2 text-sm text-[#6B7280] cursor-pointer">
+                  <input type="checkbox" checked={!!sp.obligations[ob]} onChange={e => updateSponsor(i, { obligations: { ...sp.obligations, [ob]: e.target.checked } })} className="rounded border-gray-300" />{ob}
                 </label>
               ))}
             </div>
@@ -368,16 +368,16 @@ export default function PdxWizard() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex gap-8">
-            <div><p className="text-xs text-gray-500">Estimated Reach</p><p className="text-xl font-extrabold text-white">{totalReach.toLocaleString()}</p></div>
-            <div><p className="text-xs text-gray-500">Virtual Audience (10x)</p><p className="text-xl font-extrabold text-[#10B981]">{(d.attendance * 10).toLocaleString()}</p></div>
+            <div><p className="text-xs text-[#6B7280]">Estimated Reach</p><p className="text-xl font-extrabold text-[#111827]">{totalReach.toLocaleString()}</p></div>
+            <div><p className="text-xs text-[#6B7280]">Virtual Audience (10x)</p><p className="text-xl font-extrabold text-[#10B981]">{(d.attendance * 10).toLocaleString()}</p></div>
           </div>
           <Button onClick={addCreator} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"><Plus className="h-4 w-4 mr-1" />Add Creator</Button>
         </div>
         {d.creators.map((c, i) => (
           <div key={i} className={cn(cardCls, "space-y-3")}>
             <div className="flex justify-between items-start">
-              <p className="text-sm font-bold text-white">{c.name || `Creator ${i + 1}`}</p>
-              <Button variant="ghost" size="icon" onClick={() => removeCreator(i)} className="text-red-400"><Trash2 className="h-4 w-4" /></Button>
+              <p className="text-sm font-bold text-[#111827]">{c.name || `Creator ${i + 1}`}</p>
+              <Button variant="ghost" size="icon" onClick={() => removeCreator(i)} className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Input className={inputCls} placeholder="Name" value={c.name} onChange={e => updateCreator(i, { name: e.target.value })} />
@@ -390,13 +390,13 @@ export default function PdxWizard() {
               <Input className={inputCls} placeholder="Scheduled Time Slot" value={c.timeSlot} onChange={e => updateCreator(i, { timeSlot: e.target.value })} />
             </div>
             <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-400"><input type="checkbox" checked={c.preCreatives} onChange={e => updateCreator(i, { preCreatives: e.target.checked })} className="rounded border-gray-600" />Pre-event creatives</label>
-              <label className="flex items-center gap-2 text-sm text-gray-400"><input type="checkbox" checked={c.postCreatives} onChange={e => updateCreator(i, { postCreatives: e.target.checked })} className="rounded border-gray-600" />Post-event creatives</label>
+              <label className="flex items-center gap-2 text-sm text-[#6B7280]"><input type="checkbox" checked={c.preCreatives} onChange={e => updateCreator(i, { preCreatives: e.target.checked })} className="rounded border-gray-300" />Pre-event creatives</label>
+              <label className="flex items-center gap-2 text-sm text-[#6B7280]"><input type="checkbox" checked={c.postCreatives} onChange={e => updateCreator(i, { postCreatives: e.target.checked })} className="rounded border-gray-300" />Post-event creatives</label>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div><Label className="text-xs text-gray-500">Pre-event Post</Label><Input className={inputCls} type="date" value={c.preDate} onChange={e => updateCreator(i, { preDate: e.target.value })} /></div>
-              <div><Label className="text-xs text-gray-500">Day-of Post</Label><Input className={inputCls} type="date" value={c.dayOfDate} onChange={e => updateCreator(i, { dayOfDate: e.target.value })} /></div>
-              <div><Label className="text-xs text-gray-500">Post-event Post</Label><Input className={inputCls} type="date" value={c.postDate} onChange={e => updateCreator(i, { postDate: e.target.value })} /></div>
+              <div><Label className="text-xs text-[#6B7280]">Pre-event Post</Label><Input className={inputCls} type="date" value={c.preDate} onChange={e => updateCreator(i, { preDate: e.target.value })} /></div>
+              <div><Label className="text-xs text-[#6B7280]">Day-of Post</Label><Input className={inputCls} type="date" value={c.dayOfDate} onChange={e => updateCreator(i, { dayOfDate: e.target.value })} /></div>
+              <div><Label className="text-xs text-[#6B7280]">Post-event Post</Label><Input className={inputCls} type="date" value={c.postDate} onChange={e => updateCreator(i, { postDate: e.target.value })} /></div>
             </div>
             <Textarea className={inputCls} placeholder="Green room / logistics notes" rows={1} value={c.notes} onChange={e => updateCreator(i, { notes: e.target.value })} />
           </div>
@@ -417,34 +417,34 @@ export default function PdxWizard() {
     return (
       <div className="space-y-6">
         <div className={cardCls}>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Day-Of Checklist</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-4">Day-Of Checklist</p>
           <div className="space-y-3">
             {CHECKLIST_ITEMS.map(item => (
               <label key={item} className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={!!d.checklist[item]} onChange={() => toggleCheck(item)} className="rounded border-gray-600 w-5 h-5" />
-                <span className={cn("text-sm", d.checklist[item] ? "text-[#10B981] line-through" : "text-gray-300")}>{item}</span>
+                <input type="checkbox" checked={!!d.checklist[item]} onChange={() => toggleCheck(item)} className="rounded border-gray-300 w-5 h-5" />
+                <span className={cn("text-sm", d.checklist[item] ? "text-[#10B981] line-through" : "text-[#111827]")}>{item}</span>
               </label>
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-3">{Object.values(d.checklist).filter(Boolean).length} / {CHECKLIST_ITEMS.length} complete</p>
+          <p className="text-xs text-[#6B7280] mt-3">{Object.values(d.checklist).filter(Boolean).length} / {CHECKLIST_ITEMS.length} complete</p>
         </div>
         <div className={cardCls}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Stream Destinations</p>
-            <Button variant="ghost" size="sm" onClick={addDest} className="text-gray-400"><Plus className="h-3 w-3 mr-1" />Add</Button>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Stream Destinations</p>
+            <Button variant="ghost" size="sm" onClick={addDest} className="text-[#6B7280]"><Plus className="h-3 w-3 mr-1" />Add</Button>
           </div>
           {d.streamDests.map((dest, i) => (
             <div key={i} className="grid grid-cols-[1fr_2fr_40px] gap-2 mb-2">
               <Input className={inputCls} placeholder="Platform" value={dest.platform} onChange={e => updateDest(i, { platform: e.target.value })} />
               <Input className={inputCls} placeholder="RTMP URL" value={dest.url} onChange={e => updateDest(i, { url: e.target.value })} />
-              <Button variant="ghost" size="icon" onClick={() => removeDest(i)} className="text-red-400"><Trash2 className="h-3 w-3" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => removeDest(i)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
             </div>
           ))}
         </div>
         <div className={cardCls}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Emergency Contacts</p>
-            <Button variant="ghost" size="sm" onClick={addEmergency} className="text-gray-400"><Plus className="h-3 w-3 mr-1" />Add</Button>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Emergency Contacts</p>
+            <Button variant="ghost" size="sm" onClick={addEmergency} className="text-[#6B7280]"><Plus className="h-3 w-3 mr-1" />Add</Button>
           </div>
           {d.emergencyContacts.map((ec, i) => (
             <div key={i} className="grid grid-cols-3 gap-2 mb-2">
@@ -463,12 +463,12 @@ export default function PdxWizard() {
   const renderPhase7 = () => (
     <div className="space-y-6">
       <div className={cardCls}>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Event Summary</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-4">Event Summary</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div><p className="text-gray-500">Organization</p><p className="text-white font-medium">{d.orgName || "—"}</p></div>
-          <div><p className="text-gray-500">Event</p><p className="text-white font-medium">{d.eventName || "—"}</p></div>
-          <div><p className="text-gray-500">Dates</p><p className="text-white font-medium">{d.startDate || "—"} to {d.endDate || "—"}</p></div>
-          <div><p className="text-gray-500">PDX Team</p><p className="text-white font-medium">{[d.pdxTeam.planner, d.pdxTeam.avProducer, d.pdxTeam.mcHost].filter(Boolean).join(", ") || "—"}</p></div>
+          <div><p className="text-[#6B7280]">Organization</p><p className="text-[#111827] font-medium">{d.orgName || "—"}</p></div>
+          <div><p className="text-[#6B7280]">Event</p><p className="text-[#111827] font-medium">{d.eventName || "—"}</p></div>
+          <div><p className="text-[#6B7280]">Dates</p><p className="text-[#111827] font-medium">{d.startDate || "—"} to {d.endDate || "—"}</p></div>
+          <div><p className="text-[#6B7280]">PDX Team</p><p className="text-[#111827] font-medium">{[d.pdxTeam.planner, d.pdxTeam.avProducer, d.pdxTeam.mcHost].filter(Boolean).join(", ") || "—"}</p></div>
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-4">
@@ -477,22 +477,22 @@ export default function PdxWizard() {
       </div>
       {d.creators.length > 0 && (
         <div className={cardCls}>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Creator Roster ({d.creators.length})</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-3">Creator Roster ({d.creators.length})</p>
           {d.creators.map((c, i) => (
-            <div key={i} className="flex justify-between text-sm py-1.5 border-b border-white/[0.05] last:border-0">
-              <span className="text-gray-300">{c.name} <span className="text-gray-600">@{c.handle}</span></span>
-              <span className="text-gray-400">{c.followers.toLocaleString()} followers</span>
+            <div key={i} className="flex justify-between text-sm py-1.5 border-b border-[#E5E7EB] last:border-0">
+              <span className="text-[#111827]">{c.name} <span className="text-[#6B7280]">@{c.handle}</span></span>
+              <span className="text-[#6B7280]">{c.followers.toLocaleString()} followers</span>
             </div>
           ))}
           <p className="text-sm text-[#10B981] font-medium mt-3">Total Reach: {totalReach.toLocaleString()}</p>
         </div>
       )}
       <div className={cardCls}>
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Budget vs Actual</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-3">Budget vs Actual</p>
         <div className="grid grid-cols-3 gap-4 text-center">
-          <div><p className="text-gray-500 text-xs">Estimated</p><p className="text-white font-bold">{fmt(estTotal)}</p></div>
-          <div><p className="text-gray-500 text-xs">Actual</p><p className="text-white font-bold">{fmt(actTotal)}</p></div>
-          <div><p className="text-gray-500 text-xs">Contracted</p><p className="text-[#6C5CE7] font-bold">{fmt(d.contractedPrice)}</p></div>
+          <div><p className="text-[#6B7280] text-xs">Estimated</p><p className="text-[#111827] font-bold">{fmt(estTotal)}</p></div>
+          <div><p className="text-[#6B7280] text-xs">Actual</p><p className="text-[#111827] font-bold">{fmt(actTotal)}</p></div>
+          <div><p className="text-[#6B7280] text-xs">Contracted</p><p className="text-[#6C5CE7] font-bold">{fmt(d.contractedPrice)}</p></div>
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-4">
@@ -506,12 +506,12 @@ export default function PdxWizard() {
         <Button onClick={generateAar} disabled={aiLoading} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">
           {aiLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}Generate AAR with AI
         </Button>
-        <Button variant="outline" onClick={exportPdf} className="border-white/10 text-gray-300 hover:bg-white/[0.06] hover:text-white"><Download className="h-4 w-4 mr-2" />Export AAR as PDF</Button>
+        <Button variant="outline" onClick={exportPdf} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]"><Download className="h-4 w-4 mr-2" />Export AAR as PDF</Button>
       </div>
       {d.aarAiSummary && (
         <div className="bg-[#6C5CE7]/10 border border-[#6C5CE7]/30 rounded-xl p-6">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#6C5CE7] mb-3">AI-Generated Executive Summary</p>
-          <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{d.aarAiSummary}</div>
+          <div className="text-sm text-[#374151] leading-relaxed whitespace-pre-wrap">{d.aarAiSummary}</div>
         </div>
       )}
     </div>
@@ -520,38 +520,38 @@ export default function PdxWizard() {
   const RENDERERS = [renderPhase1, renderPhase2, renderPhase3, renderPhase4, renderPhase5, renderPhase6, renderPhase7];
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] p-6 md:p-10">
-      <h1 className="text-2xl font-bold text-white mb-1">Create PDX Experience</h1>
-      <p className="text-gray-500 text-sm mb-8">Parade Deck Experience — end-to-end event stage setup wizard.</p>
+    <div className="min-h-screen bg-[#F9FAFB] p-6 md:p-10">
+      <h1 className="text-2xl font-bold text-[#111827] mb-1">Create PDX Experience</h1>
+      <p className="text-[#6B7280] text-sm mb-8">Parade Deck Experience — end-to-end event stage setup wizard.</p>
 
       {/* Stepper */}
-      <div className="flex items-center gap-1 mb-10 overflow-x-auto pb-2">
+      <div className="flex items-center gap-1 mb-10 overflow-x-auto pb-2 bg-white rounded-xl border border-[#E5E7EB] px-4 py-3">
         {PHASES.map((p, i) => {
           const completed = i < phase;
           const active = i === phase;
           return (
             <div key={i} className="flex items-center">
               <button type="button" onClick={() => setPhase(i)} className="flex items-center gap-2 group">
-                <div className={cn("w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all flex-shrink-0", completed ? "bg-[#6C5CE7] text-white" : active ? "border-2 border-[#6C5CE7] text-[#6C5CE7]" : "border border-white/20 text-gray-600")}>
+                <div className={cn("w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all flex-shrink-0", completed ? "bg-[#6C5CE7] text-white" : active ? "border-2 border-[#6C5CE7] text-[#6C5CE7]" : "border border-[#D1D5DB] text-[#6B7280]")}>
                   {completed ? <Check className="h-4 w-4" /> : <p.icon className="h-4 w-4" />}
                 </div>
-                <span className={cn("text-xs font-medium whitespace-nowrap transition-colors hidden md:inline", completed ? "text-[#6C5CE7]" : active ? "text-white" : "text-gray-600")}>{p.label}</span>
+                <span className={cn("text-xs font-medium whitespace-nowrap transition-colors hidden md:inline", completed ? "text-[#6C5CE7]" : active ? "text-[#111827]" : "text-[#6B7280]")}>{p.label}</span>
               </button>
-              {i < PHASES.length - 1 && <div className={cn("w-6 lg:w-10 h-px mx-1 flex-shrink-0", i < phase ? "bg-[#6C5CE7]" : "bg-white/10")} />}
+              {i < PHASES.length - 1 && <div className={cn("w-6 lg:w-10 h-px mx-1 flex-shrink-0", i < phase ? "bg-[#6C5CE7]" : "bg-[#E5E7EB]")} />}
             </div>
           );
         })}
       </div>
 
       <div className="mb-6">
-        <Badge className="bg-[#6C5CE7]/20 text-[#6C5CE7] border-[#6C5CE7]/40 mb-2">Phase {phase + 1} of 7</Badge>
-        <h2 className="text-xl font-bold text-white">{PHASES[phase].label}</h2>
+        <Badge className="bg-[#6C5CE7] text-white border-[#6C5CE7] mb-2">Phase {phase + 1} of 7</Badge>
+        <h2 className="text-xl font-bold text-[#111827]">{PHASES[phase].label}</h2>
       </div>
 
       {RENDERERS[phase]()}
 
-      <div className="flex items-center justify-between mt-10 pt-6 border-t border-white/[0.08]">
-        <Button variant="outline" onClick={() => setPhase(Math.max(0, phase - 1))} disabled={phase === 0} className="border-white/10 text-gray-300 hover:bg-white/[0.06] hover:text-white">
+      <div className="flex items-center justify-between mt-10 pt-6 border-t border-[#E5E7EB]">
+        <Button variant="outline" onClick={() => setPhase(Math.max(0, phase - 1))} disabled={phase === 0} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]">
           <ChevronLeft className="h-4 w-4 mr-1" />Back
         </Button>
         <div className="flex gap-3">
