@@ -25,6 +25,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -255,6 +272,17 @@ const BrandEventDetail = () => {
   const [showAddSpeaker, setShowAddSpeaker] = useState(false);
   const [editingSpeaker, setEditingSpeaker] = useState<SpeakerRow | null>(null);
 
+  /* registration edit / delete */
+  const [editingReg, setEditingReg] = useState<RegistrationRow | null>(null);
+  const [editRegFirst, setEditRegFirst] = useState("");
+  const [editRegLast, setEditRegLast] = useState("");
+  const [editRegEmail, setEditRegEmail] = useState("");
+  const [editRegTicket, setEditRegTicket] = useState("");
+  const [editRegBranch, setEditRegBranch] = useState("");
+  const [editRegStatus, setEditRegStatus] = useState("confirmed");
+  const [savingReg, setSavingReg] = useState(false);
+  const [deletingReg, setDeletingReg] = useState<RegistrationRow | null>(null);
+
   /* editable overview fields */
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
@@ -326,6 +354,60 @@ const BrandEventDetail = () => {
   }, [eventId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  /* ---- registration edit / delete ---- */
+  const openEditReg = (r: RegistrationRow) => {
+    setEditingReg(r);
+    setEditRegFirst(r.first_name);
+    setEditRegLast(r.last_name);
+    setEditRegEmail(r.email);
+    setEditRegTicket(r.ticket_id || "");
+    setEditRegBranch(r.military_branch || "");
+    setEditRegStatus(r.status || "confirmed");
+  };
+
+  const saveEditReg = async () => {
+    if (!editingReg) return;
+    if (guardAction("update")) return;
+    setSavingReg(true);
+    const { error } = await supabase
+      .from("event_registrations")
+      .update({
+        first_name: editRegFirst.trim(),
+        last_name: editRegLast.trim(),
+        email: editRegEmail.trim(),
+        ticket_id: editRegTicket || null,
+        military_branch: editRegBranch || null,
+        status: editRegStatus,
+      } as Record<string, unknown>)
+      .eq("id", editingReg.id);
+    setSavingReg(false);
+    if (error) {
+      toast.error("Failed to update registration");
+      console.error(error);
+    } else {
+      toast.success("Registration updated");
+      setEditingReg(null);
+      fetchAll();
+    }
+  };
+
+  const confirmDeleteReg = async () => {
+    if (!deletingReg) return;
+    if (guardAction("delete", "Deletions are disabled in demo mode")) { setDeletingReg(null); return; }
+    const { error } = await supabase
+      .from("event_registrations")
+      .delete()
+      .eq("id", deletingReg.id);
+    if (error) {
+      toast.error("Failed to delete registration");
+      console.error(error);
+    } else {
+      toast.success("Registration removed");
+      fetchAll();
+    }
+    setDeletingReg(null);
+  };
 
   /* ---- banner upload ---- */
   const handleBannerUpload = useCallback(
@@ -1202,6 +1284,7 @@ const BrandEventDetail = () => {
                               <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
                               <th className="px-4 py-3 font-medium text-muted-foreground">Registered</th>
                               <th className="px-4 py-3 font-medium text-muted-foreground text-center">Check-in</th>
+                              <th className="px-4 py-3 font-medium text-muted-foreground text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1234,6 +1317,26 @@ const BrandEventDetail = () => {
                                   >
                                     {r.checked_in ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                                   </Button>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditReg(r)}
+                                      className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                      title="Edit"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingReg(r)}
+                                      className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -1921,6 +2024,81 @@ const BrandEventDetail = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* ---- Edit Registration Modal ---- */}
+      <Dialog open={!!editingReg} onOpenChange={(open) => !open && setEditingReg(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Registration</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>First Name</Label>
+                <Input value={editRegFirst} onChange={(e) => setEditRegFirst(e.target.value)} />
+              </div>
+              <div>
+                <Label>Last Name</Label>
+                <Input value={editRegLast} onChange={(e) => setEditRegLast(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={editRegEmail} onChange={(e) => setEditRegEmail(e.target.value)} />
+            </div>
+            <div>
+              <Label>Ticket Type</Label>
+              <Select value={editRegTicket} onValueChange={setEditRegTicket}>
+                <SelectTrigger><SelectValue placeholder="Select ticket" /></SelectTrigger>
+                <SelectContent>
+                  {eventTickets.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Branch</Label>
+              <Input value={editRegBranch} onChange={(e) => setEditRegBranch(e.target.value)} placeholder="e.g. Army, Navy, Air Force" />
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={editRegStatus} onValueChange={setEditRegStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingReg(null)}>Cancel</Button>
+            <Button onClick={saveEditReg} disabled={savingReg}>
+              {savingReg ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Saving...</> : <><Save className="h-4 w-4 mr-1" /> Save</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---- Delete Registration Confirm ---- */}
+      <AlertDialog open={!!deletingReg} onOpenChange={(open) => !open && setDeletingReg(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Attendee</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove {deletingReg ? `${deletingReg.first_name} ${deletingReg.last_name}` : ""} from this event? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteReg} className="bg-red-600 hover:bg-red-700 text-white">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
