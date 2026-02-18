@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Calendar, Mic, Building2, User, MessageCircle, Bell, Loader2, AlertCircle, X,
+  Home, CalendarDays, Users, User, ArrowLeft,
+  Bell, Loader2, AlertCircle, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,19 +45,20 @@ export const useAttendeeEvent = () => {
 };
 
 /* ---------- tabs ---------- */
-type TabId = "schedule" | "speakers" | "community" | "sponsors" | "profile";
+type TabId = "home" | "schedule" | "community" | "profile";
 
-const TABS: { id: TabId; label: string; icon: typeof Calendar }[] = [
-  { id: "schedule", label: "Schedule", icon: Calendar },
-  { id: "speakers", label: "Speakers", icon: Mic },
-  { id: "community", label: "Community", icon: MessageCircle },
-  { id: "sponsors", label: "Sponsors", icon: Building2 },
-  { id: "profile", label: "My Profile", icon: User },
+const TABS: { id: TabId; label: string; icon: typeof Home }[] = [
+  { id: "home", label: "Home", icon: Home },
+  { id: "schedule", label: "Schedule", icon: CalendarDays },
+  { id: "community", label: "Community", icon: Users },
+  { id: "profile", label: "Profile", icon: User },
 ];
 
 interface Props {
   activeTab: TabId;
   children: React.ReactNode;
+  /** Show a back-arrow sticky header for detail / inner views */
+  pageTitle?: string;
 }
 
 /* ---------- helpers ---------- */
@@ -72,7 +74,7 @@ function darken(hex: string, amount: number): string {
 }
 
 /* ======================================== */
-const AttendeeLayout = ({ activeTab, children }: Props) => {
+const AttendeeLayout = ({ activeTab, children, pageTitle }: Props) => {
   const { eventSlug } = useParams<{ eventSlug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -188,7 +190,7 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
 
   const handleTabClick = (tabId: TabId) => {
     const base = `/attend/${eventSlug}`;
-    if (tabId === "schedule") navigate(base);
+    if (tabId === "home") navigate(base);
     else navigate(`${base}/${tabId}`);
   };
 
@@ -221,6 +223,8 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
     );
   }
 
+  const showBackHeader = !!pageTitle;
+
   return (
     <AttendeeContext.Provider value={{ event, eventSlug: eventSlug!, isRegistered, registrationId, refreshRegistration }}>
       {/* CSS custom properties for theme color */}
@@ -233,8 +237,8 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
       <div className="min-h-screen bg-gray-200 flex justify-center">
         <div className="w-full max-w-[430px] min-h-screen bg-gray-50 flex flex-col shadow-2xl relative">
 
-          {/* ---- Event Cover Banner ---- */}
-          {event.cover_image_url && (
+          {/* ---- Event Cover Banner (only on main tab views) ---- */}
+          {!showBackHeader && event.cover_image_url && (
             <div className="w-full h-24 relative overflow-hidden shrink-0">
               <img
                 src={event.cover_image_url}
@@ -245,37 +249,54 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
             </div>
           )}
 
-          {/* ---- Top Header ---- */}
-          <header
-            className="sticky top-0 z-50 h-14 flex items-center px-4 gap-3"
-            style={{ backgroundColor: theme }}
-          >
-            <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-white text-sm truncate">{event.title}</h1>
-              <p className="text-xs text-white/70 truncate">
-                {event.venue && `${event.venue}`}
-                {event.city && ` · ${event.city}`}
-                {event.state && `, ${event.state}`}
-              </p>
-            </div>
-            <button
-              className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
-              onClick={() => setNotifOpen(!notifOpen)}
+          {/* ---- Top Header: Main event header OR back-arrow detail header ---- */}
+          {showBackHeader ? (
+            /* Detail / inner view header with back arrow */
+            <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-4 bg-[#0A0F1E] mx-auto max-w-[430px]">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-1.5 -ml-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="h-[22px] w-[22px] text-white" />
+              </button>
+              <h1 className="flex-1 text-center font-semibold text-white text-sm truncate mr-6">
+                {pageTitle}
+              </h1>
+            </header>
+          ) : (
+            /* Main tab view header */
+            <header
+              className="sticky top-0 z-50 h-14 flex items-center px-4 gap-3"
+              style={{ backgroundColor: theme }}
             >
-              <Bell className={cn("h-5 w-5", notifOpen ? "text-white" : "text-white/70")} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
-            </button>
-            <span className="text-xs font-bold text-white tracking-tight shrink-0">
-              recurrent<span className="font-extrabold" style={{ color: theme === DEFAULT_THEME ? "#fff" : "#fff" }}>X</span>
-            </span>
-          </header>
+              <div className="flex-1 min-w-0">
+                <h1 className="font-bold text-white text-sm truncate">{event.title}</h1>
+                <p className="text-xs text-white/70 truncate">
+                  {event.venue && `${event.venue}`}
+                  {event.city && ` · ${event.city}`}
+                  {event.state && `, ${event.state}`}
+                </p>
+              </div>
+              <button
+                className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
+                onClick={() => setNotifOpen(!notifOpen)}
+              >
+                <Bell className={cn("h-5 w-5", notifOpen ? "text-white" : "text-white/70")} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              <span className="text-xs font-bold text-white tracking-tight shrink-0">
+                recurrent<span className="font-extrabold">X</span>
+              </span>
+            </header>
+          )}
 
           {/* ---- Notification Panel ---- */}
-          {notifOpen && (
+          {notifOpen && !showBackHeader && (
             <div className="absolute top-14 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-lg max-h-[70vh] overflow-y-auto" style={{ top: event.cover_image_url ? "calc(6rem + 3.5rem)" : "3.5rem" }}>
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -296,7 +317,7 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
           )}
 
           {/* ---- Content ---- */}
-          <main className="flex-1 overflow-y-auto pb-20">
+          <main className={cn("flex-1 overflow-y-auto pb-20", showBackHeader && "pt-14")}>
             <div className="w-full">
               {children}
             </div>
@@ -306,31 +327,33 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
           <InstallBanner eventTitle={event.title} themeColor={theme} />
 
           {/* ---- Bottom Tab Bar ---- */}
-          <nav className="sticky bottom-0 z-50 bg-white border-t border-gray-200 h-16 flex items-center justify-around px-2">
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
-                  className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-colors"
-                >
-                  <tab.icon
-                    className="h-5 w-5 transition-colors"
-                    style={{ color: isActive ? theme : "#9ca3af" }}
-                  />
-                  <span
-                    className="text-[10px] font-medium transition-colors"
-                    style={{ color: isActive ? theme : "#9ca3af" }}
+          <nav
+            className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0F1E] border-t border-[#1F2937] flex items-center justify-around px-2 mx-auto max-w-[430px]"
+            style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+          >
+            <div className="h-14 flex items-center justify-around w-full">
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-colors"
                   >
-                    {tab.label}
-                  </span>
-                  {isActive && (
-                    <div className="w-1 h-1 rounded-full mt-0.5" style={{ backgroundColor: theme }} />
-                  )}
-                </button>
-              );
-            })}
+                    <tab.icon
+                      className="h-[22px] w-[22px] transition-colors"
+                      style={{ color: isActive ? "#6C5CE7" : "#6B7280" }}
+                    />
+                    <span
+                      className="text-[10px] font-medium transition-colors"
+                      style={{ color: isActive ? "#6C5CE7" : "#6B7280" }}
+                    >
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </nav>
         </div>
       </div>

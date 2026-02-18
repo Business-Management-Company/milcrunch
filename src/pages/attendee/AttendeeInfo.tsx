@@ -264,7 +264,7 @@ function AttendeeInfoContent() {
 }
 
 const AttendeeInfoPage = () => (
-  <AttendeeLayout activeTab="info">
+  <AttendeeLayout activeTab="home" pageTitle="Event Info">
     <AttendeeInfoContent />
   </AttendeeLayout>
 );

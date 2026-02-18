@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import AttendeeLayout, { useAttendeeEvent } from "@/components/layout/AttendeeLayout";
@@ -558,10 +558,14 @@ const AttendeeScheduleContent = () => {
   );
 };
 
-const AttendeeSchedule = () => (
-  <AttendeeLayout activeTab="schedule">
-    <AttendeeScheduleContent />
-  </AttendeeLayout>
-);
+const AttendeeSchedule = () => {
+  const location = useLocation();
+  const isScheduleRoute = location.pathname.endsWith("/schedule");
+  return (
+    <AttendeeLayout activeTab={isScheduleRoute ? "schedule" : "home"}>
+      <AttendeeScheduleContent />
+    </AttendeeLayout>
+  );
+};
 
 export default AttendeeSchedule;

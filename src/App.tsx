@@ -302,6 +302,7 @@ const App = () => (
               {/* Attendee experience (mobile-first PWA) */}
               <Route path="/attend" element={<EventSelector />} />
               <Route path="/attend/:eventSlug" element={<AttendeeSchedule />} />
+              <Route path="/attend/:eventSlug/schedule" element={<AttendeeSchedule />} />
               <Route path="/attend/:eventSlug/speakers" element={<AttendeeSpeakers />} />
               <Route path="/attend/:eventSlug/community" element={<AttendeeCommunityPage />} />
               <Route path="/attend/:eventSlug/sponsors" element={<AttendeeSponsors />} />

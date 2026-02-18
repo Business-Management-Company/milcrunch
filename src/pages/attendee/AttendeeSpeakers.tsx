@@ -210,7 +210,7 @@ const AttendeeSpeakersContent = () => {
 };
 
 const AttendeeSpeakers = () => (
-  <AttendeeLayout activeTab="speakers">
+  <AttendeeLayout activeTab="home" pageTitle="Speakers">
     <AttendeeSpeakersContent />
   </AttendeeLayout>
 );

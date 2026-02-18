@@ -237,7 +237,7 @@ const AttendeeSponsorsContent = () => {
 };
 
 const AttendeeSponsors = () => (
-  <AttendeeLayout activeTab="sponsors">
+  <AttendeeLayout activeTab="home" pageTitle="Sponsors">
     <AttendeeSponsorsContent />
   </AttendeeLayout>
 );
