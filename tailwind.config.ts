@@ -86,6 +86,12 @@ export default {
         'parade': 'var(--shadow-parade)',
         'primary': '0 4px 20px 0 hsla(247, 74%, 63%, 0.5)',
       },
+      gridTemplateColumns: {
+        '15': 'repeat(15, minmax(0, 1fr))',
+      },
+      gridTemplateRows: {
+        '15': 'repeat(15, minmax(0, 1fr))',
+      },
       fontFamily: {
         'display': ['Inter', 'system-ui', 'sans-serif'],
         'headline': ['Inter', 'system-ui', 'sans-serif'],
