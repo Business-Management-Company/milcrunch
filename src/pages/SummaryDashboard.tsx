@@ -4,14 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Search,
-  ListPlus,
-  ShieldCheck,
-  Users,
   Calendar,
-  Mic,
   BarChart3,
-  Video,
   Sparkles,
   ArrowRight,
   Send,
@@ -24,59 +18,6 @@ import { cn } from "@/lib/utils";
 /* Quick-action card definitions                                       */
 /* ------------------------------------------------------------------ */
 
-const ROW1 = [
-  {
-    title: "Find Creators",
-    desc: "Search military & veteran creators by niche, branch, engagement",
-    href: "/brand/discover",
-    icon: Search,
-  },
-  {
-    title: "Build a List",
-    desc: "Curate creator lists for campaigns and outreach",
-    href: "/brand/lists",
-    icon: ListPlus,
-  },
-  {
-    title: "Verify a Creator",
-    desc: "Run military service verification checks",
-    href: "/brand/verification",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Manage Directory",
-    desc: "Review and manage approved creators",
-    href: "/brand/directories",
-    icon: Users,
-  },
-];
-
-const ROW2 = [
-  {
-    title: "Plan an Event",
-    desc: "Create experiences and live events",
-    href: "/brand/events/create",
-    icon: Calendar,
-  },
-  {
-    title: "Book a Speaker",
-    desc: "Browse and book military speakers",
-    href: "/speakers",
-    icon: Mic,
-  },
-  {
-    title: "Sponsor ROI",
-    desc: "Track sponsor performance and analytics",
-    href: "/sponsors",
-    icon: BarChart3,
-  },
-  {
-    title: "Go Live",
-    desc: "Launch a live streaming experience",
-    href: "/brand/events/create",
-    icon: Video,
-  },
-];
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -96,13 +37,6 @@ export default function SummaryDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState("");
-
-  // User's first name
-  const fullName =
-    (user?.user_metadata?.full_name as string) ??
-    (user?.user_metadata?.display_name as string) ??
-    "";
-  const firstName = fullName.split(" ")[0] || "there";
 
   // Network stats
   const [directoryCount, setDirectoryCount] = useState<number | null>(null);
