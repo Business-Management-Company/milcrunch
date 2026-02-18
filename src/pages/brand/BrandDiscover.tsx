@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -426,10 +426,59 @@ function deduplicateCreators(cards: CreatorCard[]): CreatorCard[] {
 }
 
 /** Resolve selected platforms to the list of API platform strings to query. */
-function resolveSearchPlatforms(selected: string[], creatorTypeOverride: string | null): string[] {
+function resolveSearchPlatforms(selected: string[] | undefined | null, creatorTypeOverride: string | null): string[] {
   if (creatorTypeOverride) return [creatorTypeOverride];
-  if (selected.length === 0) return ["instagram"];
-  return selected.map((p) => p.toLowerCase());
+  const safe = Array.isArray(selected) ? selected : [];
+  if (safe.length === 0) return ["instagram"];
+  return safe.map((p) => p.toLowerCase());
+}
+
+// Error boundary to prevent white screen on crash
+class DiscoverErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[BrandDiscover] Render crash:", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+          <AlertTriangle className="h-12 w-12 text-amber-500" />
+          <h2 className="text-xl font-semibold text-[#000741] dark:text-white">
+            Something went wrong
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">
+            The Discover page encountered an error. This may be caused by corrupted saved search data.
+          </p>
+          <pre className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 rounded-lg p-3 max-w-lg overflow-auto">
+            {this.state.error?.message}
+          </pre>
+          <button
+            onClick={() => {
+              try { localStorage.removeItem(LAST_SEARCH_KEY); } catch { /* */ }
+              this.setState({ hasError: false, error: null });
+            }}
+            className="px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+          >
+            Clear cache & reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 const BrandDiscover = () => {
@@ -528,17 +577,27 @@ const BrandDiscover = () => {
   }), [searchQuery, platform, followersRange, engagementMin, locationFilter, niche, gender, language, keywordsInBio, sortBy, selectedBranches]);
 
   const applyFilters = useCallback((f: SavedSearchFilters) => {
-    setSearchQuery(f.searchQuery);
-    setPlatform(f.platform);
-    setFollowersRange(f.followersRange);
-    setEngagementMin(f.engagementMin);
-    setLocationFilter(f.locationFilter);
-    setNiche(f.niche);
-    setGender(f.gender);
-    setLanguage(f.language);
-    setKeywordsInBio(f.keywordsInBio);
-    setSortBy(f.sortBy);
-    setSelectedBranches(new Set(f.selectedBranches as Branch[]));
+    try {
+      setSearchQuery(f.searchQuery ?? "");
+      // platform may be a string (old saved searches) or null/undefined
+      const rawPlatform = f.platform;
+      setPlatform(
+        Array.isArray(rawPlatform) ? rawPlatform
+        : typeof rawPlatform === "string" && rawPlatform ? [rawPlatform]
+        : []
+      );
+      setFollowersRange(f.followersRange ?? "any");
+      setEngagementMin(f.engagementMin ?? "any");
+      setLocationFilter(f.locationFilter ?? "");
+      setNiche(f.niche ?? "All niches");
+      setGender(f.gender ?? "any");
+      setLanguage(f.language ?? "any");
+      setKeywordsInBio(f.keywordsInBio ?? "");
+      setSortBy(f.sortBy ?? "confidence");
+      setSelectedBranches(new Set(Array.isArray(f.selectedBranches) ? f.selectedBranches as Branch[] : []));
+    } catch (err) {
+      console.error("[BrandDiscover] applyFilters crashed:", err, "filters:", f);
+    }
   }, []);
 
   // Save last search to localStorage whenever a search runs
@@ -549,13 +608,17 @@ const BrandDiscover = () => {
   // Load saved searches from Supabase
   const loadSavedSearches = useCallback(async () => {
     if (!user) return;
-    const { data, error } = await supabase
-      .from("saved_searches")
-      .select("id, name, search_query, filters, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    if (error) console.error("[SavedSearch] Load failed:", error.message, error);
-    if (data) setSavedSearches(data as SavedSearchRow[]);
+    try {
+      const { data, error } = await supabase
+        .from("saved_searches")
+        .select("id, name, search_query, filters, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) console.error("[SavedSearch] Load failed:", error.message, error);
+      if (data) setSavedSearches(data as SavedSearchRow[]);
+    } catch (err) {
+      console.error("[SavedSearch] loadSavedSearches crashed:", err);
+    }
   }, [user]);
 
   // Save current search to Supabase
@@ -594,8 +657,18 @@ const BrandDiscover = () => {
 
   // Load a saved search: apply filters then trigger search
   const handleLoadSavedSearch = useCallback((saved: SavedSearchRow) => {
-    applyFilters(saved.filters);
-    pendingAutoSearch.current = true;
+    try {
+      if (!saved.filters || typeof saved.filters !== "object") {
+        console.error("[SavedSearch] Invalid filters in saved search:", saved);
+        toast.error("Saved search has invalid data");
+        return;
+      }
+      applyFilters(saved.filters);
+      pendingAutoSearch.current = true;
+    } catch (err) {
+      console.error("[SavedSearch] handleLoadSavedSearch crashed:", err, "saved:", saved);
+      toast.error("Failed to load saved search");
+    }
   }, [applyFilters]);
 
   // Fetch credit balance
@@ -800,7 +873,8 @@ const BrandDiscover = () => {
       setApiResults(null);
       return;
     }
-    const currentPlatform = (platform.length > 0 ? platform[0] : "instagram").toLowerCase();
+    const plats = Array.isArray(platform) ? platform : [];
+    const currentPlatform = (plats.length > 0 ? plats[0] : "instagram").toLowerCase();
     console.log(`[BrandDiscover] ${searchMode} search — cleaned value: "${q}" (platform: ${currentPlatform})`);
     setApiLoading(true);
     setCurrentPage(1);
@@ -1043,7 +1117,8 @@ const BrandDiscover = () => {
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
   // Capture current platform so enrichment uses the correct one for each search
-  const enrichPlatform = platform.length > 0 ? platform[0].toLowerCase() : "instagram";
+  const safePlatform = Array.isArray(platform) ? platform : [];
+  const enrichPlatform = safePlatform.length > 0 ? safePlatform[0].toLowerCase() : "instagram";
   useEffect(() => {
     const creatorsToEnrich = (apiResults?.creators ?? []).filter(
       (c) => c.username && !enrichedSetRef.current.has(c.id)
@@ -1587,18 +1662,18 @@ const BrandDiscover = () => {
                   className="w-[170px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border justify-between font-normal"
                 >
                   <span className="truncate">
-                    {platform.length === 0
+                    {(safePlatform).length === 0
                       ? "All Platforms"
-                      : platform.length === 1
-                        ? PLATFORMS.find((p) => p.value === platform[0])?.label ?? platform[0]
-                        : `${platform.length} Platforms`}
+                      : safePlatform.length === 1
+                        ? PLATFORMS.find((p) => p.value === safePlatform[0])?.label ?? safePlatform[0]
+                        : `${safePlatform.length} Platforms`}
                   </span>
                   <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[200px] p-1" align="start">
                 {PLATFORMS.map((p) => {
-                  const isChecked = platform.includes(p.value);
+                  const isChecked = safePlatform.includes(p.value);
                   return (
                     <label
                       key={p.value}
@@ -1614,8 +1689,8 @@ const BrandDiscover = () => {
                         onCheckedChange={(checked) => {
                           setPlatform(
                             checked
-                              ? [...platform, p.value]
-                              : platform.filter((v) => v !== p.value)
+                              ? [...safePlatform, p.value]
+                              : safePlatform.filter((v) => v !== p.value)
                           );
                         }}
                         className="border-gray-300 data-[state=checked]:bg-[#6C5CE7] data-[state=checked]:border-[#6C5CE7]"
@@ -1783,7 +1858,7 @@ const BrandDiscover = () => {
                 Save Search
               </Button>
             )}
-            {savedSearches.length > 0 && (
+            {(savedSearches ?? []).length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="rounded-lg">
@@ -2520,4 +2595,12 @@ const BrandDiscover = () => {
   );
 };
 
-export default BrandDiscover;
+function BrandDiscoverWithBoundary() {
+  return (
+    <DiscoverErrorBoundary>
+      <BrandDiscover />
+    </DiscoverErrorBoundary>
+  );
+}
+
+export default BrandDiscoverWithBoundary;
