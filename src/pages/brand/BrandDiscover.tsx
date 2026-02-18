@@ -256,6 +256,18 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     partial.bio = instagram.biography as string;
   }
 
+  // Extract avatar from enrichment so getMergedCreator() has it
+  const avatarUrl =
+    (instagram.profile_picture_hd as string) ||
+    (instagram.profile_picture as string) ||
+    (instagram.picture as string) ||
+    (instagram.profile_pic_url as string) ||
+    (instagram.avatar as string) ||
+    null;
+  if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.trim() && !avatarUrl.includes("ui-avatars.com")) {
+    partial.avatar = avatarUrl;
+  }
+
   return partial;
 }
 
@@ -1134,8 +1146,23 @@ const BrandDiscover = () => {
     const socialPlatforms = creator.socialPlatforms ?? [];
     const handle = creator.username ?? creator.id;
 
+    console.log("[doApproveForDirectory] Avatar debug:", {
+      handle,
+      creatorAvatar: creator.avatar,
+      enrichedAvatar,
+      hasEnrichRaw: !!raw,
+      igPicture: igData?.picture,
+      igProfilePic: igData?.profile_picture,
+      igProfilePicHd: igData?.profile_picture_hd,
+      igProfilePicUrl: igData?.profile_pic_url,
+    });
+
     // Persist avatar to Supabase storage if it's an external URL
     let persistedAvatarUrl = enrichedAvatar || creator.avatar || null;
+    // Don't save ui-avatars fallback URLs — keep null so display shows real initials
+    if (persistedAvatarUrl && persistedAvatarUrl.includes("ui-avatars.com")) {
+      persistedAvatarUrl = null;
+    }
     if (persistedAvatarUrl && !persistedAvatarUrl.includes("supabase.co")) {
       try {
         const resp = await fetch("/api/upload-creator-image", {
@@ -1146,9 +1173,11 @@ const BrandDiscover = () => {
         if (resp.ok) {
           const { url } = await resp.json();
           if (url) persistedAvatarUrl = url;
+        } else {
+          console.warn("[doApproveForDirectory] Image upload failed:", resp.status, "— keeping CDN URL");
         }
-      } catch {
-        // Keep original URL if upload fails
+      } catch (uploadErr) {
+        console.warn("[doApproveForDirectory] Image upload error:", uploadErr, "— keeping CDN URL");
       }
     }
 
@@ -1157,6 +1186,8 @@ const BrandDiscover = () => {
       name: creator.name,
       directoryId,
       platform: creator.platforms?.[0] ?? "instagram",
+      avatar_url: persistedAvatarUrl,
+      ic_avatar_url: enrichedAvatar,
     });
 
     const { error } = await approveForDirectory({
@@ -1244,11 +1275,14 @@ const BrandDiscover = () => {
     setImportProgress({ current: 0, total: toImport.length });
     let done = 0;
     for (const c of toImport) {
+      // Use enriched avatar if available, skip ui-avatars fallbacks
+      const enrichedAvatar = extractAvatarFromEnrichment(enrichRawCache[c.id]);
+      const bestAvatar = enrichedAvatar || (c.avatar?.includes("ui-avatars.com") ? null : c.avatar) || null;
       await upsertCreator({
         display_name: c.name,
         handle: c.username ?? c.id,
         platform: c.platforms?.[0] ?? "instagram",
-        avatar_url: c.avatar ?? null,
+        avatar_url: bestAvatar,
         follower_count: c.followers ?? null,
         engagement_rate: c.engagementRate ?? null,
         category: c.category ?? null,
@@ -1272,11 +1306,13 @@ const BrandDiscover = () => {
     setImportProgress({ current: 0, total: toImport.length });
     let done = 0;
     for (const c of toImport) {
+      const enrichedAvatar = extractAvatarFromEnrichment(enrichRawCache[c.id]);
+      const bestAvatar = enrichedAvatar || (c.avatar?.includes("ui-avatars.com") ? null : c.avatar) || null;
       await upsertCreator({
         display_name: c.name,
         handle: c.username ?? c.id,
         platform: c.platforms?.[0] ?? "instagram",
-        avatar_url: c.avatar ?? null,
+        avatar_url: bestAvatar,
         follower_count: c.followers ?? null,
         engagement_rate: c.engagementRate ?? null,
         category: c.category ?? null,

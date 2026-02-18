@@ -289,11 +289,15 @@ export async function approveForDirectory(data: {
   // Upload profile image to Supabase storage for permanent URL
   // Skip if caller already uploaded (avatar_url is already a Supabase storage URL)
   let permanentAvatarUrl = data.avatar_url || null;
+  // Don't save ui-avatars fallback URLs
+  if (permanentAvatarUrl && permanentAvatarUrl.includes("ui-avatars.com")) {
+    permanentAvatarUrl = null;
+  }
   if (permanentAvatarUrl && permanentAvatarUrl.includes("supabase.co/storage")) {
     // Already a permanent URL — no re-upload needed
   } else {
     const sourceImageUrl = data.ic_avatar_url || data.avatar_url;
-    if (sourceImageUrl) {
+    if (sourceImageUrl && !sourceImageUrl.includes("ui-avatars.com")) {
       const uploaded = await uploadCreatorImage(sourceImageUrl, handle);
       if (uploaded) permanentAvatarUrl = uploaded;
     }
