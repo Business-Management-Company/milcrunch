@@ -181,6 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const getRedirectPath = useCallback((): string | null => {
     if (!user) return null;
+    if (user.email === "demo@recurrentx.com") return "/brand/dashboard";
     const role = (user?.user_metadata?.role as UserRole) || "creator";
     if (role === "super_admin") return "/admin";
     if (role === "admin" || role === "brand") return "/brand/dashboard";

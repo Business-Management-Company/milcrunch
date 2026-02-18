@@ -77,6 +77,12 @@ export default function LoginPage() {
       return;
     }
     const { data: { user } } = await supabase.auth.getUser();
+
+    if (user?.email === DEMO_EMAIL) {
+      navigate("/brand/dashboard", { replace: true });
+      return;
+    }
+
     const role = user?.user_metadata?.role || "creator";
 
     if (role === "super_admin") {

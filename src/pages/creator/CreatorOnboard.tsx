@@ -122,7 +122,7 @@ export default function CreatorOnboard() {
       return;
     }
     await refetchCreatorProfile();
-    setStep(3);
+    setStep(2);
   };
 
   const saveStep3 = async () => {
@@ -150,7 +150,7 @@ export default function CreatorOnboard() {
       toast.error(error.message);
       return;
     }
-    setStep(4);
+    setStep(3);
   };
 
   const completeOnboarding = async () => {
@@ -182,112 +182,56 @@ export default function CreatorOnboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1B2A4A]/5 to-background py-8 px-4">
+    <div className="min-h-screen bg-white text-gray-900 py-8 px-4" style={{ colorScheme: "light" }}>
       <div className="max-w-xl mx-auto">
         <div className="mb-8">
           <Progress value={progress} className="h-2" />
-          <p className="text-sm text-muted-foreground mt-2">Step {step} of 4</p>
+          <p className="text-sm text-gray-500 mt-2">Step {step} of 4</p>
         </div>
 
+        {/* Step 1: Set Up Your Profile */}
         {step === 1 && (
-          <Card>
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Share2 className="h-6 w-6" />
-                Connect Your Socials
-              </CardTitle>
-              <CardDescription>
-                Connect at least one platform to sync your profile. You can add more later.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {PLATFORMS.map((p) => {
-                const connectedAccount = accounts.find((a) => a.platform === p.id);
-                return (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between p-4 rounded-xl border border-border"
-                  >
-                    <span className="font-medium">{p.name}</span>
-                    {connectedAccount ? (
-                      <span className="flex items-center gap-2 text-sm text-green-600">
-                        <Check className="h-4 w-4" />
-                        {connectedAccount.platform_username ? `@${connectedAccount.platform_username}` : "Connected"}
-                      </span>
-                    ) : (
-                      <Button size="sm" variant="outline" onClick={openConnectPopup} disabled={connectLoading}>
-                        {connectLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                        Connect
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => syncAccounts()}
-                disabled={syncing}
-                className="w-full"
-              >
-                {syncing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
-                Refresh connected accounts
-              </Button>
-              <div className="flex gap-3 pt-4">
-                <Button onClick={() => setStep(2)}>
-                  Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button variant="ghost" onClick={() => setStep(2)}>
-                  Skip for now
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 2 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Set Up Your Profile</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-gray-900">Set Up Your Profile</CardTitle>
+              <CardDescription className="text-gray-500">
                 This info appears on your bio page. You can change it anytime.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Display name</Label>
-                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1" />
+                <Label className="text-gray-700">Display name</Label>
+                <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1 bg-white border-gray-300 text-gray-900" />
               </div>
               <div>
-                <Label>Handle (bio page URL: /c/yourhandle)</Label>
+                <Label className="text-gray-700">Handle (bio page URL: /c/yourhandle)</Label>
                 <Input
                   value={handle}
                   onChange={(e) => setHandle(e.target.value.replace(/^@/, "").toLowerCase())}
                   placeholder="yourhandle"
-                  className="mt-1"
+                  className="mt-1 bg-white border-gray-300 text-gray-900"
                 />
               </div>
               <div>
-                <Label>Bio</Label>
-                <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="mt-1 min-h-[80px]" />
+                <Label className="text-gray-700">Bio</Label>
+                <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="mt-1 min-h-[80px] bg-white border-gray-300 text-gray-900" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Branch (optional)</Label>
-                  <Input value={branch} onChange={(e) => setBranch(e.target.value)} className="mt-1" placeholder="e.g. Army" />
+                  <Label className="text-gray-700">Branch (optional)</Label>
+                  <Input value={branch} onChange={(e) => setBranch(e.target.value)} className="mt-1 bg-white border-gray-300 text-gray-900" placeholder="e.g. Army" />
                 </div>
                 <div>
-                  <Label>Rank (optional)</Label>
-                  <Input value={rank} onChange={(e) => setRank(e.target.value)} className="mt-1" />
+                  <Label className="text-gray-700">Rank (optional)</Label>
+                  <Input value={rank} onChange={(e) => setRank(e.target.value)} className="mt-1 bg-white border-gray-300 text-gray-900" />
                 </div>
               </div>
               <div>
-                <Label>Years of service (optional)</Label>
-                <Input value={yearsOfService} onChange={(e) => setYearsOfService(e.target.value)} className="mt-1" placeholder="e.g. 2004-2012" />
+                <Label className="text-gray-700">Years of service (optional)</Label>
+                <Input value={yearsOfService} onChange={(e) => setYearsOfService(e.target.value)} className="mt-1 bg-white border-gray-300 text-gray-900" placeholder="e.g. 2004-2012" />
               </div>
               <div>
-                <Label>Categories (select all that apply)</Label>
+                <Label className="text-gray-700">Categories (select all that apply)</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {CATEGORY_TAGS.map((tag) => (
                     <Button
@@ -295,6 +239,7 @@ export default function CreatorOnboard() {
                       type="button"
                       variant={categories.includes(tag) ? "default" : "outline"}
                       size="sm"
+                      className={categories.includes(tag) ? "" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
                       onClick={() =>
                         setCategories((c) => (c.includes(tag) ? c.filter((x) => x !== tag) : [...c, tag]))
                       }
@@ -305,10 +250,6 @@ export default function CreatorOnboard() {
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setStep(1)}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
                 <Button onClick={saveStep2} disabled={saving}>
                   {saving ? "Saving..." : "Continue"}
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -318,14 +259,15 @@ export default function CreatorOnboard() {
           </Card>
         )}
 
-        {step === 3 && (
-          <Card>
+        {/* Step 2: Add Your Links */}
+        {step === 2 && (
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Link2 className="h-6 w-6" />
                 Add Your Links
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-500">
                 Links appear as buttons on your bio page. Drag to reorder later in Profile.
               </CardDescription>
             </CardHeader>
@@ -335,6 +277,7 @@ export default function CreatorOnboard() {
                   <Input
                     placeholder="Label"
                     value={link.label}
+                    className="bg-white border-gray-300 text-gray-900"
                     onChange={(e) =>
                       setLinks((prev) => {
                         const next = [...prev];
@@ -346,6 +289,7 @@ export default function CreatorOnboard() {
                   <Input
                     placeholder="https://..."
                     value={link.url}
+                    className="bg-white border-gray-300 text-gray-900"
                     onChange={(e) =>
                       setLinks((prev) => {
                         const next = [...prev];
@@ -360,12 +304,13 @@ export default function CreatorOnboard() {
                 type="button"
                 variant="outline"
                 size="sm"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
                 onClick={() => setLinks((prev) => [...prev, { label: "", url: "" }])}
               >
                 + Add Link
               </Button>
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setStep(2)}>
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setStep(1)}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>
@@ -378,23 +323,25 @@ export default function CreatorOnboard() {
           </Card>
         )}
 
-        {step === 4 && (
-          <Card>
+        {/* Step 3: Bio Page is Live */}
+        {step === 3 && (
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-gray-900">
                 <Sparkles className="h-6 w-6" />
                 Your Bio Page is Live!
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-500">
                 Share your link in your Instagram or TikTok bio.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {bioPageUrl && (
                 <div className="flex gap-2">
-                  <Input readOnly value={bioPageUrl} className="font-mono text-sm" />
+                  <Input readOnly value={bioPageUrl} className="font-mono text-sm bg-gray-50 border-gray-300 text-gray-900" />
                   <Button
                     variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
                     onClick={() => {
                       navigator.clipboard.writeText(bioPageUrl);
                       toast.success("Link copied!");
@@ -405,27 +352,89 @@ export default function CreatorOnboard() {
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50" asChild>
                   <a href={`https://www.instagram.com/`} target="_blank" rel="noopener noreferrer">
                     Share on Instagram
                   </a>
                 </Button>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50" asChild>
                   <a href={`https://www.tiktok.com/`} target="_blank" rel="noopener noreferrer">
                     Share on TikTok
                   </a>
                 </Button>
               </div>
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" asChild>
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" asChild>
                   <a href={bioPageUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Preview bio page
                   </a>
                 </Button>
+                <Button onClick={() => setStep(4)}>
+                  Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Connect Social Media (last step) */}
+        {step === 4 && (
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-900">
+                <Share2 className="h-6 w-6" />
+                Connect Your Socials
+              </CardTitle>
+              <CardDescription className="text-gray-500">
+                Connect at least one platform to sync your profile. You can add more later.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {PLATFORMS.map((p) => {
+                const connectedAccount = accounts.find((a) => a.platform === p.id);
+                return (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-white"
+                  >
+                    <span className="font-medium text-gray-900">{p.name}</span>
+                    {connectedAccount ? (
+                      <span className="flex items-center gap-2 text-sm text-green-600">
+                        <Check className="h-4 w-4" />
+                        {connectedAccount.platform_username ? `@${connectedAccount.platform_username}` : "Connected"}
+                      </span>
+                    ) : (
+                      <Button size="sm" variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={openConnectPopup} disabled={connectLoading}>
+                        {connectLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => syncAccounts()}
+                disabled={syncing}
+                className="w-full text-gray-600 hover:bg-gray-50"
+              >
+                {syncing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                Refresh connected accounts
+              </Button>
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => setStep(3)}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
                 <Button onClick={completeOnboarding} disabled={saving}>
                   {saving ? "Saving..." : "Go to Dashboard"}
                   <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="ghost" className="text-gray-500 hover:bg-gray-50" onClick={completeOnboarding} disabled={saving}>
+                  Skip for now
                 </Button>
               </div>
             </CardContent>
