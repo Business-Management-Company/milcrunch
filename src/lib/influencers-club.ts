@@ -92,10 +92,11 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
     0;
 
   const engagementRaw =
-    typeof p?.engagement_percent === "number"
-      ? p.engagement_percent
-      : Number(p?.engagement_percent) || 0;
-  const engagementRate = Number(engagementRaw.toFixed(1));
+    typeof p?.engagement_percent === "number" ? p.engagement_percent
+    : typeof p?.engagement_rate === "number" ? p.engagement_rate
+    : typeof p?.er === "number" ? p.er
+    : Number(p?.engagement_percent) || Number(p?.engagement_rate) || Number(p?.er) || 0;
+  const engagementRate = engagementRaw ? Number(engagementRaw.toFixed(2)) : 0;
 
   const platforms = [(p?.platform as string) ?? "instagram"];
   const bio = (p?.biography ?? "") as string;
@@ -160,41 +161,66 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
     (p?.tags as unknown);
   let hashtags: string[] | undefined;
   if (Array.isArray(hashtagsRaw)) {
-    hashtags = hashtagsRaw.slice(0, 10).map((t) => {
+    hashtags = hashtagsRaw.slice(0, 20).map((t) => {
       if (typeof t === "string") return t.replace(/^#/, "");
-      if (t && typeof t === "object" && "name" in t) return String((t as { name: string }).name).replace(/^#/, "");
+      if (t && typeof t === "object") {
+        const o = t as Record<string, unknown>;
+        const val = o.name ?? o.tag ?? o.hashtag ?? o.label ?? o.value;
+        if (val) return String(val).replace(/^#/, "");
+      }
       return String(t);
-    });
+    }).filter((t) => t && t !== "undefined" && t !== "null");
   }
 
   const linksRaw =
-    (p?.links_in_bio as unknown) ??
     (p?.external_links as unknown) ??
-    (p?.link_in_bio as unknown);
+    (p?.links_in_bio as unknown) ??
+    (p?.link_in_bio as unknown) ??
+    (p?.bio_links as unknown) ??
+    (p?.links as unknown);
   const externalLinks: { label: string; url?: string }[] = [];
+  const pushLink = (rawUrl: string) => {
+    const url = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
+    const lower = url.toLowerCase();
+    let label: string;
+    if (lower.includes("linktr.ee") || lower.includes("linktree")) label = "Linktree";
+    else if (lower.includes("amazon")) label = "Amazon";
+    else if (lower.includes("shopify")) label = "Shopify";
+    else if (lower.includes("bio.site")) label = "Bio.link";
+    else if (lower.includes("youtube")) label = "YouTube";
+    else if (lower.includes("tiktok")) label = "TikTok";
+    else if (lower.includes("twitter") || lower.includes("x.com")) label = "X";
+    else label = "Link";
+    externalLinks.push({ label, url });
+  };
   if (Array.isArray(linksRaw)) {
     linksRaw.forEach((item: unknown) => {
-      const o = item as Record<string, unknown>;
-      const url = (o.url ?? o.href ?? o.link ?? o) as string | undefined;
-      if (typeof url !== "string" || !url.startsWith("http")) return;
-      const lower = url.toLowerCase();
-      let label = (o.label ?? o.title) as string | undefined;
-      if (!label) {
-        if (lower.includes("linktr.ee") || lower.includes("linktree")) label = "Linktree";
-        else if (lower.includes("amazon")) label = "Amazon";
-        else if (lower.includes("shopify")) label = "Shopify";
-        else if (lower.includes("bio.site")) label = "Bio.link";
-        else label = "Link";
+      if (typeof item === "string" && item.trim()) {
+        pushLink(item.trim());
+        return;
       }
-      externalLinks.push({ label: String(label), url });
+      if (item && typeof item === "object") {
+        const o = item as Record<string, unknown>;
+        const url = (o.url ?? o.href ?? o.link) as string | undefined;
+        const label = (o.label ?? o.title ?? o.name) as string | undefined;
+        if (typeof url === "string" && url.trim()) {
+          if (label) externalLinks.push({ label: String(label), url: url.startsWith("http") ? url : `https://${url}` });
+          else pushLink(url.trim());
+        }
+      }
     });
-  } else if (typeof linksRaw === "string" && linksRaw.startsWith("http")) {
-    const lower = linksRaw.toLowerCase();
-    const label = lower.includes("linktr") ? "Linktree" : lower.includes("amazon") ? "Amazon" : "Link";
-    externalLinks.push({ label, url: linksRaw });
+  } else if (typeof linksRaw === "string" && linksRaw.trim()) {
+    pushLink(linksRaw.trim());
   }
   if (externalLinks.length === 0 && Boolean(p?.uses_link_in_bio)) {
     externalLinks.push({ label: "Link in bio" });
+  }
+  // Also count external_links_count if the links array was empty
+  if (externalLinks.length === 0) {
+    const elc = Number(p?.external_links_count ?? p?.links_count ?? 0);
+    if (elc > 0) {
+      for (let i = 0; i < elc; i++) externalLinks.push({ label: "Link" });
+    }
   }
 
   const isVerified = Boolean(p?.is_verified);

@@ -171,7 +171,14 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
   const { result, instagram } = data;
   const partial: Partial<CreatorCard> = {};
 
+  console.log("[extractFromEnrichment] result:", result, "instagram keys:", Object.keys(instagram));
+
   if (result.email) partial.hasEmail = true;
+
+  // Engagement rate from enrichment
+  const erVal =
+    Number(instagram.engagement_percent) || Number(instagram.engagement_rate) || Number(instagram.er) || 0;
+  if (erVal > 0) partial.engagementRate = Number(erVal.toFixed(2));
 
   const creatorHas = result.creator_has as Record<string, boolean> | undefined;
   if (creatorHas && typeof creatorHas === "object") {
@@ -187,7 +194,7 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
   }
 
   // Hashtags: try direct field (FULL endpoint), then aggregate from post_data (RAW endpoint)
-  let hashtags = instagram.hashtags;
+  let hashtags = instagram.hashtags ?? instagram.frequently_used_hashtags ?? instagram.top_hashtags;
   if (!Array.isArray(hashtags) || hashtags.length === 0) {
     const posts = Array.isArray(instagram.post_data) ? (instagram.post_data as Record<string, unknown>[]) : [];
     const postTags = posts.flatMap((p) => Array.isArray(p.hashtags) ? p.hashtags as string[] : []);
@@ -196,29 +203,42 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
   if (Array.isArray(hashtags) && hashtags.length > 0) {
     const mapped = hashtags.map((t: unknown) => {
       if (typeof t === "string") return t.replace(/^#/, "");
-      if (t && typeof t === "object" && "name" in t) return String((t as { name: string }).name).replace(/^#/, "");
+      if (t && typeof t === "object") {
+        const o = t as Record<string, unknown>;
+        const val = o.name ?? o.tag ?? o.hashtag ?? o.label ?? o.value;
+        if (val) return String(val).replace(/^#/, "");
+      }
       return String(t);
-    });
-    partial.hashtags = [...new Set(mapped)].slice(0, 10);
+    }).filter((t) => t && t !== "undefined" && t !== "null");
+    partial.hashtags = [...new Set(mapped)].slice(0, 20);
   }
 
-  const links = instagram.links_in_bio;
+  const links = instagram.links_in_bio ?? instagram.external_links ?? instagram.bio_links;
   if (Array.isArray(links) && links.length > 0) {
     const externalLinks: { label: string; url?: string }[] = [];
     links.forEach((item: unknown) => {
-      const o = item as Record<string, unknown>;
-      const url = (o.url ?? o.href ?? o.link ?? o) as string | undefined;
-      if (typeof url !== "string" || !url.startsWith("http")) return;
-      const lower = url.toLowerCase();
-      let label = (o.label ?? o.title) as string | undefined;
-      if (!label) {
-        if (lower.includes("linktr.ee") || lower.includes("linktree")) label = "Linktree";
-        else if (lower.includes("amazon")) label = "Amazon";
-        else if (lower.includes("shopify")) label = "Shopify";
-        else if (lower.includes("bio.site")) label = "Bio.link";
-        else label = "Link";
+      if (typeof item === "string" && item.trim()) {
+        const url = item.startsWith("http") ? item : `https://${item}`;
+        externalLinks.push({ label: "Link", url });
+        return;
       }
-      externalLinks.push({ label: String(label), url });
+      if (item && typeof item === "object") {
+        const o = item as Record<string, unknown>;
+        const url = (o.url ?? o.href ?? o.link) as string | undefined;
+        const label = (o.label ?? o.title ?? o.name) as string | undefined;
+        if (typeof url === "string" && url.trim()) {
+          const finalUrl = url.startsWith("http") ? url : `https://${url}`;
+          const lower = finalUrl.toLowerCase();
+          let displayLabel = label;
+          if (!displayLabel) {
+            if (lower.includes("linktr")) displayLabel = "Linktree";
+            else if (lower.includes("amazon")) displayLabel = "Amazon";
+            else if (lower.includes("shopify")) displayLabel = "Shopify";
+            else displayLabel = "Link";
+          }
+          externalLinks.push({ label: String(displayLabel), url: finalUrl });
+        }
+      }
     });
     if (externalLinks.length > 0) partial.externalLinks = externalLinks;
   }
@@ -1972,7 +1992,7 @@ const BrandDiscover = () => {
                               )}
                             </td>
                             {/* ER */}
-                            <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof creator.engagementRate === "number" ? `${creator.engagementRate.toFixed(2)}%` : "—"}</td>
+                            <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{creator.engagementRate ? `${creator.engagementRate.toFixed(2)}%` : "—"}</td>
                             {/* External Links Used */}
                             <td className="p-3 text-center">
                               {linkCount > 0 ? (
@@ -1989,10 +2009,13 @@ const BrandDiscover = () => {
                             {/* Frequently Used Hashtags */}
                             <td className="p-3">
                               {hashtags.length > 0 ? (
-                                <div className="flex items-center gap-1 flex-nowrap">
+                                <div
+                                  className="flex items-center gap-1 flex-nowrap"
+                                  title={hashtags.map((t) => `#${t}`).join(", ")}
+                                >
                                   {hashtags.slice(0, 2).map((tag) => (
-                                    <span key={tag} className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[11px] px-2 py-0.5 max-w-[110px] truncate">
-                                      #{tag}
+                                    <span key={tag} className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[11px] px-2 py-0.5 shrink-0">
+                                      #{tag.length > 12 ? `${tag.slice(0, 12)}…` : tag}
                                     </span>
                                   ))}
                                   {hashtags.length > 2 && (
