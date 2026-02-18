@@ -216,34 +216,26 @@ export default function SummaryDashboard() {
       </div>
 
       {/* Quick Action Pills */}
-      <div className="max-w-[700px] mx-auto space-y-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mt-4">
         {[
-          [
-            { emoji: "\uD83D\uDD0D", label: "Find Military Creators" },
-            { emoji: "\uD83D\uDCCB", label: "Build a Creator List" },
-            { emoji: "\uD83C\uDF99\uFE0F", label: "Browse Podcast Network" },
-            { emoji: "\uD83D\uDCCA", label: "View Event Analytics" },
-          ],
-          [
-            { emoji: "\uD83C\uDF1F", label: "Find Keynote Speakers" },
-            { emoji: "\u2705", label: "Verify a Creator" },
-            { emoji: "\uD83C\uDFAA", label: "Manage Events" },
-            { emoji: "\uD83D\uDCE7", label: "Email Campaigns" },
-          ],
-        ].map((row, ri) => (
-          <div key={ri} className="flex flex-wrap justify-center gap-2.5">
-            {row.map((pill) => (
-              <button
-                key={pill.label}
-                type="button"
-                onClick={() => setPrompt(`${pill.emoji} ${pill.label}`)}
-                className="border border-gray-200 dark:border-gray-700 rounded-full px-5 py-2.5 text-sm font-medium text-[#6C5CE7] bg-white dark:bg-[#1A1D27] hover:bg-[#6C5CE7]/5 hover:border-[#6C5CE7]/40 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap"
-              >
-                <span>{pill.emoji}</span>
-                {pill.label}
-              </button>
-            ))}
-          </div>
+          { emoji: "🔍", label: "Find Military Creators" },
+          { emoji: "📋", label: "Build a Creator List" },
+          { emoji: "🎙️", label: "Browse Podcast Network" },
+          { emoji: "📊", label: "View Event Analytics" },
+          { emoji: "🎤", label: "Find Keynote Speakers" },
+          { emoji: "✅", label: "Verify a Creator" },
+          { emoji: "📅", label: "Manage Events" },
+          { emoji: "✉️", label: "Email Campaigns" },
+        ].map((pill) => (
+          <button
+            key={pill.label}
+            type="button"
+            onClick={() => setPrompt(`${pill.emoji} ${pill.label}`)}
+            className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-medium text-[#6C5CE7] text-center hover:border-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer transition flex items-center justify-center gap-2"
+          >
+            <span>{pill.emoji}</span>
+            {pill.label}
+          </button>
         ))}
       </div>
 
