@@ -57,19 +57,36 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/** Fetch the user's role from user_roles table → mapped to UserRole. */
+/** Role priority: higher index = higher privilege. */
+const ROLE_PRIORITY: Record<string, number> = {
+  attendee: 0, judge: 1, sponsor: 2, event_planner: 3,
+  brand_admin: 4, org_admin: 5, super_admin: 6,
+};
+
+/** Fetch the user's highest-privilege role from user_roles table.
+ *  A user can have multiple roles (unique on user_id+role). */
 async function fetchUserRole(userId: string): Promise<UserRole> {
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", userId)
-    .maybeSingle();
+    .eq("user_id", userId);
   if (error) {
     console.warn("[AuthContext] user_roles fetch failed:", error.message);
+    return "creator";
   }
-  const appRole = (data?.role as string) ?? null;
-  const mapped = mapAppRole(appRole);
-  console.log("[AuthContext] fetchUserRole:", { userId, appRole, mapped });
+  const roles = (data ?? []).map((r: { role: string }) => r.role);
+  // Pick the highest-privilege role
+  let best: string | null = null;
+  let bestPriority = -1;
+  for (const r of roles) {
+    const p = ROLE_PRIORITY[r] ?? -1;
+    if (p > bestPriority) {
+      best = r;
+      bestPriority = p;
+    }
+  }
+  const mapped = mapAppRole(best);
+  console.log("[AuthContext] fetchUserRole:", { userId, roles, best, mapped });
   return mapped;
 }
 

@@ -85,19 +85,17 @@ export default function LoginPage() {
       return;
     }
 
-    // Role comes from user_roles table
-    const { data: roleRow } = await supabase
+    // Role comes from user_roles table (user may have multiple roles)
+    const { data: roleRows } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", user?.id)
-      .maybeSingle();
-    const appRole = (roleRow?.role as string) ?? null;
-    // Map app_role enum → routing role
-    const isSuperAdmin = appRole === "super_admin";
-    const isAdminish = ["org_admin", "brand_admin", "event_planner", "sponsor"].includes(appRole ?? "");
+      .eq("user_id", user?.id);
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    const isSuperAdmin = roles.includes("super_admin");
+    const isAdminish = roles.some((r: string) => ["org_admin", "brand_admin", "event_planner", "sponsor"].includes(r));
     const onboardingCompleted = user?.user_metadata?.onboarding_completed ?? false;
 
-    console.log("[LoginPage handleLogin] User:", user?.email, "| appRole:", appRole, "| onboarding_completed:", onboardingCompleted);
+    console.log("[LoginPage handleLogin] User:", user?.email, "| roles:", roles, "| onboarding_completed:", onboardingCompleted);
 
     if (isSuperAdmin) {
       navigate("/admin", { replace: true });
