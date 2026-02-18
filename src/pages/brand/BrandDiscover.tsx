@@ -183,7 +183,9 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
 
   const creatorHas = result.creator_has as Record<string, boolean> | undefined;
   if (creatorHas && typeof creatorHas === "object") {
-    const platforms: string[] = ["instagram"];
+    const platforms: string[] = [];
+    // Add each platform the creator has (don't hardcode instagram — it may not be their platform)
+    if (creatorHas.instagram) platforms.push("instagram");
     if (creatorHas.tiktok) platforms.push("tiktok");
     if (creatorHas.youtube) platforms.push("youtube");
     if (creatorHas.twitter) platforms.push("twitter");
@@ -191,6 +193,8 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     if (creatorHas.linkedin) platforms.push("linkedin");
     if (creatorHas.twitch) platforms.push("twitch");
     if (creatorHas.podcast) platforms.push("podcast");
+    // If creator_has exists but no platforms were truthy, fall back to instagram
+    if (platforms.length === 0) platforms.push("instagram");
     partial.socialPlatforms = platforms;
   }
 
@@ -812,7 +816,43 @@ const BrandDiscover = () => {
 
     searchFn(q, currentPlatform)
       .then((result) => {
-        if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() === q) setApiResults(result);
+        if (searchQueryRef.current.trim().replace(/^@/, "").toLowerCase() !== q) return;
+
+        // For username search, the raw response IS the enrichment data
+        // (searchByUsername already calls the RAW enrich endpoint). Extract enrichment
+        // fields and merge them into the creator card BEFORE setting state so the
+        // first render already shows all platforms, hashtags, ER, avatar, etc.
+        // (Lookalike mode returns multiple creators that need individual enrichment.)
+        if (searchMode === "username" && result.creators.length > 0 && result.rawResponse) {
+          const raw = result.rawResponse as Record<string, unknown>;
+          const apiResult = raw?.result as Record<string, unknown> | undefined;
+          const platKey = currentPlatform === "all" ? "instagram" : currentPlatform;
+          const platData = (apiResult?.[platKey] as Record<string, unknown>) ??
+            (platKey !== "instagram" ? (apiResult?.instagram as Record<string, unknown>) : undefined);
+
+          if (apiResult && platData) {
+            const enrichResponse: EnrichedProfileResponse = {
+              result: apiResult,
+              instagram: platData,
+            };
+
+            result.creators.forEach((creator) => {
+              console.log("Enriching username result:", creator.username, "creator_has:", apiResult.creator_has);
+              const partial = extractFromEnrichment(enrichResponse);
+              // Merge enrichment data directly into the card
+              Object.assign(creator, partial);
+              // Pre-populate caches so background enrichment skips this creator
+              enrichedSetRef.current.add(creator.id);
+              setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+              setEnrichRawCache((prev) => ({ ...prev, [creator.id]: enrichResponse }));
+              // Save to Supabase cache (fire-and-forget)
+              if (creator.username) setCachedEnrichment(creator.username, enrichResponse);
+              maybeUpdateFeaturedAvatar(creator.username ?? "", enrichResponse);
+            });
+          }
+        }
+
+        setApiResults(result);
         if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15, { query: q, mode: searchMode, results: result.total });
         refreshCredits();
       })
