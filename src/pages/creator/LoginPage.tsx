@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,39 +77,9 @@ export default function LoginPage() {
       }
       return;
     }
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user?.email === DEMO_EMAIL) {
-      navigate("/brand/dashboard", { replace: true });
-      return;
-    }
-
-    // Role comes from user_roles table (user may have multiple roles)
-    const { data: roleRows } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user?.id);
-    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
-    const isSuperAdmin = roles.includes("super_admin");
-    const isAdminish = roles.some((r: string) => ["org_admin", "brand_admin", "event_planner", "sponsor"].includes(r));
-    const onboardingCompleted = user?.user_metadata?.onboarding_completed ?? false;
-
-    console.log("[LoginPage handleLogin] User:", user?.email, "| roles:", roles, "| onboarding_completed:", onboardingCompleted);
-
-    if (isSuperAdmin) {
-      navigate("/admin", { replace: true });
-      return;
-    }
-    if (isAdminish) {
-      navigate("/brand/dashboard", { replace: true });
-      return;
-    }
-    // Only creators hit onboarding check
-    if (!onboardingCompleted) {
-      navigate("/creator/onboard", { replace: true });
-    } else {
-      navigate("/creator/dashboard", { replace: true });
-    }
+    // After successful signIn, the AuthContext useEffect will fire getRedirectPath()
+    // which handles routing via the user_roles table (with RPC fallback).
+    // No need to duplicate routing logic here.
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {

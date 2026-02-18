@@ -70,11 +70,30 @@ async function fetchUserRole(userId: string): Promise<UserRole> {
     .from("user_roles")
     .select("role")
     .eq("user_id", userId);
+
+  console.log("[AuthContext] user_roles raw query:", { userId, data, error });
+
   if (error) {
     console.warn("[AuthContext] user_roles fetch failed:", error.message);
-    return "creator";
   }
-  const roles = (data ?? []).map((r: { role: string }) => r.role);
+
+  let roles = (data ?? []).map((r: { role: string }) => r.role);
+
+  // RLS may silently return empty rows — fall back to has_role() RPC
+  if (roles.length === 0) {
+    console.warn("[AuthContext] user_roles returned 0 rows (likely RLS). Trying has_role RPC fallback...");
+    const checks = await Promise.all(
+      (["super_admin", "org_admin", "brand_admin", "event_planner", "sponsor", "judge", "attendee"] as const).map(
+        async (r) => {
+          const { data: hasIt } = await supabase.rpc("has_role", { _role: r, _user_id: userId });
+          return hasIt ? r : null;
+        }
+      )
+    );
+    roles = checks.filter((r): r is string => r !== null);
+    console.log("[AuthContext] has_role RPC fallback results:", roles);
+  }
+
   // Pick the highest-privilege role
   let best: string | null = null;
   let bestPriority = -1;
@@ -86,7 +105,7 @@ async function fetchUserRole(userId: string): Promise<UserRole> {
     }
   }
   const mapped = mapAppRole(best);
-  console.log("[AuthContext] fetchUserRole:", { userId, roles, best, mapped });
+  console.log("[AuthContext] fetchUserRole result:", { userId, roles, best, mapped });
   return mapped;
 }
 
