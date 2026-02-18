@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Lock, Play, Share2, Check, Calendar, Users, Video,
-  ArrowRight, Mail, Loader2, Sun, Moon,
+  ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
   FileText, Layers, Target, XCircle, CheckCircle2,
   Smartphone, Search, TrendingUp, Radio, Handshake,
   DollarSign, ClipboardList, BookOpen,
@@ -1451,10 +1451,17 @@ export default function Prospectus() {
   const [hasAccess, setHasAccess] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("Overview");
   const [copied, setCopied] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">(() => {
     const saved = localStorage.getItem(THEME_KEY);
-    return saved === "dark";
+    if (saved === "light" || saved === "dark" || saved === "system") return saved;
+    return "light";
   });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
+
+  const darkMode =
+    themeMode === "dark" || (themeMode === "system" && systemPrefersDark);
 
   useEffect(() => {
     if (sessionStorage.getItem(SESSION_KEY) === "1") {
@@ -1463,8 +1470,15 @@ export default function Prospectus() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(THEME_KEY, darkMode ? "dark" : "light");
-  }, [darkMode]);
+    localStorage.setItem(THEME_KEY, themeMode);
+  }, [themeMode]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   if (!hasAccess) {
     return <AccessGate onAccess={() => setHasAccess(true)} />;
@@ -1521,29 +1535,39 @@ export default function Prospectus() {
 
           {/* Theme toggle + Share button */}
           <div className="flex items-center gap-2">
-            {/* Light / Dark toggle */}
-            <button
-              type="button"
-              onClick={() => setDarkMode((prev) => !prev)}
+            {/* Theme toggle pill */}
+            <div
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                "flex items-center gap-0.5 rounded-full px-1 py-1 border transition-colors duration-300",
                 darkMode
-                  ? "bg-white/[0.06] text-gray-300 border border-white/10 hover:bg-white/[0.1]"
-                  : "bg-[#111827] text-gray-200 border border-[#111827] hover:bg-[#1F2937]"
+                  ? "bg-white/[0.06] border-white/10"
+                  : "bg-white border-[#E5E7EB]"
               )}
             >
-              {darkMode ? (
-                <>
-                  <Sun className="h-4 w-4" />
-                  <span className="hidden sm:inline">Light</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dark</span>
-                </>
-              )}
-            </button>
+              {([
+                { mode: "light" as const, Icon: Sun },
+                { mode: "dark" as const, Icon: Moon },
+                { mode: "system" as const, Icon: Monitor },
+              ]).map(({ mode, Icon }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setThemeMode(mode)}
+                  className={cn(
+                    "p-1.5 rounded-full transition-all duration-200",
+                    themeMode === mode
+                      ? darkMode
+                        ? "bg-white/[0.12] text-white shadow-sm"
+                        : "bg-white text-[#111827] shadow-sm"
+                      : darkMode
+                        ? "text-gray-500 hover:text-gray-300"
+                        : "text-[#6B7280] hover:text-[#111827]"
+                  )}
+                >
+                  <Icon className="h-[18px] w-[18px]" />
+                </button>
+              ))}
+            </div>
 
             {/* Explore Demo */}
             <a
