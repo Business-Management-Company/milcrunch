@@ -32,20 +32,14 @@ import {
   ChevronDown,
   Trash2,
 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -574,7 +568,25 @@ export default function CreatorProfileModal({
     });
   }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord]);
 
-  const { incomeMin, incomeMax, income, followerGrowth, reelsPct } = useMemo(() => {
+  const postEngagementData = useMemo(() => {
+    let platRecord: Record<string, unknown> | undefined;
+    if (selectedPlatform === "tiktok") platRecord = tiktokData;
+    else if (selectedPlatform === "youtube") platRecord = youtubeData;
+    else if (selectedPlatform === "twitter") platRecord = twitterData;
+    else platRecord = igRecord;
+
+    const raw = platRecord?.post_data;
+    if (!Array.isArray(raw) || followers <= 0) return [];
+    return raw.slice(0, 12).map((item: Record<string, unknown>, i: number) => {
+      const eng = item.engagement as Record<string, unknown> | undefined;
+      const likes = Number(eng?.likes ?? 0);
+      const comments = Number(eng?.comments ?? 0);
+      const er = ((likes + comments) / followers) * 100;
+      return { post: `P${i + 1}`, er: Number(er.toFixed(2)) };
+    });
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, followers]);
+
+  const { incomeMin, incomeMax, income, followerGrowth, growthData, reelsPct } = useMemo(() => {
     // Pick the platform-specific data record for analytics
     let platRecord: Record<string, unknown> | undefined;
     if (selectedPlatform === "tiktok") platRecord = tiktokData;
@@ -601,11 +613,19 @@ export default function CreatorProfileModal({
       ? Number(igRecord?.reels_percentage_last_12_posts ?? 0)
       : 0;
 
+    const gData: { period: string; growth: number }[] = [];
+    if (growthRec && typeof growthRec === "object") {
+      if (growthRec["12_months_ago"] != null) gData.push({ period: "12mo", growth: Number(growthRec["12_months_ago"]) });
+      if (growthRec["6_months_ago"] != null) gData.push({ period: "6mo", growth: Number(growthRec["6_months_ago"]) });
+      if (growthRec["3_months_ago"] != null) gData.push({ period: "3mo", growth: Number(growthRec["3_months_ago"]) });
+    }
+
     return {
       incomeMin: iMin,
       incomeMax: iMax,
       income: formatIncome(iMin, iMax),
       followerGrowth: fGrowth,
+      growthData: gData,
       reelsPct: rPct,
     };
   }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord]);
@@ -1038,85 +1058,113 @@ export default function CreatorProfileModal({
                         <Users className="h-4 w-4" /> Similar Accounts
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="analytics" className="mt-4 space-y-4">
-                      <div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white">Estimated Creator Income (projected earnings)</p>
-                          <Select defaultValue="3m">
-                            <SelectTrigger className="w-[140px] h-9 rounded-lg border border-gray-200 dark:border-gray-700">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="3m">Last 3 months</SelectItem>
-                              <SelectItem value="6m">Last 6 months</SelectItem>
-                              <SelectItem value="12m">Last 12 months</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {showEnrichmentLoading && !income ? (
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-full max-w-md" />
-                            <Skeleton className="h-24 w-64" />
+                    <TabsContent value="analytics" className="mt-4 space-y-5">
+                      {/* Follower Growth Chart */}
+                      {growthData.length > 0 ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
+                          <div className="h-44 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={growthData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`} />
+                                <Tooltip formatter={(value: number) => [`${value > 0 ? "+" : ""}${value.toFixed(2)}%`, "Growth"]} />
+                                <Bar dataKey="growth" radius={[4, 4, 0, 0]}>
+                                  {growthData.map((entry, i) => (
+                                    <Cell key={i} fill={entry.growth >= 0 ? "#22c55e" : "#ef4444"} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
                           </div>
-                        ) : (incomeMin != null && incomeMax != null && (incomeMin > 0 || incomeMax > 0)) ? (
-                          <>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                              @{displayUsername || "handle"} generated between{" "}
-                              <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMin)}</span> and{" "}
-                              <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMax)}</span> in income in the last 90 days.
-                            </p>
-                            <div className="h-40 w-full max-w-md">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart
-                                  data={[
-                                    { month: "Month 1", income: incomeMin },
-                                    { month: "Month 2", income: Math.round((incomeMin + incomeMax) / 2) },
-                                    { month: "Month 3", income: incomeMax },
-                                  ]}
-                                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-                                >
-                                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
-                                  <Tooltip
-                                    formatter={(value: number) => ["Income", `$${formatNum(value)}`]}
-                                    labelFormatter={(label) => `${label}`}
-                                  />
-                                  <Line type="monotone" dataKey="income" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} name="Income" />
-                                </LineChart>
-                              </ResponsiveContainer>
+                          {followerGrowth && (
+                            <p className="text-xs text-muted-foreground mt-2">{String(followerGrowth)}</p>
+                          )}
+                        </div>
+                      ) : showEnrichmentLoading ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
+                          <Skeleton className="h-44 w-full" />
+                        </div>
+                      ) : null}
+
+                      {/* Engagement Per Post */}
+                      {postEngagementData.length > 0 && (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
+                          <p className="text-xs text-muted-foreground mb-3">Engagement rate for recent posts (likes + comments / followers)</p>
+                          <div className="h-36 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={postEngagementData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="post" tick={{ fontSize: 9 }} />
+                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v}%`} />
+                                <Tooltip formatter={(value: number) => [`${value.toFixed(2)}%`, "ER"]} />
+                                <Bar dataKey="er" fill="#6C5CE7" radius={[3, 3, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Key Metrics Grid */}
+                      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Key Metrics</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {[
+                            { label: "Avg Likes", value: avgLikes, fmt: formatNumber },
+                            { label: "Avg Comments", value: avgComments, fmt: formatNumber },
+                            { label: "Avg Views", value: avgViews, fmt: formatNumber },
+                            { label: statLabels.postsPerMonth, value: postsPerMonth, fmt: (v: number) => `${formatNumber(v)}/mo` },
+                          ].filter(({ value }) => value > 0).map(({ label, value, fmt }) => (
+                            <div key={label} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
+                              <p className="text-lg font-bold text-[#000741] dark:text-white">{fmt(value)}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
                             </div>
-                          </>
-                        ) : (
-                          <p className="text-muted-foreground">{income}</p>
+                          ))}
+                        </div>
+                        {selectedPlatform === "instagram" && reelsPct > 0 && (
+                          <p className="text-xs text-muted-foreground mt-3">Reels make up {reelsPct}% of last 12 posts</p>
                         )}
                       </div>
-                      {followerGrowth && (
-                        <div>
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Creator Growth</p>
-                          <p className="text-sm text-muted-foreground">{String(followerGrowth)}</p>
+
+                      {/* Estimated Income */}
+                      {(incomeMin != null && incomeMax != null && (incomeMin > 0 || incomeMax > 0)) ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
+                            @{displayUsername || "handle"} generated between{" "}
+                            <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMin)}</span> and{" "}
+                            <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMax)}</span> in income in the last 90 days.
+                          </p>
                         </div>
-                      )}
-                      {selectedPlatform === "instagram" && reelsPct > 0 && (
-                        <div>
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Content Mix</p>
-                          <p className="text-sm text-muted-foreground">Reels {reelsPct}% of last 12 posts</p>
+                      ) : showEnrichmentLoading ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
+                          <Skeleton className="h-4 w-full max-w-md" />
                         </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">{statLabels.postsPerMonth.replace(" per Month", " Frequency").replace(" per Month", " Frequency")}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {postsPerMonth != null && postsPerMonth > 0 ? `${formatNumber(postsPerMonth)} / mo` : "—"}
-                        </p>
-                      </div>
+                      ) : null}
+
+                      {/* Hashtag Cloud */}
                       {platformHashtags.length > 0 && (
-                        <div>
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Top Hashtags</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {platformHashtags.map((tag: string) => (
-                              <span key={tag} className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
-                                #{tag}
-                              </span>
-                            ))}
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Hashtags</p>
+                          <div className="flex flex-wrap gap-2">
+                            {platformHashtags.map((tag: string, i: number) => {
+                              const sizes = ["text-lg", "text-base", "text-base", "text-sm", "text-sm", "text-sm", "text-xs", "text-xs", "text-xs", "text-xs"];
+                              const opacities = [1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55];
+                              return (
+                                <span
+                                  key={tag}
+                                  className={cn(
+                                    "inline-block rounded-lg bg-[#6C5CE7]/10 px-3 py-1.5 font-medium text-[#6C5CE7] transition-colors hover:bg-[#6C5CE7]/20",
+                                    sizes[i] ?? "text-xs"
+                                  )}
+                                  style={{ opacity: opacities[i] ?? 0.55 }}
+                                >
+                                  #{tag}
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
