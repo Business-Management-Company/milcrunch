@@ -92,9 +92,9 @@ function LeadManager() {
   const [tab, setTab] = useState<TabFilter>("all");
 
   const allLeads = isDemo ? DEMO_LEADS : [];
-  const leads = tab === "all" ? allLeads : allLeads.filter(l => l.status === tab);
-  const qualified = allLeads.filter(l => l.status === "qualified").length;
-  const pipelineValue = allLeads.reduce((s, l) => s + l.value, 0);
+  const leads = tab === "all" ? allLeads : (allLeads ?? []).filter(l => l.status === tab);
+  const qualified = (allLeads ?? []).filter(l => l.status === "qualified").length;
+  const pipelineValue = (allLeads ?? []).reduce((s, l) => s + l.value, 0);
   const conversionRate = allLeads.length ? Math.round((qualified / allLeads.length) * 100) : 0;
 
   const STATS = [
@@ -205,7 +205,7 @@ function LeadManager() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {leads.map(lead => (
+                {(leads ?? []).map(lead => (
                   <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-[#111827] transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{lead.company}</td>
                     <td className="px-4 py-3">

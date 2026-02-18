@@ -185,7 +185,7 @@ function AdInventory() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {items.map(item => (
+                {(items ?? []).map(item => (
                   <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#111827] transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{item.name}</td>
                     <td className="px-4 py-3">

@@ -100,9 +100,9 @@ function AdAnalytics() {
   const cpmData = isDemo ? DEMO_CPM_TREND : [];
   const topAdvertisers = isDemo ? DEMO_TOP_ADVERTISERS : [];
 
-  const totalSpend = spendData.reduce((s, d) => s + d.spend, 0);
-  const totalImpressions = impressionsData.reduce((s, d) => s + d.impressions, 0);
-  const avgCpm = cpmData.length ? Math.round(cpmData.reduce((s, d) => s + d.cpm, 0) / cpmData.length) : 0;
+  const totalSpend = (spendData ?? []).reduce((s, d) => s + d.spend, 0);
+  const totalImpressions = (impressionsData ?? []).reduce((s, d) => s + d.impressions, 0);
+  const avgCpm = cpmData.length ? Math.round((cpmData ?? []).reduce((s, d) => s + d.cpm, 0) / cpmData.length) : 0;
   const creatorPayouts = Math.round(totalSpend * 0.7);
 
   const STATS = [
@@ -239,7 +239,7 @@ function AdAnalytics() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {topAdvertisers.map(a => (
+                {(topAdvertisers ?? []).map(a => (
                   <tr key={a.name} className="hover:bg-gray-50 dark:hover:bg-[#111827] transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{a.name}</td>
                     <td className="px-4 py-3 text-right font-medium text-emerald-500">${a.spend.toLocaleString()}</td>

@@ -91,10 +91,10 @@ function AdCampaigns() {
   const [open, setOpen] = useState(false);
 
   const campaigns = isDemo ? DEMO_CAMPAIGNS : [];
-  const activeCampaigns = campaigns.filter(c => c.status === "Active").length;
-  const totalBudget = campaigns.reduce((s, c) => s + c.budget, 0);
-  const totalSpent = campaigns.reduce((s, c) => s + c.spent, 0);
-  const totalImpressions = campaigns.reduce((s, c) => s + c.impressions, 0);
+  const activeCampaigns = (campaigns ?? []).filter(c => c.status === "Active").length;
+  const totalBudget = (campaigns ?? []).reduce((s, c) => s + c.budget, 0);
+  const totalSpent = (campaigns ?? []).reduce((s, c) => s + c.spent, 0);
+  const totalImpressions = (campaigns ?? []).reduce((s, c) => s + c.impressions, 0);
 
   const STATS = [
     { label: "Active Campaigns", value: activeCampaigns.toString(), icon: Target, color: "text-purple-400", bg: "bg-purple-900/30" },
@@ -197,7 +197,7 @@ function AdCampaigns() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {campaigns.map(c => {
+                {(campaigns ?? []).map(c => {
                   const pct = Math.round((c.spent / c.budget) * 100);
                   return (
                     <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-[#111827] transition-colors">
@@ -231,7 +231,7 @@ function AdCampaigns() {
   );
 }
 
-export default function AdCampaignsWithBoundary() {
+export default function AdCampaignsPageWithBoundary() {
   return (
     <AdCampaignsErrorBoundary>
       <AdCampaigns />

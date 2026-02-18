@@ -1,3 +1,4 @@
+import React from "react";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { Card } from "@/components/ui/card";
 import { Link } from "react-router-dom";
@@ -30,7 +31,43 @@ const QUICK_LINKS = [
   { label: "Lead Manager", description: "Track advertiser leads and pipeline", icon: UserPlus, href: "/brand/advertising/leads" },
 ];
 
-export default function AdvertisingDashboard() {
+class AdvertisingDashboardErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[AdvertisingDashboard] Render crash:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center">
+          <p className="text-red-500 font-medium">Something went wrong loading this page.</p>
+          <pre className="text-xs text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 mt-2 max-w-lg mx-auto overflow-auto">
+            {this.state.error?.message}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AdvertisingDashboard() {
+  console.log("[AdvertisingDashboard] mounted");
   const { isDemo } = useDemoMode();
 
   const stats = isDemo ? DEMO_STATS : DEMO_STATS.map(s => ({ ...s, value: "$0" }));
@@ -49,7 +86,7 @@ export default function AdvertisingDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => {
+        {(stats ?? []).map((stat) => {
           const Icon = stat.icon;
           return (
             <Card key={stat.label} className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
@@ -70,7 +107,7 @@ export default function AdvertisingDashboard() {
       {/* Quick Links */}
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Links</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {QUICK_LINKS.map((link) => {
+        {(QUICK_LINKS ?? []).map((link) => {
           const Icon = link.icon;
           return (
             <Link key={link.href} to={link.href}>
@@ -89,5 +126,13 @@ export default function AdvertisingDashboard() {
         })}
       </div>
     </>
+  );
+}
+
+export default function AdvertisingDashboardWithBoundary() {
+  return (
+    <AdvertisingDashboardErrorBoundary>
+      <AdvertisingDashboard />
+    </AdvertisingDashboardErrorBoundary>
   );
 }

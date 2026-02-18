@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   Plus,
   X,
   FileDown,
+  Package,
 } from "lucide-react";
 
 type Scenario = "base" | "growth" | "premium";
@@ -29,12 +30,12 @@ interface InventoryItem {
 }
 
 const DEMO_INVENTORY: InventoryItem[] = [
-  { id: "1", name: "Creator Page Display Banner", impressions: 300000, cpm: 14, range: "$10–$28", revenue: 4320, health: "Underpriced" },
-  { id: "2", name: "Event Sponsorship Package", impressions: 90000, cpm: 70, range: "$35–$80", revenue: 6300, health: "Premium" },
-  { id: "3", name: "Livestream Mid-break Overlay", impressions: 150000, cpm: 46, range: "$26–$60", revenue: 6840, health: "Healthy" },
-  { id: "4", name: "Podcast Pre-roll (30 sec)", impressions: 200000, cpm: 28, range: "$18–$40", revenue: 5600, health: "Healthy" },
-  { id: "5", name: "MIC Stage Naming Rights", impressions: 50000, cpm: 200, range: "$150–$250", revenue: 10000, health: "Premium" },
-  { id: "6", name: "Newsletter Sponsored Section", impressions: 85000, cpm: 22, range: "$15–$30", revenue: 1870, health: "Underpriced" },
+  { id: "1", name: "Creator Page Display Banner", impressions: 300000, cpm: 14, range: "$10\u2013$28", revenue: 4320, health: "Underpriced" },
+  { id: "2", name: "Event Sponsorship Package", impressions: 90000, cpm: 70, range: "$35\u2013$80", revenue: 6300, health: "Premium" },
+  { id: "3", name: "Livestream Mid-break Overlay", impressions: 150000, cpm: 46, range: "$26\u2013$60", revenue: 6840, health: "Healthy" },
+  { id: "4", name: "Podcast Pre-roll (30 sec)", impressions: 200000, cpm: 28, range: "$18\u2013$40", revenue: 5600, health: "Healthy" },
+  { id: "5", name: "MIC Stage Naming Rights", impressions: 50000, cpm: 200, range: "$150\u2013$250", revenue: 10000, health: "Premium" },
+  { id: "6", name: "Newsletter Sponsored Section", impressions: 85000, cpm: 22, range: "$15\u2013$30", revenue: 1870, health: "Underpriced" },
 ];
 
 const SCENARIO_MULTIPLIERS: Record<Scenario, number> = { base: 1, growth: 1.5, premium: 2.2 };
@@ -44,7 +45,43 @@ const healthColor = (h: string) =>
   h === "Healthy" ? "bg-emerald-900/40 text-emerald-300 border-emerald-700" :
   "bg-amber-900/40 text-amber-300 border-amber-700";
 
-export default function RateDesk() {
+class RateDeskErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[RateDesk] Render crash:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center">
+          <p className="text-red-500 font-medium">Something went wrong loading this page.</p>
+          <pre className="text-xs text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 mt-2 max-w-lg mx-auto overflow-auto">
+            {this.state.error?.message}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function RateDesk() {
+  console.log("[RateDesk] mounted");
   const { isDemo, guardAction } = useDemoMode();
   const [scenario, setScenario] = useState<Scenario>("base");
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("30d");
@@ -53,12 +90,12 @@ export default function RateDesk() {
 
   const mult = SCENARIO_MULTIPLIERS[scenario];
   const inventory = isDemo ? DEMO_INVENTORY : [];
-  const totalImpressions = inventory.reduce((s, i) => s + i.impressions, 0);
-  const totalRevenue = inventory.reduce((s, i) => s + i.revenue, 0);
-  const avgCpm = inventory.length ? Math.round(inventory.reduce((s, i) => s + i.cpm, 0) / inventory.length) : 0;
+  const totalImpressions = (inventory ?? []).reduce((s, i) => s + i.impressions, 0);
+  const totalRevenue = (inventory ?? []).reduce((s, i) => s + i.revenue, 0);
+  const avgCpm = inventory.length ? Math.round((inventory ?? []).reduce((s, i) => s + i.cpm, 0) / inventory.length) : 0;
 
   const addToProposal = (item: InventoryItem) => {
-    if (!proposal.find(p => p.id === item.id)) {
+    if (!(proposal ?? []).find(p => p.id === item.id)) {
       setProposal(prev => [...prev, item]);
     }
   };
@@ -67,7 +104,7 @@ export default function RateDesk() {
     setProposal(prev => prev.filter(p => p.id !== id));
   };
 
-  const proposalTotal = proposal.reduce((s, i) => s + Math.round(i.revenue * mult), 0);
+  const proposalTotal = (proposal ?? []).reduce((s, i) => s + Math.round(i.revenue * mult), 0);
 
   return (
     <>
@@ -168,7 +205,7 @@ export default function RateDesk() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {inventory.map(item => (
+                    {(inventory ?? []).map(item => (
                       <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#111827] transition-colors">
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{item.name}</td>
                         <td className="px-4 py-3 text-right text-gray-600 dark:text-gray-300">{(item.impressions / 1000).toFixed(0)}K</td>
@@ -183,7 +220,7 @@ export default function RateDesk() {
                             size="sm"
                             variant="ghost"
                             onClick={() => addToProposal(item)}
-                            disabled={!!proposal.find(p => p.id === item.id)}
+                            disabled={!!(proposal ?? []).find(p => p.id === item.id)}
                             className="text-purple-400 hover:text-purple-300"
                           >
                             <Plus className="h-4 w-4" />
@@ -213,7 +250,7 @@ export default function RateDesk() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {proposal.map(item => (
+                  {(proposal ?? []).map(item => (
                     <div key={item.id} className="flex items-center justify-between bg-[#111827] rounded-lg px-3 py-2">
                       <div>
                         <p className="text-sm font-medium text-white">{item.name}</p>
@@ -244,5 +281,13 @@ export default function RateDesk() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function RateDeskWithBoundary() {
+  return (
+    <RateDeskErrorBoundary>
+      <RateDesk />
+    </RateDeskErrorBoundary>
   );
 }
