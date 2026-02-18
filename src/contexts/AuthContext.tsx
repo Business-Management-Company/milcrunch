@@ -85,7 +85,7 @@ async function fetchUserRole(userId: string): Promise<UserRole> {
     const checks = await Promise.all(
       (["super_admin", "org_admin", "brand_admin", "event_planner", "sponsor", "judge", "attendee"] as const).map(
         async (r) => {
-          const { data: hasIt } = await supabase.rpc("has_role", { _role: r, _user_id: userId });
+          const { data: hasIt } = await supabase.rpc("has_role", { check_role: r });
           return hasIt ? r : null;
         }
       )
