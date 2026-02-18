@@ -125,6 +125,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     key: "email",
     label: "EMAIL",
     items: [
+      { href: "/brand/email/contacts", label: "Contacts", icon: Users },
       { href: "/brand/email/campaigns", label: "Campaigns", icon: Mail },
       { href: "/brand/email/lists", label: "Lists", icon: ContactRound },
       { href: "/brand/email/templates", label: "Templates", icon: LayoutTemplate },

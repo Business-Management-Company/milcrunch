@@ -88,7 +88,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type {
   EmailList, EmailContact, EmailCampaign, EmailTemplate,
-  EmailForm, EmailSettings, CampaignStats,
+  EmailForm, EmailSettings, CampaignStats, ContactSource, ContactActivity,
 } from "./email-types";
 
 const sb = supabase as any;
@@ -198,6 +198,121 @@ export async function unsubscribeByEmail(email: string, listId: string): Promise
   const { error } = await sb.from("email_contacts").update({ status: "unsubscribed" }).eq("email", email.toLowerCase().trim()).eq("list_id", listId);
   if (error) { console.error("unsubscribeByEmail", error); return false; }
   return true;
+}
+
+// ── Global Contacts (cross-list) ──────────────────────────────────
+
+function mapContact(row: any): EmailContact {
+  return {
+    ...row,
+    tags: row.tags ?? [],
+    source: row.source ?? "manual",
+    activity: row.activity ?? [],
+    phone: row.phone ?? null,
+    company: row.company ?? null,
+    title: row.title ?? null,
+  };
+}
+
+export async function getAllContacts(): Promise<EmailContact[]> {
+  const { data, error } = await sb.from("email_contacts").select("*").order("created_at", { ascending: false });
+  if (error) { console.error("getAllContacts", error); return []; }
+  return (data ?? []).map(mapContact);
+}
+
+export async function getContactById(id: string): Promise<EmailContact | null> {
+  const { data, error } = await sb.from("email_contacts").select("*").eq("id", id).single();
+  if (error) { console.error("getContactById", error); return null; }
+  return data ? mapContact(data) : null;
+}
+
+export async function getContactStats(): Promise<{ total: number; subscribed: number; unsubscribed: number; bounced: number }> {
+  const { count: total } = await sb.from("email_contacts").select("id", { count: "exact", head: true });
+  const { count: subscribed } = await sb.from("email_contacts").select("id", { count: "exact", head: true }).eq("status", "subscribed");
+  const { count: unsubscribed } = await sb.from("email_contacts").select("id", { count: "exact", head: true }).eq("status", "unsubscribed");
+  const { count: bounced } = await sb.from("email_contacts").select("id", { count: "exact", head: true }).eq("status", "bounced");
+  return { total: total ?? 0, subscribed: subscribed ?? 0, unsubscribed: unsubscribed ?? 0, bounced: bounced ?? 0 };
+}
+
+export async function addFullContact(contact: {
+  list_id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  company?: string;
+  title?: string;
+  tags?: string[];
+  source?: ContactSource;
+  metadata?: Record<string, unknown>;
+}): Promise<EmailContact | null> {
+  const payload: any = {
+    list_id: contact.list_id,
+    email: contact.email.toLowerCase().trim(),
+    first_name: contact.first_name ?? null,
+    last_name: contact.last_name ?? null,
+    phone: contact.phone ?? null,
+    company: contact.company ?? null,
+    title: contact.title ?? null,
+    tags: contact.tags ?? [],
+    source: contact.source ?? "manual",
+    metadata: contact.metadata ?? {},
+  };
+  const { data, error } = await sb.from("email_contacts").insert(payload).select("*").single();
+  if (error) { console.error("addFullContact", error.code, error.message, error.details); return null; }
+  return data ? mapContact(data) : null;
+}
+
+export async function updateFullContact(id: string, updates: Partial<{
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  title: string | null;
+  tags: string[];
+  status: string;
+}>): Promise<boolean> {
+  const payload: any = {};
+  for (const [k, v] of Object.entries(updates)) {
+    if (v !== undefined) payload[k] = k === "email" && typeof v === "string" ? v.toLowerCase().trim() : v;
+  }
+  const { error } = await sb.from("email_contacts").update(payload).eq("id", id);
+  if (error) { console.error("updateFullContact", error); return false; }
+  return true;
+}
+
+export async function getContactListMemberships(email: string): Promise<Array<{ list_id: string; list_name: string; status: string }>> {
+  const { data, error } = await sb.from("email_contacts").select("list_id, status").eq("email", email.toLowerCase().trim());
+  if (error) { console.error("getContactListMemberships", error); return []; }
+  const lists = await getEmailLists();
+  return (data ?? []).map((row: any) => ({
+    list_id: row.list_id,
+    list_name: lists.find(l => l.id === row.list_id)?.name ?? "Unknown",
+    status: row.status,
+  }));
+}
+
+export async function syncBulkContacts(
+  listId: string,
+  contacts: Array<{ email: string; first_name?: string; last_name?: string; phone?: string; company?: string; title?: string; source?: ContactSource }>,
+): Promise<{ inserted: number; duplicates: number }> {
+  const rows = contacts.map(c => ({
+    list_id: listId,
+    email: c.email.toLowerCase().trim(),
+    first_name: c.first_name ?? null,
+    last_name: c.last_name ?? null,
+    phone: c.phone ?? null,
+    company: c.company ?? null,
+    title: c.title ?? null,
+    source: c.source ?? "import",
+    tags: [],
+    metadata: {},
+  }));
+  const { data, error } = await sb.from("email_contacts").upsert(rows, { onConflict: "list_id,email", ignoreDuplicates: true }).select("id");
+  if (error) { console.error("syncBulkContacts", error); return { inserted: 0, duplicates: contacts.length }; }
+  const inserted = data?.length ?? 0;
+  return { inserted, duplicates: contacts.length - inserted };
 }
 
 // ── Campaigns ──────────────────────────────────────────────────────

@@ -9,12 +9,28 @@ export interface EmailList {
   created_at: string;
 }
 
+export type ContactSource = "manual" | "event" | "creator" | "import" | "sponsor" | "form";
+
+export interface ContactActivity {
+  type: "email_sent" | "email_opened" | "email_clicked" | "unsubscribed" | "subscribed" | "imported";
+  campaign_id?: string;
+  campaign_name?: string;
+  timestamp: string;
+  detail?: string;
+}
+
 export interface EmailContact {
   id: string;
   list_id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;
+  phone: string | null;
+  company: string | null;
+  title: string | null;
+  tags: string[];
+  source: ContactSource;
+  activity: ContactActivity[];
   status: "subscribed" | "unsubscribed" | "bounced";
   metadata: Record<string, unknown>;
   created_at: string;

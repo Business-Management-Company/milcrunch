@@ -141,6 +141,7 @@ import EmailLists from "./pages/brand/email/EmailLists";
 import EmailTemplates from "./pages/brand/email/EmailTemplates";
 import EmailForms from "./pages/brand/email/EmailForms";
 import EmailSettingsPage from "./pages/brand/email/EmailSettings";
+import EmailContacts from "./pages/brand/email/EmailContacts";
 import EmailSubscribe from "./pages/public/EmailSubscribe";
 import EmailUnsubscribe from "./pages/public/EmailUnsubscribe";
 import AdvertisingDashboard from "./pages/brand/advertising/AdvertisingDashboard";
@@ -229,6 +230,8 @@ const App = () => (
                 <Route path="/brand/streaming" element={<StreamingDashboard />} />
                 <Route path="/brand/streaming/:id" element={<StreamingDashboard />} />
                 <Route path="/brand/podcasts" element={<AdminPodcasts />} />
+                <Route path="/brand/email/contacts" element={<EmailContacts />} />
+                <Route path="/brand/email/contacts/:contactId" element={<EmailContacts />} />
                 <Route path="/brand/email/campaigns" element={<EmailCampaigns />} />
                 <Route path="/brand/email/campaigns/new" element={<EmailCampaigns />} />
                 <Route path="/brand/email/lists" element={<EmailLists />} />
