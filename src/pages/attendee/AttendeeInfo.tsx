@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: "How do I connect with other attendees?",
-    a: "Use the Community tab to browse attendees, or scan QR codes in person. Your profile controls what information is shared.",
+    a: "Use the My Profile tab to scan QR codes in person or browse attendees in the community section.",
   },
 ];
 
@@ -77,113 +77,133 @@ function AttendeeInfoContent() {
     : null;
 
   return (
-    <div className="px-4 py-4 space-y-4">
-      {/* Event Details Card */}
-      <Card className="p-5 bg-white rounded-xl">
-        <h2 className="font-bold text-gray-900 text-lg mb-4">Event Details</h2>
-
-        {/* Dates */}
-        <div className="flex items-start gap-3 mb-4">
-          <Calendar className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-medium text-gray-900">Dates & Times</p>
-            <p className="text-sm text-gray-500">
-              {startDate && endDate
-                ? `${format(startDate, "EEEE, MMM d")} — ${format(endDate, "EEEE, MMM d, yyyy")}`
-                : startDate
-                  ? format(startDate, "EEEE, MMM d, yyyy")
-                  : "TBD"}
-            </p>
-            {event.timezone && (
-              <p className="text-xs text-gray-400 mt-0.5">{event.timezone}</p>
-            )}
-          </div>
+    <div className="space-y-4">
+      {/* Hero Image */}
+      {event.cover_image_url && (
+        <div className="w-full">
+          <img
+            src={event.cover_image_url}
+            alt={event.title}
+            className="w-full h-48 object-cover"
+          />
         </div>
+      )}
 
-        {/* Venue */}
-        {event.venue && (
+      <div className="px-4 pb-4 space-y-4">
+        {/* Event Details Card */}
+        <Card className="p-5 bg-white rounded-xl">
+          <h2 className="font-bold text-gray-900 text-lg mb-4">Event Details</h2>
+
+          {/* Venue */}
+          {event.venue && (
+            <div className="flex items-start gap-3 mb-4">
+              <MapPin className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">{event.venue}</p>
+                <p className="text-sm text-gray-500">
+                  {[event.city, event.state].filter(Boolean).join(", ")}
+                </p>
+                {googleMapsUrl && (
+                  <a
+                    href={googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-[#6C5CE7] font-medium mt-1 hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Open in Maps
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Dates */}
           <div className="flex items-start gap-3 mb-4">
-            <MapPin className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+            <Calendar className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-gray-900">{event.venue}</p>
+              <p className="text-sm font-medium text-gray-900">Dates & Times</p>
               <p className="text-sm text-gray-500">
-                {[event.city, event.state].filter(Boolean).join(", ")}
+                {startDate && endDate
+                  ? `${format(startDate, "EEEE, MMM d")} — ${format(endDate, "EEEE, MMM d, yyyy")}`
+                  : startDate
+                    ? format(startDate, "EEEE, MMM d, yyyy")
+                    : "TBD"}
               </p>
-              {googleMapsUrl && (
-                <a
-                  href={googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-[#6C5CE7] font-medium mt-1 hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Open in Google Maps
-                </a>
+              {event.timezone && (
+                <p className="text-xs text-gray-400 mt-0.5">{event.timezone}</p>
               )}
             </div>
           </div>
-        )}
 
-        {/* Description */}
-        {event.description && (
-          <div className="border-t border-gray-100 pt-4 mt-2">
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
-              {event.description}
-            </p>
-          </div>
-        )}
-      </Card>
+          {/* Description */}
+          {event.description && (
+            <div className="border-t border-gray-100 pt-4 mt-2">
+              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                {event.description}
+              </p>
+            </div>
+          )}
+        </Card>
 
-      {/* WiFi Card */}
-      <Card className="p-4 bg-white rounded-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
-            <Wifi className="h-5 w-5 text-[#6C5CE7]" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-900">WiFi Access</p>
-            <p className="text-xs text-gray-500">
-              Network and password will be announced at the event.
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* FAQ */}
-      <Card className="p-5 bg-white rounded-xl">
-        <h3 className="font-bold text-gray-900 text-base mb-2">
-          Frequently Asked Questions
-        </h3>
-        <div>
-          {FAQS.map((faq) => (
-            <FaqItem key={faq.q} q={faq.q} a={faq.a} />
-          ))}
-        </div>
-      </Card>
-
-      {/* Emergency Contacts */}
-      <Card className="p-5 bg-white rounded-xl">
-        <h3 className="font-bold text-gray-900 text-base mb-3">
-          Emergency Contacts
-        </h3>
-        <div className="space-y-3">
-          {EMERGENCY_CONTACTS.map((c) => (
-            <a
-              key={c.label}
-              href={`tel:${c.number.replace(/\D/g, "")}`}
-              className="flex items-center justify-between gap-3 group"
-            >
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-700">{c.label}</span>
+        {/* WiFi Card */}
+        <Card className="p-4 bg-white rounded-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
+              <Wifi className="h-5 w-5 text-[#6C5CE7]" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">WiFi Access</p>
+              <div className="flex items-center gap-4 mt-1">
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Network</p>
+                  <p className="text-sm font-mono font-medium text-gray-900">MIC2026</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Password</p>
+                  <p className="text-sm font-mono font-medium text-gray-900">military!</p>
+                </div>
               </div>
-              <span className="text-sm text-[#6C5CE7] font-medium group-hover:underline">
-                {c.number}
-              </span>
-            </a>
-          ))}
-        </div>
-      </Card>
+            </div>
+          </div>
+        </Card>
+
+        {/* FAQ */}
+        <Card className="p-5 bg-white rounded-xl">
+          <h3 className="font-bold text-gray-900 text-base mb-2">
+            Frequently Asked Questions
+          </h3>
+          <div>
+            {FAQS.map((faq) => (
+              <FaqItem key={faq.q} q={faq.q} a={faq.a} />
+            ))}
+          </div>
+        </Card>
+
+        {/* Emergency Contacts */}
+        <Card className="p-5 bg-white rounded-xl">
+          <h3 className="font-bold text-gray-900 text-base mb-3">
+            Emergency Contacts
+          </h3>
+          <div className="space-y-3">
+            {EMERGENCY_CONTACTS.map((c) => (
+              <a
+                key={c.label}
+                href={`tel:${c.number.replace(/\D/g, "")}`}
+                className="flex items-center justify-between gap-3 group"
+              >
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">{c.label}</span>
+                </div>
+                <span className="text-sm text-[#6C5CE7] font-medium group-hover:underline">
+                  {c.number}
+                </span>
+              </a>
+            ))}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

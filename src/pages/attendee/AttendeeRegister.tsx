@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -15,11 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ArrowLeft, ArrowRight, Check, Ticket, Loader2, Calendar,
-  MapPin, AlertCircle, Copy, CalendarPlus, Users, PartyPopper,
+  ArrowLeft, ArrowRight, Check, Loader2, AlertCircle, Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -37,95 +34,91 @@ interface EventRow {
   cover_image_url: string | null;
 }
 
-interface TicketRow {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  quantity: number | null;
-  sold: number;
-}
+const STEPS = ["Create Account", "Attendee Details", "Confirmation"];
 
-const STEPS = ["Select Ticket", "Your Information", "Confirmation"];
-
-const BRANCHES = ["Army", "Navy", "Marines", "Air Force", "Coast Guard", "Space Force", "N/A"];
-const STATUSES = [
-  { value: "active_duty", label: "Active Duty" },
-  { value: "veteran", label: "Veteran" },
-  { value: "military_spouse", label: "Military Spouse" },
-  { value: "civilian", label: "Civilian" },
+const BRANCHES = [
+  "Army",
+  "Navy",
+  "Air Force",
+  "Marines",
+  "Coast Guard",
+  "Space Force",
+  "Civilian",
 ];
-const DIETARY = ["None", "Vegetarian", "Vegan", "Gluten-Free", "Halal", "Kosher", "Other"];
 
 /* ======================================== */
 const AttendeeRegister = () => {
   const { eventSlug } = useParams<{ eventSlug: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [event, setEvent] = useState<EventRow | null>(null);
-  const [tickets, setTickets] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState(0);
+  const [existingRegistration, setExistingRegistration] = useState(false);
 
-  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
-
-  const [form, setForm] = useState({
+  // Step 1: Account
+  const [accountForm, setAccountForm] = useState({
     first_name: "",
     last_name: "",
     email: "",
-    phone: "",
-    company: "",
-    title: "",
-    military_branch: "",
-    military_status: "",
-    dietary_restrictions: "",
-    special_requests: "",
+    password: "",
   });
 
-  const [regCode, setRegCode] = useState<string | null>(null);
-  const [regId, setRegId] = useState<string | null>(null);
+  // Step 2: Details
+  const [detailsForm, setDetailsForm] = useState({
+    phone: "",
+    branch: "",
+    job_title: "",
+    company: "",
+  });
+
+  // Step 3: Confirmation
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
+    fetchEvent();
   }, [eventSlug]);
 
-  // Pre-fill from auth
+  // If user is already logged in, pre-fill and check registration
   useEffect(() => {
-    if (user) {
-      setForm((prev) => ({
+    if (user && event) {
+      setAccountForm((prev) => ({
         ...prev,
         email: prev.email || user.email || "",
-        first_name: prev.first_name || user.user_metadata?.full_name?.split(" ")[0] || "",
-        last_name: prev.last_name || user.user_metadata?.full_name?.split(" ").slice(1).join(" ") || "",
+        first_name:
+          prev.first_name ||
+          user.user_metadata?.full_name?.split(" ")[0] ||
+          "",
+        last_name:
+          prev.last_name ||
+          user.user_metadata?.full_name?.split(" ").slice(1).join(" ") ||
+          "",
       }));
+      checkExistingRegistration();
     }
-  }, [user]);
+  }, [user, event]);
 
-  const fetchData = async () => {
+  const fetchEvent = async () => {
     try {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventSlug!);
+      const isUUID =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          eventSlug!
+        );
       let query = supabase
         .from("events")
-        .select("id, title, slug, start_date, end_date, venue, city, state, timezone, cover_image_url");
+        .select(
+          "id, title, slug, start_date, end_date, venue, city, state, timezone, cover_image_url"
+        );
       if (isUUID) {
         query = query.eq("id", eventSlug!);
       } else {
         query = query.eq("slug", eventSlug!);
       }
-      const evRes = await query.single();
-      if (evRes.error) throw evRes.error;
-      const ev = evRes.data as unknown as EventRow;
-      setEvent(ev);
-
-      const tkRes = await supabase
-        .from("event_tickets")
-        .select("id, name, description, price, quantity, sold")
-        .eq("event_id", ev.id)
-        .eq("is_active", true)
-        .order("sort_order");
-      setTickets((tkRes.data || []) as TicketRow[]);
+      const { data, error } = await query.single();
+      if (error) throw error;
+      setEvent(data as unknown as EventRow);
     } catch (err) {
       console.error("Error loading event:", err);
     } finally {
@@ -133,56 +126,111 @@ const AttendeeRegister = () => {
     }
   };
 
-  const updateField = (field: string, value: string) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
-
-  const generateCode = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    const prefix = (event?.title || "EVT").replace(/[^A-Z0-9]/gi, "").slice(0, 6).toUpperCase();
-    let code = `${prefix}-`;
-    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    return code;
+  const checkExistingRegistration = async () => {
+    if (!user || !event) return;
+    try {
+      const { data } = await supabase
+        .from("event_registrations")
+        .select("id")
+        .eq("event_id", event.id)
+        .eq("email", user.email!)
+        .eq("status", "confirmed")
+        .maybeSingle();
+      if (data) {
+        setExistingRegistration(true);
+        // Skip straight to app
+        navigate(`/attend/${eventSlug}`, { replace: true });
+      }
+    } catch {
+      // Silent
+    }
   };
 
-  const handleSubmit = async () => {
-    if (!event || !selectedTicket) return;
+  const handleAccountNext = async () => {
+    const { first_name, last_name, email, password } = accountForm;
+    if (!first_name.trim() || !last_name.trim() || !email.trim()) {
+      toast.error("First name, last name, and email are required");
+      return;
+    }
+
+    // If user is already logged in, skip account creation
+    if (user) {
+      setStep(1);
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const code = generateCode();
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: `${first_name.trim()} ${last_name.trim()}`,
+          },
+        },
+      });
+
+      if (error) {
+        // If user already exists, try to sign in
+        if (error.message.includes("already registered")) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          });
+          if (signInError) {
+            toast.error("Account exists. Please check your password.");
+            return;
+          }
+        } else {
+          toast.error(error.message);
+          return;
+        }
+      }
+
+      setStep(1);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Account creation failed";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDetailsSubmit = async () => {
+    if (!event || !user) {
+      toast.error("Please create an account first");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
       const { data, error } = await supabase
         .from("event_registrations")
         .insert({
           event_id: event.id,
-          ticket_id: selectedTicket,
-          first_name: form.first_name.trim(),
-          last_name: form.last_name.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim() || null,
-          company: form.company.trim() || null,
-          title: form.title.trim() || null,
-          military_branch: form.military_branch || null,
-          military_status: form.military_status || null,
-          dietary_restrictions: form.dietary_restrictions || null,
-          special_requests: form.special_requests.trim() || null,
-          registration_code: code,
+          user_id: user.id,
+          first_name: accountForm.first_name.trim(),
+          last_name: accountForm.last_name.trim(),
+          email: accountForm.email.trim(),
+          phone: detailsForm.phone.trim() || null,
+          military_branch: detailsForm.branch || null,
+          title: detailsForm.job_title.trim() || null,
+          company: detailsForm.company.trim() || null,
           status: "confirmed",
+          registered_at: new Date().toISOString(),
         } as Record<string, unknown>)
         .select("id")
         .single();
 
       if (error) throw error;
 
-      // Increment sold count
-      const ticket = tickets.find((t) => t.id === selectedTicket);
-      if (ticket) {
-        await supabase
-          .from("event_tickets")
-          .update({ sold: ticket.sold + 1 } as Record<string, unknown>)
-          .eq("id", selectedTicket);
-      }
-
-      setRegCode(code);
-      setRegId(data.id);
+      setRegistrationId(data.id);
       setStep(2);
       toast.success("Registration confirmed!");
     } catch (err: unknown) {
@@ -192,34 +240,6 @@ const AttendeeRegister = () => {
       setSubmitting(false);
     }
   };
-
-  const handleNext = () => {
-    if (step === 0) {
-      if (!selectedTicket) {
-        toast.error("Please select a ticket");
-        return;
-      }
-      setStep(1);
-    } else if (step === 1) {
-      if (!form.first_name.trim() || !form.last_name.trim() || !form.email.trim()) {
-        toast.error("First name, last name, and email are required");
-        return;
-      }
-      handleSubmit();
-    }
-  };
-
-  const addToGoogleCalendar = () => {
-    if (!event?.start_date) return;
-    const start = new Date(event.start_date);
-    const end = event.end_date ? new Date(event.end_date) : new Date(start.getTime() + 3600000);
-    const loc = [event.venue, event.city, event.state].filter(Boolean).join(", ");
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${start.toISOString().replace(/[-:]/g, "").split(".")[0]}Z/${end.toISOString().replace(/[-:]/g, "").split(".")[0]}Z&location=${encodeURIComponent(loc)}&details=${encodeURIComponent("Registration code: " + regCode)}`;
-    window.open(url, "_blank");
-  };
-
-  const selectedTicketData = tickets.find((t) => t.id === selectedTicket);
-  const eventSlugOrId = event?.slug || event?.id;
 
   if (loading) {
     return (
@@ -244,397 +264,291 @@ const AttendeeRegister = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild className="shrink-0">
-            <Link to={`/attend/${eventSlug}`}>
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+    <div className="min-h-screen bg-gray-200 flex justify-center">
+      <div className="w-full max-w-[430px] min-h-screen bg-gray-50 flex flex-col shadow-2xl">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-[#0A0F1E] h-14 flex items-center px-4 gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-gray-300 hover:text-white hover:bg-white/10 shrink-0"
+            onClick={() => navigate(`/attend/${eventSlug}`)}
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="min-w-0">
-            <h1 className="font-bold text-gray-900 text-sm truncate">{event.title}</h1>
-            <p className="text-xs text-gray-500">Registration</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold text-white text-sm truncate">{event.title}</h1>
+            <p className="text-xs text-gray-400">Registration</p>
           </div>
-        </div>
-      </div>
+          <span className="text-xs font-bold text-white tracking-tight shrink-0">
+            recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+          </span>
+        </header>
 
-      {/* Step indicator */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            {STEPS.map((label, i) => (
-              <div key={label} className="flex items-center gap-1.5">
-                <div
-                  className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
-                    i < step
-                      ? "bg-[#6C5CE7] text-white"
-                      : i === step
-                      ? "bg-purple-100 text-[#6C5CE7] border-2 border-[#6C5CE7]"
-                      : "bg-gray-100 text-gray-400"
-                  )}
-                >
-                  {i < step ? <Check className="w-3.5 h-3.5" /> : i + 1}
-                </div>
-                <span
-                  className={cn(
-                    "text-xs font-medium hidden sm:inline",
-                    i <= step ? "text-gray-900" : "text-gray-400"
-                  )}
-                >
-                  {label}
-                </span>
-                {i < STEPS.length - 1 && (
+        {/* Step indicator */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              {STEPS.map((label, i) => (
+                <div key={label} className="flex items-center gap-1.5">
                   <div
                     className={cn(
-                      "w-6 sm:w-12 h-px ml-1",
-                      i < step ? "bg-[#6C5CE7]" : "bg-gray-200"
-                    )}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-lg mx-auto px-4 py-6">
-        {/* STEP 1: Select Ticket */}
-        {step === 0 && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Select Your Ticket</h2>
-              <p className="text-sm text-gray-500">Choose the ticket type that's right for you.</p>
-            </div>
-
-            <div className="space-y-2">
-              {tickets.map((t) => {
-                const remaining = t.quantity ? t.quantity - t.sold : null;
-                const soldOut = remaining !== null && remaining <= 0;
-                const isSelected = selectedTicket === t.id;
-
-                return (
-                  <Card
-                    key={t.id}
-                    onClick={() => !soldOut && setSelectedTicket(t.id)}
-                    className={cn(
-                      "p-4 cursor-pointer transition-all border-2",
-                      isSelected
-                        ? "border-[#6C5CE7] bg-purple-50/50 shadow-md"
-                        : "border-gray-200 hover:border-gray-300",
-                      soldOut && "opacity-50 cursor-not-allowed"
+                      "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
+                      i < step
+                        ? "bg-[#6C5CE7] text-white"
+                        : i === step
+                        ? "bg-purple-100 text-[#6C5CE7] border-2 border-[#6C5CE7]"
+                        : "bg-gray-100 text-gray-400"
                     )}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-gray-900">{t.name}</h3>
-                          {isSelected && (
-                            <div className="w-5 h-5 rounded-full bg-[#6C5CE7] flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        {t.description && (
-                          <p className="text-xs text-gray-500 mb-1">{t.description}</p>
-                        )}
-                        {remaining !== null && !soldOut && (
-                          <p
-                            className={cn(
-                              "text-[10px]",
-                              remaining < 20 ? "text-orange-500 font-medium" : "text-gray-400"
-                            )}
-                          >
-                            {remaining} spot{remaining !== 1 ? "s" : ""} remaining
-                          </p>
-                        )}
-                        {soldOut && <p className="text-[10px] text-red-500 font-medium">Sold out</p>}
-                      </div>
-                      <p className="text-xl font-bold text-gray-900 shrink-0">
-                        {t.price === 0 ? "Free" : `$${t.price}`}
-                      </p>
-                    </div>
-                  </Card>
-                );
-              })}
-
-              {tickets.length === 0 && (
-                <Card className="p-8 text-center border-dashed border-gray-300">
-                  <Ticket className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No tickets available yet.</p>
-                </Card>
-              )}
+                    {i < step ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium hidden sm:inline",
+                      i <= step ? "text-gray-900" : "text-gray-400"
+                    )}
+                  >
+                    {label}
+                  </span>
+                  {i < STEPS.length - 1 && (
+                    <div
+                      className={cn(
+                        "w-6 sm:w-12 h-px ml-1",
+                        i < step ? "bg-[#6C5CE7]" : "bg-gray-200"
+                      )}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* STEP 2: Your Information */}
-        {step === 1 && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Your Information</h2>
-              <p className="text-sm text-gray-500">
-                Registering for:{" "}
-                <span className="font-medium text-gray-700">{selectedTicketData?.name}</span>
-                {selectedTicketData && (
-                  <span className="text-[#6C5CE7] ml-1">
-                    ({selectedTicketData.price === 0 ? "Free" : `$${selectedTicketData.price}`})
-                  </span>
-                )}
-              </p>
-            </div>
-
-            <Card className="p-4 border-gray-200 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-gray-600">First Name *</Label>
-                  <Input
-                    value={form.first_name}
-                    onChange={(e) => updateField("first_name", e.target.value)}
-                    placeholder="John"
-                    className="mt-1 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-600">Last Name *</Label>
-                  <Input
-                    value={form.last_name}
-                    onChange={(e) => updateField("last_name", e.target.value)}
-                    placeholder="Doe"
-                    className="mt-1 text-sm"
-                  />
-                </div>
+        {/* Content */}
+        <div className="flex-1 px-4 py-6">
+          {/* STEP 1: Create Account */}
+          {step === 0 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Create Account</h2>
+                <p className="text-sm text-gray-500">
+                  Sign up to register for {event.title}
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-gray-600">Email *</Label>
-                  <Input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => updateField("email", e.target.value)}
-                    placeholder="john@example.com"
-                    className="mt-1 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-600">Phone</Label>
-                  <Input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => updateField("phone", e.target.value)}
-                    placeholder="(555) 555-5555"
-                    className="mt-1 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-gray-600">Company</Label>
-                  <Input
-                    value={form.company}
-                    onChange={(e) => updateField("company", e.target.value)}
-                    placeholder="Acme Inc."
-                    className="mt-1 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-600">Job Title</Label>
-                  <Input
-                    value={form.title}
-                    onChange={(e) => updateField("title", e.target.value)}
-                    placeholder="Marketing Director"
-                    className="mt-1 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-xs font-medium text-gray-600 mb-2">Military Affiliation</p>
+              <Card className="p-4 border-gray-200 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs text-gray-600">Branch</Label>
-                    <Select value={form.military_branch} onValueChange={(v) => updateField("military_branch", v)}>
-                      <SelectTrigger className="mt-1 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {BRANCHES.map((b) => (
-                          <SelectItem key={b} value={b}>{b}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">Status</Label>
-                    <Select value={form.military_status} onValueChange={(v) => updateField("military_status", v)}>
-                      <SelectTrigger className="mt-1 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {STATUSES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs text-gray-600">Dietary Restrictions</Label>
-                    <Select value={form.dietary_restrictions} onValueChange={(v) => updateField("dietary_restrictions", v)}>
-                      <SelectTrigger className="mt-1 text-sm"><SelectValue placeholder="None" /></SelectTrigger>
-                      <SelectContent>
-                        {DIETARY.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">Special Requests</Label>
+                    <Label className="text-xs text-gray-600">First Name *</Label>
                     <Input
-                      value={form.special_requests}
-                      onChange={(e) => updateField("special_requests", e.target.value)}
-                      placeholder="Accessibility, etc."
+                      value={accountForm.first_name}
+                      onChange={(e) =>
+                        setAccountForm((p) => ({ ...p, first_name: e.target.value }))
+                      }
+                      placeholder="John"
+                      className="mt-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-600">Last Name *</Label>
+                    <Input
+                      value={accountForm.last_name}
+                      onChange={(e) =>
+                        setAccountForm((p) => ({ ...p, last_name: e.target.value }))
+                      }
+                      placeholder="Doe"
                       className="mt-1 text-sm"
                     />
                   </div>
                 </div>
-              </div>
-            </Card>
-          </div>
-        )}
 
-        {/* STEP 3: Confirmation */}
-        {step === 2 && regCode && (
-          <div className="space-y-4">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-[#6C5CE7] mx-auto mb-3 flex items-center justify-center">
-                <PartyPopper className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">You're Registered!</h2>
-              <p className="text-sm text-gray-500">
-                Confirmation sent to <span className="font-medium text-gray-700">{form.email}</span>
-              </p>
+                <div>
+                  <Label className="text-xs text-gray-600">Email *</Label>
+                  <Input
+                    type="email"
+                    value={accountForm.email}
+                    onChange={(e) =>
+                      setAccountForm((p) => ({ ...p, email: e.target.value }))
+                    }
+                    placeholder="john@example.com"
+                    className="mt-1 text-sm"
+                    disabled={!!user}
+                  />
+                </div>
+
+                {!user && (
+                  <div>
+                    <Label className="text-xs text-gray-600">Password *</Label>
+                    <Input
+                      type="password"
+                      value={accountForm.password}
+                      onChange={(e) =>
+                        setAccountForm((p) => ({ ...p, password: e.target.value }))
+                      }
+                      placeholder="Min 6 characters"
+                      className="mt-1 text-sm"
+                    />
+                  </div>
+                )}
+
+                {user && (
+                  <p className="text-xs text-green-600 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" />
+                    Signed in as {user.email}
+                  </p>
+                )}
+              </Card>
             </div>
+          )}
 
-            <Card className="p-6 border-gray-200 text-center">
-              <div className="bg-white p-4 rounded-xl inline-block mb-3 border border-gray-100">
-                <QRCodeSVG
-                  value={`https://milcrunch.com/checkin/${regCode}`}
-                  size={160}
-                  level="M"
-                  fgColor="#6C5CE7"
-                />
+          {/* STEP 2: Attendee Details */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Attendee Details</h2>
+                <p className="text-sm text-gray-500">
+                  Tell us a bit about yourself
+                </p>
               </div>
-              <div className="mb-3">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Registration Code</p>
-                <p className="text-xl font-mono font-bold text-gray-900 tracking-widest">{regCode}</p>
+
+              <Card className="p-4 border-gray-200 space-y-4">
+                <div>
+                  <Label className="text-xs text-gray-600">Phone (optional)</Label>
+                  <Input
+                    type="tel"
+                    value={detailsForm.phone}
+                    onChange={(e) =>
+                      setDetailsForm((p) => ({ ...p, phone: e.target.value }))
+                    }
+                    placeholder="(555) 555-5555"
+                    className="mt-1 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs text-gray-600">Branch of Service</Label>
+                  <Select
+                    value={detailsForm.branch}
+                    onValueChange={(v) =>
+                      setDetailsForm((p) => ({ ...p, branch: v }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1 text-sm">
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BRANCHES.map((b) => (
+                        <SelectItem key={b} value={b}>
+                          {b}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-gray-600">Job Title</Label>
+                  <Input
+                    value={detailsForm.job_title}
+                    onChange={(e) =>
+                      setDetailsForm((p) => ({ ...p, job_title: e.target.value }))
+                    }
+                    placeholder="Marketing Director"
+                    className="mt-1 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs text-gray-600">Company / Unit</Label>
+                  <Input
+                    value={detailsForm.company}
+                    onChange={(e) =>
+                      setDetailsForm((p) => ({ ...p, company: e.target.value }))
+                    }
+                    placeholder="Acme Inc."
+                    className="mt-1 text-sm"
+                  />
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* STEP 3: Confirmation */}
+          {step === 2 && registrationId && (
+            <div className="space-y-5">
+              <div className="text-center pt-2">
+                <div className="w-16 h-16 rounded-full bg-[#6C5CE7] mx-auto mb-3 flex items-center justify-center">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  You're registered!
+                </h2>
+                <p className="text-sm text-gray-500">{event.title}</p>
               </div>
+
+              <Card className="p-6 border-gray-200 text-center">
+                <div className="bg-white p-4 rounded-xl inline-block mb-3 border border-gray-100">
+                  <QRCodeSVG
+                    value={registrationId}
+                    size={160}
+                    level="M"
+                    fgColor="#6C5CE7"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Show this QR code at check-in
+                </p>
+              </Card>
+
+              <Button
+                asChild
+                className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white h-12 text-base"
+              >
+                <Link to={`/attend/${eventSlug}`}>Enter Event</Link>
+              </Button>
+            </div>
+          )}
+
+          {/* Navigation buttons */}
+          {step < 2 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(regCode);
-                  toast.success("Code copied!");
-                }}
+                onClick={() =>
+                  step === 0
+                    ? navigate(`/attend/${eventSlug}`)
+                    : setStep(0)
+                }
               >
-                <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy Code
-              </Button>
-            </Card>
-
-            <Card className="p-4 border-gray-200">
-              <h3 className="font-semibold text-gray-900 text-sm mb-2">Event Details</h3>
-              <div className="space-y-2 text-sm">
-                {event.start_date && (
-                  <div className="flex items-start gap-2.5">
-                    <Calendar className="w-4 h-4 text-[#6C5CE7] mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-gray-900">{format(parseISO(event.start_date), "EEEE, MMMM d, yyyy")}</p>
-                    </div>
-                  </div>
-                )}
-                {event.venue && (
-                  <div className="flex items-start gap-2.5">
-                    <MapPin className="w-4 h-4 text-[#6C5CE7] mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-gray-900">{event.venue}</p>
-                      <p className="text-gray-500 text-xs">{[event.city, event.state].filter(Boolean).join(", ")}</p>
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-start gap-2.5">
-                  <Ticket className="w-4 h-4 text-[#6C5CE7] mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-gray-900">{selectedTicketData?.name}</p>
-                    <p className="text-gray-500 text-xs">{form.first_name} {form.last_name}</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={addToGoogleCalendar}>
-                <CalendarPlus className="w-3.5 h-3.5 mr-1.5" /> Add to Calendar
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Back
               </Button>
               <Button
-                asChild
                 size="sm"
-                className="flex-1 bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
+                onClick={step === 0 ? handleAccountNext : handleDetailsSubmit}
+                disabled={submitting}
+                className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
               >
-                <Link to={`/attend/${eventSlug}`}>View Schedule</Link>
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />{" "}
+                    {step === 0 ? "Creating..." : "Registering..."}
+                  </>
+                ) : step === 0 ? (
+                  <>
+                    Continue <ArrowRight className="w-4 h-4 ml-1" />
+                  </>
+                ) : (
+                  <>
+                    Complete Registration <Check className="w-4 h-4 ml-1" />
+                  </>
+                )}
               </Button>
             </div>
-
-            <Button
-              asChild
-              variant="outline"
-              className="w-full"
-            >
-              <Link to={`/attend/${eventSlug}/community`}>
-                <Users className="w-4 h-4 mr-2" /> Join the Community
-              </Link>
-            </Button>
-          </div>
-        )}
-
-        {/* Navigation */}
-        {step < 2 && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => (step === 0 ? navigate(`/attend/${eventSlug}`) : setStep(0))}
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              {step === 0 ? "Back" : "Back"}
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleNext}
-              disabled={submitting}
-              className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-1" /> Processing...
-                </>
-              ) : step === 0 ? (
-                <>
-                  Continue <ArrowRight className="w-4 h-4 ml-1" />
-                </>
-              ) : (
-                <>
-                  Complete Registration <Check className="w-4 h-4 ml-1" />
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

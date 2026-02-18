@@ -68,6 +68,129 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+/* ---------- collapsible event info ---------- */
+function EventInfoSection({
+  event,
+  startDate,
+  endDate,
+  googleMapsUrl,
+}: {
+  event: Props["event"];
+  startDate: Date | null;
+  endDate: Date | null;
+  googleMapsUrl: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!event) return null;
+
+  return (
+    <Card className="bg-white dark:bg-[#1A1D27] rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full p-5 flex items-center justify-between"
+      >
+        <h3 className="font-bold text-gray-900 dark:text-white text-base">Event Info</h3>
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 text-gray-400 transition-transform",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      {open && (
+        <div className="px-5 pb-5 space-y-4 border-t border-gray-100 dark:border-gray-800 pt-4">
+          {/* Dates */}
+          <div className="flex items-start gap-3">
+            <Calendar className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Dates & Times</p>
+              <p className="text-sm text-gray-500">
+                {startDate && endDate
+                  ? `${format(startDate, "EEEE, MMM d")} — ${format(endDate, "EEEE, MMM d, yyyy")}`
+                  : startDate
+                    ? format(startDate, "EEEE, MMM d, yyyy")
+                    : "TBD"}
+              </p>
+              {event.timezone && (
+                <p className="text-xs text-gray-400 mt-0.5">{event.timezone}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Venue */}
+          {event.venue && (
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{event.venue}</p>
+                <p className="text-sm text-gray-500">
+                  {[event.city, event.state].filter(Boolean).join(", ")}
+                </p>
+                {googleMapsUrl && (
+                  <a
+                    href={googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-[#6C5CE7] font-medium mt-1 hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Open in Google Maps
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {event.description && (
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                {event.description}
+              </p>
+            </div>
+          )}
+
+          {/* WiFi */}
+          <div className="flex items-center gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
+            <div className="w-10 h-10 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
+              <Wifi className="h-5 w-5 text-[#6C5CE7]" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">WiFi Access</p>
+              <p className="text-xs text-gray-500">Network and password will be announced at the event.</p>
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+            <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-2">FAQ</h4>
+            {FAQS.map((faq) => (
+              <FaqItem key={faq.q} q={faq.q} a={faq.a} />
+            ))}
+          </div>
+
+          {/* Emergency Contacts */}
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+            <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3">Emergency Contacts</h4>
+            <div className="space-y-3">
+              {EMERGENCY_CONTACTS.map((c) => (
+                <a key={c.label} href={`tel:${c.number.replace(/\D/g, "")}`} className="flex items-center justify-between gap-3 group">
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.label}</span>
+                  </div>
+                  <span className="text-sm text-[#6C5CE7] font-medium group-hover:underline">{c.number}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ======================================== */
 export default function AttendeeProfile({ eventId, event }: Props) {
   const { user, signOut } = useAuth();
@@ -359,99 +482,8 @@ export default function AttendeeProfile({ eventId, event }: Props) {
         )}
       </Card>
 
-      {/* Event Details Card (moved from Info tab) */}
-      {event && (
-        <Card className="p-5 bg-white dark:bg-[#1A1D27] rounded-xl">
-          <h3 className="font-bold text-gray-900 dark:text-white text-base mb-4">Event Details</h3>
-
-          <div className="flex items-start gap-3 mb-4">
-            <Calendar className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Dates & Times</p>
-              <p className="text-sm text-gray-500">
-                {startDate && endDate
-                  ? `${format(startDate, "EEEE, MMM d")} — ${format(endDate, "EEEE, MMM d, yyyy")}`
-                  : startDate
-                    ? format(startDate, "EEEE, MMM d, yyyy")
-                    : "TBD"}
-              </p>
-              {event.timezone && (
-                <p className="text-xs text-gray-400 mt-0.5">{event.timezone}</p>
-              )}
-            </div>
-          </div>
-
-          {event.venue && (
-            <div className="flex items-start gap-3 mb-4">
-              <MapPin className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{event.venue}</p>
-                <p className="text-sm text-gray-500">
-                  {[event.city, event.state].filter(Boolean).join(", ")}
-                </p>
-                {googleMapsUrl && (
-                  <a
-                    href={googleMapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-[#6C5CE7] font-medium mt-1 hover:underline"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    Open in Google Maps
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {event.description && (
-            <div className="border-t border-gray-100 dark:border-gray-800 pt-4 mt-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                {event.description}
-              </p>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* WiFi Card */}
-      <Card className="p-4 bg-white dark:bg-[#1A1D27] rounded-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
-            <Wifi className="h-5 w-5 text-[#6C5CE7]" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">WiFi Access</p>
-            <p className="text-xs text-gray-500">Network and password will be announced at the event.</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* FAQ */}
-      <Card className="p-5 bg-white dark:bg-[#1A1D27] rounded-xl">
-        <h3 className="font-bold text-gray-900 dark:text-white text-base mb-2">Frequently Asked Questions</h3>
-        <div>
-          {FAQS.map((faq) => (
-            <FaqItem key={faq.q} q={faq.q} a={faq.a} />
-          ))}
-        </div>
-      </Card>
-
-      {/* Emergency Contacts */}
-      <Card className="p-5 bg-white dark:bg-[#1A1D27] rounded-xl">
-        <h3 className="font-bold text-gray-900 dark:text-white text-base mb-3">Emergency Contacts</h3>
-        <div className="space-y-3">
-          {EMERGENCY_CONTACTS.map((c) => (
-            <a key={c.label} href={`tel:${c.number.replace(/\D/g, "")}`} className="flex items-center justify-between gap-3 group">
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.label}</span>
-              </div>
-              <span className="text-sm text-[#6C5CE7] font-medium group-hover:underline">{c.number}</span>
-            </a>
-          ))}
-        </div>
-      </Card>
+      {/* Collapsible Event Info Section */}
+      <EventInfoSection event={event} startDate={startDate} endDate={endDate} googleMapsUrl={googleMapsUrl} />
 
       {/* Privacy Settings */}
       <Card className="p-4 bg-white dark:bg-[#1A1D27] rounded-xl space-y-3">

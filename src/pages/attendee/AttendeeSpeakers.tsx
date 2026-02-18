@@ -85,48 +85,37 @@ const AttendeeSpeakersContent = () => {
           <p className="text-gray-500 text-sm">Speakers will be announced soon.</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {speakers.map((speaker) => (
             <Card
               key={speaker.id}
               onClick={() => setSelectedSpeaker(speaker)}
-              className="p-4 bg-white border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+              className="p-3 bg-white border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col items-center text-center gap-2">
                 {speaker.avatar_url ? (
                   <img
                     src={speaker.avatar_url}
                     alt={speaker.creator_name}
-                    className="h-14 w-14 rounded-full object-cover shrink-0"
+                    className="h-16 w-16 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-lg font-bold shrink-0">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-xl font-bold">
                     {speaker.creator_name[0]}
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900 text-sm">{speaker.creator_name}</h3>
+                <div className="min-w-0 w-full">
+                  <div className="flex items-center justify-center gap-1">
+                    <h3 className="font-semibold text-gray-900 text-sm truncate">{speaker.creator_name}</h3>
                     {speaker.confirmed && (
-                      <CheckCircle2 className="h-4 w-4 text-blue-500 shrink-0" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                     )}
                   </div>
                   {speaker.role && (
-                    <p className="text-xs text-gray-500">{speaker.role}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{speaker.role}</p>
                   )}
                   {speaker.topic && (
-                    <p className="text-xs text-[#6C5CE7] font-medium mt-1">{speaker.topic}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    {speaker.military_branch && (
-                      <Badge className={cn("text-[10px] px-1.5 py-0", BRANCH_COLORS[speaker.military_branch] || "bg-gray-100 text-gray-600")}>
-                        <Shield className="h-2.5 w-2.5 mr-0.5" />
-                        {speaker.military_branch}
-                      </Badge>
-                    )}
-                  </div>
-                  {speaker.bio && (
-                    <p className="text-xs text-gray-400 mt-2 line-clamp-2">{speaker.bio}</p>
+                    <p className="text-[11px] text-[#6C5CE7] font-medium mt-0.5 line-clamp-1">{speaker.topic}</p>
                   )}
                 </div>
               </div>

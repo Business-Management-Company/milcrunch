@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Calendar, Mic, Building2, User, MessageCircle, Bell, Loader2, AlertCircle, X,
+  Calendar, Mic, Building2, User, Info, Bell, Loader2, AlertCircle, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,13 +42,13 @@ export const useAttendeeEvent = () => {
 };
 
 /* ---------- tabs ---------- */
-type TabId = "schedule" | "community" | "speakers" | "sponsors" | "profile";
+type TabId = "schedule" | "speakers" | "sponsors" | "info" | "profile";
 
 const TABS: { id: TabId; label: string; icon: typeof Calendar }[] = [
   { id: "schedule", label: "Schedule", icon: Calendar },
-  { id: "community", label: "Community", icon: MessageCircle },
   { id: "speakers", label: "Speakers", icon: Mic },
   { id: "sponsors", label: "Sponsors", icon: Building2 },
+  { id: "info", label: "Info", icon: Info },
   { id: "profile", label: "My Profile", icon: User },
 ];
 
@@ -146,7 +146,7 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
         }
       }
     } catch {
-      // Tables may not exist yet — keep mock default
+      // Tables may not exist yet -- keep mock default
     }
   };
 
@@ -214,7 +214,7 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
               <h1 className="font-bold text-white text-sm truncate">{event.title}</h1>
               <p className="text-xs text-gray-400 truncate">
                 {event.venue && `${event.venue}`}
-                {event.city && ` · ${event.city}`}
+                {event.city && ` \u00B7 ${event.city}`}
                 {event.state && `, ${event.state}`}
               </p>
             </div>
