@@ -1408,6 +1408,300 @@ function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean 
 }
 
 /* ------------------------------------------------------------------ */
+/* Tab: Events & Attendee App                                          */
+/* ------------------------------------------------------------------ */
+
+function EventsAttendeeTab({ dark }: { dark: boolean }) {
+  const brief = SOLUTION_BRIEFS["Events & Attendee App"];
+  const kbSlug = TAB_KB_CATEGORY["Events & Attendee App"];
+
+  return (
+    <div>
+      {/* Deep Dive link */}
+      {kbSlug && (
+        <div className="flex justify-end mb-2">
+          <a
+            href={`/kb/${kbSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
+              dark
+                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
+                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+            )}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Deep Dive
+          </a>
+        </div>
+      )}
+
+      {/* Video placeholder */}
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
+          <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
+        </div>
+        <h3
+          className={cn(
+            "text-xl font-bold mb-2 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          Events &amp; Attendee App
+        </h3>
+        <p
+          className={cn(
+            "text-sm max-w-md transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
+          See how RecurrentX powers end-to-end event creation, ticketing, check-in, and a mobile-first attendee experience.
+        </p>
+        <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
+      </div>
+
+      {/* Solution Brief */}
+      {brief && <SolutionBrief data={brief} dark={dark} />}
+
+      {/* PWA Showcase */}
+      <section className="mt-16 max-w-4xl mx-auto">
+        <p
+          className={cn(
+            "text-[11px] font-semibold tracking-[0.15em] uppercase mb-6 transition-colors duration-300",
+            dark ? "text-gray-500" : "text-[#9CA3AF]"
+          )}
+        >
+          PROGRESSIVE WEB APP (PWA) — NO APP STORE REQUIRED
+        </p>
+
+        <h3
+          className={cn(
+            "text-xl md:text-2xl font-extrabold leading-tight mb-2 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          Built for Organizers.{" "}
+          <span className="text-[#6C5CE7]">Loved by Attendees.</span>
+        </h3>
+        <p
+          className={cn(
+            "text-base leading-relaxed mb-8 transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
+          Manage every detail from the backend — and watch it appear instantly in the attendee PWA.
+        </p>
+
+        {/* Admin + Phone Preview Mockup */}
+        <div
+          className={cn(
+            "rounded-2xl border overflow-hidden transition-colors duration-300",
+            dark
+              ? "bg-[#111827] border-white/[0.08]"
+              : "bg-[#F9FAFB] border-[#E5E7EB]"
+          )}
+        >
+          <div className="flex flex-col md:flex-row">
+            {/* Left — Admin Panel Mockup */}
+            <div className="flex-1 p-6 md:p-8">
+              <p
+                className={cn(
+                  "text-[10px] font-semibold tracking-widest uppercase mb-4 transition-colors duration-300",
+                  dark ? "text-gray-500" : "text-[#9CA3AF]"
+                )}
+              >
+                Event Admin Dashboard
+              </p>
+              {/* Simulated admin settings */}
+              <div className="space-y-3">
+                {/* Tab bar */}
+                <div className="flex gap-1">
+                  {["Details", "Schedule", "Sponsors", "Attendee App"].map((t, i) => (
+                    <span
+                      key={t}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors duration-300",
+                        i === 3
+                          ? "bg-[#6C5CE7] text-white"
+                          : dark
+                            ? "bg-white/[0.06] text-gray-400"
+                            : "bg-white text-[#6B7280]"
+                      )}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                {/* Settings fields */}
+                <div
+                  className={cn(
+                    "rounded-xl p-4 space-y-3 transition-colors duration-300",
+                    dark ? "bg-white/[0.04]" : "bg-white"
+                  )}
+                >
+                  <p
+                    className={cn(
+                      "text-xs font-bold transition-colors duration-300",
+                      dark ? "text-white" : "text-[#111827]"
+                    )}
+                  >
+                    App Settings
+                  </p>
+                  {[
+                    { label: "Event WiFi Network", value: "MIC-Guest-2026" },
+                    { label: "WiFi Password", value: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" },
+                    { label: "Emergency Contact", value: "(555) 012-3456" },
+                    { label: "Venue Map URL", value: "maps.mic2026.com" },
+                  ].map((f) => (
+                    <div key={f.label} className="flex items-center justify-between">
+                      <span
+                        className={cn(
+                          "text-[11px] transition-colors duration-300",
+                          dark ? "text-gray-400" : "text-[#6B7280]"
+                        )}
+                      >
+                        {f.label}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[11px] font-medium transition-colors duration-300",
+                          dark ? "text-gray-300" : "text-[#374151]"
+                        )}
+                      >
+                        {f.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {/* Toggle rows */}
+                <div
+                  className={cn(
+                    "rounded-xl p-4 space-y-2.5 transition-colors duration-300",
+                    dark ? "bg-white/[0.04]" : "bg-white"
+                  )}
+                >
+                  {[
+                    { label: "Push Notifications", on: true },
+                    { label: "Community Feed", on: true },
+                    { label: "QR Networking", on: true },
+                    { label: "Sponsor Banner Ads", on: false },
+                  ].map((toggle) => (
+                    <div key={toggle.label} className="flex items-center justify-between">
+                      <span
+                        className={cn(
+                          "text-[11px] transition-colors duration-300",
+                          dark ? "text-gray-400" : "text-[#6B7280]"
+                        )}
+                      >
+                        {toggle.label}
+                      </span>
+                      <div
+                        className={cn(
+                          "w-8 h-[18px] rounded-full relative transition-colors",
+                          toggle.on ? "bg-[#6C5CE7]" : dark ? "bg-gray-600" : "bg-gray-300"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all",
+                            toggle.on ? "left-[16px]" : "left-[2px]"
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right — Phone Preview */}
+            <div className="flex items-center justify-center p-6 md:p-8 md:border-l border-t md:border-t-0 border-inherit">
+              <div>
+                <p
+                  className={cn(
+                    "text-[10px] font-semibold tracking-widest uppercase mb-3 text-center transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#9CA3AF]"
+                  )}
+                >
+                  Live Attendee Preview
+                </p>
+                <div
+                  className={cn(
+                    "relative w-[200px] h-[400px] rounded-[2rem] border-[5px] overflow-hidden shadow-xl transition-colors duration-300",
+                    dark
+                      ? "border-gray-700 bg-white shadow-black/40"
+                      : "border-gray-800 bg-white shadow-gray-400/30"
+                  )}
+                >
+                  {/* Notch */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80px] h-[20px] bg-black rounded-b-xl z-10" />
+                  {/* Screen */}
+                  <div className="w-full h-full flex flex-col bg-white">
+                    <div className="h-[24px] bg-[#6C5CE7]" />
+                    <div className="bg-[#6C5CE7] px-3 py-2 text-center">
+                      <p className="text-white text-[9px] font-bold">MIC 2026</p>
+                      <p className="text-white/70 text-[7px]">Sep 23–25, Washington DC</p>
+                    </div>
+                    {/* Info cards */}
+                    <div className="flex-1 bg-[#F9FAFB] px-2.5 py-2 space-y-1.5 overflow-hidden">
+                      <div className="bg-white rounded-lg p-2 shadow-sm">
+                        <p className="text-[8px] font-bold text-[#111827]">WiFi</p>
+                        <p className="text-[7px] text-gray-500">MIC-Guest-2026</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 shadow-sm">
+                        <p className="text-[8px] font-bold text-[#111827]">Next Session</p>
+                        <p className="text-[7px] text-gray-500">Opening Keynote - 9:00 AM</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 shadow-sm">
+                        <p className="text-[8px] font-bold text-[#111827]">Notifications</p>
+                        <p className="text-[7px] text-gray-500">3 new announcements</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 shadow-sm">
+                        <p className="text-[8px] font-bold text-[#111827]">Community</p>
+                        <p className="text-[7px] text-gray-500">47 attendees nearby</p>
+                      </div>
+                    </div>
+                    {/* Bottom nav */}
+                    <div className="h-[36px] bg-[#F9FAFB] border-t border-gray-200 flex items-center justify-around px-2">
+                      <span className="text-[6px] text-[#6C5CE7] font-medium">Home</span>
+                      <span className="text-[6px] text-gray-400 font-medium">Schedule</span>
+                      <span className="text-[6px] text-gray-400 font-medium">Map</span>
+                      <span className="text-[6px] text-gray-400 font-medium">Profile</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bullet points */}
+        <div className="mt-8 space-y-3 max-w-2xl">
+          {[
+            "Manage WiFi credentials, FAQs, and notifications from one dashboard",
+            "Live Attendee Preview shows exactly what attendees see on their phone — in real time",
+            "No app download required — the PWA installs directly from the browser to any home screen",
+          ].map((point) => (
+            <div key={point} className="flex items-start gap-2.5">
+              <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-300" : "text-[#374151]"
+                )}
+              >
+                {point}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Tab: Placeholder                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -1669,7 +1963,10 @@ export default function Prospectus() {
             )}
           </>
         )}
-        {activeTab !== "Overview" && activeTab !== "PDX Experience" && (
+        {activeTab === "Events & Attendee App" && (
+          <EventsAttendeeTab dark={darkMode} />
+        )}
+        {activeTab !== "Overview" && activeTab !== "PDX Experience" && activeTab !== "Events & Attendee App" && (
           <PlaceholderTab
             title={activeTab}
             description={TAB_PLACEHOLDERS[activeTab] ?? "Content coming soon."}
