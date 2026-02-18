@@ -15,6 +15,7 @@
     {"source": "/api/youtube", "destination": "/api/youtube"},
     {"source": "/api/parse-rss", "destination": "/api/parse-rss"},
     {"source": "/api/social-monitor", "destination": "/api/social-monitor"},
+    {"source": "/api/resend-verify-domain", "destination": "/api/resend-verify-domain"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"},
     {"source": "/((?!api/).*)", "destination": "/index.html"}
