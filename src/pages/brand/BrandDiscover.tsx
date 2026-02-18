@@ -40,6 +40,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useDemoMode } from "@/hooks/useDemoMode";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
@@ -48,7 +49,7 @@ const LAST_SEARCH_KEY = "pd_discover_last_search";
 
 interface SavedSearchFilters {
   searchQuery: string;
-  platform: string;
+  platform: string[];
   followersRange: string;
   engagementMin: string;
   locationFilter: string;
@@ -336,7 +337,6 @@ async function setCachedEnrichment(username: string, enrichment: EnrichedProfile
 }
 
 const PLATFORMS = [
-  { value: "all", label: "All Platforms" },
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
   { value: "youtube", label: "YouTube" },
@@ -399,6 +399,23 @@ function formatFollowers(count: number): string {
   return String(count);
 }
 
+/** Deduplicate creators by id, keeping the first occurrence. */
+function deduplicateCreators(cards: CreatorCard[]): CreatorCard[] {
+  const seen = new Set<string>();
+  return cards.filter((c) => {
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
+    return true;
+  });
+}
+
+/** Resolve selected platforms to the list of API platform strings to query. */
+function resolveSearchPlatforms(selected: string[], creatorTypeOverride: string | null): string[] {
+  if (creatorTypeOverride) return [creatorTypeOverride];
+  if (selected.length === 0) return ["instagram"];
+  return selected.map((p) => p.toLowerCase());
+}
+
 const BrandDiscover = () => {
   const { guardAction } = useDemoMode();
   const [urlSearchParams] = useSearchParams();
@@ -406,7 +423,7 @@ const BrandDiscover = () => {
   const [searchMode, setSearchMode] = useState<"keyword" | "username" | "lookalike">("keyword");
   const [creatorType, setCreatorType] = useState<string>("all");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [platform, setPlatform] = useState<string>("all");
+  const [platform, setPlatform] = useState<string[]>([]);
   const [followersRange, setFollowersRange] = useState<string>("any");
   const [engagementMin, setEngagementMin] = useState<string>("any");
   const [locationFilter, setLocationFilter] = useState("");
@@ -617,7 +634,7 @@ const BrandDiscover = () => {
     if (urlQ?.trim()) {
       setSearchQuery(urlQ.trim());
       const urlPlatform = urlSearchParams.get("platform");
-      if (urlPlatform) setPlatform(urlPlatform);
+      if (urlPlatform) setPlatform([urlPlatform]);
       const minF = urlSearchParams.get("min_followers");
       const maxF = urlSearchParams.get("max_followers");
       if (minF || maxF) {
@@ -669,11 +686,8 @@ const BrandDiscover = () => {
     const ctKeywords = ctConfig?.keywords ?? [];
     const allBioKeys = [...branchKeys, ...bioKeys, ...ctKeywords];
     const keywords_in_bio = allBioKeys.length > 0 ? allBioKeys : [""];
-    // For keyword searches, the platform dropdown only controls username search type —
-    // always use "instagram" (broadest data) unless a creator type overrides it.
-    const effectivePlatform = ctConfig?.platformOverride ?? "instagram";
-    const options = {
-      platform: effectivePlatform.toLowerCase(),
+    const searchPlatforms = resolveSearchPlatforms(platform, ctConfig?.platformOverride ?? null);
+    const baseOptions = {
       number_of_followers: {
         min: followerOpt?.min ?? null,
         max: followerOpt?.max ?? null,
@@ -689,21 +703,27 @@ const BrandDiscover = () => {
       language: language !== "any" ? language : undefined,
     };
     persistLastSearch(getCurrentFilters());
-    searchCreators(q, options)
-      .then((result) => {
-        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(result);
-        // Log credit usage for search
-        if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15, { query: q, results: result.total });
+    // Run parallel searches for each selected platform, merge & deduplicate
+    Promise.all(
+      searchPlatforms.map((plat) =>
+        searchCreators(q, { ...baseOptions, platform: plat })
+          .catch((err) => { console.warn(`[BrandDiscover] Search failed for ${plat}:`, err); return null; })
+      )
+    )
+      .then((results) => {
+        if (searchQueryRef.current.trim().replace(/^@/, "") !== q) return;
+        const valid = results.filter((r): r is NonNullable<typeof r> => r !== null);
+        if (valid.length === 0) { setApiResults(null); return; }
+        const allCreators = deduplicateCreators(valid.flatMap((r) => r.creators));
+        const total = Math.max(...valid.map((r) => r.total));
+        setApiResults({ creators: allCreators, total, rawResponse: valid[0].rawResponse });
+        if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15 * searchPlatforms.length, { query: q, platforms: searchPlatforms, results: total });
         refreshCredits();
-      })
-      .catch((err) => {
-        if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiResults(null);
-        console.warn("[BrandDiscover] API search failed:", err);
       })
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
-  }, [searchQuery, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, user, refreshCredits]);
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, user, refreshCredits]);
 
   // Fire search after auto-load applies filters (runs once after state updates)
   useEffect(() => {
@@ -725,28 +745,36 @@ const BrandDiscover = () => {
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
     const keywords_in_bio = selectedBranches.size > 0 ? Array.from(selectedBranches) : [""];
     const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
-    const effectivePlatform = ctConfig?.platformOverride ?? "instagram";
-    searchCreators(q, {
-      platform: effectivePlatform.toLowerCase(),
+    const searchPlatforms = resolveSearchPlatforms(platform, ctConfig?.platformOverride ?? null);
+    const baseOptions = {
       number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
-      engagement_percent: { min: engagementOpt?.min ?? null, max: null },
+      engagement_percent: { min: engagementOpt?.min ?? null, max: null as number | null },
       keywords_in_bio,
       sort_by: (sortBy === "confidence" ? "relevancy" : sortBy) as "relevancy" | "followers" | "engagement",
       location: locationFilter.trim() || undefined,
       gender: gender !== "any" ? gender : undefined,
       language: language !== "any" ? language : undefined,
       page: nextPage,
-    })
-      .then((result) => {
+    };
+    Promise.all(
+      searchPlatforms.map((plat) =>
+        searchCreators(q, { ...baseOptions, platform: plat })
+          .catch(() => null)
+      )
+    )
+      .then((results) => {
+        const valid = results.filter((r): r is NonNullable<typeof r> => r !== null);
+        if (valid.length === 0) return;
+        const newCreators = deduplicateCreators(valid.flatMap((r) => r.creators));
         setApiResults((prev) => prev ? {
           ...prev,
-          creators: [...prev.creators, ...result.creators],
-        } : result);
+          creators: deduplicateCreators([...prev.creators, ...newCreators]),
+        } : { creators: newCreators, total: Math.max(...valid.map((r) => r.total)), rawResponse: valid[0].rawResponse });
         setCurrentPage(nextPage);
       })
       .catch((err) => console.warn("[BrandDiscover] Load more failed:", err))
       .finally(() => setLoadingMore(false));
-  }, [searchQuery, apiResults, currentPage, creatorType, followersRange, engagementMin, sortBy, selectedBranches, locationFilter]);
+  }, [searchQuery, apiResults, currentPage, platform, creatorType, followersRange, engagementMin, sortBy, selectedBranches, locationFilter]);
 
   // Username / Lookalike search handler
   const runModeSearch = useCallback(() => {
@@ -756,7 +784,8 @@ const BrandDiscover = () => {
       setApiResults(null);
       return;
     }
-    console.log(`[BrandDiscover] ${searchMode} search — cleaned value: "${q}" (platform: ${platform})`);
+    const currentPlatform = (platform.length > 0 ? platform[0] : "instagram").toLowerCase();
+    console.log(`[BrandDiscover] ${searchMode} search — cleaned value: "${q}" (platform: ${currentPlatform})`);
     setApiLoading(true);
     setCurrentPage(1);
     setUsernameNotFound(null);
@@ -768,8 +797,6 @@ const BrandDiscover = () => {
     setSmartFiltersApplied([]);
 
     const searchFn = searchMode === "username" ? searchByUsername : searchLookalike;
-    // For username/lookalike, use selected platform; default to "instagram" when "all"
-    const currentPlatform = (platform === "all" ? "instagram" : platform).toLowerCase();
 
     searchFn(q, currentPlatform)
       .then((result) => {
@@ -850,7 +877,7 @@ const BrandDiscover = () => {
       return;
     }
     // Apply parsed filters to UI state (updates dropdowns)
-    if (parsed.platform) setPlatform(parsed.platform);
+    if (parsed.platform) setPlatform([parsed.platform]);
     if (parsed.followersRange) setFollowersRange(parsed.followersRange);
     if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
     if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
@@ -869,8 +896,8 @@ const BrandDiscover = () => {
     setEnrichRawCache({});
     setEnrichingIds(new Set());
     const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
-    // For keyword searches, ignore the platform dropdown — use "instagram" unless creator type or smart-parse overrides
-    const effPlatform = ctConfig?.platformOverride ?? (parsed.platform || "instagram");
+    const effPlatforms = parsed.platform ? [parsed.platform] : platform;
+    const searchPlatforms = resolveSearchPlatforms(effPlatforms, ctConfig?.platformOverride ?? null);
     const effFollowers = parsed.followersRange || followersRange;
     const effEngagement = parsed.engagementMin || engagementMin;
     const effBranches = parsed.branches.length > 0 ? parsed.branches : Array.from(selectedBranches);
@@ -881,8 +908,7 @@ const BrandDiscover = () => {
     const ctKeywords = ctConfig?.keywords ?? [];
     const kw = [...effBranches, ...bioKeys, ...ctKeywords];
     const keywords_in_bio = kw.length > 0 ? kw : [""];
-    const options = {
-      platform: effPlatform.toLowerCase(),
+    const baseOptions = {
       number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
       engagement_percent: { min: engagementOpt?.min ?? null, max: null as number | null },
       keywords_in_bio,
@@ -892,13 +918,22 @@ const BrandDiscover = () => {
       language: language !== "any" ? language : undefined,
     };
     persistLastSearch({
-      searchQuery: effectiveQuery, platform: effPlatform, followersRange: effFollowers,
+      searchQuery: effectiveQuery, platform: effPlatforms, followersRange: effFollowers,
       engagementMin: effEngagement, locationFilter: effLocation || "", niche, gender, language,
       keywordsInBio, sortBy, selectedBranches: effBranches,
     });
-    searchCreators(effectiveQuery, options)
-      .then((result) => {
-        if (searchQueryRef.current === effectiveQuery) setApiResults(result);
+    Promise.all(
+      searchPlatforms.map((plat) =>
+        searchCreators(effectiveQuery, { ...baseOptions, platform: plat })
+          .catch(() => null)
+      )
+    )
+      .then((results) => {
+        if (searchQueryRef.current !== effectiveQuery) return;
+        const valid = results.filter((r): r is NonNullable<typeof r> => r !== null);
+        if (valid.length === 0) { setApiResults(null); return; }
+        const allCreators = deduplicateCreators(valid.flatMap((r) => r.creators));
+        setApiResults({ creators: allCreators, total: Math.max(...valid.map((r) => r.total)), rawResponse: valid[0].rawResponse });
       })
       .catch((err) => {
         if (searchQueryRef.current === effectiveQuery) setApiResults(null);
@@ -920,7 +955,7 @@ const BrandDiscover = () => {
     setSearchQuery("");
     setSearchMode("keyword");
     setCreatorType("all");
-    setPlatform("all");
+    setPlatform([]);
     setFollowersRange("any");
     setEngagementMin("any");
     setLocationFilter("");
@@ -956,7 +991,7 @@ const BrandDiscover = () => {
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
   // Capture current platform so enrichment uses the correct one for each search
-  const enrichPlatform = platform === "all" ? "instagram" : platform.toLowerCase();
+  const enrichPlatform = platform.length > 0 ? platform[0].toLowerCase() : "instagram";
   useEffect(() => {
     const creatorsToEnrich = (apiResults?.creators ?? []).filter(
       (c) => c.username && !enrichedSetRef.current.has(c.id)
@@ -1468,16 +1503,53 @@ const BrandDiscover = () => {
 
           {/* Search bar row: Platform + Mode + Input + Search */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger className="w-[140px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Platform" />
-              </SelectTrigger>
-              <SelectContent>
-                {PLATFORMS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-[170px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border justify-between font-normal"
+                >
+                  <span className="truncate">
+                    {platform.length === 0
+                      ? "All Platforms"
+                      : platform.length === 1
+                        ? PLATFORMS.find((p) => p.value === platform[0])?.label ?? platform[0]
+                        : `${platform.length} Platforms`}
+                  </span>
+                  <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-1" align="start">
+                {PLATFORMS.map((p) => {
+                  const isChecked = platform.includes(p.value);
+                  return (
+                    <label
+                      key={p.value}
+                      className={cn(
+                        "flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer transition-colors text-sm",
+                        isChecked
+                          ? "bg-purple-50 dark:bg-purple-950/30"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          setPlatform(
+                            checked
+                              ? [...platform, p.value]
+                              : platform.filter((v) => v !== p.value)
+                          );
+                        }}
+                        className="border-gray-300 data-[state=checked]:bg-[#6C5CE7] data-[state=checked]:border-[#6C5CE7]"
+                      />
+                      {p.label}
+                    </label>
+                  );
+                })}
+              </PopoverContent>
+            </Popover>
             <Select value={searchMode} onValueChange={(v) => setSearchMode(v as "keyword" | "username" | "lookalike")}>
               <SelectTrigger className="w-[150px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue />
@@ -1762,7 +1834,7 @@ const BrandDiscover = () => {
                         size="sm"
                         className="mt-2 bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => {
-                          setPlatform(usernameNotFound.foundOnPlatform!);
+                          setPlatform([usernameNotFound.foundOnPlatform!]);
                           setApiResults({ creators: usernameNotFound.foundOnPlatformResults!, total: usernameNotFound.foundOnPlatformResults!.length, rawResponse: null });
                           setUsernameNotFound(null);
                         }}
@@ -1783,7 +1855,7 @@ const BrandDiscover = () => {
                             variant="outline"
                             className="cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 transition-colors capitalize"
                             onClick={() => {
-                              setPlatform(p);
+                              setPlatform([p]);
                               setUsernameNotFound(null);
                               // Trigger search on next render via the platform change
                               setTimeout(() => {
