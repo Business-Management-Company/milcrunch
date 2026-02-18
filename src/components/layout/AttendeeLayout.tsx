@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import AttendeeNotifications from "@/pages/attendee/AttendeeNotifications";
+import InstallBanner from "@/components/attendee/InstallBanner";
 
 /* ---------- types ---------- */
 export interface AttendeeEvent {
@@ -261,6 +262,9 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
               {children}
             </div>
           </main>
+
+          {/* ---- Install Banner ---- */}
+          <InstallBanner />
 
           {/* ---- Bottom Tab Bar ---- */}
           <nav className="sticky bottom-0 z-50 bg-white border-t border-gray-200 h-16 flex items-center justify-around px-2">
