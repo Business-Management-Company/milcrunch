@@ -108,10 +108,21 @@ export async function getEmailList(id: string): Promise<EmailList | null> {
 }
 
 export async function upsertEmailList(list: { id?: string; name: string; description?: string | null }): Promise<EmailList | null> {
+  // Verify authentication before insert
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error("upsertEmailList: not authenticated");
+    return null;
+  }
+
   const payload: any = { name: list.name, description: list.description ?? null };
   if (list.id) payload.id = list.id;
+
   const { data, error } = await sb.from("email_lists").upsert(payload).select("*").single();
-  if (error) { console.error("upsertEmailList", error); return null; }
+  if (error) {
+    console.error("upsertEmailList error:", error.code, error.message, error.details, error.hint);
+    return null;
+  }
   return data ?? null;
 }
 

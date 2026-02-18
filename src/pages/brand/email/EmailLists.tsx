@@ -81,16 +81,21 @@ const EmailLists = () => {
   const handleCreateList = async () => {
     if (!newName.trim()) return;
     setCreating(true);
-    const result = await upsertEmailList({ name: newName.trim(), description: newDesc.trim() || null });
-    if (result) {
-      setLists(prev => [result, ...prev]);
-      setListCounts(prev => ({ ...prev, [result.id]: 0 }));
-      toast.success("List created");
-      setShowCreateDialog(false);
-      setNewName("");
-      setNewDesc("");
-    } else {
-      toast.error("Failed to create list");
+    try {
+      const result = await upsertEmailList({ name: newName.trim(), description: newDesc.trim() || null });
+      if (result) {
+        setLists(prev => [result, ...prev]);
+        setListCounts(prev => ({ ...prev, [result.id]: 0 }));
+        toast.success("List created");
+        setShowCreateDialog(false);
+        setNewName("");
+        setNewDesc("");
+      } else {
+        toast.error("Failed to create list — check console for details");
+      }
+    } catch (err: any) {
+      console.error("handleCreateList exception:", err);
+      toast.error(`Failed to create list: ${err.message}`);
     }
     setCreating(false);
   };

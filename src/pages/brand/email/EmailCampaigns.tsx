@@ -13,9 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus, ArrowLeft, ArrowRight, Loader2, Trash2, Mail, Send, Settings, Users,
   Palette, Eye, Calendar as CalendarIcon, BarChart3, CheckCircle2,
+  FolderOpen, ClipboardList, Search,
 } from "lucide-react";
 import {
   getEmailCampaigns, upsertEmailCampaign, deleteEmailCampaign,
@@ -25,6 +27,26 @@ import { getEmailTemplates } from "@/lib/email-db";
 import { BUILT_IN_TEMPLATES } from "@/lib/email-templates-html";
 import { CAMPAIGN_STEPS, STATUS_COLORS } from "@/lib/email-types";
 import type { EmailCampaign, EmailList, EmailTemplate, CampaignStats } from "@/lib/email-types";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchDirectories, fetchDirectoryMembers, type Directory, type DirectoryMember } from "@/lib/directories";
+import { useLists } from "@/contexts/ListContext";
+
+interface DirectoryRecipient {
+  email: string;
+  first_name: string;
+  source: string;
+}
+
+function extractEmailFromMember(m: DirectoryMember): string | null {
+  // Check enrichment_data for emails
+  const ed = m.enrichment_data as any;
+  if (!ed) return null;
+  if (ed.emails?.length) return ed.emails[0];
+  if (ed.email) return ed.email;
+  if (ed.contact_email) return ed.contact_email;
+  if (ed.contact?.email) return ed.contact.email;
+  return null;
+}
 
 const EmailCampaigns = () => {
   const location = useLocation();
@@ -49,9 +71,20 @@ const EmailCampaigns = () => {
   const [fromEmail, setFromEmail] = useState("noreply@milcrunch.com");
 
   // Step 2 — Recipients
+  const [recipientTab, setRecipientTab] = useState<"email" | "directory" | "lists">("email");
   const [lists, setLists] = useState<EmailList[]>([]);
   const [selectedListId, setSelectedListId] = useState("");
   const [listCounts, setListCounts] = useState<Record<string, number>>({});
+  // Directory recipients
+  const [directories, setDirectories] = useState<Directory[]>([]);
+  const [dirMembers, setDirMembers] = useState<DirectoryMember[]>([]);
+  const [dirRecipients, setDirRecipients] = useState<DirectoryRecipient[]>([]);
+  const [selectedDirRecipients, setSelectedDirRecipients] = useState<Set<string>>(new Set());
+  const [dirSearch, setDirSearch] = useState("");
+  const [loadingDir, setLoadingDir] = useState(false);
+  // Influencer list recipients
+  const { lists: influencerLists } = useLists();
+  const [selectedInfluencerListIds, setSelectedInfluencerListIds] = useState<Set<string>>(new Set());
 
   // Step 3 — Design
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -68,16 +101,48 @@ const EmailCampaigns = () => {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [c, l, t] = await Promise.all([getEmailCampaigns(), getEmailLists(), getEmailTemplates()]);
+      const [c, l, t, dirs] = await Promise.all([
+        getEmailCampaigns(), getEmailLists(), getEmailTemplates(), fetchDirectories(),
+      ]);
       setCampaigns(c);
       setLists(l);
       setTemplates(t);
+      setDirectories(dirs);
       const counts: Record<string, number> = {};
       await Promise.all(l.map(async li => { counts[li.id] = await getContactCount(li.id); }));
       setListCounts(counts);
       setLoading(false);
+
+      // Load directory members and extract emails
+      if (dirs.length > 0) {
+        setLoadingDir(true);
+        const allMembers: DirectoryMember[] = [];
+        await Promise.all(dirs.map(async d => {
+          const members = await fetchDirectoryMembers(d.id);
+          allMembers.push(...members);
+        }));
+        setDirMembers(allMembers);
+        // Extract emails from enrichment_data
+        const recipients: DirectoryRecipient[] = [];
+        const seen = new Set<string>();
+        for (const m of allMembers) {
+          const email = extractEmailFromMember(m);
+          if (email && !seen.has(email.toLowerCase())) {
+            seen.add(email.toLowerCase());
+            recipients.push({
+              email: email.toLowerCase(),
+              first_name: m.creator_name || m.creator_handle,
+              source: "directory",
+            });
+          }
+        }
+        setDirRecipients(recipients);
+        setLoadingDir(false);
+      }
     })();
   }, []);
+
+  const hasAnyRecipients = !!selectedListId || selectedDirRecipients.size > 0 || selectedInfluencerListIds.size > 0;
 
   const resetBuilder = () => {
     setIsBuilding(false);
@@ -89,6 +154,9 @@ const EmailCampaigns = () => {
     setFromName("RecurrentX");
     setFromEmail("noreply@milcrunch.com");
     setSelectedListId("");
+    setSelectedDirRecipients(new Set());
+    setSelectedInfluencerListIds(new Set());
+    setRecipientTab("email");
     setHtmlContent("");
     setSending(false);
     setSendProgress(0);
@@ -112,7 +180,7 @@ const EmailCampaigns = () => {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: return !!campaignName.trim() && !!subject.trim();
-      case 1: return !!selectedListId;
+      case 1: return hasAnyRecipients;
       case 2: return !!htmlContent.trim();
       case 3: return true;
       default: return false;
@@ -144,7 +212,7 @@ const EmailCampaigns = () => {
   };
 
   const handleSendNow = async () => {
-    if (!selectedListId) { toast.error("Select a recipient list"); return; }
+    if (!hasAnyRecipients) { toast.error("Select at least one recipient source"); return; }
     setSending(true);
     setSendProgress(0);
 
@@ -156,14 +224,43 @@ const EmailCampaigns = () => {
       preview_text: previewText.trim() || null,
       from_name: fromName,
       from_email: fromEmail,
-      list_ids: [selectedListId],
+      list_ids: selectedListId ? [selectedListId] : [],
       html_content: htmlContent,
       status: "sending",
     });
     if (!campaign) { toast.error("Failed to save campaign"); setSending(false); return; }
 
-    const contacts = await getSubscribedContacts(selectedListId);
-    if (contacts.length === 0) { toast.error("No subscribed contacts in this list"); setSending(false); return; }
+    // Gather all recipients with deduplication
+    const allRecipients: Array<{ email: string; first_name: string; id?: string }> = [];
+    const seenEmails = new Set<string>();
+
+    // From email lists
+    if (selectedListId) {
+      const contacts = await getSubscribedContacts(selectedListId);
+      for (const c of contacts) {
+        const key = c.email.toLowerCase();
+        if (!seenEmails.has(key)) {
+          seenEmails.add(key);
+          allRecipients.push({ email: c.email, first_name: c.first_name || "there", id: c.id });
+        }
+      }
+    }
+
+    // From creator directories
+    for (const email of selectedDirRecipients) {
+      const key = email.toLowerCase();
+      if (!seenEmails.has(key)) {
+        seenEmails.add(key);
+        const r = dirRecipients.find(d => d.email === email);
+        allRecipients.push({ email, first_name: r?.first_name || "there" });
+      }
+    }
+
+    // From influencer lists (in-memory, no emails typically — skip if no email data)
+
+    if (allRecipients.length === 0) { toast.error("No recipients with valid email addresses"); setSending(false); return; }
+
+    const contacts = allRecipients;
 
     let sentCount = 0;
     let failCount = 0;
@@ -247,38 +344,191 @@ const EmailCampaigns = () => {
           </div>
         );
 
-      case 1: // Recipients
+      case 1: { // Recipients
+        const filteredDirRecipients = dirRecipients.filter(r =>
+          !dirSearch || r.email.includes(dirSearch.toLowerCase()) || r.first_name.toLowerCase().includes(dirSearch.toLowerCase())
+        );
+        const totalRecipientCount = (selectedListId ? (listCounts[selectedListId] ?? 0) : 0) + selectedDirRecipients.size;
+
         return (
-          <div className="space-y-5 max-w-2xl">
-            <div className="space-y-2">
-              <Label>Select Recipient List *</Label>
-              <Select value={selectedListId} onValueChange={setSelectedListId}>
-                <SelectTrigger><SelectValue placeholder="Choose a list..." /></SelectTrigger>
-                <SelectContent>
-                  {lists.map(l => (
-                    <SelectItem key={l.id} value={l.id}>
-                      {l.name} ({listCounts[l.id] ?? 0} subscribers)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-5 max-w-3xl">
+            {/* Tab Pills */}
+            <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
+              {([
+                { key: "email" as const, label: "Email Lists", icon: Mail },
+                { key: "directory" as const, label: "Creator Directory", icon: FolderOpen },
+                { key: "lists" as const, label: "Influencer Lists", icon: ClipboardList },
+              ]).map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setRecipientTab(tab.key)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                    recipientTab === tab.key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            {selectedListId && (
-              <Card className="p-4 bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <Users className="h-8 w-8 text-pd-blue" />
-                  <div>
-                    <p className="font-semibold text-foreground">{lists.find(l => l.id === selectedListId)?.name}</p>
-                    <p className="text-sm text-muted-foreground">{listCounts[selectedListId] ?? 0} active subscribers will receive this campaign</p>
-                  </div>
+
+            {/* Summary bar */}
+            {totalRecipientCount > 0 && (
+              <Card className="p-3 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-green-800 dark:text-green-300">{totalRecipientCount} recipient{totalRecipientCount !== 1 ? "s" : ""} selected</span>
+                  <span className="text-green-600 dark:text-green-400">(deduplicated across all sources)</span>
                 </div>
               </Card>
             )}
-            {lists.length === 0 && (
-              <p className="text-sm text-muted-foreground">No lists found. <a href="/brand/email/lists" className="text-pd-blue underline">Create a list first</a>.</p>
+
+            {/* Email Lists Tab */}
+            {recipientTab === "email" && (
+              <div className="space-y-4">
+                <Label>Select Email List</Label>
+                <Select value={selectedListId} onValueChange={setSelectedListId}>
+                  <SelectTrigger><SelectValue placeholder="Choose a list..." /></SelectTrigger>
+                  <SelectContent>
+                    {lists.map(l => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.name} ({listCounts[l.id] ?? 0} subscribers)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedListId && (
+                  <Card className="p-4 bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      <Users className="h-8 w-8 text-pd-blue" />
+                      <div>
+                        <p className="font-semibold text-foreground">{lists.find(l => l.id === selectedListId)?.name}</p>
+                        <p className="text-sm text-muted-foreground">{listCounts[selectedListId] ?? 0} active subscribers</p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+                {lists.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No lists found. <a href="/brand/email/lists" className="text-pd-blue underline">Create a list first</a>.</p>
+                )}
+              </div>
+            )}
+
+            {/* Creator Directory Tab */}
+            {recipientTab === "directory" && (
+              <div className="space-y-4">
+                {loadingDir ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : dirRecipients.length === 0 ? (
+                  <Card className="p-6 text-center">
+                    <FolderOpen className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+                    <p className="text-muted-foreground">No creators with email addresses found in your directories.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Emails are extracted from enrichment data. Enrich creators in Discovery to add email addresses.</p>
+                  </Card>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">{dirRecipients.length}</span> creator{dirRecipients.length !== 1 ? "s" : ""} with email addresses
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedDirRecipients.size === dirRecipients.length) {
+                            setSelectedDirRecipients(new Set());
+                          } else {
+                            setSelectedDirRecipients(new Set(dirRecipients.map(r => r.email)));
+                          }
+                        }}
+                      >
+                        {selectedDirRecipients.size === dirRecipients.length ? "Deselect All" : "Select All"}
+                      </Button>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={dirSearch}
+                        onChange={e => setDirSearch(e.target.value)}
+                        placeholder="Search creators..."
+                        className="pl-9"
+                      />
+                    </div>
+                    <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                      {filteredDirRecipients.map(r => (
+                        <label key={r.email} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 cursor-pointer border-b last:border-b-0">
+                          <Checkbox
+                            checked={selectedDirRecipients.has(r.email)}
+                            onCheckedChange={(checked) => {
+                              setSelectedDirRecipients(prev => {
+                                const next = new Set(prev);
+                                if (checked) next.add(r.email); else next.delete(r.email);
+                                return next;
+                              });
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{r.first_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{r.email}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedDirRecipients.size > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">{selectedDirRecipients.size}</span> recipients selected from directories
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Influencer Lists Tab */}
+            {recipientTab === "lists" && (
+              <div className="space-y-4">
+                {influencerLists.length === 0 ? (
+                  <Card className="p-6 text-center">
+                    <ClipboardList className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+                    <p className="text-muted-foreground">No influencer lists found.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Create lists in the <a href="/brand/lists" className="text-pd-blue underline">Lists page</a> first.</p>
+                  </Card>
+                ) : (
+                  <>
+                    <Label>Select Influencer Lists</Label>
+                    <div className="space-y-2">
+                      {influencerLists.map(il => (
+                        <label key={il.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                          <Checkbox
+                            checked={selectedInfluencerListIds.has(il.id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedInfluencerListIds(prev => {
+                                const next = new Set(prev);
+                                if (checked) next.add(il.id); else next.delete(il.id);
+                                return next;
+                              });
+                            }}
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">{il.name}</p>
+                            <p className="text-xs text-muted-foreground">{il.creators.length} creators</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Note: Only creators with email addresses from enrichment data will receive emails.
+                    </p>
+                  </>
+                )}
+              </div>
             )}
           </div>
         );
+      }
 
       case 2: // Design
         return (
@@ -317,7 +567,7 @@ const EmailCampaigns = () => {
                     <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{campaignName}</span></div>
                     <div><span className="text-muted-foreground">Subject:</span> <span className="font-medium">{subject}</span></div>
                     <div><span className="text-muted-foreground">From:</span> <span className="font-medium">{fromName} &lt;{fromEmail}&gt;</span></div>
-                    <div><span className="text-muted-foreground">Recipients:</span> <span className="font-medium">{listCounts[selectedListId] ?? 0} subscribers</span></div>
+                    <div><span className="text-muted-foreground">Recipients:</span> <span className="font-medium">{(listCounts[selectedListId] ?? 0) + selectedDirRecipients.size} recipients</span></div>
                     {previewText && <div className="col-span-2"><span className="text-muted-foreground">Preview:</span> <span className="font-medium">{previewText}</span></div>}
                   </div>
                 </Card>
