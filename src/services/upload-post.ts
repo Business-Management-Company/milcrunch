@@ -127,6 +127,8 @@ export interface UploadVideoOptions {
   video: string | File; // URL or file
   scheduled_date?: string; // ISO
   async_upload?: boolean;
+  first_comment?: string;
+  media_type?: string;
 }
 
 export interface UploadPhotosOptions {
@@ -136,6 +138,8 @@ export interface UploadPhotosOptions {
   photos: (string | File)[];
   scheduled_date?: string;
   async_upload?: boolean;
+  first_comment?: string;
+  media_type?: string;
 }
 
 export interface UploadTextOptions {
@@ -144,6 +148,8 @@ export interface UploadTextOptions {
   platform: UploadPostPlatform[];
   scheduled_date?: string;
   async_upload?: boolean;
+  first_comment?: string;
+  media_type?: string;
 }
 
 export interface UploadResult {
@@ -166,6 +172,8 @@ export async function uploadVideo(opts: UploadVideoOptions): Promise<UploadResul
   else form.append("video", opts.video);
   if (opts.scheduled_date) form.append("scheduled_date", opts.scheduled_date);
   if (opts.async_upload) form.append("async_upload", "true");
+  if (opts.first_comment) form.append("first_comment", opts.first_comment);
+  if (opts.media_type) form.append("media_type", opts.media_type);
 
   const res = await fetch(`${API_BASE}/api/upload_videos`, {
     method: "POST",
@@ -186,6 +194,8 @@ export async function uploadPhotos(opts: UploadPhotosOptions): Promise<UploadRes
   opts.photos.forEach((photo) => form.append("photos[]", photo));
   if (opts.scheduled_date) form.append("scheduled_date", opts.scheduled_date);
   if (opts.async_upload) form.append("async_upload", "true");
+  if (opts.first_comment) form.append("first_comment", opts.first_comment);
+  if (opts.media_type) form.append("media_type", opts.media_type);
 
   const res = await fetch(`${API_BASE}/api/upload_photos`, {
     method: "POST",
@@ -205,6 +215,8 @@ export async function uploadText(opts: UploadTextOptions): Promise<UploadResult>
   opts.platform.forEach((p) => form.append("platform[]", p));
   if (opts.scheduled_date) form.append("scheduled_date", opts.scheduled_date);
   if (opts.async_upload) form.append("async_upload", "true");
+  if (opts.first_comment) form.append("first_comment", opts.first_comment);
+  if (opts.media_type) form.append("media_type", opts.media_type);
 
   const res = await fetch(`${API_BASE}/api/upload_text`, {
     method: "POST",

@@ -26,6 +26,19 @@ import {
   Calendar,
   Trash2,
   RefreshCw,
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+  Hash,
+  Save,
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
+  Repeat2,
+  ThumbsUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -72,6 +85,82 @@ interface RecentPost {
   created_at: string;
 }
 
+type PostType = "feed" | "story" | "reel";
+type SendMode = "now" | "schedule" | "draft";
+type PreviewTab = "instagram" | "tiktok" | "facebook" | "x";
+
+/* ------------------------------------------------------------------ */
+/* AI Caption Writer                                                   */
+/* ------------------------------------------------------------------ */
+
+interface AiCaption {
+  text: string;
+  charCount: number;
+  platformFit: Record<string, "good" | "warning" | "over">;
+}
+
+async function generateCaptions(
+  platforms: UploadPostPlatform[],
+  context: string,
+  mediaInfo?: string,
+): Promise<AiCaption[]> {
+  const platformNames = platforms
+    .map((p) => PLATFORMS.find((x) => x.id === p)?.name ?? p)
+    .join(", ");
+  const platformLimits = platforms
+    .map((p) => {
+      const plat = PLATFORMS.find((x) => x.id === p);
+      return `${plat?.name ?? p}: ${plat?.charLimit ?? "no"} char limit`;
+    })
+    .join("; ");
+
+  const prompt = `Write 3 different social media caption options for posting to: ${platformNames}.
+${mediaInfo ? `The media being posted: ${mediaInfo}.` : ""}
+${context ? `Context / topic: ${context}` : ""}
+
+Platform limits: ${platformLimits}
+
+For each caption:
+- Optimize length and tone for the selected platforms
+- Include relevant hashtags where appropriate
+- Vary the style: one professional, one casual/fun, one engaging/question-based
+
+Return ONLY valid JSON array with 3 objects, each having a "text" field. No markdown, no code blocks, just the JSON array.`;
+
+  const res = await fetch("/api/anthropic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 1500,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!res.ok) throw new Error("AI request failed");
+  const data = await res.json();
+  const raw = data.content?.[0]?.text ?? "[]";
+  const parsed: { text: string }[] = JSON.parse(raw);
+
+  return parsed.map((item) => {
+    const charCount = item.text.length;
+    const platformFit: Record<string, "good" | "warning" | "over"> = {};
+    for (const p of platforms) {
+      const plat = PLATFORMS.find((x) => x.id === p);
+      if (!plat?.charLimit) {
+        platformFit[p] = "good";
+      } else if (charCount > plat.charLimit) {
+        platformFit[p] = "over";
+      } else if (charCount > plat.charLimit - 30) {
+        platformFit[p] = "warning";
+      } else {
+        platformFit[p] = "good";
+      }
+    }
+    return { text: item.text, charCount, platformFit };
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Main Component                                                      */
 /* ------------------------------------------------------------------ */
@@ -89,10 +178,23 @@ export default function BrandPosting() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<UploadPostPlatform[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [scheduling, setScheduling] = useState(false);
-  const [scheduledTime, setScheduledTime] = useState("");
   const [posting, setPosting] = useState(false);
   const [platformResults, setPlatformResults] = useState<Record<string, PlatformResult>>({});
+
+  // New features
+  const [firstComment, setFirstComment] = useState("");
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [postType, setPostType] = useState<PostType>("feed");
+  const [sendMode, setSendMode] = useState<SendMode>("now");
+  const [showSendMenu, setShowSendMenu] = useState(false);
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [previewTab, setPreviewTab] = useState<PreviewTab>("instagram");
+
+  // AI caption state
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const [aiContext, setAiContext] = useState("");
+  const [aiCaptions, setAiCaptions] = useState<AiCaption[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Recent posts
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
@@ -100,6 +202,7 @@ export default function BrandPosting() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const sendMenuRef = useRef<HTMLDivElement>(null);
 
   // Load connected accounts
   useEffect(() => {
@@ -128,6 +231,17 @@ export default function BrandPosting() {
     loadRecentPosts();
   }, [loadRecentPosts]);
 
+  // Close send menu on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (sendMenuRef.current && !sendMenuRef.current.contains(e.target as Node)) {
+        setShowSendMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   // Connected platform IDs
   const connectedPlatformIds = new Set(connectedAccounts.map((a) => a.platform));
   const availablePlatforms = PLATFORMS.filter((p) => connectedPlatformIds.has(p.id));
@@ -140,6 +254,10 @@ export default function BrandPosting() {
   const effectiveLimit = minCharLimit === Infinity ? null : minCharLimit;
   const charWarning = effectiveLimit && caption.length > effectiveLimit - 30;
   const charOver = effectiveLimit && caption.length > effectiveLimit;
+
+  // Post type needed?
+  const showPostType =
+    selectedPlatforms.includes("instagram") || selectedPlatforms.includes("tiktok");
 
   // File handling
   const handleFileSelect = (f: File) => {
@@ -172,8 +290,53 @@ export default function BrandPosting() {
     );
   };
 
+  // AI caption generation
+  const handleGenerateCaptions = async () => {
+    if (selectedPlatforms.length === 0) {
+      toast.error("Select at least one platform first.");
+      return;
+    }
+    setAiLoading(true);
+    setAiCaptions([]);
+    try {
+      const mediaInfo = file ? `${file.name} (${file.type})` : undefined;
+      const captions = await generateCaptions(selectedPlatforms, aiContext, mediaInfo);
+      setAiCaptions(captions);
+      setShowAiPrompt(false);
+    } catch {
+      toast.error("Failed to generate captions. Try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Save as draft
+  const handleSaveDraft = async () => {
+    if (!userId) return;
+    try {
+      await supabase.from("social_posts").insert({
+        user_id: userId,
+        caption: caption.trim(),
+        platforms: selectedPlatforms,
+        file_url: file?.name || null,
+        scheduled_time: null,
+        status: "draft",
+        results: {},
+      } as Record<string, unknown>);
+      toast.success("Draft saved!");
+      loadRecentPosts();
+    } catch {
+      toast.error("Failed to save draft.");
+    }
+  };
+
   // Post
   const handlePost = async () => {
+    if (sendMode === "draft") {
+      await handleSaveDraft();
+      return;
+    }
+
     if (!userId || selectedPlatforms.length === 0 || (!caption.trim() && !file)) {
       toast.error("Add a caption or media and select at least one platform.");
       return;
@@ -185,9 +348,15 @@ export default function BrandPosting() {
     setPlatformResults(initResults);
 
     try {
-      const schedDate = scheduling && scheduledTime ? new Date(scheduledTime).toISOString() : undefined;
+      const schedDate =
+        sendMode === "schedule" && scheduledTime
+          ? new Date(scheduledTime).toISOString()
+          : undefined;
 
       let result: UploadResult;
+
+      const fc = firstComment.trim() || undefined;
+      const mt = showPostType && postType !== "feed" ? postType : undefined;
 
       if (file?.type.startsWith("video/")) {
         result = await uploadVideo({
@@ -196,6 +365,8 @@ export default function BrandPosting() {
           platform: selectedPlatforms,
           video: file,
           scheduled_date: schedDate,
+          first_comment: fc,
+          media_type: mt,
         });
       } else if (file) {
         result = await uploadPhotos({
@@ -204,6 +375,8 @@ export default function BrandPosting() {
           platform: selectedPlatforms,
           photos: [file],
           scheduled_date: schedDate,
+          first_comment: fc,
+          media_type: mt,
         });
       } else {
         result = await uploadText({
@@ -211,6 +384,8 @@ export default function BrandPosting() {
           user: userId,
           platform: selectedPlatforms,
           scheduled_date: schedDate,
+          first_comment: fc,
+          media_type: mt,
         });
       }
 
@@ -269,19 +444,207 @@ export default function BrandPosting() {
     setCaption("");
     setSelectedPlatforms([]);
     clearFile();
-    setScheduling(false);
+    setSendMode("now");
     setScheduledTime("");
     setPlatformResults({});
+    setFirstComment("");
+    setPostType("feed");
+    setShowMoreOptions(false);
+    setAiCaptions([]);
+    setAiContext("");
+    setShowAiPrompt(false);
   };
 
   const canPost =
-    selectedPlatforms.length > 0 &&
-    (caption.trim().length > 0 || file) &&
-    !charOver &&
-    !posting;
+    sendMode === "draft"
+      ? caption.trim().length > 0 || file
+      : selectedPlatforms.length > 0 &&
+        (caption.trim().length > 0 || file) &&
+        !charOver &&
+        !posting;
 
   const hasResults = Object.keys(platformResults).length > 0;
 
+  const displayName = user?.user_metadata?.display_name || "RecurrentX";
+  const displayInitial = displayName[0]?.toUpperCase() || "R";
+
+  /* ---------------------------------------------------------------- */
+  /* Preview Renderers                                                 */
+  /* ---------------------------------------------------------------- */
+
+  const previewCaption = caption.trim() || "";
+  const previewUsername = displayName.toLowerCase().replace(/\s+/g, "");
+
+  const InstagramPreview = () => (
+    <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-3 py-2.5">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] p-[2px]">
+          <div className="w-full h-full rounded-full bg-white dark:bg-[#0F1117] flex items-center justify-center text-[10px] font-bold text-gray-700 dark:text-gray-300">
+            {displayInitial}
+          </div>
+        </div>
+        <span className="text-xs font-semibold text-gray-900 dark:text-white">{previewUsername}</span>
+        <MoreHorizontal className="h-4 w-4 text-gray-400 ml-auto" />
+      </div>
+      {/* Image */}
+      {filePreview ? (
+        <img src={filePreview} alt="Preview" className="w-full aspect-square object-cover" />
+      ) : file ? (
+        <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <FileVideo className="h-10 w-10 text-gray-400" />
+        </div>
+      ) : (
+        <div className="w-full aspect-square bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+          <ImagePlus className="h-10 w-10 text-gray-300 dark:text-gray-600" />
+        </div>
+      )}
+      {/* Actions */}
+      <div className="flex items-center gap-4 px-3 py-2.5">
+        <Heart className="h-5 w-5 text-gray-900 dark:text-white" />
+        <MessageCircle className="h-5 w-5 text-gray-900 dark:text-white" />
+        <Share2 className="h-5 w-5 text-gray-900 dark:text-white" />
+        <Bookmark className="h-5 w-5 text-gray-900 dark:text-white ml-auto" />
+      </div>
+      {/* Caption */}
+      <div className="px-3 pb-3">
+        {previewCaption ? (
+          <p className="text-xs text-gray-900 dark:text-gray-200 leading-relaxed">
+            <span className="font-semibold">{previewUsername}</span>{" "}
+            {previewCaption.length > 125
+              ? <>{previewCaption.slice(0, 125)}<span className="text-gray-400">... more</span></>
+              : previewCaption}
+          </p>
+        ) : (
+          <p className="text-xs text-gray-400 italic">Caption preview...</p>
+        )}
+      </div>
+    </div>
+  );
+
+  const XPreview = () => (
+    <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto p-4">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white text-sm font-bold shrink-0">
+          {displayInitial}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold text-gray-900 dark:text-white truncate">{displayName}</span>
+            <span className="text-xs text-gray-400">@{previewUsername}</span>
+          </div>
+          {previewCaption ? (
+            <p className="text-sm text-gray-900 dark:text-gray-200 mt-1 whitespace-pre-wrap leading-relaxed">
+              {previewCaption}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400 italic mt-1">Your post preview...</p>
+          )}
+          {previewCaption.length > 280 && (
+            <p className="text-xs text-red-500 font-medium mt-1.5">
+              {previewCaption.length}/280 — over X character limit
+            </p>
+          )}
+          {filePreview && (
+            <img src={filePreview} alt="Preview" className="w-full rounded-xl mt-3 border border-gray-200 dark:border-gray-700" />
+          )}
+          {/* Actions */}
+          <div className="flex items-center justify-between mt-3 text-gray-400 max-w-[240px]">
+            <MessageCircle className="h-4 w-4" />
+            <Repeat2 className="h-4 w-4" />
+            <Heart className="h-4 w-4" />
+            <Share2 className="h-4 w-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const TikTokPreview = () => (
+    <div className="bg-black rounded-2xl border border-gray-700 overflow-hidden max-w-[200px] mx-auto relative" style={{ height: 360 }}>
+      {/* Background */}
+      {filePreview ? (
+        <img src={filePreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-800 to-gray-900 flex items-center justify-center">
+          {file ? <FileVideo className="h-10 w-10 text-gray-500" /> : <ImagePlus className="h-10 w-10 text-gray-600" />}
+        </div>
+      )}
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
+      {/* Right actions */}
+      <div className="absolute right-3 bottom-24 flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center">
+          <Heart className="h-6 w-6 text-white" />
+          <span className="text-[10px] text-white mt-0.5">0</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <MessageCircle className="h-6 w-6 text-white" />
+          <span className="text-[10px] text-white mt-0.5">0</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <Share2 className="h-6 w-6 text-white" />
+          <span className="text-[10px] text-white mt-0.5">0</span>
+        </div>
+      </div>
+      {/* Bottom info */}
+      <div className="absolute bottom-3 left-3 right-14">
+        <p className="text-white text-xs font-semibold">@{previewUsername}</p>
+        {previewCaption ? (
+          <p className="text-white text-[10px] mt-1 leading-relaxed line-clamp-2">{previewCaption}</p>
+        ) : (
+          <p className="text-gray-400 text-[10px] mt-1 italic">Caption...</p>
+        )}
+      </div>
+    </div>
+  );
+
+  const FacebookPreview = () => (
+    <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-4 py-3">
+        <div className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-sm font-bold">
+          {displayInitial}
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">{displayName}</p>
+          <p className="text-[10px] text-gray-400">Just now · 🌐</p>
+        </div>
+      </div>
+      {/* Caption */}
+      <div className="px-4 pb-2">
+        {previewCaption ? (
+          <p className="text-sm text-gray-900 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{previewCaption}</p>
+        ) : (
+          <p className="text-sm text-gray-400 italic">Your post preview...</p>
+        )}
+      </div>
+      {/* Image */}
+      {filePreview && (
+        <img src={filePreview} alt="Preview" className="w-full" />
+      )}
+      {file && !filePreview && (
+        <div className="w-full aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+          <FileVideo className="h-10 w-10 text-gray-400" />
+        </div>
+      )}
+      {/* Actions */}
+      <div className="flex items-center border-t border-gray-200 dark:border-gray-700 mt-2">
+        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800">
+          <ThumbsUp className="h-4 w-4" /> Like
+        </button>
+        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800">
+          <MessageCircle className="h-4 w-4" /> Comment
+        </button>
+        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800">
+          <Share2 className="h-4 w-4" /> Share
+        </button>
+      </div>
+    </div>
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* Render                                                            */
   /* ---------------------------------------------------------------- */
 
   return (
@@ -342,7 +705,108 @@ export default function BrandPosting() {
                     return plat?.charLimit && caption.length > plat.charLimit;
                   })}
                 </p>
+
+                {/* AI Write Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (showAiPrompt) {
+                      setShowAiPrompt(false);
+                    } else {
+                      setAiCaptions([]);
+                      setShowAiPrompt(true);
+                    }
+                  }}
+                  disabled={aiLoading}
+                  className="flex items-center gap-1.5 text-xs font-medium text-[#6C5CE7] hover:text-[#5B4BD1] transition-colors disabled:opacity-50"
+                >
+                  {aiLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Write with AI
+                </button>
               </div>
+
+              {/* AI Prompt Popover */}
+              {showAiPrompt && (
+                <div className="mt-3 p-3 rounded-xl bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10 border border-[#6C5CE7]/20">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                    What's this post about? <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={aiContext}
+                    onChange={(e) => setAiContext(e.target.value)}
+                    placeholder="e.g. Behind the scenes at our military appreciation event..."
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 transition-all"
+                    onKeyDown={(e) => e.key === "Enter" && handleGenerateCaptions()}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGenerateCaptions}
+                    disabled={aiLoading || selectedPlatforms.length === 0}
+                    className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6C5CE7] text-white text-xs font-semibold hover:bg-[#5B4BD1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {aiLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5" /> Generate 3 Options
+                      </>
+                    )}
+                  </button>
+                  {selectedPlatforms.length === 0 && (
+                    <p className="text-[10px] text-amber-500 mt-1.5">Select platforms first so AI can optimize for them.</p>
+                  )}
+                </div>
+              )}
+
+              {/* AI Caption Options */}
+              {aiCaptions.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Pick a caption:</p>
+                  {aiCaptions.map((opt, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setCaption(opt.text);
+                        setAiCaptions([]);
+                      }}
+                      className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40 hover:bg-[#6C5CE7]/5 dark:hover:bg-[#6C5CE7]/10 transition-all group"
+                    >
+                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed line-clamp-4">
+                        {opt.text}
+                      </p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-[10px] text-gray-400">{opt.charCount} chars</span>
+                        <div className="flex gap-1.5">
+                          {Object.entries(opt.platformFit).map(([pid, fit]) => {
+                            const plat = PLATFORMS.find((p) => p.id === pid);
+                            return (
+                              <span
+                                key={pid}
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                                  fit === "good" && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
+                                  fit === "warning" && "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+                                  fit === "over" && "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+                                )}
+                              >
+                                {plat?.name ?? pid}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Media upload */}
@@ -453,50 +917,176 @@ export default function BrandPosting() {
                   })}
                 </div>
               )}
+
+              {/* Post Type selector (Instagram / TikTok) */}
+              {showPostType && (
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                    Post Type
+                  </label>
+                  <div className="inline-flex rounded-lg bg-gray-100 dark:bg-[#0F1117] p-0.5">
+                    {(["feed", "story", "reel"] as PostType[]).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setPostType(type)}
+                        className={cn(
+                          "px-4 py-1.5 rounded-md text-xs font-medium transition-all capitalize",
+                          postType === type
+                            ? "bg-white dark:bg-[#1A1D27] text-[#6C5CE7] shadow-sm"
+                            : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                        )}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Action buttons */}
-            <div className="flex items-center gap-3">
+            {/* More Options (collapsible) */}
+            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800">
               <button
                 type="button"
-                onClick={handlePost}
-                disabled={!canPost}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all",
-                  canPost
-                    ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                )}
+                onClick={() => setShowMoreOptions(!showMoreOptions)}
+                className="flex items-center justify-between w-full px-5 py-3.5"
               >
-                {posting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Posting...
-                  </>
-                ) : scheduling ? (
-                  <>
-                    <Clock className="h-4 w-4" /> Schedule Post
-                  </>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-gray-400" />
+                  More Options
+                </span>
+                {showMoreOptions ? (
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
                 ) : (
-                  <>
-                    <Send className="h-4 w-4" /> Post Now
-                  </>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
                 )}
               </button>
-              <button
-                type="button"
-                onClick={() => setScheduling(!scheduling)}
-                className={cn(
-                  "flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium border transition-all",
-                  scheduling
-                    ? "bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/30"
-                    : "bg-white dark:bg-[#1A1D27] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
-                )}
-              >
-                <Calendar className="h-4 w-4" /> Schedule
-              </button>
+              {showMoreOptions && (
+                <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-800">
+                  <div className="pt-4">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
+                      <Hash className="h-3.5 w-3.5" />
+                      First Comment
+                    </label>
+                    <textarea
+                      value={firstComment}
+                      onChange={(e) => setFirstComment(e.target.value)}
+                      placeholder="Great for hashtags on Instagram & TikTok"
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      This will be posted as the first comment on Instagram & TikTok.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {scheduling && (
+            {/* Send actions */}
+            <div className="flex items-center gap-3">
+              {/* Send button with dropdown */}
+              <div className="relative flex-1" ref={sendMenuRef}>
+                <div className="flex">
+                  <button
+                    type="button"
+                    onClick={handlePost}
+                    disabled={!canPost}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-l-xl text-sm font-semibold transition-all",
+                      canPost
+                        ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                    )}
+                  >
+                    {posting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Posting...
+                      </>
+                    ) : sendMode === "draft" ? (
+                      <>
+                        <Save className="h-4 w-4" /> Save Draft
+                      </>
+                    ) : sendMode === "schedule" ? (
+                      <>
+                        <Clock className="h-4 w-4" /> Schedule Post
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" /> Post Now
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSendMenu(!showSendMenu)}
+                    className={cn(
+                      "flex items-center justify-center px-3 py-3 rounded-r-xl border-l text-sm transition-all",
+                      canPost || sendMode === "draft"
+                        ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white border-[#5B4BD1]"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-gray-200 dark:border-gray-700"
+                    )}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Dropdown menu */}
+                {showSendMenu && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-20">
+                    <button
+                      type="button"
+                      onClick={() => { setSendMode("now"); setShowSendMenu(false); }}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors",
+                        sendMode === "now" && "text-[#6C5CE7] font-medium"
+                      )}
+                    >
+                      <Send className="h-4 w-4" />
+                      <div>
+                        <p className="font-medium">Post Immediately</p>
+                        <p className="text-[10px] text-gray-400">Publish to selected platforms now</p>
+                      </div>
+                      {sendMode === "now" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSendMode("schedule"); setShowSendMenu(false); }}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
+                        sendMode === "schedule" && "text-[#6C5CE7] font-medium"
+                      )}
+                    >
+                      <Calendar className="h-4 w-4" />
+                      <div>
+                        <p className="font-medium">Schedule for...</p>
+                        <p className="text-[10px] text-gray-400">Pick a date & time to publish</p>
+                      </div>
+                      {sendMode === "schedule" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSendMode("draft"); setShowSendMenu(false); }}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
+                        sendMode === "draft" && "text-[#6C5CE7] font-medium"
+                      )}
+                    >
+                      <Save className="h-4 w-4" />
+                      <div>
+                        <p className="font-medium">Save as Draft</p>
+                        <p className="text-[10px] text-gray-400">Save without posting</p>
+                      </div>
+                      {sendMode === "draft" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Schedule picker (inline) */}
+            {sendMode === "schedule" && (
               <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Schedule for
@@ -597,52 +1187,41 @@ export default function BrandPosting() {
 
           {/* RIGHT — Preview + Status */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Phone preview */}
+            {/* Per-platform preview */}
             <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 Preview
               </h3>
-              <div className="bg-gray-50 dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
-                {/* Mock phone header */}
-                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <div className="w-8 h-8 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white text-xs font-bold">
-                    {user?.user_metadata?.display_name?.[0]?.toUpperCase() || "R"}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                      {user?.user_metadata?.display_name || "RecurrentX"}
-                    </p>
-                    <p className="text-[10px] text-gray-400">Just now</p>
-                  </div>
-                </div>
 
-                {/* Image */}
-                {filePreview && (
-                  <img
-                    src={filePreview}
-                    alt="Preview"
-                    className="w-full aspect-square object-cover"
-                  />
-                )}
-                {file && !filePreview && (
-                  <div className="w-full aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <FileVideo className="h-10 w-10 text-gray-400" />
-                  </div>
-                )}
-
-                {/* Caption */}
-                <div className="px-4 py-3">
-                  {caption.trim() ? (
-                    <p className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                      {caption.length > 200 ? caption.slice(0, 200) + "..." : caption}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-400 italic">
-                      Your caption will appear here...
-                    </p>
-                  )}
-                </div>
+              {/* Platform tabs */}
+              <div className="flex rounded-lg bg-gray-100 dark:bg-[#0F1117] p-0.5 mb-4">
+                {(["instagram", "tiktok", "facebook", "x"] as PreviewTab[]).map((tab) => {
+                  const plat = PLATFORMS.find((p) => p.id === tab);
+                  const Icon = tab === "tiktok" ? TikTokIcon : plat?.icon;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setPreviewTab(tab)}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all",
+                        previewTab === tab
+                          ? "bg-white dark:bg-[#1A1D27] text-[#6C5CE7] shadow-sm"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                      )}
+                    >
+                      {Icon && <Icon className="h-3.5 w-3.5" />}
+                      {plat?.name ?? tab}
+                    </button>
+                  );
+                })}
               </div>
+
+              {/* Preview content */}
+              {previewTab === "instagram" && <InstagramPreview />}
+              {previewTab === "x" && <XPreview />}
+              {previewTab === "tiktok" && <TikTokPreview />}
+              {previewTab === "facebook" && <FacebookPreview />}
             </div>
 
             {/* Platform status */}
@@ -726,6 +1305,7 @@ export default function BrandPosting() {
                 <li>X (Twitter) has a 280-character limit</li>
                 <li>Instagram requires an image or video</li>
                 <li>Videos work best on TikTok and YouTube</li>
+                <li>Use "First Comment" for hashtags on Instagram</li>
                 <li>Schedule posts for peak engagement times</li>
               </ul>
             </div>
