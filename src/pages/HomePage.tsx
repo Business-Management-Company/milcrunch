@@ -622,13 +622,15 @@ export default function HomePage() {
 
       <main>
         {/* Hero */}
-        <section className="relative min-h-[95vh] flex items-center px-4 md:px-8 pt-20 pb-24 overflow-hidden">
+        <section className="relative min-h-screen flex items-center px-4 md:px-8 pt-20 pb-0 overflow-hidden">
           {/* Background image + dark overlay */}
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url("${HERO_BG_IMAGE}")` }}
           />
           <div className="absolute inset-0" style={{ background: "rgba(26, 26, 46, 0.55)" }} />
+          {/* Bottom gradient fade into next section */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 z-[5]" style={{ background: "linear-gradient(to bottom, transparent, #F9FAFB)" }} />
 
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
             {/* LEFT — Text content */}
