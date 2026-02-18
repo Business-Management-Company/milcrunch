@@ -4,6 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = "creator" | "brand" | "admin" | "super_admin";
 
+/** Map Supabase app_role enum → our simplified UserRole. */
+function mapAppRole(appRole: string | null): UserRole {
+  if (!appRole) return "creator";
+  switch (appRole) {
+    case "super_admin": return "super_admin";
+    case "org_admin": return "admin";
+    case "brand_admin":
+    case "event_planner":
+    case "sponsor": return "brand";
+    default: return "creator"; // judge, attendee, or unknown
+  }
+}
+
 export interface CreatorProfileRow {
   id: string;
   user_id: string;
@@ -19,9 +32,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  /** Set after loading when user exists; from profiles table + user_metadata */
+  /** Set after loading; from profiles + user_roles tables */
   creatorProfile: CreatorProfileRow | null;
-  /** Resolved role from profiles or user_metadata (includes super_admin). */
+  /** Resolved role from user_roles table (includes super_admin). */
   role: UserRole | null;
   isSuperAdmin: boolean;
   refetchCreatorProfile: () => Promise<void>;
@@ -44,24 +57,42 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Fetch the user's role from user_roles table → mapped to UserRole. */
+async function fetchUserRole(userId: string): Promise<UserRole> {
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) {
+    console.warn("[AuthContext] user_roles fetch failed:", error.message);
+  }
+  const appRole = (data?.role as string) ?? null;
+  const mapped = mapAppRole(appRole);
+  console.log("[AuthContext] fetchUserRole:", { userId, appRole, mapped });
+  return mapped;
+}
+
 async function fetchCreatorProfile(userId: string, userMeta: Record<string, unknown> = {}): Promise<CreatorProfileRow | null> {
+  // 1. Get role from user_roles table
+  const role = await fetchUserRole(userId);
+
+  // 2. Get basic profile from profiles table
   const { data } = await supabase
     .from("profiles")
     .select("id, user_id, full_name, bio, military_branch")
     .eq("user_id", userId)
     .maybeSingle();
 
-  // Build profile from profiles table + user_metadata
-  // Even without a profiles row, user_metadata may have role/onboarding data
   const meta = userMeta ?? {};
-  if (!data && !meta.role && !meta.onboarding_step) return null;
 
+  // Return profile with role from user_roles + data from profiles + metadata
   return {
     id: (data?.id as string) ?? userId,
     user_id: userId,
     handle: (meta.handle as string) ?? null,
     display_name: (data?.full_name as string) ?? (meta.full_name as string) ?? null,
-    role: (meta.role as UserRole) ?? "creator",
+    role,
     onboarding_step: (meta.onboarding_step as number) ?? 0,
     onboarding_completed: (meta.onboarding_completed as boolean) ?? false,
   };
@@ -79,7 +110,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setCreatorProfile(null);
       return;
     }
-    // Refresh user to get latest metadata
     const { data: { user: freshUser } } = await supabase.auth.getUser();
     const meta = freshUser?.user_metadata ?? user.user_metadata ?? {};
     const profile = await fetchCreatorProfile(user.id, meta);
@@ -151,7 +181,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: opts.displayName,
-          role: "creator",
           audience_type: opts.audienceType,
           branch: opts.branch,
         },
@@ -203,16 +232,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return null;
     if (user.email === "demo@recurrentx.com") return "/brand/dashboard";
 
-    // Wait for profile fetch to finish before deciding
+    // Wait for profile fetch (including user_roles query) to finish
     if (!profileLoaded) return null;
 
-    // Check both user_metadata and profiles for role — metadata may be unset
-    const role: UserRole =
-      (user.user_metadata?.role as UserRole) ||
-      creatorProfile?.role ||
-      "creator";
+    // Role comes from user_roles table (via creatorProfile.role)
+    const role: UserRole = creatorProfile?.role || "creator";
 
-    console.log("[getRedirectPath] User:", user.email, "| role:", role, "| user_metadata.role:", user.user_metadata?.role, "| profile?.role:", creatorProfile?.role, "| onboarding_complete:", creatorProfile?.onboarding_completed);
+    console.log("[getRedirectPath] User:", user.email, "| role:", role, "| onboarding_complete:", creatorProfile?.onboarding_completed);
 
     if (role === "super_admin") return "/admin";
     if (role === "admin" || role === "brand") return "/brand/dashboard";
@@ -221,10 +247,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return "/creator/dashboard";
   }, [user, creatorProfile, profileLoaded]);
 
-  const resolvedRole: UserRole =
-    (user?.user_metadata?.role as UserRole) ||
-    creatorProfile?.role ||
-    "creator";
+  const resolvedRole: UserRole = creatorProfile?.role || "creator";
   const isSuperAdmin = resolvedRole === "super_admin";
 
   return (

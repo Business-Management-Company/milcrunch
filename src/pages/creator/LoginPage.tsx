@@ -85,16 +85,25 @@ export default function LoginPage() {
       return;
     }
 
-    // Role comes from user_metadata (profiles table doesn't store role)
-    const role = user?.user_metadata?.role || "creator";
+    // Role comes from user_roles table
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user?.id)
+      .maybeSingle();
+    const appRole = (roleRow?.role as string) ?? null;
+    // Map app_role enum → routing role
+    const isSuperAdmin = appRole === "super_admin";
+    const isAdminish = ["org_admin", "brand_admin", "event_planner", "sponsor"].includes(appRole ?? "");
     const onboardingCompleted = user?.user_metadata?.onboarding_completed ?? false;
-    console.log("[LoginPage handleLogin] User:", user?.email, "| role:", role, "| onboarding_completed:", onboardingCompleted);
 
-    if (role === "super_admin") {
+    console.log("[LoginPage handleLogin] User:", user?.email, "| appRole:", appRole, "| onboarding_completed:", onboardingCompleted);
+
+    if (isSuperAdmin) {
       navigate("/admin", { replace: true });
       return;
     }
-    if (role === "admin" || role === "brand") {
+    if (isAdminish) {
       navigate("/brand/dashboard", { replace: true });
       return;
     }

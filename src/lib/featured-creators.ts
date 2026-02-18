@@ -1,6 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { generateProfileSlug, uploadCreatorImage } from "@/lib/directories";
 
+// NOTE: The featured_creators table does not yet exist in Supabase.
+// All fetch functions below will return empty results until it is created.
+// To create it, run the migration in supabase/migrations/20260208180000_featured_creators.sql
+// via the Supabase Dashboard → SQL Editor.
+
 export interface FeaturedCreator {
   id: string;
   display_name: string;

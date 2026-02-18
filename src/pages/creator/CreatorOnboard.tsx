@@ -82,10 +82,14 @@ export default function CreatorOnboard() {
       navigate("/brand/dashboard", { replace: true });
       return;
     }
-    const role = (user.user_metadata?.role as string) ?? "creator";
-    if (role === "super_admin" || role === "admin" || role === "brand") {
-      if (role === "super_admin") navigate("/admin", { replace: true });
-      else navigate("/brand/dashboard", { replace: true });
+    // Use role from creatorProfile (fetched from user_roles table)
+    const role = creatorProfile?.role ?? "creator";
+    if (role === "super_admin") {
+      navigate("/admin", { replace: true });
+      return;
+    }
+    if (role === "admin" || role === "brand") {
+      navigate("/brand/dashboard", { replace: true });
       return;
     }
     if (creatorProfile?.onboarding_completed) {
