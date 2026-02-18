@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -78,11 +78,15 @@ const CREATOR_TYPES = [
   { value: "ambassadors", label: "Brand Ambassadors", icon: "🤝", keywords: ["ambassador", "partner", "sponsored", "affiliate", "brand rep", "collab"], links: [], platformOverride: null },
 ] as const;
 
+const ALL_SOCIAL_PLATFORMS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin"] as const;
+
 const PLATFORM_URLS: Record<string, (u: string) => string> = {
   instagram: (u) => `https://instagram.com/${u}`,
   tiktok: (u) => `https://tiktok.com/@${u}`,
   youtube: (u) => `https://youtube.com/@${u}`,
   twitter: (u) => `https://x.com/${u}`,
+  facebook: (u) => `https://facebook.com/${u}`,
+  linkedin: (u) => `https://linkedin.com/in/${u}`,
 };
 
 const PLATFORM_SVGS: Record<string, React.ReactNode> = {
@@ -114,6 +118,16 @@ const PLATFORM_SVGS: Record<string, React.ReactNode> = {
   twitter: (
     <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px] text-black dark:text-white">
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  ),
+  facebook: (
+    <svg viewBox="0 0 24 24" className="h-5 w-5">
+      <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  ),
+  linkedin: (
+    <svg viewBox="0 0 24 24" className="h-5 w-5">
+      <path fill="#0A66C2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
     </svg>
   ),
 };
@@ -360,7 +374,7 @@ type Branch = (typeof BRANCHES)[number];
 
 function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(0)}K`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
   return String(count);
 }
 
@@ -1861,12 +1875,19 @@ const BrandDiscover = () => {
                       <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
                         <th className="p-3 w-8"></th>
                         <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Creator</th>
-                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Platforms</th>
+                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Social Links</th>
                         <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Followers</th>
-                        <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Engage</th>
                         <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">Email</th>
-                        <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">Links</th>
-                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Hashtags</th>
+                        <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">
+                          <span className="inline-flex items-center gap-1">
+                            ER
+                            <span title="Engagement Rate: average interactions per post divided by follower count">
+                              <Info className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
+                            </span>
+                          </span>
+                        </th>
+                        <th className="text-center p-3 font-medium text-gray-500 dark:text-gray-400">External Links Used</th>
+                        <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Frequently Used Hashtags</th>
                         <th className="p-3 w-24"></th>
                       </tr>
                     </thead>
@@ -1875,6 +1896,7 @@ const BrandDiscover = () => {
                         const creator = getMergedCreator(baseCreator);
                         if (_idx === 0) console.log("[BrandDiscover] First creator (table):", creator);
                         const socialPlatforms = creator.socialPlatforms ?? [];
+                        const socialSet = new Set(socialPlatforms.map((p) => p.toLowerCase()));
                         const linkCount = (creator.externalLinks ?? []).length;
                         const hashtags = creator.hashtags ?? [];
                         const pending = enrichRunning && !enrichCache[baseCreator.id] && !!baseCreator.username;
@@ -1885,6 +1907,7 @@ const BrandDiscover = () => {
                             className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors"
                             onClick={() => { setProfileCreator(creator); setProfileModalOpen(true); }}
                           >
+                            {/* Checkbox */}
                             <td className="p-3" onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 checked={selectedIds.has(creator.id)}
@@ -1892,6 +1915,7 @@ const BrandDiscover = () => {
                                 aria-label={`Select ${creator.name}`}
                               />
                             </td>
+                            {/* Creator */}
                             <td className="p-3">
                               <div className="flex items-center gap-3">
                                 <div className="relative shrink-0">
@@ -1905,36 +1929,49 @@ const BrandDiscover = () => {
                                     {creator.name}
                                     {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
                                   </p>
-                                  <p className="text-xs text-[#6C5CE7] truncate">{creator.username ? `@${creator.username}` : ""}</p>
                                   {creator.location && (
-                                    <p className="text-xs text-gray-400 truncate flex items-center gap-0.5"><MapPin className="h-3 w-3 shrink-0" />{creator.location}</p>
+                                    <p className="text-xs text-gray-400 truncate">{creator.location}</p>
                                   )}
                                 </div>
                               </div>
                             </td>
+                            {/* Social Links — all 6 platforms */}
                             <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1">
-                                {socialPlatforms.slice(0, 5).map((p) => (
-                                  <PlatformIcon key={p} platform={p} username={creator.username} />
-                                ))}
-                                {pending && socialPlatforms.length <= 1 && <EnrichShimmer />}
+                              <div className="flex items-center gap-0.5">
+                                {pending && socialSet.size <= 1 ? (
+                                  <EnrichShimmer />
+                                ) : (
+                                  ALL_SOCIAL_PLATFORMS.map((p) =>
+                                    socialSet.has(p) ? (
+                                      <PlatformIcon key={p} platform={p} username={creator.username} />
+                                    ) : (
+                                      <span
+                                        key={p}
+                                        className="inline-flex h-6 w-6 items-center justify-center rounded-md opacity-20"
+                                        title={p}
+                                      >
+                                        {PLATFORM_SVGS[p] ?? <span className="text-xs font-bold text-gray-400">{p[0]?.toUpperCase()}</span>}
+                                      </span>
+                                    )
+                                  )
+                                )}
                               </div>
                             </td>
+                            {/* Followers */}
                             <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowers(creator.followers)}</td>
-                            <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof creator.engagementRate === "number" ? `${creator.engagementRate.toFixed(2)}%` : "—"}</td>
+                            {/* Email */}
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               {contactEmails[creator.id] ? (
-                                <a href={`mailto:${contactEmails[creator.id]}`} className="text-xs text-blue-600 hover:underline truncate max-w-[140px] inline-block" title={contactEmails[creator.id]}>
-                                  {contactEmails[creator.id]}
+                                <a href={`mailto:${contactEmails[creator.id]}`} title={contactEmails[creator.id]} className="inline-flex items-center justify-center">
+                                  <Mail className="h-4 w-4 text-blue-500 hover:text-blue-600" />
                                 </a>
                               ) : creator.hasEmail ? (
                                 <button
                                   onClick={() => setContactConfirmCreator(creator)}
-                                  className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                                  className="inline-flex items-center justify-center"
                                   title="Get email (1.03 credits)"
                                 >
-                                  <Mail className="h-3.5 w-3.5" />
-                                  Get
+                                  <Mail className="h-4 w-4 text-purple-500 hover:text-purple-600" />
                                 </button>
                               ) : pending ? (
                                 <div className="mx-auto"><EnrichShimmer /></div>
@@ -1942,10 +1979,13 @@ const BrandDiscover = () => {
                                 <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
                             </td>
+                            {/* ER */}
+                            <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof creator.engagementRate === "number" ? `${creator.engagementRate.toFixed(2)}%` : "—"}</td>
+                            {/* External Links Used */}
                             <td className="p-3 text-center">
                               {linkCount > 0 ? (
-                                <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
-                                  <ExternalLink className="h-3.5 w-3.5" />
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[11px] font-medium px-2.5 py-0.5">
+                                  <LinkIcon className="h-3 w-3" />
                                   {linkCount}
                                 </span>
                               ) : pending ? (
@@ -1954,16 +1994,19 @@ const BrandDiscover = () => {
                                 <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
                             </td>
+                            {/* Frequently Used Hashtags */}
                             <td className="p-3">
                               {hashtags.length > 0 ? (
-                                <div className="flex items-center gap-1 flex-wrap">
+                                <div className="flex items-center gap-1 flex-nowrap">
                                   {hashtags.slice(0, 2).map((tag) => (
-                                    <span key={tag} className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[11px] px-2 py-0.5">
+                                    <span key={tag} className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[11px] px-2 py-0.5 max-w-[110px] truncate">
                                       #{tag}
                                     </span>
                                   ))}
                                   {hashtags.length > 2 && (
-                                    <span className="text-[11px] text-gray-400">+{hashtags.length - 2}</span>
+                                    <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-[11px] px-2 py-0.5 shrink-0">
+                                      +{hashtags.length - 2}
+                                    </span>
                                   )}
                                 </div>
                               ) : pending ? (
@@ -1972,6 +2015,7 @@ const BrandDiscover = () => {
                                 <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
                             </td>
+                            {/* Actions */}
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1">
                                 {isCreatorInList(creator.id) ? (
