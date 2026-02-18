@@ -118,7 +118,7 @@ import SocialMonitoring from "./pages/brand/SocialMonitoring";
 import AttendeeSchedule from "./pages/attendee/AttendeeSchedule";
 import AttendeeSpeakers from "./pages/attendee/AttendeeSpeakers";
 import AttendeeSponsors from "./pages/attendee/AttendeeSponsors";
-import AttendeeInfo from "./pages/attendee/AttendeeInfo";
+import AttendeeCommunityPage from "./pages/attendee/AttendeeCommunityPage";
 import AttendeeProfilePage from "./pages/attendee/AttendeeProfilePage";
 import AttendeeRegister from "./pages/attendee/AttendeeRegister";
 import SponsorApply from "./pages/SponsorApply";
@@ -254,8 +254,8 @@ const App = () => (
               {/* Attendee experience (mobile-first PWA) */}
               <Route path="/attend/:eventSlug" element={<AttendeeSchedule />} />
               <Route path="/attend/:eventSlug/speakers" element={<AttendeeSpeakers />} />
+              <Route path="/attend/:eventSlug/community" element={<AttendeeCommunityPage />} />
               <Route path="/attend/:eventSlug/sponsors" element={<AttendeeSponsors />} />
-              <Route path="/attend/:eventSlug/info" element={<AttendeeInfo />} />
               <Route path="/attend/:eventSlug/profile" element={<AttendeeProfilePage />} />
               <Route path="/attend/:eventSlug/register" element={<AttendeeRegister />} />
               {/* Creator bio pages (public, with CreatorPixel tracking) */}
