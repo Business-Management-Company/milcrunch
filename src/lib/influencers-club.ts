@@ -283,7 +283,9 @@ export async function searchCreators(
     throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
   }
 
-  const platformValue = (options.platform ?? "instagram").toLowerCase();
+  // "all" is a UI-only value — the API needs a real platform name; default to "instagram"
+  const rawPlatform = (options.platform ?? "instagram").toLowerCase();
+  const platformValue = rawPlatform === "all" ? "instagram" : rawPlatform;
   const number_of_followers = options.number_of_followers ?? { min: null, max: null };
   const engagement_percent = options.engagement_percent ?? { min: null, max: null };
   const keywords_in_bio = options.keywords_in_bio != null && options.keywords_in_bio.length > 0
@@ -307,6 +309,7 @@ export async function searchCreators(
     },
   };
 
+  console.log("[Influencers.club] POST", DISCOVERY_URL);
   console.log("[Influencers.club] Request body:", JSON.stringify(body, null, 2));
 
   const res = await fetch(DISCOVERY_URL, {
@@ -542,7 +545,8 @@ export async function searchByUsername(
     email_required: "preferred",
   };
 
-  console.log("[usernameSearch] Exact search_value being sent:", handle, "| platform:", platform.toLowerCase());
+  console.log("[usernameSearch] POST", RAW_ENRICH_URL);
+  console.log("[usernameSearch] Body:", JSON.stringify(body, null, 2));
 
   const res = await fetch(RAW_ENRICH_URL, {
     method: "POST",
@@ -599,7 +603,8 @@ export async function searchLookalike(
     email_required: "preferred",
   };
 
-  console.log("[lookalikeSearch] Enriching handle with lookalikes:", handle);
+  console.log("[lookalikeSearch] POST", RAW_ENRICH_URL);
+  console.log("[lookalikeSearch] Body:", JSON.stringify(body, null, 2));
 
   const res = await fetch(RAW_ENRICH_URL, {
     method: "POST",

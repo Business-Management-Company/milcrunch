@@ -336,6 +336,7 @@ async function setCachedEnrichment(username: string, enrichment: EnrichedProfile
 }
 
 const PLATFORMS = [
+  { value: "all", label: "All Platforms" },
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
   { value: "youtube", label: "YouTube" },
@@ -405,7 +406,7 @@ const BrandDiscover = () => {
   const [searchMode, setSearchMode] = useState<"keyword" | "username" | "lookalike">("keyword");
   const [creatorType, setCreatorType] = useState<string>("all");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [platform, setPlatform] = useState<string>("instagram");
+  const [platform, setPlatform] = useState<string>("all");
   const [followersRange, setFollowersRange] = useState<string>("any");
   const [engagementMin, setEngagementMin] = useState<string>("any");
   const [locationFilter, setLocationFilter] = useState("");
@@ -668,7 +669,9 @@ const BrandDiscover = () => {
     const ctKeywords = ctConfig?.keywords ?? [];
     const allBioKeys = [...branchKeys, ...bioKeys, ...ctKeywords];
     const keywords_in_bio = allBioKeys.length > 0 ? allBioKeys : [""];
-    const effectivePlatform = ctConfig?.platformOverride ?? platform;
+    // For keyword searches, the platform dropdown only controls username search type —
+    // always use "instagram" (broadest data) unless a creator type overrides it.
+    const effectivePlatform = ctConfig?.platformOverride ?? "instagram";
     const options = {
       platform: effectivePlatform.toLowerCase(),
       number_of_followers: {
@@ -700,7 +703,7 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
-  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, user, refreshCredits]);
+  }, [searchQuery, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, user, refreshCredits]);
 
   // Fire search after auto-load applies filters (runs once after state updates)
   useEffect(() => {
@@ -721,8 +724,10 @@ const BrandDiscover = () => {
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
     const keywords_in_bio = selectedBranches.size > 0 ? Array.from(selectedBranches) : [""];
+    const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
+    const effectivePlatform = ctConfig?.platformOverride ?? "instagram";
     searchCreators(q, {
-      platform: platform.toLowerCase(),
+      platform: effectivePlatform.toLowerCase(),
       number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
       engagement_percent: { min: engagementOpt?.min ?? null, max: null },
       keywords_in_bio,
@@ -741,7 +746,7 @@ const BrandDiscover = () => {
       })
       .catch((err) => console.warn("[BrandDiscover] Load more failed:", err))
       .finally(() => setLoadingMore(false));
-  }, [searchQuery, apiResults, currentPage, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter]);
+  }, [searchQuery, apiResults, currentPage, creatorType, followersRange, engagementMin, sortBy, selectedBranches, locationFilter]);
 
   // Username / Lookalike search handler
   const runModeSearch = useCallback(() => {
@@ -763,7 +768,8 @@ const BrandDiscover = () => {
     setSmartFiltersApplied([]);
 
     const searchFn = searchMode === "username" ? searchByUsername : searchLookalike;
-    const currentPlatform = platform.toLowerCase();
+    // For username/lookalike, use selected platform; default to "instagram" when "all"
+    const currentPlatform = (platform === "all" ? "instagram" : platform).toLowerCase();
 
     searchFn(q, currentPlatform)
       .then((result) => {
@@ -863,7 +869,8 @@ const BrandDiscover = () => {
     setEnrichRawCache({});
     setEnrichingIds(new Set());
     const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
-    const effPlatform = ctConfig?.platformOverride ?? (parsed.platform || platform);
+    // For keyword searches, ignore the platform dropdown — use "instagram" unless creator type or smart-parse overrides
+    const effPlatform = ctConfig?.platformOverride ?? (parsed.platform || "instagram");
     const effFollowers = parsed.followersRange || followersRange;
     const effEngagement = parsed.engagementMin || engagementMin;
     const effBranches = parsed.branches.length > 0 ? parsed.branches : Array.from(selectedBranches);
@@ -913,7 +920,7 @@ const BrandDiscover = () => {
     setSearchQuery("");
     setSearchMode("keyword");
     setCreatorType("all");
-    setPlatform("instagram");
+    setPlatform("all");
     setFollowersRange("any");
     setEngagementMin("any");
     setLocationFilter("");
