@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateConnectUrl } from "@/services/upload-post";
 import {
@@ -19,6 +19,7 @@ export function useUploadPostConnect() {
   const [connectUrl, setConnectUrl] = useState<string | null>(null);
   const [connectLoading, setConnectLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const initDone = useRef<string | null>(null);
 
   const loadAccounts = useCallback(async () => {
     if (!userId) return;
@@ -82,12 +83,14 @@ export function useUploadPostConnect() {
     }, 1500);
   }, [connectUrl, syncAccounts]);
 
-  // Init on mount
+  // Init on mount — run only once per userId
   useEffect(() => {
     if (!userId) {
       setLoading(false);
       return;
     }
+    if (initDone.current === userId) return;
+    initDone.current = userId;
     setLoading(true);
     (async () => {
       await ensureProfileAndGetUrl();
