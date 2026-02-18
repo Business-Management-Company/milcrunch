@@ -230,7 +230,11 @@ export default function LoginPage() {
               setLoading(true);
               const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
               setLoading(false);
-              if (error) toast.error("Demo login failed. Please try again.");
+              if (error) {
+                toast.error("Demo login failed. Please try again.");
+              } else {
+                navigate("/brand/dashboard", { replace: true });
+              }
             }}
           >
             🎯 Explore Demo

@@ -62,6 +62,11 @@ export default function CreatorOnboard() {
       navigate("/login");
       return;
     }
+    // Demo user should never see onboarding
+    if (user.email === "demo@recurrentx.com") {
+      navigate("/brand/dashboard", { replace: true });
+      return;
+    }
     const role = (user.user_metadata?.role as string) ?? "creator";
     if (role === "super_admin" || role === "admin" || role === "brand") {
       if (role === "super_admin") navigate("/admin", { replace: true });
