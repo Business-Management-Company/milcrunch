@@ -869,25 +869,6 @@ function OverviewTab({ dark }: { dark: boolean }) {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="text-center pb-4">
-        <a
-          href="mailto:andrew@recurrentx.com?subject=RecurrentX%20Demo%20Request"
-          className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold transition-colors text-base"
-        >
-          <Mail className="h-5 w-5" />
-          Schedule a Demo
-          <ArrowRight className="h-4 w-4" />
-        </a>
-        <p
-          className={cn(
-            "text-xs mt-3 transition-colors duration-300",
-            dark ? "text-gray-600" : "text-[#9CA3AF]"
-          )}
-        >
-          andrew@recurrentx.com
-        </p>
-      </section>
     </div>
   );
 }
@@ -946,22 +927,14 @@ function PdxTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-400" : "text-[#6B7280]"
           )}
         >
-          A turnkey live-stage production that drops into any military event — delivering
-          8+ hours of creator-led sessions, multi-platform streaming, and sponsor
+          A turnkey live-stage production that drops into any event or conference — delivering
+          non-stop creator-led sessions, multi-platform streaming, and sponsor
           activations that turn dead stage time into a six-figure revenue engine.
         </p>
       </section>
 
       {/* Visual Timeline */}
       <section className="max-w-4xl mx-auto">
-        <h3
-          className={cn(
-            "text-lg font-bold text-center mb-8 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          7 Phases. One Seamless Pipeline.
-        </h3>
         <div className="relative">
           {/* Vertical line */}
           <div
@@ -1326,7 +1299,6 @@ function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean 
 /* ------------------------------------------------------------------ */
 
 function EventsAttendeeTab({ dark }: { dark: boolean }) {
-  const brief = SOLUTION_BRIEFS["Events & Attendee App"];
   const kbSlug = TAB_KB_CATEGORY["Events & Attendee App"];
 
   return (
@@ -1351,32 +1323,49 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
         </div>
       )}
 
-      {/* Video placeholder */}
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
-          <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
-        </div>
-        <h3
-          className={cn(
-            "text-xl font-bold mb-2 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          Events &amp; Attendee App
-        </h3>
+      {/* Intro paragraph */}
+      <div className="max-w-[760px] mx-auto py-12">
         <p
           className={cn(
-            "text-sm max-w-md transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
+            "text-base leading-relaxed transition-colors duration-300",
+            dark ? "text-gray-300" : "text-[#374151]"
           )}
         >
-          See how RecurrentX powers end-to-end event creation, ticketing, check-in, and a mobile-first attendee experience.
+          RecurrentX replaces platforms like Whova with a mobile-first PWA attendee app that works
+          before, during, and after every event — no App Store required. Attendees get instant QR
+          check-in, a live personal agenda builder, real-time community feed, and QR-based
+          networking. Sponsors and organizers get persistent engagement long after the event ends —
+          turning a 3-day conference into a year-round community.
         </p>
-        <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
-      </div>
 
-      {/* Solution Brief */}
-      {brief && <SolutionBrief data={brief} dark={dark} />}
+        {/* Screenshot mockups */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
+          <div>
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+              <img
+                src="/screenshots/event-admin-dashboard.png"
+                alt="Event Management Dashboard — MIC 2026 event detail page with event name, description, dates, venue, and cover image fields"
+                className="w-full object-cover"
+              />
+            </div>
+            <p className={cn("text-xs text-center mt-2", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+              Event Management Dashboard
+            </p>
+          </div>
+          <div>
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+              <img
+                src="/screenshots/attendee-app-preview.png"
+                alt="Attendee App tab showing admin settings on the left and Live Attendee Preview phone mockup on the right"
+                className="w-full object-cover"
+              />
+            </div>
+            <p className={cn("text-xs text-center mt-2", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+              Live Attendee App Preview
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* PWA Showcase */}
       <section className="mt-16 max-w-4xl mx-auto">
@@ -1870,12 +1859,7 @@ export default function Prospectus() {
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
         {activeTab === "Overview" && <OverviewTab dark={darkMode} />}
         {activeTab === "PDX Experience" && (
-          <>
-            <PdxTab dark={darkMode} />
-            {SOLUTION_BRIEFS["PDX Experience"] && (
-              <SolutionBrief data={SOLUTION_BRIEFS["PDX Experience"]} dark={darkMode} />
-            )}
-          </>
+          <PdxTab dark={darkMode} />
         )}
         {activeTab === "Events & Attendee App" && (
           <EventsAttendeeTab dark={darkMode} />
@@ -1896,7 +1880,7 @@ export default function Prospectus() {
           darkMode ? "border-white/[0.06]" : "border-[#E5E7EB]"
         )}
       >
-        <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 text-center">
           <span
             className={cn(
               "text-xs transition-colors duration-300",
@@ -1905,12 +1889,6 @@ export default function Prospectus() {
           >
             &copy; {new Date().getFullYear()} RecurrentX &middot; Confidential
           </span>
-          <a
-            href="mailto:andrew@recurrentx.com"
-            className="text-xs text-[#6C5CE7] hover:underline"
-          >
-            andrew@recurrentx.com
-          </a>
         </div>
       </footer>
     </div>
