@@ -43,6 +43,7 @@ interface NavItem {
   icon: LucideIcon;
   badge?: string;
   tooltip?: string;
+  external?: boolean;
 }
 
 interface NavSection {
@@ -143,6 +144,7 @@ const SUPER_ADMIN_SECTION: NavSection = {
     { href: "/admin/business-overview", label: "Business Overview", icon: Briefcase },
     { href: "/admin/tasks", label: "Task Board", icon: KanbanSquare },
     { href: "/admin/prospectus-access", label: "Prospectus Access", icon: ShieldCheck },
+    { href: "/prospectus", label: "View Prospectus", icon: FileText, external: true },
   ],
 };
 
@@ -231,35 +233,56 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   {section.items.map((item) => {
                     const active = isActive(item.href);
                     const Icon = item.icon;
+                    const linkClasses = cn(
+                      "flex items-center gap-3 mx-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      active
+                        ? "bg-purple-50 text-[#6C5CE7] border-l-[3px] border-[#6C5CE7] pl-[9px]"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                      collapsed && "justify-center px-2 mx-1"
+                    );
+                    const linkContent = (
+                      <>
+                        <Icon
+                          className={cn(
+                            "h-[18px] w-[18px] shrink-0",
+                            active ? "text-[#6C5CE7]" : "text-gray-400"
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        {!collapsed && (
+                          <span className="truncate">{item.label}</span>
+                        )}
+                        {!collapsed && item.external && (
+                          <ExternalLink className="ml-auto h-3.5 w-3.5 text-gray-400" />
+                        )}
+                        {!collapsed && item.badge && (
+                          <span className="ml-auto text-[10px] font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap">
+                            {item.badge}
+                          </span>
+                        )}
+                      </>
+                    );
                     return (
                       <li key={item.href + item.label} className="relative group/nav">
-                        <Link
-                          to={item.href}
-                          title={collapsed ? item.label : undefined}
-                          className={cn(
-                            "flex items-center gap-3 mx-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                            active
-                              ? "bg-purple-50 text-[#6C5CE7] border-l-[3px] border-[#6C5CE7] pl-[9px]"
-                              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
-                            collapsed && "justify-center px-2 mx-1"
-                          )}
-                        >
-                          <Icon
-                            className={cn(
-                              "h-[18px] w-[18px] shrink-0",
-                              active ? "text-[#6C5CE7]" : "text-gray-400"
-                            )}
-                            strokeWidth={1.75}
-                          />
-                          {!collapsed && (
-                            <span className="truncate">{item.label}</span>
-                          )}
-                          {!collapsed && item.badge && (
-                            <span className="ml-auto text-[10px] font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap">
-                              {item.badge}
-                            </span>
-                          )}
-                        </Link>
+                        {item.external ? (
+                          <a
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={collapsed ? item.label : undefined}
+                            className={linkClasses}
+                          >
+                            {linkContent}
+                          </a>
+                        ) : (
+                          <Link
+                            to={item.href}
+                            title={collapsed ? item.label : undefined}
+                            className={linkClasses}
+                          >
+                            {linkContent}
+                          </Link>
+                        )}
                         {/* Custom tooltip */}
                         {!collapsed && item.tooltip && (
                           <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 opacity-0 group-hover/nav:opacity-100 transition-opacity delay-200 z-50">
