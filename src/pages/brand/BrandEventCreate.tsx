@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Check, Plus, Trash2, GripVertical, Loader2,
@@ -6,8 +6,10 @@ import {
   MessageCircle, MapPin, LogOut, Radio, Film, Sparkles, Copy,
   Target, Type, Clapperboard, Palette, Captions, Scissors, Clock,
   Youtube, Facebook, Twitter, Twitch, Linkedin, Wifi, Monitor, Video,
+  ImageIcon, Upload,
 } from "lucide-react";
 import ImageUpload from "@/components/cms/ImageUpload";
+import AIBannerModal from "@/components/brand/AIBannerModal";
 import CityAutocomplete from "@/components/CityAutocomplete";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -175,6 +177,9 @@ const BrandEventCreate = () => {
   const [coverUrl, setCoverUrl] = useState("");
   const [capacity, setCapacity] = useState("");
   const [streamingEnabled, setStreamingEnabled] = useState(false);
+  const [showAIBanner, setShowAIBanner] = useState(false);
+  const bannerFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   /* Step 1 — tickets */
   const [tickets, setTickets] = useState<TicketItem[]>([
@@ -281,6 +286,54 @@ const BrandEventCreate = () => {
   const removeScheduleItem = (key: string) => setProductionSchedule((prev) => prev.filter((s) => s.key !== key));
   const updateScheduleItem = (key: string, field: string, value: string) =>
     setProductionSchedule((prev) => prev.map((s) => (s.key === key ? { ...s, [field]: value } : s)));
+
+  /* ---- banner upload handler ---- */
+  const handleBannerUpload = useCallback(
+    async (file: File) => {
+      const ACCEPTED = ["image/png", "image/jpeg", "image/webp"];
+      if (!ACCEPTED.includes(file.type)) {
+        toast.error("Only PNG, JPG, and WEBP files are accepted.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File must be under 5 MB.");
+        return;
+      }
+      setUploadingBanner(true);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const resp = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileBase64: base64,
+            contentType: file.type,
+            bucket: "event-images",
+            folder: "events",
+            userId: user?.id,
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Upload failed");
+        setCoverUrl(data.url);
+        toast.success("Banner uploaded!");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Upload failed";
+        toast.error(msg);
+      } finally {
+        setUploadingBanner(false);
+      }
+    },
+    [user?.id]
+  );
 
   /* ---- resolve org + brand (required FK columns on events) ---- */
   const resolveOrgAndBrand = async (): Promise<{ orgId: string; brandId: string } | null> => {
@@ -755,14 +808,72 @@ const BrandEventCreate = () => {
                   className="mt-1"
                 />
               </div>
+              {/* Event Banner */}
               <div className="md:col-span-2">
-                <ImageUpload
-                  label="Cover Image"
-                  value={coverUrl}
-                  onChange={(url) => setCoverUrl(url)}
-                  folder="events"
-                />
+                <Label className="mb-2 block">Event Banner</Label>
+                {coverUrl && (
+                  <div className="relative mb-3 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <img
+                      src={coverUrl}
+                      alt="Event banner preview"
+                      className="w-full h-48 object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                      onClick={() => setCoverUrl("")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => setShowAIBanner(true)}
+                    className="bg-purple-500 hover:bg-purple-600 text-white"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate with AI
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => bannerFileRef.current?.click()}
+                    disabled={uploadingBanner}
+                  >
+                    {uploadingBanner ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Upload Image
+                  </Button>
+                  <input
+                    ref={bannerFileRef}
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleBannerUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
               </div>
+
+              {/* AI Banner Modal */}
+              <AIBannerModal
+                open={showAIBanner}
+                onOpenChange={setShowAIBanner}
+                eventName={title}
+                eventLocation={[venue, city, state].filter(Boolean).join(", ")}
+                eventDate={startDate}
+                onSelectImage={(url) => setCoverUrl(url)}
+              />
 
               {/* Live Streaming Toggle */}
               <div className="md:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-5">
