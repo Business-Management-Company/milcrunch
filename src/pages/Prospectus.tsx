@@ -1369,6 +1369,67 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
             </p>
           </div>
         </div>
+
+        {/* Event creation dashboard */}
+        <div className="mt-10">
+          <img
+            src="https://github.com/user-attachments/assets/81220ee5-6067-4000-be29-070a86d1c697"
+            alt="Event Creation & Management Dashboard"
+            className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+          />
+          <p className="text-sm text-center text-gray-400 mt-2 mb-6">Event Creation &amp; Management Dashboard</p>
+        </div>
+
+        {/* Public event page + Mobile view side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <div>
+            <img
+              src="https://github.com/user-attachments/assets/15e3af5b-ec16-4bdc-bb9d-ef729ed8579f"
+              alt="Public Event Page"
+              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+            />
+            <p className="text-sm text-center text-gray-400 mt-2 mb-6">Public Event Page</p>
+          </div>
+          <div>
+            <img
+              src="https://github.com/user-attachments/assets/cd8b3385-f6a4-4c7a-8e79-ba3d64d6e15e"
+              alt="Mobile Attendee Experience"
+              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+            />
+            <p className="text-sm text-center text-gray-400 mt-2 mb-6">Mobile Attendee Experience</p>
+          </div>
+        </div>
+
+        {/* Registration & Check-In */}
+        <h3
+          className={cn(
+            "text-xl font-bold mt-10 mb-4 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          Registration &amp; Check-In
+        </h3>
+
+        <img
+          src="https://github.com/user-attachments/assets/d1428098-0f83-4d14-9dce-9630c388a521"
+          alt="Attendee Registration Flow"
+          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+        />
+        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Attendee Registration Flow</p>
+
+        <img
+          src="https://github.com/user-attachments/assets/2f363b0e-1c8c-4223-80c7-579430a28ee1"
+          alt="Registration Confirmation"
+          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+        />
+        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Registration Confirmation</p>
+
+        <img
+          src="https://github.com/user-attachments/assets/06f7dd0c-8457-4450-99e8-55f87b34cbe0"
+          alt="Organizer Registration Dashboard"
+          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+        />
+        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Organizer Registration Dashboard</p>
       </div>
 
       {/* PWA Showcase */}
@@ -1703,121 +1764,66 @@ function CreatorNetworkTab({ dark }: { dark: boolean }) {
         ))}
       </div>
 
-      {/* Discovery screenshot mockup */}
-      <div className="max-w-4xl mx-auto mt-12">
-        <div
-          className={cn(
-            "rounded-xl overflow-hidden border shadow-lg transition-colors duration-300",
-            dark
-              ? "border-white/[0.08] shadow-black/30"
-              : "border-[#E5E7EB] shadow-gray-300/40"
-          )}
-        >
-          {/* Browser chrome */}
-          <div
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 border-b transition-colors duration-300",
-              dark
-                ? "bg-[#1a1f2e] border-white/[0.08]"
-                : "bg-[#F3F4F6] border-[#E5E7EB]"
-            )}
-          >
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-400/80" />
-              <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
-              <div className="w-3 h-3 rounded-full bg-green-400/80" />
-            </div>
-            <div
-              className={cn(
-                "flex-1 mx-4 px-3 py-1 rounded-md text-xs text-center transition-colors duration-300",
-                dark
-                  ? "bg-white/[0.06] text-gray-500"
-                  : "bg-white text-[#9CA3AF]"
-              )}
-            >
-              milcrunch.com/brand/discover
-            </div>
+      {/* Discovery screenshots */}
+      <div className="max-w-4xl mx-auto mt-12 space-y-2">
+        <img
+          src="https://github.com/user-attachments/assets/7c2779c6-e671-4414-b2b8-4845f2868db1"
+          alt="Creator Discovery list view"
+          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+        />
+        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Creator Discovery — Search 196K+ military &amp; veteran profiles</p>
+
+        <img
+          src="https://github.com/user-attachments/assets/793c49f2-627f-4b6c-a068-959ee32f9455"
+          alt="Creator Discovery grid view"
+          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+        />
+        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Grid view with profile cards</p>
+
+        <img
+          src="https://github.com/user-attachments/assets/bfc4df0d-9d52-41de-afaa-f08120ef16b7"
+          alt="Creator profile slide-out"
+          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+        />
+        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Creator profile slide-out with analytics, posts, and similar accounts</p>
+      </div>
+
+      {/* Military Verification */}
+      <div className="max-w-4xl mx-auto">
+        <h3 className={cn("text-xl font-bold mt-10 mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+          Military Verification
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <img
+              src="https://github.com/user-attachments/assets/9e5a3f58-8f1d-42d4-b40a-1a1b27614ed7"
+              alt="4-Phase AI Verification Pipeline"
+              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+            />
+            <p className="text-sm text-center text-gray-400 mt-2 mb-6">4-Phase AI Verification Pipeline</p>
           </div>
-
-          {/* Screenshot body — simulated discovery UI */}
-          <div
-            className={cn(
-              "p-6 transition-colors duration-300",
-              dark ? "bg-[#111827]" : "bg-white"
-            )}
-          >
-            {/* Search bar */}
-            <div className="flex items-center gap-3 mb-6">
-              <div
-                className={cn(
-                  "flex-1 flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors duration-300",
-                  dark ? "bg-white/[0.04] border-white/[0.08]" : "bg-[#F9FAFB] border-[#E5E7EB]"
-                )}
-              >
-                <Search className={cn("h-4 w-4", dark ? "text-gray-500" : "text-[#9CA3AF]")} />
-                <span className={cn("text-sm", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-                  Search military creators by keyword, niche, or handle...
-                </span>
-              </div>
-              <div className="px-4 py-2.5 rounded-lg bg-[#6C5CE7] text-white text-sm font-medium">
-                Search
-              </div>
-            </div>
-
-            {/* Filter pills */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {["Instagram", "10K–100K Followers", "Military & Veteran", "Fitness", "United States"].map((f) => (
-                <span
-                  key={f}
-                  className={cn(
-                    "px-3 py-1 rounded-full text-xs font-medium transition-colors duration-300",
-                    dark ? "bg-[#6C5CE7]/15 text-[#6C5CE7]" : "bg-[#6C5CE7]/10 text-[#6C5CE7]"
-                  )}
-                >
-                  {f}
-                </span>
-              ))}
-            </div>
-
-            {/* Creator cards grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { name: "Marcus Cole", handle: "@marcus.vet", followers: "48.2K", eng: "4.8%", color: "#6C5CE7" },
-                { name: "Jen Rivera", handle: "@jenrivera_mil", followers: "92.1K", eng: "3.2%", color: "#10B981" },
-                { name: "Devon Brooks", handle: "@devonbrooks", followers: "31.5K", eng: "6.1%", color: "#3B82F6" },
-                { name: "Taylor Kim", handle: "@taylork_usmc", followers: "67.8K", eng: "5.5%", color: "#F59E0B" },
-              ].map((c) => (
-                <div
-                  key={c.handle}
-                  className={cn(
-                    "rounded-lg p-3 border transition-colors duration-300",
-                    dark ? "bg-white/[0.04] border-white/[0.06]" : "bg-[#F9FAFB] border-[#E5E7EB]"
-                  )}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{ backgroundColor: c.color }}
-                    >
-                      {c.name.split(" ").map((n) => n[0]).join("")}
-                    </div>
-                    <div>
-                      <p className={cn("text-xs font-semibold", dark ? "text-white" : "text-[#111827]")}>{c.name}</p>
-                      <p className={cn("text-[10px]", dark ? "text-gray-500" : "text-[#9CA3AF]")}>{c.handle}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className={cn("text-[10px]", dark ? "text-gray-400" : "text-[#6B7280]")}>{c.followers}</span>
-                    <span className="text-[10px] text-emerald-400 font-medium">{c.eng}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div>
+            <img
+              src="https://github.com/user-attachments/assets/f966ffa2-78ce-4687-9fe7-8c27160ee2ef"
+              alt="Military Service Background Verification"
+              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+            />
+            <p className="text-sm text-center text-gray-400 mt-2 mb-6">Military Service Background Verification</p>
           </div>
         </div>
-        <p className={cn("text-xs text-center mt-3", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-          Creator Discovery Dashboard — search, filter, and build lists
-        </p>
+      </div>
+
+      {/* AI Campaign Builder */}
+      <div className="max-w-4xl mx-auto">
+        <h3 className={cn("text-xl font-bold mt-10 mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+          AI Campaign Builder
+        </h3>
+        <img
+          src="https://github.com/user-attachments/assets/b425c680-03be-498a-8b95-e69f3b3dfdb5"
+          alt="AI-powered social media campaign builder"
+          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
+        />
+        <p className="text-sm text-center text-gray-400 mt-2 mb-6">AI-powered social media campaign builder</p>
       </div>
     </div>
   );
