@@ -777,7 +777,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div ref={showcaseRef} className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+            <div ref={showcaseRef} className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-5">
               {showcaseCreators.length > 0 ? (
                 showcaseCreators.map((c, i) => (
                   <ShowcaseCard key={c.id} creator={c} index={i} inView={showcaseInView} />
@@ -789,11 +789,11 @@ export default function HomePage() {
               )}
             </div>
 
-            <div className="text-center mt-10">
-              <Link to="/creators">
-                <Button size="lg" className="rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8 font-semibold shadow-md hover:shadow-lg transition-all">
-                  View All Creators →
-                </Button>
+            <div className="text-center mt-8">
+              <Link to="/onboard">
+                <button className="border border-[#6C5CE7] text-[#6C5CE7] hover:bg-purple-50 rounded-full px-6 py-2 font-medium transition-colors">
+                  View More Creators &rarr;
+                </button>
               </Link>
             </div>
           </div>
