@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
@@ -7,7 +7,7 @@ import {
   MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
   Film, Sparkles, Target, Type, Clapperboard, Palette, Captions, Scissors,
   Monitor, Youtube, Facebook, Twitter, Twitch, Linkedin, Wifi, CheckCircle,
-  Pencil, ShieldCheck, Megaphone, Send, Smartphone,
+  Pencil, ShieldCheck, Megaphone, Send, Smartphone, Upload,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -37,6 +37,7 @@ import EventBadgePrint from "@/components/EventBadgePrint";
 import AddSpeakerModal, { SPEAKER_TYPES, SPEAKER_TYPE_COLORS } from "@/components/brand/AddSpeakerModal";
 import EditSpeakerModal from "@/components/brand/EditSpeakerModal";
 import AttendeeAppTab from "@/components/brand/AttendeeAppTab";
+import AIBannerModal from "@/components/brand/AIBannerModal";
 
 /* ---------- types ---------- */
 interface EventRow {
@@ -261,6 +262,9 @@ const BrandEventDetail = () => {
   const [editState, setEditState] = useState("");
   const [editCover, setEditCover] = useState("");
   const [editCapacity, setEditCapacity] = useState("");
+  const [showAIBanner, setShowAIBanner] = useState(false);
+  const bannerFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   /* public page fields */
   const [editSubdomain, setEditSubdomain] = useState("");
@@ -318,6 +322,54 @@ const BrandEventDetail = () => {
   }, [eventId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  /* ---- banner upload ---- */
+  const handleBannerUpload = useCallback(
+    async (file: File) => {
+      const ACCEPTED = ["image/png", "image/jpeg", "image/webp"];
+      if (!ACCEPTED.includes(file.type)) {
+        toast.error("Only PNG, JPG, and WEBP files are accepted.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File must be under 5 MB.");
+        return;
+      }
+      setUploadingBanner(true);
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const resp = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileBase64: base64,
+            contentType: file.type,
+            bucket: "event-images",
+            folder: "events",
+            userId: user?.id,
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Upload failed");
+        setEditCover(data.url);
+        toast.success("Banner uploaded!");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Upload failed";
+        toast.error(msg);
+      } finally {
+        setUploadingBanner(false);
+      }
+    },
+    [user?.id]
+  );
 
   /* ---- save overview ---- */
   const saveOverview = async () => {
@@ -669,11 +721,66 @@ const BrandEventDetail = () => {
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <ImageUpload
-                    label="Cover Image"
-                    value={editCover}
-                    onChange={(url) => setEditCover(url)}
-                    folder="events"
+                  <Label className="mb-2 block">Cover Image</Label>
+                  {editCover && (
+                    <div className="relative mb-3 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                      <img
+                        src={editCover}
+                        alt="Event cover preview"
+                        className="w-full h-48 object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                        onClick={() => setEditCover("")}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => setShowAIBanner(true)}
+                      className="bg-purple-500 hover:bg-purple-600 text-white"
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate with AI
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => bannerFileRef.current?.click()}
+                      disabled={uploadingBanner}
+                    >
+                      {uploadingBanner ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      Upload Image
+                    </Button>
+                    <input
+                      ref={bannerFileRef}
+                      type="file"
+                      accept=".png,.jpg,.jpeg,.webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleBannerUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                  <AIBannerModal
+                    open={showAIBanner}
+                    onOpenChange={setShowAIBanner}
+                    eventName={editTitle}
+                    eventLocation={[editVenue, editCity, editState].filter(Boolean).join(", ")}
+                    eventDate={editStart}
+                    onSelectImage={(url) => setEditCover(url)}
                   />
                 </div>
               </div>
