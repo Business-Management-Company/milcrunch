@@ -776,10 +776,10 @@ export default function Onboard() {
       const totalFollowers = accounts.reduce((s, a) => s + (a.followers_count ?? 0), 0);
 
       const { data: inserted, error } = await supabase
-        .from("featured_creators")
+        .from("directory_members")
         .insert({
-          handle: handle,
-          display_name: name.trim(),
+          creator_handle: handle,
+          creator_name: name.trim(),
           category: category || null,
           platform: connectedPlatforms[0] || "instagram",
           avatar_url: avatarUrl,
@@ -787,7 +787,6 @@ export default function Onboard() {
           platforms: connectedPlatforms,
           platform_urls: platformUrls,
           profile_slug: slug,
-          is_active: true,
           approved: true,
           sort_order: 0,
           enrichment_data: {

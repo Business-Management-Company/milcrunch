@@ -112,12 +112,12 @@ export async function syncDirectoryMemberStats(userId: string): Promise<void> {
 
   // Update directory_members matching this creator handle (don't create new rows)
   await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .update({
       follower_count: totalFollowers > 0 ? totalFollowers : null,
       platforms,
       platform_urls: platformUrls,
       avatar_url: bestAvatar,
     })
-    .eq("handle", handle);
+    .eq("creator_handle", handle);
 }

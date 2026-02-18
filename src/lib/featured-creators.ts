@@ -178,12 +178,12 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
   };
 }
 
-/** Showcase from directory_members, shuffled for variety on each page load. */
+/** Showcase from directory_members, shuffled for variety on each page load.
+ *  Accepts a directory name (e.g. "Military Creator Network") — looks up the UUID first. */
 export async function fetchShowcaseByDirectoryName(
   directoryName: string,
   limit = 25
 ): Promise<ShowcaseCreator[]> {
-  // Fetch approved directory members, optionally filtered by directory_id
   let query = supabase
     .from("directory_members")
     .select("*")
@@ -191,9 +191,20 @@ export async function fetchShowcaseByDirectoryName(
     .order("sort_order", { ascending: true })
     .limit(limit * 3);
 
-  // If a directory name/id is provided, filter by it
+  // Look up directory UUID by name, then filter
   if (directoryName) {
-    query = query.eq("directory_id", directoryName);
+    const { data: dirRow } = await supabase
+      .from("directories")
+      .select("id")
+      .ilike("name", `%${directoryName}%`)
+      .limit(1)
+      .maybeSingle();
+
+    console.log("[featured-creators] directory lookup:", { directoryName, dirId: dirRow?.id ?? "NOT FOUND" });
+
+    if (dirRow?.id) {
+      query = query.eq("directory_id", dirRow.id);
+    }
   }
 
   const { data, error } = await query;
@@ -202,6 +213,8 @@ export async function fetchShowcaseByDirectoryName(
     console.error("[featured-creators] Directory showcase fetch FAILED:", error.message);
     return [];
   }
+
+  console.log("[featured-creators] Directory showcase returned:", data?.length ?? 0, "rows");
 
   // Deduplicate by handle+platform
   const seen = new Set<string>();

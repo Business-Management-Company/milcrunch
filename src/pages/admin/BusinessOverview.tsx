@@ -152,7 +152,7 @@ export default function BusinessOverview() {
   useEffect(() => {
     (async () => {
       const [cr, pod, ev, sp, ver] = await Promise.all([
-        supabase.from("featured_creators").select("id", { count: "exact", head: true }),
+        supabase.from("directory_members").select("id", { count: "exact", head: true }),
         supabase.from("podcasts").select("id", { count: "exact", head: true }),
         supabase.from("events").select("id", { count: "exact", head: true }),
         supabase.from("event_sponsors").select("id", { count: "exact", head: true }),

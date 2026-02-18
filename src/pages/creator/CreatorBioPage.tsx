@@ -99,18 +99,18 @@ async function resolveCreator(handle: string): Promise<BioCreator | null> {
     };
   }
 
-  // Try featured_creators by handle
+  // Try directory_members by creator_handle
   const { data: profile } = await supabase
-    .from("featured_creators")
-    .select("display_name, bio, handle, platform, avatar_url, branch")
-    .ilike("handle", h)
+    .from("directory_members")
+    .select("creator_name, bio, creator_handle, platform, avatar_url, branch")
+    .ilike("creator_handle", h)
     .limit(1)
     .maybeSingle();
 
   if (!profile) return null;
 
   return {
-    display_name: (profile.display_name as string) ?? handle,
+    display_name: (profile.creator_name as string) ?? handle,
     avatar_url: (profile.avatar_url as string) ?? null,
     hero_image_url: (profile.avatar_url as string) ?? null,
     hero_image_format: "landscape" as HeroImageFormat,
