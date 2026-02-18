@@ -986,12 +986,12 @@ export default function Prospectus() {
               )}
             </button>
 
-            {/* Request Demo Access */}
+            {/* Explore Demo */}
             <a
               href="/login?demo=true"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white transition-all duration-300"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#10B981] hover:bg-[#059669] text-white transition-all duration-300"
             >
-              🎯 Try Demo
+              🎯 Explore Demo
             </a>
 
             {/* Share button */}
