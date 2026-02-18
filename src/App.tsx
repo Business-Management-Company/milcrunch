@@ -153,6 +153,7 @@ import LeadManager from "./pages/brand/advertising/LeadManager";
 import KnowledgeBase from "./pages/kb/KnowledgeBase";
 import KbCategoryPage from "./pages/kb/KbCategory";
 import KbArticlePage from "./pages/kb/KbArticle";
+import KbAdmin from "./pages/kb/KbAdmin";
 
 const queryClient = new QueryClient();
 
@@ -200,6 +201,7 @@ const App = () => (
                 <Route path="growth-calculator" element={<GrowthCalculator />} />
                 <Route path="revenue-projections" element={<RevenueProjections />} />
                 <Route path="saas-calculator" element={<SaasCalculator />} />
+                <Route path="kb" element={<KbAdmin />} />
               </Route>
               <Route element={<BrandRoute><RoleAwareChatProvider><AppLayout /></RoleAwareChatProvider></BrandRoute>}>
                 <Route path="/dashboard" element={<SummaryDashboard />} />

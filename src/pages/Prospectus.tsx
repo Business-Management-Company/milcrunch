@@ -4,7 +4,7 @@ import {
   Zap, Shield, ArrowRight, Mail, Loader2, Sun, Moon,
   FileText, Layers, Target, XCircle, CheckCircle2,
   Smartphone, Search, TrendingUp, Radio, Handshake,
-  Mic, DollarSign, ClipboardList,
+  Mic, DollarSign, ClipboardList, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,6 +78,15 @@ const TAB_PLACEHOLDERS: Record<string, string> = {
     "Watch our AI production pipeline in action — multi-camera streaming, auto-highlights, and social clip generation.",
   "Partnership Model":
     "Understand our pricing, revenue share, and white-label options for media companies and event organizers.",
+};
+
+const TAB_KB_CATEGORY: Record<string, string> = {
+  "Events & Attendee App": "events-pdx",
+  "PDX Experience": "events-pdx",
+  "Creator Network": "creator-network",
+  "365 Insights": "365-insights",
+  "Streaming & Media": "streaming-media",
+  "Partnership Model": "sponsorship-revenue",
 };
 
 /* ------------------------------------------------------------------ */
@@ -863,6 +872,23 @@ const PDX_PHASES = [
 function PdxTab({ dark }: { dark: boolean }) {
   return (
     <div className="space-y-16">
+      {/* Deep Dive link */}
+      <div className="flex justify-end -mb-12">
+        <a
+          href="/kb/events-pdx"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
+            dark
+              ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
+              : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+          )}
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          Deep Dive
+        </a>
+      </div>
       {/* Hero */}
       <section className="text-center max-w-3xl mx-auto pt-4">
         <div className="w-14 h-14 rounded-2xl bg-[#6C5CE7]/15 flex items-center justify-center mx-auto mb-5">
@@ -1358,9 +1384,29 @@ function PlaceholderTab({
   dark: boolean;
 }) {
   const brief = SOLUTION_BRIEFS[title];
+  const kbSlug = TAB_KB_CATEGORY[title];
 
   return (
     <div>
+      {/* Deep Dive link */}
+      {kbSlug && (
+        <div className="flex justify-end mb-2">
+          <a
+            href={`/kb/${kbSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
+              dark
+                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
+                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+            )}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Deep Dive
+          </a>
+        </div>
+      )}
       {/* Video placeholder */}
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
