@@ -41,6 +41,7 @@ import {
   Upload,
   Star,
   Pencil,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -60,6 +61,8 @@ import { useLists } from "@/contexts/ListContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import CreatorProfileModal from "@/components/CreatorProfileModal";
+import { type CreatorCard } from "@/lib/influencers-club";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
@@ -86,6 +89,24 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   youtube: <Youtube className="h-3.5 w-3.5" />,
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
+
+/** Map a DirectoryMember to the CreatorCard shape the profile drawer expects. */
+function memberToCreatorCard(m: DirectoryMember): CreatorCard {
+  return {
+    id: m.id,
+    name: m.creator_name ?? m.creator_handle,
+    username: m.creator_handle,
+    avatar: m.avatar_url || m.ic_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.creator_name ?? m.creator_handle)}&background=random&size=128`,
+    followers: m.follower_count ?? 0,
+    engagementRate: m.engagement_rate ?? 0,
+    platforms: m.platforms ?? ["instagram"],
+    bio: m.bio ?? "",
+    location: undefined,
+    category: m.category ?? undefined,
+    socialPlatforms: m.platforms ?? ["instagram"],
+    branch: m.branch ?? undefined,
+  };
+}
 
 // ─── Main Component ─────────────────────────────────────────
 
@@ -123,6 +144,23 @@ const BrandDirectory = () => {
   const [editAvgViews, setEditAvgViews] = useState("");
   const [editAvgLikes, setEditAvgLikes] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+
+  // Creator profile drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerCreator, setDrawerCreator] = useState<CreatorCard | null>(null);
+  const [drawerMemberId, setDrawerMemberId] = useState<string | null>(null);
+
+  const openCreatorDrawer = (m: DirectoryMember) => {
+    setDrawerCreator(memberToCreatorCard(m));
+    setDrawerMemberId(m.id);
+    setDrawerOpen(true);
+  };
+
+  const handleRemoveFromDirectory = () => {
+    if (!drawerMemberId || !drawerCreator) return;
+    handleRemove(drawerMemberId, drawerCreator.name);
+    setDrawerOpen(false);
+  };
 
   const handleViewChange = (mode: ViewMode) => {
     setViewMode(mode);
@@ -580,6 +618,12 @@ const BrandDirectory = () => {
               <LayoutGrid className="h-4 w-4" />
             </button>
           </div>
+          <a href="/brand/discover" target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline" className="rounded-lg border-[#6C5CE7] text-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-950/30">
+              <Search className="h-4 w-4 mr-1.5" />
+              Discover Creators
+            </Button>
+          </a>
           <Button size="sm" className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white" onClick={() => navigate("/brand/discover")}>
             Add from Discovery
           </Button>
@@ -609,7 +653,7 @@ const BrandDirectory = () => {
                 const isToggling = togglingIds.has(m.id);
                 const platforms = m.platforms ?? [];
                 return (
-                  <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center", !m.approved && "opacity-60")}>
+                  <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                     <div className="w-[72px] h-[72px] rounded-full overflow-hidden mb-3 border border-gray-200 dark:border-gray-700 relative">
                       {imgSrc && (
                         <img
@@ -638,7 +682,7 @@ const BrandDirectory = () => {
                       <div><span className="font-bold text-[#000741] dark:text-white">{typeof m.engagement_rate === "number" ? `${m.engagement_rate.toFixed(1)}%` : "—"}</span><span className="text-muted-foreground ml-1">eng.</span></div>
                     </div>
                     {platforms.length > 0 && <div className="flex items-center gap-2 text-gray-400 mb-4">{platforms.map((p) => <span key={p}>{PLATFORM_ICON[p] ?? null}</span>)}</div>}
-                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center flex-wrap">
+                    <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center flex-wrap" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] text-muted-foreground font-medium">Public</span>
                         {isToggling ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Switch checked={m.approved} onCheckedChange={() => handleToggleApproved(m.id, m.approved)} />}
@@ -698,7 +742,7 @@ const BrandDirectory = () => {
                   const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                   const isToggling = togglingIds.has(m.id);
                   return (
-                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors", !m.approved && "opacity-60")}>
+                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 relative">
@@ -732,12 +776,12 @@ const BrandDirectory = () => {
                       </td>
                       <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowerCount(m.follower_count)}</td>
                       <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof m.engagement_rate === "number" ? `${m.engagement_rate.toFixed(2)}%` : "—"}</td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center">
                           {isToggling ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Switch checked={m.approved} onCheckedChange={() => handleToggleApproved(m.id, m.approved)} />}
                         </div>
                       </td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           title={m.featured_homepage ? "Remove from homepage" : "Feature on homepage"}
@@ -747,7 +791,7 @@ const BrandDirectory = () => {
                           <Star className={cn("h-4 w-4", m.featured_homepage && "fill-current")} />
                         </button>
                       </td>
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
@@ -853,6 +897,15 @@ const BrandDirectory = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Creator Profile Drawer */}
+        <CreatorProfileModal
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          creator={drawerCreator}
+          hideDirectoryActions
+          onRemoveFromDirectory={handleRemoveFromDirectory}
+        />
       </div>
     </div>
   );

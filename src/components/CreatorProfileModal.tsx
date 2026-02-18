@@ -30,6 +30,7 @@ import {
   Link,
   ShieldCheck,
   ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -138,6 +139,10 @@ interface CreatorProfileModalProps {
   onAddToList?: (creator: ListCreator) => void;
   onOpenCreator?: (username: string) => void;
   cachedEnrichment?: EnrichedProfileResponse | null;
+  /** Hide "Add to Directory" and "Verify Military Status" buttons (e.g. when opened from a directory). */
+  hideDirectoryActions?: boolean;
+  /** If provided, shows a "Remove from Directory" button and calls this on click. */
+  onRemoveFromDirectory?: () => void;
 }
 
 interface PostItem {
@@ -170,6 +175,8 @@ export default function CreatorProfileModal({
   onAddToList,
   onOpenCreator,
   cachedEnrichment,
+  hideDirectoryActions,
+  onRemoveFromDirectory,
 }: CreatorProfileModalProps) {
   const navigate = useNavigate();
   const [enriched, setEnriched] = useState<EnrichedProfileResponse | null>(null);
@@ -752,7 +759,7 @@ export default function CreatorProfileModal({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {directoriesList.length > 0 && (
+              {!hideDirectoryActions && directoriesList.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -774,21 +781,35 @@ export default function CreatorProfileModal({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              <Button
-                variant="outline"
-                className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
-                onClick={handleVerifyMilitary}
-              >
-                <ShieldCheck className="mr-2 h-4 w-4" />
-                Verify Military Status
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full bg-white dark:bg-transparent text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 rounded-lg"
-                onClick={() => onOpenChange(false)}
-              >
-                Exclude from results
-              </Button>
+              {onRemoveFromDirectory && (
+                <Button
+                  variant="outline"
+                  className="w-full bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/40 rounded-lg"
+                  onClick={onRemoveFromDirectory}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remove from Directory
+                </Button>
+              )}
+              {!hideDirectoryActions && (
+                <Button
+                  variant="outline"
+                  className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
+                  onClick={handleVerifyMilitary}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Verify Military Status
+                </Button>
+              )}
+              {!hideDirectoryActions && (
+                <Button
+                  variant="outline"
+                  className="w-full bg-white dark:bg-transparent text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 rounded-lg"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Exclude from results
+                </Button>
+              )}
             </div>
             <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
             <div className="space-y-0 text-sm">
