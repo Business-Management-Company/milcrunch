@@ -4,6 +4,7 @@ import {
   Zap, Shield, ArrowRight, Mail, Loader2, Sun, Moon,
   FileText, Layers, Target, XCircle, CheckCircle2,
   Smartphone, Search, TrendingUp, Radio, Handshake,
+  Mic, DollarSign, ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,7 @@ const THEME_KEY = "prospectus_theme";
 const TABS = [
   "Overview",
   "Events & Attendee App",
+  "PDX Experience",
   "Creator Network",
   "365 Insights",
   "Streaming & Media",
@@ -66,6 +68,8 @@ const SAAS_ROWS = [
 const TAB_PLACEHOLDERS: Record<string, string> = {
   "Events & Attendee App":
     "See how RecurrentX powers end-to-end event creation, ticketing, check-in, and a mobile-first attendee experience.",
+  "PDX Experience":
+    "Discover the Parade Deck Experience — a turnkey live-stage production that turns any event into a multi-platform streaming powerhouse.",
   "Creator Network":
     "Explore our verified military creator marketplace — discovery, vetting, and campaign management in one place.",
   "365 Insights":
@@ -843,6 +847,211 @@ function OverviewTab({ dark }: { dark: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Tab: PDX Experience                                                 */
+/* ------------------------------------------------------------------ */
+
+const PDX_PHASES = [
+  { icon: Handshake, label: "Partnership", description: "Define the event relationship, assign your PDX team, and lock in dates and contacts." },
+  { icon: ClipboardList, label: "Agenda & ROS", description: "Build a color-coded run-of-show with time blocks, speakers, and conflict detection." },
+  { icon: DollarSign, label: "Budget", description: "Track estimated vs. actual costs with real-time margin and sponsor coverage calculations." },
+  { icon: Handshake, label: "Sponsors", description: "Manage sponsor packages, obligation checklists, and deliverables per tier." },
+  { icon: Users, label: "Creators", description: "Build a creator roster with reach calculators and social posting schedules." },
+  { icon: Video, label: "Production", description: "Day-of checklist, multi-destination streaming setup, and emergency contacts." },
+  { icon: FileText, label: "AAR Report", description: "AI-generated After Action Report with audience metrics, sponsor ROI, and PDF export." },
+];
+
+function PdxTab({ dark }: { dark: boolean }) {
+  return (
+    <div className="space-y-16">
+      {/* Hero */}
+      <section className="text-center max-w-3xl mx-auto pt-4">
+        <div className="w-14 h-14 rounded-2xl bg-[#6C5CE7]/15 flex items-center justify-center mx-auto mb-5">
+          <Radio className="h-7 w-7 text-[#6C5CE7]" />
+        </div>
+        <h2
+          className={cn(
+            "text-3xl md:text-4xl font-extrabold leading-tight mb-3 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          The Parade Deck{" "}
+          <span className="text-[#6C5CE7]">Experience</span>
+        </h2>
+        <p
+          className={cn(
+            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
+          A turnkey live-stage production that drops into any military event — delivering
+          8+ hours of creator-led sessions, multi-platform streaming, and sponsor
+          activations that turn dead stage time into a six-figure revenue engine.
+        </p>
+      </section>
+
+      {/* Visual Timeline */}
+      <section className="max-w-4xl mx-auto">
+        <h3
+          className={cn(
+            "text-lg font-bold text-center mb-8 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          7 Phases. One Seamless Pipeline.
+        </h3>
+        <div className="relative">
+          {/* Vertical line */}
+          <div
+            className={cn(
+              "absolute left-[23px] top-4 bottom-4 w-px transition-colors duration-300",
+              dark ? "bg-[#6C5CE7]/30" : "bg-[#6C5CE7]/20"
+            )}
+          />
+          <div className="space-y-6">
+            {PDX_PHASES.map((p, i) => {
+              const Icon = p.icon;
+              return (
+                <div key={p.label + i} className="flex items-start gap-5 relative">
+                  {/* Node */}
+                  <div
+                    className={cn(
+                      "w-[46px] h-[46px] rounded-xl flex items-center justify-center flex-shrink-0 z-10 transition-colors duration-300",
+                      dark
+                        ? "bg-[#6C5CE7]/15 border border-[#6C5CE7]/30"
+                        : "bg-[#6C5CE7]/10 border border-[#6C5CE7]/20"
+                    )}
+                  >
+                    <Icon className="h-5 w-5 text-[#6C5CE7]" />
+                  </div>
+                  {/* Content */}
+                  <div
+                    className={cn(
+                      "flex-1 rounded-xl p-5 transition-colors duration-300",
+                      dark
+                        ? "bg-white/[0.04] border border-white/[0.08]"
+                        : "bg-white border border-[#E5E7EB]"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="text-[10px] font-bold text-[#6C5CE7] uppercase tracking-widest">
+                        Phase {i + 1}
+                      </span>
+                    </div>
+                    <h4
+                      className={cn(
+                        "font-bold text-sm mb-1 transition-colors duration-300",
+                        dark ? "text-white" : "text-[#111827]"
+                      )}
+                    >
+                      {p.label}
+                    </h4>
+                    <p
+                      className={cn(
+                        "text-sm leading-relaxed transition-colors duration-300",
+                        dark ? "text-gray-400" : "text-[#6B7280]"
+                      )}
+                    >
+                      {p.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Impact Stats */}
+      <section className="max-w-4xl mx-auto">
+        <div
+          className={cn(
+            "rounded-2xl p-8 md:p-10 transition-colors duration-300",
+            dark
+              ? "bg-[#111827] border border-white/[0.08]"
+              : "bg-[#F9FAFB] border border-[#E5E7EB]"
+          )}
+        >
+          <h3
+            className={cn(
+              "text-lg font-bold text-center mb-8 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            PDX by the Numbers
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { value: "8+", label: "Hours of live content per event" },
+              { value: "$150K–$250K", label: "Revenue opportunity per stage" },
+              { value: "3M+", label: "YouTube impressions from MIC" },
+              { value: "30 min", label: "Session slots for creators" },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <p
+                  className={cn(
+                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
+                    dark ? "text-white" : "text-[#111827]"
+                  )}
+                >
+                  {stat.value}
+                </p>
+                <p
+                  className={cn(
+                    "text-xs mt-1 transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#9CA3AF]"
+                  )}
+                >
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Callout */}
+      <section className="max-w-3xl mx-auto">
+        <div
+          className={cn(
+            "rounded-2xl p-8 text-center border-2 transition-colors duration-300",
+            dark
+              ? "bg-[#6C5CE7]/10 border-[#6C5CE7]/30"
+              : "bg-[#6C5CE7]/5 border-[#6C5CE7]/20"
+          )}
+        >
+          <h3
+            className={cn(
+              "text-lg font-bold mb-3 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            From Planning to Post-Event — All in One Wizard
+          </h3>
+          <p
+            className={cn(
+              "text-sm leading-relaxed max-w-xl mx-auto mb-6 transition-colors duration-300",
+              dark ? "text-gray-400" : "text-[#6B7280]"
+            )}
+          >
+            Every PDX deployment follows the same proven 7-phase pipeline — from partnership
+            agreement through AI-generated After Action Reports. No spreadsheets, no email
+            chains, no guesswork.
+          </p>
+          <a
+            href="mailto:andrew@recurrentx.com?subject=PDX%20Experience%20Inquiry"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold transition-colors text-sm"
+          >
+            <Mail className="h-4 w-4" />
+            Book a PDX Demo
+            <ArrowRight className="h-4 w-4" />
+          </a>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Solution Brief data per tab                                         */
 /* ------------------------------------------------------------------ */
 
@@ -879,6 +1088,33 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
         pain: "Attendees forget speakers and sponsors within a week",
         solution:
           "Persistent profiles and community keep relationships active long after the event ends",
+      },
+    ],
+  },
+  "PDX Experience": {
+    summaryIcon: Radio,
+    componentsIcon: Layers,
+    problemIcon: Target,
+    summary:
+      "The Parade Deck Experience (PDX) is a turnkey live-stage production that drops into any military event — delivering 8+ hours of live podcast sessions, multi-platform streaming, and sponsor activations that generate $150K–$250K in revenue from a single stage.",
+    components: [
+      "7-phase event wizard (partnership → AAR)",
+      "Run-of-show builder with conflict detection",
+      "Sponsor integration with obligation tracking",
+      "Creator roster with reach calculator",
+      "Multi-destination live streaming",
+      "AI-generated After Action Reports",
+    ],
+    problemSolved: [
+      {
+        pain: "Event stages sit dark between keynotes with no monetization",
+        solution:
+          "PDX fills every hour with creator-led sessions that sponsors pay to be part of",
+      },
+      {
+        pain: "Post-event reporting takes weeks of manual work",
+        solution:
+          "AI generates executive After Action Reports with audience metrics, sponsor ROI, and strategic recommendations in minutes",
       },
     ],
   },
@@ -1318,7 +1554,15 @@ export default function Prospectus() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
         {activeTab === "Overview" && <OverviewTab dark={darkMode} />}
-        {activeTab !== "Overview" && (
+        {activeTab === "PDX Experience" && (
+          <>
+            <PdxTab dark={darkMode} />
+            {SOLUTION_BRIEFS["PDX Experience"] && (
+              <SolutionBrief data={SOLUTION_BRIEFS["PDX Experience"]} dark={darkMode} />
+            )}
+          </>
+        )}
+        {activeTab !== "Overview" && activeTab !== "PDX Experience" && (
           <PlaceholderTab
             title={activeTab}
             description={TAB_PLACEHOLDERS[activeTab] ?? "Content coming soon."}
