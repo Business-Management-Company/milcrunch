@@ -569,7 +569,7 @@ export default function HomePage() {
         .select("*", { count: "exact" })
         .eq("status", "active")
         .order("title", { ascending: true })
-        .range(0, 7);
+        .range(0, 17);
       setPodcasts(data ?? []);
       setPodcastTotal(count ?? 0);
       setPodcastsLoading(false);
@@ -850,27 +850,27 @@ export default function HomePage() {
             </p>
 
             {podcastsLoading ? (
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="w-48 flex-shrink-0 rounded-xl bg-gray-100 animate-pulse h-64" />
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                {Array.from({ length: 18 }).map((_, i) => (
+                  <div key={i} className="rounded-xl bg-gray-100 animate-pulse aspect-square" />
                 ))}
               </div>
             ) : podcasts.length === 0 ? (
               <p className="text-sm text-gray-500 py-4">No podcasts yet. Check back soon.</p>
             ) : (
-              <div className="flex gap-4 overflow-x-auto pb-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
                 {podcasts.map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => setSelectedPodcast(p)}
-                    className="w-48 flex-shrink-0 rounded-xl shadow-sm bg-white border border-gray-100 overflow-hidden hover:shadow-md transition-shadow text-left"
+                    className="rounded-xl shadow-sm bg-white border border-gray-100 overflow-hidden hover:shadow-md transition-shadow text-left"
                   >
                     {(p.image_url || p.artwork_url) ? (
                       <img
                         src={(p.image_url || p.artwork_url)!}
                         alt=""
-                        className="h-48 w-full object-cover rounded-t-xl"
+                        className="aspect-square w-full object-cover rounded-t-xl"
                         onError={(e) => {
                           e.currentTarget.style.display = "none";
                           (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
@@ -878,14 +878,14 @@ export default function HomePage() {
                       />
                     ) : null}
                     <div
-                      className={`h-48 w-full rounded-t-xl bg-[#6C5CE7] flex items-center justify-center ${
+                      className={`aspect-square w-full rounded-t-xl bg-[#6C5CE7] flex items-center justify-center ${
                         (p.image_url || p.artwork_url) ? "hidden" : ""
                       }`}
                     >
-                      <Mic2 className="h-12 w-12 text-white/80" />
+                      <Mic2 className="h-10 w-10 text-white/80" />
                     </div>
-                    <div className="p-3">
-                      <p className="text-sm font-semibold text-[#1A1A2E] line-clamp-2" title={p.title ?? undefined}>
+                    <div className="p-2.5">
+                      <p className="text-xs font-semibold text-[#1A1A2E] line-clamp-2" title={p.title ?? undefined}>
                         {p.title ?? "Untitled"}
                       </p>
                     </div>
