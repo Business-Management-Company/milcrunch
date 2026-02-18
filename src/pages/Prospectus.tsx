@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Lock, Play, Share2, Check, Calendar, Users, BarChart3, Video,
-  Zap, Shield, ArrowRight, Mail, Loader2,
+  Zap, Shield, ArrowRight, Mail, Loader2, Sun, Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 /* ------------------------------------------------------------------ */
 
 const SESSION_KEY = "prospectus_access";
+const THEME_KEY = "prospectus_theme";
 
 const TABS = [
   "Overview",
@@ -74,7 +75,7 @@ const TAB_PLACEHOLDERS: Record<string, string> = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Access Gate                                                         */
+/* Access Gate (always dark)                                           */
 /* ------------------------------------------------------------------ */
 
 function AccessGate({ onAccess }: { onAccess: () => void }) {
@@ -193,19 +194,29 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab() {
+function OverviewTab({ dark }: { dark: boolean }) {
   const saasTotal = SAAS_ROWS.reduce((s, r) => s + r.cost, 0);
 
   return (
     <div className="space-y-16">
       {/* Hero */}
       <section className="text-center max-w-3xl mx-auto pt-4">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4">
+        <h2
+          className={cn(
+            "text-3xl md:text-4xl font-extrabold leading-tight mb-4 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
           You didn&rsquo;t sponsor a 3-day event.
           <br />
           <span className="text-[#6C5CE7]">You sponsored a 365-day community.</span>
         </h2>
-        <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
+        <p
+          className={cn(
+            "text-lg max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
           RecurrentX is the platform Recurrent.io needs to turn one-time military
           events into year-round revenue engines.
         </p>
@@ -217,13 +228,32 @@ function OverviewTab() {
           {PILLARS.map((p) => (
             <div
               key={p.title}
-              className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:border-[#6C5CE7]/40 transition-colors"
+              className={cn(
+                "rounded-2xl p-6 transition-colors duration-300",
+                dark
+                  ? "bg-white/[0.04] border border-white/[0.08] hover:border-[#6C5CE7]/40"
+                  : "bg-white border border-[#E5E7EB] hover:border-[#6C5CE7]/40"
+              )}
             >
               <div className="w-11 h-11 rounded-xl bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
                 <p.icon className="h-5 w-5 text-[#6C5CE7]" />
               </div>
-              <h3 className="text-white font-bold text-base mb-2">{p.title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{p.description}</p>
+              <h3
+                className={cn(
+                  "font-bold text-base mb-2 transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                {p.title}
+              </h3>
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#6B7280]"
+                )}
+              >
+                {p.description}
+              </p>
             </div>
           ))}
         </div>
@@ -231,28 +261,98 @@ function OverviewTab() {
 
       {/* SaaS Replacement Calculator */}
       <section className="max-w-3xl mx-auto">
-        <h3 className="text-xl font-bold text-white text-center mb-1">
+        <h3
+          className={cn(
+            "text-xl font-bold text-center mb-1 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
           SaaS Replacement Calculator
         </h3>
-        <p className="text-center text-gray-500 text-sm mb-6">
+        <p
+          className={cn(
+            "text-center text-sm mb-6 transition-colors duration-300",
+            dark ? "text-gray-500" : "text-[#6B7280]"
+          )}
+        >
           One platform. One bill. One login.
         </p>
 
-        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
+        <div
+          className={cn(
+            "rounded-2xl overflow-hidden transition-colors duration-300",
+            dark
+              ? "bg-white/[0.04] border border-white/[0.08]"
+              : "bg-white border border-[#E5E7EB]"
+          )}
+        >
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.08]">
-                <th className="text-left text-gray-500 font-medium px-5 py-3">Tool</th>
-                <th className="text-left text-gray-500 font-medium px-5 py-3">Replaces</th>
-                <th className="text-right text-gray-500 font-medium px-5 py-3">Cost/mo</th>
+              <tr
+                className={cn(
+                  "transition-colors duration-300",
+                  dark ? "border-b border-white/[0.08]" : "border-b border-[#E5E7EB]"
+                )}
+              >
+                <th
+                  className={cn(
+                    "text-left font-medium px-5 py-3 transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#6B7280]"
+                  )}
+                >
+                  Tool
+                </th>
+                <th
+                  className={cn(
+                    "text-left font-medium px-5 py-3 transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#6B7280]"
+                  )}
+                >
+                  Replaces
+                </th>
+                <th
+                  className={cn(
+                    "text-right font-medium px-5 py-3 transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#6B7280]"
+                  )}
+                >
+                  Cost/mo
+                </th>
               </tr>
             </thead>
             <tbody>
-              {SAAS_ROWS.map((row) => (
-                <tr key={row.tool} className="border-b border-white/[0.05]">
-                  <td className="px-5 py-3 text-white font-medium">{row.tool}</td>
-                  <td className="px-5 py-3 text-gray-400">{row.replaces}</td>
-                  <td className="px-5 py-3 text-right text-gray-300 font-mono">
+              {SAAS_ROWS.map((row, i) => (
+                <tr
+                  key={row.tool}
+                  className={cn(
+                    "transition-colors duration-300",
+                    dark
+                      ? "border-b border-white/[0.05]"
+                      : cn("border-b border-[#E5E7EB]/60", i % 2 === 1 && "bg-[#F9FAFB]")
+                  )}
+                >
+                  <td
+                    className={cn(
+                      "px-5 py-3 font-medium transition-colors duration-300",
+                      dark ? "text-white" : "text-[#111827]"
+                    )}
+                  >
+                    {row.tool}
+                  </td>
+                  <td
+                    className={cn(
+                      "px-5 py-3 transition-colors duration-300",
+                      dark ? "text-gray-400" : "text-[#6B7280]"
+                    )}
+                  >
+                    {row.replaces}
+                  </td>
+                  <td
+                    className={cn(
+                      "px-5 py-3 text-right font-mono transition-colors duration-300",
+                      dark ? "text-gray-300" : "text-[#374151]"
+                    )}
+                  >
                     ${row.cost.toLocaleString()}
                   </td>
                 </tr>
@@ -260,7 +360,13 @@ function OverviewTab() {
             </tbody>
             <tfoot>
               <tr className="bg-[#6C5CE7]/10">
-                <td colSpan={2} className="px-5 py-3 text-white font-bold">
+                <td
+                  colSpan={2}
+                  className={cn(
+                    "px-5 py-3 font-bold transition-colors duration-300",
+                    dark ? "text-white" : "text-[#111827]"
+                  )}
+                >
                   Total you&rsquo;re replacing
                 </td>
                 <td className="px-5 py-3 text-right text-[#6C5CE7] font-bold font-mono text-base">
@@ -271,8 +377,20 @@ function OverviewTab() {
           </table>
         </div>
 
-        <div className="text-center mt-4 bg-white/[0.04] border border-white/[0.08] rounded-xl py-4 px-6">
-          <p className="text-gray-400 text-sm">
+        <div
+          className={cn(
+            "text-center mt-4 rounded-xl py-4 px-6 transition-colors duration-300",
+            dark
+              ? "bg-white/[0.04] border border-white/[0.08]"
+              : "bg-white border border-[#E5E7EB]"
+          )}
+        >
+          <p
+            className={cn(
+              "text-sm transition-colors duration-300",
+              dark ? "text-gray-400" : "text-[#6B7280]"
+            )}
+          >
             RecurrentX consolidates{" "}
             <span className="text-[#6C5CE7] font-bold">${saasTotal.toLocaleString()}+/mo</span>{" "}
             in SaaS costs into one military-focused platform.
@@ -282,13 +400,32 @@ function OverviewTab() {
 
       {/* Origin Note */}
       <section className="max-w-2xl mx-auto">
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 text-center">
+        <div
+          className={cn(
+            "rounded-2xl p-6 text-center transition-colors duration-300",
+            dark
+              ? "bg-white/[0.03] border border-white/[0.08]"
+              : "bg-white border border-[#E5E7EB]"
+          )}
+        >
           <Shield className="h-6 w-6 text-[#6C5CE7] mx-auto mb-3" />
-          <p className="text-gray-400 text-sm leading-relaxed">
+          <p
+            className={cn(
+              "text-sm leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-400" : "text-[#6B7280]"
+            )}
+          >
             Built on the foundation of{" "}
-            <span className="text-white font-semibold">Parade Deck</span> — a military
-            creator marketplace — RecurrentX evolved into the full operating system for
-            military events and communities.
+            <span
+              className={cn(
+                "font-semibold transition-colors duration-300",
+                dark ? "text-white" : "text-[#111827]"
+              )}
+            >
+              Parade Deck
+            </span>{" "}
+            — a military creator marketplace — RecurrentX evolved into the full
+            operating system for military events and communities.
           </p>
         </div>
       </section>
@@ -303,7 +440,14 @@ function OverviewTab() {
           Schedule a Demo
           <ArrowRight className="h-4 w-4" />
         </a>
-        <p className="text-gray-600 text-xs mt-3">andrew@recurrentx.com</p>
+        <p
+          className={cn(
+            "text-xs mt-3 transition-colors duration-300",
+            dark ? "text-gray-600" : "text-[#9CA3AF]"
+          )}
+        >
+          andrew@recurrentx.com
+        </p>
       </section>
     </div>
   );
@@ -313,14 +457,36 @@ function OverviewTab() {
 /* Tab: Placeholder                                                    */
 /* ------------------------------------------------------------------ */
 
-function PlaceholderTab({ title, description }: { title: string; description: string }) {
+function PlaceholderTab({
+  title,
+  description,
+  dark,
+}: {
+  title: string;
+  description: string;
+  dark: boolean;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
         <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
       </div>
-      <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
-      <p className="text-gray-400 text-sm max-w-md">{description}</p>
+      <h3
+        className={cn(
+          "text-xl font-bold mb-2 transition-colors duration-300",
+          dark ? "text-white" : "text-[#111827]"
+        )}
+      >
+        {title}
+      </h3>
+      <p
+        className={cn(
+          "text-sm max-w-md transition-colors duration-300",
+          dark ? "text-gray-400" : "text-[#6B7280]"
+        )}
+      >
+        {description}
+      </p>
       <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
     </div>
   );
@@ -334,12 +500,20 @@ export default function Prospectus() {
   const [hasAccess, setHasAccess] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("Overview");
   const [copied, setCopied] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem(THEME_KEY);
+    return saved === "dark";
+  });
 
   useEffect(() => {
     if (sessionStorage.getItem(SESSION_KEY) === "1") {
       setHasAccess(true);
     }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   if (!hasAccess) {
     return <AccessGate onAccess={() => setHasAccess(true)} />;
@@ -356,41 +530,94 @@ export default function Prospectus() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] text-white">
+    <div
+      className={cn(
+        "min-h-screen transition-colors duration-300",
+        darkMode ? "bg-[#0A0A0F] text-white" : "bg-[#F9FAFB] text-[#111827]"
+      )}
+    >
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md border-b border-white/[0.06]">
+      <header
+        className={cn(
+          "sticky top-0 z-50 backdrop-blur-md transition-colors duration-300",
+          darkMode
+            ? "bg-[#0A0A0F]/90 border-b border-white/[0.06]"
+            : "bg-white/90 border-b border-[#E5E7EB]"
+        )}
+      >
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           {/* Logo + tagline */}
           <div className="flex items-center gap-3">
-            <span className="text-lg font-bold tracking-tight">
+            <span
+              className={cn(
+                "text-lg font-bold tracking-tight transition-colors duration-300",
+                darkMode ? "text-white" : "text-[#111827]"
+              )}
+            >
               recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
-            <span className="hidden md:inline text-xs text-gray-500 border-l border-white/10 pl-3">
+            <span
+              className={cn(
+                "hidden md:inline text-xs border-l pl-3 transition-colors duration-300",
+                darkMode
+                  ? "text-gray-500 border-white/10"
+                  : "text-[#6B7280] border-[#E5E7EB]"
+              )}
+            >
               The Operating System for Military Events & Communities
             </span>
           </div>
 
-          {/* Share button */}
-          <button
-            type="button"
-            onClick={handleShare}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              copied
-                ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                : "bg-white/[0.06] text-gray-300 border border-white/10 hover:bg-white/[0.1]"
-            )}
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" /> Copied!
-              </>
-            ) : (
-              <>
-                <Share2 className="h-4 w-4" /> Share This
-              </>
-            )}
-          </button>
+          {/* Theme toggle + Share button */}
+          <div className="flex items-center gap-2">
+            {/* Light / Dark toggle */}
+            <button
+              type="button"
+              onClick={() => setDarkMode((prev) => !prev)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                darkMode
+                  ? "bg-white/[0.06] text-gray-300 border border-white/10 hover:bg-white/[0.1]"
+                  : "bg-[#111827] text-gray-200 border border-[#111827] hover:bg-[#1F2937]"
+              )}
+            >
+              {darkMode ? (
+                <>
+                  <Sun className="h-4 w-4" />
+                  <span className="hidden sm:inline">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Dark</span>
+                </>
+              )}
+            </button>
+
+            {/* Share button */}
+            <button
+              type="button"
+              onClick={handleShare}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300",
+                copied
+                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                  : darkMode
+                    ? "bg-white/[0.06] text-gray-300 border border-white/10 hover:bg-white/[0.1]"
+                    : "bg-white text-[#374151] border border-[#E5E7EB] hover:bg-[#F3F4F6]"
+              )}
+            >
+              {copied ? (
+                <>
+                  <Check className="h-4 w-4" /> Copied!
+                </>
+              ) : (
+                <>
+                  <Share2 className="h-4 w-4" /> Share This
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Tab navigation */}
@@ -402,10 +629,12 @@ export default function Prospectus() {
                 type="button"
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300",
                   activeTab === tab
                     ? "bg-[#6C5CE7] text-white"
-                    : "text-gray-400 hover:text-white hover:bg-white/[0.06]"
+                    : darkMode
+                      ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
+                      : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
                 )}
               >
                 {tab}
@@ -417,19 +646,30 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} />}
         {activeTab !== "Overview" && (
           <PlaceholderTab
             title={activeTab}
             description={TAB_PLACEHOLDERS[activeTab] ?? "Content coming soon."}
+            dark={darkMode}
           />
         )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.06] py-8">
+      <footer
+        className={cn(
+          "border-t py-8 transition-colors duration-300",
+          darkMode ? "border-white/[0.06]" : "border-[#E5E7EB]"
+        )}
+      >
         <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-xs text-gray-600">
+          <span
+            className={cn(
+              "text-xs transition-colors duration-300",
+              darkMode ? "text-gray-600" : "text-[#9CA3AF]"
+            )}
+          >
             &copy; {new Date().getFullYear()} RecurrentX &middot; Confidential
           </span>
           <a
