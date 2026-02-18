@@ -630,7 +630,7 @@ export default function HomePage() {
           />
           <div className="absolute inset-0" style={{ background: "rgba(26, 26, 46, 0.55)" }} />
           {/* Bottom gradient fade into next section */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 z-[5]" style={{ background: "linear-gradient(to bottom, transparent, #F9FAFB)" }} />
+          <div className="absolute bottom-0 left-0 right-0 h-[80px] z-[5]" style={{ background: "linear-gradient(to bottom, transparent, rgba(249,250,251,0.6))" }} />
 
           <div className="relative z-10 w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
             {/* LEFT — Text content */}
