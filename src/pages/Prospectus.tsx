@@ -188,6 +188,37 @@ function OverviewTab({ dark }: { dark: boolean }) {
 
   return (
     <div className="space-y-16">
+      {/* Hero */}
+      <section className="text-center max-w-3xl mx-auto pt-4">
+        <h2
+          className={cn(
+            "text-3xl md:text-4xl font-extrabold leading-tight mb-2 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          Where the military and veteran community comes to be{" "}
+          <span className="text-[#6C5CE7]">seen, heard, and understood.</span>
+        </h2>
+        <p
+          className={cn(
+            "text-lg md:text-xl font-semibold mb-4 transition-colors duration-300",
+            dark ? "text-gray-300" : "text-[#374151]"
+          )}
+        >
+          And where Recurrent turns that community into a permanent revenue engine.
+        </p>
+        <p
+          className={cn(
+            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
+          RecurrentX is the operating system military events and communities have been
+          missing — built by a veteran, proven at MIC, and designed to turn every event
+          into a year-round community that sponsors want to fund again and again.
+        </p>
+      </section>
+
       {/* Origin Story */}
       <section className="text-center max-w-[760px] mx-auto pt-4">
         <h2
