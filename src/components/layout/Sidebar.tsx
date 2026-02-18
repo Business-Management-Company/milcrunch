@@ -200,7 +200,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-14 bottom-0 z-30 flex flex-col border-r border-gray-200 bg-white transition-[width] duration-200",
+        "fixed left-0 top-14 bottom-0 z-30 flex flex-col border-r border-gray-800 bg-[#111827] transition-[width] duration-200",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -219,13 +219,13 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   onClick={() => toggleSection(section.key)}
                   className="flex items-center justify-between w-full px-5 mb-2 group"
                 >
-                  <span className="text-xs font-semibold tracking-wider uppercase text-gray-400">
+                  <span className="text-xs font-semibold tracking-wider uppercase text-[#6B7280]">
                     {section.label}
                   </span>
-                  <Chevron className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-500 transition-colors" />
+                  <Chevron className="h-3.5 w-3.5 text-[#6B7280] group-hover:text-gray-400 transition-colors" />
                 </button>
               ) : (
-                <div className="h-px bg-gray-100 mx-3 mb-2" />
+                <div className="h-px bg-gray-700 mx-3 mb-2" />
               )}
 
               {/* Section items */}
@@ -237,8 +237,8 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                     const linkClasses = cn(
                       "flex items-center gap-3 mx-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                       active
-                        ? "bg-purple-50 text-[#6C5CE7] border-l-[3px] border-[#6C5CE7] pl-[9px]"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                        ? "bg-[#1F2937] text-white border-l-[3px] border-[#6C5CE7] pl-[9px]"
+                        : "text-[#E5E7EB] hover:bg-[#1F2937] hover:text-white",
                       collapsed && "justify-center px-2 mx-1"
                     );
                     const linkContent = (
@@ -246,7 +246,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                         <Icon
                           className={cn(
                             "h-[18px] w-[18px] shrink-0",
-                            active ? "text-[#6C5CE7]" : "text-gray-400"
+                            active ? "text-white" : "text-[#E5E7EB]"
                           )}
                           strokeWidth={1.75}
                         />
@@ -254,10 +254,10 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                           <span className="truncate">{item.label}</span>
                         )}
                         {!collapsed && item.external && (
-                          <ExternalLink className="ml-auto h-3.5 w-3.5 text-gray-400" />
+                          <ExternalLink className="ml-auto h-3.5 w-3.5 text-[#6B7280]" />
                         )}
                         {!collapsed && item.badge && (
-                          <span className="ml-auto text-[10px] font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap">
+                          <span className="ml-auto text-[10px] font-semibold text-[#9CA3AF] bg-[#1F2937] rounded-full px-2 py-0.5 whitespace-nowrap">
                             {item.badge}
                           </span>
                         )}
@@ -306,8 +306,8 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
 
       {/* Footer */}
       {!collapsed && (
-        <div className="px-5 py-4 border-t border-gray-100">
-          <p className="text-[10px] text-gray-400 text-center">
+        <div className="px-5 py-4 border-t border-gray-700">
+          <p className="text-[10px] text-[#4B5563] text-center">
             recurrent<span className="text-[#6C5CE7] font-bold">X</span> &middot; v1.0
           </p>
         </div>
