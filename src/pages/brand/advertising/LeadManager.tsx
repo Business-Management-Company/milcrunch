@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,43 @@ const stageBadge = (s: string) =>
 
 type TabFilter = "all" | "new" | "qualified" | "closed";
 
-export default function LeadManager() {
+class LeadManagerErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[LeadManager] Render crash:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center">
+          <p className="text-red-500 font-medium">Something went wrong loading this page.</p>
+          <pre className="text-xs text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 mt-2 max-w-lg mx-auto overflow-auto">
+            {this.state.error?.message}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function LeadManager() {
+  console.log("[LeadManager] mounted");
   const { isDemo, guardAction } = useDemoMode();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabFilter>("all");
@@ -188,5 +224,13 @@ export default function LeadManager() {
         )}
       </Card>
     </>
+  );
+}
+
+export default function LeadManagerWithBoundary() {
+  return (
+    <LeadManagerErrorBoundary>
+      <LeadManager />
+    </LeadManagerErrorBoundary>
   );
 }

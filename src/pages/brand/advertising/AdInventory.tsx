@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,43 @@ const DEMO_ITEMS: InventoryItem[] = [
   { id: "10", name: "Event Photo Booth Branding", channel: "Event", owner: "MIC Events", status: "Available", date: "2026-04-01", revenue: 2800, cost: 900, profit: 1900, campaign: "—" },
 ];
 
-export default function AdInventory() {
+class AdInventoryErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[AdInventory] Render crash:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center">
+          <p className="text-red-500 font-medium">Something went wrong loading this page.</p>
+          <pre className="text-xs text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg p-3 mt-2 max-w-lg mx-auto overflow-auto">
+            {this.state.error?.message}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AdInventory() {
+  console.log("[AdInventory] mounted");
   const { isDemo, guardAction } = useDemoMode();
   const [open, setOpen] = useState(false);
 
@@ -182,5 +218,13 @@ export default function AdInventory() {
         )}
       </Card>
     </>
+  );
+}
+
+export default function AdInventoryWithBoundary() {
+  return (
+    <AdInventoryErrorBoundary>
+      <AdInventory />
+    </AdInventoryErrorBoundary>
   );
 }
