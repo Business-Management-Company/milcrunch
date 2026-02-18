@@ -1,21 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Link2,
-  Youtube,
-  Facebook,
-  Instagram,
-  Twitter,
-  Linkedin,
-  ShoppingCart,
-  CreditCard,
-  Mail,
-  Zap,
-  BarChart3,
-  Video,
-  X,
   Loader2,
   RefreshCw,
   ExternalLink,
+  Check,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,29 +26,32 @@ import {
 interface SocialPlatform {
   id: string;
   name: string;
-  icon: React.ReactNode;
-  color: string;
+  logo: string; // URL for real brand logo
   bgColor: string;
-  uploadPostPlatform: string; // platform id for Upload-Post matching
+  uploadPostPlatform: string;
 }
 
 interface OtherIntegration {
   id: string;
   name: string;
   description: string;
-  icon: React.ReactNode;
-  color: string;
+  logo?: string; // URL for real brand logo
+  customLogo?: React.ReactNode; // for text-based logos
   bgColor: string;
 }
 
 /* ------------------------------------------------------------------ */
-/*  TikTok SVG icon                                                    */
+/*  Logo component with lazy loading + gray placeholder               */
 /* ------------------------------------------------------------------ */
 
-const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.05a8.16 8.16 0 004.76 1.52V7.12a4.84 4.84 0 01-1-.43z" />
-  </svg>
+const BrandLogo = ({ src, alt }: { src: string; alt: string }) => (
+  <img
+    src={src}
+    alt={alt}
+    loading="lazy"
+    className="w-10 h-10 object-contain"
+    style={{ background: "#f3f4f6", borderRadius: 4 }}
+  />
 );
 
 /* ------------------------------------------------------------------ */
@@ -70,48 +62,42 @@ const SOCIAL_PLATFORMS: SocialPlatform[] = [
   {
     id: "instagram",
     name: "Instagram",
-    icon: <Instagram className="w-7 h-7" />,
-    color: "text-pink-500",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png",
     bgColor: "bg-pink-50",
     uploadPostPlatform: "instagram",
   },
   {
     id: "tiktok",
     name: "TikTok",
-    icon: <TikTokIcon className="w-7 h-7" />,
-    color: "text-gray-900",
+    logo: "https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.png",
     bgColor: "bg-gray-100",
     uploadPostPlatform: "tiktok",
   },
   {
     id: "youtube",
     name: "YouTube",
-    icon: <Youtube className="w-7 h-7" />,
-    color: "text-red-600",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg",
     bgColor: "bg-red-50",
     uploadPostPlatform: "youtube",
   },
   {
     id: "twitter",
     name: "Twitter / X",
-    icon: <Twitter className="w-7 h-7" />,
-    color: "text-gray-900",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/5/5a/X_icon_2.svg",
     bgColor: "bg-gray-100",
     uploadPostPlatform: "x",
   },
   {
     id: "facebook",
     name: "Facebook Pages",
-    icon: <Facebook className="w-7 h-7" />,
-    color: "text-blue-600",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png",
     bgColor: "bg-blue-50",
     uploadPostPlatform: "facebook",
   },
   {
     id: "linkedin",
     name: "LinkedIn",
-    icon: <Linkedin className="w-7 h-7" />,
-    color: "text-blue-700",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png",
     bgColor: "bg-blue-50",
     uploadPostPlatform: "linkedin",
   },
@@ -122,48 +108,53 @@ const OTHER_INTEGRATIONS: OtherIntegration[] = [
     id: "shopify",
     name: "Shopify",
     description: "Sync your merch store and product catalog",
-    icon: <ShoppingCart className="w-7 h-7" />,
-    color: "text-green-600",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/0/0e/Shopify_logo_2018.svg",
     bgColor: "bg-green-50",
   },
   {
     id: "stripe",
     name: "Stripe",
     description: "Accept payments and manage subscriptions",
-    icon: <CreditCard className="w-7 h-7" />,
-    color: "text-purple-600",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg",
     bgColor: "bg-purple-50",
   },
   {
     id: "mailchimp",
     name: "Mailchimp",
     description: "Automate email campaigns and newsletters",
-    icon: <Mail className="w-7 h-7" />,
-    color: "text-yellow-600",
+    customLogo: (
+      <span
+        className="text-sm font-bold"
+        style={{ color: "#241C15", background: "#FFE01B", borderRadius: 4, padding: "6px 8px" }}
+      >
+        MC
+      </span>
+    ),
     bgColor: "bg-yellow-50",
   },
   {
     id: "zapier",
     name: "Zapier",
     description: "Connect workflows and automate tasks",
-    icon: <Zap className="w-7 h-7" />,
-    color: "text-orange-500",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/fd/Zap_Logo_RGB_Orange.png",
     bgColor: "bg-orange-50",
   },
   {
     id: "google-analytics",
     name: "Google Analytics",
     description: "Track website traffic and user behavior",
-    icon: <BarChart3 className="w-7 h-7" />,
-    color: "text-blue-500",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/8/89/Logo_Google_Analytics.svg",
     bgColor: "bg-blue-50",
   },
   {
     id: "mux",
     name: "Mux",
     description: "Professional streaming infrastructure",
-    icon: <Video className="w-7 h-7" />,
-    color: "text-pink-600",
+    customLogo: (
+      <span className="text-lg font-extrabold" style={{ color: "#FB2491" }}>
+        Mux
+      </span>
+    ),
     bgColor: "bg-pink-50",
   },
 ];
@@ -307,7 +298,8 @@ export default function Integrations() {
           <Button
             onClick={openConnectPopup}
             disabled={connectLoading || !connectUrl}
-            className="bg-purple-600 hover:bg-purple-700"
+            style={{ backgroundColor: "#10B981" }}
+            className="hover:opacity-90 text-white"
           >
             {connectLoading ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -320,6 +312,7 @@ export default function Integrations() {
             variant="outline"
             onClick={syncAccounts}
             disabled={syncing}
+            style={{ borderColor: "#10B981", color: "#10B981" }}
           >
             {syncing ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -340,9 +333,9 @@ export default function Integrations() {
               <Card key={platform.id} className="p-5 flex items-center justify-between">
                 <div className="flex items-center gap-4 min-w-0">
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${platform.bgColor} ${platform.color}`}
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${platform.bgColor}`}
                   >
-                    {platform.icon}
+                    <BrandLogo src={platform.logo} alt={platform.name} />
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900">{platform.name}</p>
@@ -373,13 +366,15 @@ export default function Integrations() {
 
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   {isConnected ? (
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-0">
+                    <Badge className="border-0 flex items-center gap-1" style={{ backgroundColor: "#d1fae5", color: "#10B981" }}>
+                      <Check className="w-3 h-3" />
                       Connected
                     </Badge>
                   ) : (
                     <Button
                       size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
+                      style={{ backgroundColor: "#10B981" }}
+                      className="hover:opacity-90 text-white"
                       onClick={openConnectPopup}
                       disabled={connectLoading || !connectUrl}
                     >
@@ -419,14 +414,21 @@ export default function Integrations() {
             <Card key={integration.id} className="p-5 opacity-75">
               <div className="flex items-start gap-4">
                 <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${integration.bgColor} ${integration.color}`}
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${integration.bgColor}`}
                 >
-                  {integration.icon}
+                  {integration.customLogo ? (
+                    integration.customLogo
+                  ) : integration.logo ? (
+                    <BrandLogo src={integration.logo} alt={integration.name} />
+                  ) : null}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-gray-900">{integration.name}</p>
-                    <Badge variant="secondary" className="text-[10px] font-medium">
+                    <Badge
+                      className="text-[10px] font-medium text-white border-0"
+                      style={{ backgroundColor: "#0D9488" }}
+                    >
                       Coming Soon
                     </Badge>
                   </div>
