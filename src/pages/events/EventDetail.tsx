@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Calendar, MapPin, ChevronRight, AlertCircle, Loader2,
-  ExternalLink, Eye, Radio, Play,
+  ExternalLink, Eye, Radio, Play, Smartphone,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
@@ -28,6 +28,7 @@ interface EventRow {
   cover_image_url: string | null;
   capacity: number | null;
   is_published: boolean | null;
+  slug: string | null;
 }
 interface AgendaRow {
   id: string;
@@ -108,7 +109,7 @@ const EventDetail = () => {
       const [evRes, agRes, spkRes, spsRes] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published")
+          .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published, slug")
           .eq("id", eventId!)
           .single(),
         supabase
@@ -318,16 +319,40 @@ const EventDetail = () => {
             </p>
           )}
 
-          <Button
-            asChild
-            size="lg"
-            className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-10"
-          >
-            <Link to={`/events/${event.id}/register`}>
-              Register Now
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-10"
+            >
+              <Link to={`/events/${event.id}/register`}>
+                Register Now
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className={cn(
+                "font-semibold px-8",
+                event.cover_image_url
+                  ? "border-white/40 text-white hover:bg-white/10"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              )}
+            >
+              <Link to={`/attend/${event.slug || event.id}`}>
+                <Smartphone className="w-4 h-4 mr-2" />
+                Download Event App
+              </Link>
+            </Button>
+          </div>
+          <p className={cn(
+            "text-xs mt-4",
+            event.cover_image_url ? "text-white/60" : "text-gray-400"
+          )}>
+            Works on iPhone &amp; Android — no App Store required
+          </p>
         </div>
       </div>
 

@@ -303,7 +303,7 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
           </main>
 
           {/* ---- Install Banner ---- */}
-          <InstallBanner />
+          <InstallBanner eventTitle={event.title} themeColor={theme} />
 
           {/* ---- Bottom Tab Bar ---- */}
           <nav className="sticky bottom-0 z-50 bg-white border-t border-gray-200 h-16 flex items-center justify-around px-2">
