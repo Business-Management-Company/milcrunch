@@ -636,16 +636,15 @@ export default function HomePage() {
               {/* Status pill */}
               <div className="bg-white/10 backdrop-blur-sm text-white text-sm rounded-full px-4 py-1.5 inline-flex items-center gap-2 mb-8">
                 <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                2,400+ verified military creators
+                1,000+ verified military creators
               </div>
 
-              <h1 className="font-bold leading-[1.15] mb-6">
-                <span className="text-white text-3xl md:text-4xl lg:text-5xl block">Where Community, Events, and Media</span>
-                <span className="text-3xl md:text-4xl lg:text-5xl bg-gradient-to-r from-[#6C5CE7] to-[#a855f7] bg-clip-text text-transparent">Intersect</span>
+              <h1 className="text-3xl md:text-5xl font-bold leading-[1.15] mb-6 text-white">
+                Where the military and veteran community comes to be seen, heard, and understood.
               </h1>
 
-              <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0 md:whitespace-nowrap">
-                The military &amp; veteran network reaching millions across platforms
+              <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0">
+                1,000+ verified creators. Live events. Year-round community. All in one network.
               </p>
 
               <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
@@ -656,7 +655,7 @@ export default function HomePage() {
                 </Link>
                 <Link to="/creators">
                   <Button size="lg" variant="outline" className="border border-white/30 text-white rounded-full px-8 py-3 font-semibold hover:bg-white/10 bg-transparent">
-                    Browse Creators
+                    Explore Creators
                   </Button>
                 </Link>
               </div>
