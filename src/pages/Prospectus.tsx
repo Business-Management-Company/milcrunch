@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import {
-  Lock, Play, Share2, Check, Calendar, Users, BarChart3, Video,
-  Zap, Shield, ArrowRight, Mail, Loader2, Sun, Moon,
+  Lock, Play, Share2, Check, Calendar, Users, Video,
+  ArrowRight, Mail, Loader2, Sun, Moon,
   FileText, Layers, Target, XCircle, CheckCircle2,
   Smartphone, Search, TrendingUp, Radio, Handshake,
-  Mic, DollarSign, ClipboardList, BookOpen,
+  DollarSign, ClipboardList, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,32 +28,6 @@ const TABS = [
 
 type TabId = (typeof TABS)[number];
 
-const PILLARS = [
-  {
-    icon: Calendar,
-    title: "Live Events → Year-Round Revenue",
-    description:
-      "Full event management, mobile attendee app, and 365 Insights that keep sponsors engaged between events — turning a 3-day spend into 12 months of measurable ROI.",
-  },
-  {
-    icon: Users,
-    title: "Creator & Community Network",
-    description:
-      "1,000+ verified military and veteran creators with authenticated profiles, audience analytics, and a built-in marketplace for brand partnerships.",
-  },
-  {
-    icon: BarChart3,
-    title: "Sponsor Intelligence",
-    description:
-      "Real-time ROI dashboards that quantify impressions, engagement, and attribution — so renewal conversations start with data, not guesswork.",
-  },
-  {
-    icon: Video,
-    title: "AI-Powered Media",
-    description:
-      "Stream → record → auto-clip → repurpose. AI handles framing, captions, highlight reels, and social clips — generating long-tail impressions for months after the event.",
-  },
-];
 
 const SAAS_ROWS = [
   { tool: "Event Management Platform", cost: 500, replaces: "Event Management" },
@@ -214,402 +188,231 @@ function OverviewTab({ dark }: { dark: boolean }) {
 
   return (
     <div className="space-y-16">
-      {/* Hero */}
-      <section className="text-center max-w-3xl mx-auto pt-4">
+      {/* Origin Story */}
+      <section className="text-center max-w-[760px] mx-auto pt-4">
         <h2
           className={cn(
-            "text-3xl md:text-4xl font-extrabold leading-tight mb-2 transition-colors duration-300",
+            "text-[28px] font-bold leading-tight mb-6 transition-colors duration-300",
             dark ? "text-white" : "text-[#111827]"
           )}
         >
-          Where the military and veteran community comes to be{" "}
-          <span className="text-[#6C5CE7]">seen, heard, and understood.</span>
+          RecurrentX didn&rsquo;t start in a boardroom.
         </h2>
-        <p
-          className={cn(
-            "text-lg md:text-xl font-semibold mb-4 transition-colors duration-300",
-            dark ? "text-gray-300" : "text-[#374151]"
-          )}
-        >
-          And where Recurrent turns that community into a permanent revenue engine.
-        </p>
-        <p
-          className={cn(
-            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
-          )}
-        >
-          RecurrentX is the operating system military events and communities have been
-          missing — built by a veteran, proven at MIC, and designed to turn every event
-          into a year-round community that sponsors want to fund again and again.
-        </p>
-      </section>
-
-      {/* Our Story */}
-      <section className="max-w-4xl mx-auto">
-        <div
-          className={cn(
-            "rounded-2xl p-8 md:p-10 transition-colors duration-300",
-            dark
-              ? "bg-[#111827] border border-white/[0.08]"
-              : "bg-[#F9FAFB] border border-[#E5E7EB]"
-          )}
-        >
-          <h3
+        <div className="text-left space-y-4">
+          <p
             className={cn(
-              "text-xl md:text-2xl font-extrabold text-center mb-8 leading-tight transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
+              "text-base leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-300" : "text-[#374151]"
             )}
           >
-            Built by Veterans.{" "}
-            <span className="text-[#6C5CE7]">Proven at MIC.</span>
-          </h3>
-
-          <div className="space-y-5 max-w-3xl mx-auto">
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              RecurrentX didn&rsquo;t start in a boardroom. It started with a problem Andrew
-              Appleton couldn&rsquo;t stop thinking about as a veteran: the military and veteran
-              community had no place to be seen, heard, and understood.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              So he built one. Parade Deck started as a creator directory — a place where a
-              veteran podcaster with 500 followers could build a profile, connect their social
-              channels, and finally have a home for their content alongside authors, musicians,
-              military spouses, and social media creators who were all trying to build something
-              meaningful, with no support and no spotlight.
-            </p>
-
-            <div
-              className={cn(
-                "rounded-xl px-6 py-4 border-l-4 border-[#6C5CE7] transition-colors duration-300",
-                dark ? "bg-white/[0.04]" : "bg-white"
-              )}
-            >
-              <p
-                className={cn(
-                  "text-sm md:text-[15px] leading-relaxed font-semibold transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                342 creators joined. Sponsors started paying attention.
-              </p>
-            </div>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed font-bold transition-colors duration-300",
-                dark ? "text-white" : "text-[#111827]"
-              )}
-            >
-              Then came MIC.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              Recurrent brought Parade Deck to the Military Influencer Conference as a contracted
-              partner. The idea was simple: build a dedicated stage inside the conference and run
-              8 straight hours of live podcast sessions — 30 minutes each — giving the
-              network&rsquo;s creators a real platform in front of a real audience.
-            </p>
-
-            <div
-              className={cn(
-                "rounded-xl px-6 py-5 border-l-4 border-[#6C5CE7] transition-colors duration-300",
-                dark ? "bg-white/[0.04]" : "bg-white"
-              )}
-            >
-              <p className="text-[#6C5CE7] text-2xl leading-none mb-2">&ldquo;</p>
-              <p
-                className={cn(
-                  "text-base md:text-lg italic leading-relaxed transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                The Parade Deck stage brought so much energy to MIC!
-              </p>
-              <p
-                className={cn(
-                  "text-xs mt-3 transition-colors duration-300",
-                  dark ? "text-gray-500" : "text-[#9CA3AF]"
-                )}
-              >
-                &mdash; MIC 2024 Attendee
-              </p>
-            </div>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              Creators who had never been on a stage got standing ovations. Sponsors who watched
-              the streams saw something they couldn&rsquo;t get from a banner ad — authentic
-              engagement from a community that actually trusts its creators. Over 3 million
-              YouTube impressions. A $150,000–$250,000 revenue opportunity from a single stage
-              at a single event.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              They did it for three years.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              The lesson was clear: aggregate smaller, highly-engaged military creators — 20
-              military spouses each with 5,000 followers — and you don&rsquo;t just reach an
-              audience. You move one. Those followers are more authentic, more engaged, and more
-              loyal than any mega-influencer&rsquo;s audience.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed font-semibold transition-colors duration-300",
-                dark ? "text-white" : "text-[#111827]"
-              )}
-            >
-              RecurrentX is the infrastructure that makes that repeatable. Not just at MIC. Not
-              just for 3 days. But for every event, every activation, every day of the year.
-            </p>
-          </div>
-
-          {/* Stats row */}
-          <div className="mt-10 pt-8 border-t-2 border-[#6C5CE7]/30">
-            <div className="grid grid-cols-3 gap-6 text-center">
-              <div>
-                <p
-                  className={cn(
-                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
-                    dark ? "text-white" : "text-[#111827]"
-                  )}
-                >
-                  350+
-                </p>
-                <p
-                  className={cn(
-                    "text-xs mt-1 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#9CA3AF]"
-                  )}
-                >
-                  Verified creators in the network
-                </p>
-              </div>
-              <div>
-                <p
-                  className={cn(
-                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
-                    dark ? "text-white" : "text-[#111827]"
-                  )}
-                >
-                  3M+
-                </p>
-                <p
-                  className={cn(
-                    "text-xs mt-1 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#9CA3AF]"
-                  )}
-                >
-                  Combined audience reach across platforms
-                </p>
-              </div>
-              <div>
-                <p
-                  className={cn(
-                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
-                    dark ? "text-white" : "text-[#111827]"
-                  )}
-                >
-                  2 Years
-                </p>
-                <p
-                  className={cn(
-                    "text-xs mt-1 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#9CA3AF]"
-                  )}
-                >
-                  Proven success at Military Influencer Conference
-                </p>
-              </div>
-            </div>
-          </div>
+            It started with a problem a veteran couldn&rsquo;t stop thinking about: the military
+            and veteran community had no place to be seen, heard, and understood. So he built one.
+          </p>
+          <p
+            className={cn(
+              "text-base leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-300" : "text-[#374151]"
+            )}
+          >
+            Parade Deck started as a creator directory — a place where a veteran podcaster with
+            500 followers could build a profile, connect their social channels, and finally have
+            a home for their content alongside authors, musicians, milspouses, and social media
+            creators who were all trying to build something meaningful, with no support and no
+            spotlight.
+          </p>
+          <p
+            className={cn(
+              "text-base leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-300" : "text-[#374151]"
+            )}
+          >
+            That directory became a network. That network became a platform. And that platform
+            became RecurrentX.
+          </p>
         </div>
       </section>
 
-      {/* The Gap in the Market */}
-      <section className="max-w-4xl mx-auto">
+      {/* Platform Capabilities */}
+      <section className="max-w-[760px] mx-auto">
         <div
           className={cn(
-            "rounded-xl p-8 md:p-10 transition-colors duration-300",
-            dark
-              ? "bg-[#111827] border border-white/[0.08]"
-              : "bg-[#F9FAFB] border border-[#E5E7EB]"
+            "border-t transition-colors duration-300 pt-10",
+            dark ? "border-white/[0.08]" : "border-[#E5E7EB]"
           )}
         >
-          <h3
+          <p
             className={cn(
-              "text-xl md:text-2xl font-extrabold text-center mb-8 leading-tight transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
+              "text-[11px] font-semibold tracking-[0.15em] uppercase mb-8 transition-colors duration-300",
+              dark ? "text-gray-500" : "text-[#9CA3AF]"
             )}
           >
-            Recurrent Describes the Community.{" "}
-            <span className="text-[#6C5CE7]">RecurrentX Owns It.</span>
-          </h3>
+            WHAT THE PLATFORM DOES
+          </p>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Left — What Exists Today */}
+          <div className="space-y-8">
             <div>
               <h4
                 className={cn(
-                  "text-sm font-bold uppercase tracking-wide mb-4 transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#6B7280]"
-                )}
-              >
-                What Exists Today
-              </h4>
-              <ul className="space-y-2.5">
-                {[
-                  "Video Production & Display Advertising",
-                  "Email Sponsorships (one-time sends)",
-                  "Live & Virtual Events (3 days, then dark)",
-                  "Influencer Marketing (manual, unverified)",
-                  "Custom Insights (static reports)",
-                  "Branded Content (transactional)",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <ArrowRight className={cn("h-4 w-4 mt-0.5 flex-shrink-0 transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")} />
-                    <span
-                      className={cn(
-                        "text-sm leading-snug transition-colors duration-300",
-                        dark ? "text-gray-400" : "text-[#6B7280]"
-                      )}
-                    >
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p
-                className={cn(
-                  "text-xs mt-4 italic transition-colors duration-300",
-                  dark ? "text-gray-600" : "text-[#9CA3AF]"
-                )}
-              >
-                World-class execution. Zero recurring community infrastructure.
-              </p>
-            </div>
-
-            {/* Right — What RecurrentX Adds */}
-            <div>
-              <h4 className="text-sm font-bold uppercase tracking-wide text-[#10B981] mb-4">
-                What RecurrentX Adds
-              </h4>
-              <ul className="space-y-2.5">
-                {[
-                  "Year-round creator community platform",
-                  "Verified military influencer network (1,000+)",
-                  "365-day sponsor ROI dashboards",
-                  "Attendee app that lives beyond the event",
-                  "AI-powered campaign automation",
-                  "Proprietary audience data that compounds annually",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                    <span
-                      className={cn(
-                        "text-sm leading-snug font-medium transition-colors duration-300",
-                        dark ? "text-gray-300" : "text-[#374151]"
-                      )}
-                    >
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p
-                className={cn(
-                  "text-xs mt-4 italic transition-colors duration-300",
-                  dark ? "text-gray-600" : "text-[#9CA3AF]"
-                )}
-              >
-                The infrastructure layer Recurrent&rsquo;s brands have been missing.
-              </p>
-            </div>
-          </div>
-
-          {/* Bottom statement */}
-          <div className="mt-8 pt-6 border-t border-white/[0.08] text-center">
-            <p
-              className={cn(
-                "text-base md:text-lg font-bold leading-relaxed transition-colors duration-300",
-                dark ? "text-white" : "text-[#111827]"
-              )}
-            >
-              Live events bring the community together for a few days.
-              <br />
-              <span className="text-[#6C5CE7]">RecurrentX keeps them together for 365.</span>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 4 Pillars */}
-      <section>
-        <div className="grid md:grid-cols-2 gap-5 max-w-4xl mx-auto">
-          {PILLARS.map((p) => (
-            <div
-              key={p.title}
-              className={cn(
-                "rounded-2xl p-6 transition-colors duration-300",
-                dark
-                  ? "bg-white/[0.04] border border-white/[0.08] hover:border-[#6C5CE7]/40"
-                  : "bg-white border border-[#E5E7EB] hover:border-[#6C5CE7]/40"
-              )}
-            >
-              <div className="w-11 h-11 rounded-xl bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
-                <p.icon className="h-5 w-5 text-[#6C5CE7]" />
-              </div>
-              <h3
-                className={cn(
-                  "font-bold text-base mb-2 transition-colors duration-300",
+                  "text-base font-bold mb-2 transition-colors duration-300",
                   dark ? "text-white" : "text-[#111827]"
                 )}
               >
-                {p.title}
-              </h3>
+                Creator &amp; Influencer Discovery
+              </h4>
               <p
                 className={cn(
                   "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#6B7280]"
+                  dark ? "text-gray-400" : "text-[#374151]"
                 )}
               >
-                {p.description}
+                RecurrentX connects organizers and brands to a searchable database of millions of
+                creator profiles — filterable by niche, platform, follower range, engagement rate,
+                location, and military affiliation. Vetted military and veteran creators can build
+                full media profiles, link their social channels, and be discovered for brand
+                partnerships, speaking opportunities, podcast appearances, and event activations.
+                Campaign managers can build targeted creator lists, sign deliverables, and track
+                performance — all inside the platform.
               </p>
             </div>
-          ))}
+
+            <div>
+              <h4
+                className={cn(
+                  "text-base font-bold mb-2 transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                Event Management &amp; Attendee Experience
+              </h4>
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#374151]"
+                )}
+              >
+                RecurrentX goes far beyond what a ticketing platform can offer. Event organizers
+                get a full suite of tools: event creation and registration, session scheduling
+                with conflict detection, speaker and sponsor management, QR-based attendee
+                check-in, and a mobile-first attendee web app that requires no download. Attendees
+                can build a personal agenda, connect with other attendees via QR networking, and
+                participate in a real-time community feed — all from their phone browser.
+              </p>
+            </div>
+
+            <div>
+              <h4
+                className={cn(
+                  "text-base font-bold mb-2 transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                Live Streaming &amp; Production
+              </h4>
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#374151]"
+                )}
+              >
+                The platform includes integrated live streaming management for multi-destination
+                broadcasting. Production teams can manage run-of-show schedules, stream
+                destinations, and day-of checklists from a single dashboard — built around the
+                Parade Deck Experience model that has delivered 3M+ YouTube impressions at
+                Military Influencer Conference.
+              </p>
+            </div>
+
+            <div>
+              <h4
+                className={cn(
+                  "text-base font-bold mb-2 transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                Podcast Network
+              </h4>
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#374151]"
+                )}
+              >
+                RecurrentX hosts a dedicated military and veteran podcast network. Creators can
+                publish episodes, build subscriber audiences, and connect their podcast presence
+                directly to their creator profile — making their content discoverable to sponsors
+                and event organizers looking for authentic voices.
+              </p>
+            </div>
+
+            <div>
+              <h4
+                className={cn(
+                  "text-base font-bold mb-2 transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                Email Marketing
+              </h4>
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#374151]"
+                )}
+              >
+                A full email marketing suite — contacts database, list segmentation, drag-and-drop
+                campaign builder, pre-built templates, and embeddable signup forms — built directly
+                into the platform. Organizers can email attendees, creators, and sponsors from the
+                same system they use to manage everything else, with send infrastructure powered
+                by verified sending domains.
+              </p>
+            </div>
+
+            <div>
+              <h4
+                className={cn(
+                  "text-base font-bold mb-2 transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                Sponsor &amp; Revenue Infrastructure
+              </h4>
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#374151]"
+                )}
+              >
+                Sponsors get more than a logo placement. RecurrentX tracks impressions, lead
+                retrieval, content activations, and audience reach across the full event
+                lifecycle — attributed to individual sponsorship packages. The 365 Insights
+                dashboard shows sponsors quantifiable ROI week over week and month over month,
+                so renewals are data-driven, not relationship-dependent.
+              </p>
+            </div>
+
+            <div>
+              <h4
+                className={cn(
+                  "text-base font-bold mb-2 transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                Advertising &amp; Media Sales
+              </h4>
+              <p
+                className={cn(
+                  "text-sm leading-relaxed transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#374151]"
+                )}
+              >
+                An integrated ad management system gives media teams a rate desk, CPM pricing
+                controls, campaign management by advertiser, inventory tracking with profit
+                margins, and a sales lead pipeline — purpose-built for military media
+                organizations monetizing their audience through display and branded content
+                placements.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
