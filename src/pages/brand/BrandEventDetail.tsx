@@ -7,7 +7,7 @@ import {
   MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
   Film, Sparkles, Target, Type, Clapperboard, Palette, Captions, Scissors,
   Monitor, Youtube, Facebook, Twitter, Twitch, Linkedin, Wifi, CheckCircle,
-  Pencil, ShieldCheck, Megaphone, Send,
+  Pencil, ShieldCheck, Megaphone, Send, Smartphone,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -36,11 +36,13 @@ import CheckInMode from "@/components/CheckInMode";
 import EventBadgePrint from "@/components/EventBadgePrint";
 import AddSpeakerModal, { SPEAKER_TYPES, SPEAKER_TYPE_COLORS } from "@/components/brand/AddSpeakerModal";
 import EditSpeakerModal from "@/components/brand/EditSpeakerModal";
+import AttendeeAppTab from "@/components/brand/AttendeeAppTab";
 
 /* ---------- types ---------- */
 interface EventRow {
   id: string;
   title: string;
+  slug: string | null;
   description: string | null;
   event_type: string | null;
   start_date: string | null;
@@ -613,6 +615,7 @@ const BrandEventDetail = () => {
             {/* Row 2 — Manage */}
             <div className="flex flex-wrap justify-center gap-1">
               <TabsTrigger value="registrations"><Users className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
+              <TabsTrigger value="attendee-app"><Smartphone className="h-4 w-4 mr-1.5" />Attendee App</TabsTrigger>
               <TabsTrigger value="community"><MessageCircle className="h-4 w-4 mr-1.5" />Community</TabsTrigger>
               <TabsTrigger value="insights"><BarChart3 className="h-4 w-4 mr-1.5" />365 Insights</TabsTrigger>
             </div>
@@ -1747,6 +1750,17 @@ const BrandEventDetail = () => {
                 </div>
               );
             })()}
+          </TabsContent>
+
+          {/* ===== ATTENDEE APP ===== */}
+          <TabsContent value="attendee-app">
+            {event && (
+              <AttendeeAppTab
+                eventId={event.id}
+                eventSlug={event.slug}
+                eventTitle={event.title}
+              />
+            )}
           </TabsContent>
 
           {/* ===== SETTINGS ===== */}

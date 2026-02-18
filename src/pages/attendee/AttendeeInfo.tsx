@@ -1,21 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import AttendeeLayout, { useAttendeeEvent } from "@/components/layout/AttendeeLayout";
 import { Card } from "@/components/ui/card";
 import {
-  MapPin, Clock, Wifi, ChevronDown, Phone, ExternalLink, Calendar,
+  MapPin, Wifi, ChevronDown, Phone, ExternalLink, Calendar, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 
-/* ---------- FAQ data ---------- */
-const FAQS = [
+/* ---------- defaults ---------- */
+const DEFAULT_FAQS = [
   {
     q: "What should I bring?",
     a: "A valid photo ID, your QR code (digital or printed), business cards for networking, and a phone charger. Dress code is business casual.",
   },
   {
     q: "Is parking available?",
-    a: "Yes — check the venue website for parking details, rates, and any validation options. Rideshare drop-off is available at the main entrance.",
+    a: "Yes \u2014 check the venue website for parking details, rates, and any validation options. Rideshare drop-off is available at the main entrance.",
   },
   {
     q: "Can I get a refund?",
@@ -31,7 +32,6 @@ const FAQS = [
   },
 ];
 
-/* ---------- Emergency contacts ---------- */
 const EMERGENCY_CONTACTS = [
   { label: "Event Support", number: "(555) 123-4567" },
   { label: "Venue Security", number: "(555) 987-6543" },
@@ -66,6 +66,55 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 /* ======================================== */
 function AttendeeInfoContent() {
   const { event } = useAttendeeEvent();
+
+  const [wifiName, setWifiName] = useState("MIC2026");
+  const [wifiPassword, setWifiPassword] = useState("military!");
+  const [faqs, setFaqs] = useState<{ q: string; a: string }[]>(DEFAULT_FAQS);
+  const [loadingFaqs, setLoadingFaqs] = useState(true);
+
+  useEffect(() => {
+    fetchWifi();
+    fetchFaqs();
+  }, [event.id]);
+
+  const fetchWifi = async () => {
+    try {
+      const { data } = await supabase
+        .from("events")
+        .select("wifi_name, wifi_password")
+        .eq("id", event.id)
+        .single();
+      if (data) {
+        const d = data as Record<string, string | null>;
+        if (d.wifi_name) setWifiName(d.wifi_name);
+        if (d.wifi_password) setWifiPassword(d.wifi_password);
+      }
+    } catch {
+      // columns may not exist; keep defaults
+    }
+  };
+
+  const fetchFaqs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("event_faqs")
+        .select("question, answer")
+        .eq("event_id", event.id)
+        .order("sort_order");
+      if (!error && data && data.length > 0) {
+        setFaqs(
+          (data as unknown as { question: string; answer: string }[]).map((r) => ({
+            q: r.question,
+            a: r.answer,
+          }))
+        );
+      }
+    } catch {
+      // table may not exist; keep defaults
+    } finally {
+      setLoadingFaqs(false);
+    }
+  };
 
   const startDate = event.start_date ? parseISO(event.start_date) : null;
   const endDate = event.end_date ? parseISO(event.end_date) : null;
@@ -125,7 +174,7 @@ function AttendeeInfoContent() {
               <p className="text-sm font-medium text-gray-900">Dates & Times</p>
               <p className="text-sm text-gray-500">
                 {startDate && endDate
-                  ? `${format(startDate, "EEEE, MMM d")} — ${format(endDate, "EEEE, MMM d, yyyy")}`
+                  ? `${format(startDate, "EEEE, MMM d")} \u2014 ${format(endDate, "EEEE, MMM d, yyyy")}`
                   : startDate
                     ? format(startDate, "EEEE, MMM d, yyyy")
                     : "TBD"}
@@ -157,11 +206,11 @@ function AttendeeInfoContent() {
               <div className="flex items-center gap-4 mt-1">
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Network</p>
-                  <p className="text-sm font-mono font-medium text-gray-900">MIC2026</p>
+                  <p className="text-sm font-mono font-medium text-gray-900">{wifiName}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">Password</p>
-                  <p className="text-sm font-mono font-medium text-gray-900">military!</p>
+                  <p className="text-sm font-mono font-medium text-gray-900">{wifiPassword}</p>
                 </div>
               </div>
             </div>
@@ -173,11 +222,17 @@ function AttendeeInfoContent() {
           <h3 className="font-bold text-gray-900 text-base mb-2">
             Frequently Asked Questions
           </h3>
-          <div>
-            {FAQS.map((faq) => (
-              <FaqItem key={faq.q} q={faq.q} a={faq.a} />
-            ))}
-          </div>
+          {loadingFaqs ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+            </div>
+          ) : (
+            <div>
+              {faqs.map((faq) => (
+                <FaqItem key={faq.q} q={faq.q} a={faq.a} />
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* Emergency Contacts */}
