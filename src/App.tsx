@@ -150,6 +150,9 @@ import AdCampaignsPage from "./pages/brand/advertising/AdCampaigns";
 import AdInventory from "./pages/brand/advertising/AdInventory";
 import AdAnalytics from "./pages/brand/advertising/AdAnalytics";
 import LeadManager from "./pages/brand/advertising/LeadManager";
+import KnowledgeBase from "./pages/kb/KnowledgeBase";
+import KbCategoryPage from "./pages/kb/KbCategory";
+import KbArticlePage from "./pages/kb/KbArticle";
 
 const queryClient = new QueryClient();
 
@@ -327,6 +330,10 @@ const App = () => (
               {/* Public sponsor pages */}
               <Route path="/sponsor-apply/:formId" element={<SponsorApply />} />
               <Route path="/sponsors/:slug" element={<PublicSponsorPage />} />
+              {/* Knowledge Base (public) */}
+              <Route path="/kb" element={<KnowledgeBase />} />
+              <Route path="/kb/:category" element={<KbCategoryPage />} />
+              <Route path="/kb/:category/:slug" element={<KbArticlePage />} />
               {/* CMS dynamic pages */}
               <Route path="/p/:slug" element={<DynamicPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
