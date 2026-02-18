@@ -82,7 +82,7 @@ const BrandDashboard = () => {
   const { lists } = useLists();
 
   // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [typing, setTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -175,56 +175,18 @@ const BrandDashboard = () => {
         </Card>
       </div>
 
-      {/* AI Chat */}
-      <div className="max-w-3xl mx-auto mb-8">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Messages */}
-          <div className="max-h-[250px] overflow-y-auto p-4 space-y-3">
-            {messages.map((msg, i) => (
-              <div key={i} className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}>
-                <div
-                  className={
-                    msg.role === "user"
-                      ? "bg-[#6C5CE7] text-white rounded-2xl px-4 py-2 max-w-[70%] text-sm"
-                      : "bg-gray-50 text-gray-800 rounded-2xl px-4 py-2 max-w-[70%] text-sm"
-                  }
-                >
-                  {msg.text}
-                  {msg.cta && (
-                    <Link
-                      to={msg.cta.to}
-                      className="block mt-2 bg-[#6C5CE7] text-white text-xs px-4 py-2 rounded-full hover:bg-[#5A4BD1] w-fit transition-colors"
-                    >
-                      {msg.cta.label}
-                    </Link>
-                  )}
-                  {msg.followUp && (
-                    <p className="text-xs text-gray-400 mt-2">{msg.followUp}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-            {typing && (
-              <div className="flex justify-start">
-                <div className="bg-gray-50 text-gray-800 rounded-2xl px-4 py-2 max-w-[70%] text-sm flex items-center gap-1">
-                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          <form onSubmit={handleSubmit} className="border-t border-gray-200 p-3 flex gap-2 items-center">
+      {/* AI Chat + Quick Actions */}
+      <div className="mb-8">
+        <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6">
+          {/* Chat input — prominent, full width */}
+          <form onSubmit={handleSubmit} className="flex items-center gap-3 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-[#111827] focus-within:border-[#6C5CE7] focus-within:ring-2 focus-within:ring-[#6C5CE7]/20 transition-all">
             <Sparkles className="h-5 w-5 text-[#6C5CE7] shrink-0" />
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Ask me anything..."
-              className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400"
+              placeholder="Ask me anything about creators, events, or campaigns..."
+              className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400 dark:text-white"
             />
             <button
               type="submit"
@@ -234,24 +196,64 @@ const BrandDashboard = () => {
               <Send className="h-4 w-4" />
             </button>
           </form>
-        </div>
 
-        {/* Quick Action Pills — 4x2 grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.label}
-                type="button"
-                onClick={() => sendMessage(action.label)}
-                className="h-11 bg-white border border-gray-200 rounded-lg px-3 text-xs font-medium text-gray-600 hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-purple-50 transition flex items-center justify-center gap-1.5"
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{action.label}</span>
-              </button>
-            );
-          })}
+          {/* Chat messages — only shown when conversation exists */}
+          {(messages.length > 0 || typing) && (
+            <div className="max-h-[200px] overflow-y-auto mt-4 space-y-3">
+              {messages.map((msg, i) => (
+                <div key={i} className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}>
+                  <div
+                    className={
+                      msg.role === "user"
+                        ? "bg-[#6C5CE7] text-white rounded-2xl px-4 py-2 max-w-[70%] text-sm"
+                        : "bg-gray-50 dark:bg-[#111827] text-gray-800 dark:text-gray-200 rounded-2xl px-4 py-2 max-w-[70%] text-sm"
+                    }
+                  >
+                    {msg.text}
+                    {msg.cta && (
+                      <Link
+                        to={msg.cta.to}
+                        className="block mt-2 bg-[#6C5CE7] text-white text-xs px-4 py-2 rounded-full hover:bg-[#5A4BD1] w-fit transition-colors"
+                      >
+                        {msg.cta.label}
+                      </Link>
+                    )}
+                    {msg.followUp && (
+                      <p className="text-xs text-gray-400 mt-2">{msg.followUp}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {typing && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-50 dark:bg-[#111827] text-gray-800 rounded-2xl px-4 py-2 max-w-[70%] text-sm flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+
+          {/* Quick Action Pills — 4x2 grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+            {QUICK_ACTIONS.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => sendMessage(action.label)}
+                  className="flex items-center justify-center gap-2 py-3 px-3 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-[#6C5CE7] hover:text-white hover:border-[#6C5CE7] transition-colors"
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{action.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
