@@ -611,12 +611,12 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-b-2xl z-10" />
 
               {/* Screen */}
-              <div className="w-full h-full rounded-[2rem] overflow-hidden bg-gray-50">
+              <div className="w-full h-full rounded-[2rem] overflow-hidden bg-gray-50 pt-[40px]">
                 <iframe
                   src={previewPath}
                   className="w-full h-full border-0"
                   style={{
-                    pointerEvents: "none",
+                    pointerEvents: "auto",
                     transform: "scale(0.75)",
                     transformOrigin: "top left",
                     width: "133.33%",
