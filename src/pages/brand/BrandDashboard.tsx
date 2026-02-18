@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { fetchCredits } from "@/lib/influencers-club";
 import { useLists } from "@/contexts/ListContext";
-import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp } from "lucide-react";
+import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, MicVocal, ShieldCheck, CalendarDays, ShoppingBag } from "lucide-react";
 import { getChatResponse } from "@/lib/chat-responses";
 import {
   AreaChart,
@@ -39,15 +39,15 @@ function getAssistantResponse(input: string): ChatMessage {
 
 /* ── Quick-action pills ───────────────────────────────────────── */
 
-const QUICK_ACTIONS = [
-  { emoji: "🔍", label: "Find Creators" },
-  { emoji: "📋", label: "Build a List" },
-  { emoji: "🎙️", label: "Podcasts" },
-  { emoji: "📊", label: "Analytics" },
-  { emoji: "🎤", label: "Keynote Speakers" },
-  { emoji: "✅", label: "Verify Creator" },
-  { emoji: "📅", label: "Events" },
-  { emoji: "🏪", label: "SWAG Store" },
+const QUICK_ACTIONS: { icon: typeof Search; label: string }[] = [
+  { icon: Search,       label: "Find Military Creators" },
+  { icon: ClipboardList, label: "Build a Creator List" },
+  { icon: Headphones,   label: "Browse Podcast Network" },
+  { icon: BarChart3,    label: "View Event Analytics" },
+  { icon: MicVocal,     label: "Find Keynote Speakers" },
+  { icon: ShieldCheck,  label: "Verify a Creator" },
+  { icon: CalendarDays, label: "Manage Events" },
+  { icon: ShoppingBag,  label: "SWAG Store" },
 ];
 
 /* ── 365 Insights data ────────────────────────────────────────── */
@@ -151,7 +151,7 @@ const BrandDashboard = () => {
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
           ) : (
             <p className="text-2xl font-bold text-[#000741] dark:text-white">
-              {credits?.credits_used != null ? Number(credits.credits_used).toLocaleString() : "—"}
+              {credits?.credits_remaining != null ? (500 - Number(credits.credits_remaining)).toLocaleString() : "—"}
             </p>
           )}
         </Card>
