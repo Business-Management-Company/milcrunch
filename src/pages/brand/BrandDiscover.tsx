@@ -581,7 +581,7 @@ const BrandDiscover = () => {
     if (!creator.username) return;
     setContactLoading(true);
     try {
-      const data = await fullEnrichCreatorProfile(creator.username);
+      const data = await fullEnrichCreatorProfile(creator.username, undefined, enrichPlatform);
       if (data?.result?.email) {
         setContactEmails((prev) => ({ ...prev, [creator.id]: String(data.result.email) }));
         toast.success(`Email found for ${creator.name}`);
@@ -955,6 +955,8 @@ const BrandDiscover = () => {
     : (usernameNotFound?.fallbackResults ?? []);
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
+  // Capture current platform so enrichment uses the correct one for each search
+  const enrichPlatform = platform === "all" ? "instagram" : platform.toLowerCase();
   useEffect(() => {
     const creatorsToEnrich = (apiResults?.creators ?? []).filter(
       (c) => c.username && !enrichedSetRef.current.has(c.id)
@@ -986,8 +988,8 @@ const BrandDiscover = () => {
                 return;
               }
 
-              // Cache miss — call the API
-              const data = await enrichCreatorProfile(creator.username!, controller.signal);
+              // Cache miss — call the API with the correct platform
+              const data = await enrichCreatorProfile(creator.username!, controller.signal, enrichPlatform);
               if (data && !controller.signal.aborted) {
                 enrichedSetRef.current.add(creator.id);
                 const partial = extractFromEnrichment(data);
@@ -1019,7 +1021,7 @@ const BrandDiscover = () => {
     return () => {
       controller.abort();
     };
-  }, [apiResults]);
+  }, [apiResults, enrichPlatform]);
 
   const getMergedCreator = (c: CreatorCard): CreatorCard => {
     const enriched = enrichCache[c.id];

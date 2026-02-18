@@ -358,14 +358,16 @@ export interface EnrichedProfileResponse {
  */
 export async function enrichCreatorProfile(
   username: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  platform: string = "instagram"
 ): Promise<EnrichedProfileResponse | null> {
   const handle = username.replace(/^@/, "").trim();
+  const platKey = platform.toLowerCase() === "all" ? "instagram" : platform.toLowerCase();
 
   const url = RAW_ENRICH_URL;
   const body = {
     handle,
-    platform: "instagram",
+    platform: platKey,
     include_lookalikes: false,
     email_required: "preferred",
   };
@@ -421,16 +423,20 @@ export async function enrichCreatorProfile(
   }
 
   const result = (dataRecord).result as Record<string, unknown> | undefined;
-  const ig = result && typeof result === "object" ? (result.instagram as Record<string, unknown> | undefined) : undefined;
+  // Look for platform-specific data under the searched platform key, fall back to instagram
+  const platformData = result && typeof result === "object"
+    ? (result[platKey] as Record<string, unknown> | undefined) ??
+      (platKey !== "instagram" ? (result.instagram as Record<string, unknown> | undefined) : undefined)
+    : undefined;
 
-  console.log("[Enrich] OK for", handle, "— ig:", !!ig, "platforms:", result?.creator_has);
+  console.log("[Enrich] OK for", handle, "— platform:", platKey, "data:", !!platformData, "platforms:", result?.creator_has);
 
-  if (!ig || typeof ig !== "object") {
-    console.warn("[Enrich] No instagram data in result for", handle);
+  if (!platformData || typeof platformData !== "object") {
+    console.warn("[Enrich] No platform data in result for", handle, "(tried:", platKey, ")");
     return null;
   }
 
-  return { result: result ?? {}, instagram: ig };
+  return { result: result ?? {}, instagram: platformData };
 }
 
 /**
@@ -439,15 +445,17 @@ export async function enrichCreatorProfile(
  */
 export async function fullEnrichCreatorProfile(
   username: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  platform: string = "instagram"
 ): Promise<EnrichedProfileResponse | null> {
   const handle = username.replace(/^@/, "").trim();
+  const platKey = platform.toLowerCase() === "all" ? "instagram" : platform.toLowerCase();
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
 
   const body = {
     handle,
-    platform: "instagram",
+    platform: platKey,
     include_lookalikes: false,
     email_required: "preferred",
   };
@@ -466,9 +474,10 @@ export async function fullEnrichCreatorProfile(
   if (!res.ok) throw new Error(`Enrich API ${res.status}: ${res.statusText}`, { cause: data });
 
   const result = (data as Record<string, unknown>)?.result as Record<string, unknown> | undefined;
-  const ig = result?.instagram as Record<string, unknown> | undefined;
-  if (!ig) return null;
-  return { result: result ?? {}, instagram: ig };
+  const platformData = (result?.[platKey] as Record<string, unknown> | undefined) ??
+    (platKey !== "instagram" ? (result?.instagram as Record<string, unknown> | undefined) : undefined);
+  if (!platformData) return null;
+  return { result: result ?? {}, instagram: platformData };
 }
 
 /** Credit balance response from the API */
@@ -565,10 +574,13 @@ export async function searchByUsername(
   }
 
   const result = (rawResponse as Record<string, unknown>)?.result as Record<string, unknown> | undefined;
-  const ig = result?.instagram as Record<string, unknown> | undefined;
+  const platKey = platform.toLowerCase();
+  // Look for platform-specific data, fall back to instagram
+  const ig = (result?.[platKey] as Record<string, unknown> | undefined) ??
+    (platKey !== "instagram" ? (result?.instagram as Record<string, unknown> | undefined) : undefined);
 
   if (!ig || typeof ig !== "object") {
-    console.log("[usernameSearch] No instagram data found for handle:", handle);
+    console.log("[usernameSearch] No platform data found for handle:", handle, "(tried:", platKey, ")");
     return { creators: [], total: 0, rawResponse };
   }
 
@@ -630,9 +642,14 @@ export async function searchLookalike(
     return { creators: [], total: 0, rawResponse };
   }
 
-  // Map each lookalike to a CreatorCard
+  // Map each lookalike to a CreatorCard, merging cross-platform flags if available
   const creators: CreatorCard[] = lookalikes.map((la, i) => {
-    const profile = (la.profile ?? la) as unknown as ApiProfile;
+    const rawProfile = (la.profile ?? la) as Record<string, unknown>;
+    // Merge creator_has flags from the lookalike's own data or the parent result
+    const laCreatorHas = la.creator_has as Record<string, boolean> | undefined;
+    if (laCreatorHas) mergeEnrichFlags(rawProfile, { creator_has: laCreatorHas });
+    else if (result?.creator_has) mergeEnrichFlags(rawProfile, { creator_has: result.creator_has });
+    const profile = rawProfile as unknown as ApiProfile;
     const userId = (la.user_id ?? la.username ?? profile.username ?? `lookalike-${i}`) as string;
     return mapAccountToCard({ user_id: userId, profile }, i);
   });
