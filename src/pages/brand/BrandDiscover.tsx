@@ -2263,14 +2263,14 @@ const BrandDiscover = () => {
                         </div>
                         <div className="mt-auto space-y-2" onClick={(e) => e.stopPropagation()}>
                           {isCreatorInList(creator.id) ? (
-                            <Button size="sm" className="w-full rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" disabled>
+                            <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" disabled>
                               Added ✓
                             </Button>
                           ) : (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" className="w-full rounded-lg bg-[#000741] hover:bg-[#5B4BD1] text-white dark:bg-[#000741] dark:hover:bg-[#5B4BD1]">
-                                  <ListPlus className="h-4 w-4 mr-2" />
+                                <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-[#000741] hover:bg-[#5B4BD1] text-white dark:bg-[#000741] dark:hover:bg-[#5B4BD1]">
+                                  <ListPlus className="h-4 w-4" />
                                   Add to List
                                 </Button>
                               </DropdownMenuTrigger>
@@ -2294,10 +2294,10 @@ const BrandDiscover = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="rounded-lg flex-1 text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
+                                    className="flex items-center justify-center gap-2 w-full text-center rounded-lg flex-1 text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
                                     disabled={approvingDir}
                                   >
-                                    <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                                    <ShieldCheck className="h-3.5 w-3.5" />
                                     Add to Directory
                                   </Button>
                                 </DropdownMenuTrigger>
