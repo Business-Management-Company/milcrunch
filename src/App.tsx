@@ -235,6 +235,12 @@ const App = () => (
                 <Route path="/brand/email/templates" element={<EmailTemplates />} />
                 <Route path="/brand/email/forms" element={<EmailForms />} />
                 <Route path="/brand/email/settings" element={<EmailSettingsPage />} />
+                <Route path="/brand/advertising" element={<AdvertisingDashboard />} />
+                <Route path="/brand/advertising/rate-desk" element={<RateDesk />} />
+                <Route path="/brand/advertising/campaigns" element={<AdCampaignsPage />} />
+                <Route path="/brand/advertising/inventory" element={<AdInventory />} />
+                <Route path="/brand/advertising/analytics" element={<AdAnalytics />} />
+                <Route path="/brand/advertising/leads" element={<LeadManager />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/events/create" element={<CreateEvent />} />
               <Route path="/admin/awards" element={<AdminAwards />} />
