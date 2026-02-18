@@ -886,7 +886,7 @@ export default function BrandPosting() {
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
                   <p className="text-sm text-amber-700 dark:text-amber-300">
                     No connected accounts found. Connect your socials from the{" "}
-                    <a href="/brand/settings" className="underline font-medium">
+                    <a href="/brand/integrations" className="underline font-medium">
                       Settings
                     </a>{" "}
                     page first.

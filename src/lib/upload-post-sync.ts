@@ -71,7 +71,13 @@ export async function ensureUploadPostProfile(userId: string): Promise<{ ok: boo
   const users = await listUploadPostUsers();
   if (users.some((u) => u.username === userId)) return { ok: true };
   const result = await createUploadPostProfile(userId);
-  if (result.error) return { ok: false, error: result.error };
+  if (result.error) {
+    const msg = result.error.toLowerCase();
+    if (msg.includes("already in use") || msg.includes("already exists")) {
+      return { ok: true };
+    }
+    return { ok: false, error: result.error };
+  }
   return { ok: true };
 }
 
