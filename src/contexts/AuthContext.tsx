@@ -182,14 +182,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const getRedirectPath = useCallback((): string | null => {
     if (!user) return null;
     if (user.email === "demo@recurrentx.com") return "/brand/dashboard";
-    const role = (user?.user_metadata?.role as UserRole) || "creator";
+    // Check both user_metadata and creator_profiles for role — metadata may be unset
+    const role: UserRole =
+      (user.user_metadata?.role as UserRole) ||
+      creatorProfile?.role ||
+      "creator";
     if (role === "super_admin") return "/admin";
     if (role === "admin" || role === "brand") return "/brand/dashboard";
+    // Only creators hit onboarding check
     if (!creatorProfile || !creatorProfile.onboarding_completed) return "/creator/onboard";
     return "/creator/dashboard";
   }, [user, creatorProfile]);
 
-  const resolvedRole = (user?.user_metadata?.role as UserRole) ?? ("creator" as UserRole);
+  const resolvedRole: UserRole =
+    (user?.user_metadata?.role as UserRole) ||
+    creatorProfile?.role ||
+    "creator";
   const isSuperAdmin = resolvedRole === "super_admin";
 
   return (

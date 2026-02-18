@@ -85,7 +85,14 @@ export default function LoginPage() {
       return;
     }
 
-    const role = user?.user_metadata?.role || "creator";
+    // Check profile table for role (user_metadata may be unset for admin accounts)
+    const { data: profile } = await supabase
+      .from("creator_profiles")
+      .select("role, onboarding_completed")
+      .eq("user_id", user?.id)
+      .maybeSingle();
+
+    const role = user?.user_metadata?.role || profile?.role || "creator";
 
     if (role === "super_admin") {
       navigate("/admin", { replace: true });
@@ -95,11 +102,7 @@ export default function LoginPage() {
       navigate("/brand/dashboard", { replace: true });
       return;
     }
-    const { data: profile } = await supabase
-      .from("creator_profiles")
-      .select("onboarding_completed")
-      .eq("user_id", user?.id)
-      .maybeSingle();
+    // Only creators hit onboarding check
     if (!profile || !profile.onboarding_completed) {
       navigate("/creator/onboard", { replace: true });
     } else {
