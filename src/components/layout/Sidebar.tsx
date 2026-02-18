@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -173,6 +173,7 @@ interface SidebarProps {
 export default function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
   const { isSuperAdmin } = useAuth();
+  const navRef = useRef<HTMLElement>(null);
 
   const defaults: Record<string, boolean> = {};
   for (const s of SIDEBAR_SECTIONS) {
@@ -184,10 +185,18 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   );
 
   const toggleSection = useCallback((key: string) => {
+    // Capture scroll position before the re-render so layout shifts don't move it
+    const scrollTop = navRef.current?.scrollTop ?? 0;
     setCollapsedSections((prev) => {
       const next = { ...prev, [key]: !prev[key] };
       saveCollapsedSections(next);
       return next;
+    });
+    // Restore scroll position after React flushes the DOM update
+    requestAnimationFrame(() => {
+      if (navRef.current) {
+        navRef.current.scrollTop = scrollTop;
+      }
     });
   }, []);
 
@@ -205,7 +214,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       )}
     >
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4">
+      <nav ref={navRef} className="flex-1 overflow-y-auto py-4" style={{ scrollBehavior: "auto" }}>
         {sections.map((section, idx) => {
           const isSectionCollapsed = !!collapsedSections[section.key];
           const Chevron = isSectionCollapsed ? ChevronRight : ChevronDown;
