@@ -219,9 +219,122 @@ function OverviewTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-400" : "text-[#6B7280]"
           )}
         >
-          RecurrentX is the platform Recurrent.io needs to turn one-time military
-          events into year-round revenue engines.
+          Recurrent reaches 133M+ Americans through world-class media and live events.
+          RecurrentX is the missing layer — the creator network and community platform
+          that keeps MIC, MilSpouseFest, and every activation alive 365 days a year.
         </p>
+      </section>
+
+      {/* The Gap in the Market */}
+      <section className="max-w-4xl mx-auto">
+        <div
+          className={cn(
+            "rounded-xl p-8 md:p-10 transition-colors duration-300",
+            dark
+              ? "bg-[#111827] border border-white/[0.08]"
+              : "bg-[#F9FAFB] border border-[#E5E7EB]"
+          )}
+        >
+          <h3
+            className={cn(
+              "text-xl md:text-2xl font-extrabold text-center mb-8 leading-tight transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            Recurrent Describes the Community.{" "}
+            <span className="text-[#6C5CE7]">RecurrentX Owns It.</span>
+          </h3>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Left — What Recurrent Offers Today */}
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-wide text-amber-500 mb-4">
+                What Recurrent Offers Today
+              </h4>
+              <ul className="space-y-2.5">
+                {[
+                  "Video Production & Display Advertising",
+                  "Email Sponsorships (one-time sends)",
+                  "Live & Virtual Events (3 days, then dark)",
+                  "Influencer Marketing (manual, unverified)",
+                  "Custom Insights (static reports)",
+                  "Branded Content (transactional)",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5">
+                    <XCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                    <span
+                      className={cn(
+                        "text-sm leading-snug transition-colors duration-300",
+                        dark ? "text-gray-400" : "text-[#6B7280]"
+                      )}
+                    >
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p
+                className={cn(
+                  "text-xs mt-4 italic transition-colors duration-300",
+                  dark ? "text-gray-600" : "text-[#9CA3AF]"
+                )}
+              >
+                World-class execution. Zero recurring community infrastructure.
+              </p>
+            </div>
+
+            {/* Right — What RecurrentX Adds */}
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-wide text-[#10B981] mb-4">
+                What RecurrentX Adds
+              </h4>
+              <ul className="space-y-2.5">
+                {[
+                  "Year-round creator community platform",
+                  "Verified military influencer network (1,000+)",
+                  "365-day sponsor ROI dashboards",
+                  "Attendee app that lives beyond the event",
+                  "AI-powered campaign automation",
+                  "Proprietary audience data that compounds annually",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <span
+                      className={cn(
+                        "text-sm leading-snug font-medium transition-colors duration-300",
+                        dark ? "text-gray-300" : "text-[#374151]"
+                      )}
+                    >
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p
+                className={cn(
+                  "text-xs mt-4 italic transition-colors duration-300",
+                  dark ? "text-gray-600" : "text-[#9CA3AF]"
+                )}
+              >
+                The infrastructure layer Recurrent&rsquo;s brands have been missing.
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom statement */}
+          <div className="mt-8 pt-6 border-t border-white/[0.08] text-center">
+            <p
+              className={cn(
+                "text-base md:text-lg font-bold leading-relaxed transition-colors duration-300",
+                dark ? "text-white" : "text-[#111827]"
+              )}
+            >
+              MIC and MilSpouseFest bring the community together for 3 days.
+              <br />
+              <span className="text-[#6C5CE7]">RecurrentX keeps them together for 365.</span>
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* 4 Pillars */}
@@ -400,34 +513,37 @@ function OverviewTab({ dark }: { dark: boolean }) {
         </div>
       </section>
 
-      {/* Origin Note */}
-      <section className="max-w-2xl mx-auto">
+      {/* Built for Recurrent's World */}
+      <section className="max-w-3xl mx-auto">
         <div
           className={cn(
-            "rounded-2xl p-6 text-center transition-colors duration-300",
+            "rounded-2xl p-8 transition-colors duration-300",
             dark
               ? "bg-white/[0.03] border border-white/[0.08]"
               : "bg-white border border-[#E5E7EB]"
           )}
         >
-          <Shield className="h-6 w-6 text-[#6C5CE7] mx-auto mb-3" />
+          <Shield className="h-6 w-6 text-[#6C5CE7] mx-auto mb-4" />
+          <h3
+            className={cn(
+              "text-lg font-bold text-center mb-4 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            Built for Recurrent&rsquo;s World
+          </h3>
           <p
             className={cn(
-              "text-sm leading-relaxed transition-colors duration-300",
+              "text-sm leading-relaxed text-center transition-colors duration-300",
               dark ? "text-gray-400" : "text-[#6B7280]"
             )}
           >
-            Built on the foundation of{" "}
-            <span
-              className={cn(
-                "font-semibold transition-colors duration-300",
-                dark ? "text-white" : "text-[#111827]"
-              )}
-            >
-              Parade Deck
-            </span>{" "}
-            — a military creator marketplace — RecurrentX evolved into the full
-            operating system for military events and communities.
+            Recurrent&rsquo;s properties — MIC, MilSpouseFest, Task &amp; Purpose, The War Zone,
+            and We Are The Mighty — reach over 133 million Americans. Each property excels at
+            its moment: the article, the broadcast, the three-day event. RecurrentX was built
+            to answer what happens after. It&rsquo;s the year-round creator community and sponsor
+            intelligence layer that turns Recurrent&rsquo;s best moments into permanent,
+            monetizable relationships.
           </p>
         </div>
       </section>
@@ -869,6 +985,14 @@ export default function Prospectus() {
                 </>
               )}
             </button>
+
+            {/* Request Demo Access */}
+            <a
+              href="/login?demo=true"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white transition-all duration-300"
+            >
+              🎯 Try Demo
+            </a>
 
             {/* Share button */}
             <button
