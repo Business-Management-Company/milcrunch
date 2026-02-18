@@ -145,40 +145,53 @@ export default function AIBannerModal({
 
     setSelecting(index);
     try {
-      // Download the image and convert to base64
-      const resp = await fetch(image.url);
-      const blob = await resp.blob();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(",")[1]);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+      // Try to re-upload to Supabase Storage for a permanent URL
+      let finalUrl = image.url;
+      let uploaded = false;
 
-      // Upload to Supabase Storage
-      const uploadResp = await fetch("/api/upload-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileBase64: base64,
-          contentType: "image/png",
-          bucket: "event-images",
-          folder: "events",
-          userId: user?.id,
-        }),
-      });
+      try {
+        const resp = await fetch(image.url);
+        const blob = await resp.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
 
-      const uploadData = await uploadResp.json();
-      if (!uploadResp.ok) {
-        throw new Error(uploadData.error || "Upload failed");
+        const uploadResp = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileBase64: base64,
+            contentType: "image/png",
+            bucket: "event-images",
+            folder: "events",
+            userId: user?.id,
+          }),
+        });
+
+        const uploadData = await uploadResp.json();
+        if (uploadResp.ok && uploadData.url) {
+          finalUrl = uploadData.url;
+          uploaded = true;
+        }
+      } catch {
+        // Upload failed — fall through to use OpenAI URL directly
       }
 
-      onSelectImage(uploadData.url);
-      toast.success("Banner image selected!");
+      onSelectImage(finalUrl);
       onOpenChange(false);
+
+      if (uploaded) {
+        toast.success("Banner image saved!");
+      } else {
+        // OpenAI URLs expire after ~1 hour
+        toast.warning("Image saved temporarily — it will expire in ~1 hour. Save the event to lock it in.", { duration: 6000 });
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save image";
       toast.error(msg);
