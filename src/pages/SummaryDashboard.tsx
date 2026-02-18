@@ -222,14 +222,13 @@ export default function SummaryDashboard() {
             { emoji: "\uD83D\uDD0D", label: "Find Military Creators" },
             { emoji: "\uD83D\uDCCB", label: "Build a Creator List" },
             { emoji: "\uD83C\uDF99\uFE0F", label: "Browse Podcast Network" },
-          ],
-          [
             { emoji: "\uD83D\uDCCA", label: "View Event Analytics" },
           ],
           [
             { emoji: "\uD83C\uDF1F", label: "Find Keynote Speakers" },
             { emoji: "\u2705", label: "Verify a Creator" },
             { emoji: "\uD83C\uDFAA", label: "Manage Events" },
+            { emoji: "\uD83D\uDCE7", label: "Email Campaigns" },
           ],
         ].map((row, ri) => (
           <div key={ri} className="flex flex-wrap justify-center gap-2.5">
