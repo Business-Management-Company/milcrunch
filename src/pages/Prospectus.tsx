@@ -205,23 +205,30 @@ function OverviewTab({ dark }: { dark: boolean }) {
       <section className="text-center max-w-3xl mx-auto pt-4">
         <h2
           className={cn(
-            "text-3xl md:text-4xl font-extrabold leading-tight mb-4 transition-colors duration-300",
+            "text-3xl md:text-4xl font-extrabold leading-tight mb-2 transition-colors duration-300",
             dark ? "text-white" : "text-[#111827]"
           )}
         >
-          You didn&rsquo;t sponsor a 3-day event.
-          <br />
-          <span className="text-[#6C5CE7]">You sponsored a 365-day community.</span>
+          Where the military and veteran community comes to be{" "}
+          <span className="text-[#6C5CE7]">seen, heard, and understood.</span>
         </h2>
         <p
           className={cn(
-            "text-lg max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
+            "text-lg md:text-xl font-semibold mb-4 transition-colors duration-300",
+            dark ? "text-gray-300" : "text-[#374151]"
+          )}
+        >
+          And where Recurrent turns that community into a permanent revenue engine.
+        </p>
+        <p
+          className={cn(
+            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
             dark ? "text-gray-400" : "text-[#6B7280]"
           )}
         >
-          Recurrent reaches 133M+ Americans through world-class media and live events.
-          RecurrentX is the missing layer — the creator network and community platform
-          that keeps MIC, MilSpouseFest, and every activation alive 365 days a year.
+          RecurrentX is the operating system Recurrent&rsquo;s brands have been missing —
+          built by a veteran, proven at MIC, and designed to turn every event into a
+          year-round community that sponsors want to fund again and again.
         </p>
       </section>
 
