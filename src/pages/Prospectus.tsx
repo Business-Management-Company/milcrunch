@@ -232,6 +232,220 @@ function OverviewTab({ dark }: { dark: boolean }) {
         </p>
       </section>
 
+      {/* Our Story */}
+      <section className="max-w-4xl mx-auto">
+        <div
+          className={cn(
+            "rounded-2xl p-8 md:p-10 transition-colors duration-300",
+            dark
+              ? "bg-[#111827] border border-white/[0.08]"
+              : "bg-[#F9FAFB] border border-[#E5E7EB]"
+          )}
+        >
+          <h3
+            className={cn(
+              "text-xl md:text-2xl font-extrabold text-center mb-8 leading-tight transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            Built by Veterans.{" "}
+            <span className="text-[#6C5CE7]">Proven at MIC.</span>
+          </h3>
+
+          <div className="space-y-5 max-w-3xl mx-auto">
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              RecurrentX didn&rsquo;t start in a boardroom. It started with a problem Andrew
+              Appleton couldn&rsquo;t stop thinking about as a veteran: the military and veteran
+              community had no place to be seen, heard, and understood.
+            </p>
+
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              So he built one. Parade Deck started as a creator directory — a place where a
+              veteran podcaster with 500 followers could build a profile, connect their social
+              channels, and finally have a home for their content alongside authors, musicians,
+              military spouses, and social media creators who were all trying to build something
+              meaningful, with no support and no spotlight.
+            </p>
+
+            <div
+              className={cn(
+                "rounded-xl px-6 py-4 border-l-4 border-[#6C5CE7] transition-colors duration-300",
+                dark ? "bg-white/[0.04]" : "bg-white"
+              )}
+            >
+              <p
+                className={cn(
+                  "text-sm md:text-[15px] leading-relaxed font-semibold transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                342 creators joined. Sponsors started paying attention.
+              </p>
+            </div>
+
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed font-bold transition-colors duration-300",
+                dark ? "text-white" : "text-[#111827]"
+              )}
+            >
+              Then came MIC.
+            </p>
+
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              Recurrent brought Parade Deck to the Military Influencer Conference as a contracted
+              partner. The idea was simple: build a dedicated stage inside the conference and run
+              8 straight hours of live podcast sessions — 30 minutes each — giving the
+              network&rsquo;s creators a real platform in front of a real audience.
+            </p>
+
+            <div
+              className={cn(
+                "rounded-xl px-6 py-5 border-l-4 border-[#6C5CE7] transition-colors duration-300",
+                dark ? "bg-white/[0.04]" : "bg-white"
+              )}
+            >
+              <p className="text-[#6C5CE7] text-2xl leading-none mb-2">&ldquo;</p>
+              <p
+                className={cn(
+                  "text-base md:text-lg italic leading-relaxed transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                The Parade Deck stage brought so much energy to MIC!
+              </p>
+              <p
+                className={cn(
+                  "text-xs mt-3 transition-colors duration-300",
+                  dark ? "text-gray-500" : "text-[#9CA3AF]"
+                )}
+              >
+                &mdash; MIC 2024 Attendee
+              </p>
+            </div>
+
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              Creators who had never been on a stage got standing ovations. Sponsors who watched
+              the streams saw something they couldn&rsquo;t get from a banner ad — authentic
+              engagement from a community that actually trusts its creators. Over 3 million
+              YouTube impressions. A $150,000–$250,000 revenue opportunity from a single stage
+              at a single event.
+            </p>
+
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              They did it for three years.
+            </p>
+
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              The lesson was clear: aggregate smaller, highly-engaged military creators — 20
+              military spouses each with 5,000 followers — and you don&rsquo;t just reach an
+              audience. You move one. Those followers are more authentic, more engaged, and more
+              loyal than any mega-influencer&rsquo;s audience.
+            </p>
+
+            <p
+              className={cn(
+                "text-sm md:text-[15px] leading-relaxed font-semibold transition-colors duration-300",
+                dark ? "text-white" : "text-[#111827]"
+              )}
+            >
+              RecurrentX is the infrastructure that makes that repeatable. Not just at MIC. Not
+              just for 3 days. But for every event, every activation, every day of the year.
+            </p>
+          </div>
+
+          {/* Stats row */}
+          <div className="mt-10 pt-8 border-t-2 border-[#6C5CE7]/30">
+            <div className="grid grid-cols-3 gap-6 text-center">
+              <div>
+                <p
+                  className={cn(
+                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
+                    dark ? "text-white" : "text-[#111827]"
+                  )}
+                >
+                  350+
+                </p>
+                <p
+                  className={cn(
+                    "text-xs mt-1 transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#9CA3AF]"
+                  )}
+                >
+                  Verified creators in the network
+                </p>
+              </div>
+              <div>
+                <p
+                  className={cn(
+                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
+                    dark ? "text-white" : "text-[#111827]"
+                  )}
+                >
+                  3M+
+                </p>
+                <p
+                  className={cn(
+                    "text-xs mt-1 transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#9CA3AF]"
+                  )}
+                >
+                  Combined audience reach across platforms
+                </p>
+              </div>
+              <div>
+                <p
+                  className={cn(
+                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
+                    dark ? "text-white" : "text-[#111827]"
+                  )}
+                >
+                  2 Years
+                </p>
+                <p
+                  className={cn(
+                    "text-xs mt-1 transition-colors duration-300",
+                    dark ? "text-gray-500" : "text-[#9CA3AF]"
+                  )}
+                >
+                  Proven success at Military Influencer Conference
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* The Gap in the Market */}
       <section className="max-w-4xl mx-auto">
         <div
@@ -602,211 +816,6 @@ function OverviewTab({ dark }: { dark: boolean }) {
             in fragmented tools into one military-focused platform — saving organizations
             thousands every month.
           </p>
-        </div>
-      </section>
-
-      {/* Our Story */}
-      <section className="max-w-4xl mx-auto">
-        <div
-          className={cn(
-            "rounded-2xl p-8 md:p-10 transition-colors duration-300",
-            dark
-              ? "bg-[#111827] border border-white/[0.08]"
-              : "bg-[#F9FAFB] border border-[#E5E7EB]"
-          )}
-        >
-          <h3
-            className={cn(
-              "text-xl md:text-2xl font-extrabold text-center mb-8 leading-tight transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
-            )}
-          >
-            Built by Veterans.{" "}
-            <span className="text-[#6C5CE7]">Proven at MIC.</span>
-          </h3>
-
-          <div className="space-y-5 max-w-3xl mx-auto">
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              RecurrentX didn&rsquo;t start in a boardroom. It started with a problem Andrew
-              Appleton couldn&rsquo;t stop thinking about as a veteran: the military and veteran
-              community had no place to be seen, heard, and understood.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              So he built one. Parade Deck started as a creator directory — a place where a
-              veteran podcaster with 500 followers could build a profile, connect their social
-              channels, and finally have a home for their content alongside authors, musicians,
-              military spouses, and social media creators who were all trying to build something
-              meaningful, with no support and no spotlight.
-            </p>
-
-            <div
-              className={cn(
-                "rounded-xl px-6 py-4 border-l-4 border-[#6C5CE7] transition-colors duration-300",
-                dark ? "bg-white/[0.04]" : "bg-white"
-              )}
-            >
-              <p
-                className={cn(
-                  "text-sm md:text-[15px] leading-relaxed font-semibold transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                342 creators joined. Sponsors started paying attention.
-              </p>
-            </div>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed font-bold transition-colors duration-300",
-                dark ? "text-white" : "text-[#111827]"
-              )}
-            >
-              Then came MIC.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              Recurrent brought Parade Deck to the Military Influencer Conference as a contracted
-              partner. The idea was simple: build a dedicated stage inside the conference and run
-              8 straight hours of live podcast sessions — 30 minutes each — giving the
-              network&rsquo;s creators a real platform in front of a real audience.
-            </p>
-
-            <div
-              className={cn(
-                "rounded-xl px-6 py-4 border-l-4 border-[#6C5CE7] transition-colors duration-300",
-                dark ? "bg-white/[0.04]" : "bg-white"
-              )}
-            >
-              <p
-                className={cn(
-                  "text-sm md:text-[15px] leading-relaxed font-semibold transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                It worked beyond anyone&rsquo;s expectations.
-              </p>
-            </div>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              Creators who had never been on a stage got standing ovations. Sponsors who watched
-              the streams saw something they couldn&rsquo;t get from a banner ad — authentic
-              engagement from a community that actually trusts its creators. Over 3 million
-              YouTube impressions. A $150,000–$250,000 revenue opportunity from a single stage
-              at a single event.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              They did it for three years.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              The lesson was clear: aggregate smaller, highly-engaged military creators — 20
-              military spouses each with 5,000 followers — and you don&rsquo;t just reach an
-              audience. You move one. Those followers are more authentic, more engaged, and more
-              loyal than any mega-influencer&rsquo;s audience.
-            </p>
-
-            <p
-              className={cn(
-                "text-sm md:text-[15px] leading-relaxed font-semibold transition-colors duration-300",
-                dark ? "text-white" : "text-[#111827]"
-              )}
-            >
-              RecurrentX is the infrastructure that makes that repeatable. Not just at MIC. Not
-              just for 3 days. But for every event, every activation, every day of the year.
-            </p>
-          </div>
-
-          {/* Stats row */}
-          <div className="mt-10 pt-8 border-t-2 border-[#6C5CE7]/30">
-            <div className="grid grid-cols-3 gap-6 text-center">
-              <div>
-                <p
-                  className={cn(
-                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
-                    dark ? "text-white" : "text-[#111827]"
-                  )}
-                >
-                  350+
-                </p>
-                <p
-                  className={cn(
-                    "text-xs mt-1 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#9CA3AF]"
-                  )}
-                >
-                  Verified creators in the network
-                </p>
-              </div>
-              <div>
-                <p
-                  className={cn(
-                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
-                    dark ? "text-white" : "text-[#111827]"
-                  )}
-                >
-                  3M+
-                </p>
-                <p
-                  className={cn(
-                    "text-xs mt-1 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#9CA3AF]"
-                  )}
-                >
-                  Combined audience reach across platforms
-                </p>
-              </div>
-              <div>
-                <p
-                  className={cn(
-                    "text-2xl md:text-3xl font-extrabold transition-colors duration-300",
-                    dark ? "text-white" : "text-[#111827]"
-                  )}
-                >
-                  2 Years
-                </p>
-                <p
-                  className={cn(
-                    "text-xs mt-1 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#9CA3AF]"
-                  )}
-                >
-                  Proven success at Military Influencer Conference
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
