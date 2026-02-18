@@ -1,0 +1,1 @@
+ALTER TABLE events ADD COLUMN IF NOT EXISTS theme_color text DEFAULT '#6C5CE7';

@@ -690,6 +690,7 @@ export type Database = {
           slug: string
           start_date: string | null
           state: string | null
+          theme_color: string | null
           timezone: string | null
           title: string
           updated_at: string | null
@@ -714,6 +715,7 @@ export type Database = {
           slug: string
           start_date?: string | null
           state?: string | null
+          theme_color?: string | null
           timezone?: string | null
           title: string
           updated_at?: string | null
@@ -738,6 +740,7 @@ export type Database = {
           slug?: string
           start_date?: string | null
           state?: string | null
+          theme_color?: string | null
           timezone?: string | null
           title?: string
           updated_at?: string | null

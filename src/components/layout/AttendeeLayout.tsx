@@ -25,6 +25,7 @@ export interface AttendeeEvent {
   cover_image_url: string | null;
   capacity: number | null;
   is_published: boolean | null;
+  theme_color: string | null;
 }
 
 interface AttendeeContextType {
@@ -58,6 +59,18 @@ interface Props {
   children: React.ReactNode;
 }
 
+/* ---------- helpers ---------- */
+const DEFAULT_THEME = "#6C5CE7";
+
+/** Darken a hex color by a percentage (0-1) */
+function darken(hex: string, amount: number): string {
+  const c = hex.replace("#", "");
+  const r = Math.max(0, Math.round(parseInt(c.slice(0, 2), 16) * (1 - amount)));
+  const g = Math.max(0, Math.round(parseInt(c.slice(2, 4), 16) * (1 - amount)));
+  const b = Math.max(0, Math.round(parseInt(c.slice(4, 6), 16) * (1 - amount)));
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
 /* ======================================== */
 const AttendeeLayout = ({ activeTab, children }: Props) => {
   const { eventSlug } = useParams<{ eventSlug: string }>();
@@ -82,7 +95,7 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
     try {
       let query = supabase
         .from("events")
-        .select("id, title, slug, description, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published");
+        .select("id, title, slug, description, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published, theme_color");
 
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventSlug!);
       if (isUUID) {
@@ -179,6 +192,10 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
     else navigate(`${base}/${tabId}`);
   };
 
+  /* ---- theme color ---- */
+  const theme = event?.theme_color || DEFAULT_THEME;
+  const themeDark = darken(theme, 0.15);
+
   /* ---- loading ---- */
   if (loading) {
     return (
@@ -196,8 +213,8 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
           <AlertCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Event Not Found</h1>
           <p className="text-gray-500 mb-6">The event you're looking for doesn't exist or has been removed.</p>
-          <Button asChild className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white">
-            <Link to="/events">Browse Events</Link>
+          <Button asChild style={{ backgroundColor: theme }} className="hover:opacity-90 text-white">
+            <Link to="/attend">Browse Events</Link>
           </Button>
         </div>
       </div>
@@ -206,14 +223,36 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
 
   return (
     <AttendeeContext.Provider value={{ event, eventSlug: eventSlug!, isRegistered, registrationId, refreshRegistration }}>
+      {/* CSS custom properties for theme color */}
+      <style>{`
+        .attendee-theme-btn { background-color: ${theme}; }
+        .attendee-theme-btn:hover { background-color: ${themeDark}; }
+      `}</style>
+
       {/* Phone-frame wrapper for desktop */}
       <div className="min-h-screen bg-gray-200 flex justify-center">
         <div className="w-full max-w-[430px] min-h-screen bg-gray-50 flex flex-col shadow-2xl relative">
-          {/* ---- Top Header (dark navy) ---- */}
-          <header className="sticky top-0 z-50 bg-[#0A0F1E] h-14 flex items-center px-4 gap-3">
+
+          {/* ---- Event Cover Banner ---- */}
+          {event.cover_image_url && (
+            <div className="w-full h-24 relative overflow-hidden shrink-0">
+              <img
+                src={event.cover_image_url}
+                alt={event.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            </div>
+          )}
+
+          {/* ---- Top Header ---- */}
+          <header
+            className="sticky top-0 z-50 h-14 flex items-center px-4 gap-3"
+            style={{ backgroundColor: theme }}
+          >
             <div className="flex-1 min-w-0">
               <h1 className="font-bold text-white text-sm truncate">{event.title}</h1>
-              <p className="text-xs text-gray-400 truncate">
+              <p className="text-xs text-white/70 truncate">
                 {event.venue && `${event.venue}`}
                 {event.city && ` · ${event.city}`}
                 {event.state && `, ${event.state}`}
@@ -223,7 +262,7 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
               className="relative p-2 rounded-full hover:bg-white/10 transition-colors"
               onClick={() => setNotifOpen(!notifOpen)}
             >
-              <Bell className={cn("h-5 w-5", notifOpen ? "text-[#6C5CE7]" : "text-gray-300")} />
+              <Bell className={cn("h-5 w-5", notifOpen ? "text-white" : "text-white/70")} />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
                   {unreadCount > 9 ? "9+" : unreadCount}
@@ -231,13 +270,13 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
               )}
             </button>
             <span className="text-xs font-bold text-white tracking-tight shrink-0">
-              recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+              recurrent<span className="font-extrabold" style={{ color: theme === DEFAULT_THEME ? "#fff" : "#fff" }}>X</span>
             </span>
           </header>
 
           {/* ---- Notification Panel ---- */}
           {notifOpen && (
-            <div className="absolute top-14 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-lg max-h-[70vh] overflow-y-auto">
+            <div className="absolute top-14 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-lg max-h-[70vh] overflow-y-auto" style={{ top: event.cover_image_url ? "calc(6rem + 3.5rem)" : "3.5rem" }}>
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="font-bold text-base">Notifications</h2>
@@ -277,21 +316,17 @@ const AttendeeLayout = ({ activeTab, children }: Props) => {
                   className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 transition-colors"
                 >
                   <tab.icon
-                    className={cn(
-                      "h-5 w-5 transition-colors",
-                      isActive ? "text-[#6C5CE7]" : "text-gray-400"
-                    )}
+                    className="h-5 w-5 transition-colors"
+                    style={{ color: isActive ? theme : "#9ca3af" }}
                   />
                   <span
-                    className={cn(
-                      "text-[10px] font-medium transition-colors",
-                      isActive ? "text-[#6C5CE7]" : "text-gray-400"
-                    )}
+                    className="text-[10px] font-medium transition-colors"
+                    style={{ color: isActive ? theme : "#9ca3af" }}
                   >
                     {tab.label}
                   </span>
                   {isActive && (
-                    <div className="w-1 h-1 rounded-full bg-[#6C5CE7] mt-0.5" />
+                    <div className="w-1 h-1 rounded-full mt-0.5" style={{ backgroundColor: theme }} />
                   )}
                 </button>
               );

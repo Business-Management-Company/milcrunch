@@ -121,6 +121,7 @@ import AttendeeSponsors from "./pages/attendee/AttendeeSponsors";
 import AttendeeCommunityPage from "./pages/attendee/AttendeeCommunityPage";
 import AttendeeProfilePage from "./pages/attendee/AttendeeProfilePage";
 import AttendeeRegister from "./pages/attendee/AttendeeRegister";
+import EventSelector from "./pages/attendee/EventSelector";
 import SponsorApply from "./pages/SponsorApply";
 import PublicSponsorPage from "./pages/PublicSponsorPage";
 import Shop from "./pages/Shop";
@@ -252,6 +253,7 @@ const App = () => (
               <Route path="/events/:eventId/checkout" element={<EventCheckout />} />
               <Route path="/events/:eventId/confirmation" element={<EventConfirmation />} />
               {/* Attendee experience (mobile-first PWA) */}
+              <Route path="/attend" element={<EventSelector />} />
               <Route path="/attend/:eventSlug" element={<AttendeeSchedule />} />
               <Route path="/attend/:eventSlug/speakers" element={<AttendeeSpeakers />} />
               <Route path="/attend/:eventSlug/community" element={<AttendeeCommunityPage />} />
