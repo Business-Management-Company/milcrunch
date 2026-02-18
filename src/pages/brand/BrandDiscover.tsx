@@ -279,6 +279,18 @@ const EnrichShimmer = () => (
   <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse inline-block" />
 );
 
+/** Fallback avatar URL using ui-avatars when the real image fails to load. */
+function avatarFallback(name: string) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6C5CE7&color=fff&size=128`;
+}
+
+/** onError handler for creator avatar <img> tags — swaps to initials on failure. */
+function onAvatarError(e: React.SyntheticEvent<HTMLImageElement>, name: string) {
+  const img = e.currentTarget;
+  img.onerror = null;
+  img.src = avatarFallback(name);
+}
+
 /** If this handle matches a directory_members row, upload the enrichment avatar
  *  to Supabase storage and update the row with the permanent URL (fire-and-forget). */
 function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse) {
@@ -1575,7 +1587,13 @@ const BrandDiscover = () => {
             </p>
             {contactConfirmCreator && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <img src={contactConfirmCreator.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                <img
+                  src={contactConfirmCreator.avatar}
+                  alt=""
+                  loading="lazy"
+                  onError={(e) => onAvatarError(e, contactConfirmCreator.name)}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
                 <div>
                   <p className="font-semibold text-sm">{contactConfirmCreator.name}</p>
                   <p className="text-xs text-muted-foreground">@{contactConfirmCreator.username}</p>
@@ -2171,7 +2189,13 @@ const BrandDiscover = () => {
                             <td className="p-3">
                               <div className="flex items-center gap-3">
                                 <div className="relative shrink-0">
-                                  <img src={creator.avatar} alt={creator.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700" />
+                                  <img
+                                    src={creator.avatar}
+                                    alt={creator.name}
+                                    loading="lazy"
+                                    onError={(e) => onAvatarError(e, creator.name)}
+                                    className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                                  />
                                   {creator.isVerified && (
                                     <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-blue-500 bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
                                   )}
@@ -2367,6 +2391,8 @@ const BrandDiscover = () => {
                             <img
                               src={creator.avatar}
                               alt={creator.name}
+                              loading="lazy"
+                              onError={(e) => onAvatarError(e, creator.name)}
                               className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md"
                             />
                             {creator.isVerified && (
