@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -175,6 +175,23 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
   const location = useLocation();
   const { isSuperAdmin } = useAuth();
   const navRef = useRef<HTMLElement>(null);
+  const scrollPos = useRef(0);
+
+  // Track sidebar scroll position continuously
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const onScroll = () => { scrollPos.current = nav.scrollTop; };
+    nav.addEventListener("scroll", onScroll, { passive: true });
+    return () => nav.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Restore scroll position after route change (before paint)
+  useLayoutEffect(() => {
+    if (navRef.current) {
+      navRef.current.scrollTop = scrollPos.current;
+    }
+  }, [location.pathname]);
 
   const defaults: Record<string, boolean> = {};
   for (const s of SIDEBAR_SECTIONS) {
