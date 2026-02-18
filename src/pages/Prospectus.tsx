@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import {
   Lock, Play, Share2, Check, Calendar, Users, BarChart3, Video,
   Zap, Shield, ArrowRight, Mail, Loader2, Sun, Moon,
+  FileText, Layers, Target, XCircle, CheckCircle2,
+  Smartphone, Search, TrendingUp, Radio, Handshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -454,6 +456,272 @@ function OverviewTab({ dark }: { dark: boolean }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Solution Brief data per tab                                         */
+/* ------------------------------------------------------------------ */
+
+interface SolutionBriefData {
+  summary: string;
+  components: string[];
+  problemSolved: { pain: string; solution: string }[];
+  summaryIcon: typeof FileText;
+  componentsIcon: typeof Layers;
+  problemIcon: typeof Target;
+}
+
+const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
+  "Events & Attendee App": {
+    summaryIcon: Smartphone,
+    componentsIcon: Layers,
+    problemIcon: Target,
+    summary:
+      "RecurrentX replaces Whova with a mobile-first PWA attendee app that works before, during, and after every event — keeping the community engaged 365 days without requiring an App Store download.",
+    components: [
+      "Mobile schedule + agenda builder",
+      "Speaker & sponsor discovery",
+      "Community feed with real-time posts",
+      "QR-based networking & lead retrieval",
+      "Push notifications & announcements",
+    ],
+    problemSolved: [
+      {
+        pain: "Whova charges $5K–$15K per event and the app goes dark after Day 3",
+        solution:
+          "RecurrentX is included in the platform license with year-round community access",
+      },
+      {
+        pain: "Attendees forget speakers and sponsors within a week",
+        solution:
+          "Persistent profiles and community keep relationships active long after the event ends",
+      },
+    ],
+  },
+  "Creator Network": {
+    summaryIcon: Search,
+    componentsIcon: Layers,
+    problemIcon: Target,
+    summary:
+      "A verified directory of 1,000+ military and veteran creators — influencers, podcasters, speakers, and authors — with AI-powered discovery, brand safety verification, and built-in campaign management.",
+    components: [
+      "AI-powered creator search with 20+ filters",
+      "4-phase military verification pipeline",
+      "Creator profile pages with social analytics",
+      "Brand deal facilitation and list building",
+      "Creator onboarding with social account connection",
+    ],
+    problemSolved: [
+      {
+        pain: "Brands can't verify if creators actually served",
+        solution:
+          "4-phase AI verification with confidence scores and evidence",
+      },
+      {
+        pain: "Finding niche military creators requires 5+ different tools",
+        solution:
+          "One search finds verified creators across all platforms and niches",
+      },
+    ],
+  },
+  "365 Insights": {
+    summaryIcon: TrendingUp,
+    componentsIcon: Layers,
+    problemIcon: Target,
+    summary:
+      "Year-round sponsor analytics that turn event spend into a measurable, data-driven asset — giving sponsors the ROI story they need to renew and upsell every year.",
+    components: [
+      "Multi-sponsor impression tracking",
+      "12-month time-series dashboards",
+      "YoY comparison and event benchmarking",
+      "Exportable ROI reports",
+      "Sponsor renewal pipeline tools",
+    ],
+    problemSolved: [
+      {
+        pain: 'Sponsors ask "what did I get?" with no data to answer',
+        solution:
+          "Real-time dashboards show impressions, engagement, and attribution by sponsor tier",
+      },
+      {
+        pain: "Sponsor renewal rates under 50% industry-wide",
+        solution:
+          "Data-driven renewal conversations drive 85%+ retention target",
+      },
+    ],
+  },
+  "Streaming & Media": {
+    summaryIcon: Radio,
+    componentsIcon: Layers,
+    problemIcon: Target,
+    summary:
+      "Multi-destination live streaming with AI post-production built in — replacing StreamYard, Restream, and manual video editing with one integrated media engine.",
+    components: [
+      "Multi-platform streaming (YouTube, Facebook, Twitch, custom RTMP)",
+      "Browser-based streaming without hardware",
+      "AI auto-framing and lower thirds",
+      "Highlight reel generation",
+      "Social clip repurposing via Upload-Post",
+    ],
+    problemSolved: [
+      {
+        pain: "StreamYard + Restream costs $50–$200/mo and still requires manual editing",
+        solution:
+          "RecurrentX streams to all platforms simultaneously with AI post-production included",
+      },
+      {
+        pain: "Event recordings sit unwatched after the event",
+        solution:
+          "AI generates clips and schedules them across social channels for months of long-tail impressions",
+      },
+    ],
+  },
+  "Partnership Model": {
+    summaryIcon: Handshake,
+    componentsIcon: Layers,
+    problemIcon: Target,
+    summary:
+      "A white-label platform licensing model that gives Recurrent.io full ownership of the technology under their brand — turning RecurrentX into the infrastructure layer for their entire event portfolio.",
+    components: [
+      "Platform license per event property",
+      "Sponsor Dashboard access add-on ($5K–$10K per sponsor)",
+      "Creator marketplace revenue share",
+      "White-label branding options",
+      "API access for custom integrations",
+    ],
+    problemSolved: [
+      {
+        pain: "Recurrent.io consolidates $3,800+/mo in SaaS tools across their event portfolio",
+        solution:
+          "One license replaces Eventbrite, Grin, StreamYard, Jotform, Brandwatch, and manual verification",
+      },
+      {
+        pain: "No recurring data asset between events",
+        solution:
+          "RecurrentX builds a proprietary creator and audience database that grows in value with every event",
+      },
+    ],
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/* Solution Brief component                                            */
+/* ------------------------------------------------------------------ */
+
+function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean }) {
+  const cardClass = cn(
+    "rounded-xl p-6 transition-colors duration-300",
+    dark
+      ? "bg-[#1a1f2e] border border-white/[0.08]"
+      : "bg-white border border-[#E5E7EB]"
+  );
+
+  return (
+    <section className="mt-16">
+      {/* Section heading */}
+      <p className="text-xs font-semibold tracking-[0.15em] uppercase text-[#6C5CE7] mb-5">
+        Solution Brief
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Card 1 — Summary of Service */}
+        <div className={cardClass}>
+          <div className="w-10 h-10 rounded-lg bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
+            <data.summaryIcon className="h-5 w-5 text-[#6C5CE7]" />
+          </div>
+          <h4
+            className={cn(
+              "font-bold text-sm mb-3 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            Summary of Service
+          </h4>
+          <p
+            className={cn(
+              "text-sm leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-400" : "text-[#6B7280]"
+            )}
+          >
+            {data.summary}
+          </p>
+        </div>
+
+        {/* Card 2 — Major Components */}
+        <div className={cardClass}>
+          <div className="w-10 h-10 rounded-lg bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
+            <data.componentsIcon className="h-5 w-5 text-[#6C5CE7]" />
+          </div>
+          <h4
+            className={cn(
+              "font-bold text-sm mb-3 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            Major Components
+          </h4>
+          <ul className="space-y-2">
+            {data.components.map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-[#6C5CE7] mt-0.5 flex-shrink-0" />
+                <span
+                  className={cn(
+                    "text-sm leading-snug transition-colors duration-300",
+                    dark ? "text-gray-400" : "text-[#6B7280]"
+                  )}
+                >
+                  {item}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Card 3 — Problem Solved */}
+        <div className={cardClass}>
+          <div className="w-10 h-10 rounded-lg bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
+            <data.problemIcon className="h-5 w-5 text-[#6C5CE7]" />
+          </div>
+          <h4
+            className={cn(
+              "font-bold text-sm mb-3 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            Problem Solved
+          </h4>
+          <div className="space-y-4">
+            {data.problemSolved.map((ps, i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <XCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                  <span
+                    className={cn(
+                      "text-sm leading-snug transition-colors duration-300",
+                      dark ? "text-gray-500" : "text-[#9CA3AF]"
+                    )}
+                  >
+                    {ps.pain}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span
+                    className={cn(
+                      "text-sm leading-snug font-medium transition-colors duration-300",
+                      dark ? "text-gray-300" : "text-[#374151]"
+                    )}
+                  >
+                    {ps.solution}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Tab: Placeholder                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -466,28 +734,36 @@ function PlaceholderTab({
   description: string;
   dark: boolean;
 }) {
+  const brief = SOLUTION_BRIEFS[title];
+
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
-        <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
+    <div>
+      {/* Video placeholder */}
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
+          <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
+        </div>
+        <h3
+          className={cn(
+            "text-xl font-bold mb-2 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          {title}
+        </h3>
+        <p
+          className={cn(
+            "text-sm max-w-md transition-colors duration-300",
+            dark ? "text-gray-400" : "text-[#6B7280]"
+          )}
+        >
+          {description}
+        </p>
+        <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
       </div>
-      <h3
-        className={cn(
-          "text-xl font-bold mb-2 transition-colors duration-300",
-          dark ? "text-white" : "text-[#111827]"
-        )}
-      >
-        {title}
-      </h3>
-      <p
-        className={cn(
-          "text-sm max-w-md transition-colors duration-300",
-          dark ? "text-gray-400" : "text-[#6B7280]"
-        )}
-      >
-        {description}
-      </p>
-      <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
+
+      {/* Solution Brief */}
+      {brief && <SolutionBrief data={brief} dark={dark} />}
     </div>
   );
 }
