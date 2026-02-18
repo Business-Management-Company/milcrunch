@@ -37,6 +37,8 @@ export default function LoginPage() {
     demoTriggered.current = true;
     (async () => {
       setLoading(true);
+      localStorage.setItem('parade-deck-theme', 'light');
+      document.documentElement.classList.remove('dark');
       const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
       setLoading(false);
       if (error) toast.error("Demo login failed. Please try again.");
@@ -228,6 +230,8 @@ export default function LoginPage() {
             disabled={loading}
             onClick={async () => {
               setLoading(true);
+              localStorage.setItem('parade-deck-theme', 'light');
+              document.documentElement.classList.remove('dark');
               const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
               setLoading(false);
               if (error) {
