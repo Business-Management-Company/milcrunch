@@ -135,7 +135,7 @@ export default function LoginPage() {
             {isForgot ? "Reset Password" : "Welcome Back"}
           </CardTitle>
           <CardDescription>
-            {isForgot ? "Enter your email to receive a reset link" : "Sign in to your RecurrentX creator account"}
+            {isForgot ? "Enter your email to receive a reset link" : "Sign in to your MilCrunch creator account"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -133,7 +133,7 @@ const EmailSubscribe = () => {
           Subscribe
         </Button>
 
-        <p className="text-xs text-gray-400 text-center mt-4">Powered by RecurrentX</p>
+        <p className="text-xs text-gray-400 text-center mt-4">Powered by MilCrunch</p>
       </form>
     </div>
   );

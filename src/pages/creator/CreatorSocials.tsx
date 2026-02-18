@@ -129,7 +129,7 @@ const CreatorSocials = () => {
           Connect Your Socials
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Link your Instagram, TikTok, and other platforms via Upload-Post. One connection is used across RecurrentX.
+          Link your Instagram, TikTok, and other platforms via Upload-Post. One connection is used across MilCrunch.
         </p>
         {loading && !connectUrl ? (
           <div className="flex items-center gap-2 text-muted-foreground">

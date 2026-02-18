@@ -108,7 +108,7 @@ export default function SignupPage() {
           <div className="flex justify-center mb-4">
             <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">recurrent</span><span className="text-[#6C5CE7] font-extrabold">X</span></span>
           </div>
-          <CardTitle className="text-2xl font-bold">Join RecurrentX</CardTitle>
+          <CardTitle className="text-2xl font-bold">Join MilCrunch</CardTitle>
           <CardDescription>Create your creator account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

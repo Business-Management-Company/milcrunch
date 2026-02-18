@@ -137,7 +137,7 @@ export default function CreatorProfile() {
           Profile Builder
         </h1>
         <p className="text-muted-foreground">
-          Build your RecurrentX creator profile. Your handle is your public bio page URL.
+          Build your MilCrunch creator profile. Your handle is your public bio page URL.
         </p>
       </div>
 

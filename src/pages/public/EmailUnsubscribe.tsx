@@ -37,7 +37,7 @@ const EmailUnsubscribe = () => {
             </Button>
           </>
         )}
-        <p className="text-xs text-gray-400 mt-6">Powered by RecurrentX</p>
+        <p className="text-xs text-gray-400 mt-6">Powered by MilCrunch</p>
       </div>
     </div>
   );

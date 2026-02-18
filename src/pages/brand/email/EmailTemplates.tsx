@@ -65,7 +65,7 @@ function defaultBlock(type: BlockType): EmailBlock {
     case "header":
       return { id, type, content: "Your Email Header", props: { bgColor: "#6C5CE7", color: "#ffffff", fontSize: "24px" } };
     case "footer":
-      return { id, type, content: "© 2026 RecurrentX. All rights reserved.\n{{unsubscribe_url}}", props: { color: "#999999", fontSize: "12px" } };
+      return { id, type, content: "© 2026 MilCrunch. All rights reserved.\n{{unsubscribe_url}}", props: { color: "#999999", fontSize: "12px" } };
     case "two-column":
       return { id, type, content: "Left column content", props: { rightContent: "Right column content", gap: "20px" } };
   }

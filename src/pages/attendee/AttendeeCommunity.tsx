@@ -104,8 +104,8 @@ function mockDate(daysAgo: number, hoursAgo = 0): string {
 
 const MOCK_POSTS: CommunityPost[] = [
   // Announcements
-  { id: "cp1", event_id: "", user_id: null, author_name: "RecurrentX Team", author_avatar_url: null, author_branch: null, post_type: "announcement", content: "Welcome to MIC 2026! Badge pickup is open at the registration desk in the main lobby. See you out there! 🎖️", is_pinned: true, likes_count: 89, replies_count: 23, created_at: mockDate(0, 3) },
-  { id: "cp2", event_id: "", user_id: null, author_name: "RecurrentX Team", author_avatar_url: null, author_branch: null, post_type: "announcement", content: "Reminder: Opening Keynote starts at 9:00 AM sharp in the Main Stage. Seats are filling up fast!", is_pinned: true, likes_count: 45, replies_count: 8, created_at: mockDate(0, 2) },
+  { id: "cp1", event_id: "", user_id: null, author_name: "MilCrunch Team", author_avatar_url: null, author_branch: null, post_type: "announcement", content: "Welcome to MIC 2026! Badge pickup is open at the registration desk in the main lobby. See you out there! 🎖️", is_pinned: true, likes_count: 89, replies_count: 23, created_at: mockDate(0, 3) },
+  { id: "cp2", event_id: "", user_id: null, author_name: "MilCrunch Team", author_avatar_url: null, author_branch: null, post_type: "announcement", content: "Reminder: Opening Keynote starts at 9:00 AM sharp in the Main Stage. Seats are filling up fast!", is_pinned: true, likes_count: 45, replies_count: 8, created_at: mockDate(0, 2) },
   // Introductions
   { id: "cp3", event_id: "", user_id: null, author_name: "SSgt Marcus Williams", author_avatar_url: null, author_branch: "Marines", post_type: "introduction", content: "Hey everyone! SSgt Marcus Williams, USMC veteran turned content creator. I run @veteranfitlife on IG with 45K followers. Here to connect with other mil creators and learn from the best. Who else is doing fitness content?", is_pinned: false, likes_count: 45, replies_count: 12, created_at: mockDate(0, 4) },
   { id: "cp4", event_id: "", user_id: null, author_name: "Sarah Chen", author_avatar_url: null, author_branch: "Army", post_type: "introduction", content: "Hi MIC fam! I'm Sarah Chen, Army spouse and lifestyle blogger at Fort Bragg. This is my first MIC and I can't wait for the MilSpouse Creator Spotlight session. Anyone want to grab coffee before the keynote?", is_pinned: false, likes_count: 67, replies_count: 15, created_at: mockDate(0, 5) },
@@ -129,11 +129,11 @@ const MOCK_REPLIES: Record<string, CommunityReply[]> = {
     { id: "r3", post_id: "cp4", user_id: null, author_name: "Keisha Thompson", author_avatar_url: null, content: "Sarah! I'll be at the coffee shop in the lobby at 8 AM if you want to meet up! ☕", created_at: mockDate(0, 4) },
   ],
   cp7: [
-    { id: "r4", post_id: "cp7", user_id: null, author_name: "RecurrentX Team", author_avatar_url: null, content: "Great question! Yes, there's a Wellness Lounge on Level 2 with comfortable seating and low lighting. Open all 3 days.", created_at: mockDate(0, 2) },
+    { id: "r4", post_id: "cp7", user_id: null, author_name: "MilCrunch Team", author_avatar_url: null, content: "Great question! Yes, there's a Wellness Lounge on Level 2 with comfortable seating and low lighting. Open all 3 days.", created_at: mockDate(0, 2) },
     { id: "r5", post_id: "cp7", user_id: null, author_name: "SSgt Marcus Williams", author_avatar_url: null, content: "Thank you for asking this. Really important. I'll be checking it out too.", created_at: mockDate(0, 1) },
   ],
   cp8: [
-    { id: "r6", post_id: "cp8", user_id: null, author_name: "RecurrentX Team", author_avatar_url: null, content: "Happy hour starts at 4 PM as listed! Doors open at 3:45. See you there! 🍻", created_at: mockDate(0, 1) },
+    { id: "r6", post_id: "cp8", user_id: null, author_name: "MilCrunch Team", author_avatar_url: null, content: "Happy hour starts at 4 PM as listed! Doors open at 3:45. See you there! 🍻", created_at: mockDate(0, 1) },
   ],
 };
 

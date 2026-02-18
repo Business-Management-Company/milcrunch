@@ -67,7 +67,7 @@ const EmailCampaigns = () => {
   const [campaignName, setCampaignName] = useState("");
   const [subject, setSubject] = useState("");
   const [previewText, setPreviewText] = useState("");
-  const [fromName, setFromName] = useState("RecurrentX");
+  const [fromName, setFromName] = useState("MilCrunch");
   const [fromEmail, setFromEmail] = useState("noreply@milcrunch.com");
 
   // Step 2 — Recipients
@@ -151,7 +151,7 @@ const EmailCampaigns = () => {
     setCampaignName("");
     setSubject("");
     setPreviewText("");
-    setFromName("RecurrentX");
+    setFromName("MilCrunch");
     setFromEmail("noreply@milcrunch.com");
     setSelectedListId("");
     setSelectedDirRecipients(new Set());
@@ -169,7 +169,7 @@ const EmailCampaigns = () => {
       setCampaignName(campaign.name);
       setSubject(campaign.subject || "");
       setPreviewText(campaign.preview_text || "");
-      setFromName(campaign.from_name || "RecurrentX");
+      setFromName(campaign.from_name || "MilCrunch");
       setFromEmail(campaign.from_email || "noreply@milcrunch.com");
       setSelectedListId(campaign.list_ids?.[0] || "");
       setHtmlContent(campaign.html_content || "");
@@ -323,7 +323,7 @@ const EmailCampaigns = () => {
             <div className="space-y-2">
               <Label>Subject Line *</Label>
               <div className="relative">
-                <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Your weekly update from RecurrentX" />
+                <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Your weekly update from MilCrunch" />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{subject.length}/80</span>
               </div>
             </div>

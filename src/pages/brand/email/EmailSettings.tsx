@@ -35,7 +35,7 @@ const EmailSettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [settings, setSettings] = useState<EmailSettings | null>(null);
-  const [fromName, setFromName] = useState("RecurrentX");
+  const [fromName, setFromName] = useState("MilCrunch");
   const [fromEmail, setFromEmail] = useState("hello@milcrunch.com");
   const [customDomain, setCustomDomain] = useState("");
   const [dnsRecords, setDnsRecords] = useState<DnsRecord[]>([]);
@@ -49,7 +49,7 @@ const EmailSettingsPage = () => {
       const s = await getEmailSettings(user.id);
       if (s) {
         setSettings(s);
-        setFromName(s.from_name || "RecurrentX");
+        setFromName(s.from_name || "MilCrunch");
         setFromEmail(s.from_email || "hello@milcrunch.com");
         setCustomDomain(s.custom_domain || "");
         setFooterText(s.footer_text || "");
@@ -181,7 +181,7 @@ const EmailSettingsPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fromName">From Name</Label>
-                <Input id="fromName" value={fromName} onChange={e => setFromName(e.target.value)} placeholder="RecurrentX" />
+                <Input id="fromName" value={fromName} onChange={e => setFromName(e.target.value)} placeholder="MilCrunch" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fromEmail">From Email</Label>
