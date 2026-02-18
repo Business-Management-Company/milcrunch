@@ -1,33 +1,19 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, ShieldCheck, Loader2 } from "lucide-react";
 
-const SUPER_ADMIN_EMAILS = ["andrew@recurrentx.com"];
-
 type AccessRow = { id: string; email: string; created_at: string };
 
 export default function ProspectusAccess() {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [rows, setRows] = useState<AccessRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
-
-  // Route guard: only super admin emails
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user || !SUPER_ADMIN_EMAILS.includes(user.email?.toLowerCase() ?? "")) {
-      navigate("/brand/dashboard", { replace: true });
-    }
-  }, [user, authLoading, navigate]);
 
   const fetchRows = async () => {
     const { data, error } = await supabase
@@ -84,8 +70,6 @@ export default function ProspectusAccess() {
     toast({ title: "Email removed" });
   };
 
-  if (authLoading || (!user && !authLoading)) return null;
-
   return (
     <div className="p-6 md:p-10 max-w-3xl mx-auto">
       {/* Header */}
@@ -94,7 +78,10 @@ export default function ProspectusAccess() {
           <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
             <ShieldCheck className="h-5 w-5 text-[#6C5CE7]" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Prospectus Access Control</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Prospectus Access Control</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Manage who can view the investor prospectus</p>
+          </div>
         </div>
         <Button
           onClick={() => setModalOpen(true)}
