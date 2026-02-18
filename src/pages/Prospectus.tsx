@@ -54,13 +54,13 @@ const PILLARS = [
 ];
 
 const SAAS_ROWS = [
-  { tool: "Eventbrite / Cvent", cost: 500, replaces: "Event Management" },
-  { tool: "Grin / AspireIQ", cost: 800, replaces: "Creator Discovery" },
-  { tool: "StreamYard / Restream", cost: 50, replaces: "Live Streaming" },
-  { tool: "Jotform / Typeform", cost: 50, replaces: "Registration Forms" },
-  { tool: "Brandwatch / Sprout", cost: 300, replaces: "Social Monitoring" },
-  { tool: "Mailchimp / Klaviyo", cost: 100, replaces: "Email & Outreach" },
-  { tool: "Manual Verification", cost: 2000, replaces: "Military ID Verification" },
+  { tool: "Event Management Platform", cost: 500, replaces: "Event Management" },
+  { tool: "Creator Discovery & Management", cost: 800, replaces: "Creator Discovery" },
+  { tool: "Live Streaming Tools", cost: 50, replaces: "Live Streaming" },
+  { tool: "Registration & Forms", cost: 50, replaces: "Registration Forms" },
+  { tool: "Social Monitoring & Analytics", cost: 300, replaces: "Social Monitoring" },
+  { tool: "Email & Outreach Platform", cost: 100, replaces: "Email & Outreach" },
+  { tool: "Manual Creator Verification", cost: 2000, replaces: "Military ID Verification" },
 ];
 
 const TAB_PLACEHOLDERS: Record<string, string> = {
@@ -226,9 +226,9 @@ function OverviewTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-400" : "text-[#6B7280]"
           )}
         >
-          RecurrentX is the operating system Recurrent&rsquo;s brands have been missing —
-          built by a veteran, proven at MIC, and designed to turn every event into a
-          year-round community that sponsors want to fund again and again.
+          RecurrentX is the operating system military events and communities have been
+          missing — built by a veteran, proven at MIC, and designed to turn every event
+          into a year-round community that sponsors want to fund again and again.
         </p>
       </section>
 
@@ -253,10 +253,15 @@ function OverviewTab({ dark }: { dark: boolean }) {
           </h3>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Left — What Recurrent Offers Today */}
+            {/* Left — What Exists Today */}
             <div>
-              <h4 className="text-sm font-bold uppercase tracking-wide text-amber-500 mb-4">
-                What Recurrent Offers Today
+              <h4
+                className={cn(
+                  "text-sm font-bold uppercase tracking-wide mb-4 transition-colors duration-300",
+                  dark ? "text-gray-400" : "text-[#6B7280]"
+                )}
+              >
+                What Exists Today
               </h4>
               <ul className="space-y-2.5">
                 {[
@@ -268,7 +273,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                   "Branded Content (transactional)",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5">
-                    <XCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                    <ArrowRight className={cn("h-4 w-4 mt-0.5 flex-shrink-0 transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")} />
                     <span
                       className={cn(
                         "text-sm leading-snug transition-colors duration-300",
@@ -336,7 +341,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                 dark ? "text-white" : "text-[#111827]"
               )}
             >
-              MIC and MilSpouseFest bring the community together for 3 days.
+              Live events bring the community together for a few days.
               <br />
               <span className="text-[#6C5CE7]">RecurrentX keeps them together for 365.</span>
             </p>
@@ -381,6 +386,85 @@ function OverviewTab({ dark }: { dark: boolean }) {
         </div>
       </section>
 
+      {/* Events in Your Pocket */}
+      <section className="max-w-4xl mx-auto">
+        <div
+          className={cn(
+            "rounded-2xl p-8 md:p-10 transition-colors duration-300",
+            dark
+              ? "bg-[#111827] border border-white/[0.08]"
+              : "bg-[#F9FAFB] border border-[#E5E7EB]"
+          )}
+        >
+          <div className="text-center mb-8">
+            <div className="w-12 h-12 rounded-xl bg-[#6C5CE7]/15 flex items-center justify-center mx-auto mb-4">
+              <Smartphone className="h-6 w-6 text-[#6C5CE7]" />
+            </div>
+            <h3
+              className={cn(
+                "text-xl md:text-2xl font-extrabold mb-2 transition-colors duration-300",
+                dark ? "text-white" : "text-[#111827]"
+              )}
+            >
+              Events in Your Pocket
+            </h3>
+            <p
+              className={cn(
+                "text-sm max-w-xl mx-auto transition-colors duration-300",
+                dark ? "text-gray-400" : "text-[#6B7280]"
+              )}
+            >
+              The first mobile-first attendee app built specifically for military events — no App Store required.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 items-start">
+            {/* Left — Features */}
+            <div className="space-y-4 md:pt-4">
+              {[
+                "Installs on any iPhone or Android in one tap",
+                "Live schedule, speakers, and sponsor directory",
+                "QR networking and lead retrieval built in",
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span
+                    className={cn(
+                      "text-sm md:text-[15px] leading-relaxed font-medium transition-colors duration-300",
+                      dark ? "text-gray-300" : "text-[#374151]"
+                    )}
+                  >
+                    {item}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Right — Phone mockup */}
+            <div className="flex justify-center">
+              <div
+                className={cn(
+                  "relative w-[280px] h-[560px] rounded-[2.5rem] border-[6px] overflow-hidden shadow-2xl transition-colors duration-300",
+                  dark
+                    ? "border-gray-700 bg-black shadow-black/40"
+                    : "border-gray-800 bg-black shadow-gray-400/30"
+                )}
+              >
+                {/* Notch */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-black rounded-b-2xl z-10" />
+                {/* Iframe */}
+                <iframe
+                  src="/attend/military-influencer-conference-2026"
+                  title="Attendee App Preview"
+                  className="w-full h-full border-0 rounded-[2rem]"
+                  style={{ pointerEvents: "auto" }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* SaaS Replacement Calculator */}
       <section className="max-w-3xl mx-auto">
         <h3
@@ -389,7 +473,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
             dark ? "text-white" : "text-[#111827]"
           )}
         >
-          SaaS Replacement Calculator
+          One Platform. One Bill. Serious Savings.
         </h3>
         <p
           className={cn(
@@ -397,7 +481,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-500" : "text-[#6B7280]"
           )}
         >
-          One platform. One bill. One login.
+          Stop paying for 7 tools that don&rsquo;t talk to each other.
         </p>
 
         <div
@@ -515,7 +599,8 @@ function OverviewTab({ dark }: { dark: boolean }) {
           >
             RecurrentX consolidates{" "}
             <span className="text-[#6C5CE7] font-bold">${saasTotal.toLocaleString()}+/mo</span>{" "}
-            in SaaS costs into one military-focused platform.
+            in fragmented tools into one military-focused platform — saving organizations
+            thousands every month.
           </p>
         </div>
       </section>
@@ -673,7 +758,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                     dark ? "text-white" : "text-[#111827]"
                   )}
                 >
-                  342+
+                  350+
                 </p>
                 <p
                   className={cn(
@@ -681,7 +766,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                     dark ? "text-gray-500" : "text-[#9CA3AF]"
                   )}
                 >
-                  Creators in the original Parade Deck network
+                  Verified creators in the network
                 </p>
               </div>
               <div>
@@ -699,7 +784,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                     dark ? "text-gray-500" : "text-[#9CA3AF]"
                   )}
                 >
-                  YouTube impressions from the Parade Deck Experience stage
+                  Combined audience reach across platforms
                 </p>
               </div>
               <div>
@@ -709,7 +794,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                     dark ? "text-white" : "text-[#111827]"
                   )}
                 >
-                  3 Years
+                  2 Years
                 </p>
                 <p
                   className={cn(
@@ -717,7 +802,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                     dark ? "text-gray-500" : "text-[#9CA3AF]"
                   )}
                 >
-                  Proven at Military Influencer Conference
+                  Proven success at Military Influencer Conference
                 </p>
               </div>
             </div>
