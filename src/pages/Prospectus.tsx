@@ -5,7 +5,6 @@ import {
   FileText, Layers, Target, XCircle, CheckCircle2,
   Smartphone, Search, TrendingUp, Radio, Handshake,
   Mic, DollarSign, ClipboardList, BookOpen,
-  Star, MapPin, User, Bell, Heart, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -648,102 +647,67 @@ function OverviewTab({ dark }: { dark: boolean }) {
 
           {/* 3-Phone Display */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-            {/* Phone 1 — QR Check-In */}
+            {/* Phone 1 — Registration & Check-In */}
             <div className="flex flex-col items-center">
               <div
                 className={cn(
                   "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
                   dark
-                    ? "border-gray-700 bg-white shadow-black/40"
-                    : "border-gray-800 bg-white shadow-gray-400/30"
+                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
+                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
                 )}
               >
                 {/* Notch */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
-                {/* Screen */}
-                <div className="w-full h-full flex flex-col bg-white">
-                  {/* Status bar */}
+                {/* Screen content */}
+                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
+                  {/* Status bar spacer */}
                   <div className="h-[28px] bg-[#6C5CE7]" />
-                  {/* Purple header with calendar icon */}
-                  <div className="bg-[#6C5CE7] px-4 py-2.5 flex items-center justify-center gap-1.5">
-                    <Calendar className="h-3 w-3 text-white/80" />
-                    <div className="text-center">
-                      <p className="text-white text-[10px] font-bold leading-tight">Military Influencer Conference 2026</p>
-                    </div>
+                  {/* Purple header */}
+                  <div className="bg-[#6C5CE7] px-4 py-3 text-center">
+                    <p className="text-white text-[10px] font-bold leading-tight">Military Influencer</p>
+                    <p className="text-white text-[10px] font-bold leading-tight">Conference 2026</p>
                   </div>
                   {/* QR Code area */}
-                  <div className="flex-1 flex flex-col items-center justify-center px-5 bg-white">
-                    {/* QR Code — dense 15x15 pattern */}
-                    <div className="w-[130px] h-[130px] bg-white rounded-xl p-2 mb-4 shadow-md shadow-gray-200 border border-gray-100">
-                      <div className="w-full h-full grid grid-cols-15 grid-rows-15 gap-[1px]">
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 bg-[#111827]">
+                    {/* QR Code pattern */}
+                    <div className="w-[130px] h-[130px] bg-white rounded-xl p-2.5 mb-4">
+                      <div className="w-full h-full grid grid-cols-9 grid-rows-9 gap-[2px]">
                         {[
-                          [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1],
-                          [1,0,0,0,0,0,1,0,0,1,0,0,1,0,1],
-                          [1,0,1,1,1,0,1,0,1,1,0,1,1,0,1],
-                          [1,0,1,1,1,0,1,0,0,1,1,0,1,0,1],
-                          [1,0,1,1,1,0,1,0,1,0,1,0,1,0,1],
-                          [1,0,0,0,0,0,1,0,0,1,0,1,1,0,1],
-                          [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1],
-                          [0,0,0,0,0,0,0,0,1,1,0,1,0,0,0],
-                          [1,0,1,1,0,1,1,1,0,0,1,0,1,1,0],
-                          [0,1,0,0,1,0,0,1,1,0,1,1,0,1,1],
-                          [1,1,0,1,1,1,1,0,0,1,0,0,1,0,1],
-                          [0,0,0,0,0,0,0,0,1,0,1,0,0,1,0],
-                          [1,1,1,1,1,1,1,0,0,1,0,1,1,0,1],
-                          [1,0,0,0,0,0,1,0,1,0,1,0,1,1,0],
-                          [1,0,1,1,1,0,1,0,1,1,0,1,0,0,1],
+                          [1,1,1,1,1,0,1,0,1],
+                          [1,0,0,0,1,0,0,1,1],
+                          [1,0,1,0,1,0,1,0,1],
+                          [1,0,0,0,1,0,0,1,0],
+                          [1,1,1,1,1,0,1,0,1],
+                          [0,0,0,0,0,0,1,1,0],
+                          [1,1,0,1,1,1,0,0,1],
+                          [0,1,0,0,1,0,1,0,1],
+                          [1,0,1,1,0,1,0,1,0],
                         ].map((row, ri) =>
                           row.map((v, ci) => (
                             <div
-                              key={`qr1-${ri}-${ci}`}
+                              key={`qr-${ri}-${ci}`}
                               className={cn(
-                                "rounded-[0.5px]",
-                                v
-                                  ? ri >= 8 && ri <= 10 && ci >= 8 && ci <= 10
-                                    ? "bg-[#6C5CE7]"
-                                    : "bg-[#111827]"
-                                  : "bg-white"
+                                "rounded-[1px]",
+                                v ? (ri === 6 ? "bg-[#6C5CE7]" : "bg-[#111827]") : "bg-white"
                               )}
                             />
                           ))
                         )}
                       </div>
                     </div>
-                    {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-[#6C5CE7] flex items-center justify-center mb-2 ring-2 ring-[#6C5CE7]/30 ring-offset-2 ring-offset-white">
-                      <span className="text-white text-sm font-bold">CR</span>
-                    </div>
-                    {/* Name */}
-                    <p className="text-[#111827] text-[16px] font-bold tracking-tight">Curtez Riggs</p>
-                    {/* VIP Badge */}
-                    <span className="mt-1.5 px-4 py-1 rounded-full bg-[#10B981] text-white text-[10px] font-bold tracking-wide uppercase">
-                      VIP Attendee
+                    <p className="text-white text-sm font-bold">Curtez Riggs</p>
+                    <span className="mt-1.5 px-3 py-0.5 rounded-full bg-[#10B981] text-white text-[10px] font-semibold">
+                      Attendee
                     </span>
-                    {/* Scan info */}
-                    <p className="text-gray-400 text-[9px] mt-3 flex items-center gap-1">
-                      <span>Scan at registration</span>
-                      <span className="text-gray-300">&bull;</span>
-                      <span>Sep 23, 2026</span>
-                    </p>
+                    <p className="text-gray-500 text-[9px] mt-3">Scan at registration desk</p>
                   </div>
-                  {/* Bottom nav with icons */}
-                  <div className="h-[48px] bg-[#F9FAFB] border-t border-gray-200 flex items-center justify-around px-3">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Calendar className="h-3.5 w-3.5 text-[#6C5CE7]" />
-                      <span className="text-[7px] text-[#6C5CE7] font-medium">Schedule</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Map</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Users className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Community</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <User className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Profile</span>
-                    </div>
+                  {/* Bottom nav */}
+                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
+                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
                   </div>
                 </div>
               </div>
@@ -756,100 +720,74 @@ function OverviewTab({ dark }: { dark: boolean }) {
               </div>
             </div>
 
-            {/* Phone 2 — Schedule */}
+            {/* Phone 2 — Live Agenda */}
             <div className="flex flex-col items-center">
               <div
                 className={cn(
                   "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
                   dark
-                    ? "border-gray-700 bg-white shadow-black/40"
-                    : "border-gray-800 bg-white shadow-gray-400/30"
+                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
+                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
                 )}
               >
                 {/* Notch */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
-                {/* Screen */}
-                <div className="w-full h-full flex flex-col bg-white">
-                  {/* Status bar */}
+                {/* Screen content */}
+                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
+                  {/* Status bar spacer */}
                   <div className="h-[28px] bg-[#6C5CE7]" />
-                  {/* Purple header with search icon */}
-                  <div className="bg-[#6C5CE7] px-4 py-2.5 flex items-center justify-between">
-                    <div className="w-4" />
-                    <p className="text-white text-xs font-bold">Schedule</p>
-                    <Search className="h-3.5 w-3.5 text-white/80" />
+                  {/* Purple header */}
+                  <div className="bg-[#6C5CE7] px-4 py-3">
+                    <p className="text-white text-xs font-bold text-center">Schedule</p>
                   </div>
                   {/* Day pills */}
-                  <div className="bg-white px-3 py-2.5 flex items-center gap-1.5">
-                    <span className="px-3 py-1 rounded-full bg-[#6C5CE7] text-white text-[9px] font-bold">
+                  <div className="bg-[#111827] px-4 py-2.5 flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full bg-[#6C5CE7] text-white text-[10px] font-semibold">
                       Day 1 &middot; Sep 23
                     </span>
-                    <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 text-[9px] font-medium">
+                    <span className="px-3 py-1 rounded-full bg-white/10 text-gray-400 text-[10px] font-medium">
                       Day 2
                     </span>
-                    <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 text-[9px] font-medium">
+                    <span className="px-3 py-1 rounded-full bg-white/10 text-gray-400 text-[10px] font-medium">
                       Day 3
                     </span>
                   </div>
                   {/* Session cards */}
-                  <div className="flex-1 bg-[#F9FAFB] px-3 py-1 space-y-2 overflow-hidden">
-                    {/* Card 1 — Opening Keynote */}
-                    <div className="bg-white rounded-xl p-3 border-l-[3px] border-[#6C5CE7] relative shadow-sm">
-                      <Star className="h-3 w-3 text-gray-300 absolute top-3 right-3" />
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Clock className="h-2.5 w-2.5 text-gray-400" />
+                  <div className="flex-1 bg-[#111827] px-3 py-2 space-y-2.5 overflow-hidden">
+                    {/* Card 1 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#6C5CE7] flex justify-between items-start">
+                      <div>
                         <p className="text-gray-500 text-[9px] font-medium">9:00 AM</p>
+                        <p className="text-white text-[11px] font-semibold mt-0.5">Opening Keynote</p>
+                        <p className="text-gray-500 text-[9px] mt-1">Main Stage</p>
                       </div>
-                      <p className="text-[#111827] text-[11px] font-bold leading-tight">Opening Keynote</p>
-                      <div className="flex items-center gap-1 mt-1.5">
-                        <MapPin className="h-2.5 w-2.5 text-gray-400" />
-                        <p className="text-gray-500 text-[9px]">Main Stage</p>
-                      </div>
+                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
                     </div>
-                    {/* Card 2 — Military Spouse Creator Panel */}
-                    <div className="bg-white rounded-xl p-3 border-l-[3px] border-[#10B981] relative shadow-sm">
-                      <Star className="h-3 w-3 text-gray-300 absolute top-3 right-3" />
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Clock className="h-2.5 w-2.5 text-gray-400" />
+                    {/* Card 2 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#10B981] flex justify-between items-start">
+                      <div>
                         <p className="text-gray-500 text-[9px] font-medium">10:30 AM</p>
+                        <p className="text-white text-[11px] font-semibold mt-0.5">Military Spouse Creator Panel</p>
+                        <p className="text-gray-500 text-[9px] mt-1">PDX Stage</p>
                       </div>
-                      <p className="text-[#111827] text-[11px] font-bold leading-tight">Military Spouse Creator Panel</p>
-                      <div className="flex items-center gap-1 mt-1.5">
-                        <MapPin className="h-2.5 w-2.5 text-gray-400" />
-                        <p className="text-gray-500 text-[9px]">PDX Stage</p>
-                      </div>
+                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
                     </div>
-                    {/* Card 3 — Brand Partnerships Workshop */}
-                    <div className="bg-white rounded-xl p-3 border-l-[3px] border-[#3B82F6] relative shadow-sm">
-                      <Star className="h-3 w-3 text-gray-300 absolute top-3 right-3" />
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Clock className="h-2.5 w-2.5 text-gray-400" />
+                    {/* Card 3 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#3B82F6] flex justify-between items-start">
+                      <div>
                         <p className="text-gray-500 text-[9px] font-medium">1:00 PM</p>
+                        <p className="text-white text-[11px] font-semibold mt-0.5">Brand Partnerships Workshop</p>
+                        <p className="text-gray-500 text-[9px] mt-1">Room 204</p>
                       </div>
-                      <p className="text-[#111827] text-[11px] font-bold leading-tight">Brand Partnerships Workshop</p>
-                      <div className="flex items-center gap-1 mt-1.5">
-                        <MapPin className="h-2.5 w-2.5 text-gray-400" />
-                        <p className="text-gray-500 text-[9px]">Room 204</p>
-                      </div>
+                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
                     </div>
                   </div>
                   {/* Bottom nav */}
-                  <div className="h-[48px] bg-[#F9FAFB] border-t border-gray-200 flex items-center justify-around px-3">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Schedule</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Map</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Users className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Community</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Star className="h-3.5 w-3.5 text-[#6C5CE7]" />
-                      <span className="text-[7px] text-[#6C5CE7] font-medium">My Schedule</span>
-                    </div>
+                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
                   </div>
                 </div>
               </div>
@@ -862,109 +800,86 @@ function OverviewTab({ dark }: { dark: boolean }) {
               </div>
             </div>
 
-            {/* Phone 3 — Community */}
+            {/* Phone 3 — Community Connections */}
             <div className="flex flex-col items-center">
               <div
                 className={cn(
                   "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
                   dark
-                    ? "border-gray-700 bg-white shadow-black/40"
-                    : "border-gray-800 bg-white shadow-gray-400/30"
+                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
+                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
                 )}
               >
                 {/* Notch */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
-                {/* Screen */}
-                <div className="w-full h-full flex flex-col bg-white">
-                  {/* Status bar */}
+                {/* Screen content */}
+                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
+                  {/* Status bar spacer */}
                   <div className="h-[28px] bg-[#6C5CE7]" />
-                  {/* Purple header with bell icon */}
-                  <div className="bg-[#6C5CE7] px-4 py-2.5 flex items-center justify-between">
-                    <div className="w-4" />
-                    <p className="text-white text-xs font-bold">Community</p>
-                    <div className="relative">
-                      <Bell className="h-3.5 w-3.5 text-white/80" />
-                      <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-                    </div>
+                  {/* Purple header */}
+                  <div className="bg-[#6C5CE7] px-4 py-3">
+                    <p className="text-white text-xs font-bold text-center">Community</p>
                   </div>
                   {/* Feed */}
-                  <div className="flex-1 bg-[#F9FAFB] px-3 py-2.5 space-y-2.5 overflow-hidden">
+                  <div className="flex-1 bg-[#111827] px-3 py-3 space-y-3 overflow-hidden">
                     {/* Post 1 */}
-                    <div className="bg-white rounded-xl p-3 shadow-sm">
+                    <div className="bg-[#1a1f2e] rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-[#3B82F6]/15 flex items-center justify-center ring-1 ring-[#3B82F6]/20">
-                          <span className="text-[9px] font-bold text-[#3B82F6]">JM</span>
+                        <div className="w-7 h-7 rounded-full bg-[#6C5CE7]/30 flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-[#6C5CE7]">JM</span>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-[#111827] text-[10px] font-bold">Jake Morrison</p>
-                          <p className="text-gray-400 text-[8px]">2h ago</p>
+                        <div>
+                          <p className="text-white text-[10px] font-semibold">Jake Morrison</p>
+                          <p className="text-gray-600 text-[8px]">2h ago</p>
                         </div>
                       </div>
-                      <p className="text-gray-600 text-[10px] leading-relaxed">
+                      <p className="text-gray-300 text-[10px] leading-relaxed">
                         Just landed in Tampa! Who&rsquo;s heading to the PDX stage tomorrow? &#127908;
                       </p>
-                      <div className="mt-2.5 flex items-center gap-1.5">
-                        <Heart className="h-3 w-3 text-red-400" />
-                        <span className="text-gray-400 text-[9px] font-medium">12 likes</span>
+                      <div className="mt-2 flex items-center gap-1 text-gray-500">
+                        <span className="text-[9px]">&#10084;</span>
+                        <span className="text-[9px]">12</span>
                       </div>
                     </div>
                     {/* Post 2 */}
-                    <div className="bg-white rounded-xl p-3 shadow-sm">
+                    <div className="bg-[#1a1f2e] rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-[#14B8A6]/15 flex items-center justify-center ring-1 ring-[#14B8A6]/20">
-                          <span className="text-[9px] font-bold text-[#14B8A6]">SR</span>
+                        <div className="w-7 h-7 rounded-full bg-[#10B981]/30 flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-[#10B981]">SR</span>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-[#111827] text-[10px] font-bold">Sarah Rodriguez</p>
-                          <p className="text-gray-400 text-[8px]">4h ago</p>
+                        <div>
+                          <p className="text-white text-[10px] font-semibold">Sarah Rodriguez</p>
+                          <p className="text-gray-600 text-[8px]">4h ago</p>
                         </div>
                       </div>
-                      <p className="text-gray-600 text-[10px] leading-relaxed">
+                      <p className="text-gray-300 text-[10px] leading-relaxed">
                         Can&rsquo;t wait for the keynote. First time at MIC! &#127482;&#127480;
                       </p>
-                      <div className="mt-2.5 flex items-center gap-1.5">
-                        <Heart className="h-3 w-3 text-red-400" />
-                        <span className="text-gray-400 text-[9px] font-medium">8 likes</span>
+                      <div className="mt-2 flex items-center gap-1 text-gray-500">
+                        <span className="text-[9px]">&#10084;</span>
+                        <span className="text-[9px]">8</span>
                       </div>
                     </div>
-                    {/* Nearby Attendees */}
-                    <div className="bg-white rounded-xl p-3 shadow-sm">
-                      <p className="text-[#111827] text-[10px] font-bold mb-2.5">Nearby Attendees</p>
-                      <div className="flex items-center gap-1 mb-3">
-                        <div className="w-7 h-7 rounded-full bg-[#6C5CE7] flex items-center justify-center ring-2 ring-white">
-                          <span className="text-[8px] font-bold text-white">KL</span>
-                        </div>
-                        <div className="w-7 h-7 rounded-full bg-[#3B82F6] flex items-center justify-center ring-2 ring-white -ml-2">
-                          <span className="text-[8px] font-bold text-white">DW</span>
-                        </div>
-                        <div className="w-7 h-7 rounded-full bg-[#10B981] flex items-center justify-center ring-2 ring-white -ml-2">
-                          <span className="text-[8px] font-bold text-white">TP</span>
-                        </div>
-                        <span className="text-gray-500 text-[9px] ml-1.5 font-medium">47 attendees near you</span>
+                    {/* Connect section */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3">
+                      <p className="text-white text-[10px] font-semibold mb-2">Connect</p>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <div className="w-6 h-6 rounded-full bg-[#6C5CE7]/40 border-2 border-[#1a1f2e]" />
+                        <div className="w-6 h-6 rounded-full bg-[#3B82F6]/40 border-2 border-[#1a1f2e] -ml-2.5" />
+                        <div className="w-6 h-6 rounded-full bg-[#10B981]/40 border-2 border-[#1a1f2e] -ml-2.5" />
+                        <span className="text-gray-500 text-[9px] ml-1">47 attendees near you</span>
                       </div>
-                      <button className="w-full py-2 rounded-lg bg-[#10B981] hover:bg-[#059669] text-white text-[11px] font-bold text-center transition-colors flex items-center justify-center gap-1">
-                        &#128242; Share My Profile
-                      </button>
+                      <div className="w-full py-1.5 rounded-lg bg-[#10B981] text-white text-[10px] font-semibold text-center">
+                        &#128241; Share My Profile
+                      </div>
                     </div>
                   </div>
                   {/* Bottom nav */}
-                  <div className="h-[48px] bg-[#F9FAFB] border-t border-gray-200 flex items-center justify-around px-3">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Schedule</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Map</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <Users className="h-3.5 w-3.5 text-[#6C5CE7]" />
-                      <span className="text-[7px] text-[#6C5CE7] font-medium">Community</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <User className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-[7px] text-gray-400 font-medium">Profile</span>
-                    </div>
+                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
                   </div>
                 </div>
               </div>
