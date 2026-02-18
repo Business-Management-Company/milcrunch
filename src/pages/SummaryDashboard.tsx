@@ -17,9 +17,6 @@ import {
   Send,
   MapPin,
   Clock,
-  ShoppingBag,
-  Headphones,
-  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -79,24 +76,6 @@ const ROW2 = [
     href: "/brand/events/create",
     icon: Video,
   },
-];
-
-/* ------------------------------------------------------------------ */
-/* Pill button quick actions                                           */
-/* ------------------------------------------------------------------ */
-
-const PILLS_ROW1 = [
-  { label: "Find Military Creators", icon: "🔍", href: "/brand/discover" },
-  { label: "Build a Creator List", icon: "📋", href: "/brand/lists" },
-  { label: "Browse Podcast Network", icon: "🎙️", href: "/brand/podcasts" },
-  { label: "View Event Analytics", icon: "📊", href: "/brand/events" },
-];
-
-const PILLS_ROW2 = [
-  { label: "Find Keynote Speakers", icon: "🎤", href: "/brand/discover" },
-  { label: "Verify a Creator", icon: "✅", href: "/brand/discover" },
-  { label: "Manage Events", icon: "📅", href: "/brand/events" },
-  { label: "SWAG Store", icon: "🏪", href: "/swag" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -233,18 +212,8 @@ export default function SummaryDashboard() {
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="text-center pt-4">
-        <h1 className="text-3xl md:text-4xl font-bold text-[#000741] dark:text-white tracking-tight">
-          Welcome back, {firstName}
-        </h1>
-        <p className="text-muted-foreground mt-1 text-lg">
-          What can I help you with?
-        </p>
-      </div>
-
       {/* AI Prompt Bar */}
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto pt-6">
         <div className="relative flex items-center">
           <Sparkles className="absolute left-4 h-5 w-5 text-[#6C5CE7]" />
           <input
@@ -278,95 +247,51 @@ export default function SummaryDashboard() {
           </button>
         </div>
 
-        {/* Pill Quick Actions */}
-        <div className="mt-5 space-y-3">
-          <div className="flex flex-wrap justify-center gap-2.5">
-            {PILLS_ROW1.map((pill) => (
-              <Link
-                key={pill.label}
-                to={pill.href}
-                className={cn(
-                  "flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300",
-                  "hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-900/20",
-                  "transition-all",
-                )}
-              >
-                <span>{pill.icon}</span>
-                {pill.label}
-              </Link>
-            ))}
-          </div>
-          <div className="flex flex-wrap justify-center gap-2.5">
-            {PILLS_ROW2.map((pill) => (
-              <Link
-                key={pill.label}
-                to={pill.href}
-                className={cn(
-                  "flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300",
-                  "hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-900/20",
-                  "transition-all",
-                )}
-              >
-                <span>{pill.icon}</span>
-                {pill.label}
-              </Link>
-            ))}
-          </div>
+      </div>
+
+      {/* Quick Action Pills */}
+      <div className="max-w-[700px] mx-auto space-y-2">
+        <div className="flex flex-wrap justify-center gap-2">
+          {[
+            { emoji: "\uD83D\uDD0D", label: "Find Military Creators" },
+            { emoji: "\uD83D\uDCCB", label: "Build a Creator List" },
+            { emoji: "\uD83C\uDF99\uFE0F", label: "Browse Podcast Network" },
+            { emoji: "\uD83D\uDCCA", label: "View Event Analytics" },
+          ].map((pill) => (
+            <button
+              key={pill.label}
+              type="button"
+              onClick={() => setPrompt(`${pill.emoji} ${pill.label}`)}
+              className="border border-[#6C5CE7] rounded-full px-4 py-2 text-sm font-medium text-[#6C5CE7] bg-white hover:bg-purple-50 transition cursor-pointer flex items-center gap-2 whitespace-nowrap"
+            >
+              <span>{pill.emoji}</span>
+              {pill.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          {[
+            { emoji: "\uD83C\uDF24\uFE0F", label: "Find Keynote Speakers" },
+            { emoji: "\u2705", label: "Verify a Creator" },
+            { emoji: "\uD83D\uDCC5", label: "Manage Events" },
+          ].map((pill) => (
+            <button
+              key={pill.label}
+              type="button"
+              onClick={() => setPrompt(`${pill.emoji} ${pill.label}`)}
+              className="border border-[#6C5CE7] rounded-full px-4 py-2 text-sm font-medium text-[#6C5CE7] bg-white hover:bg-purple-50 transition cursor-pointer flex items-center gap-2 whitespace-nowrap"
+            >
+              <span>{pill.emoji}</span>
+              {pill.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Quick Action Cards — Row 1 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {ROW1.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link
-              key={card.href + card.title}
-              to={card.href}
-              className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
-            >
-              <div className="rounded-lg bg-[#6C5CE7]/10 p-2.5 w-fit mb-3">
-                <Icon className="h-5 w-5 text-[#6C5CE7]" />
-              </div>
-              <h3 className="font-semibold text-[#000741] dark:text-white text-sm">
-                {card.title}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                {card.desc}
-              </p>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Quick Action Cards — Row 2 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 -mt-6">
-        {ROW2.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link
-              key={card.href + card.title}
-              to={card.href}
-              className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
-            >
-              <div className="rounded-lg bg-[#6C5CE7]/10 p-2.5 w-fit mb-3">
-                <Icon className="h-5 w-5 text-[#6C5CE7]" />
-              </div>
-              <h3 className="font-semibold text-[#000741] dark:text-white text-sm">
-                {card.title}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                {card.desc}
-              </p>
-            </Link>
-          );
-        })}
-      </div>
-
       {/* Three-column section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Recent Activity */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5">
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
           <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             Recent Activity
@@ -387,7 +312,7 @@ export default function SummaryDashboard() {
         </div>
 
         {/* Upcoming Events */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5">
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
           <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             Upcoming Events
@@ -433,7 +358,7 @@ export default function SummaryDashboard() {
         </div>
 
         {/* Network Stats */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5">
+        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
           <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
             Network Stats
