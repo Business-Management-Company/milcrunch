@@ -219,10 +219,10 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   onClick={() => toggleSection(section.key)}
                   className="flex items-center justify-between w-full px-5 mb-2 group"
                 >
-                  <span className="text-xs font-semibold tracking-wider uppercase text-[#6B7280]">
+                  <span className="text-[11px] font-[600] tracking-[0.08em] uppercase text-[#6B7280]">
                     {section.label}
                   </span>
-                  <Chevron className="h-3.5 w-3.5 text-[#6B7280] group-hover:text-gray-400 transition-colors" />
+                  <Chevron className="h-3 w-3 text-[#6B7280] group-hover:text-gray-400 transition-colors" />
                 </button>
               ) : (
                 <div className="h-px bg-gray-700 mx-3 mb-2" />
@@ -235,18 +235,18 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                     const active = isActive(item.href);
                     const Icon = item.icon;
                     const linkClasses = cn(
-                      "flex items-center gap-3 mx-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "flex items-center gap-3 mx-3 px-3 py-2 rounded-lg text-[14px] transition-colors",
                       active
-                        ? "bg-[#1F2937] text-white border-l-[3px] border-[#6C5CE7] pl-[9px]"
-                        : "text-[#E5E7EB] hover:bg-[#1F2937] hover:text-white",
+                        ? "bg-[#1F2937] text-white font-medium border-l-[3px] border-[#6C5CE7] pl-[9px]"
+                        : "text-[#D1D5DB] font-normal hover:bg-[#1F2937] hover:text-white",
                       collapsed && "justify-center px-2 mx-1"
                     );
                     const linkContent = (
                       <>
                         <Icon
                           className={cn(
-                            "h-[18px] w-[18px] shrink-0",
-                            active ? "text-white" : "text-[#E5E7EB]"
+                            "h-4 w-4 shrink-0",
+                            active ? "text-white" : "text-[#D1D5DB]"
                           )}
                           strokeWidth={1.75}
                         />
