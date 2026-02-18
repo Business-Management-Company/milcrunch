@@ -58,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfileRow | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const refetchCreatorProfile = useCallback(async () => {
     if (!user?.id) {
@@ -90,9 +91,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user?.id) {
       setCreatorProfile(null);
+      setProfileLoaded(false);
       return;
     }
-    fetchCreatorProfile(user.id).then(setCreatorProfile);
+    setProfileLoaded(false);
+    fetchCreatorProfile(user.id).then((profile) => {
+      setCreatorProfile(profile);
+      setProfileLoaded(true);
+    });
   }, [user?.id]);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
@@ -182,17 +188,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const getRedirectPath = useCallback((): string | null => {
     if (!user) return null;
     if (user.email === "demo@recurrentx.com") return "/brand/dashboard";
+
+    // Wait for profile fetch to finish before deciding
+    if (!profileLoaded) return null;
+
     // Check both user_metadata and creator_profiles for role — metadata may be unset
     const role: UserRole =
       (user.user_metadata?.role as UserRole) ||
       creatorProfile?.role ||
       "creator";
+
+    console.log("[getRedirectPath] User:", user.email, "| role:", role, "| user_metadata.role:", user.user_metadata?.role, "| profile?.role:", creatorProfile?.role, "| onboarding_complete:", creatorProfile?.onboarding_completed);
+
     if (role === "super_admin") return "/admin";
     if (role === "admin" || role === "brand") return "/brand/dashboard";
     // Only creators hit onboarding check
     if (!creatorProfile || !creatorProfile.onboarding_completed) return "/creator/onboard";
     return "/creator/dashboard";
-  }, [user, creatorProfile]);
+  }, [user, creatorProfile, profileLoaded]);
 
   const resolvedRole: UserRole =
     (user?.user_metadata?.role as UserRole) ||

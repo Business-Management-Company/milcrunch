@@ -296,7 +296,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   );
 }
 
-// No hardcoded showcase fallback — homepage always pulls from directory_members
+// No hardcoded showcase fallback — homepage always pulls from featured_creators
 
 
 // Editable homepage content fallbacks
