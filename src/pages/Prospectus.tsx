@@ -645,47 +645,250 @@ function OverviewTab({ dark }: { dark: boolean }) {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 items-start">
-            {/* Left — Features */}
-            <div className="space-y-4 md:pt-4">
-              {[
-                "Installs on any iPhone or Android in one tap",
-                "Live schedule, speakers, and sponsor directory",
-                "QR networking and lead retrieval built in",
-              ].map((item) => (
-                <div key={item} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span
-                    className={cn(
-                      "text-sm md:text-[15px] leading-relaxed font-medium transition-colors duration-300",
-                      dark ? "text-gray-300" : "text-[#374151]"
-                    )}
-                  >
-                    {item}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Right — Phone mockup */}
-            <div className="flex justify-center">
+          {/* 3-Phone Display */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            {/* Phone 1 — Registration & Check-In */}
+            <div className="flex flex-col items-center">
               <div
                 className={cn(
-                  "relative w-[280px] h-[560px] rounded-[2.5rem] border-[6px] overflow-hidden shadow-2xl transition-colors duration-300",
+                  "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
                   dark
-                    ? "border-gray-700 bg-black shadow-black/40"
-                    : "border-gray-800 bg-black shadow-gray-400/30"
+                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
+                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
                 )}
               >
                 {/* Notch */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-black rounded-b-2xl z-10" />
-                {/* Iframe */}
-                <iframe
-                  src="/attend/military-influencer-conference-2026"
-                  title="Attendee App Preview"
-                  className="w-full h-full border-0 rounded-[2rem]"
-                  style={{ pointerEvents: "auto" }}
-                />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
+                {/* Screen content */}
+                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
+                  {/* Status bar spacer */}
+                  <div className="h-[28px] bg-[#6C5CE7]" />
+                  {/* Purple header */}
+                  <div className="bg-[#6C5CE7] px-4 py-3 text-center">
+                    <p className="text-white text-[10px] font-bold leading-tight">Military Influencer</p>
+                    <p className="text-white text-[10px] font-bold leading-tight">Conference 2026</p>
+                  </div>
+                  {/* QR Code area */}
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 bg-[#111827]">
+                    {/* QR Code pattern */}
+                    <div className="w-[130px] h-[130px] bg-white rounded-xl p-2.5 mb-4">
+                      <div className="w-full h-full grid grid-cols-9 grid-rows-9 gap-[2px]">
+                        {[
+                          [1,1,1,1,1,0,1,0,1],
+                          [1,0,0,0,1,0,0,1,1],
+                          [1,0,1,0,1,0,1,0,1],
+                          [1,0,0,0,1,0,0,1,0],
+                          [1,1,1,1,1,0,1,0,1],
+                          [0,0,0,0,0,0,1,1,0],
+                          [1,1,0,1,1,1,0,0,1],
+                          [0,1,0,0,1,0,1,0,1],
+                          [1,0,1,1,0,1,0,1,0],
+                        ].map((row, ri) =>
+                          row.map((v, ci) => (
+                            <div
+                              key={`qr-${ri}-${ci}`}
+                              className={cn(
+                                "rounded-[1px]",
+                                v ? (ri === 6 ? "bg-[#6C5CE7]" : "bg-[#111827]") : "bg-white"
+                              )}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-white text-sm font-bold">Curtez Riggs</p>
+                    <span className="mt-1.5 px-3 py-0.5 rounded-full bg-[#10B981] text-white text-[10px] font-semibold">
+                      Attendee
+                    </span>
+                    <p className="text-gray-500 text-[9px] mt-3">Scan at registration desk</p>
+                  </div>
+                  {/* Bottom nav */}
+                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
+                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                  </div>
+                </div>
+              </div>
+              {/* Label */}
+              <div className="mt-4 flex items-start gap-2 max-w-[240px]">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className={cn("text-sm font-medium transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                  Instant QR check-in — no printed tickets
+                </span>
+              </div>
+            </div>
+
+            {/* Phone 2 — Live Agenda */}
+            <div className="flex flex-col items-center">
+              <div
+                className={cn(
+                  "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
+                  dark
+                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
+                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
+                )}
+              >
+                {/* Notch */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
+                {/* Screen content */}
+                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
+                  {/* Status bar spacer */}
+                  <div className="h-[28px] bg-[#6C5CE7]" />
+                  {/* Purple header */}
+                  <div className="bg-[#6C5CE7] px-4 py-3">
+                    <p className="text-white text-xs font-bold text-center">Schedule</p>
+                  </div>
+                  {/* Day pills */}
+                  <div className="bg-[#111827] px-4 py-2.5 flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full bg-[#6C5CE7] text-white text-[10px] font-semibold">
+                      Day 1 &middot; Sep 23
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-white/10 text-gray-400 text-[10px] font-medium">
+                      Day 2
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-white/10 text-gray-400 text-[10px] font-medium">
+                      Day 3
+                    </span>
+                  </div>
+                  {/* Session cards */}
+                  <div className="flex-1 bg-[#111827] px-3 py-2 space-y-2.5 overflow-hidden">
+                    {/* Card 1 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#6C5CE7] flex justify-between items-start">
+                      <div>
+                        <p className="text-gray-500 text-[9px] font-medium">9:00 AM</p>
+                        <p className="text-white text-[11px] font-semibold mt-0.5">Opening Keynote</p>
+                        <p className="text-gray-500 text-[9px] mt-1">Main Stage</p>
+                      </div>
+                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
+                    </div>
+                    {/* Card 2 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#10B981] flex justify-between items-start">
+                      <div>
+                        <p className="text-gray-500 text-[9px] font-medium">10:30 AM</p>
+                        <p className="text-white text-[11px] font-semibold mt-0.5">Military Spouse Creator Panel</p>
+                        <p className="text-gray-500 text-[9px] mt-1">PDX Stage</p>
+                      </div>
+                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
+                    </div>
+                    {/* Card 3 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#3B82F6] flex justify-between items-start">
+                      <div>
+                        <p className="text-gray-500 text-[9px] font-medium">1:00 PM</p>
+                        <p className="text-white text-[11px] font-semibold mt-0.5">Brand Partnerships Workshop</p>
+                        <p className="text-gray-500 text-[9px] mt-1">Room 204</p>
+                      </div>
+                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
+                    </div>
+                  </div>
+                  {/* Bottom nav */}
+                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                  </div>
+                </div>
+              </div>
+              {/* Label */}
+              <div className="mt-4 flex items-start gap-2 max-w-[240px]">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className={cn("text-sm font-medium transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                  Live schedule with personal agenda builder
+                </span>
+              </div>
+            </div>
+
+            {/* Phone 3 — Community Connections */}
+            <div className="flex flex-col items-center">
+              <div
+                className={cn(
+                  "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
+                  dark
+                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
+                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
+                )}
+              >
+                {/* Notch */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
+                {/* Screen content */}
+                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
+                  {/* Status bar spacer */}
+                  <div className="h-[28px] bg-[#6C5CE7]" />
+                  {/* Purple header */}
+                  <div className="bg-[#6C5CE7] px-4 py-3">
+                    <p className="text-white text-xs font-bold text-center">Community</p>
+                  </div>
+                  {/* Feed */}
+                  <div className="flex-1 bg-[#111827] px-3 py-3 space-y-3 overflow-hidden">
+                    {/* Post 1 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 rounded-full bg-[#6C5CE7]/30 flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-[#6C5CE7]">JM</span>
+                        </div>
+                        <div>
+                          <p className="text-white text-[10px] font-semibold">Jake Morrison</p>
+                          <p className="text-gray-600 text-[8px]">2h ago</p>
+                        </div>
+                      </div>
+                      <p className="text-gray-300 text-[10px] leading-relaxed">
+                        Just landed in Tampa! Who&rsquo;s heading to the PDX stage tomorrow? &#127908;
+                      </p>
+                      <div className="mt-2 flex items-center gap-1 text-gray-500">
+                        <span className="text-[9px]">&#10084;</span>
+                        <span className="text-[9px]">12</span>
+                      </div>
+                    </div>
+                    {/* Post 2 */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 rounded-full bg-[#10B981]/30 flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-[#10B981]">SR</span>
+                        </div>
+                        <div>
+                          <p className="text-white text-[10px] font-semibold">Sarah Rodriguez</p>
+                          <p className="text-gray-600 text-[8px]">4h ago</p>
+                        </div>
+                      </div>
+                      <p className="text-gray-300 text-[10px] leading-relaxed">
+                        Can&rsquo;t wait for the keynote. First time at MIC! &#127482;&#127480;
+                      </p>
+                      <div className="mt-2 flex items-center gap-1 text-gray-500">
+                        <span className="text-[9px]">&#10084;</span>
+                        <span className="text-[9px]">8</span>
+                      </div>
+                    </div>
+                    {/* Connect section */}
+                    <div className="bg-[#1a1f2e] rounded-lg p-3">
+                      <p className="text-white text-[10px] font-semibold mb-2">Connect</p>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <div className="w-6 h-6 rounded-full bg-[#6C5CE7]/40 border-2 border-[#1a1f2e]" />
+                        <div className="w-6 h-6 rounded-full bg-[#3B82F6]/40 border-2 border-[#1a1f2e] -ml-2.5" />
+                        <div className="w-6 h-6 rounded-full bg-[#10B981]/40 border-2 border-[#1a1f2e] -ml-2.5" />
+                        <span className="text-gray-500 text-[9px] ml-1">47 attendees near you</span>
+                      </div>
+                      <div className="w-full py-1.5 rounded-lg bg-[#10B981] text-white text-[10px] font-semibold text-center">
+                        &#128241; Share My Profile
+                      </div>
+                    </div>
+                  </div>
+                  {/* Bottom nav */}
+                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-white/10" />
+                  </div>
+                </div>
+              </div>
+              {/* Label */}
+              <div className="mt-4 flex items-start gap-2 max-w-[240px]">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <span className={cn("text-sm font-medium transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                  QR networking and real-time community feed
+                </span>
               </div>
             </div>
           </div>
