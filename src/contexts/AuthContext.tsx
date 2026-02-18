@@ -284,7 +284,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, creatorProfile, profileLoaded]);
 
   const resolvedRole: UserRole = creatorProfile?.role || "creator";
-  const isSuperAdmin = resolvedRole === "super_admin";
+  const isSuperAdmin = !!user && user.email === "andrew@podlogix.co";
 
   return (
     <AuthContext.Provider
@@ -294,7 +294,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         creatorProfile,
         role: user ? resolvedRole : null,
-        isSuperAdmin: !!user && isSuperAdmin,
+        isSuperAdmin,
         refetchCreatorProfile,
         signUp,
         signUpCreator,
