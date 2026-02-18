@@ -105,6 +105,7 @@ import AdminDeployments from "./pages/superadmin/AdminDeployments";
 import AdminPrompts from "./pages/superadmin/AdminPrompts";
 import AdminChat from "./pages/superadmin/AdminChat";
 import ProspectusAccess from "./pages/admin/ProspectusAccess";
+import SuperAdminHub from "./pages/admin/SuperAdminHub";
 import BrandPages from "./pages/brand/BrandPages";
 import BrandPageEdit from "./pages/brand/BrandPageEdit";
 import DynamicPage from "./pages/DynamicPage";
@@ -238,6 +239,7 @@ const App = () => (
               {/* /swag moved to public routes */}
               <Route path="/settings" element={<PlaceholderPage title="Settings" description="Manage your account and platform preferences." />} />
               </Route>
+              <Route path="/admin/dashboard" element={<SuperAdminHub />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/shop/:id" element={<ShopProduct />} />
               <Route path="/swag" element={<SwagPackages />} />
