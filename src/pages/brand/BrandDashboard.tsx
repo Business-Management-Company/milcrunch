@@ -6,7 +6,7 @@ import { useLists } from "@/contexts/ListContext";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import DemoWelcomeModal from "@/components/demo/DemoWelcomeModal";
 import DemoTour from "@/components/demo/DemoTour";
-import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, MicVocal, ShieldCheck, CalendarDays, ShoppingBag } from "lucide-react";
+import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, CalendarDays, Radio } from "lucide-react";
 import { getChatResponse } from "@/lib/chat-responses";
 import {
   AreaChart,
@@ -43,14 +43,12 @@ function getAssistantResponse(input: string): ChatMessage {
 /* ── Quick-action pills ───────────────────────────────────────── */
 
 const QUICK_ACTIONS: { icon: typeof Search; label: string }[] = [
-  { icon: Search,       label: "Find Military Creators" },
-  { icon: ClipboardList, label: "Build a Creator List" },
-  { icon: Headphones,   label: "Browse Podcast Network" },
-  { icon: BarChart3,    label: "View Event Analytics" },
-  { icon: MicVocal,     label: "Find Keynote Speakers" },
-  { icon: ShieldCheck,  label: "Verify a Creator" },
-  { icon: CalendarDays, label: "Manage Events" },
-  { icon: ShoppingBag,  label: "SWAG Store" },
+  { icon: Search,       label: "Find Creators" },
+  { icon: ClipboardList, label: "Build a List" },
+  { icon: Headphones,   label: "Browse Podcasts" },
+  { icon: CalendarDays, label: "Plan an Event" },
+  { icon: Radio,        label: "Go Live" },
+  { icon: BarChart3,    label: "Sponsor ROI" },
 ];
 
 /* ── 365 Insights data ────────────────────────────────────────── */
@@ -243,7 +241,7 @@ const BrandDashboard = () => {
           )}
 
           {/* Quick Action Pills — 4x2 grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mt-5">
             {QUICK_ACTIONS.map((action) => {
               const Icon = action.icon;
               return (

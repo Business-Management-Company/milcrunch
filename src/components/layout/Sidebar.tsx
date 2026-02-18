@@ -85,6 +85,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
   {
     key: "sponsors",
     label: "SPONSORS",
+    defaultCollapsed: true,
     items: [
       { href: "/brand/sponsors", label: "Sponsor Dashboard", icon: Handshake },
       { href: "/brand/sponsors/forms", label: "Sponsor Forms", icon: FileSpreadsheet },
@@ -95,6 +96,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
   {
     key: "creators",
     label: "INFLUENCERS",
+    defaultCollapsed: true,
     items: [
       { href: "/brand/discover", label: "Discovery", icon: Search },
       { href: "/brand/directories", label: "Directories", icon: FolderOpen, tooltip: "Manage your verified creator database. Add, edit, and organize creators by branch, platform, and specialty." },
