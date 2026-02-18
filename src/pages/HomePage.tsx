@@ -646,7 +646,7 @@ export default function HomePage() {
               </h1>
 
               <p className="text-gray-300 text-lg md:text-xl max-w-xl mt-6 mb-8 mx-auto lg:mx-0">
-                1,000+ verified creators. Live events. Year-round community. All in one network.
+                Verified influencers, podcasters, and creators. Live events. Year-round community. All-in-one network.
               </p>
 
               <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
