@@ -1,13 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   Lock, Play, Share2, Check, Calendar, Users, BarChart3, Video,
   Zap, Shield, ArrowRight, Mail, Loader2, Sun, Moon,
   FileText, Layers, Target, XCircle, CheckCircle2,
-  Smartphone, Search, TrendingUp, Radio, Handshake, X,
+  Smartphone, Search, TrendingUp, Radio, Handshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { SCREENSHOTS, type ScreenshotItem } from "./prospectus-mockups";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -723,114 +722,6 @@ function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean 
 }
 
 /* ------------------------------------------------------------------ */
-/* Lightbox                                                            */
-/* ------------------------------------------------------------------ */
-
-function Lightbox({
-  item,
-  onClose,
-}: {
-  item: ScreenshotItem;
-  onClose: () => void;
-}) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [handleKeyDown]);
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-12"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-3xl aspect-video rounded-xl overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {item.mockup}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-3 py-1.5 rounded-lg font-medium">
-          {item.label}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Platform Screenshots section                                        */
-/* ------------------------------------------------------------------ */
-
-function PlatformScreenshots({
-  items,
-  dark,
-}: {
-  items: ScreenshotItem[];
-  dark: boolean;
-}) {
-  const [lightboxItem, setLightboxItem] = useState<ScreenshotItem | null>(null);
-
-  return (
-    <section className="mt-16">
-      <p className="text-xs font-semibold tracking-[0.15em] uppercase text-[#6C5CE7] mb-5">
-        Platform Screenshots
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-        {items.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            onClick={() => setLightboxItem(item)}
-            className="text-left group"
-          >
-            <div
-              className={cn(
-                "aspect-video rounded-lg overflow-hidden shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:scale-[1.02]",
-                dark
-                  ? "border border-[#1a1f2e]"
-                  : "border border-[#E5E7EB]"
-              )}
-            >
-              {item.mockup}
-            </div>
-            <p
-              className={cn(
-                "text-xs mt-2 transition-colors duration-300",
-                dark ? "text-gray-500" : "text-[#6B7280]"
-              )}
-            >
-              {item.label}
-            </p>
-          </button>
-        ))}
-      </div>
-
-      {lightboxItem && (
-        <Lightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
-      )}
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Tab: Placeholder                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -844,7 +735,6 @@ function PlaceholderTab({
   dark: boolean;
 }) {
   const brief = SOLUTION_BRIEFS[title];
-  const screenshots = SCREENSHOTS[title];
 
   return (
     <div>
@@ -874,9 +764,6 @@ function PlaceholderTab({
 
       {/* Solution Brief */}
       {brief && <SolutionBrief data={brief} dark={dark} />}
-
-      {/* Platform Screenshots */}
-      {screenshots && <PlatformScreenshots items={screenshots} dark={dark} />}
     </div>
   );
 }
