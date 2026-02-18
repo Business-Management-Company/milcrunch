@@ -49,12 +49,12 @@ function BrandEventCover({ event }: { event: EventWithCounts }) {
   const hasImage = !!event.cover_image_url && !imgFailed;
 
   return (
-    <div className="h-40 bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20 flex items-center justify-center relative">
+    <div className={`h-48 flex items-center justify-center relative ${hasImage ? "" : "bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20"}`}>
       {hasImage ? (
         <img
           src={event.cover_image_url!}
           alt={event.title}
-          className="w-full h-full object-cover"
+          className="w-full h-48 object-cover block"
           referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
         />
@@ -206,7 +206,7 @@ const BrandEvents = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((event) => (
               <Link key={event.id} to={`/brand/events/${event.id}`} className="block group">
-                <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden hover:border-pd-blue/50 hover:shadow-md transition-all h-full flex flex-col">
+                <Card className="rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm bg-white dark:bg-[#1A1D27] hover:border-pd-blue/50 hover:shadow-md transition-all h-full flex flex-col">
                   {/* Cover image or placeholder */}
                   <BrandEventCover event={event} />
 
