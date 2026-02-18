@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { uploadText, type UploadPostPlatform } from "@/services/upload-post";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import { SpeakerMultiSelector } from "@/components/SpeakerSelector";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -902,10 +903,10 @@ Make the captions authentic and engaging for a military community audience. Refe
 
             {/* 3. Key Speakers */}
             <FormSection number={3} title="Key Speakers">
-              <Input
-                placeholder="e.g. John Smith, Jane Doe"
+              <SpeakerMultiSelector
                 value={speakers}
-                onChange={(e) => setSpeakers(e.target.value)}
+                onChange={setSpeakers}
+                placeholder="Search speakers..."
               />
             </FormSection>
 

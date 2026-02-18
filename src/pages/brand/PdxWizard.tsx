@@ -12,6 +12,7 @@ import {
   Check, Plus, Trash2, Loader2, Sparkles, Download, ChevronRight, ChevronLeft,
   AlertTriangle,
 } from "lucide-react";
+import SpeakerSelector from "@/components/SpeakerSelector";
 
 const sb = supabase as any;
 const fmt = (n: number) => "$" + n.toLocaleString();
@@ -247,7 +248,13 @@ export default function PdxWizard() {
                         {BLOCK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                       </select>
                       <div className="flex gap-2">
-                        <Input className={cn(inputCls, "flex-1")} placeholder="Speaker" value={block.speaker} onChange={e => updateBlock(globalIdx, { speaker: e.target.value })} />
+                        <SpeakerSelector
+                          value={block.speaker}
+                          onChange={(name) => updateBlock(globalIdx, { speaker: name })}
+                          placeholder="Speaker"
+                          compact
+                          className="flex-1"
+                        />
                         <Button variant="ghost" size="icon" onClick={() => removeBlock(globalIdx)} className="text-red-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
@@ -380,7 +387,16 @@ export default function PdxWizard() {
               <Button variant="ghost" size="icon" onClick={() => removeCreator(i)} className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Input className={inputCls} placeholder="Name" value={c.name} onChange={e => updateCreator(i, { name: e.target.value })} />
+              <SpeakerSelector
+                value={c.name}
+                onChange={(name) => updateCreator(i, { name })}
+                onSelect={(spk) => {
+                  updateCreator(i, { name: spk.name });
+                  if (spk.topic) updateCreator(i, { talkTitle: spk.topic });
+                }}
+                placeholder="Name"
+                compact
+              />
               <Input className={inputCls} placeholder="@handle" value={c.handle} onChange={e => updateCreator(i, { handle: e.target.value })} />
               <select className={cn(inputCls, "rounded-md px-3 py-2 text-sm")} value={c.platform} onChange={e => updateCreator(i, { platform: e.target.value })}>{PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}</select>
               <Input className={inputCls} placeholder="Followers" type="number" value={c.followers || ""} onChange={e => updateCreator(i, { followers: Number(e.target.value) || 0 })} />

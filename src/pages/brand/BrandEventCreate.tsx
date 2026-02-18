@@ -11,6 +11,7 @@ import {
 import ImageUpload from "@/components/cms/ImageUpload";
 import AIBannerModal from "@/components/brand/AIBannerModal";
 import CityAutocomplete from "@/components/CityAutocomplete";
+import SpeakerSelector from "@/components/SpeakerSelector";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -1058,7 +1059,18 @@ const BrandEventCreate = () => {
                     <div className="flex-1 grid gap-3 md:grid-cols-3">
                       <div>
                         <Label className="text-xs">Name *</Label>
-                        <Input value={s.creator_name} onChange={(e) => updateSpeaker(s.key, "creator_name", e.target.value)} placeholder="Marcus Thompson" className="mt-1" />
+                        <SpeakerSelector
+                          value={s.creator_name}
+                          onChange={(name) => updateSpeaker(s.key, "creator_name", name)}
+                          onSelect={(spk) => {
+                            updateSpeaker(s.key, "creator_name", spk.name);
+                            if (spk.avatar_url) updateSpeaker(s.key, "avatar_url", spk.avatar_url);
+                            if (spk.topic) updateSpeaker(s.key, "topic", spk.topic);
+                            if (spk.bio) updateSpeaker(s.key, "bio", spk.bio || "");
+                          }}
+                          placeholder="Search or type name..."
+                          className="mt-1"
+                        />
                       </div>
                       <div>
                         <Label className="text-xs">Handle</Label>
@@ -1582,7 +1594,12 @@ const BrandEventCreate = () => {
                               <Input value={s.segment} onChange={(e) => updateScheduleItem(s.key, "segment", e.target.value)} placeholder="Opening Keynote" className="h-7 text-xs" />
                             </td>
                             <td className="px-3 py-1.5">
-                              <Input value={s.speaker} onChange={(e) => updateScheduleItem(s.key, "speaker", e.target.value)} placeholder="Col. Smith" className="h-7 text-xs" />
+                              <SpeakerSelector
+                                value={s.speaker}
+                                onChange={(name) => updateScheduleItem(s.key, "speaker", name)}
+                                placeholder="Col. Smith"
+                                compact
+                              />
                             </td>
                             <td className="px-3 py-1.5">
                               <Input value={s.notes} onChange={(e) => updateScheduleItem(s.key, "notes", e.target.value)} placeholder="Use wide shot" className="h-7 text-xs" />
