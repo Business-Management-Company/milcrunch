@@ -6,6 +6,8 @@ import TopNav from "@/components/layout/TopNav";
 import Sidebar from "@/components/layout/Sidebar";
 import CommandPalette from "@/components/CommandPalette";
 import FloatingAdminChat from "@/components/superadmin/FloatingAdminChat";
+import DemoBanner, { DEMO_BANNER_HEIGHT } from "@/components/demo/DemoBanner";
+import { useDemoMode } from "@/hooks/useDemoMode";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_WIDTH = 240;
@@ -15,6 +17,8 @@ export default function AppLayout() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { isDemo } = useDemoMode();
+  const demoOffset = isDemo ? DEMO_BANNER_HEIGHT : 0;
 
   const checkMobile = useCallback(() => {
     const m = window.innerWidth < 768;
@@ -44,9 +48,13 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background dark:bg-[#0F1117]">
-      <TopNav onOpenCommandPalette={() => setCommandOpen(true)} />
+      <DemoBanner />
+      <TopNav onOpenCommandPalette={() => setCommandOpen(true)} demoOffset={demoOffset} />
       {isMobile && (
-        <div className="fixed left-0 top-14 z-40 flex h-14 items-center pl-2">
+        <div
+          className="fixed left-0 z-40 flex h-14 items-center pl-2"
+          style={{ top: `calc(3.5rem + ${demoOffset}px)` }}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -58,10 +66,10 @@ export default function AppLayout() {
           </Button>
         </div>
       )}
-      <Sidebar collapsed={sidebarCollapsed} />
+      <Sidebar collapsed={sidebarCollapsed} demoOffset={demoOffset} />
       <main
-        className={cn("transition-[margin-left] duration-200 pt-14 min-h-screen bg-background dark:bg-[#0F1117]")}
-        style={{ marginLeft: sidebarWidth }}
+        className={cn("transition-[margin-left] duration-200 min-h-screen bg-background dark:bg-[#0F1117]")}
+        style={{ marginLeft: sidebarWidth, paddingTop: `calc(3.5rem + ${demoOffset}px)` }}
       >
         <div className="p-4 md:p-6 lg:p-8">
           <Outlet />

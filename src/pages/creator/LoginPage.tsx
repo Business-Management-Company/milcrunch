@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,14 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { DEMO_EMAIL } from "@/hooks/useDemoMode";
+
+const DEMO_PASSWORD = "MIC2026demo";
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const isForgot = searchParams.get("mode") === "forgot";
+  const isDemoTrigger = searchParams.get("demo") === "true";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const demoTriggered = useRef(false);
 
   const { signIn, signInWithOAuth, resetPassword, user, loading: authLoading, getRedirectPath } = useAuth();
   const navigate = useNavigate();
@@ -25,6 +30,18 @@ export default function LoginPage() {
     const path = getRedirectPath();
     if (path) navigate(path, { replace: true });
   }, [user, authLoading, getRedirectPath, navigate]);
+
+  /* Auto-trigger demo login when ?demo=true */
+  useEffect(() => {
+    if (!isDemoTrigger || authLoading || user || demoTriggered.current) return;
+    demoTriggered.current = true;
+    (async () => {
+      setLoading(true);
+      const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+      setLoading(false);
+      if (error) toast.error("Demo login failed. Please try again.");
+    })();
+  }, [isDemoTrigger, authLoading, user, signIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,6 +204,31 @@ export default function LoginPage() {
               Apple
             </Button>
           </div>
+
+          {/* Demo access */}
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <span className="relative flex justify-center text-xs text-muted-foreground bg-card px-2">
+              — or —
+            </span>
+          </div>
+
+          <Button
+            type="button"
+            className="w-full text-white font-medium"
+            style={{ backgroundColor: "#1B2A4A" }}
+            disabled={loading}
+            onClick={async () => {
+              setLoading(true);
+              const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+              setLoading(false);
+              if (error) toast.error("Demo login failed. Please try again.");
+            }}
+          >
+            🎯 Explore Demo
+          </Button>
             </>
           )}
 

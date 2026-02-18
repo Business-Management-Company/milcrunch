@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { fetchCredits } from "@/lib/influencers-club";
 import { useLists } from "@/contexts/ListContext";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import DemoWelcomeModal from "@/components/demo/DemoWelcomeModal";
+import DemoTour from "@/components/demo/DemoTour";
 import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, MicVocal, ShieldCheck, CalendarDays, ShoppingBag } from "lucide-react";
 import { getChatResponse } from "@/lib/chat-responses";
 import {
@@ -80,6 +83,8 @@ const BrandDashboard = () => {
   const [credits, setCredits] = useState<{ credits_remaining: number | null; credits_used: number | null; credits_total: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const { lists } = useLists();
+  const { isDemo } = useDemoMode();
+  const [tourActive, setTourActive] = useState(false);
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -258,7 +263,7 @@ const BrandDashboard = () => {
       </div>
 
       {/* 365 Insights Snapshot */}
-      <div className="mb-8">
+      <div className="mb-8" data-tour="insights">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">365 Insights Snapshot</h2>
 
         {/* Mini stat cards */}
@@ -317,6 +322,16 @@ const BrandDashboard = () => {
           </div>
         </div>
       </div>
+      {/* Demo tour */}
+      <DemoWelcomeModal
+        isDemo={isDemo}
+        onStartTour={() => setTourActive(true)}
+        onSkip={() => {}}
+      />
+      <DemoTour
+        active={tourActive}
+        onComplete={() => setTourActive(false)}
+      />
     </>
   );
 };

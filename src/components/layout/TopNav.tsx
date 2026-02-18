@@ -25,6 +25,7 @@ function getInitials(name: string | undefined, email: string): string {
 
 interface TopNavProps {
   onOpenCommandPalette: () => void;
+  demoOffset?: number;
 }
 
 const ALERT_ICONS: Record<string, React.ReactNode> = {
@@ -39,7 +40,7 @@ const MOCK_ALERTS = [
   { id: "a3", message: "#MilSpouseFest hit 500 total mentions", type: "milestone", is_read: true },
 ];
 
-export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
+export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavProps) {
   const { user, isSuperAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const displayName = user?.user_metadata?.full_name ?? user?.email ?? "User";
@@ -57,9 +58,10 @@ export default function TopNav({ onOpenCommandPalette }: TopNavProps) {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 gap-4",
+        "fixed left-0 right-0 z-40 h-14 flex items-center justify-between px-4 gap-4",
         "bg-white dark:bg-[#0F1117] border-b border-gray-200 dark:border-gray-800 shadow-sm"
       )}
+      style={{ top: demoOffset }}
     >
       <div className="flex items-center gap-3 min-w-0">
         <Link to="/dashboard" className="flex items-center shrink-0" aria-label="RecurrentX home">

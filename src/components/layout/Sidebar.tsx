@@ -168,9 +168,10 @@ function saveCollapsedSections(state: Record<string, boolean>) {
 interface SidebarProps {
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  demoOffset?: number;
 }
 
-export default function Sidebar({ collapsed = false }: SidebarProps) {
+export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarProps) {
   const location = useLocation();
   const { isSuperAdmin } = useAuth();
   const navRef = useRef<HTMLElement>(null);
@@ -209,9 +210,10 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-14 bottom-0 z-30 flex flex-col border-r border-gray-800 bg-[#111827] transition-[width] duration-200",
+        "fixed left-0 bottom-0 z-30 flex flex-col border-r border-gray-800 bg-[#111827] transition-[width] duration-200",
         collapsed ? "w-16" : "w-64"
       )}
+      style={{ top: `calc(3.5rem + ${demoOffset}px)` }}
     >
       {/* Navigation */}
       <nav ref={navRef} className="flex-1 overflow-y-auto py-4" style={{ scrollBehavior: "auto" }}>
