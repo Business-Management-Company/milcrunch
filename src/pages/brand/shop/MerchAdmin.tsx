@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 const CATEGORIES = ["Apparel", "Headwear", "Accessories", "Challenge Coins", "Patches", "Drinkware", "Other"];
 
@@ -52,6 +53,7 @@ type SortOption = "newest" | "oldest" | "price_asc" | "price_desc";
 
 export default function MerchAdmin() {
   const { toast } = useToast();
+  const { guardAction } = useDemoMode();
   const [products, setProducts] = useState<MerchProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -109,6 +111,7 @@ export default function MerchAdmin() {
   };
 
   const handleSave = async () => {
+    if (guardAction("save")) return;
     if (!form.title.trim() || form.price <= 0) {
       toast({ title: "Validation", description: "Title and price are required", variant: "destructive" });
       return;
@@ -148,6 +151,7 @@ export default function MerchAdmin() {
   };
 
   const handleDelete = async (id: string) => {
+    if (guardAction("delete")) return;
     if (!confirm("Delete this product?")) return;
     const { error } = await supabase.from("merch_products").delete().eq("id", id);
     if (error) {

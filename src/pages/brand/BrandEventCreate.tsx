@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ---------- types ---------- */
 interface AgendaItem {
@@ -161,6 +162,7 @@ const nextKey = () => `k-${++keyCounter}`;
 const BrandEventCreate = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { guardAction } = useDemoMode();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [createdEventId, setCreatedEventId] = useState<string | null>(null);
@@ -372,6 +374,7 @@ const BrandEventCreate = () => {
 
   /* ---- save step 0: basics ---- */
   const saveBasics = async () => {
+    if (guardAction("create")) return false;
     if (!title.trim()) {
       toast.error("Event name is required");
       return false;

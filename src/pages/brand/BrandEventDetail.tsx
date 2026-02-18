@@ -38,6 +38,7 @@ import AddSpeakerModal, { SPEAKER_TYPES, SPEAKER_TYPE_COLORS } from "@/component
 import EditSpeakerModal from "@/components/brand/EditSpeakerModal";
 import AttendeeAppTab from "@/components/brand/AttendeeAppTab";
 import AIBannerModal from "@/components/brand/AIBannerModal";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ---------- types ---------- */
 interface EventRow {
@@ -164,6 +165,7 @@ const EVENT_FORMATS = [
 
 /* ---------- Send Notification Card ---------- */
 function SendNotificationCard({ eventId }: { eventId: string }) {
+  const { guardAction } = useDemoMode();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -171,6 +173,7 @@ function SendNotificationCard({ eventId }: { eventId: string }) {
   const [sending, setSending] = useState(false);
 
   const handleSend = async () => {
+    if (guardAction("notification")) return;
     if (!title.trim()) { toast.error("Title is required"); return; }
     setSending(true);
     const { error } = await supabase.from("event_notifications").insert({
@@ -235,6 +238,7 @@ const BrandEventDetail = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { guardAction } = useDemoMode();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [event, setEvent] = useState<EventRow | null>(null);
@@ -373,6 +377,7 @@ const BrandEventDetail = () => {
 
   /* ---- save overview ---- */
   const saveOverview = async () => {
+    if (guardAction("update")) return;
     if (!eventId) return;
     setSaving(true);
     try {
@@ -533,6 +538,7 @@ const BrandEventDetail = () => {
 
   /* ---- delete event ---- */
   const deleteEvent = async () => {
+    if (guardAction("delete")) return;
     if (!eventId || !confirm("Delete this event and all associated data? This cannot be undone.")) return;
     setSaving(true);
     try {

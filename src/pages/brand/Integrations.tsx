@@ -18,6 +18,7 @@ import {
   ensureUploadPostProfile,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -164,6 +165,7 @@ const OTHER_INTEGRATIONS: OtherIntegration[] = [
 /* ------------------------------------------------------------------ */
 
 export default function Integrations() {
+  const { guardAction } = useDemoMode();
   const { toast } = useToast();
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -250,6 +252,7 @@ export default function Integrations() {
 
   /* ---- Open Upload-Post connect popup ---- */
   const openConnectPopup = () => {
+    if (guardAction("connect_social")) return;
     if (connectUrl) {
       window.open(connectUrl, "uploadpost-connect", "width=600,height=700");
     } else {

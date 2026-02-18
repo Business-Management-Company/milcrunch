@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -167,6 +168,7 @@ Return ONLY valid JSON array with 3 objects, each having a "text" field. No mark
 
 export default function BrandPosting() {
   const { user } = useAuth();
+  const { guardAction } = useDemoMode();
   const userId = user?.id ?? null;
 
   // Connected accounts
@@ -332,6 +334,7 @@ export default function BrandPosting() {
 
   // Post
   const handlePost = async () => {
+    if (guardAction("social_post")) return;
     if (sendMode === "draft") {
       await handleSaveDraft();
       return;

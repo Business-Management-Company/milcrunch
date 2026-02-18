@@ -40,6 +40,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
 
@@ -364,6 +365,7 @@ function formatFollowers(count: number): string {
 }
 
 const BrandDiscover = () => {
+  const { guardAction } = useDemoMode();
   const [urlSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"keyword" | "username" | "lookalike">("keyword");
@@ -490,6 +492,7 @@ const BrandDiscover = () => {
 
   // Save current search to Supabase
   const handleSaveSearch = async () => {
+    if (guardAction("save")) return;
     if (!user || !saveSearchName.trim()) return;
     setSavingSearch(true);
     const filters = getCurrentFilters();
@@ -514,6 +517,7 @@ const BrandDiscover = () => {
   // Delete a saved search
   const handleDeleteSavedSearch = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (guardAction("delete")) return;
     await supabase.from("saved_searches").delete().eq("id", id);
     setSavedSearches((prev) => prev.filter((s) => s.id !== id));
   };

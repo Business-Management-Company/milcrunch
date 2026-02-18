@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -60,6 +61,7 @@ const DEFAULT_GROUPS: Omit<HashtagGroup, "id" | "created_at">[] = [
 /* ------------------------------------------------------------------ */
 
 export default function BrandTags() {
+  const { guardAction } = useDemoMode();
   const [groups, setGroups] = useState<HashtagGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -144,6 +146,7 @@ export default function BrandTags() {
 
   // Save
   const handleSave = async () => {
+    if (guardAction("save")) return;
     if (!formName.trim()) return;
     setSaving(true);
     const tags = parseHashtags(formHashtags);
@@ -168,6 +171,7 @@ export default function BrandTags() {
 
   // Delete
   const handleDelete = async (id: string) => {
+    if (guardAction("delete")) return;
     setDeletingId(id);
     await supabase.from("hashtag_groups").delete().eq("id", id);
     setDeletingId(null);

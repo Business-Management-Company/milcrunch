@@ -27,6 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 interface SitePage {
   id: string;
@@ -74,6 +75,7 @@ const STATUS_ICONS: Record<string, typeof Globe> = {
 };
 
 const BrandPages = () => {
+  const { guardAction } = useDemoMode();
   const [pages, setPages] = useState<SitePage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -100,6 +102,7 @@ const BrandPages = () => {
   };
 
   const updateStatus = async (page: SitePage, newStatus: string) => {
+    if (guardAction("update")) return;
     const payload: Record<string, unknown> = {
       status: newStatus,
       updated_at: new Date().toISOString(),
@@ -120,6 +123,7 @@ const BrandPages = () => {
   };
 
   const deletePage = async () => {
+    if (guardAction("delete")) return;
     if (!deleteTarget) return;
     const { error } = await supabase
       .from("site_pages")

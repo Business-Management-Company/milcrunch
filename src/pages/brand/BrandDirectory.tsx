@@ -59,6 +59,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLists } from "@/contexts/ListContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
@@ -91,6 +92,7 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 const BrandDirectory = () => {
   const navigate = useNavigate();
   const { isSuperAdmin, user } = useAuth();
+  const { guardAction } = useDemoMode();
   const { lists } = useLists();
 
   // Directory-level state
@@ -252,6 +254,7 @@ const BrandDirectory = () => {
   // ─── Featured on Homepage toggle ────────────────────────────
 
   const handleToggleFeatured = async (member: DirectoryMember) => {
+    if (guardAction("update")) return;
     const newValue = !member.featured_homepage;
     if (newValue) {
       // Check max 3
@@ -282,6 +285,7 @@ const BrandDirectory = () => {
   };
 
   const handleSaveEdit = async () => {
+    if (guardAction("update")) return;
     if (!editMember) return;
     setEditSaving(true);
     const { error } = await supabase

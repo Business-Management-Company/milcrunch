@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { uploadText, type UploadPostPlatform } from "@/services/upload-post";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -420,6 +421,7 @@ function PostCard({
 
 export default function BrandCampaigns() {
   const { user } = useAuth();
+  const { guardAction } = useDemoMode();
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 
   // Form state
@@ -535,6 +537,7 @@ export default function BrandCampaigns() {
 
   // Generate campaign
   const handleGenerate = useCallback(async () => {
+    if (guardAction("save")) return;
     if (!selectedEventId || platforms.length === 0) return;
     setGenerating(true);
     setError("");
@@ -660,7 +663,7 @@ Make the captions authentic and engaging for a military community audience. Refe
     } finally {
       setGenerating(false);
     }
-  }, [selectedEventId, selectedEvent, goal, effectiveDuration, hasDateRange, startDate, endDate, speakers, sponsors, selectedSponsors, hashtags, platforms, apiKey]);
+  }, [guardAction, selectedEventId, selectedEvent, goal, effectiveDuration, hasDateRange, startDate, endDate, speakers, sponsors, selectedSponsors, hashtags, platforms, apiKey]);
 
   // Schedule a single post
   const schedulePost = useCallback(

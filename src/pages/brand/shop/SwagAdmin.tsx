@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 interface SwagItem {
   name: string;
@@ -69,6 +70,7 @@ const CLAIM_STATUSES = ["claimed", "shipped", "delivered"];
 
 export default function SwagAdmin() {
   const { toast } = useToast();
+  const { guardAction } = useDemoMode();
   const [packages, setPackages] = useState<SwagPackage[]>([]);
   const [events, setEvents] = useState<EventOption[]>([]);
   const [sponsors, setSponsors] = useState<SponsorOption[]>([]);
@@ -146,6 +148,7 @@ export default function SwagAdmin() {
   };
 
   const handleSave = async () => {
+    if (guardAction("save")) return;
     if (!form.title.trim() || !form.event_id) {
       toast({ title: "Validation", description: "Title and event are required", variant: "destructive" });
       return;
@@ -176,6 +179,7 @@ export default function SwagAdmin() {
   };
 
   const handleDelete = async (id: string) => {
+    if (guardAction("delete")) return;
     if (!confirm("Delete this package?")) return;
     const { error } = await supabase.from("swag_packages").delete().eq("id", id);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
