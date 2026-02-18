@@ -37,6 +37,20 @@ const CATEGORY_TAGS = [
   "Podcasts", "News & Politics", "Motivation", "Family", "Travel", "Food", "Tech", "Fashion",
 ];
 
+const BRANCH_OPTIONS = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force", "National Guard", "Reserves"];
+const STATUS_OPTIONS = ["Active Duty", "Veteran", "Military Spouse", "VSO", "Civilian", "Other"];
+
+const RANKS_BY_BRANCH: Record<string, string[]> = {
+  Army: ["Private (E1)", "Private (E2)", "Private First Class (E3)", "Corporal (E4)", "Sergeant (E5)", "Staff Sergeant (E6)", "Sergeant First Class (E7)", "Master Sergeant (E8)", "Sergeant Major (E9)", "Second Lieutenant (O1)", "First Lieutenant (O2)", "Captain (O3)", "Major (O4)", "Lieutenant Colonel (O5)", "Colonel (O6)", "Brigadier General (O7)", "Major General (O8)", "Lieutenant General (O9)", "General (O10)"],
+  Marines: ["Private (E1)", "Private First Class (E2)", "Lance Corporal (E3)", "Corporal (E4)", "Sergeant (E5)", "Staff Sergeant (E6)", "Gunnery Sergeant (E7)", "Master Sergeant (E8)", "Sergeant Major (E9)", "Second Lieutenant (O1)", "First Lieutenant (O2)", "Captain (O3)", "Major (O4)", "Lieutenant Colonel (O5)", "Colonel (O6)", "Brigadier General (O7)", "Major General (O8)", "Lieutenant General (O9)", "General (O10)"],
+  Navy: ["Seaman Recruit (E1)", "Seaman Apprentice (E2)", "Seaman (E3)", "Petty Officer 3rd Class (E4)", "Petty Officer 2nd Class (E5)", "Petty Officer 1st Class (E6)", "Chief Petty Officer (E7)", "Senior Chief Petty Officer (E8)", "Master Chief Petty Officer (E9)", "Ensign (O1)", "Lieutenant Junior Grade (O2)", "Lieutenant (O3)", "Lieutenant Commander (O4)", "Commander (O5)", "Captain (O6)", "Rear Admiral Lower Half (O7)", "Rear Admiral (O8)", "Vice Admiral (O9)", "Admiral (O10)"],
+  "Coast Guard": ["Seaman Recruit (E1)", "Seaman Apprentice (E2)", "Seaman (E3)", "Petty Officer 3rd Class (E4)", "Petty Officer 2nd Class (E5)", "Petty Officer 1st Class (E6)", "Chief Petty Officer (E7)", "Senior Chief Petty Officer (E8)", "Master Chief Petty Officer (E9)", "Ensign (O1)", "Lieutenant Junior Grade (O2)", "Lieutenant (O3)", "Lieutenant Commander (O4)", "Commander (O5)", "Captain (O6)", "Rear Admiral Lower Half (O7)", "Rear Admiral (O8)", "Vice Admiral (O9)", "Admiral (O10)"],
+  "Air Force": ["Airman Basic (E1)", "Airman (E2)", "Airman First Class (E3)", "Senior Airman (E4)", "Staff Sergeant (E5)", "Technical Sergeant (E6)", "Master Sergeant (E7)", "Senior Master Sergeant (E8)", "Chief Master Sergeant (E9)", "Second Lieutenant (O1)", "First Lieutenant (O2)", "Captain (O3)", "Major (O4)", "Lieutenant Colonel (O5)", "Colonel (O6)", "Brigadier General (O7)", "Major General (O8)", "Lieutenant General (O9)", "General (O10)"],
+  "Space Force": ["Specialist 1 (E1)", "Specialist 2 (E2)", "Specialist 3 (E3)", "Specialist 4 (E4)", "Sergeant (E5)", "Technical Sergeant (E6)", "Master Sergeant (E7)", "Senior Master Sergeant (E8)", "Chief Master Sergeant (E9)", "Second Lieutenant (O1)", "First Lieutenant (O2)", "Captain (O3)", "Major (O4)", "Lieutenant Colonel (O5)", "Colonel (O6)", "Brigadier General (O7)", "Major General (O8)", "Lieutenant General (O9)", "General (O10)"],
+};
+
+const GENERIC_RANKS = ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "W1", "W2", "W3", "W4", "W5", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "O8", "O9", "O10"];
+
 export default function CreatorOnboard() {
   const { user, creatorProfile, refetchCreatorProfile } = useAuth();
   const navigate = useNavigate();
@@ -46,6 +60,7 @@ export default function CreatorOnboard() {
   const [handle, setHandle] = useState("");
   const [bio, setBio] = useState("");
   const [branch, setBranch] = useState("");
+  const [status, setStatus] = useState("");
   const [rank, setRank] = useState("");
   const [yearsOfService, setYearsOfService] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
@@ -113,6 +128,7 @@ export default function CreatorOnboard() {
         handle: handle.replace(/^@/, "").trim().toLowerCase() || null,
         bio: bio.trim() || null,
         branch: branch || null,
+        status: status || null,
         rank: rank || null,
         years_of_service: yearsOfService || null,
         category_tags: categories.length ? categories : null,
@@ -224,12 +240,37 @@ export default function CreatorOnboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-700">Branch (optional)</Label>
-                  <Input value={branch} onChange={(e) => setBranch(e.target.value)} className="mt-1 bg-white border-gray-300 text-gray-900" placeholder="e.g. Army" />
+                  <select
+                    value={branch}
+                    onChange={(e) => { setBranch(e.target.value); setRank(""); }}
+                    className="mt-1 border border-gray-300 rounded-lg px-3 py-2 w-full text-gray-900 bg-white"
+                  >
+                    <option value="">Select branch</option>
+                    {BRANCH_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
+                  </select>
                 </div>
                 <div>
-                  <Label className="text-gray-700">Rank (optional)</Label>
-                  <Input value={rank} onChange={(e) => setRank(e.target.value)} className="mt-1 bg-white border-gray-300 text-gray-900" />
+                  <Label className="text-gray-700">Status (optional)</Label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="mt-1 border border-gray-300 rounded-lg px-3 py-2 w-full text-gray-900 bg-white"
+                  >
+                    <option value="">Select status</option>
+                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
+              </div>
+              <div>
+                <Label className="text-gray-700">Rank (optional)</Label>
+                <select
+                  value={rank}
+                  onChange={(e) => setRank(e.target.value)}
+                  className="mt-1 border border-gray-300 rounded-lg px-3 py-2 w-full text-gray-900 bg-white"
+                >
+                  <option value="">Select rank</option>
+                  {(RANKS_BY_BRANCH[branch] || GENERIC_RANKS).map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
               </div>
               <div>
                 <Label className="text-gray-700">Years of service (optional)</Label>
