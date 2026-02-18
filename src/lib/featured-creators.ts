@@ -1,10 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { generateProfileSlug, uploadCreatorImage } from "@/lib/directories";
 
-// NOTE: The featured_creators table does not yet exist in Supabase.
-// All fetch functions below will return empty results until it is created.
-// To create it, run the migration in supabase/migrations/20260208180000_featured_creators.sql
-// via the Supabase Dashboard → SQL Editor.
+// Homepage showcase functions use `featured_creators` table.
+// Directory/network page functions use `directory_members` table
+// with columns: creator_handle, creator_name, avatar_url, directory_id, etc.
 
 export interface FeaturedCreator {
   id: string;
@@ -86,12 +85,11 @@ export async function fetchFeaturedGrid(limit = 8): Promise<FeaturedCreator[]> {
   return (data ?? []) as FeaturedCreator[];
 }
 
-/** Showcase grid: approved featured creators (deduplicated). */
+/** Showcase grid: approved directory members (deduplicated). */
 export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator[]> {
   const { data, error } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("*")
-    .eq("is_active", true)
     .eq("approved", true)
     .order("sort_order", { ascending: true })
     .limit(limit * 2); // over-fetch for dedup
@@ -105,12 +103,12 @@ export async function fetchShowcaseCreators(limit = 20): Promise<ShowcaseCreator
   const unique: ShowcaseCreator[] = [];
   for (const row of data ?? []) {
     const r = row as Record<string, unknown>;
-    const handle = (r.handle as string) ?? "";
+    const handle = (r.creator_handle as string) ?? "";
     const platform = (r.platform as string) ?? "instagram";
     const key = `${handle}:${platform}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    unique.push(mapFeaturedRow(r));
+    unique.push(mapDirectoryRow(r));
     if (unique.length >= limit) break;
   }
   return unique;
@@ -180,22 +178,28 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
   };
 }
 
-/** Showcase from featured_creators, shuffled for variety on each page load. */
+/** Showcase from directory_members, shuffled for variety on each page load. */
 export async function fetchShowcaseByDirectoryName(
-  _directoryName: string,
+  directoryName: string,
   limit = 25
 ): Promise<ShowcaseCreator[]> {
-  // Fetch all active + approved featured creators
-  const { data, error } = await supabase
-    .from("featured_creators")
+  // Fetch approved directory members, optionally filtered by directory_id
+  let query = supabase
+    .from("directory_members")
     .select("*")
-    .eq("is_active", true)
     .eq("approved", true)
     .order("sort_order", { ascending: true })
     .limit(limit * 3);
 
+  // If a directory name/id is provided, filter by it
+  if (directoryName) {
+    query = query.eq("directory_id", directoryName);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
-    console.error("[featured-creators] Showcase fetch FAILED:", error.message);
+    console.error("[featured-creators] Directory showcase fetch FAILED:", error.message);
     return [];
   }
 
@@ -204,12 +208,12 @@ export async function fetchShowcaseByDirectoryName(
   const unique: ShowcaseCreator[] = [];
   for (const row of data ?? []) {
     const r = row as Record<string, unknown>;
-    const handle = (r.handle as string) ?? "";
+    const handle = (r.creator_handle as string) ?? "";
     const platform = (r.platform as string) ?? "instagram";
     const key = `${handle}:${platform}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    unique.push(mapFeaturedRow(r));
+    unique.push(mapDirectoryRow(r));
   }
 
   // Fisher-Yates shuffle for random order on each page load
@@ -221,29 +225,29 @@ export async function fetchShowcaseByDirectoryName(
   return unique.slice(0, limit);
 }
 
-/** Fetch a single featured creator by handle (for profile page). */
+/** Fetch a single directory member by handle (for profile page). */
 export async function fetchDirectoryMemberByHandle(
   handle: string
 ): Promise<ShowcaseCreator | null> {
   const h = handle.replace(/^@/, "").trim().toLowerCase();
 
-  // Try by handle
+  // Try by creator_handle
   const { data: byHandle } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("*")
-    .ilike("handle", h)
+    .ilike("creator_handle", h)
     .eq("approved", true)
     .limit(1);
-  if (byHandle?.length) return mapFeaturedRow(byHandle[0] as Record<string, unknown>);
+  if (byHandle?.length) return mapDirectoryRow(byHandle[0] as Record<string, unknown>);
 
   // Try by profile_slug
   const { data: bySlug } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("*")
     .ilike("profile_slug", h)
     .eq("approved", true)
     .limit(1);
-  if (bySlug?.length) return mapFeaturedRow(bySlug[0] as Record<string, unknown>);
+  if (bySlug?.length) return mapDirectoryRow(bySlug[0] as Record<string, unknown>);
 
   return null;
 }
@@ -265,7 +269,7 @@ export function detectBranch(bio: string): string | null {
   return null;
 }
 
-/** Upsert a creator into the featured_creators table. */
+/** Upsert a creator into the directory_members table. */
 export async function approveForDirectory(data: {
   handle: string;
   display_name: string;
@@ -289,7 +293,7 @@ export async function approveForDirectory(data: {
 
   // Get max sort_order
   const { data: maxRow } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("sort_order")
     .order("sort_order", { ascending: false })
     .limit(1);
@@ -313,8 +317,8 @@ export async function approveForDirectory(data: {
   }
 
   const payload: Record<string, unknown> = {
-    handle,
-    display_name: data.display_name,
+    creator_handle: handle,
+    creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: permanentAvatarUrl,
     ic_avatar_url: data.ic_avatar_url || null,
@@ -326,25 +330,25 @@ export async function approveForDirectory(data: {
     platforms: data.platforms || [],
     platform_urls: data.platform_urls || {},
     category: data.category || null,
-    is_active: true,
     approved: true,
     sort_order: nextOrder,
     added_by: data.added_by || null,
+    directory_id: data.directory_id || null,
     profile_slug: slug,
   };
 
   if (data.enrichment_data) payload.enrichment_data = data.enrichment_data;
   if (data.source_list_id) payload.source_list_id = data.source_list_id;
 
-  console.log("[approveForDirectory] Upserting to featured_creators:", {
-    handle,
+  console.log("[approveForDirectory] Upserting to directory_members:", {
+    creator_handle: handle,
     platform: payload.platform,
     columns: Object.keys(payload),
   });
 
   const { error } = await supabase
-    .from("featured_creators")
-    .upsert(payload, { onConflict: "platform,handle", ignoreDuplicates: false });
+    .from("directory_members")
+    .upsert(payload, { onConflict: "platform,creator_handle", ignoreDuplicates: false });
 
   if (error) {
     console.error("[approveForDirectory] UPSERT FAILED:", error.message, error.details, error.hint, error.code);
@@ -354,44 +358,34 @@ export async function approveForDirectory(data: {
   return { error: null };
 }
 
-/** Toggle approved status of a featured creator. */
+/** Toggle approved status of a directory member. */
 export async function toggleDirectoryApproval(id: string, approved: boolean): Promise<{ error: string | null }> {
   const { error } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .update({ approved })
     .eq("id", id);
   if (error) return { error: error.message };
   return { error: null };
 }
 
-/** Fetch ALL directory creators (both approved and unapproved) for admin management.
+/** Fetch ALL directory members (both approved and unapproved) for admin management.
  * @deprecated Use fetchDirectoryMembers from lib/directories instead. */
 export async function fetchAllDirectoryCreators(): Promise<ShowcaseCreator[]> {
   const { data, error } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("*")
     .order("sort_order", { ascending: true });
   if (error) {
     console.warn("[featured-creators] Admin fetch failed:", error.message);
     return [];
   }
-  return (data ?? []).map((row: Record<string, unknown>) => ({
-    ...(row as FeaturedCreator),
-    branch: (row.branch as string) ?? null,
-    status: (row.status as string) ?? null,
-    bio: (row.bio as string) ?? null,
-    platforms: Array.isArray(row.platforms) ? row.platforms as string[] : [],
-    paradedeck_verified: (row.paradedeck_verified as boolean) ?? false,
-    influencersclub_verified: (row.influencersclub_verified as boolean) ?? false,
-    profile_slug: (row.profile_slug as string) ?? null,
-    ic_avatar_url: (row.ic_avatar_url as string) ?? null,
-  }));
+  return (data ?? []).map((row: Record<string, unknown>) => mapDirectoryRow(row));
 }
 
 /** Soft-remove a creator from directory (set approved = false, keep data). */
 export async function removeFromDirectory(id: string): Promise<{ error: string | null }> {
   const { error } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .update({ approved: false })
     .eq("id", id);
   if (error) return { error: error.message };
