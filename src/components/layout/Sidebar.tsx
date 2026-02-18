@@ -187,9 +187,9 @@ const SUPER_ADMIN_SECTION: NavSection = {
   ],
 };
 
-const FINANCIALS_SECTION: NavSection = {
-  key: "financials",
-  label: "FINANCIALS",
+const REV_CALCULATORS_SECTION: NavSection = {
+  key: "rev-calculators",
+  label: "REV CALCULATORS",
   defaultCollapsed: true,
   items: [
     { href: "/admin/roi-calculator", label: "ROI Calculator", icon: Calculator },
@@ -269,7 +269,13 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
   }, []);
 
   const sections = isSuperAdmin
-    ? [...SIDEBAR_SECTIONS, SUPER_ADMIN_SECTION, FINANCIALS_SECTION]
+    ? [
+        // All sections except settings, then super admin + rev calculators, then settings last
+        ...SIDEBAR_SECTIONS.filter((s) => s.key !== "settings"),
+        SUPER_ADMIN_SECTION,
+        REV_CALCULATORS_SECTION,
+        ...SIDEBAR_SECTIONS.filter((s) => s.key === "settings"),
+      ]
     : SIDEBAR_SECTIONS;
 
   const isActive = (href: string) => location.pathname === href || (href !== "/dashboard" && location.pathname.startsWith(href + "/"));
