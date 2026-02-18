@@ -35,6 +35,10 @@ import {
   AreaChart,
   Area,
   XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
 import {
@@ -96,27 +100,27 @@ const BRAND_FEATURES = [
 
 type PodcastRow = Database["public"]["Tables"]["podcasts"]["Row"];
 
-// --- 365 Insights Preview data ---
+// --- 365 Insights Preview data (3 series: impressions, engagement, community) ---
 const INSIGHTS_CHART_DATA = [
-  { month: "Sep", value: 350 },
-  { month: "Oct", value: 520 },
-  { month: "Nov", value: 640 },
-  { month: "Dec", value: 600 },
-  { month: "Jan", value: 500 },
-  { month: "Feb", value: 380 },
-  { month: "Mar", value: 50 },
-  { month: "Apr", value: 60 },
-  { month: "May", value: 70 },
-  { month: "Jun", value: 80 },
-  { month: "Jul", value: 100 },
-  { month: "Aug", value: 120 },
+  { month: "Sep", impressions: 320, engagement: 140, community: 800 },
+  { month: "Oct", impressions: 410, engagement: 180, community: 920 },
+  { month: "Nov", impressions: 680, engagement: 310, community: 1100 },  // MilSpouseFest
+  { month: "Dec", impressions: 520, engagement: 260, community: 1250 },
+  { month: "Jan", impressions: 440, engagement: 290, community: 1380 },
+  { month: "Feb", impressions: 480, engagement: 320, community: 1500 },
+  { month: "Mar", impressions: 920, engagement: 480, community: 1850 },  // MIC 2026
+  { month: "Apr", impressions: 610, engagement: 390, community: 1980 },
+  { month: "May", impressions: 750, engagement: 420, community: 2150 },  // MilSpouseFest
+  { month: "Jun", impressions: 540, engagement: 360, community: 2280 },
+  { month: "Jul", impressions: 490, engagement: 380, community: 2400 },
+  { month: "Aug", impressions: 520, engagement: 400, community: 2520 },
 ];
 
 const INSIGHTS_KPIS = [
-  { value: 3400000, display: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
-  { value: 2400, display: "2,400", label: "Community Members", icon: Users, color: "text-blue-500" },
-  { value: 1467, display: "1,467", label: "Active Creators", icon: Mic, color: "text-green-500" },
-  { value: 34, display: "+34%", label: "Year over Year Growth", icon: TrendingUp, color: "text-teal-500" },
+  { value: 3400000, display: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]", border: "border-l-[#6C5CE7]" },
+  { value: 2400, display: "2,400", label: "Community Members", icon: Users, color: "text-[#3B82F6]", border: "border-l-[#3B82F6]" },
+  { value: 1467, display: "1,467", label: "Active Creators", icon: Mic, color: "text-[#10B981]", border: "border-l-[#10B981]" },
+  { value: 34, display: "+34%", label: "Year over Year Growth", icon: TrendingUp, color: "text-[#F59E0B]", border: "border-l-[#F59E0B]" },
 ];
 
 function AnimatedCounter({ target, display, inView }: { target: number; display: string; inView: boolean }) {
@@ -417,7 +421,7 @@ function HomepageEditor({
   );
 }
 
-function InsightsPreview({ user }: { user: any }) {
+function InsightsPreview() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
 
@@ -455,9 +459,9 @@ function InsightsPreview({ user }: { user: any }) {
             return (
               <div
                 key={kpi.label}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 text-center min-w-[180px] flex-shrink-0"
+                className={`bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${kpi.border} p-5 text-left min-w-[180px] flex-shrink-0`}
               >
-                <Icon className={`h-6 w-6 mx-auto mb-2 ${kpi.color}`} />
+                <Icon className={`h-5 w-5 mb-2 ${kpi.color}`} />
                 <p className="text-2xl font-bold text-gray-900">
                   <AnimatedCounter target={kpi.value} display={kpi.display} inView={inView} />
                 </p>
@@ -467,40 +471,73 @@ function InsightsPreview({ user }: { user: any }) {
           })}
         </div>
 
-        {/* Mini Chart */}
-        <div className="max-w-4xl mx-auto h-[250px] rounded-2xl bg-white shadow-sm border border-gray-100 p-6 mb-10">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={INSIGHTS_CHART_DATA} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-              <defs>
-                <linearGradient id="insightsPurple" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="month"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: "#9CA3AF" }}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#6C5CE7"
-                strokeWidth={2.5}
-                fill="url(#insightsPurple)"
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* Multi-line Chart */}
+        <div className="max-w-4xl mx-auto rounded-2xl bg-white shadow-sm p-6 mb-4">
+          {/* Legend */}
+          <div className="flex items-center justify-end gap-5 mb-4">
+            {[
+              { label: "Sponsor Impressions", color: "#6C5CE7" },
+              { label: "Creator Engagement", color: "#10B981" },
+              { label: "Community Growth", color: "#3B82F6" },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                <span className="text-xs text-gray-500">{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={INSIGHTS_CHART_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="fillPurple" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="fillEmerald" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="fillBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#9CA3AF" }}
+                />
+                <YAxis hide />
+                <Tooltip
+                  contentStyle={{ borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 12 }}
+                  labelStyle={{ fontWeight: 600, color: "#374151" }}
+                />
+                {/* Event reference lines */}
+                <ReferenceLine x="Nov" stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "MilSpouseFest", position: "top", fontSize: 9, fill: "#9CA3AF" }} />
+                <ReferenceLine x="Mar" stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "MIC 2026", position: "top", fontSize: 9, fill: "#9CA3AF" }} />
+                <ReferenceLine x="May" stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "MilSpouseFest", position: "top", fontSize: 9, fill: "#9CA3AF" }} />
+                <Area type="monotone" dataKey="community" stroke="#3B82F6" strokeWidth={2} fill="url(#fillBlue)" dot={false} name="Community Growth" />
+                <Area type="monotone" dataKey="impressions" stroke="#6C5CE7" strokeWidth={2} fill="url(#fillPurple)" dot={false} name="Sponsor Impressions" />
+                <Area type="monotone" dataKey="engagement" stroke="#10B981" strokeWidth={2} fill="url(#fillEmerald)" dot={false} name="Creator Engagement" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* CTA */}
-        <Link to={user ? "/brand/dashboard" : "/login"}>
-          <Button className="bg-[#6C5CE7] text-white rounded-full px-8 py-3 font-semibold hover:bg-[#5B4BD1]">
-            See the full dashboard →
-          </Button>
-        </Link>
+        {/* Event Markers */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+          <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-3 py-1">
+            MIC 2026 — March 2026
+          </span>
+          <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-3 py-1">
+            MilSpouseFest — Nov 2025 &amp; May 2026
+          </span>
+        </div>
+
         <p className="text-sm text-gray-400 mt-4">
           Powering insights for MIC, MilSpouseFest, and 10+ military events
         </p>
@@ -934,7 +971,7 @@ export default function HomePage() {
         </section>
 
         {/* 365 Insights Preview */}
-        <InsightsPreview user={user} />
+        <InsightsPreview />
 
         {/* For Brands */}
         <section id="for-brands" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
