@@ -54,7 +54,7 @@ const KnowledgeBase = () => {
             </h1>
           </div>
           <p className="text-gray-500 text-lg mb-8">
-            Everything you need to get the most out of RecurrentX.
+            Everything you need to get the most out of MilCrunch.
           </p>
 
           <div className="relative max-w-xl mx-auto">

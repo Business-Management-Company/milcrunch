@@ -68,7 +68,7 @@ export default function PlansPage() {
             </h1>
             <p className="text-gray-500 max-w-2xl mx-auto mb-14">
               Whether you create content, host a podcast, or represent a brand
-              — RecurrentX has a seat for you.
+              — MilCrunch has a seat for you.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

@@ -105,7 +105,7 @@ export default function SponsorApply() {
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Thank You!</h2>
           <p className="text-gray-600">Your sponsor application has been submitted successfully. We'll be in touch within 48 hours.</p>
-          <Link to="/" className="mt-6 inline-block text-[#6C5CE7] hover:underline text-sm">Back to RecurrentX</Link>
+          <Link to="/" className="mt-6 inline-block text-[#6C5CE7] hover:underline text-sm">Back to MilCrunch</Link>
         </Card>
       </div>
     );

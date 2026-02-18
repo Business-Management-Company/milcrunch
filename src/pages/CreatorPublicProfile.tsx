@@ -81,14 +81,14 @@ export default function CreatorPublicProfile() {
     fetchDirectoryMemberByHandle(handle).then((data) => {
       if (data) {
         setCreator(data);
-        document.title = `${data.display_name} | Military Creator | RecurrentX`;
+        document.title = `${data.display_name} | Military Creator | MilCrunch`;
       } else {
         setNotFound(true);
-        document.title = "Creator Not Found | RecurrentX";
+        document.title = "Creator Not Found | MilCrunch";
       }
       setLoading(false);
     });
-    return () => { document.title = "RecurrentX"; };
+    return () => { document.title = "MilCrunch"; };
   }, [handle]);
 
   const handleFollowClick = () => {
@@ -209,7 +209,7 @@ export default function CreatorPublicProfile() {
                       <TooltipTrigger asChild>
                         <ShieldCheck className="h-5 w-5 text-purple-500 shrink-0" />
                       </TooltipTrigger>
-                      <TooltipContent>RecurrentX Verified</TooltipContent>
+                      <TooltipContent>MilCrunch Verified</TooltipContent>
                     </Tooltip>
                   )}
                   {creator.influencersclub_verified && (

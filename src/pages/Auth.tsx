@@ -126,8 +126,8 @@ const Auth = () => {
             {isForgotPassword
               ? "Enter your email to receive a password reset link"
               : isSignUp 
-                ? "Sign up to get started with RecurrentX"
-                : "Sign in to your RecurrentX account"}
+                ? "Sign up to get started with MilCrunch"
+                : "Sign in to your MilCrunch account"}
           </CardDescription>
         </CardHeader>
         <CardContent>

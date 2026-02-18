@@ -190,7 +190,7 @@ function CreatorCard({
                 <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
-                RecurrentX Verified
+                MilCrunch Verified
               </TooltipContent>
             </Tooltip>
           )}

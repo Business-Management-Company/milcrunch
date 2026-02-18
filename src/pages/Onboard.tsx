@@ -951,7 +951,7 @@ export default function Onboard() {
           {/* Sign-in link */}
           {!userId && step === 3 && (
             <p className="text-center text-xs text-gray-400 mt-4">
-              Social connections require a RecurrentX account.{" "}
+              Social connections require a MilCrunch account.{" "}
               <Link to="/login" className="text-[#6C5CE7] hover:underline">
                 Sign in
               </Link>{" "}

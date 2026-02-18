@@ -125,7 +125,7 @@ export default function SummaryDashboard() {
         } else {
           setEvents([
             { id: "1", name: "MilSpouseFest San Diego", date_label: "Mar 15", location: "San Diego, CA" },
-            { id: "2", name: "RecurrentX at Fort Liberty", date_label: "Apr 5", location: "Fort Liberty, NC" },
+            { id: "2", name: "MilCrunch at Fort Liberty", date_label: "Apr 5", location: "Fort Liberty, NC" },
             { id: "3", name: "MIC 2026", date_label: "Sep 15-17", location: "Washington, DC" },
           ]);
         }

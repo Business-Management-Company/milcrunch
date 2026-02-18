@@ -40,7 +40,7 @@ export default function PublicSponsorPage() {
         <Card className="p-12 text-center max-w-md">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Sponsor Not Found</h2>
           <p className="text-gray-500 text-sm mb-4">This sponsor page doesn't exist or hasn't been published yet.</p>
-          <Link to="/" className="text-[#6C5CE7] hover:underline text-sm">Back to RecurrentX</Link>
+          <Link to="/" className="text-[#6C5CE7] hover:underline text-sm">Back to MilCrunch</Link>
         </Card>
       </div>
     );

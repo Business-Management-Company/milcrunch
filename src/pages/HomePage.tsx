@@ -87,14 +87,14 @@ const CATEGORIES: { label: string; image: string }[] = [
 
 const EVENTS = [
   { name: "MilSpouseFest San Diego", date: "Mar 15", location: "San Diego, CA", tag: "MilSpouseFest", image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80" },
-  { name: "RecurrentX at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC", tag: "Experience", image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&q=80" },
+  { name: "MilCrunch at Fort Liberty", date: "Apr 5", location: "Fort Liberty, NC", tag: "Experience", image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&q=80" },
   { name: "MIC 2026", date: "Sep", location: "Washington, DC", tag: "MIC", image: "https://images.unsplash.com/photo-1587825140708-dfaf18c4f2d4?w=600&q=80" },
-  { name: "RecurrentX at VFW National", date: "Aug", location: "Louisville, KY", tag: "Experience", image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80" },
+  { name: "MilCrunch at VFW National", date: "Aug", location: "Louisville, KY", tag: "Experience", image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&q=80" },
 ];
 
 const BRAND_FEATURES = [
   { title: "AI Creator Discovery", desc: "Find verified military creators by branch, audience, niche, and engagement." },
-  { title: "Sponsor Events", desc: "Attach your brand to RecurrentX events and get visibility across the community." },
+  { title: "Sponsor Events", desc: "Attach your brand to MilCrunch events and get visibility across the community." },
   { title: "First-Party Data", desc: "Real audience insights from real interactions — not anonymous impressions." },
 ];
 
@@ -253,7 +253,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
             <TooltipTrigger asChild>
               <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">RecurrentX Verified</TooltipContent>
+            <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
           </Tooltip>
         )}
         {c.influencersclub_verified && (
@@ -302,9 +302,9 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
 // Editable homepage content fallbacks
 const CONTENT_DEFAULTS: Record<string, string> = {
   hero_title: "Stop juggling your events, creators, sponsors, and media.",
-  hero_subtitle: "RecurrentX brings it all into one command center — so you can focus on the mission.",
+  hero_subtitle: "MilCrunch brings it all into one command center — so you can focus on the mission.",
   events_title: "Events That Don't End When the Lights Go Off",
-  events_subtitle: "MIC. MilSpouseFest. And more. Every event on RecurrentX extends into a year-round community — not just 3 days on Whova.",
+  events_subtitle: "MIC. MilSpouseFest. And more. Every event on MilCrunch extends into a year-round community — not just 3 days on Whova.",
   cta_text: "The military community doesn't stop. Neither should your platform.",
 };
 

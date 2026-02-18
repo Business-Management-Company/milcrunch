@@ -330,7 +330,7 @@ export default function DynamicPage() {
             <span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </Link>
-        <p className="text-xs text-gray-500">&copy; 2026 RecurrentX. All rights reserved.</p>
+        <p className="text-xs text-gray-500">&copy; 2026 MilCrunch. All rights reserved.</p>
       </footer>
     </div>
   );

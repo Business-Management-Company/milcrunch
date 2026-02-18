@@ -45,7 +45,7 @@ const SAAS_ROWS = [
 
 const TAB_PLACEHOLDERS: Record<string, string> = {
   "Events & Attendee App":
-    "See how RecurrentX powers end-to-end event creation, ticketing, check-in, and a mobile-first attendee experience.",
+    "See how MilCrunch powers end-to-end event creation, ticketing, check-in, and a mobile-first attendee experience.",
   "PDX Experience":
     "Discover the Parade Deck Experience — a turnkey live-stage production that turns any event into a multi-platform streaming powerhouse.",
   "Creator Network":
@@ -217,7 +217,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-400" : "text-[#6B7280]"
           )}
         >
-          RecurrentX is the operating system military events and communities have been
+          MilCrunch is the operating system military events and communities have been
           missing — built by a veteran, proven at MIC, and designed to turn every event
           into a year-round community that sponsors want to fund again and again.
         </p>
@@ -231,7 +231,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
             dark ? "text-white" : "text-[#111827]"
           )}
         >
-          RecurrentX didn&rsquo;t start in a boardroom.
+          MilCrunch didn&rsquo;t start in a boardroom.
         </h2>
         <div className="text-left space-y-4">
           <p
@@ -262,7 +262,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
             )}
           >
             That directory became a network. That network became a platform. And that platform
-            became RecurrentX.
+            became MilCrunch.
           </p>
         </div>
       </section>
@@ -300,7 +300,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                   dark ? "text-gray-400" : "text-[#374151]"
                 )}
               >
-                RecurrentX connects organizers and brands to a searchable database of millions of
+                MilCrunch connects organizers and brands to a searchable database of millions of
                 creator profiles — filterable by niche, platform, follower range, engagement rate,
                 location, and military affiliation. Vetted military and veteran creators can build
                 full media profiles, link their social channels, and be discovered for brand
@@ -325,7 +325,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                   dark ? "text-gray-400" : "text-[#374151]"
                 )}
               >
-                RecurrentX goes far beyond what a ticketing platform can offer. Event organizers
+                MilCrunch goes far beyond what a ticketing platform can offer. Event organizers
                 get a full suite of tools: event creation and registration, session scheduling
                 with conflict detection, speaker and sponsor management, QR-based attendee
                 check-in, and a mobile-first attendee web app that requires no download. Attendees
@@ -372,7 +372,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                   dark ? "text-gray-400" : "text-[#374151]"
                 )}
               >
-                RecurrentX hosts a dedicated military and veteran podcast network. Creators can
+                MilCrunch hosts a dedicated military and veteran podcast network. Creators can
                 publish episodes, build subscriber audiences, and connect their podcast presence
                 directly to their creator profile — making their content discoverable to sponsors
                 and event organizers looking for authentic voices.
@@ -417,7 +417,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                   dark ? "text-gray-400" : "text-[#374151]"
                 )}
               >
-                Sponsors get more than a logo placement. RecurrentX tracks impressions, lead
+                Sponsors get more than a logo placement. MilCrunch tracks impressions, lead
                 retrieval, content activations, and audience reach across the full event
                 lifecycle — attributed to individual sponsorship packages. The 365 Insights
                 dashboard shows sponsors quantifiable ROI week over week and month over month,
@@ -865,7 +865,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
               dark ? "text-gray-400" : "text-[#6B7280]"
             )}
           >
-            RecurrentX consolidates{" "}
+            MilCrunch consolidates{" "}
             <span className="text-[#6C5CE7] font-bold">${saasTotal.toLocaleString()}+/mo</span>{" "}
             in fragmented tools into one military-focused platform — saving organizations
             thousands every month.
@@ -1024,7 +1024,7 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
     componentsIcon: Layers,
     problemIcon: Target,
     summary:
-      "RecurrentX replaces Whova with a mobile-first PWA attendee app that works before, during, and after every event — keeping the community engaged 365 days without requiring an App Store download.",
+      "MilCrunch replaces Whova with a mobile-first PWA attendee app that works before, during, and after every event — keeping the community engaged 365 days without requiring an App Store download.",
     components: [
       "Mobile schedule + agenda builder",
       "Speaker & sponsor discovery",
@@ -1036,7 +1036,7 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
       {
         pain: "Whova charges $5K–$15K per event and the app goes dark after Day 3",
         solution:
-          "RecurrentX is included in the platform license with year-round community access",
+          "MilCrunch is included in the platform license with year-round community access",
       },
       {
         pain: "Attendees forget speakers and sponsors within a week",
@@ -1141,7 +1141,7 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
       {
         pain: "StreamYard + Restream costs $50–$200/mo and still requires manual editing",
         solution:
-          "RecurrentX streams to all platforms simultaneously with AI post-production included",
+          "MilCrunch streams to all platforms simultaneously with AI post-production included",
       },
       {
         pain: "Event recordings sit unwatched after the event",
@@ -1155,7 +1155,7 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
     componentsIcon: Layers,
     problemIcon: Target,
     summary:
-      "A white-label platform licensing model that gives Recurrent.io full ownership of the technology under their brand — turning RecurrentX into the infrastructure layer for their entire event portfolio.",
+      "A white-label platform licensing model that gives Recurrent.io full ownership of the technology under their brand — turning MilCrunch into the infrastructure layer for their entire event portfolio.",
     components: [
       "Platform license per event property",
       "Sponsor Dashboard access add-on ($5K–$10K per sponsor)",
@@ -1172,7 +1172,7 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
       {
         pain: "No recurring data asset between events",
         solution:
-          "RecurrentX builds a proprietary creator and audience database that grows in value with every event",
+          "MilCrunch builds a proprietary creator and audience database that grows in value with every event",
       },
     ],
   },
@@ -1335,7 +1335,7 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-300" : "text-[#374151]"
           )}
         >
-          RecurrentX replaces platforms like Whova with a mobile-first PWA attendee app that works
+          MilCrunch replaces platforms like Whova with a mobile-first PWA attendee app that works
           before, during, and after every event — no App Store required. Attendees get instant QR
           check-in, a live personal agenda builder, real-time community feed, and QR-based
           networking. Sponsors and organizers get persistent engagement long after the event ends —
@@ -1739,7 +1739,7 @@ function CreatorNetworkTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-300" : "text-[#374151]"
           )}
         >
-          RecurrentX connects event organizers and brands to a searchable database of millions of
+          MilCrunch connects event organizers and brands to a searchable database of millions of
           creator profiles — filterable by niche, platform, follower range, engagement rate,
           location, and military affiliation. Vetted creators build full media profiles, link their
           social channels, and get discovered for brand partnerships, speaking opportunities, and
@@ -2499,7 +2499,7 @@ export default function Prospectus() {
               darkMode ? "text-gray-600" : "text-[#9CA3AF]"
             )}
           >
-            &copy; {new Date().getFullYear()} RecurrentX &middot; Confidential
+            &copy; {new Date().getFullYear()} MilCrunch &middot; Confidential
           </span>
         </div>
       </footer>

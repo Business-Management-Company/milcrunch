@@ -270,7 +270,7 @@ const Index = () => {
               <span className="text-sm font-medium text-accent">Case Studies</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-headline font-extrabold text-foreground">
-              Powered by RecurrentX
+              Powered by MilCrunch
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               See what's possible with our platform
