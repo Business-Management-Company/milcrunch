@@ -1894,7 +1894,7 @@ const BrandDiscover = () => {
                     <tbody>
                       {displayCreators.map((baseCreator, _idx) => {
                         const creator = getMergedCreator(baseCreator);
-                        if (_idx === 0) console.log("[BrandDiscover] First creator (table):", creator);
+                        console.log(`[BrandDiscover] Creator[${_idx}] (table):`, { name: creator.name, username: creator.username, socialPlatforms: creator.socialPlatforms, hasEmail: creator.hasEmail, hashtags: creator.hashtags, externalLinks: creator.externalLinks, full: creator });
                         const socialPlatforms = creator.socialPlatforms ?? [];
                         const socialSet = new Set(socialPlatforms.map((p) => p.toLowerCase()));
                         const linkCount = (creator.externalLinks ?? []).length;
@@ -1921,7 +1921,7 @@ const BrandDiscover = () => {
                                 <div className="relative shrink-0">
                                   <img src={creator.avatar} alt={creator.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700" />
                                   {creator.isVerified && (
-                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-[#6C5CE7] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
+                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-blue-500 bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
                                   )}
                                 </div>
                                 <div className="min-w-0">
@@ -1929,31 +1929,23 @@ const BrandDiscover = () => {
                                     {creator.name}
                                     {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
                                   </p>
-                                  {creator.location && (
-                                    <p className="text-xs text-gray-400 truncate">{creator.location}</p>
+                                  {creator.username && (
+                                    <p className="text-xs text-gray-400 truncate">@{creator.username}</p>
                                   )}
                                 </div>
                               </div>
                             </td>
-                            {/* Social Links — all 6 platforms */}
+                            {/* Social Links — only active platforms */}
                             <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-0.5">
+                              <div className="flex items-center gap-1">
                                 {pending && socialSet.size <= 1 ? (
                                   <EnrichShimmer />
+                                ) : socialSet.size > 0 ? (
+                                  ALL_SOCIAL_PLATFORMS.filter((p) => socialSet.has(p)).map((p) => (
+                                    <PlatformIcon key={p} platform={p} username={creator.username} />
+                                  ))
                                 ) : (
-                                  ALL_SOCIAL_PLATFORMS.map((p) =>
-                                    socialSet.has(p) ? (
-                                      <PlatformIcon key={p} platform={p} username={creator.username} />
-                                    ) : (
-                                      <span
-                                        key={p}
-                                        className="inline-flex h-6 w-6 items-center justify-center rounded-md opacity-20"
-                                        title={p}
-                                      >
-                                        {PLATFORM_SVGS[p] ?? <span className="text-xs font-bold text-gray-400">{p[0]?.toUpperCase()}</span>}
-                                      </span>
-                                    )
-                                  )
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
                                 )}
                               </div>
                             </td>

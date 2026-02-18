@@ -75,7 +75,7 @@ function getApiKey(): string {
 
 function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const p = account.profile;
-  if (index === 0) console.log("[influencers-club] Raw API profile[0]:", JSON.parse(JSON.stringify(account)));
+  console.log(`[influencers-club] Raw API profile[${index}]:`, JSON.parse(JSON.stringify(account)));
   const id = (account.user_id ?? `api-${index}`) as string;
   const name = (p?.full_name ?? p?.username ?? "Unknown") as string;
 
@@ -130,6 +130,24 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin", "podcast", "twitch"].forEach((plat) => {
     if (hasFlags[plat as keyof typeof hasFlags] && !socialPlatforms.includes(plat)) {
       socialPlatforms.push(plat);
+    }
+  });
+  // Also detect platforms from URL / follower / subscriber fields
+  const urlFollowerChecks: [string, string[]][] = [
+    ["instagram", ["instagram_url", "instagram_followers"]],
+    ["tiktok", ["tiktok_url", "tiktok_followers"]],
+    ["youtube", ["youtube_url", "youtube_subscribers", "youtube_followers"]],
+    ["twitter", ["twitter_url", "twitter_followers", "x_url"]],
+    ["facebook", ["facebook_url", "facebook_followers"]],
+    ["linkedin", ["linkedin_url", "linkedin_followers"]],
+  ];
+  urlFollowerChecks.forEach(([plat, fields]) => {
+    if (!socialPlatforms.includes(plat)) {
+      const hasValue = fields.some((f) => {
+        const v = (p as Record<string, unknown>)?.[f];
+        return v != null && v !== "" && v !== 0 && v !== false;
+      });
+      if (hasValue) socialPlatforms.push(plat);
     }
   });
   if (socialPlatforms.length === 0 && (p?.username || id)) socialPlatforms.push("instagram");
