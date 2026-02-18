@@ -55,14 +55,15 @@ import {
   type Directory,
   type DirectoryMember,
 } from "@/lib/directories";
-import { formatFollowerCount, getInitials } from "@/lib/featured-creators";
+import { formatFollowerCount, getInitials, extractAvatarFromEnrichment } from "@/lib/featured-creators";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLists } from "@/contexts/ListContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
-import { type CreatorCard } from "@/lib/influencers-club";
+import { type CreatorCard, enrichCreatorProfile } from "@/lib/influencers-club";
+import { uploadCreatorImage } from "@/lib/directories";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
@@ -138,6 +139,10 @@ const BrandDirectory = () => {
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [promoteListId, setPromoteListId] = useState("");
   const [promoting, setPromoting] = useState(false);
+
+  // Refresh photos state
+  const [refreshingPhotos, setRefreshingPhotos] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Edit modal state (avg_views, avg_likes)
   const [editMember, setEditMember] = useState<DirectoryMember | null>(null);
@@ -340,6 +345,63 @@ const BrandDirectory = () => {
       toast.success("Stats updated");
       setEditMember(null);
     }
+  };
+
+  // ─── Refresh photos for creators missing avatars ──────────
+
+  const handleRefreshPhotos = async () => {
+    const needsPhoto = members.filter((m) => {
+      const url = m.avatar_url;
+      return !url || url.includes("ui-avatars.com");
+    });
+    if (needsPhoto.length === 0) {
+      toast.info("All creators already have photos");
+      return;
+    }
+
+    setRefreshingPhotos(true);
+    setRefreshProgress({ current: 0, total: needsPhoto.length });
+    let updated = 0;
+
+    for (let i = 0; i < needsPhoto.length; i++) {
+      const m = needsPhoto[i];
+      setRefreshProgress({ current: i + 1, total: needsPhoto.length });
+
+      try {
+        const data = await enrichCreatorProfile(m.creator_handle, undefined, m.platform || "instagram");
+        if (!data) continue;
+
+        const avatarUrl = extractAvatarFromEnrichment(data);
+        if (!avatarUrl) continue;
+
+        // Upload to Supabase storage for a permanent URL
+        let permanentUrl = avatarUrl;
+        const uploaded = await uploadCreatorImage(avatarUrl, m.creator_handle);
+        if (uploaded) permanentUrl = uploaded;
+
+        const { error } = await supabase
+          .from("directory_members")
+          .update({ avatar_url: permanentUrl, ic_avatar_url: avatarUrl })
+          .eq("id", m.id);
+
+        if (!error) {
+          updated++;
+          setMembers((prev) =>
+            prev.map((mem) =>
+              mem.id === m.id ? { ...mem, avatar_url: permanentUrl, ic_avatar_url: avatarUrl } : mem
+            )
+          );
+        } else {
+          console.warn("[RefreshPhotos] Update failed for", m.creator_handle, error.message);
+        }
+      } catch (err) {
+        console.warn("[RefreshPhotos] Enrichment failed for", m.creator_handle, err);
+      }
+    }
+
+    setRefreshingPhotos(false);
+    setRefreshProgress(null);
+    toast.success(`Photos updated for ${updated} creator${updated !== 1 ? "s" : ""}`);
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
@@ -608,6 +670,10 @@ const BrandDirectory = () => {
           <Button variant="outline" size="sm" className="rounded-lg" onClick={() => loadMembers(selectedDir.id)} disabled={membersLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-1.5", membersLoading && "animate-spin")} />
             Refresh
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-lg text-gray-600 dark:text-gray-400" onClick={handleRefreshPhotos} disabled={refreshingPhotos || membersLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-1.5", refreshingPhotos && "animate-spin")} />
+            {refreshProgress ? `Refreshing ${refreshProgress.current} of ${refreshProgress.total}...` : "Refresh Photos"}
           </Button>
           {/* View toggle */}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ml-auto">
