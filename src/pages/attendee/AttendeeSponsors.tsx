@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Loader2, Building2, ExternalLink, MapPin,
+  Loader2, Building2, ExternalLink, MapPin, ScanLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import SponsorLeadRetrieval from "./SponsorLeadRetrieval";
 
 /* ---------- types ---------- */
 interface Sponsor {
@@ -38,9 +40,15 @@ const TIER_STYLES: Record<string, { bg: string; text: string; label: string; log
 /* ======================================== */
 const AttendeeSponsorsContent = () => {
   const { event } = useAttendeeEvent();
+  const { user } = useAuth();
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
+  const [leadRetrievalSponsor, setLeadRetrievalSponsor] = useState<Sponsor | null>(null);
+
+  // Check if current user is a brand/admin (sponsor rep)
+  const userRole = user?.user_metadata?.role;
+  const isSponsorRep = userRole === "brand" || userRole === "admin" || userRole === "super_admin";
 
   useEffect(() => {
     fetchSponsors();
@@ -73,6 +81,18 @@ const AttendeeSponsorsContent = () => {
       .filter((t) => groups[t])
       .map((tier) => ({ tier, sponsors: groups[tier] }));
   }, [sponsors]);
+
+  // Show Lead Retrieval full-screen when active
+  if (leadRetrievalSponsor) {
+    return (
+      <SponsorLeadRetrieval
+        eventId={event.id}
+        sponsorId={leadRetrievalSponsor.id}
+        sponsorName={leadRetrievalSponsor.sponsor_name}
+        onBack={() => setLeadRetrievalSponsor(null)}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -191,6 +211,19 @@ const AttendeeSponsorsContent = () => {
                         Visit Website
                         <ExternalLink className="h-4 w-4 ml-2" />
                       </a>
+                    </Button>
+                  )}
+
+                  {isSponsorRep && (
+                    <Button
+                      onClick={() => {
+                        setSelectedSponsor(null);
+                        setLeadRetrievalSponsor(selectedSponsor);
+                      }}
+                      className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2"
+                    >
+                      <ScanLine className="h-4 w-4" />
+                      Lead Retrieval
                     </Button>
                   )}
                 </div>
