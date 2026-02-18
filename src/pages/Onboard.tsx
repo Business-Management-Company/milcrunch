@@ -73,6 +73,21 @@ const NICHE_OPTIONS = [
   "Other",
 ];
 
+const CATEGORY_OPTIONS = [
+  "Military Life",
+  "Fitness",
+  "Veterans",
+  "Lifestyle",
+  "Podcasts",
+  "Business",
+  "Gaming",
+  "Education",
+  "News & Politics",
+  "Music",
+  "Faith",
+  "Comedy",
+];
+
 const SOCIAL_PLATFORMS = [
   { id: "instagram", name: "Instagram", icon: Instagram, color: "text-pink-500 bg-pink-500/10 border-pink-500/20" },
   { id: "tiktok", name: "TikTok", icon: null, color: "text-gray-900 bg-gray-100 border-gray-200" },
@@ -217,15 +232,19 @@ function Step1({
 function Step2({
   types,
   setTypes,
+  category,
+  setCategory,
 }: {
   types: string[];
   setTypes: (v: string[]) => void;
+  category: string;
+  setCategory: (v: string) => void;
 }) {
   const toggle = (t: string) =>
     setTypes(types.includes(t) ? types.filter((x) => x !== t) : [...types, t]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-1">How you show up</h2>
         <p className="text-sm text-gray-500">
@@ -249,6 +268,26 @@ function Step2({
           {types.length} selected
         </p>
       )}
+
+      {/* Primary Category */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Primary Category <span className="text-red-500">*</span>
+        </label>
+        <p className="text-xs text-gray-400 mb-3">
+          Choose the category that best represents your content.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {CATEGORY_OPTIONS.map((c) => (
+            <Pill
+              key={c}
+              label={c}
+              selected={category === c}
+              onClick={() => setCategory(category === c ? "" : c)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -583,6 +622,7 @@ export default function Onboard() {
 
   // Step 2
   const [types, setTypes] = useState<string[]>([]);
+  const [category, setCategory] = useState("");
 
   // Step 3
   const [frequency, setFrequency] = useState("");
@@ -665,7 +705,7 @@ export default function Onboard() {
       case 0:
         return name.trim().length > 0 && email.trim().length > 0 && zip.trim().length > 0;
       case 1:
-        return types.length > 0;
+        return types.length > 0 && category.length > 0;
       case 2:
         return frequency.length > 0;
       case 3:
@@ -741,6 +781,7 @@ export default function Onboard() {
           directory_id: directoryId,
           creator_handle: handle,
           creator_name: name.trim(),
+          category: category || null,
           platform: connectedPlatforms[0] || "instagram",
           avatar_url: avatarUrl,
           follower_count: totalFollowers || null,
@@ -836,7 +877,7 @@ export default function Onboard() {
                 setZip={setZip}
               />
             )}
-            {step === 1 && <Step2 types={types} setTypes={setTypes} />}
+            {step === 1 && <Step2 types={types} setTypes={setTypes} category={category} setCategory={setCategory} />}
             {step === 2 && (
               <Step3
                 types={types}

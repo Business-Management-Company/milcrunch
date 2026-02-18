@@ -799,7 +799,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Browse by Category */}
+        {/* Browse by Category — hidden until we have ≥3 creators per category with real data */}
+        {false && (
         <section id="features" className="px-4 md:px-8 py-16 md:py-20 scroll-mt-20">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
@@ -836,6 +837,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Military Podcast Network */}
         <section className="px-4 md:px-8 py-16 md:py-20 bg-white">
