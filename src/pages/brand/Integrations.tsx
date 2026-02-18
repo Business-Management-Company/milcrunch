@@ -411,7 +411,7 @@ export default function Integrations() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Other Integrations</h2>
           <p className="text-sm text-gray-500">
-            Third-party services to extend your RecurrentX experience.
+            Third-party services to extend your MilCrunch experience.
           </p>
         </div>
 

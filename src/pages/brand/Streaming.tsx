@@ -680,7 +680,7 @@ export default function Streaming() {
           <h3 className="font-semibold text-gray-900 dark:text-white">AI-Powered Production</h3>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          StreamYard charges $50/mo and you still need to edit your recordings. RecurrentX streams to every platform AND our AI handles production in real-time. Your A/V team just clicks Go Live.
+          StreamYard charges $50/mo and you still need to edit your recordings. MilCrunch streams to every platform AND our AI handles production in real-time. Your A/V team just clicks Go Live.
         </p>
       </Card>
 

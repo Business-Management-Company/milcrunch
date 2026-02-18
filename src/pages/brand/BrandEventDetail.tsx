@@ -1463,7 +1463,7 @@ const BrandEventDetail = () => {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground bg-gray-50 dark:bg-gray-800/50 p-2 rounded">
-                        Custom domains are configured by the RecurrentX team. Contact support for setup.
+                        Custom domains are configured by the MilCrunch team. Contact support for setup.
                       </p>
                     </div>
                   </Card>
@@ -1751,7 +1751,7 @@ const BrandEventDetail = () => {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">
-                      StreamYard charges $50/mo and you still need to edit your recordings. RecurrentX streams to every platform AND our AI handles production in real-time.
+                      StreamYard charges $50/mo and you still need to edit your recordings. MilCrunch streams to every platform AND our AI handles production in real-time.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {AI_FEATURES_DETAIL.map((f) => {

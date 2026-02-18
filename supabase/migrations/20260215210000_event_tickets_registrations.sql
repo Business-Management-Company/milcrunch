@@ -73,6 +73,6 @@ BEGIN
     INSERT INTO event_tickets (event_id, name, description, price, quantity, sort_order) VALUES
       (v_event_id, 'General Admission', 'Access to all sessions, panels, and networking events.', 0, 300, 1),
       (v_event_id, 'Creator Pass', 'Everything in General Admission plus exclusive creator networking sessions, content workshops, and brand meetups.', 0, 150, 2),
-      (v_event_id, 'VIP Experience', 'The full RecurrentX experience — all sessions, VIP dinner with speakers, exclusive swag bag, and priority seating.', 199, 50, 3);
+      (v_event_id, 'VIP Experience', 'The full MilCrunch experience — all sessions, VIP dinner with speakers, exclusive swag bag, and priority seating.', 199, 50, 3);
   END IF;
 END $$;

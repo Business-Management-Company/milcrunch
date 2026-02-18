@@ -41,7 +41,7 @@ export default function RoiCalculator() {
           max_tokens: 256,
           messages: [{
             role: "user",
-            content: `You are a SaaS revenue strategist. Given these RecurrentX platform inputs: ${events} events/yr, ${attendees} avg attendees, ${sponsors} sponsors/event at ${fmt(packageVal)} avg package, ${creators} creators, ${fmt(licenseFee)}/mo license. Annual sponsor revenue: ${fmt(annualSponsor)}, license revenue: ${fmt(annualLicense)}, total: ${fmt(totalRevenue)}. ROI vs $45,600/yr SaaS stack: ${roiPct}%. Give exactly 3 sentences of strategic insight on ROI optimization.`,
+            content: `You are a SaaS revenue strategist. Given these MilCrunch platform inputs: ${events} events/yr, ${attendees} avg attendees, ${sponsors} sponsors/event at ${fmt(packageVal)} avg package, ${creators} creators, ${fmt(licenseFee)}/mo license. Annual sponsor revenue: ${fmt(annualSponsor)}, license revenue: ${fmt(annualLicense)}, total: ${fmt(totalRevenue)}. ROI vs $45,600/yr SaaS stack: ${roiPct}%. Give exactly 3 sentences of strategic insight on ROI optimization.`,
           }],
         }),
       });

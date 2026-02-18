@@ -858,7 +858,7 @@ const BrandPageEdit = () => {
                       {(page.meta_title || "").length}/60
                     </span>
                   </Label>
-                  <Input value={page.meta_title} onChange={(e) => set("meta_title", e.target.value)} placeholder="Page Title — RecurrentX" />
+                  <Input value={page.meta_title} onChange={(e) => set("meta_title", e.target.value)} placeholder="Page Title — MilCrunch" />
                 </div>
                 <div>
                   <Label className="text-xs">

@@ -47,14 +47,14 @@ const statusColor = (s: string) =>
   "text-gray-400";
 
 const DEMO_ITEMS: InventoryItem[] = [
-  { id: "1", name: "Creator Page Display Banner", channel: "Display", owner: "RecurrentX", status: "Active", date: "2026-01-15", revenue: 4320, cost: 1200, profit: 3120, campaign: "USAA MIC 2026" },
+  { id: "1", name: "Creator Page Display Banner", channel: "Display", owner: "MilCrunch", status: "Active", date: "2026-01-15", revenue: 4320, cost: 1200, profit: 3120, campaign: "USAA MIC 2026" },
   { id: "2", name: "Event Sponsorship Package", channel: "Event", owner: "MIC Events", status: "Sold", date: "2026-02-01", revenue: 6300, cost: 2100, profit: 4200, campaign: "USAA MIC 2026" },
-  { id: "3", name: "Livestream Mid-break Overlay", channel: "Streaming", owner: "RecurrentX", status: "Active", date: "2026-01-20", revenue: 6840, cost: 2500, profit: 4340, campaign: "Hiring Our Heroes" },
+  { id: "3", name: "Livestream Mid-break Overlay", channel: "Streaming", owner: "MilCrunch", status: "Active", date: "2026-01-20", revenue: 6840, cost: 2500, profit: 4340, campaign: "Hiring Our Heroes" },
   { id: "4", name: "Podcast Pre-roll (30 sec)", channel: "Podcast", owner: "MIC Podcasts", status: "Active", date: "2026-02-10", revenue: 5600, cost: 1800, profit: 3800, campaign: "Amazon Veterans Day" },
   { id: "5", name: "MIC Stage Naming Rights", channel: "Event", owner: "MIC Events", status: "Sold", date: "2025-12-01", revenue: 10000, cost: 3000, profit: 7000, campaign: "USAA MIC 2026" },
-  { id: "6", name: "Newsletter Sponsored Section", channel: "Newsletter", owner: "RecurrentX", status: "Active", date: "2026-02-05", revenue: 1870, cost: 500, profit: 1370, campaign: "Hiring Our Heroes" },
-  { id: "7", name: "Social Media Takeover (1 Day)", channel: "Social", owner: "RecurrentX", status: "Available", date: "2026-03-01", revenue: 3200, cost: 800, profit: 2400, campaign: "—" },
-  { id: "8", name: "Homepage Hero Banner", channel: "Display", owner: "RecurrentX", status: "Active", date: "2026-01-10", revenue: 7500, cost: 2000, profit: 5500, campaign: "USAA MIC 2026" },
+  { id: "6", name: "Newsletter Sponsored Section", channel: "Newsletter", owner: "MilCrunch", status: "Active", date: "2026-02-05", revenue: 1870, cost: 500, profit: 1370, campaign: "Hiring Our Heroes" },
+  { id: "7", name: "Social Media Takeover (1 Day)", channel: "Social", owner: "MilCrunch", status: "Available", date: "2026-03-01", revenue: 3200, cost: 800, profit: 2400, campaign: "—" },
+  { id: "8", name: "Homepage Hero Banner", channel: "Display", owner: "MilCrunch", status: "Active", date: "2026-01-10", revenue: 7500, cost: 2000, profit: 5500, campaign: "USAA MIC 2026" },
   { id: "9", name: "Podcast Mid-roll (60 sec)", channel: "Podcast", owner: "MIC Podcasts", status: "Paused", date: "2026-01-25", revenue: 4200, cost: 1400, profit: 2800, campaign: "—" },
   { id: "10", name: "Event Photo Booth Branding", channel: "Event", owner: "MIC Events", status: "Available", date: "2026-04-01", revenue: 2800, cost: 900, profit: 1900, campaign: "—" },
 ];
@@ -133,7 +133,7 @@ function AdInventory() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Owner</label>
-                  <Input placeholder="RecurrentX" className="dark:bg-[#111827] dark:border-gray-700 dark:text-white" />
+                  <Input placeholder="MilCrunch" className="dark:bg-[#111827] dark:border-gray-700 dark:text-white" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">

@@ -80,7 +80,7 @@ function AdvertisingDashboard() {
           <h1 className="text-3xl font-bold text-pd-navy dark:text-white">Ad Management</h1>
         </div>
         <p className="text-gray-500 dark:text-gray-400">
-          Manage advertising inventory, campaigns, and revenue across RecurrentX properties.
+          Manage advertising inventory, campaigns, and revenue across MilCrunch properties.
         </p>
       </div>
 

@@ -15,15 +15,15 @@ export interface RoleChatConfig {
 }
 
 const SHARED_CONTEXT = `
-Current project: RecurrentX (milcrunch.com) — a military creator platform with discovery, events, sponsorships, podcasts, creator bio pages, and brand tools.
+Current project: MilCrunch (milcrunch.com) — a military creator platform with discovery, events, sponsorships, podcasts, creator bio pages, and brand tools.
 
-365-DAY ENGAGEMENT: RecurrentX is a year-round community platform. Events are not one-offs — each event has an ongoing community with registered attendees, active creator directories, and continuous engagement metrics. When discussing events, reference this year-round engagement model:
+365-DAY ENGAGEMENT: MilCrunch is a year-round community platform. Events are not one-offs — each event has an ongoing community with registered attendees, active creator directories, and continuous engagement metrics. When discussing events, reference this year-round engagement model:
 - "MIC 2026 has X speakers confirmed and a community of X registered attendees."
 - "The 365-day engagement for this event shows X total impressions across the creator directory."
 - These metrics are being built out — use placeholder language like "growing community" when exact numbers aren't available yet.
 `;
 
-const SUPER_ADMIN_PROMPT = `You are the RecurrentX AI Assistant with full administrative access.
+const SUPER_ADMIN_PROMPT = `You are the MilCrunch AI Assistant with full administrative access.
 
 You can help with:
 - Searching and managing creators via the discovery engine
@@ -39,7 +39,7 @@ When the user asks you to update event details (title, description, dates, venue
 
 ${SHARED_CONTEXT}`;
 
-const EVENT_PLANNER_PROMPT = `You are the RecurrentX AI Assistant for event planning.
+const EVENT_PLANNER_PROMPT = `You are the MilCrunch AI Assistant for event planning.
 
 You are assisting an event planner. You can help with their assigned events.
 You can help with:
@@ -54,7 +54,7 @@ You cannot modify platform-wide settings, the homepage, or other teams' events.
 
 ${SHARED_CONTEXT}`;
 
-const BRAND_ADMIN_PROMPT = `You are the RecurrentX AI Assistant for brand management.
+const BRAND_ADMIN_PROMPT = `You are the MilCrunch AI Assistant for brand management.
 
 You are assisting a brand administrator with broad access.
 You can help with:
@@ -67,14 +67,14 @@ You can help with:
 
 ${SHARED_CONTEXT}`;
 
-const READ_ONLY_PROMPT = `You are the RecurrentX AI Assistant with read access.
+const READ_ONLY_PROMPT = `You are the MilCrunch AI Assistant with read access.
 
 You are assisting a platform user with read access.
 You can help with:
 - Searching and discovering creators using the discovery engine
 - Viewing events and analytics
 - Answering questions about the platform and its features
-- Providing guidance on using RecurrentX
+- Providing guidance on using MilCrunch
 
 You cannot modify events, settings, or content directly.
 
@@ -116,7 +116,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
   switch (role) {
     case "super_admin":
       return {
-        label: "RecurrentX AI",
+        label: "MilCrunch AI",
         sublabel: "🛡️ Full Access",
         icon: "shield",
         systemPromptAdditions: SUPER_ADMIN_PROMPT,
@@ -130,7 +130,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
       };
     case "event_planner":
       return {
-        label: "RecurrentX AI",
+        label: "MilCrunch AI",
         sublabel: "📅 Event Management",
         icon: "calendar",
         systemPromptAdditions: EVENT_PLANNER_PROMPT,
@@ -145,7 +145,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
     case "org_admin":
     case "brand_admin":
       return {
-        label: "RecurrentX AI",
+        label: "MilCrunch AI",
         sublabel: "👁️ Brand Management",
         icon: "building",
         systemPromptAdditions: BRAND_ADMIN_PROMPT,
@@ -159,7 +159,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
       };
     case "sponsor":
       return {
-        label: "RecurrentX AI",
+        label: "MilCrunch AI",
         sublabel: "📊 Sponsor View",
         icon: "megaphone",
         systemPromptAdditions: READ_ONLY_PROMPT,
@@ -168,12 +168,12 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
           { label: "My Sponsorships", prompt: "Show me all events I'm sponsoring and their current status." },
           { label: "Event Overview", prompt: "Show me upcoming events with registration counts and engagement metrics." },
           { label: "Find Creators", prompt: "Help me search for military veteran creators for our brand campaigns." },
-          { label: "Platform Help", prompt: "What can RecurrentX do? Give me an overview of the platform's features." },
+          { label: "Platform Help", prompt: "What can MilCrunch do? Give me an overview of the platform's features." },
         ],
       };
     default:
       return {
-        label: "RecurrentX AI",
+        label: "MilCrunch AI",
         sublabel: "👁️ Read Access",
         icon: "eye",
         systemPromptAdditions: READ_ONLY_PROMPT,
@@ -181,7 +181,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
         quickActions: [
           { label: "Upcoming Events", prompt: "Show me all upcoming events and their details." },
           { label: "Find Creators", prompt: "Help me search for military veteran creators." },
-          { label: "Platform Help", prompt: "What can RecurrentX do? Give me an overview of the platform's features." },
+          { label: "Platform Help", prompt: "What can MilCrunch do? Give me an overview of the platform's features." },
         ],
       };
   }

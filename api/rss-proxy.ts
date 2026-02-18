@@ -16,7 +16,7 @@ export default async function handler(
   }
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": "RecurrentX-RSS-Proxy/1.0" },
+      headers: { "User-Agent": "MilCrunch-RSS-Proxy/1.0" },
       signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) {

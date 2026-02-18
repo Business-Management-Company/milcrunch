@@ -2,7 +2,7 @@
   "name": "parade-deck",
   "private": true,
   "version": "1.0.0",
-  "description": "RecurrentX — For the military and veteran community to thrive. Creators, events, podcasts, and brands in one platform.",
+  "description": "MilCrunch — For the military and veteran community to thrive. Creators, events, podcasts, and brands in one platform.",
   "type": "module",
   "scripts": {
     "dev": "vite",

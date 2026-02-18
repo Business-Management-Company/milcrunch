@@ -229,7 +229,7 @@ export default function BusinessOverview() {
             {/* Right — solution */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-green-600 mb-4">
-                What Events Look Like with RecurrentX
+                What Events Look Like with MilCrunch
               </h3>
               {SOLUTIONS.map((s) => (
                 <div key={s.text} className="flex items-start gap-3 rounded-xl border border-green-100 dark:border-green-900/30 bg-green-50/50 dark:bg-green-950/10 p-4">
@@ -244,7 +244,7 @@ export default function BusinessOverview() {
         {/* ═══════════════ SECTION 2: PLATFORM CAPABILITIES ═══════════════ */}
         <section className="print-break">
           <h2 className="text-2xl font-bold text-[#000741] dark:text-white text-center mb-2">Platform Capabilities</h2>
-          <p className="text-center text-muted-foreground mb-8">Live data from the RecurrentX platform</p>
+          <p className="text-center text-muted-foreground mb-8">Live data from the MilCrunch platform</p>
 
           {/* Stats row */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-10">
@@ -298,7 +298,7 @@ export default function BusinessOverview() {
                   <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <th className="text-left py-3 px-5 font-semibold text-gray-600 dark:text-gray-300">Current Tool</th>
                     <th className="text-right py-3 px-5 font-semibold text-gray-600 dark:text-gray-300">Monthly Cost</th>
-                    <th className="text-left py-3 px-5 font-semibold text-gray-600 dark:text-gray-300">RecurrentX Replaces</th>
+                    <th className="text-left py-3 px-5 font-semibold text-gray-600 dark:text-gray-300">MilCrunch Replaces</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -330,7 +330,7 @@ export default function BusinessOverview() {
           </Card>
 
           <p className="text-center text-sm text-muted-foreground mt-4">
-            RecurrentX consolidates <strong className="text-[#000741] dark:text-white">${saasTotal.toLocaleString()}+/mo</strong> in SaaS costs into one military-focused platform.
+            MilCrunch consolidates <strong className="text-[#000741] dark:text-white">${saasTotal.toLocaleString()}+/mo</strong> in SaaS costs into one military-focused platform.
           </p>
         </section>
 
@@ -366,14 +366,14 @@ export default function BusinessOverview() {
               {/* Before/After */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <h4 className="text-sm font-semibold uppercase tracking-wider text-red-500">Before RecurrentX</h4>
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-red-500">Before MilCrunch</h4>
                   <div className="rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-950/10 p-4 space-y-2">
                     <p className="text-sm text-gray-700 dark:text-gray-300 italic">"We sponsored for $25K. What did we get?"</p>
                     <p className="text-sm text-gray-700 dark:text-gray-300 italic">"50% sponsor renewal — they can't justify the spend."</p>
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <h4 className="text-sm font-semibold uppercase tracking-wider text-green-600">After RecurrentX</h4>
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-green-600">After MilCrunch</h4>
                   <div className="rounded-lg border border-green-100 dark:border-green-900/30 bg-green-50/30 dark:bg-green-950/10 p-4 space-y-2">
                     <p className="text-sm text-gray-700 dark:text-gray-300 italic">"Our $25K generated 3.4M impressions over 12 months at $0.007 CPM."</p>
                     <p className="text-sm text-gray-700 dark:text-gray-300 italic">"85% renewal with data-driven upsell."</p>

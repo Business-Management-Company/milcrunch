@@ -12,7 +12,7 @@ export default function DemoBanner() {
       className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-3 text-white text-xs font-medium"
       style={{ height: DEMO_BANNER_HEIGHT, backgroundColor: "#1a1f2e" }}
     >
-      <span>🎯 You're exploring the RecurrentX demo</span>
+      <span>🎯 You're exploring the MilCrunch demo</span>
       <span className="text-white/40">—</span>
       <button
         onClick={exitDemo}

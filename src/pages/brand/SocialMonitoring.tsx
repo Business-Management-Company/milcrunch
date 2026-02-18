@@ -140,7 +140,7 @@ const MOCK_KEYWORDS: TrackedKeyword[] = [
   { id: "k1", text: "#MIC2026", type: "hashtag" },
   { id: "k2", text: "#MilitaryInfluencer", type: "hashtag" },
   { id: "k3", text: "#MilSpouseFest", type: "hashtag" },
-  { id: "k4", text: "RecurrentX", type: "brand" },
+  { id: "k4", text: "MilCrunch", type: "brand" },
 ];
 
 interface Alert {

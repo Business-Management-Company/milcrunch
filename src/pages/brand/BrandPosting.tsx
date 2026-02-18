@@ -468,7 +468,7 @@ export default function BrandPosting() {
 
   const hasResults = Object.keys(platformResults).length > 0;
 
-  const displayName = user?.user_metadata?.display_name || "RecurrentX";
+  const displayName = user?.user_metadata?.display_name || "MilCrunch";
   const displayInitial = displayName[0]?.toUpperCase() || "R";
 
   /* ---------------------------------------------------------------- */

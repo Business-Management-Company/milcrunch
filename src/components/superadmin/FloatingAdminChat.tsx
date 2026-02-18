@@ -36,7 +36,7 @@ export default function FloatingAdminChat() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: makeId(), role: "assistant", text: "👋 Hi! I'm your RecurrentX AI assistant. How can I help today?" },
+    { id: makeId(), role: "assistant", text: "👋 Hi! I'm your MilCrunch AI assistant. How can I help today?" },
   ]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -123,7 +123,7 @@ export default function FloatingAdminChat() {
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-[#6C5CE7]" />
                 <div>
-                  <span className="font-semibold text-sm">RecurrentX AI</span>
+                  <span className="font-semibold text-sm">MilCrunch AI</span>
                   <span className="text-xs text-muted-foreground ml-2">Assistant</span>
                 </div>
               </div>

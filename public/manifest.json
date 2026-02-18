@@ -1,6 +1,6 @@
 {
-  "name": "RecurrentX Events",
-  "short_name": "RecurrentX",
+  "name": "MilCrunch Events",
+  "short_name": "MilCrunch",
   "description": "Your military event companion app",
   "start_url": "/attend/",
   "display": "standalone",

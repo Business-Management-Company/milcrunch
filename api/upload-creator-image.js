@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const imgResp = await fetch(imageUrl, {
       redirect: "follow",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; RecurrentX/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; MilCrunch/1.0)",
         "Accept": "image/*,*/*",
       },
     });

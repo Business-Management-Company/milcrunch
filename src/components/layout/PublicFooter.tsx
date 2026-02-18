@@ -73,7 +73,7 @@ export default function PublicFooter() {
 
         <div className="mt-12 pt-8 border-t border-white/10 text-center">
           <p className="text-sm text-gray-500">
-            &copy; 2026 RecurrentX. All rights reserved.
+            &copy; 2026 MilCrunch. All rights reserved.
           </p>
         </div>
       </div>

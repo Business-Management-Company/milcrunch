@@ -390,7 +390,7 @@ export default function SwagAdmin() {
                       <Input
                         value={item.name}
                         onChange={(e) => updateItem(i, "name", e.target.value)}
-                        placeholder="Item name (e.g. RecurrentX Challenge Coin)"
+                        placeholder="Item name (e.g. MilCrunch Challenge Coin)"
                         className="flex-1"
                       />
                       <Button size="sm" variant="ghost" onClick={() => removeItem(i)} className="h-8 w-8 p-0 text-red-400 hover:text-red-600">

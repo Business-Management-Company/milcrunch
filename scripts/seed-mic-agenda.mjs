@@ -105,7 +105,7 @@ async function main() {
     { day: 3, start: "08:00", end: "09:00", title: "Breakfast", type: "meal", room: "Grand Foyer", order: 1 },
     { day: 3, start: "09:00", end: "10:00", title: 'Panel: "The Business of Military Events"', type: "panel", room: "Main Stage", order: 2, desc: "Behind the scenes of planning and executing military community events." },
     { day: 3, start: "10:00", end: "11:00", title: 'Workshop: "Pitching Brands as a Creator"', type: "workshop", room: "Breakout Room A", order: 3, desc: "Learn how to craft compelling pitch decks and set your rates.", capacity: 50 },
-    { day: 3, start: "11:00", end: "12:00", title: 'Closing Keynote: "365 Days of Impact"', type: "keynote", room: "Main Stage", order: 4, featured: true, desc: "Building year-round community impact with RecurrentX." },
+    { day: 3, start: "11:00", end: "12:00", title: 'Closing Keynote: "365 Days of Impact"', type: "keynote", room: "Main Stage", order: 4, featured: true, desc: "Building year-round community impact with MilCrunch." },
     { day: 3, start: "12:00", end: "12:30", title: "Closing Ceremony & Announcements", type: "ceremony", room: "Main Stage", order: 5, desc: "Closing remarks and announcements for the coming year." },
   ];
 

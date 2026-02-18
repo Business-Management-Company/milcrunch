@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "RecurrentX/1.0 Podcast Player",
+        "User-Agent": "MilCrunch/1.0 Podcast Player",
         Accept: "application/rss+xml, application/xml, text/xml, */*",
       },
     });

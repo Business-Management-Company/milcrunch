@@ -40,7 +40,7 @@ export default function SaasCalculator() {
 
   const copyToClipboard = () => {
     const lines = TOOLS.map((t, i) => `${t.category}: ${fmt(costs[i])}/mo`).join("\n");
-    const text = `Current SaaS Stack: ${fmt(total)}/mo\nRecurrentX: ${fmt(rxFee)}/mo\nMonthly Savings: ${fmt(savings)}\nAnnual Savings: ${fmt(savings * 12)}\n\n${lines}`;
+    const text = `Current SaaS Stack: ${fmt(total)}/mo\nMilCrunch: ${fmt(rxFee)}/mo\nMonthly Savings: ${fmt(savings)}\nAnnual Savings: ${fmt(savings * 12)}\n\n${lines}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -49,7 +49,7 @@ export default function SaasCalculator() {
   return (
     <div className="min-h-screen bg-[#0A0F1E] p-6 md:p-10">
       <h1 className="text-2xl font-bold text-white mb-1">SaaS Savings Calculator</h1>
-      <p className="text-gray-500 text-sm mb-8">Adjust what you currently spend — see how much RecurrentX saves you.</p>
+      <p className="text-gray-500 text-sm mb-8">Adjust what you currently spend — see how much MilCrunch saves you.</p>
 
       <div className="grid lg:grid-cols-5 gap-8">
         {/* Tool sliders — 3 columns */}
@@ -97,7 +97,7 @@ export default function SaasCalculator() {
           </div>
 
           <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl p-6 text-center">
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#10B981] mb-2">RecurrentX Replaces All of This</p>
+            <p className="text-xs font-semibold tracking-widest uppercase text-[#10B981] mb-2">MilCrunch Replaces All of This</p>
             <p className="text-3xl font-extrabold text-white">{fmt(rxFee)}<span className="text-base font-normal text-gray-400">/mo</span></p>
           </div>
 

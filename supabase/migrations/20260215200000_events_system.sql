@@ -1,5 +1,5 @@
 -- =============================================
--- RecurrentX Events System Migration
+-- MilCrunch Events System Migration
 -- Tables: events (ALTER), event_speakers, event_agenda, event_sponsors
 -- =============================================
 

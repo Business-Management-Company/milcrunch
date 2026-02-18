@@ -1,13 +1,13 @@
-# CLAUDE.md — RecurrentX Project Context
+# CLAUDE.md — MilCrunch Project Context
 
 ## Project Overview
 
-**RecurrentX** (milcrunch.com) — a two-sided military creator & experience platform.
+**MilCrunch** (milcrunch.com) — a two-sided military creator & experience platform.
 - **Brands** discover, verify, and manage military/veteran influencers for events, campaigns, and partnerships
 - **Creators** connect socials, get a bio page, schedule content, and track analytics
-- **PDX** (RecurrentX Experience) — mobile streaming stage for military events
+- **PDX** (MilCrunch Experience) — mobile streaming stage for military events
 
-**Tagline:** "Stop juggling your events, creators, sponsors, and media. RecurrentX brings it all into one command center — so you can focus on the mission."
+**Tagline:** "Stop juggling your events, creators, sponsors, and media. MilCrunch brings it all into one command center — so you can focus on the mission."
 **Brand:** "recurrent" in black/white + "X" in purple (#9B51E0) bold. The "X" stands for "Experience".
 
 **Owner:** Andrew Appleton (andrew@podlogix.co)
@@ -20,7 +20,7 @@
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS + shadcn/ui
 - **Backend:** Supabase (PostgreSQL + Auth + RLS)
 - **Hosting:** Vercel (auto-deploys on push to main)
-- **Domain:** milcrunch.com + www.milcrunch.com (DNS via GoDaddy) — user-facing brand is RecurrentX
+- **Domain:** milcrunch.com + www.milcrunch.com (DNS via GoDaddy) — user-facing brand is MilCrunch
 - **Repo:** github.com/Business-Management-Company/Veteran-Network-Hub (main branch)
 - **Vercel Project:** parade-deck-demo (under Podlogix Pro team)
 
@@ -235,7 +235,7 @@ The most complex page. Key details:
 6. **Lists page redesign** — Match Influencers.club style
 7. **Email system** — Credit-based email tool with in-app send/receive
 8. **Tag system** — Create, assign, and search by tags
-9. **Recurrent.io pitch** — Position RecurrentX as year-round community for Military.com
+9. **Recurrent.io pitch** — Position MilCrunch as year-round community for Military.com
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * TypeScript types for the RecurrentX Mail module.
+ * TypeScript types for the MilCrunch Mail module.
  */
 
 export interface EmailList {

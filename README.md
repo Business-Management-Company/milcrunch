@@ -1,6 +1,6 @@
-# RecurrentX
+# MilCrunch
 
-RecurrentX is where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.
+MilCrunch is where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.
 
 ## Tech Stack
 

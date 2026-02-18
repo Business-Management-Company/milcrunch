@@ -36,7 +36,7 @@ export default function DemoWelcomeModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            Welcome to the RecurrentX Demo
+            Welcome to the MilCrunch Demo
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed mt-2">
             Explore the full platform — creator discovery, event management, AI

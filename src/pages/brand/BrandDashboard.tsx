@@ -27,7 +27,7 @@ type ChatMessage = {
 
 const WELCOME_MESSAGE: ChatMessage = {
   role: "assistant",
-  text: "Welcome back! I'm your RecurrentX assistant. Ask me about creators, events, podcasts, or analytics — or pick a quick action below.",
+  text: "Welcome back! I'm your MilCrunch assistant. Ask me about creators, events, podcasts, or analytics — or pick a quick action below.",
 };
 
 function getAssistantResponse(input: string): ChatMessage {

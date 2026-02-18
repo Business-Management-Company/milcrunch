@@ -1,5 +1,5 @@
 /**
- * Supabase helpers for RecurrentX Mail.
+ * Supabase helpers for MilCrunch Mail.
  * Uses raw .from() queries since these tables may not be in the generated types.
  *
  * SQL to create tables (run in Supabase Dashboard → SQL Editor):
@@ -32,7 +32,7 @@
  *   name text NOT NULL,
  *   subject text,
  *   preview_text text,
- *   from_name text DEFAULT 'RecurrentX',
+ *   from_name text DEFAULT 'MilCrunch',
  *   from_email text DEFAULT 'noreply@milcrunch.com',
  *   html_content text,
  *   list_ids jsonb DEFAULT '[]',
@@ -73,7 +73,7 @@
  * CREATE TABLE email_settings (
  *   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *   user_id uuid NOT NULL UNIQUE,
- *   from_name text DEFAULT 'RecurrentX',
+ *   from_name text DEFAULT 'MilCrunch',
  *   from_email text DEFAULT 'noreply@milcrunch.com',
  *   custom_domain text,
  *   domain_verified boolean DEFAULT false,

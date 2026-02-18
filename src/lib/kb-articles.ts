@@ -91,7 +91,7 @@ export const KB_ARTICLES: KbArticle[] = [
     isPublished: true,
     content: `## What is PDX?
 
-The Parade Deck Experience (PDX) is RecurrentX's turnkey live-stage production model designed specifically for military and veteran events. Rather than leaving a conference stage empty between keynotes, PDX transforms that downtime into an engaging, revenue-generating content hub featuring military creators, panel discussions, live interviews, and sponsor activations.
+The Parade Deck Experience (PDX) is MilCrunch's turnkey live-stage production model designed specifically for military and veteran events. Rather than leaving a conference stage empty between keynotes, PDX transforms that downtime into an engaging, revenue-generating content hub featuring military creators, panel discussions, live interviews, and sponsor activations.
 
 PDX has been battle-tested at events like the Military Influencer Conference (MIC), where it turned hours of otherwise dead stage time into some of the highest-engagement segments of the entire event.
 
@@ -105,7 +105,7 @@ Establish the relationship with the event organizer. Define scope, stage access 
 
 ### Phase 2 — Agenda & Run of Show
 
-Build a detailed Run of Show (ROS) that maps every minute of stage time. The ROS includes segment types, creator assignments, sponsor integrations, and transition notes. RecurrentX's ROS builder handles conflict detection automatically.
+Build a detailed Run of Show (ROS) that maps every minute of stage time. The ROS includes segment types, creator assignments, sponsor integrations, and transition notes. MilCrunch's ROS builder handles conflict detection automatically.
 
 ### Phase 3 — Budget
 
@@ -117,7 +117,7 @@ Attach sponsors to specific segments, overlays, and activations. Each sponsor ge
 
 ### Phase 5 — Creators
 
-Source and schedule military creators from your RecurrentX network. Creators are matched to segments based on their audience, content style, and topic expertise. Invitations, confirmations, and day-of logistics are managed inside the platform.
+Source and schedule military creators from your MilCrunch network. Creators are matched to segments based on their audience, content style, and topic expertise. Invitations, confirmations, and day-of logistics are managed inside the platform.
 
 ### Phase 6 — Production
 
@@ -148,11 +148,11 @@ Once the event wraps, generate post-event reports covering impressions, engageme
     isPublished: true,
     content: `## What is a Run of Show?
 
-A Run of Show (ROS) is the minute-by-minute schedule that drives your entire PDX stage production. It defines who is on stage, what is happening, which sponsors are featured, and how transitions flow between segments. In RecurrentX, the ROS builder is a visual, drag-and-drop tool that makes it easy to plan even the most complex multi-day events.
+A Run of Show (ROS) is the minute-by-minute schedule that drives your entire PDX stage production. It defines who is on stage, what is happening, which sponsors are featured, and how transitions flow between segments. In MilCrunch, the ROS builder is a visual, drag-and-drop tool that makes it easy to plan even the most complex multi-day events.
 
 ## Accessing the ROS Builder
 
-Navigate to your event in the RecurrentX dashboard and select the "Run of Show" tab. If this is a new event, you will be prompted to set your stage windows — the blocks of time you have access to the stage each day. Stage windows define the outer boundaries of your schedule.
+Navigate to your event in the MilCrunch dashboard and select the "Run of Show" tab. If this is a new event, you will be prompted to set your stage windows — the blocks of time you have access to the stage each day. Stage windows define the outer boundaries of your schedule.
 
 ## Adding Time Blocks
 
@@ -214,7 +214,7 @@ Once your schedule is finalized, you have several export options:
     isPublished: true,
     content: `## What is the Attendee App?
 
-The RecurrentX Attendee App is a mobile-first Progressive Web App (PWA) that gives event attendees instant access to schedules, speakers, sponsors, and a live community feed — all without downloading anything from the App Store or Google Play. Attendees simply scan a QR code or tap a link, and the app loads in their browser.
+The MilCrunch Attendee App is a mobile-first Progressive Web App (PWA) that gives event attendees instant access to schedules, speakers, sponsors, and a live community feed — all without downloading anything from the App Store or Google Play. Attendees simply scan a QR code or tap a link, and the app loads in their browser.
 
 ## Why a PWA?
 
@@ -260,7 +260,7 @@ Each attendee gets a unique QR code in the app. When two attendees scan each oth
 
 ## Sharing the App
 
-Once configured, RecurrentX generates a unique URL and QR code for your event app. Place the QR code on signage, lanyards, table tents, and slide decks so attendees can access the app from anywhere at the venue.
+Once configured, MilCrunch generates a unique URL and QR code for your event app. Place the QR code on signage, lanyards, table tents, and slide decks so attendees can access the app from anywhere at the venue.
 
 ## Post-Event Access
 
@@ -278,11 +278,11 @@ The attendee app remains live after the event ends. Attendees can revisit sessio
     isPublished: true,
     content: `## What is Lead Retrieval?
 
-Lead retrieval is the process of capturing attendee contact information at events so sponsors can follow up after the show. RecurrentX's lead retrieval system uses the same QR codes built into the attendee app, giving sponsors a frictionless way to scan and collect leads without any extra hardware.
+Lead retrieval is the process of capturing attendee contact information at events so sponsors can follow up after the show. MilCrunch's lead retrieval system uses the same QR codes built into the attendee app, giving sponsors a frictionless way to scan and collect leads without any extra hardware.
 
 ## How It Works
 
-Every attendee who opens the event app has a unique QR code associated with their profile. When a sponsor representative scans that QR code using the RecurrentX sponsor portal, the attendee's information — name, email, company, title, and any custom registration fields — is instantly captured and added to the sponsor's lead list.
+Every attendee who opens the event app has a unique QR code associated with their profile. When a sponsor representative scans that QR code using the MilCrunch sponsor portal, the attendee's information — name, email, company, title, and any custom registration fields — is instantly captured and added to the sponsor's lead list.
 
 ### Setting Up Lead Retrieval for Sponsors
 
@@ -327,7 +327,7 @@ Sponsors can view their captured leads in real time from the sponsor portal. The
 
 ## Privacy and Compliance
 
-Attendees are informed during registration that their information may be shared with sponsors through lead retrieval. RecurrentX includes opt-out options for attendees who prefer not to participate. All lead data is encrypted in transit and at rest.`,
+Attendees are informed during registration that their information may be shared with sponsors through lead retrieval. MilCrunch includes opt-out options for attendees who prefer not to participate. All lead data is encrypted in transit and at rest.`,
   },
   {
     title: "Sending Push Notifications to Attendees",
@@ -345,7 +345,7 @@ During a live event, plans change. Sessions run long, rooms get swapped, surpris
 
 ## Enabling Notifications
 
-Push notifications are enabled by default for all RecurrentX attendee apps. When an attendee first opens the PWA, they are prompted to allow notifications. Attendees who accept will receive notifications even when the app is not actively open on their screen, as long as their browser supports PWA push.
+Push notifications are enabled by default for all MilCrunch attendee apps. When an attendee first opens the PWA, they are prompted to allow notifications. Attendees who accept will receive notifications even when the app is not actively open on their screen, as long as their browser supports PWA push.
 
 > Approximately 60-70% of attendees opt in to notifications when prompted at first open. To maximize opt-in rates, include a note on event signage encouraging attendees to enable notifications for schedule updates.
 
@@ -402,15 +402,15 @@ After sending, the notification dashboard shows delivery rate, open rate, and ta
     isPublished: true,
     content: `## Why Verification Matters
 
-The military influencer space has a trust problem. Stolen valor, exaggerated service records, and fake military personas undermine the credibility of genuine veteran creators and put brands at risk. RecurrentX built its verification pipeline specifically to solve this — giving brands confidence that the creators they work with are who they say they are.
+The military influencer space has a trust problem. Stolen valor, exaggerated service records, and fake military personas undermine the credibility of genuine veteran creators and put brands at risk. MilCrunch built its verification pipeline specifically to solve this — giving brands confidence that the creators they work with are who they say they are.
 
-When a creator is verified through RecurrentX, brands can partner with them knowing their military background has been authenticated through a rigorous, multi-phase process.
+When a creator is verified through MilCrunch, brands can partner with them knowing their military background has been authenticated through a rigorous, multi-phase process.
 
 ## The 4-Phase Verification Pipeline
 
 ### Phase 1 — AI Screening
 
-The first phase is automated. When a creator joins the RecurrentX network or is discovered through the search tool, our AI screening system analyzes their public profiles for military service indicators:
+The first phase is automated. When a creator joins the MilCrunch network or is discovered through the search tool, our AI screening system analyzes their public profiles for military service indicators:
 
 - Bio keywords and hashtags related to military service
 - Content themes and topics consistent with military experience
@@ -429,11 +429,11 @@ Creators who pass AI screening are invited to submit documentation supporting th
 - VA benefit letter or health card
 - Official military orders or service records
 
-Documents are reviewed by trained staff. Sensitive information like Social Security numbers is redacted before storage. RecurrentX never shares original documents with brands — only the verified/not-verified status.
+Documents are reviewed by trained staff. Sensitive information like Social Security numbers is redacted before storage. MilCrunch never shares original documents with brands — only the verified/not-verified status.
 
 ### Phase 3 — Community Validation
 
-In this phase, the creator's profile is cross-referenced against the RecurrentX community network. The system checks:
+In this phase, the creator's profile is cross-referenced against the MilCrunch community network. The system checks:
 
 - Whether other verified creators vouch for or have collaborated with this creator
 - Participation in known military organizations, nonprofits, or veteran groups
@@ -444,7 +444,7 @@ Community validation adds a layer of social proof that documents alone cannot pr
 
 ### Phase 4 — Manual Review
 
-A RecurrentX team member conducts a final review of all collected evidence — AI signals, documents, and community validation. This human-in-the-loop step catches edge cases that automated systems might miss and ensures no one is unfairly rejected or approved.
+A MilCrunch team member conducts a final review of all collected evidence — AI signals, documents, and community validation. This human-in-the-loop step catches edge cases that automated systems might miss and ensures no one is unfairly rejected or approved.
 
 > The manual review step is intentionally human-driven. Military service comes in many forms, and a human reviewer can apply judgment that algorithms cannot.
 
@@ -462,7 +462,7 @@ Brands viewing a creator's profile in the discovery tool or a saved list see the
 
 ## Ongoing Monitoring
 
-Verification is not a one-time event. RecurrentX periodically re-scans verified creators to ensure their public profiles remain consistent with their verified status. If significant discrepancies are detected, the creator is flagged for re-review.`,
+Verification is not a one-time event. MilCrunch periodically re-scans verified creators to ensure their public profiles remain consistent with their verified status. If significant discrepancies are detected, the creator is flagged for re-review.`,
   },
   {
     title: "Building a Creator List for Your Campaign",
@@ -476,7 +476,7 @@ Verification is not a one-time event. RecurrentX periodically re-scans verified 
     isPublished: true,
     content: `## Overview
 
-Creator lists are the backbone of any campaign in RecurrentX. A list is a curated group of military and veteran creators that you have hand-picked for a specific campaign, event, or ongoing partnership. Lists make it easy to organize outreach, track responses, and ensure you are working with the right creators for each opportunity.
+Creator lists are the backbone of any campaign in MilCrunch. A list is a curated group of military and veteran creators that you have hand-picked for a specific campaign, event, or ongoing partnership. Lists make it easy to organize outreach, track responses, and ensure you are working with the right creators for each opportunity.
 
 ## Using the Discovery Tool
 
@@ -548,7 +548,7 @@ Lists can be shared with team members who have brand-level access. Shared lists 
     isPublished: true,
     content: `## Why Analytics Matter
 
-Follower counts tell part of the story, but they do not tell you whether a creator's audience actually pays attention. RecurrentX provides deep analytics on every creator in the network so you can make decisions based on real performance data rather than vanity metrics.
+Follower counts tell part of the story, but they do not tell you whether a creator's audience actually pays attention. MilCrunch provides deep analytics on every creator in the network so you can make decisions based on real performance data rather than vanity metrics.
 
 ## Key Metrics Explained
 
@@ -565,7 +565,7 @@ Engagement rate measures how actively a creator's audience interacts with their 
 
 ### Reach and Impressions
 
-Reach is the number of unique accounts that see a creator's content. Impressions are the total number of times content is displayed, including repeat views. RecurrentX estimates these metrics based on platform-reported data and historical performance patterns.
+Reach is the number of unique accounts that see a creator's content. Impressions are the total number of times content is displayed, including repeat views. MilCrunch estimates these metrics based on platform-reported data and historical performance patterns.
 
 ### Audience Authenticity Score
 
@@ -577,7 +577,7 @@ Growth rate shows how quickly a creator's audience is expanding or contracting o
 
 ## Platform Breakdown
 
-RecurrentX tracks metrics across all connected platforms. The analytics panel shows a per-platform breakdown so you can see where a creator performs best:
+MilCrunch tracks metrics across all connected platforms. The analytics panel shows a per-platform breakdown so you can see where a creator performs best:
 
 - Instagram — Engagement rate, story views, reel plays, follower growth
 - TikTok — Average views per video, engagement rate, follower growth
@@ -613,7 +613,7 @@ When building a campaign list, use the comparison tool to place two or more crea
     isPublished: true,
     content: `## Overview
 
-A PDX stage is only as good as the talent on it. The creator invitation workflow in RecurrentX connects your saved creator lists directly to your event's Run of Show, making it straightforward to source, invite, and coordinate talent for every stage segment.
+A PDX stage is only as good as the talent on it. The creator invitation workflow in MilCrunch connects your saved creator lists directly to your event's Run of Show, making it straightforward to source, invite, and coordinate talent for every stage segment.
 
 ## Sourcing Creators from Your Lists
 
@@ -648,7 +648,7 @@ For each confirmed creator, you can manage:
 
 ### Pre-Event Briefing
 
-One week before the event, RecurrentX sends an automated briefing to all confirmed creators with their schedule, venue map, check-in instructions, and production team contact details. You can customize this briefing from the event settings.
+One week before the event, MilCrunch sends an automated briefing to all confirmed creators with their schedule, venue map, check-in instructions, and production team contact details. You can customize this briefing from the event settings.
 
 ## Day-of Logistics
 
@@ -667,14 +667,14 @@ After the event, each creator receives a summary of their segment performance �
     slug: "creator-onboarding-guide",
     category: "creator-network",
     summary:
-      "For creators joining the RecurrentX network — how to set up your profile and connect socials.",
+      "For creators joining the MilCrunch network — how to set up your profile and connect socials.",
     readTime: 5,
     date: "2026-02-04",
     related: ["military-creator-verification", "creator-analytics"],
     isPublished: true,
-    content: `## Welcome to RecurrentX
+    content: `## Welcome to MilCrunch
 
-If you are a military or veteran content creator, RecurrentX is where brands and event organizers discover you for campaigns, partnerships, and live-stage appearances. This guide walks you through setting up your profile so you can start getting discovered.
+If you are a military or veteran content creator, MilCrunch is where brands and event organizers discover you for campaigns, partnerships, and live-stage appearances. This guide walks you through setting up your profile so you can start getting discovered.
 
 ## Creating Your Account
 
@@ -717,7 +717,7 @@ Select the niches that best describe your content. You can choose multiple categ
 
 ## Connecting Social Accounts
 
-Navigate to the "Social Accounts" section of your profile. RecurrentX supports connecting:
+Navigate to the "Social Accounts" section of your profile. MilCrunch supports connecting:
 
 - Instagram
 - TikTok
@@ -726,15 +726,15 @@ Navigate to the "Social Accounts" section of your profile. RecurrentX supports c
 - Facebook
 - LinkedIn
 
-For each platform, you will authenticate through the platform's official OAuth flow. This allows RecurrentX to pull your public metrics — follower count, engagement rate, recent content — which brands use to evaluate fit. RecurrentX never posts on your behalf or accesses private messages.
+For each platform, you will authenticate through the platform's official OAuth flow. This allows MilCrunch to pull your public metrics — follower count, engagement rate, recent content — which brands use to evaluate fit. MilCrunch never posts on your behalf or accesses private messages.
 
 ### Why Connect Socials?
 
-Connecting your accounts means brands can see your real, verified metrics directly on your RecurrentX profile. Creators with connected accounts get significantly more views from brands than those with manual-entry-only profiles.
+Connecting your accounts means brands can see your real, verified metrics directly on your MilCrunch profile. Creators with connected accounts get significantly more views from brands than those with manual-entry-only profiles.
 
 ## Getting Verified
 
-Military verification is what sets RecurrentX apart. After completing your profile, navigate to the "Verification" tab to begin the process. You will be guided through:
+Military verification is what sets MilCrunch apart. After completing your profile, navigate to the "Verification" tab to begin the process. You will be guided through:
 
 - AI Screening — Automatic analysis of your public profiles for military service indicators
 - Document Upload — Submit your DD-214, military ID, or other service documentation
@@ -744,12 +744,12 @@ A verified badge on your profile tells brands that your military service has bee
 
 ## Getting Discovered
 
-Once your profile is live and verified, brands can find you through the RecurrentX discovery tool. To maximize your visibility:
+Once your profile is live and verified, brands can find you through the MilCrunch discovery tool. To maximize your visibility:
 
 - Keep your social accounts connected and active
 - Update your bio and categories as your content evolves
 - Respond promptly to brand inquiries and event invitations
-- Participate in the RecurrentX community to build your network
+- Participate in the MilCrunch community to build your network
 
 ## What to Expect
 
@@ -769,7 +769,7 @@ Brands may reach out for various opportunities — sponsored posts, event appear
     isPublished: true,
     content: `## What is the Sponsor Dashboard?
 
-The sponsor dashboard is the centerpiece of RecurrentX's 365 Insights module. It provides a rolling 12-month view of every sponsor's performance across events, streams, social content, and email campaigns. Instead of waiting until an event ends to show sponsors their results, the dashboard delivers real-time data that keeps sponsors engaged and invested year-round.
+The sponsor dashboard is the centerpiece of MilCrunch's 365 Insights module. It provides a rolling 12-month view of every sponsor's performance across events, streams, social content, and email campaigns. Instead of waiting until an event ends to show sponsors their results, the dashboard delivers real-time data that keeps sponsors engaged and invested year-round.
 
 ## Dashboard Layout
 
@@ -810,7 +810,7 @@ Engagement rate for sponsors measures how often viewers interact with sponsor co
 
 ### Attribution
 
-RecurrentX tracks which channel drove each impression and engagement, so you can show sponsors exactly where their value is coming from. If 60% of a sponsor's impressions come from streaming and 25% from social clips, that informs future package design.
+MilCrunch tracks which channel drove each impression and engagement, so you can show sponsors exactly where their value is coming from. If 60% of a sponsor's impressions come from streaming and 25% from social clips, that informs future package design.
 
 > The 365 dashboard is your most powerful tool for sponsor retention. Sponsors who see real-time data throughout the year are far more likely to renew than those who only get a single post-event report.
 
@@ -841,14 +841,14 @@ Each sponsor dashboard has a "Share" button that generates a read-only link. Sha
     slug: "impression-tracking",
     category: "365-insights",
     summary:
-      "The methodology behind RecurrentX's multi-channel impression tracking system.",
+      "The methodology behind MilCrunch's multi-channel impression tracking system.",
     readTime: 5,
     date: "2026-02-09",
     related: ["sponsor-dashboard-guide", "yoy-comparison-reports"],
     isPublished: true,
     content: `## What Counts as an Impression?
 
-An impression in RecurrentX is defined as one instance of a sponsor's branding being displayed to one viewer. The system tracks impressions across multiple channels, each with its own measurement methodology. Understanding how impressions are counted helps you set accurate expectations with sponsors and present data confidently.
+An impression in MilCrunch is defined as one instance of a sponsor's branding being displayed to one viewer. The system tracks impressions across multiple channels, each with its own measurement methodology. Understanding how impressions are counted helps you set accurate expectations with sponsors and present data confidently.
 
 ## Tracking by Channel
 
@@ -861,21 +861,21 @@ Event impressions are estimated based on verified attendance data and sponsor pl
 - Printed materials — Estimated based on distribution counts (programs, lanyards, table tents)
 - Attendee app — Exact count of sponsor page views and logo impressions within the app
 
-> Event impressions use a conservative estimation model. RecurrentX intentionally underestimates rather than overestimates to maintain credibility with sponsors.
+> Event impressions use a conservative estimation model. MilCrunch intentionally underestimates rather than overestimates to maintain credibility with sponsors.
 
 ### Streaming Impressions
 
-Streaming impressions are the most precisely tracked channel. When a sponsor's overlay, lower-third, or dedicated segment appears during a live stream, RecurrentX counts:
+Streaming impressions are the most precisely tracked channel. When a sponsor's overlay, lower-third, or dedicated segment appears during a live stream, MilCrunch counts:
 
 - Concurrent viewers — The number of viewers watching at the moment the sponsor branding is displayed
 - VOD views — Additional impressions from the video-on-demand replay, tracked over 90 days post-stream
 - Multi-destination totals — Impressions are aggregated across all stream destinations (YouTube, Facebook, Twitch, custom RTMP)
 
-Each platform's analytics API provides viewer counts that RecurrentX pulls automatically.
+Each platform's analytics API provides viewer counts that MilCrunch pulls automatically.
 
 ### Social Media Impressions
 
-When content featuring sponsor branding is posted to connected social accounts, RecurrentX tracks:
+When content featuring sponsor branding is posted to connected social accounts, MilCrunch tracks:
 
 - Post impressions — The number of times the post is displayed in feeds
 - Video views — View counts for video content featuring sponsor branding
@@ -911,7 +911,7 @@ Impression data updates on different cadences depending on the channel:
 
 ## Deduplication
 
-RecurrentX applies deduplication logic to avoid double-counting impressions. If a viewer sees a sponsor's logo on a live stream and then again on a social clip of that same segment, those are counted as two separate impressions (different channels), but a single viewer watching the same VOD twice counts as one impression.
+MilCrunch applies deduplication logic to avoid double-counting impressions. If a viewer sees a sponsor's logo on a live stream and then again on a social clip of that same segment, those are counted as two separate impressions (different channels), but a single viewer watching the same VOD twice counts as one impression.
 
 ## Reporting Confidence
 
@@ -929,7 +929,7 @@ Each impression total in the dashboard includes a confidence indicator — High,
     isPublished: true,
     content: `## When to Start the Renewal Conversation
 
-The best time to begin a renewal conversation is not when the current contract is about to expire — it is when performance data is at its peak. If a sponsor just had a successful event activation or their dashboard shows a strong impression milestone, that is the moment to reach out. RecurrentX's 365 Insights gives you a continuous stream of data points to anchor these conversations.
+The best time to begin a renewal conversation is not when the current contract is about to expire — it is when performance data is at its peak. If a sponsor just had a successful event activation or their dashboard shows a strong impression milestone, that is the moment to reach out. MilCrunch's 365 Insights gives you a continuous stream of data points to anchor these conversations.
 
 As a general rule, start the formal renewal process 60-90 days before contract expiration. But informal touchpoints — sharing dashboard highlights, sending quick updates — should happen throughout the year.
 
@@ -1080,7 +1080,7 @@ YoY reports can be exported as PDF or shared as a live link. The live version al
     isPublished: true,
     content: `## What Can Be Exported?
 
-RecurrentX allows you to export data from nearly every section of the platform as CSV files. This makes it easy to work with your data in Excel, Google Sheets, or any other tool your team uses. Exportable data includes:
+MilCrunch allows you to export data from nearly every section of the platform as CSV files. This makes it easy to work with your data in Excel, Google Sheets, or any other tool your team uses. Exportable data includes:
 
 - Sponsor analytics — Impressions, engagement, and attribution data
 - Creator lists — Contact details, metrics, and verification status for saved creators
@@ -1112,7 +1112,7 @@ Export sponsor dashboards as CSV and paste the data into your own branded report
 
 ### Importing into Other Tools
 
-Export contact lists or lead data for import into CRMs like Salesforce or HubSpot. RecurrentX CSVs use standard column headers that map cleanly to most CRM import tools.
+Export contact lists or lead data for import into CRMs like Salesforce or HubSpot. MilCrunch CSVs use standard column headers that map cleanly to most CRM import tools.
 
 ### Offline Analysis
 
@@ -1148,11 +1148,11 @@ For data you export regularly, you can set up scheduled exports that automatical
     isPublished: true,
     content: `## What is Multi-Destination Streaming?
 
-Multi-destination streaming allows you to broadcast a single live stream to multiple platforms at the same time. Instead of choosing between YouTube or Facebook, you send your stream to both — plus Twitch, LinkedIn Live, and any custom RTMP destination you configure. RecurrentX handles the replication so you get maximum reach without managing multiple encoders.
+Multi-destination streaming allows you to broadcast a single live stream to multiple platforms at the same time. Instead of choosing between YouTube or Facebook, you send your stream to both — plus Twitch, LinkedIn Live, and any custom RTMP destination you configure. MilCrunch handles the replication so you get maximum reach without managing multiple encoders.
 
 ## Adding Stream Destinations
 
-Navigate to your event and open the "Streaming" tab. Click "Add Destination" to configure a new output. RecurrentX supports the following destination types:
+Navigate to your event and open the "Streaming" tab. Click "Add Destination" to configure a new output. MilCrunch supports the following destination types:
 
 ### Pre-Configured Platforms
 
@@ -1168,7 +1168,7 @@ For any platform not listed above, use the Custom RTMP option. You will need:
 - RTMP URL — The ingest server URL provided by the platform
 - Stream Key — The unique key that identifies your stream
 
-> Keep your stream keys secure. Anyone with your stream key can broadcast to your channel. Store them in RecurrentX and avoid sharing them over email or chat.
+> Keep your stream keys secure. Anyone with your stream key can broadcast to your channel. Store them in MilCrunch and avoid sharing them over email or chat.
 
 ## Configuring Stream Settings
 
@@ -1183,7 +1183,7 @@ These settings apply to all destinations. Some platforms may re-encode the strea
 
 ## Testing Before Going Live
 
-Always run a test stream before the actual event. RecurrentX includes a "Test Mode" that sends a 60-second stream to all configured destinations without making them publicly visible (platforms must support unlisted or private streams for this to work).
+Always run a test stream before the actual event. MilCrunch includes a "Test Mode" that sends a 60-second stream to all configured destinations without making them publicly visible (platforms must support unlisted or private streams for this to work).
 
 During the test, check:
 
@@ -1208,15 +1208,15 @@ If a destination shows yellow or red status:
 - Check your internet upload speed — you need at least 1.5x your total bitrate across all destinations
 - Reduce resolution or bitrate if bandwidth is constrained
 - Disconnect low-priority destinations to free up bandwidth for primary platforms
-- RecurrentX automatically attempts to reconnect dropped destinations every 30 seconds
+- MilCrunch automatically attempts to reconnect dropped destinations every 30 seconds
 
 ## Overlays and Branding
 
-RecurrentX's overlay system lets you add sponsor logos, lower-third graphics, countdown timers, and social media tickers to your stream. These overlays are rendered server-side, meaning they appear identically on every destination platform. Manage overlays from the "Graphics" sub-tab under Streaming.
+MilCrunch's overlay system lets you add sponsor logos, lower-third graphics, countdown timers, and social media tickers to your stream. These overlays are rendered server-side, meaning they appear identically on every destination platform. Manage overlays from the "Graphics" sub-tab under Streaming.
 
 ## Post-Stream
 
-After ending the stream, recordings are automatically saved in RecurrentX. VOD links from each platform are collected and displayed in the streaming dashboard for easy access. These recordings feed into the AI Clip Generator for post-event content creation.`,
+After ending the stream, recordings are automatically saved in MilCrunch. VOD links from each platform are collected and displayed in the streaming dashboard for easy access. These recordings feed into the AI Clip Generator for post-event content creation.`,
   },
   {
     title: "Using the AI Clip Generator",
@@ -1230,7 +1230,7 @@ After ending the stream, recordings are automatically saved in RecurrentX. VOD l
     isPublished: true,
     content: `## What is the AI Clip Generator?
 
-The AI Clip Generator is a RecurrentX tool that analyzes your event recordings and automatically identifies the most engaging moments to create short-form social clips. Instead of manually scrubbing through hours of footage, the AI does the heavy lifting — finding highlights, trimming clips, and formatting them for different platforms.
+The AI Clip Generator is a MilCrunch tool that analyzes your event recordings and automatically identifies the most engaging moments to create short-form social clips. Instead of manually scrubbing through hours of footage, the AI does the heavy lifting — finding highlights, trimming clips, and formatting them for different platforms.
 
 ## How the AI Identifies Highlights
 
@@ -1285,7 +1285,7 @@ Each export includes platform-specific metadata fields like title, description, 
 
 ## Measuring Clip Performance
 
-After clips are published, RecurrentX tracks their performance through connected social accounts. The clip dashboard shows views, engagement rate, shares, and comments for each clip, allowing you to identify which moments resonate most with your audience and refine your clipping strategy over time.`,
+After clips are published, MilCrunch tracks their performance through connected social accounts. The clip dashboard shows views, engagement rate, shares, and comments for each clip, allowing you to identify which moments resonate most with your audience and refine your clipping strategy over time.`,
   },
   {
     title: "Browser-Based Streaming Guide",
@@ -1299,7 +1299,7 @@ After clips are published, RecurrentX tracks their performance through connected
     isPublished: true,
     content: `## Why Browser-Based Streaming?
 
-Traditional live streaming requires dedicated software like OBS Studio, specialized hardware, and a production crew to manage it all. RecurrentX's browser-based streaming eliminates the software requirement entirely. You can go live from any modern web browser with just a camera and microphone — making it ideal for smaller activations, remote interviews, and situations where a full production setup is not feasible.
+Traditional live streaming requires dedicated software like OBS Studio, specialized hardware, and a production crew to manage it all. MilCrunch's browser-based streaming eliminates the software requirement entirely. You can go live from any modern web browser with just a camera and microphone — making it ideal for smaller activations, remote interviews, and situations where a full production setup is not feasible.
 
 ## Browser Requirements
 
@@ -1377,13 +1377,13 @@ The browser interface provides:
     isPublished: true,
     content: `## The Content Repurposing Mindset
 
-A single event can generate months of social content if you approach it strategically. Every panel discussion, interview, performance, and sponsor activation is raw material that can be sliced, reformatted, and redistributed across platforms long after the venue lights go off. RecurrentX's content pipeline is designed to maximize the long-tail value of every minute of footage.
+A single event can generate months of social content if you approach it strategically. Every panel discussion, interview, performance, and sponsor activation is raw material that can be sliced, reformatted, and redistributed across platforms long after the venue lights go off. MilCrunch's content pipeline is designed to maximize the long-tail value of every minute of footage.
 
 ## The Repurposing Pipeline
 
 ### Step 1 — Capture Everything
 
-During the event, ensure every PDX stage segment is recorded. RecurrentX automatically saves recordings from all stream destinations. For on-site-only moments (networking areas, behind-the-scenes), assign a crew member to capture mobile video that can be uploaded to the platform later.
+During the event, ensure every PDX stage segment is recorded. MilCrunch automatically saves recordings from all stream destinations. For on-site-only moments (networking areas, behind-the-scenes), assign a crew member to capture mobile video that can be uploaded to the platform later.
 
 ### Step 2 — Generate AI Clips
 
@@ -1402,7 +1402,7 @@ A suggested cadence:
 
 ### Step 4 — Format for Each Platform
 
-Each platform has different optimal formats. RecurrentX's export tools handle this, but the strategic considerations matter too:
+Each platform has different optimal formats. MilCrunch's export tools handle this, but the strategic considerations matter too:
 
 - YouTube — Longer clips (3-10 minutes) perform well. Upload full sessions as standalone videos.
 - Instagram Reels — 30-60 second high-energy moments with captions and trending audio
@@ -1415,7 +1415,7 @@ Each platform has different optimal formats. RecurrentX's export tools handle th
 
 ### Step 5 — Schedule and Publish
 
-Use RecurrentX's content scheduler or connect your preferred social media management tool. Schedule posts at optimal times for each platform and include relevant hashtags, mentions, and sponsor tags.
+Use MilCrunch's content scheduler or connect your preferred social media management tool. Schedule posts at optimal times for each platform and include relevant hashtags, mentions, and sponsor tags.
 
 ## Maximizing Sponsor Value
 
@@ -1423,7 +1423,7 @@ Content repurposing is where the "365" in 365 Insights becomes real for sponsors
 
 ## Measuring Long-Tail Impact
 
-The content analytics panel in RecurrentX shows cumulative performance of all published clips over time. Watch for:
+The content analytics panel in MilCrunch shows cumulative performance of all published clips over time. Watch for:
 
 - Which clips continue to gain views weeks after publishing (evergreen content)
 - Which platforms deliver the most consistent engagement
@@ -1434,18 +1434,18 @@ Use these insights to inform content strategy for your next event. The clips tha
 
   // ─── EMAIL MARKETING ────────────────────────────────────────────────
   {
-    title: "Getting Started with RecurrentX Mail",
+    title: "Getting Started with MilCrunch Mail",
     slug: "getting-started-email",
     category: "email-marketing",
     summary:
-      "Initial setup guide for the RecurrentX email marketing system.",
+      "Initial setup guide for the MilCrunch email marketing system.",
     readTime: 4,
     date: "2026-02-12",
     related: ["creating-first-campaign", "building-contact-lists"],
     isPublished: true,
     content: `## Overview
 
-RecurrentX Mail is the built-in email marketing system that lets you send campaigns, manage contact lists, and track deliverability — all without leaving the RecurrentX platform. Whether you are promoting an upcoming event, sharing content with creators, or sending sponsor updates, RecurrentX Mail handles it from composition to delivery.
+MilCrunch Mail is the built-in email marketing system that lets you send campaigns, manage contact lists, and track deliverability — all without leaving the MilCrunch platform. Whether you are promoting an upcoming event, sharing content with creators, or sending sponsor updates, MilCrunch Mail handles it from composition to delivery.
 
 ## Navigating the Email Section
 
@@ -1462,26 +1462,26 @@ Before sending your first email, complete the following setup steps:
 
 ### Verify Your Sender Identity
 
-RecurrentX requires a verified sender identity to protect deliverability. Navigate to Email > Settings > Sender Identity and add:
+MilCrunch requires a verified sender identity to protect deliverability. Navigate to Email > Settings > Sender Identity and add:
 
-- Sender Name — The "from" name recipients see (e.g., "RecurrentX Events Team")
+- Sender Name — The "from" name recipients see (e.g., "MilCrunch Events Team")
 - Sender Email — The "from" email address (must be a domain you control)
 
 A verification email is sent to the address you enter. Click the link to confirm ownership.
 
 ### Connect Your Domain
 
-For the best deliverability rates, configure a custom sending domain rather than using the default RecurrentX domain. This involves adding DNS records (SPF, DKIM, and DMARC) to your domain's DNS settings. See the Custom Sending Domain article for a detailed walkthrough.
+For the best deliverability rates, configure a custom sending domain rather than using the default MilCrunch domain. This involves adding DNS records (SPF, DKIM, and DMARC) to your domain's DNS settings. See the Custom Sending Domain article for a detailed walkthrough.
 
 > Sending from a custom domain significantly improves inbox placement rates. Emails from generic or shared domains are more likely to land in spam folders.
 
 ### Set Your Default Footer
 
-Every email must include a physical mailing address and unsubscribe link for CAN-SPAM compliance. Configure your default footer in Email > Settings > Footer. RecurrentX automatically appends the unsubscribe link, but you need to add your organization's mailing address.
+Every email must include a physical mailing address and unsubscribe link for CAN-SPAM compliance. Configure your default footer in Email > Settings > Footer. MilCrunch automatically appends the unsubscribe link, but you need to add your organization's mailing address.
 
 ## Understanding Credits
 
-RecurrentX Mail operates on a credit system. Each email sent consumes one credit. Your credit balance is displayed in the email dashboard header. Credits can be purchased in bulk through your account settings, and unused credits roll over month to month.
+MilCrunch Mail operates on a credit system. Each email sent consumes one credit. Your credit balance is displayed in the email dashboard header. Credits can be purchased in bulk through your account settings, and unused credits roll over month to month.
 
 ### Credit Usage Tips
 
@@ -1529,7 +1529,7 @@ Start by providing the basics:
 
 ### Step 2 — Choose a Template
 
-Browse the template gallery or start from scratch. RecurrentX includes templates designed for common use cases:
+Browse the template gallery or start from scratch. MilCrunch includes templates designed for common use cases:
 
 - Event Invitation — Formatted for date, location, RSVP button, and agenda highlights
 - Newsletter — Multi-section layout with articles, links, and featured content
@@ -1577,7 +1577,7 @@ Send a test email to yourself and at least one team member. Check:
 
 ### Step 6 — Schedule or Send
 
-Choose to send the campaign immediately or schedule it for a specific date and time. If scheduling, RecurrentX displays the send time in your local timezone and the estimated delivery window.
+Choose to send the campaign immediately or schedule it for a specific date and time. If scheduling, MilCrunch displays the send time in your local timezone and the estimated delivery window.
 
 Click "Send" or "Schedule" to finalize. Once sent, the campaign moves to the Sent tab where you can monitor delivery and engagement in real time.
 
@@ -1597,7 +1597,7 @@ Monitor your campaign performance in Email > Analytics. Key metrics are availabl
     isPublished: true,
     content: `## Why Lists Matter
 
-Contact lists are the foundation of effective email marketing. Well-organized lists let you send targeted, relevant emails to the right people — which translates to higher open rates, better engagement, and fewer unsubscribes. RecurrentX makes it easy to create, import, and manage lists from multiple sources.
+Contact lists are the foundation of effective email marketing. Well-organized lists let you send targeted, relevant emails to the right people — which translates to higher open rates, better engagement, and fewer unsubscribes. MilCrunch makes it easy to create, import, and manage lists from multiple sources.
 
 ## Creating a New List
 
@@ -1625,7 +1625,7 @@ The most common way to populate a list is importing from a CSV file. Click "Impo
 
 ### Field Mapping
 
-After uploading your CSV, RecurrentX shows a mapping screen where you match your CSV columns to contact fields. The system auto-detects common column names, but you can manually adjust any mappings.
+After uploading your CSV, MilCrunch shows a mapping screen where you match your CSV columns to contact fields. The system auto-detects common column names, but you can manually adjust any mappings.
 
 ### Import Options
 
@@ -1637,7 +1637,7 @@ After uploading your CSV, RecurrentX shows a mapping screen where you match your
 
 ## Syncing from Event Registrations
 
-If you manage events in RecurrentX, contact data from event registrations can be synced directly into an email list. Navigate to your event, open the "Registrants" tab, and click "Sync to Email List." You can create a new list or add registrants to an existing one.
+If you manage events in MilCrunch, contact data from event registrations can be synced directly into an email list. Navigate to your event, open the "Registrants" tab, and click "Sync to Email List." You can create a new list or add registrants to an existing one.
 
 Event syncing is particularly powerful for:
 
@@ -1647,7 +1647,7 @@ Event syncing is particularly powerful for:
 
 ## Managing Duplicates
 
-RecurrentX uses email address as the unique identifier for contacts. When importing or syncing:
+MilCrunch uses email address as the unique identifier for contacts. When importing or syncing:
 
 - If a contact with the same email exists on the same list, the duplicate is skipped
 - If a contact exists on a different list, they remain on both lists (contacts can belong to multiple lists)
@@ -1667,7 +1667,7 @@ Segments can be used as targeting criteria when selecting recipients for a campa
 
 Maintain healthy lists by:
 
-- Removing bounced addresses promptly (RecurrentX auto-suppresses hard bounces)
+- Removing bounced addresses promptly (MilCrunch auto-suppresses hard bounces)
 - Honoring unsubscribe requests (handled automatically)
 - Periodically re-engaging inactive contacts or removing them
 - Never purchasing email lists — imported contacts should always be people who have opted in`,
@@ -1684,7 +1684,7 @@ Maintain healthy lists by:
     isPublished: true,
     content: `## Why a Custom Sending Domain Matters
 
-When you send emails through RecurrentX without a custom domain, they are sent from a shared sending infrastructure. While this works, emails from shared domains are more likely to be filtered by spam algorithms because the sender reputation is shared across multiple organizations. A custom sending domain ties your email reputation directly to your own domain, resulting in significantly better inbox placement.
+When you send emails through MilCrunch without a custom domain, they are sent from a shared sending infrastructure. While this works, emails from shared domains are more likely to be filtered by spam algorithms because the sender reputation is shared across multiple organizations. A custom sending domain ties your email reputation directly to your own domain, resulting in significantly better inbox placement.
 
 ## What You Need
 
@@ -1698,7 +1698,7 @@ Before starting, ensure you have:
 
 ### Step 1 — Add Your Domain
 
-Navigate to Email > Settings > Sending Domain and click "Add Domain." Enter your domain name (e.g., yourbrand.com). RecurrentX generates the DNS records you need to add.
+Navigate to Email > Settings > Sending Domain and click "Add Domain." Enter your domain name (e.g., yourbrand.com). MilCrunch generates the DNS records you need to add.
 
 ### Step 2 — Add SPF Record
 
@@ -1706,9 +1706,9 @@ SPF (Sender Policy Framework) tells receiving mail servers which servers are aut
 
 - Record Type: TXT
 - Host: @ (or your domain root)
-- Value: The SPF string provided by RecurrentX (includes RecurrentX's sending IPs)
+- Value: The SPF string provided by MilCrunch (includes MilCrunch's sending IPs)
 
-If you already have an SPF record, do not create a second one. Instead, add the RecurrentX include statement to your existing record.
+If you already have an SPF record, do not create a second one. Instead, add the MilCrunch include statement to your existing record.
 
 > Having multiple SPF records for the same domain will cause validation failures. Always merge into a single SPF record.
 
@@ -1716,7 +1716,7 @@ If you already have an SPF record, do not create a second one. Instead, add the 
 
 DKIM (DomainKeys Identified Mail) adds a cryptographic signature to your emails that proves they have not been tampered with in transit.
 
-RecurrentX generates two CNAME records for DKIM:
+MilCrunch generates two CNAME records for DKIM:
 
 - Record 1: Host = provided selector, Value = provided CNAME target
 - Record 2: Host = provided selector, Value = provided CNAME target
@@ -1729,11 +1729,11 @@ DMARC (Domain-based Message Authentication, Reporting, and Conformance) tells re
 
 - Record Type: TXT
 - Host: _dmarc
-- Value: A DMARC policy string (RecurrentX recommends starting with a "none" policy for monitoring, then tightening to "quarantine" or "reject" once you confirm everything works)
+- Value: A DMARC policy string (MilCrunch recommends starting with a "none" policy for monitoring, then tightening to "quarantine" or "reject" once you confirm everything works)
 
 ### Step 5 — Verify
 
-After adding all DNS records, return to RecurrentX and click "Verify Domain." DNS propagation can take anywhere from a few minutes to 48 hours, though most changes take effect within 1-2 hours. RecurrentX checks each record and shows green checkmarks as they are detected.
+After adding all DNS records, return to MilCrunch and click "Verify Domain." DNS propagation can take anywhere from a few minutes to 48 hours, though most changes take effect within 1-2 hours. MilCrunch checks each record and shows green checkmarks as they are detected.
 
 ## Troubleshooting Verification
 
@@ -1746,7 +1746,7 @@ If verification fails after 48 hours:
 
 ## After Verification
 
-Once verified, RecurrentX automatically routes all emails through your custom domain. Update your sender identity to use an email address at the verified domain. Deliverability improvements are typically visible within 1-2 weeks as your domain builds sending reputation.
+Once verified, MilCrunch automatically routes all emails through your custom domain. Update your sender identity to use an email address at the verified domain. Deliverability improvements are typically visible within 1-2 weeks as your domain builds sending reputation.
 
 ## Maintaining Domain Health
 
@@ -1780,7 +1780,7 @@ The percentage of emails that were successfully delivered to recipients' mail se
 
 ### Open Rate
 
-The percentage of delivered emails that were opened by recipients. RecurrentX tracks opens using a tiny tracking pixel embedded in the email.
+The percentage of delivered emails that were opened by recipients. MilCrunch tracks opens using a tiny tracking pixel embedded in the email.
 
 - Industry average: 20-25% for most sectors
 - Good performance: 30%+ indicates strong subject lines and engaged audience
@@ -1824,7 +1824,7 @@ Benchmarks vary by industry and audience, but for military and event-focused ema
 
 ## A/B Testing Basics
 
-RecurrentX supports A/B testing for subject lines and send times. Create two variants of your campaign and send each to a small percentage of your list. After a set period (usually 2-4 hours), the winning variant is automatically sent to the remainder.
+MilCrunch supports A/B testing for subject lines and send times. Create two variants of your campaign and send each to a small percentage of your list. After a set period (usually 2-4 hours), the winning variant is automatically sent to the remainder.
 
 Test one variable at a time:
 
@@ -1844,7 +1844,7 @@ Test one variable at a time:
     slug: "can-spam-compliance",
     category: "email-marketing",
     summary:
-      "What you need to know about email compliance and RecurrentX's built-in safeguards.",
+      "What you need to know about email compliance and MilCrunch's built-in safeguards.",
     readTime: 5,
     date: "2026-02-02",
     related: ["custom-sending-domain", "email-analytics"],
@@ -1883,17 +1883,17 @@ You must provide a clear, conspicuous way for recipients to opt out of future em
 
 When someone unsubscribes, you must stop sending them email within 10 business days. You cannot charge a fee, require additional information beyond an email address, or make the recipient jump through hoops to unsubscribe.
 
-## How RecurrentX Handles Compliance
+## How MilCrunch Handles Compliance
 
-RecurrentX has built-in safeguards that handle the most common compliance requirements automatically:
+MilCrunch has built-in safeguards that handle the most common compliance requirements automatically:
 
 ### Automatic Unsubscribe Links
 
-Every email sent through RecurrentX includes a one-click unsubscribe link in the footer. This link is always present and cannot be removed from the template. When a recipient clicks it, they are immediately removed from the sending list and added to a global suppression list.
+Every email sent through MilCrunch includes a one-click unsubscribe link in the footer. This link is always present and cannot be removed from the template. When a recipient clicks it, they are immediately removed from the sending list and added to a global suppression list.
 
 ### Suppression List Management
 
-RecurrentX maintains a global suppression list of contacts who have unsubscribed. These contacts are automatically excluded from all future campaigns, regardless of which list they are on. You cannot override suppression — this is by design.
+MilCrunch maintains a global suppression list of contacts who have unsubscribed. These contacts are automatically excluded from all future campaigns, regardless of which list they are on. You cannot override suppression — this is by design.
 
 ### Physical Address Requirement
 
@@ -1903,7 +1903,7 @@ The email editor requires a physical mailing address in the footer before a camp
 
 Hard bounces (invalid email addresses) are automatically suppressed after the first bounce. This protects your sender reputation and prevents repeated sends to non-existent addresses.
 
-> RecurrentX handles the technical compliance requirements, but you are still responsible for the content of your emails. Do not use deceptive subject lines, do not send to purchased lists, and always make sure your content is genuinely relevant to your recipients.
+> MilCrunch handles the technical compliance requirements, but you are still responsible for the content of your emails. Do not use deceptive subject lines, do not send to purchased lists, and always make sure your content is genuinely relevant to your recipients.
 
 ## Best Practices Beyond Compliance
 
@@ -1924,7 +1924,7 @@ If you email recipients outside the United States, additional regulations may ap
 - CASL (Canada) — Requires express or implied consent with stricter rules than CAN-SPAM
 - PECR (United Kingdom) — Similar to GDPR with UK-specific requirements
 
-RecurrentX's compliance tools cover CAN-SPAM requirements. For international email, consult with a legal professional to ensure compliance with applicable local laws.`,
+MilCrunch's compliance tools cover CAN-SPAM requirements. For international email, consult with a legal professional to ensure compliance with applicable local laws.`,
   },
 
   // ─── SPONSORSHIP & REVENUE ──────────────────────────────────────────
@@ -1940,7 +1940,7 @@ RecurrentX's compliance tools cover CAN-SPAM requirements. For international ema
     isPublished: true,
     content: `## Why Tiered Packages?
 
-Tiered sponsorship packages give prospects clear options at different investment levels. Instead of negotiating every deal from scratch, tiers provide a starting framework that speeds up the sales process while still allowing customization. RecurrentX's package system supports four standard tiers — Presenting, Gold, Silver, and Bronze — plus the ability to create custom tiers for unique partnerships.
+Tiered sponsorship packages give prospects clear options at different investment levels. Instead of negotiating every deal from scratch, tiers provide a starting framework that speeds up the sales process while still allowing customization. MilCrunch's package system supports four standard tiers — Presenting, Gold, Silver, and Bronze — plus the ability to create custom tiers for unique partnerships.
 
 ## The Four Standard Tiers
 
@@ -2004,7 +2004,7 @@ Typical inclusions:
 
 ## Customizing Packages
 
-The standard tiers are starting points. RecurrentX lets you customize any package by adding or removing individual line items. Common customizations include:
+The standard tiers are starting points. MilCrunch lets you customize any package by adding or removing individual line items. Common customizations include:
 
 - Adding a dedicated email campaign for a Gold sponsor who wants more digital visibility
 - Including a creator partnership component for a sponsor interested in influencer marketing
@@ -2013,14 +2013,14 @@ The standard tiers are starting points. RecurrentX lets you customize any packag
 
 ## Obligation Tracking
 
-Every deliverable in a sponsor package is tracked as an obligation in RecurrentX. When you create or modify a package, each line item becomes a checklist entry on the sponsor's dashboard. As deliverables are fulfilled (logo placed, social post published, stage segment completed), mark them complete to maintain an accurate fulfillment record.
+Every deliverable in a sponsor package is tracked as an obligation in MilCrunch. When you create or modify a package, each line item becomes a checklist entry on the sponsor's dashboard. As deliverables are fulfilled (logo placed, social post published, stage segment completed), mark them complete to maintain an accurate fulfillment record.
 
 This tracking serves two purposes:
 
 - Internal accountability — Your team always knows what has been delivered and what is outstanding
 - Sponsor transparency — Sponsors can see their obligation status in real time through the shared dashboard
 
-## Setting Up Packages in RecurrentX
+## Setting Up Packages in MilCrunch
 
 Navigate to Sponsorship > Packages to create or edit your tiers. For each tier, define:
 
@@ -2044,7 +2044,7 @@ Once packages are configured, they can be attached to events, applied to sponsor
     isPublished: true,
     content: `## What is the Rate Desk?
 
-The Rate Desk is RecurrentX's pricing tool for sponsor inventory. It helps you set data-driven rates for every type of sponsor placement — stream overlays, social posts, email inclusions, stage segments, and event signage. Instead of guessing what to charge, the Rate Desk uses impression estimates and CPM (cost per thousand impressions) calculations to set floor and ceiling prices for each placement.
+The Rate Desk is MilCrunch's pricing tool for sponsor inventory. It helps you set data-driven rates for every type of sponsor placement — stream overlays, social posts, email inclusions, stage segments, and event signage. Instead of guessing what to charge, the Rate Desk uses impression estimates and CPM (cost per thousand impressions) calculations to set floor and ceiling prices for each placement.
 
 ## Understanding CPM
 
@@ -2060,7 +2060,7 @@ Navigate to Sponsorship > Rate Desk. You will see a table of placement types wit
 
 ### Placement Types
 
-RecurrentX includes the following default placement types:
+MilCrunch includes the following default placement types:
 
 - Stream Overlay — Logo displayed during live stream segments
 - Stream Dedicated Segment — Sponsor-specific segment during a stream
@@ -2086,11 +2086,11 @@ For each placement type, set two CPM rates:
 
 ### Impression Estimates
 
-Enter the estimated number of impressions each placement type generates per event or per campaign. RecurrentX uses historical data from your 365 Insights dashboard to suggest estimates, but you can override them manually.
+Enter the estimated number of impressions each placement type generates per event or per campaign. MilCrunch uses historical data from your 365 Insights dashboard to suggest estimates, but you can override them manually.
 
 ## Calculating Package Prices
 
-Once your rate desk is configured, RecurrentX automatically calculates the total value of any sponsor package by summing the individual placement values. This makes it easy to:
+Once your rate desk is configured, MilCrunch automatically calculates the total value of any sponsor package by summing the individual placement values. This makes it easy to:
 
 - Price new packages — Add up the placements included in each tier to determine the appropriate price point
 - Justify pricing to sponsors — Show exactly how the package price maps to expected impressions and CPM rates
@@ -2139,7 +2139,7 @@ Review your rate desk quarterly. Use actual impression data from 365 Insights to
     isPublished: true,
     content: `## What is the Proposal Builder?
 
-The Proposal Builder is RecurrentX's tool for creating professional, branded sponsorship pitch decks. It combines your event data, audience demographics, package details, and historical performance into a polished document that you can send to prospective sponsors. No more cobbling together slides in PowerPoint — the Proposal Builder pulls live data directly from your RecurrentX dashboard.
+The Proposal Builder is MilCrunch's tool for creating professional, branded sponsorship pitch decks. It combines your event data, audience demographics, package details, and historical performance into a polished document that you can send to prospective sponsors. No more cobbling together slides in PowerPoint — the Proposal Builder pulls live data directly from your MilCrunch dashboard.
 
 ## Accessing the Proposal Builder
 
@@ -2190,7 +2190,7 @@ Once your proposal is complete, you have several output options:
 
 ## Tracking Proposal Engagement
 
-When you send an interactive link, RecurrentX tracks when the prospect opens the proposal, which sections they spend the most time on, and whether they download the PDF. This engagement data appears in your sponsor pipeline and helps you time your follow-up.
+When you send an interactive link, MilCrunch tracks when the prospect opens the proposal, which sections they spend the most time on, and whether they download the PDF. This engagement data appears in your sponsor pipeline and helps you time your follow-up.
 
 ## Proposal Best Practices
 
@@ -2213,11 +2213,11 @@ When you send an interactive link, RecurrentX tracks when the prospect opens the
     isPublished: true,
     content: `## What is the Sponsor Pipeline?
 
-The sponsor pipeline in RecurrentX is a CRM-style tool built specifically for managing sponsorship sales. It tracks every prospective sponsor from initial identification through proposal, negotiation, and signed contract. The pipeline gives you visibility into where every deal stands and ensures no prospect falls through the cracks.
+The sponsor pipeline in MilCrunch is a CRM-style tool built specifically for managing sponsorship sales. It tracks every prospective sponsor from initial identification through proposal, negotiation, and signed contract. The pipeline gives you visibility into where every deal stands and ensures no prospect falls through the cracks.
 
 ## Pipeline Stages
 
-RecurrentX uses a standard pipeline with customizable stages. The default stages are:
+MilCrunch uses a standard pipeline with customizable stages. The default stages are:
 
 ### Identified
 
@@ -2268,7 +2268,7 @@ Drag leads between stages in the Kanban view or update the stage from the lead d
 
 ## Tracking Outreach
 
-Every interaction with a prospect should be logged. RecurrentX tracks:
+Every interaction with a prospect should be logged. MilCrunch tracks:
 
 - Emails sent — Log outreach emails with subject and date
 - Calls made — Record call outcomes and key takeaways
@@ -2278,7 +2278,7 @@ Every interaction with a prospect should be logged. RecurrentX tracks:
 
 ## Setting Follow-Up Reminders
 
-For each lead, set follow-up reminders so you never lose momentum. Reminders appear in your RecurrentX dashboard and can also be sent to your email. Common reminder cadences:
+For each lead, set follow-up reminders so you never lose momentum. Reminders appear in your MilCrunch dashboard and can also be sent to your email. Common reminder cadences:
 
 - After initial outreach: Follow up in 3-5 business days
 - After sending a proposal: Follow up in 5-7 business days
@@ -2369,9 +2369,9 @@ Calculate and present the sponsor's return on investment:
 
 Include a gallery of all content featuring the sponsor — social media posts, stream screenshots, event photos, and email templates. Visual evidence is far more compelling than numbers alone.
 
-## Generating Reports in RecurrentX
+## Generating Reports in MilCrunch
 
-Navigate to 365 Insights and select the sponsor. Click "Generate Post-Event Report" and choose the event. RecurrentX auto-populates the report with:
+Navigate to 365 Insights and select the sponsor. Click "Generate Post-Event Report" and choose the event. MilCrunch auto-populates the report with:
 
 - Impression data from all tracked channels
 - Obligation status from the package tracker

@@ -1643,7 +1643,7 @@ const BrandEventCreate = () => {
                 <div className="flex justify-between"><span className="text-muted-foreground">Live Streaming</span><span className="font-medium">{streamingEnabled ? "Enabled" : "Disabled"}</span></div>
                 {streamingEnabled && (
                   <>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Stream Source</span><span className="font-medium">{streamSource === "platform" ? "RecurrentX Platform" : "External Encoder"}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Stream Source</span><span className="font-medium">{streamSource === "platform" ? "MilCrunch Platform" : "External Encoder"}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Stages</span><span className="font-medium">{stages.filter((s) => s.name.trim()).length}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Destinations</span><span className="font-medium">{selectedDestinations.length + customRtmp.length}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">AI Features</span><span className="font-medium">{streamSource === "platform" ? Object.values(aiFeatures).filter(Boolean).length + " active" : "N/A"}</span></div>

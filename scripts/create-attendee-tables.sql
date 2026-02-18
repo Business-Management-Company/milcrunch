@@ -1,5 +1,5 @@
 -- ============================================
--- RecurrentX Attendee Experience - Database Setup
+-- MilCrunch Attendee Experience - Database Setup
 -- Run this in Supabase SQL Editor (Dashboard → SQL)
 -- ============================================
 
@@ -309,7 +309,7 @@ BEGIN
   (v_event_id, 3, '08:00', '09:00', 'Breakfast', 'meal', 'Grand Foyer', 1, NULL, false),
   (v_event_id, 3, '09:00', '10:00', 'Panel: "The Business of Military Events"', 'panel', 'Main Stage', 2, 'Behind the scenes of planning and executing military community events.', false),
   (v_event_id, 3, '10:00', '11:00', 'Workshop: "Pitching Brands as a Creator"', 'workshop', 'Breakout Room A', 3, 'Learn how to craft compelling pitch decks and set your rates.', false),
-  (v_event_id, 3, '11:00', '12:00', 'Closing Keynote: "365 Days of Impact"', 'keynote', 'Main Stage', 4, 'Building year-round community impact with RecurrentX.', true),
+  (v_event_id, 3, '11:00', '12:00', 'Closing Keynote: "365 Days of Impact"', 'keynote', 'Main Stage', 4, 'Building year-round community impact with MilCrunch.', true),
   (v_event_id, 3, '12:00', '12:30', 'Closing Ceremony & Announcements', 'ceremony', 'Main Stage', 5, 'Closing remarks and announcements for the coming year.', false);
 
   -- Create tickets
@@ -322,8 +322,8 @@ BEGIN
   -- Create sample speakers
   DELETE FROM event_speakers WHERE event_id = v_event_id;
   INSERT INTO event_speakers (event_id, creator_name, role, topic, bio, confirmed, sort_order, military_branch) VALUES
-  (v_event_id, 'Andrew Appleton', 'Founder, RecurrentX', '365 Days of Impact', 'Founder and CEO of RecurrentX. Building the infrastructure for military creator economy.', true, 1, 'Army'),
-  (v_event_id, 'Paul Majano', 'Board Chairman, RecurrentX', 'From Battlefield to Boardroom', 'Board Chairman at RecurrentX. Veteran entrepreneur and military community leader.', true, 2, 'Marines'),
+  (v_event_id, 'Andrew Appleton', 'Founder, MilCrunch', '365 Days of Impact', 'Founder and CEO of MilCrunch. Building the infrastructure for military creator economy.', true, 1, 'Army'),
+  (v_event_id, 'Paul Majano', 'Board Chairman, MilCrunch', 'From Battlefield to Boardroom', 'Board Chairman at MilCrunch. Veteran entrepreneur and military community leader.', true, 2, 'Marines'),
   (v_event_id, 'Sarah Mitchell', 'MilSpouse Creator', 'MilSpouse Entrepreneurs Panel', 'Military spouse, entrepreneur, and social media creator with 500K+ followers.', true, 3, NULL),
   (v_event_id, 'Marcus Johnson', 'Veteran YouTuber', 'YouTube Monetization Masterclass', 'Army veteran turned full-time YouTuber with 1M+ subscribers. Expert in video monetization.', true, 4, 'Army'),
   (v_event_id, 'Jessica Torres', 'TikTok Creator', 'TikTok for Military Creators', 'Air Force veteran and TikTok creator with 2M+ followers. Specializes in military humor and advocacy.', true, 5, 'Air Force'),

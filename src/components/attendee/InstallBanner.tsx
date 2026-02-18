@@ -101,7 +101,7 @@ export default function InstallBanner({ eventTitle, themeColor = "#6C5CE7" }: Pr
                   </span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">RecurrentX Events</p>
+                  <p className="font-semibold text-gray-900 text-sm">MilCrunch Events</p>
                   <p className="text-gray-500 text-xs mt-0.5">
                     Get the full event experience on your home screen.
                     <br />

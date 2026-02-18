@@ -1,5 +1,5 @@
 /**
- * Pre-built responsive email HTML templates for RecurrentX Mail.
+ * Pre-built responsive email HTML templates for MilCrunch Mail.
  * Each template uses table-based layout with inline styles for email client compatibility.
  * Variables: {{first_name}}, {{email}}, {{unsubscribe_url}}, {{footer_text}}
  */
@@ -52,11 +52,11 @@ ${WRAPPER_END}`,
     thumbnail_color: "#10B981",
     html: `${WRAPPER_START}
 <tr><td style="background:#10B981;padding:40px;text-align:center;">
-<h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Welcome to RecurrentX!</h1>
+<h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Welcome to MilCrunch!</h1>
 </td></tr>
 <tr><td style="padding:40px;">
 <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:26px;">Hey {{first_name}},</p>
-<p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:26px;">We're thrilled to have you join the RecurrentX community. Here's how to get started:</p>
+<p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:26px;">We're thrilled to have you join the MilCrunch community. Here's how to get started:</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 <tr><td style="padding:16px;background:#f0fdf4;border-radius:8px;margin-bottom:12px;">
 <p style="margin:0;color:#166534;font-size:15px;"><strong>1.</strong> Complete your creator profile</p>
@@ -111,7 +111,7 @@ ${WRAPPER_END}`,
     thumbnail_color: "#F59E0B",
     html: `${WRAPPER_START}
 <tr><td style="background:linear-gradient(135deg,#F59E0B,#D97706);padding:40px;text-align:center;">
-<h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">RecurrentX Weekly</h1>
+<h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">MilCrunch Weekly</h1>
 <p style="margin:8px 0 0;color:#fef3c7;font-size:14px;">[Date]</p>
 </td></tr>
 <tr><td style="padding:40px;">
