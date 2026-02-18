@@ -39,6 +39,12 @@ import {
   LayoutTemplate,
   FormInput,
   Settings2,
+  Calculator,
+  TrendingUp,
+  DollarSign,
+  PiggyBank,
+  Target,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 
@@ -141,6 +147,18 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     ],
   },
   {
+    key: "advertising",
+    label: "ADVERTISING",
+    items: [
+      { href: "/brand/advertising", label: "Ad Management", icon: Megaphone },
+      { href: "/brand/advertising/rate-desk", label: "Rate Desk", icon: Calculator },
+      { href: "/brand/advertising/campaigns", label: "Ad Campaigns", icon: Target },
+      { href: "/brand/advertising/inventory", label: "Ad Inventory", icon: Package },
+      { href: "/brand/advertising/analytics", label: "Ad Analytics", icon: TrendingUp },
+      { href: "/brand/advertising/leads", label: "Lead Manager", icon: UserPlus },
+    ],
+  },
+  {
     key: "settings",
     label: "SETTINGS",
     defaultCollapsed: true,
@@ -162,6 +180,18 @@ const SUPER_ADMIN_SECTION: NavSection = {
     { href: "/admin/tasks", label: "Task Board", icon: KanbanSquare },
     { href: "/admin/prospectus-access", label: "Prospectus Access", icon: ShieldCheck },
     { href: "/prospectus", label: "View Prospectus", icon: FileText, external: true },
+  ],
+};
+
+const FINANCIALS_SECTION: NavSection = {
+  key: "financials",
+  label: "FINANCIALS",
+  defaultCollapsed: true,
+  items: [
+    { href: "/admin/roi-calculator", label: "ROI Calculator", icon: Calculator },
+    { href: "/admin/growth-calculator", label: "Growth Model", icon: TrendingUp },
+    { href: "/admin/revenue-projections", label: "Revenue Projections", icon: DollarSign },
+    { href: "/admin/saas-calculator", label: "SaaS Savings", icon: PiggyBank },
   ],
 };
 
@@ -235,7 +265,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
   }, []);
 
   const sections = isSuperAdmin
-    ? [...SIDEBAR_SECTIONS, SUPER_ADMIN_SECTION]
+    ? [...SIDEBAR_SECTIONS, SUPER_ADMIN_SECTION, FINANCIALS_SECTION]
     : SIDEBAR_SECTIONS;
 
   const isActive = (href: string) => location.pathname === href || (href !== "/dashboard" && location.pathname.startsWith(href + "/"));

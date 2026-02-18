@@ -104,6 +104,10 @@ import AdminTasks from "./pages/superadmin/AdminTasks";
 import AdminDeployments from "./pages/superadmin/AdminDeployments";
 import AdminPrompts from "./pages/superadmin/AdminPrompts";
 import AdminChat from "./pages/superadmin/AdminChat";
+import RoiCalculator from "./pages/superadmin/RoiCalculator";
+import GrowthCalculator from "./pages/superadmin/GrowthCalculator";
+import RevenueProjections from "./pages/superadmin/RevenueProjections";
+import SaasCalculator from "./pages/superadmin/SaasCalculator";
 import ProspectusAccess from "./pages/admin/ProspectusAccess";
 import SuperAdminHub from "./pages/admin/SuperAdminHub";
 import BrandPages from "./pages/brand/BrandPages";
@@ -139,6 +143,12 @@ import EmailForms from "./pages/brand/email/EmailForms";
 import EmailSettingsPage from "./pages/brand/email/EmailSettings";
 import EmailSubscribe from "./pages/public/EmailSubscribe";
 import EmailUnsubscribe from "./pages/public/EmailUnsubscribe";
+import AdvertisingDashboard from "./pages/brand/advertising/AdvertisingDashboard";
+import RateDesk from "./pages/brand/advertising/RateDesk";
+import AdCampaignsPage from "./pages/brand/advertising/AdCampaigns";
+import AdInventory from "./pages/brand/advertising/AdInventory";
+import AdAnalytics from "./pages/brand/advertising/AdAnalytics";
+import LeadManager from "./pages/brand/advertising/LeadManager";
 
 const queryClient = new QueryClient();
 
@@ -182,6 +192,10 @@ const App = () => (
                 <Route path="deployments" element={<AdminDeployments />} />
                 <Route path="prompts" element={<AdminPrompts />} />
                 <Route path="chat" element={<AdminChat />} />
+                <Route path="roi-calculator" element={<RoiCalculator />} />
+                <Route path="growth-calculator" element={<GrowthCalculator />} />
+                <Route path="revenue-projections" element={<RevenueProjections />} />
+                <Route path="saas-calculator" element={<SaasCalculator />} />
               </Route>
               <Route element={<BrandRoute><RoleAwareChatProvider><AppLayout /></RoleAwareChatProvider></BrandRoute>}>
                 <Route path="/dashboard" element={<SummaryDashboard />} />
