@@ -727,7 +727,15 @@ const BrandDirectory = () => {
                           alt={m.creator_name ?? ""}
                           className="w-full h-full object-cover absolute inset-0"
                           onError={(e) => {
-                            e.currentTarget.style.display = "none";
+                            const el = e.currentTarget;
+                            if (el.dataset.retried) { el.style.display = "none"; return; }
+                            el.dataset.retried = "1";
+                            const fallback = safeImageUrl(m.avatar_url) || safeImageUrl(m.ic_avatar_url);
+                            if (fallback && el.src !== fallback) {
+                              el.src = fallback;
+                            } else {
+                              el.style.display = "none";
+                            }
                           }}
                         />
                       )}
@@ -813,7 +821,15 @@ const BrandDirectory = () => {
                                 alt={m.creator_name ?? ""}
                                 className="w-full h-full object-cover absolute inset-0"
                                 onError={(e) => {
-                                  e.currentTarget.style.display = "none";
+                                  const el = e.currentTarget;
+                                  if (el.dataset.retried) { el.style.display = "none"; return; }
+                                  el.dataset.retried = "1";
+                                  const fallback = safeImageUrl(m.avatar_url) || safeImageUrl(m.ic_avatar_url);
+                                  if (fallback && el.src !== fallback) {
+                                    el.src = fallback;
+                                  } else {
+                                    el.style.display = "none";
+                                  }
                                 }}
                               />
                             )}

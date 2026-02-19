@@ -167,7 +167,12 @@ function CreatorCard({
   const [imgFailed, setImgFailed] = useState(false);
 
   const handleImgError = () => {
-    setImgFailed(true);
+    const fallback = safeImageUrl(c.avatar_url);
+    if (imgSrc !== fallback && fallback) {
+      setImgSrc(fallback);
+    } else {
+      setImgFailed(true);
+    }
   };
 
   const showImage = !!imgSrc && !imgFailed;

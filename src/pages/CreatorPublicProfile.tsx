@@ -322,7 +322,12 @@ export default function CreatorPublicProfile() {
   }, [creator]);
 
   const handleImgError = () => {
-    setImgFailed(true);
+    const fallback = safeImageUrl(creator?.avatar_url);
+    if (creator && imgSrc !== fallback && fallback) {
+      setImgSrc(fallback);
+    } else {
+      setImgFailed(true);
+    }
   };
   const showImage = !!imgSrc && !imgFailed;
 
