@@ -59,6 +59,7 @@ import {
   fetchShowcaseByDirectoryName,
   fetchFeaturedHomepageCreators,
   enrichHomepageHeroCreators,
+  extractAvatarFromEnrichment,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 
@@ -193,6 +194,20 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 function HeroAvatar({ src, name, handle }: { src: string | null; name: string; handle: string }) {
   const safeSrc = safeImageUrl(src);
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  // 3-second timeout: if image hasn't loaded, hide it
+  useEffect(() => {
+    if (!safeSrc || imgLoaded || imgError) return;
+    const timer = setTimeout(() => {
+      if (!imgLoaded) {
+        console.warn("[HeroAvatar] 3s timeout — hiding image for", handle, "src:", safeSrc);
+        setImgError(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [safeSrc, imgLoaded, imgError, handle]);
+
   return (
     <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
       {safeSrc && !imgError && (
@@ -200,9 +215,8 @@ function HeroAvatar({ src, name, handle }: { src: string | null; name: string; h
           src={safeSrc}
           alt={name}
           className="w-full h-full object-cover absolute inset-0 z-10"
-          onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
+          onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
-          style={{ opacity: 1 }}
         />
       )}
       <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm">
@@ -216,9 +230,23 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
-  // 3-tier fallback: ic_avatar_url → avatar_url → profile_image_url → Initials
-  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, (c as Record<string, unknown>).profile_image_url as string);
+  // 4-tier fallback: ic_avatar_url → avatar_url → enrichment_data avatar → profile_image_url → Initials
+  const enrichAvatar = extractAvatarFromEnrichment(c.enrichment_data);
+  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, enrichAvatar, (c as Record<string, unknown>).profile_image_url as string);
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  // 3-second timeout: if image hasn't loaded, give up
+  useEffect(() => {
+    if (!imgSrc || imgLoaded || imgError) return;
+    const timer = setTimeout(() => {
+      if (!imgLoaded) {
+        console.warn("[ShowcaseCard] 3s timeout — hiding image for", c.handle, "src:", imgSrc);
+        setImgError(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [imgSrc, imgLoaded, imgError, c.handle]);
 
   return (
     <Link
@@ -248,6 +276,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               alt={c.display_name}
               className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
+              onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
             />
           )}
@@ -709,7 +738,16 @@ export default function HomePage() {
 
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
-                    const avatar = creatorAvatarUrl(db.ic_avatar_url, db.avatar_url, (db as Record<string, unknown>).profile_image_url as string);
+                    const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
+                    const avatar = creatorAvatarUrl(db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string);
+                    if (db.handle === "davebrayusa" || db.handle === "therealdoctodd") {
+                      console.log("[Hero] Avatar debug for", db.handle, {
+                        ic_avatar_url: db.ic_avatar_url,
+                        avatar_url: db.avatar_url,
+                        enrichAvatar,
+                        resolved: avatar,
+                      });
+                    }
 
                     // Build stats in priority order, filter to non-null/non-zero, take up to 4
                     const allStats: { value: string; label: string; color: string }[] = [];

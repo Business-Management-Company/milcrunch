@@ -23,6 +23,7 @@ import {
   fetchShowcaseByDirectoryName,
   formatFollowerCount,
   getInitials,
+  extractAvatarFromEnrichment,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
@@ -161,8 +162,19 @@ function CreatorCard({
   inView: boolean;
   index: number;
 }) {
-  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url) || null;
+  const enrichAvatar = extractAvatarFromEnrichment(c.enrichment_data);
+  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, enrichAvatar) || null;
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  // 3-second timeout: if image hasn't loaded, give up
+  useEffect(() => {
+    if (!imgSrc || imgLoaded || imgError) return;
+    const timer = setTimeout(() => {
+      if (!imgLoaded) setImgError(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [imgSrc, imgLoaded, imgError]);
   const platforms = c.platforms ?? [];
   const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
@@ -211,6 +223,7 @@ function CreatorCard({
               alt={c.display_name}
               className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
+              onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
             />
           )}

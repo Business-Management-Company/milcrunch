@@ -39,6 +39,7 @@ import {
   fetchDirectoryMemberByHandle,
   formatFollowerCount,
   getInitials,
+  extractAvatarFromEnrichment,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
@@ -289,6 +290,7 @@ export default function CreatorPublicProfile() {
 
   // Image fallback
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   // Banner image
   const [bannerFailed, setBannerFailed] = useState(false);
@@ -313,12 +315,23 @@ export default function CreatorPublicProfile() {
   }, [handle]);
 
   /* ---- Image fallback ---- */
-  const imgSrc = creator ? creatorAvatarUrl(creator.ic_avatar_url, creator.avatar_url, (creator as Record<string, unknown>).profile_image_url as string) : null;
+  const enrichAvatar = creator ? extractAvatarFromEnrichment(creator.enrichment_data) : null;
+  const imgSrc = creator ? creatorAvatarUrl(creator.ic_avatar_url, creator.avatar_url, enrichAvatar, (creator as Record<string, unknown>).profile_image_url as string) : null;
 
-  // Reset error state when creator changes
+  // Reset error/loaded state when creator changes
   useEffect(() => {
     setImgError(false);
+    setImgLoaded(false);
   }, [creator]);
+
+  // 3-second timeout
+  useEffect(() => {
+    if (!imgSrc || imgLoaded || imgError) return;
+    const timer = setTimeout(() => {
+      if (!imgLoaded) setImgError(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [imgSrc, imgLoaded, imgError]);
 
   /* ---- Parse enrichment data ---- */
   const enrichment = useMemo(() => {
@@ -524,6 +537,7 @@ export default function CreatorPublicProfile() {
                     alt={creator.display_name}
                     className="w-full h-full object-cover absolute inset-0 z-10"
                     loading="lazy"
+                    onLoad={() => setImgLoaded(true)}
                     onError={() => setImgError(true)}
                   />
                 )}
