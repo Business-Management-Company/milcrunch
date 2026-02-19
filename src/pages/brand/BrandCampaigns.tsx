@@ -226,9 +226,11 @@ function PlatformToggles({
 function DirectoryMemberCombobox({
   selected,
   onChange,
+  eventLinked = [],
 }: {
   selected: string[];
   onChange: (v: string[]) => void;
+  eventLinked?: string[];
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ creator_name: string; creator_handle: string }[]>([]);
@@ -293,18 +295,29 @@ function DirectoryMemberCombobox({
     <div ref={wrapperRef} className="space-y-2">
       {selected.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {selected.map((name) => (
-            <span
-              key={name}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20"
-            >
-              {name}
-              <button type="button" onClick={() => removeSpeaker(name)} className="hover:text-[#5B4BD1]">
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
+          {selected.map((name) => {
+            const isFromEvent = eventLinked.includes(name);
+            return (
+              <span
+                key={name}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border",
+                  isFromEvent
+                    ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                    : "bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/20"
+                )}
+              >
+                {name}
+                <button type="button" onClick={() => removeSpeaker(name)} className={isFromEvent ? "hover:text-white/70" : "hover:text-[#5B4BD1]"}>
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            );
+          })}
         </div>
+      )}
+      {selected.length === 0 && eventLinked.length === 0 && (
+        <p className="text-xs text-gray-400 italic">No speakers linked to this event yet — type to add one.</p>
       )}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -351,10 +364,12 @@ function SponsorCombobox({
   allSponsors,
   selected,
   onChange,
+  eventLinked = [],
 }: {
   allSponsors: SponsorOption[];
   selected: string[];
   onChange: (ids: string[]) => void;
+  eventLinked?: string[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -403,18 +418,29 @@ function SponsorCombobox({
     <div ref={wrapperRef} className="space-y-2">
       {selectedSponsors.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {selectedSponsors.map((s) => (
-            <span
-              key={s.id}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20"
-            >
-              {s.name}
-              <button type="button" onClick={() => removeSponsor(s.id)} className="hover:text-[#5B4BD1]">
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
+          {selectedSponsors.map((s) => {
+            const isFromEvent = eventLinked.includes(s.id);
+            return (
+              <span
+                key={s.id}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border",
+                  isFromEvent
+                    ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                    : "bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/20"
+                )}
+              >
+                {s.name}
+                <button type="button" onClick={() => removeSponsor(s.id)} className={isFromEvent ? "hover:text-white/70" : "hover:text-[#5B4BD1]"}>
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            );
+          })}
         </div>
+      )}
+      {selectedSponsors.length === 0 && eventLinked.length === 0 && (
+        <p className="text-xs text-gray-400 italic">No sponsors linked to this event yet — type to add one.</p>
       )}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -759,8 +785,10 @@ export default function BrandCampaigns() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [speakerNames, setSpeakerNames] = useState<string[]>([]);
+  const [eventSpeakerNames, setEventSpeakerNames] = useState<string[]>([]); // auto-populated from event
   const [allSponsors, setAllSponsors] = useState<SponsorOption[]>([]);
   const [selectedSponsors, setSelectedSponsors] = useState<string[]>([]);
+  const [eventSponsorIds, setEventSponsorIds] = useState<string[]>([]); // auto-populated from event
   const [hashtags, setHashtags] = useState("");
   const [platforms, setPlatforms] = useState<string[]>(["instagram", "tiktok"]);
 
@@ -822,9 +850,13 @@ export default function BrandCampaigns() {
     })();
   }, []);
 
-  // Pre-populate form dates from selected event
+  // Pre-populate form dates + speakers + sponsors from selected event
   useEffect(() => {
-    if (!selectedEventId) return;
+    if (!selectedEventId) {
+      setEventSpeakerNames([]);
+      setEventSponsorIds([]);
+      return;
+    }
     const ev = events.find((e) => e.id === selectedEventId);
     if (!ev) return;
     if (ev.start_date) {
@@ -833,7 +865,45 @@ export default function BrandCampaigns() {
     if (ev.end_date) {
       setEndDate(ev.end_date.split("T")[0]);
     }
-  }, [selectedEventId, events]);
+
+    // Fetch linked speakers
+    (async () => {
+      const { data } = await supabase
+        .from("event_speakers")
+        .select("creator_name, creator_handle")
+        .eq("event_id", selectedEventId);
+      const names = (data ?? [])
+        .map((s: { creator_name: string | null; creator_handle: string | null }) => s.creator_name || s.creator_handle || "")
+        .filter(Boolean);
+      setEventSpeakerNames(names);
+      // Merge into speakerNames (keep any manually-added ones, prepend event speakers)
+      setSpeakerNames((prev) => {
+        const combined = [...new Set([...names, ...prev])];
+        return combined;
+      });
+    })();
+
+    // Fetch linked sponsors
+    (async () => {
+      const { data } = await supabase
+        .from("event_sponsors")
+        .select("sponsor_name")
+        .eq("event_id", selectedEventId);
+      const sponsorNames = (data ?? [])
+        .map((s: { sponsor_name: string }) => s.sponsor_name)
+        .filter(Boolean);
+      // Match to allSponsors by name, or create custom entries
+      const ids = sponsorNames.map((name: string) => {
+        const match = allSponsors.find((s) => s.name.toLowerCase() === name.toLowerCase());
+        return match ? match.id : `custom:${name}`;
+      });
+      setEventSponsorIds(ids);
+      setSelectedSponsors((prev) => {
+        const combined = [...new Set([...ids, ...prev])];
+        return combined;
+      });
+    })();
+  }, [selectedEventId, events, allSponsors]);
 
   // Load ALL sponsors on mount (not tied to event)
   useEffect(() => {
@@ -1296,6 +1366,7 @@ Make the captions authentic and engaging for a military community audience. Refe
               <DirectoryMemberCombobox
                 selected={speakerNames}
                 onChange={setSpeakerNames}
+                eventLinked={eventSpeakerNames}
               />
             </FormSection>
 
@@ -1305,6 +1376,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                 allSponsors={allSponsors}
                 selected={selectedSponsors}
                 onChange={setSelectedSponsors}
+                eventLinked={eventSponsorIds}
               />
             </FormSection>
 
