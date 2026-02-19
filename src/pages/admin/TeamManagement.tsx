@@ -217,17 +217,13 @@ const TeamManagement = () => {
 
       if (membersError) throw membersError;
       
-      // Get profiles for team members
+      // Build basic profile info from member data (no profiles table)
       const userIds = (membersData || []).map(m => m.user_id);
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url")
-        .in("user_id", userIds);
-
-      const profilesMap = (profilesData || []).reduce((acc, p) => {
-        acc[p.user_id] = p;
-        return acc;
-      }, {} as Record<string, any>);
+      const profilesMap: Record<string, { user_id: string; full_name: string | null; avatar_url: string | null }> = {};
+      // Profiles are sourced from auth metadata — no separate table to query
+      for (const uid of userIds) {
+        profilesMap[uid] = { user_id: uid, full_name: null, avatar_url: null };
+      }
 
       const membersWithProfiles = (membersData || []).map(m => ({
         ...m,

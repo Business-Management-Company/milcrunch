@@ -36,9 +36,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  /** True once user_roles + profiles tables have been queried after login. */
+  /** True once user_roles table has been queried after login. */
   profileLoaded: boolean;
-  /** Set after loading; from profiles + user_roles tables */
+  /** Set after loading; from user_metadata + user_roles tables */
   creatorProfile: CreatorProfileRow | null;
   /** Resolved role from user_roles table (includes super_admin). */
   role: UserRole | null;
@@ -121,21 +121,14 @@ async function fetchCreatorProfile(userId: string, userMeta: Record<string, unkn
   // 1. Get role from user_roles table
   const role = await fetchUserRole(userId);
 
-  // 2. Get basic profile from profiles table
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, user_id, full_name, bio, military_branch")
-    .eq("user_id", userId)
-    .maybeSingle();
-
+  // 2. Build profile from auth.users metadata (no separate profiles table needed)
   const meta = userMeta ?? {};
 
-  // Return profile with role from user_roles + data from profiles + metadata
   return {
-    id: (data?.id as string) ?? userId,
+    id: userId,
     user_id: userId,
     handle: (meta.handle as string) ?? null,
-    display_name: (data?.full_name as string) ?? (meta.full_name as string) ?? null,
+    display_name: (meta.full_name as string) ?? null,
     role,
     onboarding_step: (meta.onboarding_step as number) ?? 0,
     onboarding_completed: (meta.onboarding_completed as boolean) ?? false,
@@ -231,17 +224,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       },
     });
     if (authError) return { error: authError };
-    if (authData.user) {
-      await supabase.from("profiles").upsert(
-        {
-          user_id: authData.user.id,
-          full_name: opts.displayName.trim() || null,
-          military_branch: opts.branch || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-    }
+    // full_name, branch already saved to user_metadata via signUp data field above
     return { error: null };
   };
 

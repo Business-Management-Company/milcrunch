@@ -100,12 +100,8 @@ export default function CreatorOnboard() {
 
   useEffect(() => {
     if (!user?.id || creatorProfile !== null) return;
-    // Ensure profiles row exists and set onboarding metadata
+    // Set onboarding metadata in user_metadata
     (async () => {
-      await supabase.from("profiles").upsert(
-        { user_id: user.id, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" }
-      );
       await supabase.auth.updateUser({
         data: { role: "creator", onboarding_step: 0, onboarding_completed: false },
       });
@@ -123,27 +119,13 @@ export default function CreatorOnboard() {
   const saveStep2 = async () => {
     if (!user?.id) return;
     setSaving(true);
-    // Save basic fields to profiles table
-    const { error } = await supabase.from("profiles").upsert(
-      {
-        user_id: user.id,
-        full_name: displayName.trim() || null,
-        bio: bio.trim() || null,
-        military_branch: branch || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
-    if (error) {
-      setSaving(false);
-      toast.error(error.message);
-      return;
-    }
-    // Save extra fields to user_metadata
-    await supabase.auth.updateUser({
+    // Save all fields to user_metadata
+    const { error } = await supabase.auth.updateUser({
       data: {
         handle: handle.replace(/^@/, "").trim().toLowerCase() || null,
         full_name: displayName.trim() || null,
+        bio: bio.trim() || null,
+        military_branch: branch || null,
         rank: rank || null,
         years_of_service: yearsOfService || null,
         category_tags: categories.length ? categories : null,
@@ -151,6 +133,10 @@ export default function CreatorOnboard() {
       },
     });
     setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     await refetchCreatorProfile();
     setStep(2);
   };

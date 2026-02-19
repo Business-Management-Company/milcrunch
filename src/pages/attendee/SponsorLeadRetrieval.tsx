@@ -254,13 +254,6 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
         l.attendee_registration_id && l.reg_email // rough check
       );
 
-      // Look up registration by user_id -> email -> event_registrations
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("user_id", parsed.userId)
-        .maybeSingle();
-
       // Try to find their registration for this event
       const { data: authUser } = await supabase.auth.admin.getUserById(parsed.userId).catch(() => ({ data: null })) as { data: { user?: { email?: string } } | null };
 

@@ -33,25 +33,18 @@ export default function CreatorProfile() {
       setLoading(false);
       return;
     }
-    // Load from profiles table + user_metadata
-    supabase
-      .from("profiles")
-      .select("full_name, bio")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        const meta = user.user_metadata ?? {};
-        setHandle((meta.handle as string) ?? "");
-        setDisplayName((data?.full_name as string) ?? (meta.full_name as string) ?? "");
-        setBio((data?.bio as string) ?? "");
-        setHeroImageUrl((meta.hero_image_url as string) ?? null);
-        setHeroImageFormat((meta.hero_image_format as HeroImageFormat) ?? "landscape");
-        setHeroDominantColor((meta.hero_dominant_color as string) ?? null);
-        setBioPageTheme((meta.bio_page_theme as BioPageTheme) ?? "light");
-        const cl = meta.custom_links;
-        setCustomLinks(typeof cl === "object" && cl ? cl as Record<string, unknown> : {});
-      })
-      .finally(() => setLoading(false));
+    // Load from user_metadata
+    const meta = user.user_metadata ?? {};
+    setHandle((meta.handle as string) ?? "");
+    setDisplayName((meta.full_name as string) ?? "");
+    setBio((meta.bio as string) ?? "");
+    setHeroImageUrl((meta.hero_image_url as string) ?? null);
+    setHeroImageFormat((meta.hero_image_format as HeroImageFormat) ?? "landscape");
+    setHeroDominantColor((meta.hero_dominant_color as string) ?? null);
+    setBioPageTheme((meta.bio_page_theme as BioPageTheme) ?? "light");
+    const cl = meta.custom_links;
+    setCustomLinks(typeof cl === "object" && cl ? cl as Record<string, unknown> : {});
+    setLoading(false);
   }, [user?.id]);
 
   const save = async () => {
@@ -62,26 +55,12 @@ export default function CreatorProfile() {
       return;
     }
     setSaving(true);
-    // Save basic fields to profiles table
-    const { error: profileErr } = await supabase.from("profiles").upsert(
-      {
-        user_id: user.id,
-        full_name: displayName.trim() || null,
-        bio: bio.trim() || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" }
-    );
-    if (profileErr) {
-      setSaving(false);
-      toast.error(profileErr.message);
-      return;
-    }
-    // Save extra fields to user_metadata
+    // Save all fields to user_metadata
     const { error: metaErr } = await supabase.auth.updateUser({
       data: {
         handle: h,
         full_name: displayName.trim() || null,
+        bio: bio.trim() || null,
         hero_image_url: heroImageUrl || null,
         hero_image_format: heroImageFormat,
         hero_dominant_color: heroDominantColor || null,
