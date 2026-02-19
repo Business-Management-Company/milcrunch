@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { generateProfileSlug, uploadCreatorImage } from "@/lib/directories";
-import { enrichCreatorProfile } from "@/lib/influencers-club";
+import { enrichCreatorProfile, type EnrichedProfileResponse } from "@/lib/influencers-club";
 
 // Homepage showcase functions use `featured_creators` table.
 // Directory/network page functions use `directory_members` table
@@ -40,92 +40,85 @@ export interface ShowcaseCreator extends FeaturedCreator {
   media_count?: number | null;
 }
 
-/** Hardcoded featured creators for the homepage hero cards.
- *  Uses static data so the hero renders instantly without a DB dependency.
- *  Enrichment updates follower_count on mount if the API is reachable. */
-const HERO_CREATORS: ShowcaseCreator[] = [
+/** Hardcoded fallback creators shown when directory_members table is unavailable. */
+const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
   {
-    id: "hero-combatflipflops",
-    display_name: "Combat Flip Flops",
-    handle: "combatflipflops",
+    id: "hero-davebrayusa",
+    display_name: "DAVE BRAY USA",
+    handle: "davebrayusa",
     platform: "instagram",
     avatar_url: null,
-    follower_count: 57574,
-    engagement_rate: 0.5,
-    category: "Veteran Brand",
+    follower_count: 14304,
+    engagement_rate: null,
+    category: "Musician/Band",
     sort_order: 1,
     is_active: true,
-    is_verified: true,
+    is_verified: false,
     approved: true,
     created_at: null,
-    branch: "Army",
+    branch: "Navy",
     status: "veteran",
-    bio: "Bad for Running, Worse for Fighting",
+    bio: "Download \"The Marines' Hymn\" Now!!",
     platforms: ["instagram"],
     paradedeck_verified: true,
     influencersclub_verified: true,
-    profile_slug: "combatflipflops",
+    profile_slug: "davebrayusa",
     ic_avatar_url: null,
     featured_homepage: true,
-    avg_views: null,
-    avg_likes: null,
   },
   {
-    id: "hero-stephaniesulaiman",
-    display_name: "Stephanie Sulaiman",
-    handle: "stephaniesulaiman",
+    id: "hero-therealdoctodd",
+    display_name: "Doc Todd",
+    handle: "therealdoctodd",
     platform: "instagram",
     avatar_url: null,
-    follower_count: 14792,
-    engagement_rate: 1.1,
-    category: "Military Life",
+    follower_count: 17535,
+    engagement_rate: null,
+    category: "Health & Wellness",
     sort_order: 2,
     is_active: true,
     is_verified: false,
     approved: true,
     created_at: null,
-    branch: null,
-    status: null,
-    bio: null,
+    branch: "Army",
+    status: "veteran",
+    bio: "They Call Me: Doc Todd — Mr. Post Traumatic Growth",
     platforms: ["instagram"],
-    paradedeck_verified: false,
+    paradedeck_verified: true,
     influencersclub_verified: true,
-    profile_slug: "stephaniesulaiman",
+    profile_slug: "therealdoctodd",
     ic_avatar_url: null,
     featured_homepage: true,
-    avg_views: null,
-    avg_likes: null,
   },
   {
-    id: "hero-jae.claire",
-    display_name: "Jae Claire",
-    handle: "jae.claire",
+    id: "hero-brittanyyycampbelll",
+    display_name: "Brittany Campbell",
+    handle: "brittanyyycampbelll",
     platform: "instagram",
     avatar_url: null,
-    follower_count: 10893,
-    engagement_rate: 8.3,
-    category: "Digital Creator",
+    follower_count: 8355,
+    engagement_rate: null,
+    category: "Military Lifestyle",
     sort_order: 3,
     is_active: true,
     is_verified: false,
     approved: true,
     created_at: null,
-    branch: null,
-    status: null,
-    bio: null,
-    platforms: ["instagram"],
-    paradedeck_verified: false,
+    branch: "Air Force",
+    status: "milspouse",
+    bio: "Military lifestyle | wife + furr momma",
+    platforms: ["instagram", "tiktok"],
+    paradedeck_verified: true,
     influencersclub_verified: true,
-    profile_slug: "jae-claire",
+    profile_slug: "brittanyyycampbelll",
     ic_avatar_url: null,
     featured_homepage: true,
-    avg_views: null,
-    avg_likes: null,
   },
 ];
 
 /** Fetch up to 3 featured creators for the homepage hero cards.
- *  Tries directory_members first; falls back to hardcoded creators. */
+ *  Pulls from directory_members WHERE featured_homepage = true.
+ *  Falls back to hardcoded creators if the table doesn't exist or is empty. */
 export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]> {
   try {
     const { data, error } = await supabase
@@ -137,37 +130,133 @@ export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]
       .limit(3);
 
     if (!error && data && data.length > 0) {
-      console.log("[featured-creators] Using DB hero creators:", data.length);
+      console.log("[featured-creators] Homepage: using DB creators:", data.length);
       return data.map((r: Record<string, unknown>) => mapDirectoryRow(r));
     }
-  } catch {
-    // Table may not exist yet — fall through to hardcoded
+
+    if (error) {
+      console.warn("[featured-creators] Homepage DB query failed:", error.message);
+    }
+  } catch (err) {
+    console.warn("[featured-creators] Homepage DB query error:", err);
   }
 
-  console.log("[featured-creators] Using hardcoded hero creators");
-  return HERO_CREATORS;
+  console.log("[featured-creators] Homepage: using fallback hero creators");
+  return FALLBACK_HERO_CREATORS;
 }
 
-/** In-memory cache for hero enrichment data (avoids hitting non-existent DB table). */
-const heroEnrichMemoryCache = new Map<string, { data: Record<string, unknown>; ts: number }>();
 const HERO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-/** Extract follower_count and avatar from an enrichment response.
- *  The enrichment API returns follower_count but NOT engagement_rate. */
-function extractEnrichStats(data: Record<string, unknown>): {
+/** Check creator_enrichment_cache for a cached enrichment response. */
+async function getHeroEnrichCache(
+  handle: string,
+  platform: string,
+): Promise<EnrichedProfileResponse | null> {
+  try {
+    const { data } = await supabase
+      .from("creator_enrichment_cache")
+      .select("enrichment_data, cached_at")
+      .eq("username", handle.toLowerCase())
+      .eq("platform", platform)
+      .single();
+    if (!data) return null;
+    const cachedAt = new Date(data.cached_at).getTime();
+    if (Date.now() - cachedAt > HERO_CACHE_TTL_MS) return null;
+    return data.enrichment_data as EnrichedProfileResponse;
+  } catch {
+    return null;
+  }
+}
+
+/** Write enrichment data into creator_enrichment_cache. */
+async function setHeroEnrichCache(
+  handle: string,
+  platform: string,
+  enrichment: EnrichedProfileResponse,
+): Promise<void> {
+  try {
+    await supabase
+      .from("creator_enrichment_cache")
+      .upsert(
+        {
+          username: handle.toLowerCase(),
+          platform,
+          enrichment_data: enrichment,
+          cached_at: new Date().toISOString(),
+        },
+        { onConflict: "username" },
+      );
+  } catch (err) {
+    console.warn("[HeroEnrich] Cache write failed:", err);
+  }
+}
+
+// GET /public/v1/creators/{handle} endpoint removed — returns 404.
+// All enrichment goes through POST /public/v1/creators/enrich/handle/raw/.
+
+/** Deep-search a nested object for a numeric value by field name (up to 3 levels). */
+function deepFindNumber(obj: unknown, keys: string[]): number {
+  if (!obj || typeof obj !== "object") return 0;
+  const o = obj as Record<string, unknown>;
+
+  const checkKeys = (target: Record<string, unknown>): number => {
+    for (const k of keys) {
+      if (k in target && target[k] != null && target[k] !== "") {
+        const n = Number(target[k]);
+        if (!isNaN(n) && n > 0) return n;
+      }
+    }
+    return 0;
+  };
+
+  // Level 0: top level
+  const l0 = checkKeys(o);
+  if (l0 > 0) return l0;
+
+  // Level 1: one level into object children
+  for (const val of Object.values(o)) {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      const child = val as Record<string, unknown>;
+      const l1 = checkKeys(child);
+      if (l1 > 0) return l1;
+
+      // Level 2: two levels deep (e.g. instagram.reels.avg_view_count)
+      for (const innerVal of Object.values(child)) {
+        if (innerVal && typeof innerVal === "object" && !Array.isArray(innerVal)) {
+          const l2 = checkKeys(innerVal as Record<string, unknown>);
+          if (l2 > 0) return l2;
+        }
+      }
+    }
+  }
+  return 0;
+}
+
+/** Extract hero-relevant stats from any enrichment/stats response. */
+function extractHeroStats(
+  data: Record<string, unknown>,
+): {
   follower_count: number;
-  avatar_url: string | null;
+  engagement_rate: number;
+  avg_views: number;
+  avg_likes: number;
+  avg_comments: number;
+  media_count: number;
 } {
-  const result = data.result as Record<string, unknown> | undefined;
-  const ig = (result?.instagram ?? data.instagram ?? data) as Record<string, unknown>;
-  const follower_count = Number(ig?.follower_count ?? ig?.followers ?? 0) || 0;
-  const avatar_url = extractAvatarFromEnrichment(data);
-  return { follower_count, avatar_url };
+  const follower_count = deepFindNumber(data, ["follower_count", "followers", "subscriberCount", "number_of_followers"]);
+  const engagement_rate = deepFindNumber(data, ["engagement_percent", "engagement_rate", "engagementRate", "er"]);
+  const avg_views = deepFindNumber(data, ["avg_views", "avg_view_count", "avgViews", "average_views", "avg_reels_plays", "average_reels_plays"]);
+  const avg_likes = deepFindNumber(data, ["avg_likes", "avg_like_count", "avgLikes", "average_likes"]);
+  const avg_comments = deepFindNumber(data, ["avg_comments", "avg_comment_count", "avgComments", "average_comments"]);
+  const media_count = deepFindNumber(data, ["media_count", "mediaCount", "posts_count", "postsCount", "total_posts"]);
+
+  console.log("[HeroEnrich] extractHeroStats →", { follower_count, engagement_rate, avg_views, avg_likes, avg_comments, media_count });
+  return { follower_count, engagement_rate, avg_views, avg_likes, avg_comments, media_count };
 }
 
 /** Enrich an array of ShowcaseCreators with live Influencers.club data.
- *  Uses in-memory cache to avoid burning API credits on repeat visits.
- *  Only updates follower_count and avatar (API doesn't return engagement_rate). */
+ *  Tries creator_enrichment_cache first (7-day TTL), then POST enrich API.
+ *  Falls back to existing data on any failure. */
 export async function enrichHomepageHeroCreators(
   creators: ShowcaseCreator[],
 ): Promise<ShowcaseCreator[]> {
@@ -175,40 +264,49 @@ export async function enrichHomepageHeroCreators(
     creators.map(async (c) => {
       const handle = c.handle;
       const platform = c.platform || "instagram";
-      const cacheKey = `${handle}:${platform}`;
       try {
+        // 1. Check DB cache (gracefully returns null if table doesn't exist)
         let responseData: Record<string, unknown> | null = null;
+        const cached = await getHeroEnrichCache(handle, platform);
 
-        // 1. Check in-memory cache
-        const cached = heroEnrichMemoryCache.get(cacheKey);
-        if (cached && Date.now() - cached.ts < HERO_CACHE_TTL_MS) {
-          responseData = cached.data;
+        if (cached) {
+          console.log("[HeroEnrich] Cache hit for", handle);
+          responseData = cached as unknown as Record<string, unknown>;
         } else {
-          // 2. Call POST enrichment (the only working endpoint)
-          console.log("[HeroEnrich] Enriching", handle);
+          console.log("[HeroEnrich] Cache miss for", handle, "— calling POST enrich");
           const enrichment = await enrichCreatorProfile(handle, undefined, platform);
           responseData = enrichment as unknown as Record<string, unknown>;
 
+          // Try to cache (silently fails if table doesn't exist)
           if (responseData) {
-            heroEnrichMemoryCache.set(cacheKey, { data: responseData, ts: Date.now() });
+            await setHeroEnrichCache(handle, platform, responseData as unknown as EnrichedProfileResponse);
           }
         }
 
-        if (!responseData) return c;
+        if (!responseData) return c; // API returned null — keep existing data
 
-        // 3. Extract follower_count + avatar from enrichment
-        const stats = extractEnrichStats(responseData);
+        // 2. Extract stats (deep search across all response shapes)
+        const stats = extractHeroStats(responseData);
 
+        // 3. Extract avatar from enrichment
+        const enrichAvatar = extractAvatarFromEnrichment(responseData);
+
+        // 4. Merge: prefer API data when > 0, keep existing data as fallback
         return {
           ...c,
           follower_count: stats.follower_count || c.follower_count,
-          avatar_url: stats.avatar_url || c.avatar_url,
-          ic_avatar_url: stats.avatar_url || c.ic_avatar_url,
+          engagement_rate: stats.engagement_rate || c.engagement_rate,
+          avatar_url: enrichAvatar || c.avatar_url,
+          ic_avatar_url: enrichAvatar || c.ic_avatar_url,
           enrichment_data: responseData,
+          avg_views: stats.avg_views > 0 ? formatFollowerCount(stats.avg_views) : (c.avg_views || null),
+          avg_likes: stats.avg_likes > 0 ? formatFollowerCount(stats.avg_likes) : (c.avg_likes || null),
+          avg_comments: stats.avg_comments > 0 ? formatFollowerCount(stats.avg_comments) : (c.avg_comments || null),
+          media_count: stats.media_count > 0 ? stats.media_count : (c.media_count || null),
         };
       } catch (err) {
         console.warn("[HeroEnrich] Failed for", handle, ":", err);
-        return c;
+        return c; // Fallback to existing data
       }
     }),
   );

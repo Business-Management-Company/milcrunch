@@ -706,12 +706,20 @@ export default function HomePage() {
                     const style = CARD_STYLES[i];
                     const avatar = db.avatar_url || db.ic_avatar_url || null;
                     const followers = formatFollowerCount(db.follower_count);
-                    const engagement = typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : null;
+                    // Only show engagement if it's meaningful (> 0.1%)
+                    const engNum = typeof db.engagement_rate === "number" ? db.engagement_rate : 0;
+                    const engagement = engNum > 0.1 ? `${engNum.toFixed(1)}%` : null;
 
-                    // Build stats array — clean 2-stat card (Followers + Engagement)
+                    // Build stats array — only include stats with real, non-zero data
+                    const hasValue = (v: string | number | null | undefined) =>
+                      v != null && v !== "" && v !== "0" && v !== "—" && v !== 0;
                     const stats: { value: string; label: string; color: string }[] = [];
-                    if (followers && followers !== "—") stats.push({ value: followers, label: "Followers", color: "text-gray-900" });
+                    if (hasValue(db.follower_count) && followers !== "—") stats.push({ value: followers, label: "Followers", color: "text-gray-900" });
                     if (engagement) stats.push({ value: engagement, label: "Engagement", color: "text-teal-500" });
+                    if (hasValue(db.avg_views)) stats.push({ value: db.avg_views!, label: "Avg Views", color: "text-gray-900" });
+                    if (hasValue(db.avg_likes)) stats.push({ value: db.avg_likes!, label: "Avg Likes", color: "text-gray-900" });
+                    if (hasValue(db.avg_comments)) stats.push({ value: db.avg_comments!, label: "Avg Comments", color: "text-gray-900" });
+                    if (hasValue(db.media_count)) stats.push({ value: formatFollowerCount(db.media_count!), label: "Posts", color: "text-gray-900" });
 
                     const gridCols = stats.length <= 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-4";
 
