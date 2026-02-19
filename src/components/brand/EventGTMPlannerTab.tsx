@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, ShieldAlert, CalendarCheck, Copy, Printer, Sparkles, Search,
-  AlertTriangle, CheckCircle2, FileText,
+  AlertTriangle, CheckCircle2, FileText, Shield, Info, MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { scrapeFirecrawl } from "@/lib/verification";
@@ -41,10 +41,30 @@ interface CompetingEvent {
   severity: "high" | "medium" | "low";
 }
 
+interface BaseEvent {
+  name: string;
+  date: string;
+  location: string;
+  baseName: string;
+  url: string;
+  severity: "high" | "medium" | "low";
+}
+
+interface ObservanceConflict {
+  name: string;
+  date: Date;
+  daysAway: number;
+  direction: "before" | "after" | "same-day";
+  suggestion: "leverage" | "caution";
+}
+
 interface ConflictResults {
   holidays: HolidayConflict[];
   competing: CompetingEvent[];
+  baseEvents: BaseEvent[];
+  observances: ObservanceConflict[];
   firecrawlFailed: boolean;
+  baseEventsFailed: boolean;
 }
 
 /* ---------- holidays ---------- */
@@ -103,6 +123,159 @@ function findHolidayConflicts(startDate: string | null, endDate: string | null):
         if (isWithinInterval(h.date, nearInterval)) {
           conflicts.push({ name: h.name, date: h.date, proximity: "within-3-days" });
         }
+      }
+    }
+  }
+  return conflicts;
+}
+
+/* ---------- military installations by state ---------- */
+const INSTALLATIONS_BY_STATE: Record<string, { name: string; city: string }[]> = {
+  "Alabama": [{ name: "Fort Novosel", city: "Ozark" }, { name: "Redstone Arsenal", city: "Huntsville" }],
+  "Alaska": [{ name: "Joint Base Elmendorf-Richardson", city: "Anchorage" }, { name: "Fort Wainwright", city: "Fairbanks" }],
+  "Arizona": [{ name: "Fort Huachuca", city: "Sierra Vista" }, { name: "Davis-Monthan AFB", city: "Tucson" }, { name: "Luke AFB", city: "Glendale" }],
+  "Arkansas": [{ name: "Little Rock AFB", city: "Jacksonville" }],
+  "California": [{ name: "Camp Pendleton", city: "Oceanside" }, { name: "Naval Base San Diego", city: "San Diego" }, { name: "Edwards AFB", city: "Edwards" }, { name: "Travis AFB", city: "Fairfield" }, { name: "Fort Irwin", city: "Barstow" }, { name: "Vandenberg SFB", city: "Lompoc" }, { name: "NAS Lemoore", city: "Lemoore" }],
+  "Colorado": [{ name: "Fort Carson", city: "Colorado Springs" }, { name: "Peterson SFB", city: "Colorado Springs" }, { name: "Buckley SFB", city: "Aurora" }, { name: "Schriever SFB", city: "Colorado Springs" }],
+  "Connecticut": [{ name: "Naval Submarine Base New London", city: "Groton" }],
+  "Delaware": [{ name: "Dover AFB", city: "Dover" }],
+  "Florida": [{ name: "MacDill AFB", city: "Tampa" }, { name: "Eglin AFB", city: "Valparaiso" }, { name: "NAS Jacksonville", city: "Jacksonville" }, { name: "NAS Pensacola", city: "Pensacola" }, { name: "Patrick SFB", city: "Cocoa Beach" }, { name: "Hurlburt Field", city: "Mary Esther" }, { name: "Tyndall AFB", city: "Panama City" }],
+  "Georgia": [{ name: "Fort Moore", city: "Columbus" }, { name: "Fort Stewart", city: "Hinesville" }, { name: "Moody AFB", city: "Valdosta" }, { name: "Robins AFB", city: "Warner Robins" }, { name: "Hunter Army Airfield", city: "Savannah" }, { name: "NAS Kings Bay", city: "Kings Bay" }],
+  "Hawaii": [{ name: "Joint Base Pearl Harbor-Hickam", city: "Honolulu" }, { name: "Schofield Barracks", city: "Wahiawa" }, { name: "Marine Corps Base Hawaii", city: "Kaneohe" }],
+  "Idaho": [{ name: "Mountain Home AFB", city: "Mountain Home" }],
+  "Illinois": [{ name: "Scott AFB", city: "Belleville" }, { name: "Naval Station Great Lakes", city: "North Chicago" }],
+  "Indiana": [{ name: "Crane Naval Surface Warfare Center", city: "Crane" }],
+  "Kansas": [{ name: "Fort Riley", city: "Junction City" }, { name: "McConnell AFB", city: "Wichita" }, { name: "Fort Leavenworth", city: "Leavenworth" }],
+  "Kentucky": [{ name: "Fort Campbell", city: "Hopkinsville" }, { name: "Fort Knox", city: "Radcliff" }],
+  "Louisiana": [{ name: "Fort Johnson", city: "Leesville" }, { name: "Barksdale AFB", city: "Bossier City" }, { name: "NAS JRB New Orleans", city: "New Orleans" }],
+  "Maine": [{ name: "Portsmouth Naval Shipyard", city: "Kittery" }],
+  "Maryland": [{ name: "Fort Meade", city: "Fort Meade" }, { name: "Joint Base Andrews", city: "Camp Springs" }, { name: "Aberdeen Proving Ground", city: "Aberdeen" }, { name: "NAS Patuxent River", city: "Patuxent River" }],
+  "Massachusetts": [{ name: "Hanscom AFB", city: "Bedford" }, { name: "Joint Base Cape Cod", city: "Buzzards Bay" }],
+  "Michigan": [{ name: "Selfridge ANGB", city: "Harrison Township" }],
+  "Mississippi": [{ name: "Keesler AFB", city: "Biloxi" }, { name: "Columbus AFB", city: "Columbus" }, { name: "NAS Meridian", city: "Meridian" }],
+  "Missouri": [{ name: "Whiteman AFB", city: "Knob Noster" }, { name: "Fort Leonard Wood", city: "Waynesville" }],
+  "Montana": [{ name: "Malmstrom AFB", city: "Great Falls" }],
+  "Nebraska": [{ name: "Offutt AFB", city: "Bellevue" }],
+  "Nevada": [{ name: "Nellis AFB", city: "Las Vegas" }, { name: "Creech AFB", city: "Indian Springs" }],
+  "New Hampshire": [{ name: "Portsmouth Naval Shipyard", city: "Portsmouth" }],
+  "New Jersey": [{ name: "Joint Base McGuire-Dix-Lakehurst", city: "Wrightstown" }],
+  "New Mexico": [{ name: "Holloman AFB", city: "Alamogordo" }, { name: "Cannon AFB", city: "Clovis" }, { name: "Kirtland AFB", city: "Albuquerque" }, { name: "White Sands Missile Range", city: "Las Cruces" }],
+  "New York": [{ name: "Fort Drum", city: "Watertown" }, { name: "West Point", city: "West Point" }],
+  "North Carolina": [{ name: "Fort Liberty", city: "Fayetteville" }, { name: "Camp Lejeune", city: "Jacksonville" }, { name: "MCAS Cherry Point", city: "Havelock" }, { name: "Seymour Johnson AFB", city: "Goldsboro" }],
+  "North Dakota": [{ name: "Minot AFB", city: "Minot" }, { name: "Grand Forks AFB", city: "Grand Forks" }],
+  "Ohio": [{ name: "Wright-Patterson AFB", city: "Dayton" }],
+  "Oklahoma": [{ name: "Fort Sill", city: "Lawton" }, { name: "Tinker AFB", city: "Oklahoma City" }, { name: "Altus AFB", city: "Altus" }, { name: "Vance AFB", city: "Enid" }],
+  "Pennsylvania": [{ name: "Carlisle Barracks", city: "Carlisle" }],
+  "Rhode Island": [{ name: "Naval Station Newport", city: "Newport" }],
+  "South Carolina": [{ name: "Fort Jackson", city: "Columbia" }, { name: "Joint Base Charleston", city: "Charleston" }, { name: "MCAS Beaufort", city: "Beaufort" }, { name: "Shaw AFB", city: "Sumter" }],
+  "South Dakota": [{ name: "Ellsworth AFB", city: "Rapid City" }],
+  "Tennessee": [{ name: "NSA Mid-South", city: "Millington" }],
+  "Texas": [{ name: "Fort Cavazos", city: "Killeen" }, { name: "Fort Sam Houston", city: "San Antonio" }, { name: "Fort Bliss", city: "El Paso" }, { name: "Dyess AFB", city: "Abilene" }, { name: "Laughlin AFB", city: "Del Rio" }, { name: "Sheppard AFB", city: "Wichita Falls" }, { name: "Joint Base San Antonio", city: "San Antonio" }, { name: "NAS Corpus Christi", city: "Corpus Christi" }, { name: "NAS JRB Fort Worth", city: "Fort Worth" }],
+  "Utah": [{ name: "Hill AFB", city: "Ogden" }, { name: "Dugway Proving Ground", city: "Dugway" }],
+  "Virginia": [{ name: "Naval Station Norfolk", city: "Norfolk" }, { name: "Fort Gregg-Adams", city: "Petersburg" }, { name: "Joint Base Langley-Eustis", city: "Hampton" }, { name: "MCB Quantico", city: "Quantico" }, { name: "Fort Belvoir", city: "Fort Belvoir" }, { name: "NAS Oceana", city: "Virginia Beach" }, { name: "Pentagon", city: "Arlington" }, { name: "Dam Neck", city: "Virginia Beach" }],
+  "Washington": [{ name: "Joint Base Lewis-McChord", city: "Tacoma" }, { name: "Naval Base Kitsap", city: "Bremerton" }, { name: "Fairchild AFB", city: "Spokane" }, { name: "NAS Whidbey Island", city: "Oak Harbor" }],
+  "West Virginia": [{ name: "Yeager Airport ANG", city: "Charleston" }],
+  "Wisconsin": [{ name: "Fort McCoy", city: "Sparta" }],
+  "Wyoming": [{ name: "F.E. Warren AFB", city: "Cheyenne" }],
+  "District of Columbia": [{ name: "Joint Base Anacostia-Bolling", city: "Washington" }, { name: "Fort McNair", city: "Washington" }],
+};
+
+function getNearbyBases(eventState: string | null): { name: string; city: string }[] {
+  if (!eventState) return [];
+  // Try exact match first, then partial
+  const normalize = (s: string) => s.trim().toLowerCase();
+  const stateNorm = normalize(eventState);
+  for (const [key, bases] of Object.entries(INSTALLATIONS_BY_STATE)) {
+    if (normalize(key) === stateNorm) return bases;
+  }
+  // Abbreviation fallback
+  const ABBREV: Record<string, string> = {
+    AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+    CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+    HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+    KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+    MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
+    MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+    NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
+    OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+    SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+    VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+    DC: "District of Columbia",
+  };
+  const fullName = ABBREV[eventState.trim().toUpperCase()];
+  if (fullName && INSTALLATIONS_BY_STATE[fullName]) return INSTALLATIONS_BY_STATE[fullName];
+  return [];
+}
+
+/* ---------- military observances (7-day window) ---------- */
+function getMilitaryObservances(year: number): { name: string; date: Date }[] {
+  const nthWeekday = (m: number, weekday: number, n: number): Date => {
+    const first = new Date(year, m, 1);
+    let day = 1 + ((weekday - first.getDay() + 7) % 7);
+    day += (n - 1) * 7;
+    return new Date(year, m, day);
+  };
+  const lastWeekday = (m: number, weekday: number): Date => {
+    const last = new Date(year, m + 1, 0);
+    const diff = (last.getDay() - weekday + 7) % 7;
+    return new Date(year, m, last.getDate() - diff);
+  };
+
+  // Military Spouse Appreciation Day: Friday before Mother's Day (2nd Sunday of May)
+  const mothersDay = nthWeekday(4, 0, 2);
+  const milSpouseDay = new Date(mothersDay);
+  milSpouseDay.setDate(milSpouseDay.getDate() - 2); // Friday before Sunday
+
+  return [
+    { name: "Veterans Day", date: new Date(year, 10, 11) },
+    { name: "Memorial Day", date: lastWeekday(4, 1) }, // Last Monday of May
+    { name: "Armed Forces Day", date: nthWeekday(4, 6, 3) }, // 3rd Saturday of May
+    { name: "Military Spouse Appreciation Day", date: milSpouseDay },
+    { name: "Gold Star Mother's Day", date: lastWeekday(8, 0) }, // Last Sunday of September
+    { name: "POW/MIA Recognition Day", date: nthWeekday(8, 5, 3) }, // 3rd Friday of September
+    { name: "Pearl Harbor Remembrance Day", date: new Date(year, 11, 7) },
+  ];
+}
+
+function findObservanceConflicts(startDate: string | null, endDate: string | null): ObservanceConflict[] {
+  if (!startDate) return [];
+  const start = parseISO(startDate);
+  const end = endDate ? parseISO(endDate) : start;
+  const years = new Set([start.getFullYear(), end.getFullYear()]);
+  const conflicts: ObservanceConflict[] = [];
+
+  for (const y of years) {
+    for (const obs of getMilitaryObservances(y)) {
+      const obsTime = obs.date.getTime();
+      const startTime = start.getTime();
+      const endTime = end.getTime();
+      const msPerDay = 86400000;
+
+      // Check if observance falls during event
+      if (obsTime >= startTime && obsTime <= endTime) {
+        conflicts.push({ name: obs.name, date: obs.date, daysAway: 0, direction: "same-day", suggestion: "leverage" });
+        continue;
+      }
+
+      // Check 7-day window before event start
+      const daysBefore = Math.round((startTime - obsTime) / msPerDay);
+      if (daysBefore > 0 && daysBefore <= 7) {
+        conflicts.push({
+          name: obs.name, date: obs.date, daysAway: daysBefore,
+          direction: "before",
+          suggestion: daysBefore <= 3 ? "leverage" : "caution",
+        });
+        continue;
+      }
+
+      // Check 7-day window after event end
+      const daysAfter = Math.round((obsTime - endTime) / msPerDay);
+      if (daysAfter > 0 && daysAfter <= 7) {
+        conflicts.push({
+          name: obs.name, date: obs.date, daysAway: daysAfter,
+          direction: "after",
+          suggestion: daysAfter <= 3 ? "leverage" : "caution",
+        });
       }
     }
   }
@@ -221,10 +394,13 @@ export default function EventGTMPlannerTab({
     setConflicts(null);
     try {
       const holidays = findHolidayConflicts(startDate, endDate);
+      const observances = findObservanceConflicts(startDate, endDate);
       let competing: CompetingEvent[] = [];
+      let baseEvents: BaseEvent[] = [];
       let firecrawlFailed = false;
+      let baseEventsFailed = false;
 
-      // Try Eventbrite scrape
+      // Try Eventbrite scrape for general competing events
       if (city || state) {
         const loc = encodeURIComponent(location || "united-states");
         const keywords = encodeURIComponent(eventType || "military veteran");
@@ -233,7 +409,6 @@ export default function EventGTMPlannerTab({
         try {
           const scraped = await scrapeFirecrawl(url);
           if (scraped?.markdown) {
-            // Use AI to extract structured events from markdown
             const parsed = await callAnthropic(
               "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
               `Extract competing events from this Eventbrite search page markdown. For each event found, return: name, date, location, url, severity (high if same date and nearby location, medium if same week, low otherwise). Our event: "${eventTitle}" on ${dateRange} in ${location}.\n\nMarkdown:\n${scraped.markdown.slice(0, 6000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
@@ -250,11 +425,50 @@ export default function EventGTMPlannerTab({
         }
       }
 
-      setConflicts({ holidays, competing, firecrawlFailed });
-      if (holidays.length === 0 && competing.length === 0) {
+      // Scan nearby military bases for competing events
+      const nearbyBases = getNearbyBases(state);
+      if (nearbyBases.length > 0 && startDate) {
+        // Scrape up to 3 base cities (to keep it fast)
+        const basesToScan = nearbyBases.slice(0, 3);
+        const basePromises = basesToScan.map(async (base) => {
+          try {
+            const baseLoc = encodeURIComponent(`${base.city}--${state || ""}`);
+            const baseUrl = `https://www.eventbrite.com/d/${baseLoc}/military-veteran/?start_date=${startDate}`;
+            const scraped = await scrapeFirecrawl(baseUrl);
+            if (!scraped?.markdown) return [];
+            const parsed = await callAnthropic(
+              "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
+              `Extract military/veteran events near ${base.name} (${base.city}) from this Eventbrite markdown. For each event, return: name, date, location, url, severity (high if overlapping dates, medium if same month, low otherwise). Our event runs ${dateRange}.\n\nMarkdown:\n${scraped.markdown.slice(0, 4000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
+              1024
+            );
+            try {
+              const jsonStr = parsed.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+              const events: CompetingEvent[] = JSON.parse(jsonStr);
+              return events.map((ev) => ({ ...ev, baseName: base.name }));
+            } catch { return []; }
+          } catch (e) {
+            console.warn(`[GTM] Base scan failed for ${base.name}:`, e);
+            return [];
+          }
+        });
+
+        try {
+          const results = await Promise.race([
+            Promise.all(basePromises),
+            new Promise<BaseEvent[][]>((resolve) => setTimeout(() => resolve([]), 30000)),
+          ]) as BaseEvent[][];
+          baseEvents = results.flat();
+        } catch {
+          baseEventsFailed = true;
+        }
+      }
+
+      const totalConflicts = holidays.length + competing.length + baseEvents.length + observances.length;
+      setConflicts({ holidays, competing, baseEvents, observances, firecrawlFailed, baseEventsFailed });
+      if (totalConflicts === 0) {
         toast.success("No conflicts detected!");
       } else {
-        toast.info(`Found ${holidays.length + competing.length} potential conflict(s)`);
+        toast.info(`Found ${totalConflicts} potential conflict(s)`);
       }
     } catch (e) {
       console.error("[GTM] Conflict scan error:", e);
@@ -275,6 +489,14 @@ export default function EventGTMPlannerTab({
           }${
             conflicts.competing.length > 0
               ? "\n" + conflicts.competing.map((c) => `- Competing event: ${c.name} on ${c.date} in ${c.location} (${c.severity} severity)`).join("\n")
+              : ""
+          }${
+            conflicts.baseEvents.length > 0
+              ? "\n" + conflicts.baseEvents.map((b) => `- Military base event near ${b.baseName}: ${b.name} on ${b.date} in ${b.location} (${b.severity})`).join("\n")
+              : ""
+          }${
+            conflicts.observances.length > 0
+              ? "\n" + conflicts.observances.map((o) => `- Military observance: ${o.name} on ${format(o.date, "MMM d, yyyy")} (${o.daysAway === 0 ? "during event" : `${o.daysAway} days ${o.direction}`}, suggestion: ${o.suggestion})`).join("\n")
               : ""
           }`
         : "";
@@ -417,11 +639,11 @@ Keep it concise — this should fit on one printed page. Use bullet points where
         </p>
 
         {conflicts && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {/* Holiday conflicts */}
             {conflicts.holidays.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Holiday / Observance Conflicts</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Federal Holiday Conflicts</p>
                 {conflicts.holidays.map((h, i) => (
                   <div
                     key={i}
@@ -483,18 +705,115 @@ Keep it concise — this should fit on one printed page. Use bullet points where
               </div>
             )}
 
-            {/* No conflicts */}
-            {conflicts.holidays.length === 0 && conflicts.competing.length === 0 && (
+            {/* Nearby Military Installations */}
+            {conflicts.baseEvents.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nearby Military Installation Events</p>
+                {conflicts.baseEvents.map((b, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      b.severity === "high"
+                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                        : b.severity === "medium"
+                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
+                        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30"
+                    }`}
+                  >
+                    <Shield className={`h-4 w-4 shrink-0 ${
+                      b.severity === "high" ? "text-red-500" : b.severity === "medium" ? "text-yellow-500" : "text-green-500"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium">{b.name}</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
+                          <MapPin className="h-2.5 w-2.5 mr-0.5" />{b.baseName}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{b.date} · {b.location}</span>
+                    </div>
+                    <Badge
+                      variant={b.severity === "high" ? "destructive" : "secondary"}
+                      className={`text-xs shrink-0 ${b.severity === "low" ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : ""}`}
+                    >
+                      {b.severity}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+            {getNearbyBases(state).length > 0 && conflicts.baseEvents.length === 0 && !conflicts.baseEventsFailed && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
+                <Shield className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-700 dark:text-green-300">
+                  No competing events found near {getNearbyBases(state).slice(0, 3).map((b) => b.name).join(", ")}
+                </span>
+              </div>
+            )}
+
+            {/* Military Observance Conflicts */}
+            {conflicts.observances.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Military Observance Conflicts</p>
+                {conflicts.observances.map((obs, i) => {
+                  const isSameDay = obs.direction === "same-day";
+                  const isLeverage = obs.suggestion === "leverage";
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 p-3 rounded-lg border border-purple-200 bg-purple-50/60 dark:border-purple-800/50 dark:bg-purple-950/20"
+                    >
+                      <Info className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-purple-900 dark:text-purple-200">{obs.name}</span>
+                          <span className="text-xs text-purple-600 dark:text-purple-400">
+                            {format(obs.date, "MMM d, yyyy")}
+                          </span>
+                        </div>
+                        <p className="text-xs text-purple-700/80 dark:text-purple-300/70 mt-1">
+                          {isSameDay
+                            ? `Falls during your event. Consider theming sessions or marketing around ${obs.name} to boost engagement and attendance.`
+                            : obs.direction === "before"
+                            ? `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} before your event. ${
+                                isLeverage
+                                  ? `Close enough to tie in ${obs.name} messaging — use it to build pre-event momentum.`
+                                  : `Be aware that attendees may have ${obs.name}-related commitments. Consider adjusting outreach timing.`
+                              }`
+                            : `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} after your event. ${
+                                isLeverage
+                                  ? `Leverage proximity to ${obs.name} in post-event content and follow-up campaigns.`
+                                  : `Some attendees may be traveling or attending ${obs.name} events. Monitor registration trends.`
+                              }`
+                          }
+                        </p>
+                      </div>
+                      <Badge className="text-[10px] shrink-0 bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0">
+                        {isLeverage ? "Leverage" : "Caution"}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* All clear */}
+            {conflicts.holidays.length === 0 && conflicts.competing.length === 0 && conflicts.baseEvents.length === 0 && conflicts.observances.length === 0 && (
               <div className="flex items-center gap-2 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <span className="text-sm text-green-700 dark:text-green-300">No scheduling conflicts detected</span>
               </div>
             )}
 
-            {/* Firecrawl fallback note */}
+            {/* Fallback notes */}
             {conflicts.firecrawlFailed && (
               <p className="text-xs text-muted-foreground italic">
                 Note: Competing event search was unavailable. Only holiday/observance conflicts are shown.
+              </p>
+            )}
+            {conflicts.baseEventsFailed && (
+              <p className="text-xs text-muted-foreground italic">
+                Note: Military base event search timed out. Try again later.
               </p>
             )}
           </div>
