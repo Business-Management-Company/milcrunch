@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Handshake, ClipboardList, DollarSign, Users, Video, FileText,
   Check, Plus, Trash2, Loader2, Sparkles, Download, ChevronRight, ChevronLeft,
-  AlertTriangle,
+  AlertTriangle, LogOut,
 } from "lucide-react";
 import SpeakerSelector from "@/components/SpeakerSelector";
 
@@ -103,9 +104,11 @@ function hasConflict(blocks: TimeBlock[], block: TimeBlock, idx: number): boolea
 /* ── Component ──────────────────────────────────────────────────────── */
 
 export default function PdxWizard() {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState(0);
   const [d, setD] = useState<PdxData>({ ...INIT, budget: INIT.budget.map(b => ({ ...b })) });
   const [saving, setSaving] = useState(false);
+  const [savingExit, setSavingExit] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
   const up = (patch: Partial<PdxData>) => setD(prev => ({ ...prev, ...patch }));
@@ -120,25 +123,34 @@ export default function PdxWizard() {
   const sponsorRevenue = d.sponsors.reduce((s, sp) => s + (sp.value || 0), 0);
   const totalReach = d.creators.reduce((s, c) => s + (c.followers || 0), 0);
 
+  const buildPayload = () => ({
+    organization_name: d.orgName, event_name: d.eventName,
+    event_dates: { start: d.startDate, end: d.endDate },
+    attendance_expected: d.attendance,
+    org_contacts: d.orgContacts, pdx_team: d.pdxTeam,
+    ros: d.ros, budget: d.budget,
+    contracted_price: d.contractedPrice,
+    sponsors: d.sponsors, creators: d.creators,
+    production_checklist: d.checklist,
+    stream_destinations: d.streamDests,
+    aar_data: { liveAttendance: d.aarLiveAttendance, virtualViewers: d.aarVirtualViewers, peakViewers: d.aarPeakViewers, watchTime: d.aarWatchTime, socialResults: d.aarSocialResults, keyWins: d.aarKeyWins, recommendations: d.aarRecommendations, aiSummary: d.aarAiSummary },
+    status: "planning",
+  });
+
   const save = async () => {
     setSaving(true);
-    const payload = {
-      organization_name: d.orgName, event_name: d.eventName,
-      event_dates: { start: d.startDate, end: d.endDate },
-      attendance_expected: d.attendance,
-      org_contacts: d.orgContacts, pdx_team: d.pdxTeam,
-      ros: d.ros, budget: d.budget,
-      contracted_price: d.contractedPrice,
-      sponsors: d.sponsors, creators: d.creators,
-      production_checklist: d.checklist,
-      stream_destinations: d.streamDests,
-      aar_data: { liveAttendance: d.aarLiveAttendance, virtualViewers: d.aarVirtualViewers, peakViewers: d.aarPeakViewers, watchTime: d.aarWatchTime, socialResults: d.aarSocialResults, keyWins: d.aarKeyWins, recommendations: d.aarRecommendations, aiSummary: d.aarAiSummary },
-      status: "planning",
-    };
-    const { error } = await sb.from("pdx_events").insert(payload);
+    const { error } = await sb.from("pdx_events").insert(buildPayload());
     setSaving(false);
     if (error) { console.error(error); toast.error("Failed to save — check if pdx_events table exists"); }
     else toast.success("Experience event saved!");
+  };
+
+  const saveAndExit = async () => {
+    setSavingExit(true);
+    const { error } = await sb.from("pdx_events").insert(buildPayload());
+    setSavingExit(false);
+    if (error) { console.error(error); toast.error("Failed to save — check if pdx_events table exists"); }
+    else { toast.success("Experience saved!"); navigate("/brand/events"); }
   };
 
   const generateAar = async () => {
@@ -567,9 +579,14 @@ export default function PdxWizard() {
       {RENDERERS[phase]()}
 
       <div className="flex items-center justify-between mt-10 pt-6 border-t border-[#E5E7EB]">
-        <Button variant="outline" onClick={() => setPhase(Math.max(0, phase - 1))} disabled={phase === 0} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]">
-          <ChevronLeft className="h-4 w-4 mr-1" />Back
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => setPhase(Math.max(0, phase - 1))} disabled={phase === 0} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]">
+            <ChevronLeft className="h-4 w-4 mr-1" />Back
+          </Button>
+          <Button variant="outline" onClick={saveAndExit} disabled={savingExit || saving} className="border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10">
+            {savingExit ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <LogOut className="h-4 w-4 mr-1" />}Save &amp; Exit
+          </Button>
+        </div>
         <div className="flex gap-3">
           {phase === 6 ? (
             <Button onClick={save} disabled={saving} className="bg-[#10B981] hover:bg-[#059669] text-white px-8">
