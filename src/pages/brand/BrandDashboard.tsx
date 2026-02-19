@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { fetchCredits } from "@/lib/influencers-club";
 import { useLists } from "@/contexts/ListContext";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import DemoWelcomeModal from "@/components/demo/DemoWelcomeModal";
 import DemoTour from "@/components/demo/DemoTour";
 import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, CalendarDays, Radio } from "lucide-react";
@@ -82,7 +84,19 @@ const BrandDashboard = () => {
   const [loading, setLoading] = useState(true);
   const { lists } = useLists();
   const { isDemo } = useDemoMode();
+  const { user, creatorProfile } = useAuth();
   const [tourActive, setTourActive] = useState(false);
+
+  // Dynamic welcome name
+  const displayName =
+    creatorProfile?.display_name ||
+    (user?.user_metadata?.full_name as string) ||
+    "";
+  const firstName = displayName.split(" ")[0] || "there";
+
+  // DB-sourced 365 Insights (overrides static fallback when available)
+  const [chartData, setChartData] = useState(INSIGHTS_CHART_DATA);
+  const [insightsStats, setInsightsStats] = useState(INSIGHTS_STATS);
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -93,6 +107,68 @@ const BrandDashboard = () => {
   useEffect(() => {
     fetchCredits().then((c) => { setCredits(c); setLoading(false); });
   }, []);
+
+  // Fetch 365 Insights from event_engagement_metrics for this user's events
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data: userEvents } = await supabase
+        .from("events")
+        .select("id")
+        .eq("created_by", user.id);
+
+      if (!userEvents || userEvents.length === 0) return;
+
+      const eventIds = userEvents.map((e: any) => e.id);
+
+      const { data: metrics } = await supabase
+        .from("event_engagement_metrics")
+        .select("metric_type, value, period_start")
+        .in("event_id", eventIds)
+        .order("period_start", { ascending: true });
+
+      if (!metrics || metrics.length === 0) return;
+
+      // Chart: sponsor_impressions by month
+      const impressions = metrics.filter((m: any) => m.metric_type === "sponsor_impressions");
+      if (impressions.length > 0) {
+        setChartData(
+          impressions.map((m: any) => ({
+            month: new Date(m.period_start).toLocaleDateString("en-US", { month: "short" }),
+            value: Math.round(m.value),
+          })),
+        );
+      }
+
+      // Summary stats
+      const totalImp = impressions.reduce((s: number, m: any) => s + (m.value || 0), 0);
+      const community = metrics.filter((m: any) => m.metric_type === "community_growth");
+      const latestComm = community.length > 0 ? Math.round(community[community.length - 1].value) : 0;
+      const engagement = metrics.filter((m: any) => m.metric_type === "creator_engagement");
+      const avgEng =
+        engagement.length > 0
+          ? engagement.reduce((s: number, m: any) => s + (m.value || 0), 0) / engagement.length
+          : 0;
+
+      const halfIdx = Math.floor(impressions.length / 2);
+      const firstHalf = impressions.slice(0, halfIdx).reduce((s: number, m: any) => s + m.value, 0);
+      const secondHalf = impressions.slice(halfIdx).reduce((s: number, m: any) => s + m.value, 0);
+      const growth = firstHalf > 0 ? Math.round(((secondHalf - firstHalf) / firstHalf) * 100) : 0;
+
+      const fmtVal = (n: number) => {
+        if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+        if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+        return n.toLocaleString();
+      };
+
+      setInsightsStats([
+        { value: fmtVal(totalImp), label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
+        { value: latestComm.toLocaleString(), label: "Community Members", icon: Users, color: "text-blue-600" },
+        { value: `${avgEng.toFixed(1)}%`, label: "Avg Engagement", icon: Mic, color: "text-green-600" },
+        { value: growth >= 0 ? `+${growth}%` : `${growth}%`, label: "YoY Growth", icon: TrendingUp, color: "text-teal-600" },
+      ]);
+    })();
+  }, [user?.id]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -122,7 +198,7 @@ const BrandDashboard = () => {
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">Welcome back, Andrew</h1>
+        <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">Welcome back, {firstName}</h1>
         <p className="text-gray-500 dark:text-gray-400">Here's what's happening across your network today.</p>
       </div>
 
@@ -266,7 +342,7 @@ const BrandDashboard = () => {
 
         {/* Mini stat cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {INSIGHTS_STATS.map((stat) => {
+          {insightsStats.map((stat) => {
             const Icon = stat.icon;
             return (
               <div
@@ -285,7 +361,7 @@ const BrandDashboard = () => {
         <div className="bg-white dark:bg-[#1A1D27] rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={INSIGHTS_CHART_DATA} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="dashPurple" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.3} />
