@@ -36,6 +36,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** True once user_roles + profiles tables have been queried after login. */
+  profileLoaded: boolean;
   /** Set after loading; from profiles + user_roles tables */
   creatorProfile: CreatorProfileRow | null;
   /** Resolved role from user_roles table (includes super_admin). */
@@ -290,7 +292,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, creatorProfile, profileLoaded]);
 
   const resolvedRole: UserRole = creatorProfile?.role || "creator";
-  const isSuperAdmin = !!user && user.email === "andrew@podlogix.co";
+  const isSuperAdmin = !!user && profileLoaded && resolvedRole === "super_admin";
   const effectiveUserId = user?.id === DEMO_USER_ID ? DEMO_OWNER_ID : user?.id;
 
   return (
@@ -299,6 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         session,
         loading,
+        profileLoaded,
         creatorProfile,
         role: user ? resolvedRole : null,
         isSuperAdmin,

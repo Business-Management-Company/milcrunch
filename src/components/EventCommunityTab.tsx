@@ -78,7 +78,7 @@ function Avatar({ name, url }: { name: string | null; url: string | null }) {
 
 /* ======================================== */
 const EventCommunityTab = ({ eventId, eventCreatedAt, eventStartDate, registrationCount }: Props) => {
-  const { user } = useAuth();
+  const { user, role: authRole } = useAuth();
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -231,8 +231,7 @@ const EventCommunityTab = ({ eventId, eventCreatedAt, eventStartDate, registrati
       ? new Date(eventCreatedAt).toLocaleDateString()
       : "—";
 
-  const userRole = user?.user_metadata?.role;
-  const isAdmin = userRole === "admin" || userRole === "super_admin";
+  const isAdmin = authRole === "admin" || authRole === "super_admin";
 
   /* ======================================== */
   return (

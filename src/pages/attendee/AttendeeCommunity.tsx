@@ -139,7 +139,7 @@ const MOCK_REPLIES: Record<string, CommunityReply[]> = {
 
 /* ======================================== */
 export default function AttendeeCommunity({ eventId, event }: Props) {
-  const { user } = useAuth();
+  const { user, role: authRole } = useAuth();
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -345,8 +345,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
     ? posts
     : posts.filter((p) => p.post_type === filterType);
 
-  const userRole = user?.user_metadata?.role;
-  const isAdmin = userRole === "admin" || userRole === "super_admin";
+  const isAdmin = authRole === "admin" || authRole === "super_admin";
 
   return (
     <div className="space-y-4 px-4 py-4">

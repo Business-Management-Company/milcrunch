@@ -567,7 +567,7 @@ function InsightsPreview() {
 }
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [podcasts, setPodcasts] = useState<PodcastRow[]>([]);
   const [podcastTotal, setPodcastTotal] = useState<number | null>(null);
   const [podcastsLoading, setPodcastsLoading] = useState(true);
@@ -581,7 +581,7 @@ export default function HomePage() {
   const [heroLoading, setHeroLoading] = useState(true);
   const { content: cms, refresh: refreshCms } = useSiteContent("homepage");
   const [editOpen, setEditOpen] = useState(false);
-  const isSuperAdmin = user?.user_metadata?.role === "super_admin";
+  const isSuperAdmin = role === "super_admin";
 
   useEffect(() => {
     (async () => {

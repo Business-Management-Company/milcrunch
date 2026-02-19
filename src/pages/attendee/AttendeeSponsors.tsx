@@ -40,15 +40,14 @@ const TIER_STYLES: Record<string, { bg: string; text: string; label: string; log
 /* ======================================== */
 const AttendeeSponsorsContent = () => {
   const { event } = useAttendeeEvent();
-  const { user } = useAuth();
+  const { user, role: authRole } = useAuth();
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
   const [leadRetrievalSponsor, setLeadRetrievalSponsor] = useState<Sponsor | null>(null);
 
   // Check if current user is a brand/admin (sponsor rep)
-  const userRole = user?.user_metadata?.role;
-  const isSponsorRep = userRole === "brand" || userRole === "admin" || userRole === "super_admin";
+  const isSponsorRep = authRole === "brand" || authRole === "admin" || authRole === "super_admin";
 
   useEffect(() => {
     fetchSponsors();
