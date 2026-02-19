@@ -45,6 +45,8 @@ const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 const PLATFORMS = ["instagram", "tiktok", "youtube", "twitter"];
 const PAGE_SIZE = 50;
+const CACHE_KEY = "milcrunch_directory_v1";
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 type SortKey = "followers" | "engagement" | "recent" | "name";
 
@@ -52,11 +54,19 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "followers", label: "Followers" },
   { value: "engagement", label: "Engagement" },
   { value: "recent", label: "Recently Added" },
-  { value: "name", label: "Name A–Z" },
+  { value: "name", label: "Name A\u2013Z" },
 ];
 
-/* Unified soft purple banner for all cards */
-const DEFAULT_BANNER = "bg-gradient-to-r from-[#6C5CE7] to-[#8B7CF7]";
+/* Branch-specific banner gradients */
+const BRANCH_BANNER: Record<string, string> = {
+  Army: "bg-gradient-to-br from-green-800 via-green-700 to-green-900",
+  Navy: "bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900",
+  "Air Force": "bg-gradient-to-br from-sky-600 via-blue-600 to-sky-800",
+  Marines: "bg-gradient-to-br from-red-800 via-red-700 to-red-900",
+  "Coast Guard": "bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700",
+  "Space Force": "bg-gradient-to-br from-indigo-700 via-indigo-600 to-purple-800",
+};
+const DEFAULT_BANNER = "bg-gradient-to-br from-[#6C5CE7] via-[#7C6CF7] to-[#8B7CF7]";
 
 /* Branch filter badge colors (selected state) */
 const BRANCH_SELECTED: Record<string, string> = {
@@ -68,14 +78,14 @@ const BRANCH_SELECTED: Record<string, string> = {
   "Space Force": "bg-indigo-600 border-indigo-600 text-white",
 };
 
-/* Branch badge pill colors (on card) */
+/* Branch badge pill colors (on card) — stronger colors */
 const BRANCH_BADGE: Record<string, string> = {
-  Army: "bg-green-100 text-green-800",
-  Navy: "bg-blue-100 text-blue-900",
-  "Air Force": "bg-sky-100 text-sky-700",
-  Marines: "bg-red-100 text-red-700",
-  "Coast Guard": "bg-orange-100 text-orange-700",
-  "Space Force": "bg-indigo-100 text-indigo-700",
+  Army: "bg-green-700 text-white",
+  Navy: "bg-blue-800 text-white",
+  "Air Force": "bg-sky-600 text-white",
+  Marines: "bg-red-700 text-white",
+  "Coast Guard": "bg-orange-600 text-white",
+  "Space Force": "bg-indigo-600 text-white",
 };
 
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
@@ -87,7 +97,7 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 
 const PLATFORM_COLOR: Record<string, string> = {
   instagram: "text-pink-500",
-  tiktok: "text-gray-900 dark:text-white",
+  tiktok: "text-gray-900",
   youtube: "text-red-600",
   twitter: "text-gray-700",
 };
@@ -98,6 +108,46 @@ const PLATFORM_LABEL: Record<string, string> = {
   youtube: "YouTube",
   twitter: "X",
 };
+
+/* ------------------------------------------------------------------ */
+/* Skeleton Card                                                       */
+/* ------------------------------------------------------------------ */
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col animate-pulse">
+      {/* Banner shimmer */}
+      <div className="h-20 w-full bg-gradient-to-br from-[#6C5CE7]/40 via-[#8B7CF7]/30 to-[#6C5CE7]/40" />
+      {/* Avatar placeholder */}
+      <div className="flex justify-center -mt-8">
+        <div className="w-16 h-16 rounded-full border-4 border-white bg-gray-200 shadow-lg" />
+      </div>
+      {/* Content */}
+      <div className="p-4 flex flex-col items-center gap-2.5">
+        <div className="h-4 w-28 bg-gray-200 rounded-md" />
+        <div className="h-3 w-20 bg-gray-100 rounded-md" />
+        <div className="h-5 w-16 bg-gray-200 rounded-full" />
+        <div className="flex gap-6 mt-1">
+          <div className="text-center">
+            <div className="h-4 w-12 bg-gray-200 rounded-md mb-1" />
+            <div className="h-2.5 w-14 bg-gray-100 rounded-md" />
+          </div>
+          <div className="text-center">
+            <div className="h-4 w-10 bg-gray-200 rounded-md mb-1" />
+            <div className="h-2.5 w-16 bg-gray-100 rounded-md" />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-1">
+          <div className="h-4 w-4 bg-gray-100 rounded" />
+          <div className="h-4 w-4 bg-gray-100 rounded" />
+        </div>
+        <div className="border-t border-gray-100 mt-1 pt-3 w-full">
+          <div className="h-4 w-24 bg-gray-100 rounded-md mx-auto" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Creator Card                                                        */
@@ -127,25 +177,47 @@ function CreatorCard({
 
   const showImage = !!imgSrc && !imgFailed;
   const platforms = c.platforms ?? [];
-  const bannerClass = DEFAULT_BANNER;
-  const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
+  const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
+  const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
+  const isVerified = c.paradedeck_verified || c.influencersclub_verified;
 
   return (
     <Link
       to={`/creators/${c.profile_slug || c.handle}`}
-      className="group bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden cursor-pointer flex flex-col"
+      className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
       style={{
         opacity: inView ? 1 : 0,
-        transform: inView ? "none" : "translateY(24px)",
-        transition: `opacity 0.5s ease-out ${Math.min(index, 20) * 40}ms, transform 0.5s ease-out ${Math.min(index, 20) * 40}ms`,
+        transform: inView ? "scale(1)" : "translateY(24px) scale(0.97)",
+        transition: `opacity 0.45s ease-out ${Math.min(index, 20) * 35}ms, transform 0.45s ease-out ${Math.min(index, 20) * 35}ms, box-shadow 0.3s ease`,
       }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
     >
-      {/* Banner */}
-      <div className={cn("h-20 w-full", bannerClass)} />
+      {/* Banner — branch-colored gradient with subtle pattern overlay */}
+      <div className={cn("h-20 w-full relative", bannerClass)}>
+        {/* Subtle diagonal pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage: `repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 11px)`,
+          }}
+        />
+        {/* Branch label on banner */}
+        {c.branch && (
+          <span className="absolute top-2.5 right-2.5 text-[10px] font-bold uppercase tracking-wider text-white/80">
+            {c.branch}
+          </span>
+        )}
+      </div>
 
-      {/* Avatar overlapping banner */}
-      <div className="flex justify-center -mt-8">
-        <div className="w-16 h-16 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
+      {/* Avatar overlapping banner — with verification ring */}
+      <div className="flex justify-center -mt-8 relative z-10">
+        <div
+          className={cn(
+            "w-16 h-16 rounded-full border-[3px] shadow-lg overflow-hidden bg-white relative",
+            isVerified ? "border-[#6C5CE7]" : "border-white",
+          )}
+        >
           {showImage ? (
             <img
               src={imgSrc!}
@@ -159,23 +231,48 @@ function CreatorCard({
               {getInitials(c.display_name, c.handle)}
             </div>
           )}
+
+          {/* Verified checkmark overlay */}
+          {isVerified && (
+            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#6C5CE7] flex items-center justify-center ring-2 ring-white">
+              <ShieldCheck className="h-3 w-3 text-white" />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Content */}
       <div className="p-4 flex flex-col items-center flex-1">
-        {/* Name */}
-        <h3 className="font-semibold text-gray-900 text-sm text-center leading-snug break-words w-full">
-          {c.display_name}
-        </h3>
+        {/* Name + inline verification badges */}
+        <div className="flex items-center gap-1 mb-0.5">
+          <h3 className="font-semibold text-gray-900 text-sm text-center leading-snug break-words">
+            {c.display_name}
+          </h3>
+          {c.paradedeck_verified && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ShieldCheck className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
+            </Tooltip>
+          )}
+          {c.influencersclub_verified && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <BadgeCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">Creator Verified</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
 
         {/* Handle */}
         <p className="text-xs text-gray-400 text-center">@{c.handle}</p>
 
-        {/* Badges */}
+        {/* Branch badge — bold pill */}
         <div className="flex items-center gap-1.5 mt-2 flex-wrap justify-center">
           {c.branch && (
-            <span className={cn("text-[11px] font-semibold px-2.5 py-0.5 rounded-full", badgeClass)}>
+            <span className={cn("text-[11px] font-bold px-3 py-1 rounded-full shadow-sm", badgeClass)}>
               {c.branch}
             </span>
           )}
@@ -183,26 +280,6 @@ function CreatorCard({
             <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700">
               {c.status}
             </span>
-          )}
-          {c.paradedeck_verified && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                MilCrunch Verified
-              </TooltipContent>
-            </Tooltip>
-          )}
-          {c.influencersclub_verified && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Creator Verified
-              </TooltipContent>
-            </Tooltip>
           )}
         </div>
 
@@ -230,10 +307,7 @@ function CreatorCard({
             {platforms.map((p) => (
               <span
                 key={p}
-                className={cn(
-                  "transition-colors",
-                  PLATFORM_COLOR[p] ?? "text-gray-400",
-                )}
+                className={cn("transition-colors", PLATFORM_COLOR[p] ?? "text-gray-400")}
               >
                 {PLATFORM_ICON[p] ?? null}
               </span>
@@ -253,11 +327,37 @@ function CreatorCard({
 }
 
 /* ------------------------------------------------------------------ */
+/* Cache helpers                                                       */
+/* ------------------------------------------------------------------ */
+
+function getCachedCreators(): ShowcaseCreator[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL_MS) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    return data as ShowcaseCreator[];
+  } catch {
+    return null;
+  }
+}
+
+function setCachedCreators(data: ShowcaseCreator[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+  } catch { /* quota exceeded — ignore */ }
+}
+
+/* ------------------------------------------------------------------ */
 /* Main Page                                                           */
 /* ------------------------------------------------------------------ */
 
 export default function Creators() {
   const [allCreators, setAllCreators] = useState<ShowcaseCreator[]>([]);
+  const [loading, setLoading] = useState(true);
   const [inView, setInView] = useState(false);
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState<string | null>(null);
@@ -268,10 +368,26 @@ export default function Creators() {
   const gridRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
 
+  // Load data: cache-first, then refresh in background
   useEffect(() => {
-    fetchShowcaseByDirectoryName("Military Creator Network", 500).then((data) =>
-      setAllCreators(data),
-    );
+    const cached = getCachedCreators();
+    if (cached && cached.length > 0) {
+      setAllCreators(cached);
+      setLoading(false);
+      // Refresh in background
+      fetchShowcaseByDirectoryName("Military Creator Network", 500).then((fresh) => {
+        if (fresh.length > 0) {
+          setAllCreators(fresh);
+          setCachedCreators(fresh);
+        }
+      });
+    } else {
+      fetchShowcaseByDirectoryName("Military Creator Network", 500).then((data) => {
+        setAllCreators(data);
+        setLoading(false);
+        if (data.length > 0) setCachedCreators(data);
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -482,7 +598,7 @@ export default function Creators() {
           {/* Sort bar */}
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-gray-500">
-              {filtered.length} creator{filtered.length !== 1 ? "s" : ""}
+              {loading ? "Loading creators\u2026" : `${filtered.length} creator${filtered.length !== 1 ? "s" : ""}`}
             </p>
             <div ref={sortRef} className="relative">
               <button
@@ -531,24 +647,27 @@ export default function Creators() {
             ref={gridRef}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           >
-            {paged.map((c, i) => (
-              <CreatorCard key={c.id} creator={c} inView={inView} index={i} />
-            ))}
+            {loading
+              ? Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)
+              : paged.map((c, i) => (
+                  <CreatorCard key={c.id} creator={c} inView={inView} index={i} />
+                ))
+            }
           </div>
 
-          {paged.length === 0 && (
+          {!loading && paged.length === 0 && (
             <div className="text-center py-16 text-gray-400">
               <p className="text-lg font-medium mb-2">No creators found</p>
               <p className="text-sm">
                 {hasFilters
                   ? "Try adjusting your filters or search terms."
-                  : "Check back soon — we're onboarding verified military creators."}
+                  : "Check back soon \u2014 we\u2019re onboarding verified military creators."}
               </p>
             </div>
           )}
 
           {/* Load More */}
-          {hasMore && (
+          {!loading && hasMore && (
             <div className="text-center mt-10">
               <Button
                 variant="outline"
