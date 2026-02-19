@@ -558,6 +558,7 @@ export default function HomePage() {
   type EventRow = Database["public"]["Tables"]["events"]["Row"];
   const [dbEvents, setDbEvents] = useState<EventRow[]>([]);
   const [heroCreators, setHeroCreators] = useState<ShowcaseCreator[]>([]);
+  const [heroLoading, setHeroLoading] = useState(true);
   const { content: cms, refresh: refreshCms } = useSiteContent("homepage");
   const [editOpen, setEditOpen] = useState(false);
   const isSuperAdmin = user?.user_metadata?.role === "super_admin";
@@ -592,6 +593,7 @@ export default function HomePage() {
     (async () => {
       const featured = await fetchFeaturedHomepageCreators();
       setHeroCreators(featured);
+      setHeroLoading(false);
     })();
   }, []);
 
@@ -667,40 +669,58 @@ export default function HomePage() {
             <div className="hidden lg:flex flex-1 justify-center items-center">
               <div className="relative" style={{ animation: "heroFloat 5s ease-in-out infinite" }}>
                 {(() => {
-                  const FALLBACK_CARDS = [
-                    { name: "Sofia M.", handle: "sofiacreates", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face", category: "Lifestyle", badgeBg: "bg-[#E8F5E9]", badgeText: "text-[#2E7D32]", followers: "2.4M", engagement: "4.8%", avgViews: "1.2M", avgLikes: "45.3K" },
-                    { name: "Marcus J.", handle: "marcusfitpro", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face", category: "Fitness", badgeBg: "bg-[#E3F2FD]", badgeText: "text-[#1565C0]", followers: "890K", engagement: "6.2%", avgViews: "340K", avgLikes: "28.1K" },
-                    { name: "Lena Park", handle: "lenaeats", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face", category: "Food", badgeBg: "bg-[#FFF3E0]", badgeText: "text-[#E65100]", followers: "1.1M", engagement: "5.1%", avgViews: "890K", avgLikes: "52.7K" },
-                  ];
                   const CARD_STYLES = [
                     { z: "z-30", shadow: "shadow-2xl", mt: "", ml: "ml-[60px]" },
                     { z: "z-20", shadow: "shadow-xl", mt: "mt-[-10px]", ml: "ml-[0px]" },
                     { z: "z-10", shadow: "shadow-lg", mt: "mt-[-10px]", ml: "ml-[60px]" },
                   ];
 
-                  return [0, 1, 2].map((i) => {
-                    const db = heroCreators[i];
-                    const fb = FALLBACK_CARDS[i];
-                    const style = CARD_STYLES[i];
+                  if (heroLoading || heroCreators.length === 0) {
+                    return CARD_STYLES.map((style, i) => (
+                      <div key={i} className={`relative ${style.z} bg-white/80 rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml} animate-pulse`}>
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-full bg-gray-200" />
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-28" />
+                            <div className="h-3 bg-gray-100 rounded w-20" />
+                          </div>
+                          <div className="h-6 bg-gray-100 rounded-full w-16" />
+                        </div>
+                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-3">
+                          {[0, 1, 2, 3].map((j) => (
+                            <div key={j}>
+                              <div className="h-4 bg-gray-200 rounded w-12 mb-1" />
+                              <div className="h-2 bg-gray-100 rounded w-14" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  }
 
-                    const name = db?.display_name || fb.name;
-                    const handle = db?.handle || fb.handle;
-                    const avatar = db?.avatar_url || db?.ic_avatar_url || fb.avatar;
-                    const category = db?.category || fb.category;
-                    const followers = db ? formatFollowerCount(db.follower_count) : fb.followers;
-                    const engagement = db ? (typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : "—") : fb.engagement;
-                    const avgViews = db?.avg_views ?? fb.avgViews;
-                    const avgLikes = db?.avg_likes ?? fb.avgLikes;
+                  return heroCreators.slice(0, 3).map((db, i) => {
+                    const style = CARD_STYLES[i];
+                    const avatar = db.avatar_url || db.ic_avatar_url || null;
+                    const followers = formatFollowerCount(db.follower_count);
+                    const engagement = typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : "—";
 
                     return (
-                      <div key={i} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
+                      <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
                         <div className="flex items-center gap-4">
-                          <img src={avatar} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
+                          {avatar ? (
+                            <img src={avatar} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm ring-2 ring-gray-100">
+                              {getInitials(db.display_name, db.handle)}
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-[17px] text-gray-900">{name}</p>
-                            <p className="text-[14px] text-gray-400">@{handle}</p>
+                            <p className="font-bold text-[17px] text-gray-900">{db.display_name}</p>
+                            <p className="text-[14px] text-gray-400">@{db.handle}</p>
                           </div>
-                          <span className={`text-[12px] font-medium px-3 py-1.5 rounded-full ${db ? "bg-[#E8F5E9] text-[#2E7D32]" : `${fb.badgeBg} ${fb.badgeText}`}`}>{category}</span>
+                          {db.category && (
+                            <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">{db.category}</span>
+                          )}
                         </div>
                         <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-3">
                           <div>
@@ -712,11 +732,11 @@ export default function HomePage() {
                             <p className="text-[10px] text-gray-400 uppercase">Engagement</p>
                           </div>
                           <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgViews || "—"}</p>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{db.avg_views || "—"}</p>
                             <p className="text-[10px] text-gray-400 uppercase">Avg Views</p>
                           </div>
                           <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgLikes || "—"}</p>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{db.avg_likes || "—"}</p>
                             <p className="text-[10px] text-gray-400 uppercase">Avg Likes</p>
                           </div>
                         </div>

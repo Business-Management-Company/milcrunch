@@ -8,6 +8,7 @@
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for (let reg of registrations) { reg.unregister(); }
         });
+        navigator.serviceWorker.register = () => Promise.resolve();
       }
     </script>
     <title>MilCrunch — For the Military & Veteran Community to Thrive</title>
