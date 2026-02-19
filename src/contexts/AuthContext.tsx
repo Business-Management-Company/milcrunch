@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -141,6 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfileRow | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const prevUserIdRef = useRef<string | null>(null);
 
   const refetchCreatorProfile = useCallback(async () => {
     if (!user?.id) {
@@ -151,21 +152,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const meta = freshUser?.user_metadata ?? user.user_metadata ?? {};
     const profile = await fetchCreatorProfile(user.id, meta);
     setCreatorProfile(profile);
-  }, [user?.id, user?.user_metadata]);
+  }, [user?.id]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
-        setCreatorProfile(null);
+        const newUser = session?.user ?? null;
+        setUser(newUser);
+        // Only reset profile when user actually changes (sign-in / sign-out),
+        // NOT on TOKEN_REFRESHED or user metadata updates — that caused an
+        // infinite loop with CreatorOnboard's updateUser → auth event → null
+        // profile → refetch → updateUser cycle.
+        if (newUser?.id !== prevUserIdRef.current) {
+          setCreatorProfile(null);
+          setProfileLoaded(false);
+          prevUserIdRef.current = newUser?.id ?? null;
+        }
         setLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      prevUserIdRef.current = u?.id ?? null;
       setLoading(false);
     });
 

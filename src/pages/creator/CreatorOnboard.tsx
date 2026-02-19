@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ export default function CreatorOnboard() {
     { label: "YouTube Channel", url: "" },
   ]);
   const [saving, setSaving] = useState(false);
+  const onboardInitRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -99,8 +100,10 @@ export default function CreatorOnboard() {
   }, [user, creatorProfile, navigate]);
 
   useEffect(() => {
-    if (!user?.id || creatorProfile !== null) return;
-    // Set onboarding metadata in user_metadata
+    if (!user?.id || creatorProfile !== null || onboardInitRef.current) return;
+    // Guard: only run once to avoid infinite loop (updateUser triggers auth
+    // events which can reset creatorProfile, re-triggering this effect).
+    onboardInitRef.current = true;
     (async () => {
       await supabase.auth.updateUser({
         data: { role: "creator", onboarding_step: 0, onboarding_completed: false },
