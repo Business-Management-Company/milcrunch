@@ -48,14 +48,14 @@ function formatDateTime(): string {
 }
 
 export default function SummaryDashboard() {
-  const { user } = useAuth();
+  const { user, effectiveUserId, creatorProfile } = useAuth();
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState("");
 
   const fullName =
-    (user?.user_metadata?.full_name as string) ??
-    (user?.user_metadata?.display_name as string) ??
-    "";
+    creatorProfile?.display_name ||
+    (user?.user_metadata?.full_name as string) ||
+    (user?.email === "demo@recurrentx.com" ? "MilCrunch" : "");
   const firstName = fullName.split(" ")[0] || "there";
 
   // Network stats

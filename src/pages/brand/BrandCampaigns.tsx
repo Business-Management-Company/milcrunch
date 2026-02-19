@@ -421,7 +421,7 @@ function PostCard({
 /* ------------------------------------------------------------------ */
 
 export default function BrandCampaigns() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
 
@@ -669,7 +669,7 @@ Make the captions authentic and engaging for a military community audience. Refe
   // Schedule a single post
   const schedulePost = useCallback(
     async (post: CampaignPost, globalIndex: number) => {
-      if (!selectedEvent?.start_date || !user?.id) return;
+      if (!selectedEvent?.start_date || !effectiveUserId) return;
       setSchedulingPosts((prev) => new Set(prev).add(globalIndex));
       try {
         const eventDate = new Date(selectedEvent.start_date);
@@ -687,7 +687,7 @@ Make the captions authentic and engaging for a military community audience. Refe
 
         await uploadText({
           title: post.caption.slice(0, 100),
-          user: user.id,
+          user: effectiveUserId,
           platform: [post.platform as UploadPostPlatform],
           scheduled_date: postDate.toISOString(),
           async_upload: true,

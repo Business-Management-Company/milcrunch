@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = "creator" | "brand" | "admin" | "super_admin";
 
+/** Demo account mirrors Andrew's data so the demo sees real content. */
+export const DEMO_USER_ID = "c5601707-9e85-4f1b-a8fc-72e3d6cfaba4";
+export const DEMO_OWNER_ID = "8099d2c3-5e31-4b72-99c2-5c6bc7fb4f8b";
+
 /** Map Supabase app_role enum → our simplified UserRole. */
 function mapAppRole(appRole: string | null): UserRole {
   if (!appRole) return "creator";
@@ -37,6 +41,8 @@ interface AuthContextType {
   /** Resolved role from user_roles table (includes super_admin). */
   role: UserRole | null;
   isSuperAdmin: boolean;
+  /** For data queries: demo account maps to Andrew's ID so it sees real data. */
+  effectiveUserId: string | undefined;
   refetchCreatorProfile: () => Promise<void>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signUpCreator: (opts: {
@@ -285,6 +291,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const resolvedRole: UserRole = creatorProfile?.role || "creator";
   const isSuperAdmin = !!user && user.email === "andrew@podlogix.co";
+  const effectiveUserId = user?.id === DEMO_USER_ID ? DEMO_OWNER_ID : user?.id;
 
   return (
     <AuthContext.Provider
@@ -295,6 +302,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         creatorProfile,
         role: user ? resolvedRole : null,
         isSuperAdmin,
+        effectiveUserId,
         refetchCreatorProfile,
         signUp,
         signUpCreator,
