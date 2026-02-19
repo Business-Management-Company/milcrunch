@@ -55,6 +55,7 @@ import AddSpeakerModal, { SPEAKER_TYPES, SPEAKER_TYPE_COLORS } from "@/component
 import EditSpeakerModal from "@/components/brand/EditSpeakerModal";
 import AttendeeAppTab from "@/components/brand/AttendeeAppTab";
 import AIBannerModal from "@/components/brand/AIBannerModal";
+import EventGTMPlannerTab from "@/components/brand/EventGTMPlannerTab";
 import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ---------- types ---------- */
@@ -758,6 +759,7 @@ const BrandEventDetail = () => {
               <TabsTrigger value="attendee-app"><Smartphone className="h-4 w-4 mr-1.5" />Attendee App</TabsTrigger>
               <TabsTrigger value="community"><MessageCircle className="h-4 w-4 mr-1.5" />Community</TabsTrigger>
               <TabsTrigger value="insights"><BarChart3 className="h-4 w-4 mr-1.5" />365 Insights</TabsTrigger>
+              <TabsTrigger value="gtm-planner"><Target className="h-4 w-4 mr-1.5" />GTM Planner</TabsTrigger>
             </div>
           </TabsList>
 
@@ -1369,6 +1371,27 @@ const BrandEventDetail = () => {
               eventStartDate={event.start_date}
               directoryId={event.directory_id}
             />
+          </TabsContent>
+
+          {/* ===== GTM PLANNER ===== */}
+          <TabsContent value="gtm-planner">
+            {event && (
+              <EventGTMPlannerTab
+                eventId={event.id}
+                eventTitle={event.title}
+                eventDescription={event.description}
+                eventType={event.event_type}
+                startDate={event.start_date}
+                endDate={event.end_date}
+                venue={event.venue}
+                city={event.city}
+                state={event.state}
+                capacity={event.capacity}
+                speakerCount={speakers.length}
+                sponsorCount={sponsors.length}
+                registrationCount={registrations.length}
+              />
+            )}
           </TabsContent>
 
           {/* ===== PUBLIC PAGE ===== */}
