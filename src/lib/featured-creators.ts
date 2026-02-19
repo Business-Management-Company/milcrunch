@@ -116,21 +116,24 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
   },
 ];
 
+/** Hero creator handles — the 3 creators to feature on the homepage. */
+const HERO_HANDLES = ["davebrayusa", "therealdoctodd", "brittanyyycampbelll"];
+
 /** Fetch up to 3 featured creators for the homepage hero cards.
- *  Pulls from directory_members WHERE featured_homepage = true.
+ *  Pulls from directory_members by handle (davebrayusa, therealdoctodd, brittanyyycampbelll).
  *  Falls back to hardcoded creators if the table doesn't exist or is empty. */
 export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]> {
   try {
     const { data, error } = await supabase
       .from("directory_members")
       .select("*")
-      .eq("featured_homepage", true)
+      .in("creator_handle", HERO_HANDLES)
       .eq("approved", true)
       .order("sort_order", { ascending: true })
       .limit(3);
 
     if (!error && data && data.length > 0) {
-      console.log("[featured-creators] Homepage: using DB creators:", data.length);
+      console.log("[featured-creators] Homepage: using DB creators:", data.length, "— columns:", data[0] ? Object.keys(data[0]).join(", ") : "none");
       return data.map((r: Record<string, unknown>) => mapDirectoryRow(r));
     }
 

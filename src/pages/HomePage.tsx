@@ -708,7 +708,7 @@ export default function HomePage() {
                     const followers = formatFollowerCount(db.follower_count);
                     // Only show engagement if it's meaningful (> 0.1%)
                     const engNum = typeof db.engagement_rate === "number" ? db.engagement_rate : 0;
-                    const engagement = engNum > 0.1 ? `${engNum.toFixed(1)}%` : null;
+                    const engagement = engNum > 0.1 ? `${engNum.toFixed(2)}%` : null;
 
                     // Build stats array — only include stats with real, non-zero data
                     const hasValue = (v: string | number | null | undefined) =>
