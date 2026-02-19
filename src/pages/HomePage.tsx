@@ -704,6 +704,15 @@ export default function HomePage() {
                     const followers = formatFollowerCount(db.follower_count);
                     const engagement = typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : "—";
 
+                    // Extract avg views & likes from enrichment_data
+                    const ed = db.enrichment_data as Record<string, unknown> | null;
+                    const plat = ed?.[db.platform] as Record<string, unknown> | undefined
+                      ?? ed?.instagram as Record<string, unknown> | undefined;
+                    const rawViews = Number(plat?.avg_views ?? plat?.avg_view_count ?? 0);
+                    const rawLikes = Number(plat?.avg_likes ?? plat?.avg_like_count ?? 0);
+                    const avgViews = rawViews ? formatFollowerCount(rawViews) : "—";
+                    const avgLikes = rawLikes ? formatFollowerCount(rawLikes) : "—";
+
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
                         <div className="flex items-center gap-4">
@@ -722,7 +731,7 @@ export default function HomePage() {
                             <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">{db.category}</span>
                           )}
                         </div>
-                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-2 gap-3">
+                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-3">
                           <div>
                             <p className="text-[16px] font-bold text-gray-900 leading-tight">{followers}</p>
                             <p className="text-[10px] text-gray-400 uppercase">Followers</p>
@@ -730,6 +739,14 @@ export default function HomePage() {
                           <div>
                             <p className="text-[16px] font-bold text-teal-500 leading-tight">{engagement}</p>
                             <p className="text-[10px] text-gray-400 uppercase">Engagement</p>
+                          </div>
+                          <div>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgViews}</p>
+                            <p className="text-[10px] text-gray-400 uppercase">Avg Views</p>
+                          </div>
+                          <div>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgLikes}</p>
+                            <p className="text-[10px] text-gray-400 uppercase">Avg Likes</p>
                           </div>
                         </div>
                       </div>
