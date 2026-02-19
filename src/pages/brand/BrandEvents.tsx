@@ -51,12 +51,12 @@ function BrandEventCover({ event }: { event: EventWithCounts }) {
   const hasImage = !!event.cover_image_url && !imgFailed;
 
   return (
-    <div className={`h-48 flex items-center justify-center relative ${hasImage ? "" : "bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20"}`}>
+    <div className={`h-48 overflow-hidden flex items-center justify-center relative ${hasImage ? "" : "bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20"}`}>
       {hasImage ? (
         <img
           src={event.cover_image_url!}
           alt={event.title}
-          className="w-full h-48 object-cover block"
+          className="w-full h-[200px] object-cover block"
           referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
         />
@@ -154,9 +154,14 @@ const BrandEvents = () => {
 
   const formatDateRange = (start: string | null, end: string | null) => {
     if (!start) return "No date set";
-    const s = format(new Date(start), "MMM d, yyyy");
+    // Parse date parts manually to avoid UTC timezone shift
+    const parseDateLocal = (str: string) => {
+      const [y, m, d] = str.split("T")[0].split("-").map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const s = format(parseDateLocal(start), "MMM d, yyyy");
     if (!end) return s;
-    const e = format(new Date(end), "MMM d, yyyy");
+    const e = format(parseDateLocal(end), "MMM d, yyyy");
     return `${s} – ${e}`;
   };
 

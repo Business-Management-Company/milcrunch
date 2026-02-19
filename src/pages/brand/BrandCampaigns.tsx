@@ -1189,7 +1189,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                       {ev.title}
                       {ev.start_date && (
                         <span className="text-gray-400 ml-2">
-                          ({new Date(ev.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})
+                          ({new Date(ev.start_date + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})
                         </span>
                       )}
                     </SelectItem>
