@@ -551,7 +551,7 @@ const BrandDiscover = () => {
   } | null>(null);
 
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
 
@@ -624,7 +624,7 @@ const BrandDiscover = () => {
       const { data, error } = await supabase
         .from("saved_searches")
         .select("id, name, search_query, filters, created_at")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveUserId!)
         .order("created_at", { ascending: false });
       if (error) console.error("[SavedSearch] Load failed:", error.message, error);
       if (data) setSavedSearches(data as SavedSearchRow[]);
@@ -640,7 +640,7 @@ const BrandDiscover = () => {
     setSavingSearch(true);
     const filters = getCurrentFilters();
     const { error } = await supabase.from("saved_searches").insert({
-      user_id: user.id,
+      user_id: effectiveUserId!,
       name: saveSearchName.trim(),
       search_query: filters.searchQuery,
       filters,
@@ -713,8 +713,8 @@ const BrandDiscover = () => {
         setEnrichRawCache((prev) => ({ ...prev, [creator.id]: data }));
       }
       // Log credit usage
-      if (user?.id) {
-        logCreditUsage(user.id, "full_enrichment", 1.03, { handle: creator.username });
+      if (effectiveUserId) {
+        logCreditUsage(effectiveUserId, "full_enrichment", 1.03, { handle: creator.username });
       }
       refreshCredits();
     } catch (err) {
@@ -818,7 +818,7 @@ const BrandDiscover = () => {
         const allCreators = deduplicateCreators(valid.flatMap((r) => r.creators));
         const total = Math.max(...valid.map((r) => r.total));
         setApiResults({ creators: allCreators, total, rawResponse: valid[0].rawResponse });
-        if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15 * searchPlatforms.length, { query: q, platforms: searchPlatforms, results: total });
+        if (effectiveUserId) logCreditUsage(effectiveUserId, "discovery_search", 0.15 * searchPlatforms.length, { query: q, platforms: searchPlatforms, results: total });
         refreshCredits();
       })
       .finally(() => {
@@ -939,7 +939,7 @@ const BrandDiscover = () => {
         }
 
         setApiResults(result);
-        if (user?.id) logCreditUsage(user.id, "discovery_search", 0.15, { query: q, mode: searchMode, results: result.total });
+        if (effectiveUserId) logCreditUsage(effectiveUserId, "discovery_search", 0.15, { query: q, mode: searchMode, results: result.total });
         refreshCredits();
       })
       .catch(async (err) => {
@@ -1331,7 +1331,7 @@ const BrandDiscover = () => {
       category: creator.category ?? null,
       ic_avatar_url: enrichedAvatar || null,
       enrichment_data: raw || null,
-      added_by: user?.id ?? null,
+      added_by: effectiveUserId ?? null,
       directory_id: directoryId || null,
     });
 

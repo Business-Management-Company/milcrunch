@@ -113,7 +113,7 @@ function memberToCreatorCard(m: DirectoryMember): CreatorCard {
 
 const BrandDirectory = () => {
   const navigate = useNavigate();
-  const { isSuperAdmin, user } = useAuth();
+  const { isSuperAdmin, user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
   const { lists } = useLists();
 
@@ -213,7 +213,7 @@ const BrandDirectory = () => {
     const { directory, error } = await createDirectory({
       name: newName.trim(),
       description: newDesc.trim() || undefined,
-      created_by: user?.id,
+      created_by: effectiveUserId,
     });
     setCreating(false);
     if (error) {
@@ -286,7 +286,7 @@ const BrandDirectory = () => {
       platforms: c.platforms || [],
       category: c.category || null,
     }));
-    const { added, failed } = await promoteListToDirectory(selectedDir.id, mapped, user?.id);
+    const { added, failed } = await promoteListToDirectory(selectedDir.id, mapped, effectiveUserId);
     setPromoting(false);
     setPromoteOpen(false);
     setPromoteListId("");

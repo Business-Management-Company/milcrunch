@@ -69,7 +69,7 @@ async function promoteCreatorToDirectory(
 
 const BrandLists = () => {
   const { lists, removeCreatorFromList, createList } = useLists();
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, effectiveUserId } = useAuth();
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -120,7 +120,7 @@ const BrandLists = () => {
 
   const handlePromoteOne = async (creator: ListCreator) => {
     setPromotingIds((prev) => new Set(prev).add(creator.id));
-    const err = await promoteCreatorToDirectory(creator, selectedListId, user?.id ?? null);
+    const err = await promoteCreatorToDirectory(creator, selectedListId, effectiveUserId ?? null);
     setPromotingIds((prev) => {
       const next = new Set(prev);
       next.delete(creator.id);
@@ -139,7 +139,7 @@ const BrandLists = () => {
     let success = 0;
     let failed = 0;
     for (const creator of selectedList.creators) {
-      const err = await promoteCreatorToDirectory(creator, selectedListId, user?.id ?? null);
+      const err = await promoteCreatorToDirectory(creator, selectedListId, effectiveUserId ?? null);
       if (err) failed++;
       else success++;
     }

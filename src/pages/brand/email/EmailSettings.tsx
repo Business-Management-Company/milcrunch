@@ -30,7 +30,7 @@ function saveToLocalStorage(data: Partial<EmailSettings>) {
 }
 
 const EmailSettingsPage = () => {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -43,10 +43,10 @@ const EmailSettingsPage = () => {
   const [footerText, setFooterText] = useState("You received this email because you subscribed at milcrunch.com. You can unsubscribe at any time.");
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!effectiveUserId) return;
     (async () => {
       setLoading(true);
-      const s = await getEmailSettings(user.id);
+      const s = await getEmailSettings(effectiveUserId);
       if (s) {
         setSettings(s);
         setFromName(s.from_name || "MilCrunch");
@@ -71,10 +71,10 @@ const EmailSettingsPage = () => {
       }
       setLoading(false);
     })();
-  }, [user?.id]);
+  }, [effectiveUserId]);
 
   const handleSave = async () => {
-    if (!user?.id) return;
+    if (!effectiveUserId) return;
     setSaving(true);
 
     // Always save to localStorage as fallback
@@ -82,7 +82,7 @@ const EmailSettingsPage = () => {
 
     const result = await upsertEmailSettings({
       id: settings?.id,
-      user_id: user.id,
+      user_id: effectiveUserId,
       from_name: fromName,
       from_email: fromEmail,
       custom_domain: customDomain || null,

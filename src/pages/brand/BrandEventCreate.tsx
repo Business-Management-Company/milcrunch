@@ -162,7 +162,7 @@ const nextKey = () => `k-${++keyCounter}`;
 /* ======================================== */
 const BrandEventCreate = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -321,7 +321,7 @@ const BrandEventCreate = () => {
             contentType: file.type,
             bucket: "event-images",
             folder: "events",
-            userId: user?.id,
+            userId: effectiveUserId,
           }),
         });
         const data = await resp.json();
@@ -335,7 +335,7 @@ const BrandEventCreate = () => {
         setUploadingBanner(false);
       }
     },
-    [user?.id]
+    [effectiveUserId]
   );
 
   /* ---- resolve org + brand (required FK columns on events) ---- */
@@ -423,7 +423,7 @@ const BrandEventCreate = () => {
             cover_image_url: coverUrl.trim() || null,
             capacity: capacity ? parseInt(capacity) : null,
             is_published: false,
-            created_by: user?.id || null,
+            created_by: effectiveUserId || null,
             organization_id: resolved.orgId,
             brand_id: resolved.brandId,
           } as Record<string, unknown>)
@@ -523,7 +523,7 @@ const BrandEventCreate = () => {
         bio: s.bio.trim() || null,
         sort_order: i,
         confirmed: false,
-        added_by: user?.id || null,
+        added_by: effectiveUserId || null,
       }));
       const { error } = await supabase.from("event_speakers").insert(rows);
       if (error) throw error;

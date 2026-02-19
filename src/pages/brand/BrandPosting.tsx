@@ -167,9 +167,9 @@ Return ONLY valid JSON array with 3 objects, each having a "text" field. No mark
 /* ------------------------------------------------------------------ */
 
 export default function BrandPosting() {
-  const { user } = useAuth();
+  const { user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
-  const userId = user?.id ?? null;
+  const userId = effectiveUserId ?? null;
 
   // Connected accounts
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccountRow[]>([]);
