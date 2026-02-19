@@ -11,8 +11,16 @@ import {
   Send,
   MapPin,
   Clock,
+  Search,
+  ListPlus,
+  Mic,
+  CheckCircle,
+  Mail,
+  Presentation,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchDirectoriesWithCounts, type Directory } from "@/lib/directories";
 
 /* ------------------------------------------------------------------ */
 /* Quick-action card definitions                                       */
@@ -58,10 +66,8 @@ export default function SummaryDashboard() {
     (user?.email === "demo@recurrentx.com" ? "MilCrunch" : "");
   const firstName = fullName.split(" ")[0] || "there";
 
-  // Network stats
-  const [directoryCount, setDirectoryCount] = useState<number | null>(null);
-  const [totalReach, setTotalReach] = useState<number | null>(null);
-  const [listCount, setListCount] = useState<number | null>(null);
+  // Network stats — top 3 directories with member counts
+  const [topDirectories, setTopDirectories] = useState<Directory[]>([]);
 
   // Upcoming events
   const [events, setEvents] = useState<
@@ -74,25 +80,10 @@ export default function SummaryDashboard() {
   >([]);
 
   useEffect(() => {
-    // Directory count + total reach (from directory_members)
-    supabase
-      .from("directory_members")
-      .select("follower_count", { count: "exact" })
-      .eq("approved", true)
-      .then(({ data, count }) => {
-        setDirectoryCount(count ?? 0);
-        const reach = (data ?? []).reduce(
-          (sum, r) => sum + ((r.follower_count as number) ?? 0),
-          0,
-        );
-        setTotalReach(reach);
-      });
-
-    // List count
-    supabase
-      .from("influencer_lists")
-      .select("id", { count: "exact", head: true })
-      .then(({ count }) => setListCount(count ?? 0));
+    // Top 3 directories with member counts
+    fetchDirectoriesWithCounts().then((dirs) => {
+      setTopDirectories(dirs.slice(0, 3));
+    });
 
     // Upcoming events
     supabase
@@ -166,79 +157,87 @@ export default function SummaryDashboard() {
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto -m-6 p-6 min-h-full bg-[#F8F9FA] dark:bg-transparent rounded-xl">
-      {/* Greeting Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6C5CE7]/[0.06] via-white to-[#0EA5E9]/[0.04] dark:from-[#6C5CE7]/[0.12] dark:via-[#1A1D27] dark:to-[#0EA5E9]/[0.06] border border-[#6C5CE7]/15 dark:border-[#6C5CE7]/20 px-8 py-6">
-        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#6C5CE7]/[0.08] blur-3xl pointer-events-none" aria-hidden />
-        <h1 className="relative text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
-          {getGreeting()},{" "}
-          <span className="text-[#6C5CE7]">{firstName}</span>
-        </h1>
-        <p className="relative text-sm text-muted-foreground mt-1">{formatDateTime()}</p>
-        <p className="relative text-sm text-muted-foreground mt-0.5">
-          What can I help you build today?
-        </p>
+      {/* Centered heading */}
+      <div className="text-center pt-4">
+        <div className="inline-flex items-center gap-2.5 mb-2">
+          <Sparkles className="h-7 w-7 text-[#6C5CE7]" />
+          <h1 className="text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
+            {getGreeting()}, <span className="text-[#6C5CE7]">{firstName}</span>
+          </h1>
+        </div>
+        <p className="text-sm text-muted-foreground">{formatDateTime()}</p>
       </div>
 
-      {/* AI Prompt Bar */}
+      {/* Large chat-style input card */}
       <div className="max-w-3xl mx-auto">
-        <div className="relative flex items-center">
-          <Sparkles className="absolute left-4 h-5 w-5 text-[#6C5CE7]" />
-          <input
-            type="text"
-            placeholder="Ask me anything about creators, events, or campaigns..."
-            className={cn(
-              "w-full pl-12 pr-14 h-[56px] rounded-2xl text-base",
-              "border-2 border-purple-200 dark:border-purple-800 focus:border-[#6C5CE7]",
-              "bg-white dark:bg-[#1A1D27]",
-              "shadow-sm hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-[#6C5CE7]/40 focus:shadow-[0_0_20px_rgba(108,92,231,0.15)]",
-              "outline-none transition-all placeholder:text-gray-400",
-            )}
+        <div className={cn(
+          "rounded-2xl border-2 bg-white dark:bg-[#1A1D27] transition-all",
+          prompt.trim()
+            ? "border-[#6C5CE7] shadow-[0_0_20px_rgba(108,92,231,0.15)]"
+            : "border-[#6C5CE7]/25 hover:border-[#6C5CE7]/40 shadow-sm hover:shadow-md",
+        )}>
+          <textarea
+            placeholder="Describe what you need — find creators, plan an event, build a list..."
+            className="w-full min-h-[80px] px-6 pt-5 pb-2 text-base bg-transparent outline-none resize-none placeholder:text-gray-400 dark:text-white"
+            rows={2}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleSubmit();
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit();
+              }
             }}
           />
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!prompt.trim()}
-            className={cn(
-              "absolute right-3 rounded-xl p-2 transition-colors",
-              prompt.trim()
-                ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-400",
-            )}
-          >
-            <Send className="h-4 w-4" />
-          </button>
+          <div className="flex items-center justify-between px-6 pb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[#6C5CE7]/40" />
+            </div>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!prompt.trim()}
+              className={cn(
+                "px-5 py-2 rounded-xl text-sm font-semibold transition-all",
+                prompt.trim()
+                  ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1] shadow-md"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed",
+              )}
+            >
+              Get started
+            </button>
+          </div>
         </div>
-
       </div>
 
-      {/* Quick Action Pills */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mt-4">
+      {/* Quick Action Pills — flowing layout */}
+      <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto">
         {[
-          { emoji: "🔍", label: "Find Military Creators", hoverBorder: "hover:border-[#6C5CE7]/60", hoverBg: "hover:bg-[#6C5CE7]/5 dark:hover:bg-purple-900/20" },
-          { emoji: "📋", label: "Build a Creator List", hoverBorder: "hover:border-[#0EA5E9]/60", hoverBg: "hover:bg-[#0EA5E9]/5 dark:hover:bg-blue-900/20" },
-          { emoji: "🎙️", label: "Browse Podcast Network", hoverBorder: "hover:border-amber-400/60", hoverBg: "hover:bg-amber-50 dark:hover:bg-amber-900/20" },
-          { emoji: "📊", label: "View Event Analytics", hoverBorder: "hover:border-[#22C55E]/60", hoverBg: "hover:bg-[#22C55E]/5 dark:hover:bg-green-900/20" },
-          { emoji: "🎤", label: "Find Keynote Speakers", hoverBorder: "hover:border-pink-400/60", hoverBg: "hover:bg-pink-50 dark:hover:bg-pink-900/20" },
-          { emoji: "✅", label: "Verify a Creator", hoverBorder: "hover:border-teal-400/60", hoverBg: "hover:bg-teal-50 dark:hover:bg-teal-900/20" },
-          { emoji: "📅", label: "Manage Events", hoverBorder: "hover:border-[#0EA5E9]/60", hoverBg: "hover:bg-[#0EA5E9]/5 dark:hover:bg-blue-900/20" },
-          { emoji: "✉️", label: "Email Campaigns", hoverBorder: "hover:border-rose-400/60", hoverBg: "hover:bg-rose-50 dark:hover:bg-rose-900/20" },
+          { icon: Search, label: "Find Creators", color: "#6C5CE7" },
+          { icon: ListPlus, label: "Build a List", color: "#0EA5E9" },
+          { icon: Mic, label: "Browse Podcasts", color: "#F59E0B" },
+          { icon: BarChart3, label: "Event Analytics", color: "#22C55E" },
+          { icon: Presentation, label: "Find Speakers", color: "#EC4899" },
+          { icon: CheckCircle, label: "Verify Creator", color: "#14B8A6" },
+          { icon: Calendar, label: "Manage Events", color: "#0EA5E9" },
+          { icon: Mail, label: "Email Campaigns", color: "#F43F5E" },
         ].map((pill) => (
           <button
             key={pill.label}
             type="button"
-            onClick={() => setPrompt(`${pill.emoji} ${pill.label}`)}
-            className={cn(
-              "bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-medium text-[#000741] dark:text-gray-200 text-center cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2",
-              pill.hoverBorder,
-              pill.hoverBg,
-            )}
+            onClick={() => setPrompt(pill.label)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-sm font-medium text-[#000741] dark:text-gray-200 hover:border-current hover:shadow-sm transition-all"
+            style={{ "--tw-border-opacity": 1 } as React.CSSProperties}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = pill.color;
+              e.currentTarget.style.backgroundColor = `${pill.color}08`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "";
+              e.currentTarget.style.backgroundColor = "";
+            }}
           >
-            <span>{pill.emoji}</span>
+            <pill.icon className="h-4 w-4" style={{ color: pill.color }} />
             {pill.label}
           </button>
         ))}
@@ -325,39 +324,47 @@ export default function SummaryDashboard() {
           </div>
         </div>
 
-        {/* Network Stats */}
+        {/* Network Stats — Top Directories */}
         <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
           <div className="px-6 py-3 bg-gradient-to-r from-[#22C55E]/10 to-[#22C55E]/5 border-b border-[#22C55E]/10">
             <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-[#22C55E]/15">
-                <BarChart3 className="h-4 w-4 text-[#22C55E]" />
+                <FolderOpen className="h-4 w-4 text-[#22C55E]" />
               </span>
-              Network Stats
+              Directories
             </h2>
           </div>
           <div className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Creators in Directory</span>
-                <span className="text-lg font-bold text-[#000741] dark:text-white">
-                  {directoryCount != null ? formatCount(directoryCount) : "—"}
-                </span>
-              </div>
-              <div className="h-px bg-gray-100 dark:bg-gray-800" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Combined Reach</span>
-                <span className="text-lg font-bold text-[#000741] dark:text-white">
-                  {totalReach != null ? formatCount(totalReach) : "—"}
-                </span>
-              </div>
-              <div className="h-px bg-gray-100 dark:bg-gray-800" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Active Lists</span>
-                <span className="text-lg font-bold text-[#000741] dark:text-white">
-                  {listCount != null ? listCount : "—"}
-                </span>
-              </div>
-            </div>
+            {topDirectories.length > 0 ? (
+              <ul className="space-y-3">
+                {topDirectories.map((dir, i) => (
+                  <li key={dir.id}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-[#000741] dark:text-white truncate">
+                        {dir.name}
+                      </span>
+                      <span className="shrink-0 ml-2 text-sm font-bold text-[#22C55E]">
+                        {dir.member_count ?? 0}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {dir.member_count === 1 ? "1 creator" : `${dir.member_count ?? 0} creators`}
+                    </p>
+                    {i < topDirectories.length - 1 && (
+                      <div className="h-px bg-gray-100 dark:bg-gray-800 mt-3" />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No directories yet</p>
+            )}
+            <Link
+              to="/brand/directory"
+              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#22C55E] hover:underline"
+            >
+              View All <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
       </div>
