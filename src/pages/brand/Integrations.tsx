@@ -14,7 +14,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { generateConnectUrl } from "@/services/upload-post";
 import {
   syncConnectedAccountsFromUploadPost,
-  getConnectedAccounts,
   ensureUploadPostProfile,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
@@ -177,13 +176,6 @@ export default function Integrations() {
   const [syncing, setSyncing] = useState(false);
   const initDone = useRef<string | null>(null);
 
-  /* ---- Load connected accounts from Supabase ---- */
-  const loadAccounts = useCallback(async () => {
-    if (!userId) return;
-    const list = await getConnectedAccounts(userId);
-    setAccounts(list);
-  }, [userId]);
-
   /* ---- Ensure Upload-Post profile & get connect URL ---- */
   const ensureProfileAndGetUrl = useCallback(async () => {
     if (!userId) return;
@@ -238,7 +230,7 @@ export default function Integrations() {
     }
   }, [userId, toast]);
 
-  /* ---- Init on mount — run only once per userId ---- */
+  /* ---- Init on mount — ensure profile, generate URL, live-sync ---- */
   useEffect(() => {
     if (!userId) {
       setLoading(false);
@@ -249,22 +241,39 @@ export default function Integrations() {
     setLoading(true);
     (async () => {
       await ensureProfileAndGetUrl();
-      await loadAccounts();
+      // Live sync from Upload-Post API on page load so status is always current
+      const synced = await syncConnectedAccountsFromUploadPost(userId).catch(() => []);
+      setAccounts(synced);
     })().finally(() => setLoading(false));
-  }, [userId, ensureProfileAndGetUrl, loadAccounts]);
+  }, [userId, ensureProfileAndGetUrl]);
 
-  /* ---- Open Upload-Post connect popup ---- */
+  /* ---- Open Upload-Post connect popup + auto-sync on close ---- */
   const openConnectPopup = () => {
     if (guardAction("connect_social")) return;
-    if (connectUrl) {
-      window.open(connectUrl, "uploadpost-connect", "width=600,height=700");
-    } else {
+    if (!connectUrl) {
       toast({
         title: "Not ready",
         description: "Connect link is still loading. Please wait.",
         variant: "destructive",
       });
+      return;
     }
+    const popup = window.open(connectUrl, "uploadpost-connect", "width=600,height=700");
+    if (!popup) {
+      toast({
+        title: "Popup blocked",
+        description: "Please allow popups for this site and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Poll for popup close, then auto-sync accounts
+    const interval = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(interval);
+        syncAccounts();
+      }
+    }, 1500);
   };
 
   /* ---- Check if platform is connected ---- */
@@ -304,7 +313,7 @@ export default function Integrations() {
           <Button
             onClick={openConnectPopup}
             disabled={connectLoading || !connectUrl}
-            style={{ backgroundColor: "#10B981" }}
+            style={{ backgroundColor: "#7C3AED" }}
             className="hover:opacity-90 text-white"
           >
             {connectLoading ? (
@@ -318,7 +327,7 @@ export default function Integrations() {
             variant="outline"
             onClick={syncAccounts}
             disabled={syncing}
-            style={{ borderColor: "#10B981", color: "#10B981" }}
+            style={{ borderColor: "#7C3AED", color: "#7C3AED" }}
           >
             {syncing ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -372,14 +381,14 @@ export default function Integrations() {
 
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   {isConnected ? (
-                    <Badge className="border-0 flex items-center gap-1" style={{ backgroundColor: "#d1fae5", color: "#10B981" }}>
+                    <Badge className="border-0 flex items-center gap-1" style={{ backgroundColor: "#ede9fe", color: "#7C3AED" }}>
                       <Check className="w-3 h-3" />
                       Connected
                     </Badge>
                   ) : (
                     <Button
                       size="sm"
-                      style={{ backgroundColor: "#10B981" }}
+                      style={{ backgroundColor: "#7C3AED" }}
                       className="hover:opacity-90 text-white"
                       onClick={openConnectPopup}
                       disabled={connectLoading || !connectUrl}
@@ -433,7 +442,7 @@ export default function Integrations() {
                     <p className="font-semibold text-gray-900">{integration.name}</p>
                     <Badge
                       className="text-[10px] font-medium text-white border-0"
-                      style={{ backgroundColor: "#0D9488" }}
+                      style={{ backgroundColor: "#7C3AED" }}
                     >
                       Coming Soon
                     </Badge>
