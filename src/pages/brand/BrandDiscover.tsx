@@ -267,9 +267,21 @@ function extractFromEnrichment(data: EnrichedProfileResponse): Partial<CreatorCa
     (instagram.picture as string) ||
     (instagram.profile_pic_url as string) ||
     (instagram.avatar as string) ||
+    (instagram.avatar_url as string) ||
+    (instagram.profile_image_url as string) ||
     null;
+  console.log("[extractFromEnrichment] Avatar fields:", {
+    profile_picture_hd: instagram.profile_picture_hd,
+    profile_picture: instagram.profile_picture,
+    picture: instagram.picture,
+    profile_pic_url: instagram.profile_pic_url,
+    avatar: instagram.avatar,
+    avatar_url: instagram.avatar_url,
+    profile_image_url: instagram.profile_image_url,
+    resolved: avatarUrl,
+  });
   if (avatarUrl && typeof avatarUrl === "string" && avatarUrl.trim() && !avatarUrl.includes("ui-avatars.com")) {
-    partial.avatar = avatarUrl;
+    partial.avatar = avatarUrl.replace(/^http:\/\//i, "https://");
   }
 
   return partial;

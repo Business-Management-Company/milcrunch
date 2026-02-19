@@ -79,7 +79,20 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const id = (account.user_id ?? `api-${index}`) as string;
   const name = (p?.full_name ?? p?.username ?? "Unknown") as string;
 
-  const avatarRaw = (p?.picture ?? p?.profile_picture_hd ?? p?.profile_picture ?? p?.profile_pic_url ?? p?.avatar) as string | undefined | null;
+  const avatarRaw = (p?.picture ?? p?.profile_picture_hd ?? p?.profile_picture ?? p?.profile_pic_url ?? p?.avatar ?? p?.avatar_url ?? p?.profile_image_url) as string | undefined | null;
+  if (index === 0) {
+    console.log("[mapAccountToCard] Avatar debug for first creator:", {
+      name,
+      picture: p?.picture,
+      profile_picture_hd: p?.profile_picture_hd,
+      profile_picture: p?.profile_picture,
+      profile_pic_url: p?.profile_pic_url,
+      avatar: p?.avatar,
+      avatar_url: p?.avatar_url,
+      profile_image_url: p?.profile_image_url,
+      resolved: avatarRaw,
+    });
+  }
   const avatar =
     avatarRaw && String(avatarRaw).trim()
       ? String(avatarRaw).trim().replace(/^http:\/\//i, "https://")
