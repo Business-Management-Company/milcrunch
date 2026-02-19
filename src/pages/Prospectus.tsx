@@ -24,7 +24,7 @@ const THEME_KEY = "prospectus_theme";
 const TABS = [
   "Overview",
   "Events & Attendee App",
-  "PDX Experience",
+  "MilCrunch Experience",
   "Creator Network",
   "365 Insights",
   "Streaming & Media",
@@ -48,8 +48,8 @@ const SAAS_ROWS = [
 const TAB_PLACEHOLDERS: Record<string, string> = {
   "Events & Attendee App":
     "See how MilCrunch powers end-to-end event creation, ticketing, check-in, and a mobile-first attendee experience.",
-  "PDX Experience":
-    "Discover the Parade Deck Experience — a turnkey live-stage production that turns any event into a multi-platform streaming powerhouse.",
+  "MilCrunch Experience":
+    "Discover the MilCrunch Experience — a turnkey live-stage production that turns any event into a multi-platform streaming powerhouse.",
   "Creator Network":
     "Explore our verified military creator marketplace — discovery, vetting, and campaign management in one place.",
   "365 Insights":
@@ -62,7 +62,7 @@ const TAB_PLACEHOLDERS: Record<string, string> = {
 
 const TAB_KB_CATEGORY: Record<string, string> = {
   "Events & Attendee App": "events-pdx",
-  "PDX Experience": "events-pdx",
+  "MilCrunch Experience": "events-pdx",
   "Creator Network": "creator-network",
   "365 Insights": "365-insights",
   "Streaming & Media": "streaming-media",
@@ -185,77 +185,6 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Browser Mockup Wrapper                                              */
-/* ------------------------------------------------------------------ */
-
-function BrowserMockup({
-  src,
-  alt,
-  caption,
-  dark,
-  className,
-}: {
-  src: string;
-  alt: string;
-  caption?: string;
-  dark: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={cn("group", className)}>
-      <div
-        className={cn(
-          "rounded-xl overflow-hidden shadow-lg shadow-[#6C5CE7]/10 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl group-hover:shadow-[#6C5CE7]/20",
-          dark ? "border border-white/10" : "border border-gray-200"
-        )}
-      >
-        {/* Browser chrome bar */}
-        <div
-          className={cn(
-            "flex items-center gap-2 px-3 py-2",
-            dark ? "bg-[#1A1D27]" : "bg-gray-800"
-          )}
-        >
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
-          </div>
-          <div className="flex-1 ml-2">
-            <div
-              className={cn(
-                "rounded px-2.5 py-0.5 text-[10px] truncate max-w-[200px]",
-                dark
-                  ? "bg-white/5 text-gray-500"
-                  : "bg-gray-700 text-gray-400"
-              )}
-            >
-              milcrunch.com
-            </div>
-          </div>
-        </div>
-        {/* Screenshot */}
-        <img
-          src={src}
-          alt={alt}
-          className="w-full object-cover"
-          loading="lazy"
-        />
-      </div>
-      {caption && (
-        <p
-          className={cn(
-            "text-xs text-center mt-2.5 transition-colors duration-300",
-            dark ? "text-gray-500" : "text-[#9CA3AF]"
-          )}
-        >
-          {caption}
-        </p>
-      )}
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Tab: Overview                                                       */
@@ -323,7 +252,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
               dark ? "text-gray-300" : "text-[#374151]"
             )}
           >
-            Parade Deck started as a creator directory — a place where a veteran podcaster with
+            MilCrunch started as a creator directory — a place where a veteran podcaster with
             500 followers could build a profile, connect their social channels, and finally have
             a home for their content alongside authors, musicians, milspouses, and social media
             creators who were all trying to build something meaningful, with no support and no
@@ -341,91 +270,6 @@ function OverviewTab({ dark }: { dark: boolean }) {
         </div>
       </section>
 
-      {/* Hero Screenshots */}
-      <section className="max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/793c49f2-627f-4b6c-a068-959ee32f9455"
-            alt="Military Spouses Discovery — Grid View"
-            caption="Creator & Influencer Discovery"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/81220ee5-6067-4000-be29-070a86d1c697"
-            alt="Event Creation & Management Dashboard"
-            caption="Event Creation & Management"
-            dark={dark}
-          />
-        </div>
-      </section>
-
-      {/* Platform Screenshots Gallery */}
-      <section className="max-w-5xl mx-auto">
-        <h3
-          className={cn(
-            "text-lg font-bold text-center mb-6 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          Platform Screenshots
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/7c2779c6-e671-4414-b2b8-4845f2868db1"
-            alt="Military Spouses Discovery — List View"
-            caption="Discovery — List View"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/bfc4df0d-9d52-41de-afaa-f08120ef16b7"
-            alt="Expanded Discovery Slide-out"
-            caption="Creator Profile Slide-out"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/9e5a3f58-8f1d-42d4-b40a-1a1b27614ed7"
-            alt="Verification Overview"
-            caption="Military Verification Pipeline"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/15e3af5b-ec16-4bdc-bb9d-ef729ed8579f"
-            alt="Public Event Page"
-            caption="Public Event Page"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/d1428098-0f83-4d14-9dce-9630c388a521"
-            alt="Event Registration Flow"
-            caption="Attendee Registration"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/06f7dd0c-8457-4450-99e8-55f87b34cbe0"
-            alt="Registration List"
-            caption="Registration Dashboard"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/b425c680-03be-498a-8b95-e69f3b3dfdb5"
-            alt="Event Campaign AI Generated"
-            caption="AI Campaign Builder"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/4730f6ce-b2ca-4871-8e33-8124ae33fe6c"
-            alt="Event Registration Admin"
-            caption="Registration Admin"
-            dark={dark}
-          />
-          <BrowserMockup
-            src="https://github.com/user-attachments/assets/cd8b3385-f6a4-4c7a-8e79-ba3d64d6e15e"
-            alt="Event Mobile Experience"
-            caption="Mobile Attendee App"
-            dark={dark}
-          />
-        </div>
-      </section>
 
       {/* Platform Capabilities */}
       <section className="max-w-[760px] mx-auto">
@@ -512,7 +356,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                 The platform includes integrated live streaming management for multi-destination
                 broadcasting. Production teams can manage run-of-show schedules, stream
                 destinations, and day-of checklists from a single dashboard — built around the
-                Parade Deck Experience model that has delivered 3M+ YouTube impressions at
+                MilCrunch Experience model that has delivered 3M+ YouTube impressions at
                 Military Influencer Conference.
               </p>
             </div>
@@ -766,7 +610,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                       <div>
                         <p className="text-gray-500 text-[9px] font-medium">10:30 AM</p>
                         <p className="text-white text-[11px] font-semibold mt-0.5">Military Spouse Creator Panel</p>
-                        <p className="text-gray-500 text-[9px] mt-1">PDX Stage</p>
+                        <p className="text-gray-500 text-[9px] mt-1">Experience Stage</p>
                       </div>
                       <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
                     </div>
@@ -832,7 +676,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
                         </div>
                       </div>
                       <p className="text-gray-300 text-[10px] leading-relaxed">
-                        Just landed in Tampa! Who&rsquo;s heading to the PDX stage tomorrow? &#127908;
+                        Just landed in Tampa! Who&rsquo;s heading to the Experience stage tomorrow? &#127908;
                       </p>
                       <div className="mt-2 flex items-center gap-1 text-gray-500">
                         <span className="text-[9px]">&#10084;</span>
@@ -1042,7 +886,7 @@ function OverviewTab({ dark }: { dark: boolean }) {
 /* ------------------------------------------------------------------ */
 
 const PDX_PHASES = [
-  { icon: Handshake, label: "Partnership", description: "Define the event relationship, assign your PDX team, and lock in dates and contacts." },
+  { icon: Handshake, label: "Partnership", description: "Define the event relationship, assign your Experience team, and lock in dates and contacts." },
   { icon: ClipboardList, label: "Agenda & ROS", description: "Build a color-coded run-of-show with time blocks, speakers, and conflict detection." },
   { icon: DollarSign, label: "Budget", description: "Track estimated vs. actual costs with real-time margin and sponsor coverage calculations." },
   { icon: Handshake, label: "Sponsors", description: "Manage sponsor packages, obligation checklists, and deliverables per tier." },
@@ -1082,7 +926,7 @@ function PdxTab({ dark }: { dark: boolean }) {
             dark ? "text-white" : "text-[#111827]"
           )}
         >
-          The Parade Deck{" "}
+          The MilCrunch{" "}
           <span className="text-[#6C5CE7]">Experience</span>
         </h2>
         <p
@@ -1205,12 +1049,12 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
       },
     ],
   },
-  "PDX Experience": {
+  "MilCrunch Experience": {
     summaryIcon: Radio,
     componentsIcon: Layers,
     problemIcon: Target,
     summary:
-      "The Parade Deck Experience (PDX) is a turnkey live-stage production that drops into any military event — delivering 8+ hours of live podcast sessions, multi-platform streaming, and sponsor activations that generate $150K–$250K in revenue from a single stage.",
+      "The MilCrunch Experience is a turnkey live-stage production that drops into any military event — delivering 8+ hours of live podcast sessions, multi-platform streaming, and sponsor activations that generate $150K–$250K in revenue from a single stage.",
     components: [
       "7-phase event wizard (partnership → AAR)",
       "Run-of-show builder with conflict detection",
@@ -1223,7 +1067,7 @@ const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
       {
         pain: "Event stages sit dark between keynotes with no monetization",
         solution:
-          "PDX fills every hour with creator-led sessions that sponsors pay to be part of",
+          "The Experience fills every hour with creator-led sessions that sponsors pay to be part of",
       },
       {
         pain: "Post-event reporting takes weeks of manual work",
@@ -1502,63 +1346,8 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
           turning a 3-day conference into a year-round community.
         </p>
 
-        {/* Screenshot mockups */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
-          <div>
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
-              <img
-                src="/screenshots/event-admin-dashboard.png"
-                alt="Event Management Dashboard — MIC 2026 event detail page with event name, description, dates, venue, and cover image fields"
-                className="w-full object-cover"
-              />
-            </div>
-            <p className={cn("text-xs text-center mt-2", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-              Event Management Dashboard
-            </p>
-          </div>
-          <div>
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
-              <img
-                src="/screenshots/attendee-app-preview.png"
-                alt="Attendee App tab showing admin settings on the left and Live Attendee Preview phone mockup on the right"
-                className="w-full object-cover"
-              />
-            </div>
-            <p className={cn("text-xs text-center mt-2", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-              Live Attendee App Preview
-            </p>
-          </div>
-        </div>
 
-        {/* Event creation dashboard */}
-        <div className="mt-10">
-          <img
-            src="https://github.com/user-attachments/assets/81220ee5-6067-4000-be29-070a86d1c697"
-            alt="Event Creation & Management Dashboard"
-            className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-          />
-          <p className="text-sm text-center text-gray-400 mt-2 mb-6">Event Creation &amp; Management Dashboard</p>
-        </div>
 
-        {/* Public event page + Mobile view side by side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <div>
-            <img
-              src="https://github.com/user-attachments/assets/15e3af5b-ec16-4bdc-bb9d-ef729ed8579f"
-              alt="Public Event Page"
-              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-            />
-            <p className="text-sm text-center text-gray-400 mt-2 mb-6">Public Event Page</p>
-          </div>
-          <div>
-            <img
-              src="https://github.com/user-attachments/assets/cd8b3385-f6a4-4c7a-8e79-ba3d64d6e15e"
-              alt="Mobile Attendee Experience"
-              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-            />
-            <p className="text-sm text-center text-gray-400 mt-2 mb-6">Mobile Attendee Experience</p>
-          </div>
-        </div>
 
         {/* Registration & Check-In */}
         <h3
@@ -1570,26 +1359,6 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
           Registration &amp; Check-In
         </h3>
 
-        <img
-          src="https://github.com/user-attachments/assets/d1428098-0f83-4d14-9dce-9630c388a521"
-          alt="Attendee Registration Flow"
-          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-        />
-        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Attendee Registration Flow</p>
-
-        <img
-          src="https://github.com/user-attachments/assets/2f363b0e-1c8c-4223-80c7-579430a28ee1"
-          alt="Registration Confirmation"
-          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-        />
-        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Registration Confirmation</p>
-
-        <img
-          src="https://github.com/user-attachments/assets/06f7dd0c-8457-4450-99e8-55f87b34cbe0"
-          alt="Organizer Registration Dashboard"
-          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-        />
-        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Organizer Registration Dashboard</p>
       </div>
 
       {/* PWA Showcase */}
@@ -1924,67 +1693,8 @@ function CreatorNetworkTab({ dark }: { dark: boolean }) {
         ))}
       </div>
 
-      {/* Discovery screenshots */}
-      <div className="max-w-4xl mx-auto mt-12 space-y-2">
-        <img
-          src="https://github.com/user-attachments/assets/7c2779c6-e671-4414-b2b8-4845f2868db1"
-          alt="Creator Discovery list view"
-          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-        />
-        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Creator Discovery — Search 196K+ military &amp; veteran profiles</p>
 
-        <img
-          src="https://github.com/user-attachments/assets/793c49f2-627f-4b6c-a068-959ee32f9455"
-          alt="Creator Discovery grid view"
-          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-        />
-        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Grid view with profile cards</p>
 
-        <img
-          src="https://github.com/user-attachments/assets/bfc4df0d-9d52-41de-afaa-f08120ef16b7"
-          alt="Creator profile slide-out"
-          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-        />
-        <p className="text-sm text-center text-gray-400 mt-2 mb-6">Creator profile slide-out with analytics, posts, and similar accounts</p>
-      </div>
-
-      {/* Military Verification */}
-      <div className="max-w-4xl mx-auto">
-        <h3 className={cn("text-xl font-bold mt-10 mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
-          Military Verification
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <img
-              src="https://github.com/user-attachments/assets/9e5a3f58-8f1d-42d4-b40a-1a1b27614ed7"
-              alt="4-Phase AI Verification Pipeline"
-              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-            />
-            <p className="text-sm text-center text-gray-400 mt-2 mb-6">4-Phase AI Verification Pipeline</p>
-          </div>
-          <div>
-            <img
-              src="https://github.com/user-attachments/assets/f966ffa2-78ce-4687-9fe7-8c27160ee2ef"
-              alt="Military Service Background Verification"
-              className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-            />
-            <p className="text-sm text-center text-gray-400 mt-2 mb-6">Military Service Background Verification</p>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Campaign Builder */}
-      <div className="max-w-4xl mx-auto">
-        <h3 className={cn("text-xl font-bold mt-10 mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
-          AI Campaign Builder
-        </h3>
-        <img
-          src="https://github.com/user-attachments/assets/b425c680-03be-498a-8b95-e69f3b3dfdb5"
-          alt="AI-powered social media campaign builder"
-          className="rounded-2xl border border-gray-200 shadow-lg w-full object-cover"
-        />
-        <p className="text-sm text-center text-gray-400 mt-2 mb-6">AI-powered social media campaign builder</p>
-      </div>
     </div>
   );
 }
@@ -2624,7 +2334,7 @@ export default function Prospectus() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
         {activeTab === "Overview" && <OverviewTab dark={darkMode} />}
-        {activeTab === "PDX Experience" && (
+        {activeTab === "MilCrunch Experience" && (
           <PdxTab dark={darkMode} />
         )}
         {activeTab === "Events & Attendee App" && (
@@ -2639,7 +2349,7 @@ export default function Prospectus() {
         {activeTab === "Financial Model" && (
           <FinancialModelTab dark={darkMode} />
         )}
-        {activeTab !== "Overview" && activeTab !== "PDX Experience" && activeTab !== "Events & Attendee App" && activeTab !== "Creator Network" && activeTab !== "365 Insights" && activeTab !== "Financial Model" && (
+        {activeTab !== "Overview" && activeTab !== "MilCrunch Experience" && activeTab !== "Events & Attendee App" && activeTab !== "Creator Network" && activeTab !== "365 Insights" && activeTab !== "Financial Model" && (
           <PlaceholderTab
             title={activeTab}
             description={TAB_PLACEHOLDERS[activeTab] ?? "Content coming soon."}
