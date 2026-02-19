@@ -704,14 +704,23 @@ export default function HomePage() {
                     const followers = formatFollowerCount(db.follower_count);
                     const engagement = typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : "—";
 
-                    // Extract avg views & likes from enrichment_data
+                    // Extract avg views & likes: prefer DB columns → enrichment_data → computed estimate
                     const ed = db.enrichment_data as Record<string, unknown> | null;
+                    const resultObj = ed?.result as Record<string, unknown> | undefined;
                     const plat = ed?.[db.platform] as Record<string, unknown> | undefined
-                      ?? ed?.instagram as Record<string, unknown> | undefined;
-                    const rawViews = Number(plat?.avg_views ?? plat?.avg_view_count ?? 0);
+                      ?? resultObj?.[db.platform] as Record<string, unknown> | undefined
+                      ?? ed?.instagram as Record<string, unknown> | undefined
+                      ?? resultObj?.instagram as Record<string, unknown> | undefined;
+                    const reels = plat?.reels as Record<string, unknown> | undefined;
+                    const rawViews = Number(reels?.avg_view_count ?? plat?.avg_views ?? plat?.avg_view_count ?? 0);
                     const rawLikes = Number(plat?.avg_likes ?? plat?.avg_like_count ?? 0);
-                    const avgViews = rawViews ? formatFollowerCount(rawViews) : "—";
-                    const avgLikes = rawLikes ? formatFollowerCount(rawLikes) : "—";
+                    // Computed fallback: estimate from followers × engagement rate
+                    const fc = db.follower_count ?? 0;
+                    const er = db.engagement_rate ?? 0;
+                    const estLikes = fc && er ? Math.round(fc * (er / 100)) : 0;
+                    const estViews = estLikes ? Math.round(estLikes * 3) : 0;
+                    const avgViews = db.avg_views || (rawViews ? formatFollowerCount(rawViews) : estViews ? formatFollowerCount(estViews) : "—");
+                    const avgLikes = db.avg_likes || (rawLikes ? formatFollowerCount(rawLikes) : estLikes ? formatFollowerCount(estLikes) : "—");
 
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
