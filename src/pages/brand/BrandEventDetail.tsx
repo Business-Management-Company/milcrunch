@@ -56,6 +56,7 @@ import EditSpeakerModal from "@/components/brand/EditSpeakerModal";
 import AttendeeAppTab from "@/components/brand/AttendeeAppTab";
 import AIBannerModal from "@/components/brand/AIBannerModal";
 import EventGTMPlannerTab from "@/components/brand/EventGTMPlannerTab";
+import EventAIAssistant from "@/components/brand/EventAIAssistant";
 import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ---------- types ---------- */
@@ -881,6 +882,28 @@ const BrandEventDetail = () => {
                 </Button>
               </div>
             </Card>
+
+            {event && (
+              <div className="mt-6">
+                <EventAIAssistant
+                  eventTitle={event.title}
+                  eventDescription={event.description}
+                  eventType={event.event_type}
+                  startDate={event.start_date}
+                  endDate={event.end_date}
+                  venue={event.venue}
+                  city={event.city}
+                  state={event.state}
+                  capacity={event.capacity}
+                  status={event.is_published ? "published" : "draft"}
+                  sponsors={sponsors.map(s => ({ sponsor_name: s.sponsor_name, tier: s.tier }))}
+                  speakers={speakers.map(s => ({ creator_name: s.creator_name, role: s.role, confirmed: s.confirmed }))}
+                  tickets={eventTickets.map(t => ({ name: t.name, price: t.price, quantity: t.quantity, sold: t.sold }))}
+                  registrationCount={registrations.length}
+                  agendaSessionCount={agenda.length}
+                />
+              </div>
+            )}
           </TabsContent>
 
           {/* ===== AGENDA ===== */}
