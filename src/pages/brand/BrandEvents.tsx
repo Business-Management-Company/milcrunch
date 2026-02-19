@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Plus, MapPin, Users, Mic, Handshake, Search, Loader2 } from "lucide-react";
+import { Calendar, Plus, MapPin, Users, Mic, Handshake, Search, Loader2, Sparkles, Send, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface EventRow {
   id: string;
@@ -75,6 +77,12 @@ const BrandEvents = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [regCounts, setRegCounts] = useState<Record<string, number>>({});
+
+  /* AI Agent */
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEvents();
@@ -98,23 +106,31 @@ const BrandEvents = () => {
 
       // Fetch speaker and sponsor counts
       const eventIds = (data || []).map((e: EventRow) => e.id);
-      const [speakerRes, sponsorRes] = await Promise.all([
+      const [speakerRes, sponsorRes, regRes] = await Promise.all([
         eventIds.length > 0
           ? supabase.from("event_speakers").select("event_id").in("event_id", eventIds)
           : { data: [], error: null },
         eventIds.length > 0
           ? supabase.from("event_sponsors").select("event_id").in("event_id", eventIds)
           : { data: [], error: null },
+        eventIds.length > 0
+          ? supabase.from("event_registrations").select("event_id").in("event_id", eventIds)
+          : { data: [], error: null },
       ]);
 
       const speakerCounts: Record<string, number> = {};
       const sponsorCounts: Record<string, number> = {};
+      const registrationCounts: Record<string, number> = {};
       (speakerRes.data || []).forEach((r: { event_id: string }) => {
         speakerCounts[r.event_id] = (speakerCounts[r.event_id] || 0) + 1;
       });
       (sponsorRes.data || []).forEach((r: { event_id: string }) => {
         sponsorCounts[r.event_id] = (sponsorCounts[r.event_id] || 0) + 1;
       });
+      (regRes.data || []).forEach((r: { event_id: string }) => {
+        registrationCounts[r.event_id] = (registrationCounts[r.event_id] || 0) + 1;
+      });
+      setRegCounts(registrationCounts);
 
       setEvents(
         (data || []).map((e: EventRow) => ({
@@ -144,6 +160,48 @@ const BrandEvents = () => {
     return `${s} – ${e}`;
   };
 
+  /* AI Agent handler */
+  const handleAiSubmit = async () => {
+    const q = aiPrompt.trim();
+    if (!q || aiLoading) return;
+    setAiLoading(true);
+    setAiResponse(null);
+    try {
+      const eventsContext = events.map((e) => ({
+        title: e.title,
+        type: e.event_type,
+        date: formatDateRange(e.start_date, e.end_date),
+        location: [e.venue, e.city, e.state].filter(Boolean).join(", ") || "TBD",
+        status: e.is_published ? "published" : "draft",
+        capacity: e.capacity ?? "not set",
+        registrations: regCounts[e.id] ?? 0,
+        speakers: e.speaker_count,
+        sponsors: e.sponsor_count,
+      }));
+
+      const res = await fetch("/api/anthropic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system: `You are a helpful event strategy assistant for MilCrunch, a military and veteran event management platform. The user manages the following events:\n\n${JSON.stringify(eventsContext, null, 2)}\n\nToday's date is ${format(new Date(), "MMMM d, yyyy")}. Answer concisely and actionably. Use bullet points when listing. If you reference an event, use its exact title.`,
+          messages: [{ role: "user", content: q }],
+        }),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const data = await res.json();
+      const text = (data.content?.[0]?.text ?? "").trim();
+      setAiResponse(text || "No response generated.");
+      setAiPrompt("");
+    } catch (e) {
+      console.error("[BrandEvents] AI error:", e);
+      toast.error("AI request failed. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
       <div className="max-w-7xl mx-auto">
@@ -161,6 +219,62 @@ const BrandEvents = () => {
             </Link>
           </Button>
         </div>
+
+        {/* AI Agent Prompt Bar */}
+        <div className="mb-6">
+          <div className="relative flex items-center">
+            <Sparkles className="absolute left-4 h-5 w-5 text-[#6C5CE7]" />
+            <input
+              type="text"
+              placeholder="Ask about your events... e.g. 'Which event has the most registrations?' or 'What should I focus on this week?'"
+              className={cn(
+                "w-full pl-12 pr-14 py-4 rounded-2xl text-sm",
+                "border-2 border-purple-200 dark:border-purple-800 focus:border-[#6C5CE7]",
+                "bg-white dark:bg-[#1A1D27]",
+                "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#6C5CE7]/30",
+                "outline-none transition-all placeholder:text-gray-400",
+              )}
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleAiSubmit(); }}
+              disabled={aiLoading}
+            />
+            <button
+              type="button"
+              onClick={handleAiSubmit}
+              disabled={!aiPrompt.trim() || aiLoading}
+              className={cn(
+                "absolute right-3 rounded-xl p-2 transition-colors",
+                aiPrompt.trim() && !aiLoading
+                  ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-400",
+              )}
+            >
+              {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* AI Response Card */}
+        {aiResponse && (
+          <div className="mb-6 rounded-2xl border-2 border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 p-5 relative">
+            <button
+              type="button"
+              onClick={() => setAiResponse(null)}
+              className="absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex items-start gap-3 pr-8">
+              <div className="w-7 h-7 rounded-lg bg-[#6C5CE7]/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="h-4 w-4 text-[#6C5CE7]" />
+              </div>
+              <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap min-w-0">
+                {aiResponse}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="relative max-w-md mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
