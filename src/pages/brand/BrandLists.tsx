@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeImageUrl } from "@/lib/utils";
 import CreateListModal from "@/components/CreateListModal";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
@@ -276,9 +276,14 @@ const BrandLists = () => {
                   </div>
                   <div className="flex items-start gap-3 mb-3 pt-6">
                     <img
-                      src={creator.avatar}
+                      src={safeImageUrl(creator.avatar) ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=6C5CE7&color=fff&size=128`}
                       alt={creator.name}
                       className="w-12 h-12 rounded-full object-cover border border-border shrink-0"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        el.onerror = null;
+                        el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(creator.name)}&background=6C5CE7&color=fff&size=128`;
+                      }}
                     />
                     <div className="min-w-0 flex-1">
                       <h3 className="font-medium text-foreground truncate">

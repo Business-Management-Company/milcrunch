@@ -82,7 +82,7 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const avatarRaw = (p?.picture ?? p?.profile_picture_hd ?? p?.profile_picture ?? p?.profile_pic_url ?? p?.avatar) as string | undefined | null;
   const avatar =
     avatarRaw && String(avatarRaw).trim()
-      ? avatarRaw
+      ? String(avatarRaw).trim().replace(/^http:\/\//i, "https://")
       : `https://ui-avatars.com/api/?name=${encodeURIComponent(String(name))}&background=random&size=128`;
 
   const followers =

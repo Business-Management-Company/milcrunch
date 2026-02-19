@@ -679,11 +679,11 @@ export function extractAvatarFromEnrichment(enrichData: unknown): string | null 
       (obj.profile_pic_url as string) ||
       (obj.avatar as string) ||
       null;
-    if (url && typeof url === "string" && url.trim() && !url.includes("ui-avatars.com")) return url;
+    if (url && typeof url === "string" && url.trim() && !url.includes("ui-avatars.com")) return url.replace(/^http:\/\//i, "https://");
     const bi = obj.basicInfo as Record<string, unknown> | undefined;
     if (bi) {
       const biUrl = (bi.profilePicture as string) || null;
-      if (biUrl && typeof biUrl === "string" && biUrl.trim() && !biUrl.includes("ui-avatars.com")) return biUrl;
+      if (biUrl && typeof biUrl === "string" && biUrl.trim() && !biUrl.includes("ui-avatars.com")) return biUrl.replace(/^http:\/\//i, "https://");
     }
     return null;
   };

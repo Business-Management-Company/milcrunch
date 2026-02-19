@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { safeImageUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -445,9 +446,14 @@ export default function FeaturedCreators() {
                   <TableCell>
                     {row.avatar_url ? (
                       <img
-                        src={row.avatar_url}
+                        src={safeImageUrl(row.avatar_url)!}
                         alt={row.display_name}
                         className="h-10 w-10 rounded-full object-cover"
+                        onError={(e) => {
+                          const el = e.currentTarget;
+                          el.onerror = null;
+                          el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.display_name)}&background=6C5CE7&color=fff&size=128`;
+                        }}
                       />
                     ) : (
                       <div

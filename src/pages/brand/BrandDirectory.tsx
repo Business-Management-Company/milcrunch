@@ -43,7 +43,7 @@ import {
   Pencil,
   ExternalLink,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeImageUrl } from "@/lib/utils";
 import {
   fetchDirectoriesWithCounts,
   fetchDirectoryMembers,
@@ -97,7 +97,7 @@ function memberToCreatorCard(m: DirectoryMember): CreatorCard {
     id: m.id,
     name: m.creator_name ?? m.creator_handle,
     username: m.creator_handle,
-    avatar: m.avatar_url || m.ic_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.creator_name ?? m.creator_handle)}&background=random&size=128`,
+    avatar: safeImageUrl(m.avatar_url) || safeImageUrl(m.ic_avatar_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.creator_name ?? m.creator_handle)}&background=random&size=128`,
     followers: m.follower_count ?? 0,
     engagementRate: m.engagement_rate ?? 0,
     platforms: m.platforms ?? ["instagram"],
@@ -714,7 +714,7 @@ const BrandDirectory = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((m) => {
-                const imgSrc = m.avatar_url || m.ic_avatar_url || null;
+                const imgSrc = safeImageUrl(m.avatar_url) || safeImageUrl(m.ic_avatar_url) || null;
                 const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                 const isToggling = togglingIds.has(m.id);
                 const platforms = m.platforms ?? [];
@@ -728,8 +728,11 @@ const BrandDirectory = () => {
                           className="w-full h-full object-cover absolute inset-0"
                           onError={(e) => {
                             const el = e.currentTarget;
-                            if (m.ic_avatar_url && el.src !== m.ic_avatar_url && m.avatar_url !== m.ic_avatar_url) {
-                              el.src = m.ic_avatar_url;
+                            if (el.dataset.retried) { el.style.display = "none"; return; }
+                            el.dataset.retried = "1";
+                            const fallback = safeImageUrl(m.ic_avatar_url);
+                            if (fallback && el.src !== fallback) {
+                              el.src = fallback;
                             } else {
                               el.style.display = "none";
                             }
@@ -804,7 +807,7 @@ const BrandDirectory = () => {
               </thead>
               <tbody>
                 {filtered.map((m) => {
-                  const imgSrc = m.avatar_url || m.ic_avatar_url || null;
+                  const imgSrc = safeImageUrl(m.avatar_url) || safeImageUrl(m.ic_avatar_url) || null;
                   const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                   const isToggling = togglingIds.has(m.id);
                   return (
@@ -819,8 +822,11 @@ const BrandDirectory = () => {
                                 className="w-full h-full object-cover absolute inset-0"
                                 onError={(e) => {
                                   const el = e.currentTarget;
-                                  if (m.ic_avatar_url && el.src !== m.ic_avatar_url && m.avatar_url !== m.ic_avatar_url) {
-                                    el.src = m.ic_avatar_url;
+                                  if (el.dataset.retried) { el.style.display = "none"; return; }
+                                  el.dataset.retried = "1";
+                                  const fallback = safeImageUrl(m.ic_avatar_url);
+                                  if (fallback && el.src !== fallback) {
+                                    el.src = fallback;
                                   } else {
                                     el.style.display = "none";
                                   }

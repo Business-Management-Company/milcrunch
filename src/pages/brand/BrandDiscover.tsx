@@ -279,6 +279,12 @@ const EnrichShimmer = () => (
   <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse inline-block" />
 );
 
+/** Force image URL to HTTPS to prevent mixed-content flash. */
+function safeImgUrl(url: string | null | undefined): string | null {
+  if (!url || !url.trim()) return null;
+  return url.replace(/^http:\/\//i, "https://");
+}
+
 /** Fallback avatar URL using ui-avatars when the real image fails to load. */
 function avatarFallback(name: string) {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6C5CE7&color=fff&size=128`;
@@ -287,6 +293,8 @@ function avatarFallback(name: string) {
 /** onError handler for creator avatar <img> tags — swaps to initials on failure. */
 function onAvatarError(e: React.SyntheticEvent<HTMLImageElement>, name: string) {
   const img = e.currentTarget;
+  if (img.dataset.retried) return;
+  img.dataset.retried = "1";
   img.onerror = null;
   img.src = avatarFallback(name);
 }
@@ -1588,7 +1596,7 @@ const BrandDiscover = () => {
             {contactConfirmCreator && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
                 <img
-                  src={contactConfirmCreator.avatar}
+                  src={safeImgUrl(contactConfirmCreator.avatar) ?? avatarFallback(contactConfirmCreator.name)}
                   alt=""
                   loading="lazy"
                   onError={(e) => onAvatarError(e, contactConfirmCreator.name)}
@@ -2190,7 +2198,7 @@ const BrandDiscover = () => {
                               <div className="flex items-center gap-3">
                                 <div className="relative shrink-0">
                                   <img
-                                    src={creator.avatar}
+                                    src={safeImgUrl(creator.avatar) ?? avatarFallback(creator.name)}
                                     alt={creator.name}
                                     loading="lazy"
                                     onError={(e) => onAvatarError(e, creator.name)}
@@ -2389,7 +2397,7 @@ const BrandDiscover = () => {
                         <div className="flex items-center gap-3 mb-2">
                           <div className="relative shrink-0">
                             <img
-                              src={creator.avatar}
+                              src={safeImgUrl(creator.avatar) ?? avatarFallback(creator.name)}
                               alt={creator.name}
                               loading="lazy"
                               onError={(e) => onAvatarError(e, creator.name)}

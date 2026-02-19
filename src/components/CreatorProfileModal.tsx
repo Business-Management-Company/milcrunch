@@ -40,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { cn } from "@/lib/utils";
+import { cn, safeImageUrl } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -459,8 +459,9 @@ export default function CreatorProfileModal({
     (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username ?? username ?? "";
   const displayName =
     (igRecord?.full_name as string) ?? (resultTop.first_name as string) ?? creator?.name ?? displayUsername ?? "—";
-  const picture =
+  const pictureRaw =
     (igRecord?.profile_picture_hd as string) ?? (igRecord?.profile_picture as string) ?? creator?.avatar ?? "";
+  const picture = safeImageUrl(pictureRaw) ?? "";
   const bio = useMemo(() => {
     if (selectedPlatform === "tiktok" && tiktokData) {
       return (tiktokData.biography as string) ?? (tiktokData.bio as string) ?? creator?.bio ?? "";
@@ -724,11 +725,22 @@ export default function CreatorProfileModal({
         <div className="flex h-full flex-col md:flex-row overflow-hidden">
           {/* Left panel - fixed ~350px */}
           <div className="flex w-full flex-col border-r border-border dark:border-gray-800 bg-white dark:bg-[#0F1117] p-6 md:w-[350px] shrink-0">
-            <img
-              src={picture || undefined}
-              alt={displayName}
-              className="mx-auto mb-4 h-40 w-40 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-            />
+            {picture ? (
+              <img
+                src={picture}
+                alt={displayName}
+                className="mx-auto mb-4 h-40 w-40 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                onError={(e) => {
+                  const el = e.currentTarget;
+                  el.onerror = null;
+                  el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6C5CE7&color=fff&size=256`;
+                }}
+              />
+            ) : (
+              <div className="mx-auto mb-4 h-40 w-40 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-3xl border-2 border-gray-200 dark:border-gray-700">
+                {displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+              </div>
+            )}
             <p className="text-lg font-bold text-center text-gray-900 dark:text-white">
               {displayName}
               {isVerified && (

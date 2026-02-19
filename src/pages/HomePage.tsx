@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { safeImageUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -190,11 +191,12 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 };
 
 function HeroAvatar({ src, name, handle }: { src: string | null; name: string; handle: string }) {
+  const safeSrc = safeImageUrl(src);
   const [failed, setFailed] = useState(false);
-  if (src && !failed) {
+  if (safeSrc && !failed) {
     return (
       <img
-        src={src}
+        src={safeSrc}
         alt={name}
         className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100"
         onError={() => setFailed(true)}
@@ -213,11 +215,12 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
   // 3-tier fallback: Supabase Storage → Influencers.club URL → Initials
-  const [imgSrc, setImgSrc] = useState<string | null>(c.avatar_url || c.ic_avatar_url || null);
+  const [imgSrc, setImgSrc] = useState<string | null>(safeImageUrl(c.avatar_url) || safeImageUrl(c.ic_avatar_url) || null);
   const [imgFailed, setImgFailed] = useState(false);
   const handleImgError = () => {
-    if (imgSrc === c.avatar_url && c.ic_avatar_url && c.ic_avatar_url !== c.avatar_url) {
-      setImgSrc(c.ic_avatar_url);
+    const safeFallback = safeImageUrl(c.ic_avatar_url);
+    if (imgSrc === safeImageUrl(c.avatar_url) && safeFallback && safeFallback !== imgSrc) {
+      setImgSrc(safeFallback);
     } else {
       setImgFailed(true);
     }

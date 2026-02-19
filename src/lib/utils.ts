@@ -5,6 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Force an image URL to HTTPS to prevent mixed-content errors that cause flashing. */
+export function safeImageUrl(url: string | null | undefined): string | null {
+  if (!url || !url.trim()) return null;
+  return url.replace(/^http:\/\//i, "https://");
+}
+
 /**
  * Escape HTML to prevent XSS, then convert basic markdown (**bold**, *italic*) to HTML.
  * Safe to use with dangerouslySetInnerHTML for AI/user message content.
