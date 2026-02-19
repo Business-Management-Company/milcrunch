@@ -417,6 +417,127 @@ function PostCard({
 }
 
 /* ------------------------------------------------------------------ */
+/* Campaign Preview Mockup with Device Switcher                        */
+/* ------------------------------------------------------------------ */
+
+type DeviceView = "web" | "mobile" | "ipad";
+
+function CampaignPreviewMockup() {
+  const [device, setDevice] = useState<DeviceView>("web");
+
+  const devices: { key: DeviceView; label: string }[] = [
+    { key: "web", label: "Web" },
+    { key: "mobile", label: "Mobile" },
+    { key: "ipad", label: "iPad" },
+  ];
+
+  const mockContent = (
+    <>
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#8B7CF7] flex items-center justify-center mb-5 shadow-md mx-auto">
+        <Megaphone className="h-7 w-7 text-white" />
+      </div>
+      <p className="text-gray-800 dark:text-gray-200 font-semibold text-sm mb-1.5">Campaign Preview</p>
+      <p className="text-xs text-gray-400 leading-relaxed max-w-[260px] mx-auto">
+        Fill out the form and click Generate to see your campaign posts here.
+      </p>
+    </>
+  );
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full bg-gray-50 dark:bg-[#0F1117] rounded-xl p-6">
+      {/* Device switcher */}
+      <div className="flex gap-1 bg-gray-200 dark:bg-gray-800 rounded-lg p-1 mb-6">
+        {devices.map((d) => (
+          <button
+            key={d.key}
+            type="button"
+            onClick={() => setDevice(d.key)}
+            className={cn(
+              "px-4 py-1.5 rounded-md text-xs font-medium transition-all",
+              device === d.key
+                ? "bg-white dark:bg-[#1A1D27] text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            )}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Web view — browser mockup */}
+      {device === "web" && (
+        <div className="w-full max-w-[520px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
+          {/* Browser chrome */}
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-[#111827] border-b border-gray-200 dark:border-gray-700">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-red-400" />
+              <div className="w-3 h-3 rounded-full bg-yellow-400" />
+              <div className="w-3 h-3 rounded-full bg-green-400" />
+            </div>
+            <div className="flex-1 ml-3">
+              <div className="bg-white dark:bg-[#0F1117] rounded-md px-3 py-1 text-xs text-gray-400 border border-gray-200 dark:border-gray-700 truncate">
+                milcrunch.com/brand/campaigns
+              </div>
+            </div>
+          </div>
+          {/* Page content */}
+          <div className="px-8 py-10 min-h-[340px] flex flex-col items-center justify-center text-center">
+            {mockContent}
+            <div className="mt-6 w-full max-w-[380px] space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+                <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+                <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+              </div>
+              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
+              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
+              <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-2" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile view — phone mockup */}
+      {device === "mobile" && (
+        <div className="relative w-[260px] rounded-[2.5rem] border-[6px] border-gray-800 dark:border-gray-600 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-gray-800 dark:bg-gray-600 rounded-b-2xl z-10" />
+          <div className="pt-10 pb-8 px-5 min-h-[400px] flex flex-col items-center justify-center text-center">
+            {mockContent}
+            <div className="mt-6 w-full space-y-2.5">
+              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
+              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
+              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-3/5" />
+              <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-3" />
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-20 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+        </div>
+      )}
+
+      {/* iPad view — tablet mockup */}
+      {device === "ipad" && (
+        <div className="relative w-[400px] rounded-[1.5rem] border-[5px] border-gray-800 dark:border-gray-600 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-600 dark:bg-gray-500 rounded-full z-10" />
+          <div className="pt-8 pb-6 px-6 min-h-[320px] flex flex-col items-center justify-center text-center">
+            {mockContent}
+            <div className="mt-6 w-full max-w-[320px] space-y-2.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+                <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+              </div>
+              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
+              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
+              <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-2" />
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Main Page                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -1030,31 +1151,7 @@ Make the captions authentic and engaging for a military community audience. Refe
             )}
 
             {!generating && !campaign && (
-              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-[#0F1117] rounded-xl p-8">
-                {/* Mock phone frame */}
-                <div className="relative w-[280px] rounded-[2.5rem] border-[6px] border-gray-800 dark:border-gray-600 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
-                  {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-gray-800 dark:bg-gray-600 rounded-b-2xl z-10" />
-                  {/* Screen content */}
-                  <div className="pt-10 pb-8 px-5 min-h-[420px] flex flex-col items-center justify-center text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#8B7CF7] flex items-center justify-center mb-5 shadow-md">
-                      <Megaphone className="h-7 w-7 text-white" />
-                    </div>
-                    <p className="text-gray-800 dark:text-gray-200 font-semibold text-sm mb-1.5">Campaign Preview</p>
-                    <p className="text-xs text-gray-400 leading-relaxed max-w-[200px]">
-                      Fill out the form and click Generate to see your campaign posts here.
-                    </p>
-                    <div className="mt-6 w-full space-y-2.5">
-                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
-                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
-                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-3/5" />
-                      <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-3" />
-                    </div>
-                  </div>
-                  {/* Home indicator */}
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-24 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
-                </div>
-              </div>
+              <CampaignPreviewMockup />
             )}
 
             {!generating && campaign && (

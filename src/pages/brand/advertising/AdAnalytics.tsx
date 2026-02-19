@@ -79,7 +79,7 @@ class AdAnalyticsErrorBoundary extends React.Component<
           </pre>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+            className="mt-4 px-4 py-2 bg-[#6B46C1] text-white rounded-lg hover:bg-[#5A3AA8] transition-colors text-sm font-medium"
           >
             Reload
           </button>
@@ -131,7 +131,7 @@ function AdAnalytics() {
             <button
               key={val}
               onClick={() => setTimeFilter(val)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${timeFilter === val ? "bg-[#6C5CE7] text-white" : "text-gray-400 hover:text-white"}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${timeFilter === val ? "bg-[#6B46C1] text-white" : "text-gray-400 hover:text-white"}`}
             >
               {label}
             </button>
@@ -170,7 +170,7 @@ function AdAnalytics() {
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9CA3AF" }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9CA3AF" }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(val: number) => [`$${val.toLocaleString()}`, "Spend"]} />
-                  <Bar dataKey="spend" fill="#6C5CE7" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="spend" fill="#6B46C1" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -190,7 +190,7 @@ function AdAnalytics() {
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9CA3AF" }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9CA3AF" }} tickFormatter={v => `${(v / 1000).toFixed(0)}K`} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(val: number) => [`${(val / 1000).toFixed(0)}K`, "Impressions"]} />
-                  <Line type="monotone" dataKey="impressions" stroke="#6C5CE7" strokeWidth={2.5} dot={{ fill: "#6C5CE7", r: 4 }} />
+                  <Line type="monotone" dataKey="impressions" stroke="#6B46C1" strokeWidth={2.5} dot={{ fill: "#6B46C1", r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (

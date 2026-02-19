@@ -7,12 +7,10 @@ import {
   Search,
   Calendar,
   Mic,
-  Trophy,
   Handshake,
   Headphones,
   Monitor,
   FileText,
-  BarChart3,
   Radio,
   ShoppingBag,
   Building2,
@@ -77,9 +75,8 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "EVENTS",
     items: [
       { href: "/brand/events", label: "Events", icon: Calendar },
-      { href: "/brand/pdx/new", label: "PDX Stage", icon: Radio },
+      { href: "/brand/pdx/new", label: "MilCrunch Experience", icon: Radio },
       { href: "/speakers", label: "Speakers", icon: Mic },
-      { href: "/awards", label: "Awards", icon: Trophy },
     ],
   },
   {
@@ -141,13 +138,6 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     items: [
       { href: "/brand/shop/merch", label: "Merch Store", icon: ShoppingBag },
       { href: "/brand/shop/swag", label: "SWAG Packages", icon: Package },
-    ],
-  },
-  {
-    key: "analytics",
-    label: "ANALYTICS",
-    items: [
-      { href: "/analytics", label: "Analytics", icon: BarChart3 },
     ],
   },
   {

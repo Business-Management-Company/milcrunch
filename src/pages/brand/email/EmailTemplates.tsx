@@ -490,8 +490,16 @@ const EmailTemplates = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
         {BUILT_IN_TEMPLATES.map(tpl => (
           <Card key={tpl.category} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleUseBuiltIn(tpl)}>
-            <div className="h-32 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color}, ${tpl.thumbnail_color}dd)` }}>
-              <TemplateIcon category={tpl.category} className="h-12 w-12" />
+            <div
+              className="h-32 flex items-center justify-center relative"
+              style={{
+                background: tpl.thumbnail_image
+                  ? `url('${tpl.thumbnail_image}') center/cover no-repeat, linear-gradient(135deg, ${tpl.thumbnail_color}, ${tpl.thumbnail_color}dd)`
+                  : `linear-gradient(135deg, ${tpl.thumbnail_color}, ${tpl.thumbnail_color}dd)`,
+              }}
+            >
+              {tpl.thumbnail_image && <div className="absolute inset-0 bg-black/30" />}
+              <TemplateIcon category={tpl.category} className="h-12 w-12 relative z-10" />
             </div>
             <div className="p-4">
               <h3 className="font-semibold text-foreground">{tpl.name}</h3>

@@ -9,6 +9,7 @@ export interface BuiltInTemplate {
   category: string;
   description: string;
   thumbnail_color: string;
+  thumbnail_image?: string;
   html: string;
 }
 
@@ -29,10 +30,13 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
     category: "event",
     description: "Purple header with event details and RSVP button",
     thumbnail_color: "#6C5CE7",
+    thumbnail_image: "https://images.unsplash.com/photo-1579192181049-30e4c148cfa0?w=400&h=160&fit=crop&crop=center",
     html: `${WRAPPER_START}
-<tr><td style="background:linear-gradient(135deg,#6C5CE7,#000741);padding:48px 40px;text-align:center;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1579192181049-30e4c148cfa0?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#6C5CE7,#000741);padding:0;">
+<div style="background:rgba(0,7,65,0.65);padding:48px 40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">You're Invited!</h1>
 <p style="margin:12px 0 0;color:#c4b5fd;font-size:16px;">A special event just for you, {{first_name}}</p>
+</div>
 </td></tr>
 <tr><td style="padding:40px;">
 <h2 style="margin:0 0 16px;color:#111827;font-size:22px;">[Event Name]</h2>
@@ -50,9 +54,12 @@ ${WRAPPER_END}`,
     category: "welcome",
     description: "Welcome message with next steps and social links",
     thumbnail_color: "#10B981",
+    thumbnail_image: "https://images.unsplash.com/photo-1598128558393-70ff21f8be44?w=400&h=160&fit=crop&crop=center",
     html: `${WRAPPER_START}
-<tr><td style="background:#10B981;padding:40px;text-align:center;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1598128558393-70ff21f8be44?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, #10B981;padding:0;">
+<div style="background:rgba(5,90,60,0.7);padding:40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Welcome to MilCrunch!</h1>
+</div>
 </td></tr>
 <tr><td style="padding:40px;">
 <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:26px;">Hey {{first_name}},</p>
@@ -81,10 +88,13 @@ ${WRAPPER_END}`,
     category: "report",
     description: "Data table layout with logo header for sponsor updates",
     thumbnail_color: "#3B82F6",
+    thumbnail_image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=160&fit=crop&crop=center",
     html: `${WRAPPER_START}
-<tr><td style="background:#000741;padding:32px 40px;text-align:center;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, #000741;padding:0;">
+<div style="background:rgba(0,7,65,0.75);padding:32px 40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:700;">Sponsorship Report</h1>
 <p style="margin:8px 0 0;color:#93c5fd;font-size:14px;">[Month/Year]</p>
+</div>
 </td></tr>
 <tr><td style="padding:40px;">
 <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:26px;">Hi {{first_name}}, here's your sponsorship performance summary:</p>
@@ -109,10 +119,13 @@ ${WRAPPER_END}`,
     category: "newsletter",
     description: "Multi-section newsletter with image placeholders",
     thumbnail_color: "#F59E0B",
+    thumbnail_image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=160&fit=crop&crop=center",
     html: `${WRAPPER_START}
-<tr><td style="background:linear-gradient(135deg,#F59E0B,#D97706);padding:40px;text-align:center;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#F59E0B,#D97706);padding:0;">
+<div style="background:rgba(120,80,0,0.65);padding:40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">MilCrunch Weekly</h1>
 <p style="margin:8px 0 0;color:#fef3c7;font-size:14px;">[Date]</p>
+</div>
 </td></tr>
 <tr><td style="padding:40px;">
 <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:26px;">Hey {{first_name}}, here's what's happening this week:</p>
@@ -135,11 +148,14 @@ ${WRAPPER_END}`,
     category: "reminder",
     description: "Countdown-style reminder with schedule highlights",
     thumbnail_color: "#EF4444",
+    thumbnail_image: "https://images.unsplash.com/photo-1523875194681-bedd468c58bf?w=400&h=160&fit=crop&crop=center",
     html: `${WRAPPER_START}
-<tr><td style="background:linear-gradient(135deg,#EF4444,#B91C1C);padding:40px;text-align:center;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1523875194681-bedd468c58bf?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#EF4444,#B91C1C);padding:0;">
+<div style="background:rgba(140,20,20,0.7);padding:40px;text-align:center;">
 <p style="margin:0 0 8px;color:#fecaca;font-size:14px;text-transform:uppercase;letter-spacing:2px;">Happening Soon</p>
 <h1 style="margin:0;color:#ffffff;font-size:32px;font-weight:700;">[Event Name]</h1>
 <p style="margin:16px 0 0;color:#ffffff;font-size:18px;">[Date] &bull; [Time]</p>
+</div>
 </td></tr>
 <tr><td style="padding:40px;">
 <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:26px;">Hey {{first_name}}, just a friendly reminder — this event is right around the corner!</p>
@@ -168,10 +184,13 @@ ${WRAPPER_END}`,
     category: "thankyou",
     description: "Thank you message with event highlights and CTA",
     thumbnail_color: "#8B5CF6",
+    thumbnail_image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=160&fit=crop&crop=center",
     html: `${WRAPPER_START}
-<tr><td style="background:linear-gradient(135deg,#8B5CF6,#6D28D9);padding:48px 40px;text-align:center;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#8B5CF6,#6D28D9);padding:0;">
+<div style="background:rgba(80,30,160,0.7);padding:48px 40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Thank You!</h1>
 <p style="margin:12px 0 0;color:#ddd6fe;font-size:16px;">We couldn't have done it without you, {{first_name}}</p>
+</div>
 </td></tr>
 <tr><td style="padding:40px;">
 <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:26px;">Thank you for being part of [Event Name]! Here are some highlights:</p>

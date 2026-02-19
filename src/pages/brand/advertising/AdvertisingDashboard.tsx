@@ -55,7 +55,7 @@ class AdvertisingDashboardErrorBoundary extends React.Component<
           </pre>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+            className="mt-4 px-4 py-2 bg-[#6B46C1] text-white rounded-lg hover:bg-[#5A3AA8] transition-colors text-sm font-medium"
           >
             Reload
           </button>
@@ -111,7 +111,7 @@ function AdvertisingDashboard() {
           const Icon = link.icon;
           return (
             <Link key={link.href} to={link.href}>
-              <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl hover:border-[#6C5CE7] transition-colors group cursor-pointer">
+              <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl hover:border-[#6B46C1] transition-colors group cursor-pointer">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
                     <Icon className="h-5 w-5 text-purple-600 dark:text-purple-400" />

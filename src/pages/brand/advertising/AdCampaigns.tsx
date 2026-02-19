@@ -74,7 +74,7 @@ class AdCampaignsErrorBoundary extends React.Component<
           </pre>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+            className="mt-4 px-4 py-2 bg-[#6B46C1] text-white rounded-lg hover:bg-[#5A3AA8] transition-colors text-sm font-medium"
           >
             Reload
           </button>
@@ -115,7 +115,7 @@ function AdCampaigns() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white">
+            <Button className="bg-[#6B46C1] hover:bg-[#5A3AA8] text-white">
               <Plus className="h-4 w-4 mr-2" /> Create Campaign
             </Button>
           </DialogTrigger>
@@ -147,7 +147,7 @@ function AdCampaigns() {
                 <Input type="date" className="dark:bg-[#111827] dark:border-gray-700 dark:text-white" />
               </div>
               <Button
-                className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white"
+                className="w-full bg-[#6B46C1] hover:bg-[#5A3AA8] text-white"
                 onClick={() => { if (guardAction("create")) return; setOpen(false); }}
               >
                 Create Campaign
@@ -214,7 +214,7 @@ function AdCampaigns() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-[#6C5CE7] rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-[#6B46C1] rounded-full" style={{ width: `${pct}%` }} />
                           </div>
                           <span className="text-xs text-gray-400 w-8">{pct}%</span>
                         </div>

@@ -69,7 +69,7 @@ class RateDeskErrorBoundary extends React.Component<
           </pre>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+            className="mt-4 px-4 py-2 bg-[#6B46C1] text-white rounded-lg hover:bg-[#5A3AA8] transition-colors text-sm font-medium"
           >
             Reload
           </button>
@@ -125,7 +125,7 @@ function RateDesk() {
             <button
               key={s}
               onClick={() => setScenario(s)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${scenario === s ? "bg-[#6C5CE7] text-white" : "text-gray-400 hover:text-white"}`}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${scenario === s ? "bg-[#6B46C1] text-white" : "text-gray-400 hover:text-white"}`}
             >
               {s}
             </button>
@@ -136,7 +136,7 @@ function RateDesk() {
             <button
               key={val}
               onClick={() => setTimeWindow(val)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${timeWindow === val ? "bg-[#6C5CE7] text-white" : "text-gray-400 hover:text-white"}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${timeWindow === val ? "bg-[#6B46C1] text-white" : "text-gray-400 hover:text-white"}`}
             >
               {label}
             </button>
@@ -147,7 +147,7 @@ function RateDesk() {
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${typeFilter === t ? "bg-[#6C5CE7] text-white" : "text-gray-400 hover:text-white"}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${typeFilter === t ? "bg-[#6B46C1] text-white" : "text-gray-400 hover:text-white"}`}
             >
               {t === "all" ? "All Types" : t}
             </button>
@@ -267,7 +267,7 @@ function RateDesk() {
                       <span className="text-xl font-bold text-emerald-400">${proposalTotal.toLocaleString()}</span>
                     </div>
                     <Button
-                      className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white"
+                      className="w-full bg-[#6B46C1] hover:bg-[#5A3AA8] text-white"
                       onClick={() => { if (guardAction("create")) return; }}
                     >
                       <FileDown className="h-4 w-4 mr-2" />

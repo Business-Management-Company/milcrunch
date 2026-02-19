@@ -74,7 +74,7 @@ class LeadManagerErrorBoundary extends React.Component<
           </pre>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+            className="mt-4 px-4 py-2 bg-[#6B46C1] text-white rounded-lg hover:bg-[#5A3AA8] transition-colors text-sm font-medium"
           >
             Reload
           </button>
@@ -116,7 +116,7 @@ function LeadManager() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white">
+            <Button className="bg-[#6B46C1] hover:bg-[#5A3AA8] text-white">
               <Plus className="h-4 w-4 mr-2" /> Add Lead
             </Button>
           </DialogTrigger>
@@ -144,7 +144,7 @@ function LeadManager() {
                 <Input placeholder="Outreach, Discovery, Proposal, Negotiation" className="dark:bg-[#111827] dark:border-gray-700 dark:text-white" />
               </div>
               <Button
-                className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white"
+                className="w-full bg-[#6B46C1] hover:bg-[#5A3AA8] text-white"
                 onClick={() => { if (guardAction("create")) return; setOpen(false); }}
               >
                 Add Lead
@@ -178,7 +178,7 @@ function LeadManager() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${tab === t ? "bg-[#6C5CE7] text-white" : "text-gray-400 hover:text-white"}`}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${tab === t ? "bg-[#6B46C1] text-white" : "text-gray-400 hover:text-white"}`}
           >
             {t === "all" ? "All Leads" : t}
           </button>
