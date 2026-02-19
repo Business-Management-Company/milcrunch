@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,104 +78,7 @@ function blankArticle(): EditableArticle {
 }
 
 // ---------------------------------------------------------------------------
-// Simple markdown renderer (mirrors public article page logic)
-// ---------------------------------------------------------------------------
-
-function renderMarkdown(md: string) {
-  if (!md) return null;
-
-  const lines = md.split("\n");
-  const elements: React.ReactNode[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // Blank line
-    if (line.trim() === "") {
-      i++;
-      continue;
-    }
-
-    // h2
-    if (line.startsWith("## ")) {
-      elements.push(
-        <h2
-          key={i}
-          className="text-lg font-bold text-white mt-6 mb-2 first:mt-0"
-        >
-          {line.slice(3)}
-        </h2>,
-      );
-      i++;
-      continue;
-    }
-
-    // h3
-    if (line.startsWith("### ")) {
-      elements.push(
-        <h3
-          key={i}
-          className="text-base font-semibold text-white/90 mt-4 mb-1"
-        >
-          {line.slice(4)}
-        </h3>,
-      );
-      i++;
-      continue;
-    }
-
-    // Callout (blockquote)
-    if (line.startsWith("> ")) {
-      const calloutLines: string[] = [];
-      while (i < lines.length && lines[i].startsWith("> ")) {
-        calloutLines.push(lines[i].slice(2));
-        i++;
-      }
-      elements.push(
-        <div
-          key={`callout-${i}`}
-          className="border-l-2 border-[#6C5CE7] bg-[#6C5CE7]/10 pl-4 py-2 my-3 text-sm text-white/80 rounded-r"
-        >
-          {calloutLines.map((cl, idx) => (
-            <p key={idx}>{cl}</p>
-          ))}
-        </div>,
-      );
-      continue;
-    }
-
-    // Bullet list
-    if (line.startsWith("- ")) {
-      const items: string[] = [];
-      while (i < lines.length && lines[i].startsWith("- ")) {
-        items.push(lines[i].slice(2));
-        i++;
-      }
-      elements.push(
-        <ul
-          key={`ul-${i}`}
-          className="list-disc list-inside space-y-1 my-2 text-sm text-white/70"
-        >
-          {items.map((item, idx) => (
-            <li key={idx}>{item}</li>
-          ))}
-        </ul>,
-      );
-      continue;
-    }
-
-    // Regular paragraph
-    elements.push(
-      <p key={i} className="text-sm text-white/70 my-2 leading-relaxed">
-        {line}
-      </p>,
-    );
-    i++;
-  }
-
-  return <>{elements}</>;
-}
+/* ---------- markdown rendering handled by shared MarkdownRenderer component ---------- */
 
 // ---------------------------------------------------------------------------
 // Category badge color
@@ -562,7 +466,9 @@ export default function KbAdmin() {
                 <p className="text-sm text-white/50 mb-4">{draft.summary}</p>
               )}
 
-              <div className="mt-4">{renderMarkdown(draft.content)}</div>
+              <div className="mt-4">
+                {draft.content && <MarkdownRenderer content={draft.content} className="text-white/70 [&_h2]:text-white [&_h3]:text-white/90 [&_strong]:text-white/90" />}
+              </div>
 
               {!draft.content && (
                 <p className="text-white/20 italic text-sm mt-6">

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Send, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
 import { getChatResponse } from "@/lib/chat-responses";
 
@@ -157,7 +158,11 @@ export default function FloatingAdminChat() {
                       : "bg-white text-gray-800 rounded-bl-sm mr-auto shadow-sm dark:bg-gray-800 dark:text-gray-100"
                   )}
                 >
-                  <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                  {m.role === "assistant" ? (
+                    <MarkdownRenderer content={m.text} />
+                  ) : (
+                    <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                  )}
                   {m.cta && (
                     <button
                       onClick={() => {

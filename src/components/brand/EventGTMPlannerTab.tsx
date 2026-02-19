@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { scrapeFirecrawl } from "@/lib/verification";
 import { format, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
 /* ---------- types ---------- */
 interface Props {
@@ -299,59 +300,7 @@ async function callAnthropic(system: string, userMessage: string, maxTokens = 40
   return (data.content?.[0]?.text ?? "").trim();
 }
 
-/* ---------- simple markdown renderer ---------- */
-function renderMarkdown(text: string) {
-  const lines = text.split("\n");
-  const elements: React.ReactNode[] = [];
-  let listItems: string[] = [];
-  let listKey = 0;
-
-  const flushList = () => {
-    if (listItems.length > 0) {
-      elements.push(
-        <ul key={`list-${listKey++}`} className="list-disc list-inside space-y-1 mb-3 text-sm text-gray-700 dark:text-gray-300">
-          {listItems.map((item, i) => <li key={i} dangerouslySetInnerHTML={{ __html: inlineFmt(item) }} />)}
-        </ul>
-      );
-      listItems = [];
-    }
-  };
-
-  const inlineFmt = (s: string) =>
-    s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-     .replace(/`(.+?)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">$1</code>');
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (/^#{1,3}\s/.test(line)) {
-      flushList();
-      const level = (line.match(/^#+/) || [""])[0].length;
-      const text = line.replace(/^#+\s*/, "");
-      const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
-      const cls = level === 1
-        ? "text-lg font-bold mt-5 mb-2 text-gray-900 dark:text-white"
-        : level === 2
-        ? "text-base font-semibold mt-4 mb-2 text-gray-800 dark:text-gray-100"
-        : "text-sm font-semibold mt-3 mb-1 text-gray-700 dark:text-gray-200";
-      elements.push(<Tag key={i} className={cls} dangerouslySetInnerHTML={{ __html: inlineFmt(text) }} />);
-    } else if (/^[-*]\s/.test(line)) {
-      listItems.push(line.replace(/^[-*]\s*/, ""));
-    } else if (/^\d+\.\s/.test(line)) {
-      listItems.push(line.replace(/^\d+\.\s*/, ""));
-    } else if (line.trim() === "") {
-      flushList();
-    } else {
-      flushList();
-      elements.push(
-        <p key={i} className="text-sm text-gray-700 dark:text-gray-300 mb-2" dangerouslySetInnerHTML={{ __html: inlineFmt(line) }} />
-      );
-    }
-  }
-  flushList();
-  return elements;
-}
+/* ---------- markdown rendering handled by shared MarkdownRenderer component ---------- */
 
 /* ======================================== */
 export default function EventGTMPlannerTab({
@@ -918,9 +867,10 @@ Keep it concise — this should fit on one printed page. Use bullet points where
 
         {gtmPlan && (
           <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
-            {renderMarkdown(gtmPlan)}
+            <MarkdownRenderer content={gtmPlan} />
           </div>
         )}
+
       </Card>
 
       {/* Section C — Supervisor Summary */}
@@ -955,7 +905,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
 
         {summary && (
           <div ref={summaryRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30">
-            {renderMarkdown(summary)}
+            <MarkdownRenderer content={summary} />
           </div>
         )}
       </Card>

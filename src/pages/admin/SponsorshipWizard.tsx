@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
 interface SponsorPackage {
   id: string;
@@ -580,10 +581,8 @@ Best regards,
                     Download PDF
                   </Button>
                 </div>
-                <div className="prose prose-sm max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm text-muted-foreground bg-secondary/30 p-4 rounded-lg overflow-auto max-h-96">
-                    {generatedProspectus}
-                  </pre>
+                <div className="bg-secondary/30 p-4 rounded-lg overflow-auto max-h-96">
+                  <MarkdownRenderer content={generatedProspectus} />
                 </div>
               </Card>
             )}
@@ -597,9 +596,9 @@ Best regards,
                     Copy Template
                   </Button>
                 </div>
-                <pre className="whitespace-pre-wrap text-sm text-muted-foreground bg-secondary/30 p-4 rounded-lg overflow-auto max-h-96">
-                  {generatedEmail}
-                </pre>
+                <div className="bg-secondary/30 p-4 rounded-lg overflow-auto max-h-96">
+                  <MarkdownRenderer content={generatedEmail} />
+                </div>
               </Card>
             )}
           </div>

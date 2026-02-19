@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MessageSquare, Send, Loader2, Shield, Calendar, Eye, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
 const ROLE_ICONS = {
   shield: Shield,
@@ -102,7 +103,11 @@ export default function AdminChat() {
                     )}
                   >
                     <p className="text-xs font-medium opacity-80 mb-1">{m.role === "user" ? "You" : "Assistant"}</p>
-                    <p className="whitespace-pre-wrap text-sm">{m.content}</p>
+                    {m.role === "assistant" ? (
+                      <MarkdownRenderer content={m.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap text-sm">{m.content}</p>
+                    )}
                     <p className="text-xs opacity-70 mt-1">{format(new Date(m.created_at), "MMM d, HH:mm")}</p>
                   </div>
                 ))}
@@ -121,7 +126,7 @@ export default function AdminChat() {
                 {streamingContent && (
                   <div className="rounded-lg px-3 py-2 bg-muted/60 max-w-[85%]">
                     <p className="text-xs font-medium opacity-80 mb-1">Assistant</p>
-                    <p className="whitespace-pre-wrap text-sm">{streamingContent}</p>
+                    <MarkdownRenderer content={streamingContent} />
                   </div>
                 )}
                 {loading && !streamingContent && (

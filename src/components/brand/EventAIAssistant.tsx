@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles, Send, Trash2 } from "lucide-react";
 import { parseISO, differenceInDays } from "date-fns";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
 /* ---------- types ---------- */
 interface Props {
@@ -50,59 +51,7 @@ async function callAnthropic(
   return (data.content?.[0]?.text ?? "").trim();
 }
 
-/* ---------- simple markdown renderer ---------- */
-function renderMarkdown(text: string) {
-  const lines = text.split("\n");
-  const elements: React.ReactNode[] = [];
-  let listItems: string[] = [];
-  let listKey = 0;
-
-  const flushList = () => {
-    if (listItems.length > 0) {
-      elements.push(
-        <ul key={`list-${listKey++}`} className="list-disc list-inside space-y-1 mb-3 text-sm text-gray-700 dark:text-gray-300">
-          {listItems.map((item, i) => <li key={i} dangerouslySetInnerHTML={{ __html: inlineFmt(item) }} />)}
-        </ul>,
-      );
-      listItems = [];
-    }
-  };
-
-  const inlineFmt = (s: string) =>
-    s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-     .replace(/`(.+?)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">$1</code>');
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (/^#{1,3}\s/.test(line)) {
-      flushList();
-      const level = (line.match(/^#+/) || [""])[0].length;
-      const txt = line.replace(/^#+\s*/, "");
-      const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
-      const cls = level === 1
-        ? "text-lg font-bold mt-5 mb-2 text-gray-900 dark:text-white"
-        : level === 2
-        ? "text-base font-semibold mt-4 mb-2 text-gray-800 dark:text-gray-100"
-        : "text-sm font-semibold mt-3 mb-1 text-gray-700 dark:text-gray-200";
-      elements.push(<Tag key={i} className={cls} dangerouslySetInnerHTML={{ __html: inlineFmt(txt) }} />);
-    } else if (/^[-*]\s/.test(line)) {
-      listItems.push(line.replace(/^[-*]\s*/, ""));
-    } else if (/^\d+\.\s/.test(line)) {
-      listItems.push(line.replace(/^\d+\.\s*/, ""));
-    } else if (line.trim() === "") {
-      flushList();
-    } else {
-      flushList();
-      elements.push(
-        <p key={i} className="text-sm text-gray-700 dark:text-gray-300 mb-2" dangerouslySetInnerHTML={{ __html: inlineFmt(line) }} />,
-      );
-    }
-  }
-  flushList();
-  return elements;
-}
+/* ---------- markdown rendering handled by shared MarkdownRenderer component ---------- */
 
 /* ---------- quick prompts ---------- */
 const QUICK_PROMPTS = [
@@ -256,7 +205,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
             ) : (
               <div key={i} className="flex justify-start">
                 <div className="max-w-[90%] rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                  {renderMarkdown(m.content)}
+                  <MarkdownRenderer content={m.content} />
                 </div>
               </div>
             ),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 
 interface ReportData {
   id: string;
@@ -13,58 +14,7 @@ interface ReportData {
   expires_at: string;
 }
 
-/* Simple markdown renderer (mirrors the one in EventGTMPlannerTab) */
-function renderMarkdown(text: string) {
-  const lines = text.split("\n");
-  const elements: React.ReactNode[] = [];
-  let listItems: string[] = [];
-  let listKey = 0;
-
-  const flushList = () => {
-    if (listItems.length > 0) {
-      elements.push(
-        <ul key={`list-${listKey++}`} className="list-disc list-inside space-y-1 mb-3 text-[15px] text-gray-700 leading-relaxed">
-          {listItems.map((item, i) => <li key={i} dangerouslySetInnerHTML={{ __html: inlineFmt(item) }} />)}
-        </ul>
-      );
-      listItems = [];
-    }
-  };
-
-  const inlineFmt = (s: string) =>
-    s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-     .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:13px">$1</code>');
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^#{1,3}\s/.test(line)) {
-      flushList();
-      const level = (line.match(/^#+/) || [""])[0].length;
-      const text = line.replace(/^#+\s*/, "");
-      const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
-      const cls = level === 1
-        ? "text-xl font-bold mt-8 mb-3 text-gray-900"
-        : level === 2
-        ? "text-lg font-semibold mt-6 mb-2 text-gray-800"
-        : "text-base font-semibold mt-4 mb-2 text-gray-700";
-      elements.push(<Tag key={i} className={cls} dangerouslySetInnerHTML={{ __html: inlineFmt(text) }} />);
-    } else if (/^[-*]\s/.test(line)) {
-      listItems.push(line.replace(/^[-*]\s*/, ""));
-    } else if (/^\d+\.\s/.test(line)) {
-      listItems.push(line.replace(/^\d+\.\s*/, ""));
-    } else if (line.trim() === "") {
-      flushList();
-    } else {
-      flushList();
-      elements.push(
-        <p key={i} className="text-[15px] text-gray-700 mb-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: inlineFmt(line) }} />
-      );
-    }
-  }
-  flushList();
-  return elements;
-}
+/* ---------- markdown rendering handled by shared MarkdownRenderer component ---------- */
 
 export default function SharedReport() {
   const { reportId } = useParams<{ reportId: string }>();
@@ -144,7 +94,7 @@ export default function SharedReport() {
       {/* Content */}
       <main className="max-w-3xl mx-auto px-6 py-8">
         <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
-          {renderMarkdown(report.content)}
+          <MarkdownRenderer content={report.content} className="text-[15px]" />
         </div>
       </main>
 
