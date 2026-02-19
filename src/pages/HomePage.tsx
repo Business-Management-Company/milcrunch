@@ -714,6 +714,8 @@ export default function HomePage() {
                     if (engagement) stats.push({ value: engagement, label: "Engagement", color: "text-teal-500" });
                     if (db.avg_views) stats.push({ value: db.avg_views, label: "Avg Views", color: "text-gray-900" });
                     if (db.avg_likes) stats.push({ value: db.avg_likes, label: "Avg Likes", color: "text-gray-900" });
+                    if (db.avg_comments) stats.push({ value: db.avg_comments, label: "Avg Comments", color: "text-gray-900" });
+                    if (db.media_count) stats.push({ value: formatFollowerCount(db.media_count), label: "Posts", color: "text-gray-900" });
 
                     const gridCols = stats.length <= 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-4";
 
@@ -736,11 +738,11 @@ export default function HomePage() {
                           )}
                         </div>
                         {stats.length > 0 && (
-                          <div className={`border-t border-gray-100 mt-2 pt-2 grid ${gridCols} gap-3`}>
+                          <div className={`border-t border-gray-100 mt-2 pt-2 grid ${stats.length > 4 ? "grid-cols-3" : gridCols} gap-x-3 gap-y-2`}>
                             {stats.map((s) => (
                               <div key={s.label}>
                                 <p className={`text-[16px] font-bold ${s.color} leading-tight`}>{s.value}</p>
-                                <p className="text-[10px] text-gray-400 uppercase">{s.label}</p>
+                                <p className="text-[10px] text-gray-400 uppercase tracking-wide">{s.label}</p>
                               </div>
                             ))}
                           </div>

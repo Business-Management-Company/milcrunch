@@ -36,6 +36,8 @@ export interface ShowcaseCreator extends FeaturedCreator {
   featured_homepage?: boolean;
   avg_views?: string | null;
   avg_likes?: string | null;
+  avg_comments?: string | null;
+  media_count?: number | null;
 }
 
 /** Fetch up to 3 featured creators for the homepage hero cards.
@@ -136,37 +138,37 @@ async function fetchCreatorStatsGet(
   }
 }
 
-/** Deep-search a nested object for a numeric value by field name. */
+/** Deep-search a nested object for a numeric value by field name (up to 3 levels). */
 function deepFindNumber(obj: unknown, keys: string[]): number {
   if (!obj || typeof obj !== "object") return 0;
   const o = obj as Record<string, unknown>;
-  // Check top level first
-  for (const k of keys) {
-    if (k in o && o[k] != null && o[k] !== "") {
-      const n = Number(o[k]);
-      if (!isNaN(n) && n > 0) return n;
+
+  const checkKeys = (target: Record<string, unknown>): number => {
+    for (const k of keys) {
+      if (k in target && target[k] != null && target[k] !== "") {
+        const n = Number(target[k]);
+        if (!isNaN(n) && n > 0) return n;
+      }
     }
-  }
-  // Recurse one level into object children
+    return 0;
+  };
+
+  // Level 0: top level
+  const l0 = checkKeys(o);
+  if (l0 > 0) return l0;
+
+  // Level 1: one level into object children
   for (const val of Object.values(o)) {
     if (val && typeof val === "object" && !Array.isArray(val)) {
-      for (const k of keys) {
-        const child = val as Record<string, unknown>;
-        if (k in child && child[k] != null && child[k] !== "") {
-          const n = Number(child[k]);
-          if (!isNaN(n) && n > 0) return n;
-        }
-      }
-      // Check one more level deep (e.g. instagram.reels.avg_view_count)
+      const child = val as Record<string, unknown>;
+      const l1 = checkKeys(child);
+      if (l1 > 0) return l1;
+
+      // Level 2: two levels deep (e.g. instagram.reels.avg_view_count)
       for (const innerVal of Object.values(child)) {
         if (innerVal && typeof innerVal === "object" && !Array.isArray(innerVal)) {
-          for (const k of keys) {
-            const deep = innerVal as Record<string, unknown>;
-            if (k in deep && deep[k] != null && deep[k] !== "") {
-              const n = Number(deep[k]);
-              if (!isNaN(n) && n > 0) return n;
-            }
-          }
+          const l2 = checkKeys(innerVal as Record<string, unknown>);
+          if (l2 > 0) return l2;
         }
       }
     }
@@ -182,14 +184,18 @@ function extractHeroStats(
   engagement_rate: number;
   avg_views: number;
   avg_likes: number;
+  avg_comments: number;
+  media_count: number;
 } {
-  const follower_count = deepFindNumber(data, ["follower_count", "followers", "subscriberCount"]);
-  const engagement_rate = deepFindNumber(data, ["engagement_percent", "engagement_rate", "engagementRate"]);
-  const avg_views = deepFindNumber(data, ["avg_views", "avg_view_count", "avgViews", "average_views"]);
+  const follower_count = deepFindNumber(data, ["follower_count", "followers", "subscriberCount", "number_of_followers"]);
+  const engagement_rate = deepFindNumber(data, ["engagement_percent", "engagement_rate", "engagementRate", "er"]);
+  const avg_views = deepFindNumber(data, ["avg_views", "avg_view_count", "avgViews", "average_views", "avg_reels_plays", "average_reels_plays"]);
   const avg_likes = deepFindNumber(data, ["avg_likes", "avg_like_count", "avgLikes", "average_likes"]);
+  const avg_comments = deepFindNumber(data, ["avg_comments", "avg_comment_count", "avgComments", "average_comments"]);
+  const media_count = deepFindNumber(data, ["media_count", "mediaCount", "posts_count", "postsCount", "total_posts"]);
 
-  console.log("[HeroEnrich] extractHeroStats →", { follower_count, engagement_rate, avg_views, avg_likes });
-  return { follower_count, engagement_rate, avg_views, avg_likes };
+  console.log("[HeroEnrich] extractHeroStats →", { follower_count, engagement_rate, avg_views, avg_likes, avg_comments, media_count });
+  return { follower_count, engagement_rate, avg_views, avg_likes, avg_comments, media_count };
 }
 
 /** Enrich an array of ShowcaseCreators with live Influencers.club data.
@@ -243,6 +249,8 @@ export async function enrichHomepageHeroCreators(
           // Store formatted strings; null means "no data" (card will hide this stat)
           avg_views: stats.avg_views > 0 ? formatFollowerCount(stats.avg_views) : null,
           avg_likes: stats.avg_likes > 0 ? formatFollowerCount(stats.avg_likes) : null,
+          avg_comments: stats.avg_comments > 0 ? formatFollowerCount(stats.avg_comments) : null,
+          media_count: stats.media_count > 0 ? stats.media_count : null,
         };
       } catch (err) {
         console.warn("[HeroEnrich] Failed for", handle, ":", err);
@@ -343,6 +351,8 @@ function mapFeaturedRow(r: Record<string, unknown>): ShowcaseCreator {
     featured_homepage: (r.featured_homepage as boolean) ?? false,
     avg_views: (r.avg_views as string) ?? null,
     avg_likes: (r.avg_likes as string) ?? null,
+    avg_comments: (r.avg_comments as string) ?? null,
+    media_count: (r.media_count as number) ?? null,
   };
 }
 
@@ -375,6 +385,8 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     featured_homepage: (r.featured_homepage as boolean) ?? false,
     avg_views: (r.avg_views as string) ?? null,
     avg_likes: (r.avg_likes as string) ?? null,
+    avg_comments: (r.avg_comments as string) ?? null,
+    media_count: (r.media_count as number) ?? null,
   };
 }
 
