@@ -715,18 +715,22 @@ export default function HomePage() {
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
                     const avatar = db.avatar_url || db.ic_avatar_url || null;
-                    // Exactly 4 stats: Followers, Engagement Rate, Number of Posts, Avg Comments
-                    const followers = db.follower_count != null ? formatFollowerCount(db.follower_count) : "—";
-                    const engagement = db.engagement_rate != null ? `${db.engagement_rate.toFixed(2)}%` : "—";
-                    const posts = db.post_count != null ? String(db.post_count) : "—";
-                    const avgComments = db.avg_comments != null ? String(db.avg_comments) : "—";
 
-                    const stats: { value: string; label: string; color: string }[] = [
-                      { value: followers, label: "Followers", color: "text-gray-900" },
-                      { value: engagement, label: "Engagement", color: "text-teal-500" },
-                      { value: posts, label: "Posts", color: "text-gray-900" },
-                      { value: avgComments, label: "Avg Comments", color: "text-gray-900" },
-                    ];
+                    // Build stats in priority order, filter to non-null/non-zero, take up to 4
+                    const allStats: { value: string; label: string; color: string }[] = [];
+                    if (db.follower_count != null && db.follower_count > 0)
+                      allStats.push({ value: formatFollowerCount(db.follower_count), label: "Followers", color: "text-gray-900" });
+                    if (db.engagement_rate != null && db.engagement_rate > 0)
+                      allStats.push({ value: `${db.engagement_rate.toFixed(2)}%`, label: "Engagement", color: "text-teal-500" });
+                    if (db.avg_comments != null && db.avg_comments > 0)
+                      allStats.push({ value: formatFollowerCount(db.avg_comments), label: "Avg Comments", color: "text-gray-900" });
+                    if (db.avg_views && db.avg_views !== "—" && db.avg_views !== "0")
+                      allStats.push({ value: db.avg_views, label: "Avg Views", color: "text-gray-900" });
+                    if (db.avg_likes && db.avg_likes !== "—" && db.avg_likes !== "0")
+                      allStats.push({ value: db.avg_likes, label: "Avg Likes", color: "text-gray-900" });
+                    if (db.post_count != null && db.post_count > 0)
+                      allStats.push({ value: formatFollowerCount(db.post_count), label: "Posts", color: "text-gray-900" });
+                    const stats = allStats.slice(0, 4);
 
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
@@ -741,7 +745,9 @@ export default function HomePage() {
                           )}
                         </div>
                         {stats.length > 0 && (
-                          <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-x-3 gap-y-2">
+                          <div className={`border-t border-gray-100 mt-2 pt-2 grid gap-x-3 gap-y-2 ${
+                            stats.length >= 4 ? "grid-cols-4" : stats.length === 3 ? "grid-cols-3" : stats.length === 2 ? "grid-cols-2" : "grid-cols-1"
+                          }`}>
                             {stats.map((s) => (
                               <div key={s.label}>
                                 <p className={`text-[16px] font-bold ${s.color} leading-tight`}>{s.value}</p>
