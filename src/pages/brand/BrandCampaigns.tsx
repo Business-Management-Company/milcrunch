@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,9 @@ import {
   Plus,
   X,
   Tag,
+  Search,
+  MapPin,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +39,6 @@ import {
 } from "@/components/ui/select";
 import { uploadText, type UploadPostPlatform } from "@/services/upload-post";
 import { useDemoMode } from "@/hooks/useDemoMode";
-import { SpeakerMultiSelector } from "@/components/SpeakerSelector";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -68,6 +70,11 @@ interface EventOption {
   id: string;
   title: string;
   start_date: string | null;
+  end_date: string | null;
+  description: string | null;
+  city: string | null;
+  state: string | null;
+  venue: string | null;
 }
 
 interface SponsorOption {
@@ -76,8 +83,10 @@ interface SponsorOption {
 }
 
 interface TagGroup {
+  id: string;
   name: string;
-  hashtags: string;
+  hashtags: string[];
+  use_count: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -117,24 +126,10 @@ const CONTENT_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-20250514";
-const TAG_STORAGE_KEY = "rx_campaign_tag_groups";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
-
-function loadTagGroups(): TagGroup[] {
-  try {
-    const raw = localStorage.getItem(TAG_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveTagGroups(groups: TagGroup[]) {
-  localStorage.setItem(TAG_STORAGE_KEY, JSON.stringify(groups));
-}
 
 function sponsorHandle(name: string): string {
   return "@" + name.toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -218,62 +213,244 @@ function PlatformToggles({
 }
 
 /* ------------------------------------------------------------------ */
-/* Sponsor Multi-Select with handles/hashtags                          */
+/* Directory Member Combobox (Key Speakers)                            */
 /* ------------------------------------------------------------------ */
 
-function SponsorMultiSelect({
-  sponsors,
+function DirectoryMemberCombobox({
   selected,
   onChange,
 }: {
-  sponsors: SponsorOption[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ creator_name: string; creator_handle: string }[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      setOpen(false);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("directory_members")
+        .select("creator_name, creator_handle")
+        .or(`creator_name.ilike.%${query}%,creator_handle.ilike.%${query}%`)
+        .limit(8);
+      setResults(data ?? []);
+      setOpen(true);
+      setLoading(false);
+    }, 250);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  const addSpeaker = (name: string) => {
+    if (!selected.includes(name)) {
+      onChange([...selected, name]);
+    }
+    setQuery("");
+    setOpen(false);
+  };
+
+  const removeSpeaker = (name: string) => {
+    onChange(selected.filter((s) => s !== name));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && query.trim()) {
+      e.preventDefault();
+      addSpeaker(query.trim());
+    }
+  };
+
+  return (
+    <div ref={wrapperRef} className="space-y-2">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selected.map((name) => (
+            <span
+              key={name}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20"
+            >
+              {name}
+              <button type="button" onClick={() => removeSpeaker(name)} className="hover:text-[#5B4BD1]">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => { if (results.length > 0) setOpen(true); }}
+          placeholder="Search speakers or type a name..."
+          className="pl-9"
+        />
+        {loading && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+        )}
+        {open && results.length > 0 && (
+          <div className="absolute z-20 top-full mt-1 w-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+            {results.map((r) => (
+              <button
+                key={r.creator_handle}
+                type="button"
+                onClick={() => addSpeaker(r.creator_name || r.creator_handle)}
+                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-[#0F1117] text-sm flex items-center gap-2 transition-colors"
+              >
+                <Users className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <span className="font-medium text-gray-800 dark:text-gray-200">{r.creator_name || r.creator_handle}</span>
+                {r.creator_name && r.creator_handle && (
+                  <span className="text-xs text-gray-400">@{r.creator_handle}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="text-[10px] text-gray-400">Press Enter to add a custom speaker name</p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Sponsor Combobox (All Sponsors)                                     */
+/* ------------------------------------------------------------------ */
+
+function SponsorCombobox({
+  allSponsors,
+  selected,
+  onChange,
+}: {
+  allSponsors: SponsorOption[];
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
-  if (sponsors.length === 0) {
-    return <p className="text-sm text-gray-400 italic">No sponsors linked to this event.</p>;
-  }
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filtered = query.trim()
+    ? allSponsors.filter((s) => s.name.toLowerCase().includes(query.toLowerCase()))
+    : allSponsors;
+
+  const selectedSponsors = selected.map((id) => {
+    if (id.startsWith("custom:")) return { id, name: id.replace("custom:", "") };
+    return allSponsors.find((s) => s.id === id) ?? { id, name: id };
+  });
+
+  const addSponsor = (id: string) => {
+    if (!selected.includes(id)) {
+      onChange([...selected, id]);
+    }
+    setQuery("");
+    setOpen(false);
+  };
+
+  const removeSponsor = (id: string) => {
+    onChange(selected.filter((s) => s !== id));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && query.trim()) {
+      e.preventDefault();
+      const customId = `custom:${query.trim()}`;
+      addSponsor(customId);
+    }
+  };
+
   return (
-    <div className="space-y-2">
-      {sponsors.map((s) => {
-        const active = selected.includes(s.id);
-        const handle = sponsorHandle(s.name);
-        const tag = sponsorHashtag(s.name);
-        return (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() =>
-              onChange(active ? selected.filter((id) => id !== s.id) : [...selected, s.id])
-            }
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
-              active
-                ? "bg-[#6C5CE7]/5 border-[#6C5CE7]/30"
-                : "bg-white dark:bg-[#0F1117] border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
-            )}
-          >
-            <div
-              className={cn(
-                "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
-                active
-                  ? "bg-[#6C5CE7] border-[#6C5CE7]"
-                  : "border-gray-300 dark:border-gray-600"
-              )}
+    <div ref={wrapperRef} className="space-y-2">
+      {selectedSponsors.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedSponsors.map((s) => (
+            <span
+              key={s.id}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20"
             >
-              {active && <CheckCircle2 className="h-3 w-3 text-white" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={cn("text-sm font-medium", active ? "text-[#6C5CE7]" : "text-gray-700 dark:text-gray-300")}>
-                {s.name}
-              </p>
-              <p className="text-xs text-gray-400">
-                {handle} &middot; {tag}
-              </p>
-            </div>
-          </button>
-        );
-      })}
+              {s.name}
+              <button type="button" onClick={() => removeSponsor(s.id)} className="hover:text-[#5B4BD1]">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setOpen(true)}
+          placeholder="Search sponsors or type a name..."
+          className="pl-9"
+        />
+        {open && filtered.length > 0 && (
+          <div className="absolute z-20 top-full mt-1 w-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+            {filtered.map((s) => {
+              const isSelected = selected.includes(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => isSelected ? removeSponsor(s.id) : addSponsor(s.id)}
+                  className={cn(
+                    "w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors",
+                    isSelected
+                      ? "bg-[#6C5CE7]/5 text-[#6C5CE7]"
+                      : "hover:bg-gray-50 dark:hover:bg-[#0F1117] text-gray-800 dark:text-gray-200"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
+                      isSelected ? "bg-[#6C5CE7] border-[#6C5CE7]" : "border-gray-300 dark:border-gray-600"
+                    )}
+                  >
+                    {isSelected && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
+                  </div>
+                  <span className="font-medium">{s.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <p className="text-[10px] text-gray-400">Press Enter to add a custom sponsor name</p>
     </div>
   );
 }
@@ -286,7 +463,7 @@ function TagGroupModal({
   onSave,
   onClose,
 }: {
-  onSave: (g: TagGroup) => void;
+  onSave: (name: string, hashtagsRaw: string) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
@@ -335,7 +512,7 @@ function TagGroupModal({
               size="sm"
               disabled={!name.trim() || !tags.trim()}
               onClick={() => {
-                onSave({ name: name.trim(), hashtags: tags.trim() });
+                onSave(name.trim(), tags.trim());
                 onClose();
               }}
               className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
@@ -417,120 +594,141 @@ function PostCard({
 }
 
 /* ------------------------------------------------------------------ */
-/* Campaign Preview Mockup with Device Switcher                        */
+/* Campaign Live Preview                                               */
 /* ------------------------------------------------------------------ */
 
-type DeviceView = "web" | "mobile" | "ipad";
+function CampaignLivePreview({
+  eventTitle,
+  startDate,
+  endDate,
+  goal,
+  speakerNames,
+  sponsorNames,
+  hashtags,
+  platforms,
+  duration,
+}: {
+  eventTitle: string | null;
+  startDate: string;
+  endDate: string;
+  goal: string;
+  speakerNames: string[];
+  sponsorNames: string[];
+  hashtags: string;
+  platforms: string[];
+  duration: number;
+}) {
+  const isEmpty = !eventTitle;
 
-function CampaignPreviewMockup() {
-  const [device, setDevice] = useState<DeviceView>("web");
-
-  const devices: { key: DeviceView; label: string }[] = [
-    { key: "web", label: "Web" },
-    { key: "mobile", label: "Mobile" },
-    { key: "ipad", label: "iPad" },
-  ];
-
-  const mockContent = (
-    <>
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#8B7CF7] flex items-center justify-center mb-5 shadow-md mx-auto">
-        <Megaphone className="h-7 w-7 text-white" />
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-12"
+        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.10)" }}
+      >
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#8B7CF7] flex items-center justify-center mb-5 shadow-md">
+          <Megaphone className="h-8 w-8 text-white" />
+        </div>
+        <p className="text-gray-800 dark:text-gray-200 font-semibold text-base mb-1.5">Campaign Preview</p>
+        <p className="text-sm text-gray-400 leading-relaxed max-w-[280px] text-center">
+          Fill out the form to see your campaign preview
+        </p>
       </div>
-      <p className="text-gray-800 dark:text-gray-200 font-semibold text-sm mb-1.5">Campaign Preview</p>
-      <p className="text-xs text-gray-400 leading-relaxed max-w-[260px] mx-auto">
-        Fill out the form and click Generate to see your campaign posts here.
-      </p>
-    </>
-  );
+    );
+  }
+
+  const hashtagList = hashtags.split(/\s+/).filter((h) => h.startsWith("#"));
+  const hasDateRange = !!(startDate && endDate && endDate >= startDate);
+  const dateDuration = hasDateRange ? daysBetween(startDate, endDate) : null;
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-gray-50 dark:bg-[#0F1117] rounded-xl p-6">
-      {/* Device switcher */}
-      <div className="flex gap-1 bg-gray-200 dark:bg-gray-800 rounded-lg p-1 mb-6">
-        {devices.map((d) => (
-          <button
-            key={d.key}
-            type="button"
-            onClick={() => setDevice(d.key)}
-            className={cn(
-              "px-4 py-1.5 rounded-md text-xs font-medium transition-all",
-              device === d.key
-                ? "bg-white dark:bg-[#1A1D27] text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            )}
-          >
-            {d.label}
-          </button>
-        ))}
+    <div
+      className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-5"
+      style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.10)" }}
+    >
+      {/* Event name */}
+      <div>
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Event</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{eventTitle}</h3>
       </div>
 
-      {/* Web view — browser mockup */}
-      {device === "web" && (
-        <div className="w-full max-w-[520px] rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
-          {/* Browser chrome */}
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-[#111827] border-b border-gray-200 dark:border-gray-700">
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-400" />
-              <div className="w-3 h-3 rounded-full bg-yellow-400" />
-              <div className="w-3 h-3 rounded-full bg-green-400" />
-            </div>
-            <div className="flex-1 ml-3">
-              <div className="bg-white dark:bg-[#0F1117] rounded-md px-3 py-1 text-xs text-gray-400 border border-gray-200 dark:border-gray-700 truncate">
-                milcrunch.com/brand/campaigns
-              </div>
-            </div>
-          </div>
-          {/* Page content */}
-          <div className="px-8 py-10 min-h-[340px] flex flex-col items-center justify-center text-center">
-            {mockContent}
-            <div className="mt-6 w-full max-w-[380px] space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-                <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-                <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-              </div>
-              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
-              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
-              <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-2" />
-            </div>
+      {/* Date range */}
+      {(startDate || endDate) && (
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <CalendarClock className="h-4 w-4 text-[#6C5CE7]" />
+          <span>
+            {startDate && new Date(startDate + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {startDate && endDate && " — "}
+            {endDate && new Date(endDate + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          </span>
+        </div>
+      )}
+
+      {/* Goal badge + duration pill */}
+      <div className="flex flex-wrap gap-2">
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20">
+          {goal}
+        </span>
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+          {dateDuration ?? duration} days
+        </span>
+      </div>
+
+      {/* Platform icons */}
+      {platforms.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Platforms</p>
+          <div className="flex gap-2">
+            {platforms.map((p) => (
+              <span
+                key={p}
+                className="w-8 h-8 rounded-lg bg-[#6C5CE7]/10 text-[#6C5CE7] flex items-center justify-center"
+              >
+                {PLATFORM_ICONS[p]}
+              </span>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Mobile view — phone mockup */}
-      {device === "mobile" && (
-        <div className="relative w-[260px] rounded-[2.5rem] border-[6px] border-gray-800 dark:border-gray-600 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-gray-800 dark:bg-gray-600 rounded-b-2xl z-10" />
-          <div className="pt-10 pb-8 px-5 min-h-[400px] flex flex-col items-center justify-center text-center">
-            {mockContent}
-            <div className="mt-6 w-full space-y-2.5">
-              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
-              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
-              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-3/5" />
-              <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-3" />
-            </div>
+      {/* Speaker chips */}
+      {speakerNames.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Speakers</p>
+          <div className="flex flex-wrap gap-1.5">
+            {speakerNames.map((name) => (
+              <span key={name} className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                {name}
+              </span>
+            ))}
           </div>
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-20 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
         </div>
       )}
 
-      {/* iPad view — tablet mockup */}
-      {device === "ipad" && (
-        <div className="relative w-[400px] rounded-[1.5rem] border-[5px] border-gray-800 dark:border-gray-600 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-600 dark:bg-gray-500 rounded-full z-10" />
-          <div className="pt-8 pb-6 px-6 min-h-[320px] flex flex-col items-center justify-center text-center">
-            {mockContent}
-            <div className="mt-6 w-full max-w-[320px] space-y-2.5">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-                <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-              </div>
-              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
-              <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
-              <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-2" />
-            </div>
+      {/* Sponsor chips */}
+      {sponsorNames.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Sponsors</p>
+          <div className="flex flex-wrap gap-1.5">
+            {sponsorNames.map((name) => (
+              <span key={name} className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+                {name}
+              </span>
+            ))}
           </div>
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+        </div>
+      )}
+
+      {/* Hashtag chips */}
+      {hashtagList.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Hashtags</p>
+          <div className="flex flex-wrap gap-1.5">
+            {hashtagList.map((tag) => (
+              <span key={tag} className="px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20">
+                {tag}
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -553,14 +751,14 @@ export default function BrandCampaigns() {
   const [duration, setDuration] = useState<(typeof DURATIONS)[number]>(30);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [speakers, setSpeakers] = useState("");
-  const [sponsors, setSponsors] = useState<SponsorOption[]>([]);
+  const [speakerNames, setSpeakerNames] = useState<string[]>([]);
+  const [allSponsors, setAllSponsors] = useState<SponsorOption[]>([]);
   const [selectedSponsors, setSelectedSponsors] = useState<string[]>([]);
   const [hashtags, setHashtags] = useState("");
   const [platforms, setPlatforms] = useState<string[]>(["instagram", "tiktok"]);
 
-  // Tag groups
-  const [tagGroups, setTagGroups] = useState<TagGroup[]>(loadTagGroups);
+  // Tag groups (Supabase-backed)
+  const [tagGroups, setTagGroups] = useState<TagGroup[]>([]);
   const [showTagModal, setShowTagModal] = useState(false);
 
   // Generation state
@@ -580,81 +778,140 @@ export default function BrandCampaigns() {
   const dateDuration = hasDateRange ? daysBetween(startDate, endDate) : null;
   const effectiveDuration = dateDuration ?? duration;
 
+  // Resolve sponsor names for preview and AI prompt
+  const resolvedSponsorNames = selectedSponsors.map((id) => {
+    if (id.startsWith("custom:")) return id.replace("custom:", "");
+    return allSponsors.find((s) => s.id === id)?.name ?? id;
+  });
+
   // Auto-append sponsor handles/hashtags when selection changes
   useEffect(() => {
     if (selectedSponsors.length === 0) return;
     const additions: string[] = [];
-    sponsors
-      .filter((s) => selectedSponsors.includes(s.id))
-      .forEach((s) => {
-        const h = sponsorHandle(s.name);
-        const t = sponsorHashtag(s.name);
-        if (!hashtags.includes(h)) additions.push(h);
-        if (!hashtags.includes(t)) additions.push(t);
-      });
+    selectedSponsors.forEach((id) => {
+      const name = id.startsWith("custom:")
+        ? id.replace("custom:", "")
+        : allSponsors.find((s) => s.id === id)?.name;
+      if (!name) return;
+      const h = sponsorHandle(name);
+      const t = sponsorHashtag(name);
+      if (!hashtags.includes(h)) additions.push(h);
+      if (!hashtags.includes(t)) additions.push(t);
+    });
     if (additions.length > 0) {
       setHashtags((prev) => (prev ? prev + " " + additions.join(" ") : additions.join(" ")));
     }
-    // Only run when selectedSponsors changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSponsors]);
 
-  // Load events
+  // Load events (expanded fields)
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("events")
-        .select("id, title, start_date")
+        .select("id, title, start_date, end_date, description, city, state, venue")
         .order("start_date", { ascending: false });
-      setEvents(data ?? []);
+      setEvents((data ?? []) as EventOption[]);
     })();
   }, []);
 
-  // Load sponsors for selected event
+  // Pre-populate form dates from selected event
   useEffect(() => {
-    if (!selectedEventId) {
-      setSponsors([]);
-      setSelectedSponsors([]);
-      return;
+    if (!selectedEventId) return;
+    const ev = events.find((e) => e.id === selectedEventId);
+    if (!ev) return;
+    if (ev.start_date) {
+      setStartDate(ev.start_date.split("T")[0]);
     }
+    if (ev.end_date) {
+      setEndDate(ev.end_date.split("T")[0]);
+    }
+  }, [selectedEventId, events]);
+
+  // Load ALL sponsors on mount (not tied to event)
+  useEffect(() => {
     (async () => {
       const { data } = await supabase
-        .from("sponsorship_deals")
-        .select("sponsor_id, sponsors(id, name)")
-        .eq("event_id", selectedEventId);
-      const unique = new Map<string, SponsorOption>();
-      (data ?? []).forEach((d: any) => {
-        const s = d.sponsors;
-        if (s && s.id) unique.set(s.id, { id: s.id, name: s.name });
-      });
-      setSponsors(Array.from(unique.values()));
-      setSelectedSponsors([]);
+        .from("sponsors")
+        .select("id, name")
+        .order("name");
+      setAllSponsors((data ?? []) as SponsorOption[]);
     })();
-  }, [selectedEventId]);
+  }, []);
+
+  // Load tag groups from Supabase
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("hashtag_groups")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (error) {
+        console.error("Failed to load hashtag groups:", error);
+        return;
+      }
+      setTagGroups(
+        ((data ?? []) as TagGroup[]).map((g) => ({
+          ...g,
+          hashtags: Array.isArray(g.hashtags)
+            ? g.hashtags
+            : typeof g.hashtags === "string"
+              ? JSON.parse(g.hashtags as string)
+              : [],
+        }))
+      );
+    })();
+  }, []);
 
   // Get selected event details
   const selectedEvent = events.find((e) => e.id === selectedEventId);
 
-  // Handle tag group save
-  const handleSaveTagGroup = (g: TagGroup) => {
-    const updated = [...tagGroups, g];
-    setTagGroups(updated);
-    saveTagGroups(updated);
+  // Handle tag group save to Supabase
+  const handleSaveTagGroup = async (name: string, hashtagsRaw: string) => {
+    const parsed = hashtagsRaw
+      .split(/[\s,]+/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((t) => (t.startsWith("#") ? t : `#${t}`));
+
+    const { data, error } = await supabase
+      .from("hashtag_groups")
+      .insert({ name, hashtags: parsed as any, use_count: 0 })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Failed to save tag group:", error);
+      return;
+    }
+    if (data) {
+      setTagGroups((prev) => [...prev, { ...data, hashtags: parsed } as TagGroup]);
+    }
   };
 
-  const handleDeleteTagGroup = (idx: number) => {
-    const updated = tagGroups.filter((_, i) => i !== idx);
-    setTagGroups(updated);
-    saveTagGroups(updated);
+  const handleDeleteTagGroup = async (id: string) => {
+    const { error } = await supabase.from("hashtag_groups").delete().eq("id", id);
+    if (error) {
+      console.error("Failed to delete tag group:", error);
+      return;
+    }
+    setTagGroups((prev) => prev.filter((g) => g.id !== id));
   };
 
-  const applyTagGroup = (g: TagGroup) => {
+  const applyTagGroup = async (g: TagGroup) => {
     setHashtags((prev) => {
-      const combined = prev ? prev + " " + g.hashtags : g.hashtags;
-      // Deduplicate
-      const unique = [...new Set(combined.split(/\s+/).filter(Boolean))];
-      return unique.join(" ");
+      const existing = prev.split(/\s+/).filter(Boolean);
+      const combined = [...new Set([...existing, ...g.hashtags])];
+      return combined.join(" ");
     });
+    // Increment use_count
+    await supabase
+      .from("hashtag_groups")
+      .update({ use_count: (g.use_count ?? 0) + 1 })
+      .eq("id", g.id);
+    setTagGroups((prev) =>
+      prev.map((tg) => (tg.id === g.id ? { ...tg, use_count: (tg.use_count ?? 0) + 1 } : tg))
+    );
   };
 
   // Generate campaign
@@ -664,10 +921,6 @@ export default function BrandCampaigns() {
     setGenerating(true);
     setError("");
     setCampaign(null);
-
-    const sponsorNames = sponsors
-      .filter((s) => selectedSponsors.includes(s.id))
-      .map((s) => s.name);
 
     const goalInstruction =
       goal === "Custom"
@@ -684,8 +937,8 @@ Event: ${selectedEvent?.title ?? "Unknown"}
 Event Date: ${selectedEvent?.start_date ?? "TBD"}
 Campaign Goal: ${goal}
 Campaign Duration: ${effectiveDuration} days${hasDateRange ? ` (${startDate} to ${endDate})` : ""}
-Key Speakers: ${speakers || "None specified"}
-Sponsors to Feature: ${sponsorNames.length > 0 ? sponsorNames.join(", ") : "None specified"}
+Key Speakers: ${speakerNames.length > 0 ? speakerNames.join(", ") : "None specified"}
+Sponsors to Feature: ${resolvedSponsorNames.length > 0 ? resolvedSponsorNames.join(", ") : "None specified"}
 Hashtags: ${hashtags || "None specified"}
 Platforms: ${platforms.join(", ")}
 
@@ -785,7 +1038,7 @@ Make the captions authentic and engaging for a military community audience. Refe
     } finally {
       setGenerating(false);
     }
-  }, [guardAction, selectedEventId, selectedEvent, goal, effectiveDuration, hasDateRange, startDate, endDate, speakers, sponsors, selectedSponsors, hashtags, platforms, apiKey]);
+  }, [guardAction, selectedEventId, selectedEvent, goal, effectiveDuration, hasDateRange, startDate, endDate, speakerNames, resolvedSponsorNames, hashtags, platforms, apiKey]);
 
   // Schedule a single post
   const schedulePost = useCallback(
@@ -894,6 +1147,12 @@ Make the captions authentic and engaging for a military community audience. Refe
   };
 
   const isLargeCampaign = goal === "Full Campaign" && effectiveDuration >= 90;
+
+  // Parse hashtags into removable chips
+  const hashtagChips = hashtags.split(/\s+/).filter(Boolean);
+  const removeHashtag = (tag: string) => {
+    setHashtags((prev) => prev.split(/\s+/).filter((t) => t !== tag).join(" "));
+  };
 
   return (
     <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
@@ -1024,24 +1283,19 @@ Make the captions authentic and engaging for a military community audience. Refe
 
             {/* 3. Key Speakers */}
             <FormSection number={3} title="Key Speakers">
-              <SpeakerMultiSelector
-                value={speakers}
-                onChange={setSpeakers}
-                placeholder="Search speakers..."
+              <DirectoryMemberCombobox
+                selected={speakerNames}
+                onChange={setSpeakerNames}
               />
             </FormSection>
 
             {/* 4. Sponsors */}
             <FormSection number={4} title="Sponsors to Feature">
-              {selectedEventId ? (
-                <SponsorMultiSelect
-                  sponsors={sponsors}
-                  selected={selectedSponsors}
-                  onChange={setSelectedSponsors}
-                />
-              ) : (
-                <p className="text-sm text-gray-400 italic">Select an event first.</p>
-              )}
+              <SponsorCombobox
+                allSponsors={allSponsors}
+                selected={selectedSponsors}
+                onChange={setSelectedSponsors}
+              />
             </FormSection>
 
             {/* 5. Hashtags + Tags */}
@@ -1053,8 +1307,8 @@ Make the captions authentic and engaging for a military community audience. Refe
                     Saved Tags
                   </Label>
                   <div className="flex flex-wrap gap-1.5">
-                    {tagGroups.map((g, idx) => (
-                      <div key={idx} className="group flex items-center gap-1">
+                    {tagGroups.map((g) => (
+                      <div key={g.id} className="group flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => applyTagGroup(g)}
@@ -1065,7 +1319,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteTagGroup(idx)}
+                          onClick={() => handleDeleteTagGroup(g.id)}
                           className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xs transition-opacity hover:bg-red-200"
                         >
                           <X className="h-3 w-3" />
@@ -1091,6 +1345,23 @@ Make the captions authentic and engaging for a military community audience. Refe
                 value={hashtags}
                 onChange={(e) => setHashtags(e.target.value)}
               />
+
+              {/* Hashtag chips */}
+              {hashtagChips.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {hashtagChips.map((tag, i) => (
+                    <span
+                      key={`${tag}-${i}`}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20"
+                    >
+                      {tag}
+                      <button type="button" onClick={() => removeHashtag(tag)} className="hover:text-[#5B4BD1]">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </FormSection>
 
             {/* 6. Platforms */}
@@ -1151,7 +1422,17 @@ Make the captions authentic and engaging for a military community audience. Refe
             )}
 
             {!generating && !campaign && (
-              <CampaignPreviewMockup />
+              <CampaignLivePreview
+                eventTitle={selectedEvent?.title ?? null}
+                startDate={startDate}
+                endDate={endDate}
+                goal={goal}
+                speakerNames={speakerNames}
+                sponsorNames={resolvedSponsorNames}
+                hashtags={hashtags}
+                platforms={platforms}
+                duration={duration}
+              />
             )}
 
             {!generating && campaign && (
