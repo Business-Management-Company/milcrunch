@@ -7,7 +7,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <div className="flex items-center">
-              <span className="font-bold text-xl text-foreground tracking-tight">recurrent<span className="text-[#6C5CE7] font-extrabold">X</span></span>
+              <span className="font-bold text-xl text-foreground tracking-tight">MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span></span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               Where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.

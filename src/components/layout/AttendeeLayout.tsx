@@ -290,7 +290,7 @@ const AttendeeLayout = ({ activeTab, children, pageTitle }: Props) => {
                 )}
               </button>
               <span className="text-xs font-bold text-white tracking-tight shrink-0">
-                recurrent<span className="font-extrabold">X</span>
+                MilCrunch<span className="font-extrabold">X</span>
               </span>
             </header>
           )}

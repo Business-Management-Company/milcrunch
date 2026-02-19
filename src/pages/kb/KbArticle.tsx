@@ -155,7 +155,7 @@ const KbArticle = () => {
         <header className="border-b border-gray-100 bg-white">
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-1 text-xl font-bold">
-              <span className="text-gray-900">recurrent</span>
+              <span className="text-gray-900">MilCrunch</span>
               <span className="text-[#6C5CE7] font-extrabold">X</span>
             </Link>
             <Link
@@ -193,7 +193,7 @@ const KbArticle = () => {
       <header className="border-b border-gray-100 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-1 text-xl font-bold">
-            <span className="text-gray-900">recurrent</span>
+            <span className="text-gray-900">MilCrunch</span>
             <span className="text-[#6C5CE7] font-extrabold">X</span>
           </Link>
           <Link

@@ -301,7 +301,7 @@ export default function DynamicPage() {
       <header className="h-14 flex items-center justify-between px-4 md:px-8 border-b border-gray-200 bg-white">
         <Link to="/" className="shrink-0">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-[#000741]">recurrent</span>
+            <span className="text-[#000741]">MilCrunch</span>
             <span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </Link>
@@ -326,7 +326,7 @@ export default function DynamicPage() {
       <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white text-center">
         <Link to="/" className="inline-block mb-2">
           <span className="font-bold text-lg" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-[#000741]">recurrent</span>
+            <span className="text-[#000741]">MilCrunch</span>
             <span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </Link>

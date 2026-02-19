@@ -71,7 +71,7 @@ const EventSelector = () => {
           <div className="flex items-center justify-between mb-1">
             <h1 className="text-xl font-bold text-white">Events</h1>
             <span className="text-xs font-bold text-white tracking-tight">
-              recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
           </div>
           <p className="text-sm text-gray-400">Select an event to get started</p>

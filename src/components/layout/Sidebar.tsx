@@ -392,7 +392,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
       {!collapsed && (
         <div className="px-5 py-4 border-t border-gray-700">
           <p className="text-[10px] text-[#4B5563] text-center">
-            recurrent<span className="text-[#6C5CE7] font-bold">X</span> &middot; v1.0
+            MilCrunch<span className="text-[#6C5CE7] font-bold">X</span> &middot; v1.0
           </p>
         </div>
       )}

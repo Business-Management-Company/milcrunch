@@ -198,7 +198,7 @@ export default function BusinessOverview() {
         {/* ═══════════════ HERO ═══════════════ */}
         <section className="text-center space-y-4">
           <div className="flex items-center justify-center gap-1.5 text-3xl font-extrabold tracking-tight">
-            <span className="text-[#000741] dark:text-white">recurrent</span>
+            <span className="text-[#000741] dark:text-white">MilCrunch</span>
             <span className="text-[#9B51E0] font-black">X</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-[#000741] dark:text-white leading-tight">

@@ -65,7 +65,7 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavP
     >
       <div className="flex items-center gap-3 min-w-0">
         <Link to="/dashboard" className="flex items-center shrink-0" aria-label="MilCrunch home">
-          <span className="font-bold text-lg text-foreground tracking-tight hidden sm:inline">recurrent<span className="text-[#6C5CE7] font-extrabold">X</span></span>
+          <span className="font-bold text-lg text-foreground tracking-tight hidden sm:inline">MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span></span>
         </Link>
       </div>
 

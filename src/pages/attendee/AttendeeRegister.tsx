@@ -281,7 +281,7 @@ const AttendeeRegister = () => {
             <p className="text-xs text-gray-400">Registration</p>
           </div>
           <span className="text-xs font-bold text-white tracking-tight shrink-0">
-            recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+            MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </header>
 

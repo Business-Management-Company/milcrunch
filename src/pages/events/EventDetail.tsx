@@ -502,7 +502,7 @@ const EventDetail = () => {
             </Link>
           </Button>
           <p className="text-xs text-gray-400 mt-6">
-            Powered by <span className="font-semibold text-gray-500">recurrent</span><span className="font-bold text-purple-500">X</span>
+            Powered by <span className="font-semibold text-gray-500">MilCrunch</span><span className="font-bold text-purple-500">X</span>
           </p>
         </div>
       </section>

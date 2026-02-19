@@ -103,7 +103,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <span className="text-2xl font-bold text-white tracking-tight">
-            recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+            MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
         </div>
 
@@ -2353,7 +2353,7 @@ export default function Prospectus() {
                 darkMode ? "text-white" : "text-[#111827]"
               )}
             >
-              recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
             <span
               className={cn(

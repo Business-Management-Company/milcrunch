@@ -103,7 +103,7 @@ export default function AttendeeApp() {
               <p className="text-xs text-muted-foreground truncate">{event.venue} — {event.city}, {event.state}</p>
             )}
           </div>
-          <span className="text-xs font-bold text-[#6C5CE7] shrink-0 ml-2">recurrent<span className="font-extrabold">X</span></span>
+          <span className="text-xs font-bold text-[#6C5CE7] shrink-0 ml-2">MilCrunch<span className="font-extrabold">X</span></span>
         </div>
       </header>
 

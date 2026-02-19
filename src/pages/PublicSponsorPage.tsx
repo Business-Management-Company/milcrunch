@@ -140,7 +140,7 @@ export default function PublicSponsorPage() {
         {/* Footer */}
         <div className="text-center pt-8">
           <Link to="/" className="text-sm text-gray-400 hover:text-[#6C5CE7]">
-            Powered by recurrent<span className="text-[#6C5CE7] font-bold">X</span>
+            Powered by MilCrunch<span className="text-[#6C5CE7] font-bold">X</span>
           </Link>
         </div>
       </div>

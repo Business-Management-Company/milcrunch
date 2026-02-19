@@ -118,7 +118,7 @@ export default function SponsorApply() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <span className="font-bold text-2xl tracking-tight text-gray-900">
-              recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
             </span>
           </Link>
         </div>
@@ -151,7 +151,7 @@ export default function SponsorApply() {
 
           <div className="p-4 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-400">
-              Powered by <span className="font-semibold">recurrent<span className="text-[#6C5CE7]">X</span></span>
+              Powered by <span className="font-semibold">MilCrunch<span className="text-[#6C5CE7]">X</span></span>
             </p>
           </div>
         </Card>

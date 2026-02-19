@@ -16,7 +16,7 @@ export default function PublicFooter() {
           <div className="space-y-4">
             <Link to="/">
               <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                <span className="text-white">recurrent</span>
+                <span className="text-white">MilCrunch</span>
                 <span className="text-[#6C5CE7] font-extrabold">X</span>
               </span>
             </Link>

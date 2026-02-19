@@ -45,7 +45,7 @@ export default function Shop() {
         <div className="bg-gradient-to-b from-[#1A1A2E] to-[#0D0D1A] py-16 px-4">
           <div className="max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-3">
-              Recurrent<span className="text-[#6C5CE7] font-extrabold">X</span> Merch
+              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span> Merch
             </h1>
             <p className="text-gray-400 text-lg max-w-xl mx-auto">
               Official gear for the military creator community

@@ -48,7 +48,7 @@ export default function SuperAdminHub() {
       <header className="px-8 pt-10 pb-6">
         <div className="flex items-center gap-3">
           <span className="text-2xl font-bold tracking-tight">
-            recurrent<span className="text-[#6C5CE7] font-extrabold">X</span>
+            MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
           </span>
           <span className="text-gray-500 text-lg">/</span>
           <h1 className="text-2xl font-bold">Super Admin</h1>

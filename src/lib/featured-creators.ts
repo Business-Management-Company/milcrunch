@@ -37,20 +37,33 @@ export interface ShowcaseCreator extends FeaturedCreator {
   avg_likes?: string | null;
 }
 
-/** Fetch up to 3 featured creators for the homepage hero cards. */
+/** Fetch up to 3 featured creators for the homepage hero cards.
+ *  Pulls from directory_members WHERE featured_homepage = true. */
 export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]> {
   const { data, error } = await supabase
-    .from("featured_creators")
+    .from("directory_members")
     .select("*")
-    .eq("is_active", true)
+    .eq("featured_homepage", true)
     .eq("approved", true)
     .order("sort_order", { ascending: true })
     .limit(3);
+
+  console.log("[featured-creators] Homepage query result:", {
+    count: data?.length ?? 0,
+    rows: data?.map((r: Record<string, unknown>) => ({
+      creator_name: r.creator_name,
+      creator_handle: r.creator_handle,
+      featured_homepage: r.featured_homepage,
+      avatar_url: r.avatar_url,
+    })),
+    error: error?.message ?? null,
+  });
+
   if (error) {
     console.warn("[featured-creators] Homepage featured fetch failed:", error.message);
     return [];
   }
-  return (data ?? []).map((r: Record<string, unknown>) => mapFeaturedRow(r));
+  return (data ?? []).map((r: Record<string, unknown>) => mapDirectoryRow(r));
 }
 
 /** For hero: top 3 active + approved featured creators by sort_order. */
