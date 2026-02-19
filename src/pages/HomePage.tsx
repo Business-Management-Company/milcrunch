@@ -190,6 +190,25 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
+function HeroAvatar({ src, name, handle }: { src: string | null; name: string; handle: string }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm ring-2 ring-gray-100">
+      {getInitials(name, handle)}
+    </div>
+  );
+}
+
 function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
@@ -721,13 +740,7 @@ export default function HomePage() {
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
                         <div className="flex items-center gap-4">
-                          {avatar ? (
-                            <img src={avatar} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100" />
-                          ) : (
-                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm ring-2 ring-gray-100">
-                              {getInitials(db.display_name, db.handle)}
-                            </div>
-                          )}
+                          <HeroAvatar src={avatar} name={db.display_name} handle={db.handle} />
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-[17px] text-gray-900">{db.display_name}</p>
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>
