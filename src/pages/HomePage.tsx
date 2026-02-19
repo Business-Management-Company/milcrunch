@@ -706,11 +706,16 @@ export default function HomePage() {
                     const style = CARD_STYLES[i];
                     const avatar = db.avatar_url || db.ic_avatar_url || null;
                     const followers = formatFollowerCount(db.follower_count);
-                    const engagement = typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : "—";
+                    const engagement = typeof db.engagement_rate === "number" ? `${db.engagement_rate.toFixed(1)}%` : null;
 
-                    // avg_views / avg_likes are populated by enrichHomepageHeroCreators()
-                    const avgViews = db.avg_views || "—";
-                    const avgLikes = db.avg_likes || "—";
+                    // Build stats array — only include stats with real data
+                    const stats: { value: string; label: string; color: string }[] = [];
+                    if (followers && followers !== "—") stats.push({ value: followers, label: "Followers", color: "text-gray-900" });
+                    if (engagement) stats.push({ value: engagement, label: "Engagement", color: "text-teal-500" });
+                    if (db.avg_views) stats.push({ value: db.avg_views, label: "Avg Views", color: "text-gray-900" });
+                    if (db.avg_likes) stats.push({ value: db.avg_likes, label: "Avg Likes", color: "text-gray-900" });
+
+                    const gridCols = stats.length <= 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-4";
 
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
@@ -730,24 +735,16 @@ export default function HomePage() {
                             <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">{db.category}</span>
                           )}
                         </div>
-                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-3">
-                          <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{followers}</p>
-                            <p className="text-[10px] text-gray-400 uppercase">Followers</p>
+                        {stats.length > 0 && (
+                          <div className={`border-t border-gray-100 mt-2 pt-2 grid ${gridCols} gap-3`}>
+                            {stats.map((s) => (
+                              <div key={s.label}>
+                                <p className={`text-[16px] font-bold ${s.color} leading-tight`}>{s.value}</p>
+                                <p className="text-[10px] text-gray-400 uppercase">{s.label}</p>
+                              </div>
+                            ))}
                           </div>
-                          <div>
-                            <p className="text-[16px] font-bold text-teal-500 leading-tight">{engagement}</p>
-                            <p className="text-[10px] text-gray-400 uppercase">Engagement</p>
-                          </div>
-                          <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgViews}</p>
-                            <p className="text-[10px] text-gray-400 uppercase">Avg Views</p>
-                          </div>
-                          <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{avgLikes}</p>
-                            <p className="text-[10px] text-gray-400 uppercase">Avg Likes</p>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     );
                   });

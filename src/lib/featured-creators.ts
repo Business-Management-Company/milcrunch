@@ -113,41 +113,88 @@ async function setHeroEnrichCache(
   }
 }
 
-/** Extract hero-relevant stats from an enrichment response. */
+/** Fetch creator stats via the simple GET endpoint.
+ *  GET /api/enrich/public/v1/creators/{handle} */
+async function fetchCreatorStatsGet(
+  handle: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const apiKey = import.meta.env.VITE_INFLUENCERS_CLUB_API_KEY;
+    if (!apiKey) return null;
+    const res = await fetch(
+      `/api/enrich/public/v1/creators/${encodeURIComponent(handle)}`,
+      { headers: { Authorization: `Bearer ${String(apiKey).trim()}` } },
+    );
+    if (!res.ok) {
+      console.warn("[HeroEnrich] GET stats failed for", handle, "— status", res.status);
+      return null;
+    }
+    return await res.json();
+  } catch (err) {
+    console.warn("[HeroEnrich] GET stats error for", handle, ":", err);
+    return null;
+  }
+}
+
+/** Deep-search a nested object for a numeric value by field name. */
+function deepFindNumber(obj: unknown, keys: string[]): number {
+  if (!obj || typeof obj !== "object") return 0;
+  const o = obj as Record<string, unknown>;
+  // Check top level first
+  for (const k of keys) {
+    if (k in o && o[k] != null && o[k] !== "") {
+      const n = Number(o[k]);
+      if (!isNaN(n) && n > 0) return n;
+    }
+  }
+  // Recurse one level into object children
+  for (const val of Object.values(o)) {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      for (const k of keys) {
+        const child = val as Record<string, unknown>;
+        if (k in child && child[k] != null && child[k] !== "") {
+          const n = Number(child[k]);
+          if (!isNaN(n) && n > 0) return n;
+        }
+      }
+      // Check one more level deep (e.g. instagram.reels.avg_view_count)
+      for (const innerVal of Object.values(child)) {
+        if (innerVal && typeof innerVal === "object" && !Array.isArray(innerVal)) {
+          for (const k of keys) {
+            const deep = innerVal as Record<string, unknown>;
+            if (k in deep && deep[k] != null && deep[k] !== "") {
+              const n = Number(deep[k]);
+              if (!isNaN(n) && n > 0) return n;
+            }
+          }
+        }
+      }
+    }
+  }
+  return 0;
+}
+
+/** Extract hero-relevant stats from any enrichment/stats response. */
 function extractHeroStats(
-  enrichment: EnrichedProfileResponse,
-  platform: string,
+  data: Record<string, unknown>,
 ): {
   follower_count: number;
   engagement_rate: number;
   avg_views: number;
   avg_likes: number;
 } {
-  // Platform data lives at enrichment.instagram (or enrichment.result[platform])
-  const platData =
-    (enrichment as Record<string, unknown>)[platform] as Record<string, unknown> | undefined ??
-    enrichment.instagram;
-  const result = enrichment.result ?? {};
-  // For platforms other than instagram, also check under result
-  const platFromResult = (result as Record<string, unknown>)[platform] as Record<string, unknown> | undefined;
-  const p = platData ?? platFromResult ?? {};
+  const follower_count = deepFindNumber(data, ["follower_count", "followers", "subscriberCount"]);
+  const engagement_rate = deepFindNumber(data, ["engagement_percent", "engagement_rate", "engagementRate"]);
+  const avg_views = deepFindNumber(data, ["avg_views", "avg_view_count", "avgViews", "average_views"]);
+  const avg_likes = deepFindNumber(data, ["avg_likes", "avg_like_count", "avgLikes", "average_likes"]);
 
-  const reels = (p.reels as Record<string, unknown>) ?? {};
-
-  const follower_count =
-    Number(p.follower_count ?? p.followers ?? 0);
-  const engagement_rate =
-    Number(p.engagement_percent ?? p.engagement_rate ?? 0);
-  const avg_views =
-    Number(reels.avg_view_count ?? p.avg_views ?? p.avg_view_count ?? 0);
-  const avg_likes =
-    Number(p.avg_likes ?? p.avg_like_count ?? 0);
-
+  console.log("[HeroEnrich] extractHeroStats →", { follower_count, engagement_rate, avg_views, avg_likes });
   return { follower_count, engagement_rate, avg_views, avg_likes };
 }
 
 /** Enrich an array of ShowcaseCreators with live Influencers.club data.
  *  Uses creator_enrichment_cache (7-day TTL) to avoid burning API credits.
+ *  Tries GET /public/v1/creators/{handle} first, falls back to POST enrich.
  *  Falls back to existing data on any failure. */
 export async function enrichHomepageHeroCreators(
   creators: ShowcaseCreator[],
@@ -158,33 +205,44 @@ export async function enrichHomepageHeroCreators(
       const platform = c.platform || "instagram";
       try {
         // 1. Check cache
-        let enrichment = await getHeroEnrichCache(handle, platform);
+        let responseData: Record<string, unknown> | null = null;
+        const cached = await getHeroEnrichCache(handle, platform);
 
-        // 2. Cache miss → call Influencers.club API (0.03 credits)
-        if (!enrichment) {
-          console.log("[HeroEnrich] Cache miss for", handle, "— calling API");
-          enrichment = await enrichCreatorProfile(handle, undefined, platform);
-          if (enrichment) {
-            await setHeroEnrichCache(handle, platform, enrichment);
-          }
-        } else {
+        if (cached) {
           console.log("[HeroEnrich] Cache hit for", handle);
+          responseData = cached as unknown as Record<string, unknown>;
+        } else {
+          console.log("[HeroEnrich] Cache miss for", handle, "— calling API");
+
+          // 2a. Try simple GET endpoint first
+          responseData = await fetchCreatorStatsGet(handle);
+
+          // 2b. Fall back to POST enrich if GET failed
+          if (!responseData) {
+            const enrichment = await enrichCreatorProfile(handle, undefined, platform);
+            responseData = enrichment as unknown as Record<string, unknown>;
+          }
+
+          // Cache the result
+          if (responseData) {
+            await setHeroEnrichCache(handle, platform, responseData as unknown as EnrichedProfileResponse);
+          }
         }
 
-        if (!enrichment) return c; // API returned null — keep DB data
+        if (!responseData) return c; // API returned null — keep DB data
 
-        // 3. Extract stats
-        const stats = extractHeroStats(enrichment, platform);
+        // 3. Extract stats (deep search across all response shapes)
+        const stats = extractHeroStats(responseData);
 
-        // 4. Merge: prefer API data, keep DB data as fallback
+        // 4. Merge: prefer API data when > 0, keep DB data as fallback
         return {
           ...c,
           follower_count: stats.follower_count || c.follower_count,
           engagement_rate: stats.engagement_rate || c.engagement_rate,
-          enrichment_data: enrichment,
-          // Store formatted strings for direct display in hero cards
-          avg_views: stats.avg_views ? formatFollowerCount(stats.avg_views) : c.avg_views,
-          avg_likes: stats.avg_likes ? formatFollowerCount(stats.avg_likes) : c.avg_likes,
+          enrichment_data: responseData,
+          // Store formatted strings; null means "no data" (card will hide this stat)
+          avg_views: stats.avg_views > 0 ? formatFollowerCount(stats.avg_views) : null,
+          avg_likes: stats.avg_likes > 0 ? formatFollowerCount(stats.avg_likes) : null,
         };
       } catch (err) {
         console.warn("[HeroEnrich] Failed for", handle, ":", err);
