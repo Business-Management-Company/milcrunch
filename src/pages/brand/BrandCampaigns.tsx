@@ -77,6 +77,13 @@ interface EventOption {
   venue: string | null;
 }
 
+/** Safely format a date value that may be ISO string, date-only, null, or malformed. */
+const formatDate = (d: string | null | undefined): string => {
+  if (!d) return "";
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? "" : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
 interface SponsorOption {
   id: string;
   name: string;
@@ -656,9 +663,9 @@ function CampaignLivePreview({
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
           <CalendarClock className="h-4 w-4 text-[#6C5CE7]" />
           <span>
-            {startDate && new Date(startDate + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {formatDate(startDate)}
             {startDate && endDate && " — "}
-            {endDate && new Date(endDate + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {formatDate(endDate)}
           </span>
         </div>
       )}
@@ -1184,16 +1191,19 @@ Make the captions authentic and engaging for a military community audience. Refe
                   <SelectValue placeholder="Select an event" />
                 </SelectTrigger>
                 <SelectContent>
-                  {events.map((ev) => (
-                    <SelectItem key={ev.id} value={ev.id}>
-                      {ev.title}
-                      {ev.start_date && (
-                        <span className="text-gray-400 ml-2">
-                          ({new Date(ev.start_date + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})
-                        </span>
-                      )}
-                    </SelectItem>
-                  ))}
+                  {events.map((ev) => {
+                    const dateStr = formatDate(ev.start_date);
+                    return (
+                      <SelectItem key={ev.id} value={ev.id}>
+                        {ev.title}
+                        {dateStr && (
+                          <span className="text-gray-400 ml-2">
+                            ({dateStr})
+                          </span>
+                        )}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </FormSection>
