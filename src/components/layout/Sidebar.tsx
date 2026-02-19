@@ -39,8 +39,6 @@ import {
   Settings2,
   Calculator,
   TrendingUp,
-  DollarSign,
-  PiggyBank,
   Target,
   UserPlus,
   type LucideIcon,
@@ -75,7 +73,8 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "EVENTS",
     items: [
       { href: "/brand/events", label: "Events", icon: Calendar },
-      { href: "/brand/pdx/new", label: "MilCrunch Experience", icon: Radio },
+      { href: "/brand/pdx/new", label: "Experiences", icon: Radio },
+      { href: "/brand/calculators", label: "Calculators", icon: Calculator },
       { href: "/speakers", label: "Speakers", icon: Mic },
     ],
   },
@@ -177,17 +176,6 @@ const SUPER_ADMIN_SECTION: NavSection = {
   ],
 };
 
-const REV_CALCULATORS_SECTION: NavSection = {
-  key: "rev-calculators",
-  label: "REV CALCULATORS",
-  defaultCollapsed: true,
-  items: [
-    { href: "/admin/roi-calculator", label: "ROI Calculator", icon: Calculator },
-    { href: "/admin/growth-calculator", label: "Growth Model", icon: TrendingUp },
-    { href: "/admin/revenue-projections", label: "Revenue Projections", icon: DollarSign },
-    { href: "/admin/saas-calculator", label: "SaaS Savings", icon: PiggyBank },
-  ],
-};
 
 const STORAGE_KEY = "pd_sidebar_collapsed";
 
@@ -260,10 +248,9 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
 
   const sections = isSuperAdmin
     ? [
-        // All sections except settings, then super admin + rev calculators, then settings last
+        // All sections except settings, then super admin, then settings last
         ...SIDEBAR_SECTIONS.filter((s) => s.key !== "settings"),
         SUPER_ADMIN_SECTION,
-        REV_CALCULATORS_SECTION,
         ...SIDEBAR_SECTIONS.filter((s) => s.key === "settings"),
       ]
     : SIDEBAR_SECTIONS;

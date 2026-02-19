@@ -47,7 +47,7 @@ export default function SaasCalculator() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-6 md:p-10">
+    <div className="bg-white p-6 md:p-10">
       <h1 className="text-2xl font-bold text-[#1a1a2e] mb-1">SaaS Savings Calculator</h1>
       <p className="text-gray-500 text-sm mb-8">Adjust what you currently spend — see how much MilCrunch saves you.</p>
 

@@ -62,7 +62,7 @@ export default function RevenueProjections() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-6 md:p-10">
+    <div className="bg-white p-6 md:p-10">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-[#1a1a2e] mb-1">Revenue Projections</h1>

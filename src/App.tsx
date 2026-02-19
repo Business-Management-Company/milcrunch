@@ -108,6 +108,7 @@ import RoiCalculator from "./pages/superadmin/RoiCalculator";
 import GrowthCalculator from "./pages/superadmin/GrowthCalculator";
 import RevenueProjections from "./pages/superadmin/RevenueProjections";
 import SaasCalculator from "./pages/superadmin/SaasCalculator";
+import Calculators from "./pages/superadmin/Calculators";
 import ProspectusAccess from "./pages/admin/ProspectusAccess";
 import SuperAdminHub from "./pages/admin/SuperAdminHub";
 import BrandPages from "./pages/brand/BrandPages";
@@ -217,6 +218,7 @@ const App = () => (
                 <Route path="/brand/events/create" element={<BrandEventCreate />} />
                 <Route path="/brand/events/:eventId" element={<BrandEventDetail />} />
                 <Route path="/brand/pdx/new" element={<PdxWizard />} />
+                <Route path="/brand/calculators" element={<Calculators />} />
                 <Route path="/brand/attribution" element={<BrandAttribution />} />
                 <Route path="/brand/settings" element={<BrandSettings />} />
                 <Route path="/brand/posting" element={<BrandPosting />} />
