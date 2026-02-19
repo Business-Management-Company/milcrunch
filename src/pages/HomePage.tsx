@@ -705,23 +705,18 @@ export default function HomePage() {
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
                     const avatar = db.avatar_url || db.ic_avatar_url || null;
-                    const followers = formatFollowerCount(db.follower_count);
-                    // Only show engagement if it's meaningful (> 0.1%)
-                    const engNum = typeof db.engagement_rate === "number" ? db.engagement_rate : 0;
-                    const engagement = engNum > 0.1 ? `${engNum.toFixed(2)}%` : null;
+                    // Exactly 4 stats: Followers, Engagement Rate, Number of Posts, Avg Comments
+                    const followers = db.follower_count != null ? formatFollowerCount(db.follower_count) : "—";
+                    const engagement = db.engagement_rate != null ? `${db.engagement_rate.toFixed(2)}%` : "—";
+                    const posts = db.post_count != null ? String(db.post_count) : "—";
+                    const avgComments = db.avg_comments != null ? String(db.avg_comments) : "—";
 
-                    // Build stats array — only include stats with real, non-zero data
-                    const hasValue = (v: string | number | null | undefined) =>
-                      v != null && v !== "" && v !== "0" && v !== "—" && v !== 0;
-                    const stats: { value: string; label: string; color: string }[] = [];
-                    if (hasValue(db.follower_count) && followers !== "—") stats.push({ value: followers, label: "Followers", color: "text-gray-900" });
-                    if (engagement) stats.push({ value: engagement, label: "Engagement", color: "text-teal-500" });
-                    if (hasValue(db.avg_views)) stats.push({ value: db.avg_views!, label: "Avg Views", color: "text-gray-900" });
-                    if (hasValue(db.avg_likes)) stats.push({ value: db.avg_likes!, label: "Avg Likes", color: "text-gray-900" });
-                    if (hasValue(db.avg_comments)) stats.push({ value: db.avg_comments!, label: "Avg Comments", color: "text-gray-900" });
-                    if (hasValue(db.media_count)) stats.push({ value: formatFollowerCount(db.media_count!), label: "Posts", color: "text-gray-900" });
-
-                    const gridCols = stats.length <= 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-4";
+                    const stats: { value: string; label: string; color: string }[] = [
+                      { value: followers, label: "Followers", color: "text-gray-900" },
+                      { value: engagement, label: "Engagement", color: "text-teal-500" },
+                      { value: posts, label: "Posts", color: "text-gray-900" },
+                      { value: avgComments, label: "Avg Comments", color: "text-gray-900" },
+                    ];
 
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
@@ -742,7 +737,7 @@ export default function HomePage() {
                           )}
                         </div>
                         {stats.length > 0 && (
-                          <div className={`border-t border-gray-100 mt-2 pt-2 grid ${stats.length > 4 ? "grid-cols-3" : gridCols} gap-x-3 gap-y-2`}>
+                          <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-x-3 gap-y-2">
                             {stats.map((s) => (
                               <div key={s.label}>
                                 <p className={`text-[16px] font-bold ${s.color} leading-tight`}>{s.value}</p>

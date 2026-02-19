@@ -36,7 +36,8 @@ export interface ShowcaseCreator extends FeaturedCreator {
   featured_homepage?: boolean;
   avg_views?: string | null;
   avg_likes?: string | null;
-  avg_comments?: string | null;
+  avg_comments?: number | null;
+  post_count?: number | null;
   media_count?: number | null;
 }
 
@@ -116,24 +117,21 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
   },
 ];
 
-/** Hero creator handles — the 3 creators to feature on the homepage. */
-const HERO_HANDLES = ["davebrayusa", "therealdoctodd", "brittanyyycampbelll"];
-
 /** Fetch up to 3 featured creators for the homepage hero cards.
- *  Pulls from directory_members by handle (davebrayusa, therealdoctodd, brittanyyycampbelll).
+ *  Pulls from directory_members WHERE featured_homepage = true.
  *  Falls back to hardcoded creators if the table doesn't exist or is empty. */
 export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]> {
   try {
     const { data, error } = await supabase
       .from("directory_members")
-      .select("*")
-      .in("creator_handle", HERO_HANDLES)
+      .select("id, creator_handle, creator_name, platform, avatar_url, ic_avatar_url, follower_count, engagement_rate, post_count, avg_comments, category, sort_order, branch, status, bio, platforms, paradedeck_verified, influencersclub_verified, profile_slug, platform_urls, enrichment_data, featured_homepage, approved")
+      .eq("featured_homepage", true)
       .eq("approved", true)
       .order("sort_order", { ascending: true })
       .limit(3);
 
     if (!error && data && data.length > 0) {
-      console.log("[featured-creators] Homepage: using DB creators:", data.length, "— columns:", data[0] ? Object.keys(data[0]).join(", ") : "none");
+      console.log("[featured-creators] Homepage: using DB creators:", data.length);
       return data.map((r: Record<string, unknown>) => mapDirectoryRow(r));
     }
 
@@ -304,7 +302,8 @@ export async function enrichHomepageHeroCreators(
           enrichment_data: responseData,
           avg_views: stats.avg_views > 0 ? formatFollowerCount(stats.avg_views) : (c.avg_views || null),
           avg_likes: stats.avg_likes > 0 ? formatFollowerCount(stats.avg_likes) : (c.avg_likes || null),
-          avg_comments: stats.avg_comments > 0 ? formatFollowerCount(stats.avg_comments) : (c.avg_comments || null),
+          avg_comments: stats.avg_comments > 0 ? stats.avg_comments : (c.avg_comments ?? null),
+          post_count: stats.media_count > 0 ? stats.media_count : (c.post_count ?? null),
           media_count: stats.media_count > 0 ? stats.media_count : (c.media_count || null),
         };
       } catch (err) {
@@ -406,7 +405,8 @@ function mapFeaturedRow(r: Record<string, unknown>): ShowcaseCreator {
     featured_homepage: (r.featured_homepage as boolean) ?? false,
     avg_views: (r.avg_views as string) ?? null,
     avg_likes: (r.avg_likes as string) ?? null,
-    avg_comments: (r.avg_comments as string) ?? null,
+    avg_comments: r.avg_comments != null ? Number(r.avg_comments) : null,
+    post_count: r.post_count != null ? Number(r.post_count) : null,
     media_count: (r.media_count as number) ?? null,
   };
 }
@@ -440,7 +440,8 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     featured_homepage: (r.featured_homepage as boolean) ?? false,
     avg_views: (r.avg_views as string) ?? null,
     avg_likes: (r.avg_likes as string) ?? null,
-    avg_comments: (r.avg_comments as string) ?? null,
+    avg_comments: r.avg_comments != null ? Number(r.avg_comments) : null,
+    post_count: r.post_count != null ? Number(r.post_count) : null,
     media_count: (r.media_count as number) ?? null,
   };
 }
