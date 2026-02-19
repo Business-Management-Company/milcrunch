@@ -25,7 +25,7 @@ import {
   getInitials,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
-import { cn, safeImageUrl } from "@/lib/utils";
+import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
 /* Icons                                                               */
@@ -162,17 +162,12 @@ function CreatorCard({
   index: number;
 }) {
   const [imgSrc, setImgSrc] = useState<string | null>(
-    safeImageUrl(c.avatar_url) || safeImageUrl(c.ic_avatar_url) || null,
+    creatorAvatarUrl(c.ic_avatar_url, c.avatar_url) || null,
   );
   const [imgFailed, setImgFailed] = useState(false);
 
   const handleImgError = () => {
-    const safeFallback = safeImageUrl(c.ic_avatar_url);
-    if (imgSrc === safeImageUrl(c.avatar_url) && safeFallback && safeFallback !== imgSrc) {
-      setImgSrc(safeFallback);
-    } else {
-      setImgFailed(true);
-    }
+    setImgFailed(true);
   };
 
   const showImage = !!imgSrc && !imgFailed;

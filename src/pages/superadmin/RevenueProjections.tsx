@@ -54,21 +54,21 @@ export default function RevenueProjections() {
     const w = window.open("", "_blank");
     if (!w) return;
     const rows = year.streams.map(
-      (s) => `<tr><td style="padding:8px 12px;border-bottom:1px solid #1F2937">${s.name}</td><td style="padding:8px 12px;border-bottom:1px solid #1F2937;text-align:right;font-family:monospace">${fmt(s.amount)}</td></tr>`
+      (s) => `<tr><td style="padding:8px 12px;border-bottom:1px solid #E5E7EB">${s.name}</td><td style="padding:8px 12px;border-bottom:1px solid #E5E7EB;text-align:right;font-family:monospace">${fmt(s.amount)}</td></tr>`
     ).join("");
-    w.document.write(`<!DOCTYPE html><html><head><title>MilCrunch Revenue Projections — ${year.label}</title><style>body{font-family:system-ui;background:#0A0F1E;color:#fff;padding:40px}table{width:100%;border-collapse:collapse;margin-top:20px}h1{font-size:28px}h2{color:#6C5CE7;margin-top:8px}.total{font-size:24px;color:#10B981;font-weight:800;margin-top:24px}</style></head><body><h1>MilCrunch Revenue Projections</h1><h2>${year.label}</h2><table>${rows}<tr style="background:rgba(108,92,231,0.15)"><td style="padding:8px 12px;font-weight:700">Total Revenue</td><td style="padding:8px 12px;text-align:right;font-weight:700;color:#10B981;font-family:monospace">${fmt(total)}</td></tr></table><p class="total">Total: ${fmt(total)}</p><p style="color:#6B7280;font-size:12px;margin-top:40px">&copy; ${new Date().getFullYear()} MilCrunch &middot; Confidential</p></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><title>MilCrunch Revenue Projections — ${year.label}</title><style>body{font-family:system-ui;background:#fff;color:#1a1a2e;padding:40px}table{width:100%;border-collapse:collapse;margin-top:20px}h1{font-size:28px}h2{color:#7C3AED;margin-top:8px}.total{font-size:24px;color:#10B981;font-weight:800;margin-top:24px}</style></head><body><h1>MilCrunch Revenue Projections</h1><h2>${year.label}</h2><table>${rows}<tr style="background:rgba(124,58,237,0.08)"><td style="padding:8px 12px;font-weight:700">Total Revenue</td><td style="padding:8px 12px;text-align:right;font-weight:700;color:#7C3AED;font-family:monospace">${fmt(total)}</td></tr></table><p class="total">Total: ${fmt(total)}</p><p style="color:#6B7280;font-size:12px;margin-top:40px">&copy; ${new Date().getFullYear()} MilCrunch &middot; Confidential</p></body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 300);
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] p-6 md:p-10">
+    <div className="min-h-screen bg-white p-6 md:p-10">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Revenue Projections</h1>
+          <h1 className="text-2xl font-bold text-[#1a1a2e] mb-1">Revenue Projections</h1>
           <p className="text-gray-500 text-sm">3-year revenue breakdown by stream.</p>
         </div>
-        <Button onClick={exportPdf} variant="outline" className="border-white/10 text-gray-300 hover:bg-white/[0.06] hover:text-white">
+        <Button onClick={exportPdf} variant="outline" className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-[#1a1a2e]">
           <Download className="h-4 w-4 mr-2" /> Export as PDF
         </Button>
       </div>
@@ -85,8 +85,8 @@ export default function RevenueProjections() {
               className={cn(
                 "px-5 py-2.5 rounded-lg text-sm font-medium transition-all",
                 activeYear === i
-                  ? "bg-[#6C5CE7] text-white"
-                  : "bg-white/[0.04] text-gray-400 border border-white/[0.08] hover:text-white hover:bg-white/[0.08]"
+                  ? "bg-[#7C3AED] text-white"
+                  : "bg-[#F8F9FA] text-gray-500 border border-gray-200 hover:text-[#1a1a2e] hover:bg-gray-100"
               )}
             >
               {y.label} <span className="ml-2 text-xs opacity-70">{fmt(t)}</span>
@@ -96,13 +96,13 @@ export default function RevenueProjections() {
       </div>
 
       {/* Revenue table */}
-      <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl overflow-hidden">
+      <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/[0.08]">
-              <th className="text-left text-xs font-medium uppercase tracking-wider text-gray-500 px-6 py-3">Revenue Stream</th>
-              <th className="text-right text-xs font-medium uppercase tracking-wider text-gray-500 px-6 py-3 w-40">Amount</th>
-              <th className="text-left text-xs font-medium uppercase tracking-wider text-gray-500 px-6 py-3 w-64">Share</th>
+            <tr className="border-b border-gray-200">
+              <th className="text-left text-xs font-medium uppercase tracking-wider text-gray-400 px-6 py-3">Revenue Stream</th>
+              <th className="text-right text-xs font-medium uppercase tracking-wider text-gray-400 px-6 py-3 w-40">Amount</th>
+              <th className="text-left text-xs font-medium uppercase tracking-wider text-gray-400 px-6 py-3 w-64">Share</th>
             </tr>
           </thead>
           <tbody>
@@ -110,15 +110,15 @@ export default function RevenueProjections() {
               const pct = total > 0 ? (s.amount / total * 100).toFixed(1) : "0";
               const barWidth = maxAmount > 0 ? (s.amount / maxAmount * 100) : 0;
               return (
-                <tr key={s.name} className="border-b border-white/[0.05]">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-300">{s.name}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-white text-right tabular-nums">{fmt(s.amount)}</td>
+                <tr key={s.name} className="border-b border-gray-100">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-700">{s.name}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-[#1a1a2e] text-right tabular-nums">{fmt(s.amount)}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden">
-                        <div className="h-full rounded-full bg-[#6C5CE7]" style={{ width: `${barWidth}%` }} />
+                      <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
+                        <div className="h-full rounded-full bg-[#7C3AED]" style={{ width: `${barWidth}%` }} />
                       </div>
-                      <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{pct}%</span>
+                      <span className="text-xs text-gray-400 tabular-nums w-10 text-right">{pct}%</span>
                     </div>
                   </td>
                 </tr>
@@ -126,11 +126,11 @@ export default function RevenueProjections() {
             })}
           </tbody>
           <tfoot>
-            <tr className="bg-[#6C5CE7]/10">
-              <td className="px-6 py-4 text-sm font-bold text-white">Total Revenue</td>
-              <td className="px-6 py-4 text-lg font-extrabold text-[#6C5CE7] text-right tabular-nums">{fmt(total)}</td>
+            <tr className="bg-[#7C3AED]/[0.06]">
+              <td className="px-6 py-4 text-sm font-bold text-[#1a1a2e]">Total Revenue</td>
+              <td className="px-6 py-4 text-lg font-extrabold text-[#7C3AED] text-right tabular-nums">{fmt(total)}</td>
               <td className="px-6 py-4">
-                <span className="text-xs font-medium text-[#6C5CE7]">100%</span>
+                <span className="text-xs font-medium text-[#7C3AED]">100%</span>
               </td>
             </tr>
           </tfoot>
@@ -149,14 +149,14 @@ export default function RevenueProjections() {
               className={cn(
                 "rounded-xl p-5 text-center transition-all",
                 activeYear === i
-                  ? "bg-[#6C5CE7]/15 border-2 border-[#6C5CE7]/40"
-                  : "bg-white/[0.04] border border-white/[0.08]"
+                  ? "bg-white border-2 border-[#7C3AED]"
+                  : "bg-[#F8F9FA] border border-gray-200"
               )}
             >
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{y.label}</p>
-              <p className="text-xl font-extrabold text-white">{fmt(t)}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{y.label}</p>
+              <p className="text-xl font-extrabold text-[#1a1a2e]">{fmt(t)}</p>
               {i > 0 && (
-                <p className="text-xs text-[#10B981] font-medium mt-1">+{growth}% YoY</p>
+                <p className="text-xs text-[#7C3AED] font-medium mt-1">+{growth}% YoY</p>
               )}
             </div>
           );

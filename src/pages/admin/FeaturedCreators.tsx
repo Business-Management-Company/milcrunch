@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { safeImageUrl } from "@/lib/utils";
+import { safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -446,7 +446,7 @@ export default function FeaturedCreators() {
                   <TableCell>
                     {(() => {
                       const icAvatar = (row as Record<string, unknown>).ic_avatar_url as string | null;
-                      const src = safeImageUrl(icAvatar) || safeImageUrl(row.avatar_url);
+                      const src = creatorAvatarUrl(icAvatar, row.avatar_url);
                       if (!src) return (
                         <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#6C5CE7]">
                           {getInitials(row.display_name, row.handle)}

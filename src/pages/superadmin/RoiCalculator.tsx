@@ -63,18 +63,18 @@ export default function RoiCalculator() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] p-6 md:p-10">
-      <h1 className="text-2xl font-bold text-white mb-1">ROI Calculator</h1>
+    <div className="min-h-screen bg-white p-6 md:p-10">
+      <h1 className="text-2xl font-bold text-[#1a1a2e] mb-1">ROI Calculator</h1>
       <p className="text-gray-500 text-sm mb-8">Model sponsor revenue, platform licensing, and ROI vs legacy SaaS stack.</p>
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Sliders */}
         <div className="space-y-6">
           {sliders.map((s) => (
-            <div key={s.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5">
+            <div key={s.label} className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-5">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-gray-300">{s.label}</span>
-                <span className="text-sm font-bold text-white tabular-nums">
+                <span className="text-sm font-medium text-gray-700">{s.label}</span>
+                <span className="text-sm font-bold text-[#1a1a2e] tabular-nums">
                   {s.prefix ?? ""}{s.value.toLocaleString()}
                 </span>
               </div>
@@ -84,9 +84,9 @@ export default function RoiCalculator() {
                 min={s.min}
                 max={s.max}
                 step={s.step}
-                className="[&_[role=slider]]:bg-[#6C5CE7] [&_[role=slider]]:border-[#6C5CE7] [&_.range]:bg-[#6C5CE7]"
+                className="[&_[role=slider]]:bg-[#7C3AED] [&_[role=slider]]:border-[#7C3AED] [&_.range]:bg-[#7C3AED]"
               />
-              <div className="flex justify-between text-xs text-gray-600 mt-1.5">
+              <div className="flex justify-between text-xs text-gray-400 mt-1.5">
                 <span>{s.prefix ?? ""}{s.min.toLocaleString()}</span>
                 <span>{s.prefix ?? ""}{s.max.toLocaleString()}</span>
               </div>
@@ -96,41 +96,41 @@ export default function RoiCalculator() {
 
         {/* Results */}
         <div className="space-y-4">
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-6">
-            <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 mb-4">Revenue Summary</p>
+          <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-6">
+            <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4">Revenue Summary</p>
 
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-400">Annual Sponsor Revenue</p>
+                <p className="text-sm text-gray-500">Annual Sponsor Revenue</p>
                 <p className="text-3xl font-extrabold text-[#10B981]">{fmt(annualSponsor)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Annual License Revenue</p>
-                <p className="text-xl font-bold text-white">{fmt(annualLicense)}</p>
+                <p className="text-sm text-gray-500">Annual License Revenue</p>
+                <p className="text-xl font-bold text-[#1a1a2e]">{fmt(annualLicense)}</p>
               </div>
-              <div className="pt-3 border-t border-white/[0.08]">
-                <p className="text-sm text-gray-400">Total Platform Revenue</p>
-                <p className="text-2xl font-extrabold text-white">{fmt(totalRevenue)}</p>
+              <div className="pt-3 border-t border-gray-200">
+                <p className="text-sm text-gray-500">Total Platform Revenue</p>
+                <p className="text-2xl font-extrabold text-[#1a1a2e]">{fmt(totalRevenue)}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-6">
-            <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 mb-4">ROI vs SaaS Stack</p>
+          <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-6">
+            <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4">ROI vs SaaS Stack</p>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-400">Legacy SaaS Cost/yr</span>
-                <span className="text-sm font-medium text-red-400">{fmt(saasBaseline)}</span>
+                <span className="text-sm text-gray-500">Legacy SaaS Cost/yr</span>
+                <span className="text-sm font-medium text-red-500">{fmt(saasBaseline)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-400">Net Savings</span>
-                <span className={cn("text-sm font-bold", netSavings >= 0 ? "text-[#10B981]" : "text-red-400")}>
+                <span className="text-sm text-gray-500">Net Savings</span>
+                <span className={cn("text-sm font-bold", netSavings >= 0 ? "text-[#10B981]" : "text-red-500")}>
                   {netSavings >= 0 ? "+" : ""}{fmt(netSavings)}
                 </span>
               </div>
-              <div className="flex justify-between items-center pt-3 border-t border-white/[0.08]">
-                <span className="text-sm text-gray-400">ROI</span>
-                <span className={cn("text-2xl font-extrabold", Number(roiPct) >= 0 ? "text-[#10B981]" : "text-red-400")}>
+              <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                <span className="text-sm text-gray-500">ROI</span>
+                <span className={cn("text-2xl font-extrabold", Number(roiPct) >= 0 ? "text-[#10B981]" : "text-red-500")}>
                   {roiPct}%
                 </span>
               </div>
@@ -140,15 +140,15 @@ export default function RoiCalculator() {
           <Button
             onClick={analyze}
             disabled={aiLoading}
-            className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white h-12 text-sm font-semibold"
+            className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white h-12 text-sm font-semibold"
           >
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
             Analyze with AI
           </Button>
 
           {aiInsight && (
-            <div className="bg-[#6C5CE7]/10 border border-[#6C5CE7]/30 rounded-xl p-5">
-              <p className="text-sm text-gray-300 leading-relaxed">{aiInsight}</p>
+            <div className="bg-[#7C3AED]/10 border border-[#7C3AED]/30 rounded-xl p-5">
+              <p className="text-sm text-gray-700 leading-relaxed">{aiInsight}</p>
             </div>
           )}
         </div>

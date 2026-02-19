@@ -41,7 +41,7 @@ import {
   getInitials,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
-import { cn, safeImageUrl } from "@/lib/utils";
+import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
 /* Icons                                                               */
@@ -316,23 +316,13 @@ export default function CreatorPublicProfile() {
   /* ---- Image fallback ---- */
   useEffect(() => {
     if (creator) {
-      setImgSrc(safeImageUrl(creator.avatar_url) || safeImageUrl(creator.ic_avatar_url) || null);
+      setImgSrc(creatorAvatarUrl(creator.ic_avatar_url, creator.avatar_url, (creator as Record<string, unknown>).profile_image_url as string));
       setImgFailed(false);
     }
   }, [creator]);
 
   const handleImgError = () => {
-    const safeFallback = safeImageUrl(creator?.ic_avatar_url);
-    if (
-      creator &&
-      imgSrc === safeImageUrl(creator.avatar_url) &&
-      safeFallback &&
-      safeFallback !== imgSrc
-    ) {
-      setImgSrc(safeFallback);
-    } else {
-      setImgFailed(true);
-    }
+    setImgFailed(true);
   };
   const showImage = !!imgSrc && !imgFailed;
 

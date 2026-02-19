@@ -39,18 +39,18 @@ export default function GrowthCalculator() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] p-6 md:p-10">
-      <h1 className="text-2xl font-bold text-white mb-1">Growth Calculator</h1>
+    <div className="min-h-screen bg-white p-6 md:p-10">
+      <h1 className="text-2xl font-bold text-[#1a1a2e] mb-1">Growth Calculator</h1>
       <p className="text-gray-500 text-sm mb-8">Model creator network growth, MRR trajectory, and unit economics.</p>
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Sliders */}
         <div className="space-y-6">
           {sliders.map((s) => (
-            <div key={s.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5">
+            <div key={s.label} className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-5">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-medium text-gray-300">{s.label}</span>
-                <span className="text-sm font-bold text-white tabular-nums">
+                <span className="text-sm font-medium text-gray-700">{s.label}</span>
+                <span className="text-sm font-bold text-[#1a1a2e] tabular-nums">
                   {s.prefix ?? ""}{s.value.toLocaleString()}{s.suffix ?? ""}
                 </span>
               </div>
@@ -60,9 +60,9 @@ export default function GrowthCalculator() {
                 min={s.min}
                 max={s.max}
                 step={s.step}
-                className="[&_[role=slider]]:bg-[#6C5CE7] [&_[role=slider]]:border-[#6C5CE7] [&_.range]:bg-[#6C5CE7]"
+                className="[&_[role=slider]]:bg-[#7C3AED] [&_[role=slider]]:border-[#7C3AED] [&_.range]:bg-[#7C3AED]"
               />
-              <div className="flex justify-between text-xs text-gray-600 mt-1.5">
+              <div className="flex justify-between text-xs text-gray-400 mt-1.5">
                 <span>{s.prefix ?? ""}{s.min.toLocaleString()}{s.suffix ?? ""}</span>
                 <span>{s.prefix ?? ""}{s.max.toLocaleString()}{s.suffix ?? ""}</span>
               </div>
@@ -72,57 +72,57 @@ export default function GrowthCalculator() {
 
         {/* Results */}
         <div className="space-y-4">
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-6">
-            <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 mb-4">Growth Projections</p>
+          <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-6">
+            <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4">Growth Projections</p>
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-400">Total Creators at End of Period</p>
-                <p className="text-2xl font-extrabold text-white">{totalCreators.toLocaleString()}</p>
+                <p className="text-sm text-gray-500">Total Creators at End of Period</p>
+                <p className="text-2xl font-extrabold text-[#1a1a2e]">{totalCreators.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">MRR at End of Period</p>
+                <p className="text-sm text-gray-500">MRR at End of Period</p>
                 <p className="text-2xl font-extrabold text-[#10B981]">{fmt(mrr)}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-6">
-            <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 mb-4">Unit Economics</p>
+          <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-6">
+            <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-4">Unit Economics</p>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-400">Customer Acquisition Cost</span>
-                <span className="text-sm font-medium text-white">{fmt(cac)}</span>
+                <span className="text-sm text-gray-500">Customer Acquisition Cost</span>
+                <span className="text-sm font-medium text-[#1a1a2e]">{fmt(cac)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-400">Customer LTV</span>
-                <span className="text-sm font-medium text-white">{fmt(Math.round(ltv))}</span>
+                <span className="text-sm text-gray-500">Customer LTV</span>
+                <span className="text-sm font-medium text-[#1a1a2e]">{fmt(Math.round(ltv))}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-400">LTV / CAC Ratio</span>
-                <span className={cn("text-sm font-bold", Number(ltvCac) >= 3 ? "text-[#10B981]" : "text-amber-400")}>
+                <span className="text-sm text-gray-500">LTV / CAC Ratio</span>
+                <span className={cn("text-sm font-bold", Number(ltvCac) >= 3 ? "text-[#10B981]" : "text-amber-500")}>
                   {ltvCac}x
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-400">Payback Period</span>
-                <span className="text-sm font-medium text-white">{paybackMonths} month{paybackMonths !== 1 ? "s" : ""}</span>
+                <span className="text-sm text-gray-500">Payback Period</span>
+                <span className="text-sm font-medium text-[#1a1a2e]">{paybackMonths} month{paybackMonths !== 1 ? "s" : ""}</span>
               </div>
-              <div className="flex justify-between items-center pt-3 border-t border-white/[0.08]">
-                <span className="text-sm text-gray-400">Net ROI</span>
-                <span className={cn("text-2xl font-extrabold", Number(netRoi) >= 0 ? "text-[#10B981]" : "text-red-400")}>
+              <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                <span className="text-sm text-gray-500">Net ROI</span>
+                <span className={cn("text-2xl font-extrabold", Number(netRoi) >= 0 ? "text-[#10B981]" : "text-red-500")}>
                   {netRoi}%
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5">
-            <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 mb-3">Industry Benchmarks</p>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li className="flex justify-between"><span>Healthy LTV/CAC</span><span className="text-gray-300">3x+</span></li>
-              <li className="flex justify-between"><span>SaaS Median Churn</span><span className="text-gray-300">5–7%/mo</span></li>
-              <li className="flex justify-between"><span>Best-in-class Payback</span><span className="text-gray-300">&lt;12 months</span></li>
-              <li className="flex justify-between"><span>Creator Platform Net Revenue Retention</span><span className="text-gray-300">110–130%</span></li>
+          <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-5">
+            <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-3">Industry Benchmarks</p>
+            <ul className="space-y-2 text-sm text-gray-500">
+              <li className="flex justify-between"><span>Healthy LTV/CAC</span><span className="text-[#1a1a2e]">3x+</span></li>
+              <li className="flex justify-between"><span>SaaS Median Churn</span><span className="text-[#1a1a2e]">5–7%/mo</span></li>
+              <li className="flex justify-between"><span>Best-in-class Payback</span><span className="text-[#1a1a2e]">&lt;12 months</span></li>
+              <li className="flex justify-between"><span>Creator Platform Net Revenue Retention</span><span className="text-[#1a1a2e]">110–130%</span></li>
             </ul>
           </div>
         </div>

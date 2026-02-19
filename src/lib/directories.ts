@@ -63,6 +63,8 @@ export interface DirectoryMember {
   featured_homepage: boolean;
   avg_views: string | null;
   avg_likes: string | null;
+  avg_comments: number | null;
+  post_count: number | null;
 }
 
 // ─── Directory CRUD ─────────────────────────────────────────
@@ -386,5 +388,7 @@ function mapMemberRow(row: Record<string, unknown>): DirectoryMember {
     featured_homepage: (row.featured_homepage as boolean) ?? false,
     avg_views: (row.avg_views as string) ?? null,
     avg_likes: (row.avg_likes as string) ?? null,
+    avg_comments: row.avg_comments != null ? Number(row.avg_comments) : null,
+    post_count: row.post_count != null ? Number(row.post_count) : null,
   };
 }

@@ -11,6 +11,19 @@ export function safeImageUrl(url: string | null | undefined): string | null {
   return url.replace(/^http:\/\//i, "https://");
 }
 
+/** Resolve the best creator avatar URL from multiple sources.
+ *  Standard priority: ic_avatar_url → avatar_url → profile_image_url.
+ *  Returns the first non-empty URL, forced to HTTPS, or null. */
+export function creatorAvatarUrl(
+  ...sources: (string | null | undefined)[]
+): string | null {
+  for (const src of sources) {
+    const safe = safeImageUrl(src);
+    if (safe) return safe;
+  }
+  return null;
+}
+
 /**
  * Escape HTML to prevent XSS, then convert basic markdown (**bold**, *italic*) to HTML.
  * Safe to use with dangerouslySetInnerHTML for AI/user message content.
