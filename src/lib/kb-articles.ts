@@ -31,10 +31,10 @@ export type KBArticle = KbArticle;
 export const KB_CATEGORIES: KbCategory[] = [
   {
     slug: "events-pdx",
-    label: "Events & PDX",
+    label: "Events & Experience",
     emoji: "\uD83C\uDFAA",
     description:
-      "Create and manage events, set up the Parade Deck Experience stage, and build mobile attendee apps.",
+      "Create and manage events, set up the MilCrunch Experience stage, and build mobile attendee apps.",
   },
   {
     slug: "creator-network",
@@ -80,28 +80,28 @@ export const KB_CATEGORIES: KbCategory[] = [
 export const KB_ARTICLES: KbArticle[] = [
   // ─── EVENTS & PDX ───────────────────────────────────────────────────
   {
-    title: "What is the Parade Deck Experience (PDX)?",
+    title: "What is the MilCrunch Experience?",
     slug: "what-is-pdx",
     category: "events-pdx",
     summary:
-      "A complete overview of the PDX live-stage production model and its 7-phase pipeline.",
+      "A complete overview of the Experience live-stage production model and its 7-phase pipeline.",
     readTime: 6,
     date: "2026-02-10",
     related: ["creating-run-of-show", "inviting-creators-pdx-stage"],
     isPublished: true,
-    content: `## What is PDX?
+    content: `## What is the Experience?
 
-The Parade Deck Experience (PDX) is MilCrunch's turnkey live-stage production model designed specifically for military and veteran events. Rather than leaving a conference stage empty between keynotes, PDX transforms that downtime into an engaging, revenue-generating content hub featuring military creators, panel discussions, live interviews, and sponsor activations.
+The MilCrunch Experience is MilCrunch's turnkey live-stage production model designed specifically for military and veteran events. Rather than leaving a conference stage empty between keynotes, the Experience transforms that downtime into an engaging, revenue-generating content hub featuring military creators, panel discussions, live interviews, and sponsor activations.
 
-PDX has been battle-tested at events like the Military Influencer Conference (MIC), where it turned hours of otherwise dead stage time into some of the highest-engagement segments of the entire event.
+The Experience has been battle-tested at events like the Military Influencer Conference (MIC), where it turned hours of otherwise dead stage time into some of the highest-engagement segments of the entire event.
 
 ## The 7-Phase Pipeline
 
-Every PDX production follows a structured pipeline that keeps your team organized from initial planning through post-event analysis.
+Every Experience production follows a structured pipeline that keeps your team organized from initial planning through post-event analysis.
 
 ### Phase 1 — Partnership
 
-Establish the relationship with the event organizer. Define scope, stage access windows, technical requirements, and revenue-sharing terms. This is where you align on goals and set expectations for what PDX will deliver.
+Establish the relationship with the event organizer. Define scope, stage access windows, technical requirements, and revenue-sharing terms. This is where you align on goals and set expectations for what the Experience will deliver.
 
 ### Phase 2 — Agenda & Run of Show
 
@@ -113,7 +113,7 @@ Set your production budget covering equipment, travel, talent fees, and crew. Th
 
 ### Phase 4 — Sponsors
 
-Attach sponsors to specific segments, overlays, and activations. Each sponsor gets defined deliverables — logo placements, shout-outs, dedicated segments, and lead-retrieval access. This is where PDX generates direct revenue.
+Attach sponsors to specific segments, overlays, and activations. Each sponsor gets defined deliverables — logo placements, shout-outs, dedicated segments, and lead-retrieval access. This is where the Experience generates direct revenue.
 
 ### Phase 5 — Creators
 
@@ -127,28 +127,28 @@ Execute the live show. This includes multi-destination streaming, on-site camera
 
 Once the event wraps, generate post-event reports covering impressions, engagement, sponsor ROI, and creator performance. The AAR feeds directly into your 365 Insights dashboard so sponsors see value year-round, not just event week.
 
-## Why PDX Works
+## Why the Experience Works
 
-- Revenue from dead time — Stages sitting idle between keynotes are wasted money. PDX fills those gaps with sponsor-backed content.
-- Creator-driven engagement — Military audiences connect with creators they already follow. PDX puts those creators on stage.
+- Revenue from dead time — Stages sitting idle between keynotes are wasted money. The Experience fills those gaps with sponsor-backed content.
+- Creator-driven engagement — Military audiences connect with creators they already follow. The Experience puts those creators on stage.
 - Turnkey production — The 7-phase pipeline means nothing falls through the cracks, even for teams running their first live stage.
-- 365 content engine — Every PDX segment is recorded, clipped, and redistributed as social content for months after the event.
+- 365 content engine — Every Experience segment is recorded, clipped, and redistributed as social content for months after the event.
 
-> PDX is not just a stage show — it is a full content and sponsorship engine that extends the value of every event far beyond the venue walls.`,
+> The Experience is not just a stage show — it is a full content and sponsorship engine that extends the value of every event far beyond the venue walls.`,
   },
   {
     title: "How to Create a Run of Show (ROS)",
     slug: "creating-run-of-show",
     category: "events-pdx",
     summary:
-      "Step-by-step guide to building a conflict-free event schedule in the PDX wizard.",
+      "Step-by-step guide to building a conflict-free event schedule in the Experience wizard.",
     readTime: 5,
     date: "2026-02-10",
     related: ["what-is-pdx", "setting-up-attendee-app"],
     isPublished: true,
     content: `## What is a Run of Show?
 
-A Run of Show (ROS) is the minute-by-minute schedule that drives your entire PDX stage production. It defines who is on stage, what is happening, which sponsors are featured, and how transitions flow between segments. In MilCrunch, the ROS builder is a visual, drag-and-drop tool that makes it easy to plan even the most complex multi-day events.
+A Run of Show (ROS) is the minute-by-minute schedule that drives your entire Experience stage production. It defines who is on stage, what is happening, which sponsors are featured, and how transitions flow between segments. In MilCrunch, the ROS builder is a visual, drag-and-drop tool that makes it easy to plan even the most complex multi-day events.
 
 ## Accessing the ROS Builder
 
@@ -529,7 +529,7 @@ Inside a list, you can reorder creators, add notes to individual entries, remove
 
 - One list per campaign — Keep campaigns organized by creating a dedicated list for each initiative
 - Tiered lists — Create "first choice" and "backup" lists so you have alternatives ready if a creator declines
-- Event-specific lists — For PDX productions, build a list per event and map creators to ROS segments directly from the list
+- Event-specific lists — For Experience productions, build a list per event and map creators to ROS segments directly from the list
 - Evergreen lists — Maintain a running list of top-performing creators you want to work with repeatedly
 
 ## Collaboration
@@ -599,21 +599,21 @@ When building a campaign list, use the comparison tool to place two or more crea
 - Campaign selection — Prioritize creators with high engagement and strong authenticity scores
 - Budget allocation — Creators with larger reach but lower engagement may suit awareness campaigns, while high-engagement creators are better for conversion-focused campaigns
 - Long-term partnerships — Look for consistent growth and stable engagement over time rather than one-time viral spikes
-- Event talent — For PDX stage appearances, prioritize creators whose audience demographics align with your event attendees`,
+- Event talent — For Experience stage appearances, prioritize creators whose audience demographics align with your event attendees`,
   },
   {
-    title: "Inviting Creators to Your PDX Stage",
+    title: "Inviting Creators to Your Experience Stage",
     slug: "inviting-creators-pdx-stage",
     category: "creator-network",
     summary:
-      "How to source, coordinate, and manage talent for your PDX live-stage sessions.",
+      "How to source, coordinate, and manage talent for your Experience live-stage sessions.",
     readTime: 5,
     date: "2026-02-06",
     related: ["what-is-pdx", "creator-analytics"],
     isPublished: true,
     content: `## Overview
 
-A PDX stage is only as good as the talent on it. The creator invitation workflow in MilCrunch connects your saved creator lists directly to your event's Run of Show, making it straightforward to source, invite, and coordinate talent for every stage segment.
+An Experience stage is only as good as the talent on it. The creator invitation workflow in MilCrunch connects your saved creator lists directly to your event's Run of Show, making it straightforward to source, invite, and coordinate talent for every stage segment.
 
 ## Sourcing Creators from Your Lists
 
@@ -753,7 +753,7 @@ Once your profile is live and verified, brands can find you through the MilCrunc
 
 ## What to Expect
 
-Brands may reach out for various opportunities — sponsored posts, event appearances, product reviews, PDX stage sessions, and long-term ambassador roles. You will receive notifications through the platform and via email when a brand expresses interest.`,
+Brands may reach out for various opportunities — sponsored posts, event appearances, product reviews, Experience stage sessions, and long-term ambassador roles. You will receive notifications through the platform and via email when a brand expresses interest.`,
   },
 
   // ─── 365 INSIGHTS ───────────────────────────────────────────────────
@@ -1383,7 +1383,7 @@ A single event can generate months of social content if you approach it strategi
 
 ### Step 1 — Capture Everything
 
-During the event, ensure every PDX stage segment is recorded. MilCrunch automatically saves recordings from all stream destinations. For on-site-only moments (networking areas, behind-the-scenes), assign a crew member to capture mobile video that can be uploaded to the platform later.
+During the event, ensure every Experience stage segment is recorded. MilCrunch automatically saves recordings from all stream destinations. For on-site-only moments (networking areas, behind-the-scenes), assign a crew member to capture mobile video that can be uploaded to the platform later.
 
 ### Step 2 — Generate AI Clips
 
@@ -1952,7 +1952,7 @@ Typical inclusions:
 
 - Exclusive naming rights (e.g., "Presented by [Sponsor Name]")
 - Logo on all event marketing materials, streams, and communications
-- Dedicated stage segment (5-10 minutes) during PDX production
+- Dedicated stage segment (5-10 minutes) during Experience production
 - Premium booth placement
 - Full-access lead retrieval
 - Social media feature posts (minimum 3-5)
@@ -1968,7 +1968,7 @@ Strong visibility with prominent but non-exclusive placement.
 Typical inclusions:
 
 - Logo on event marketing materials and stream overlays
-- Shared stage mention during PDX production
+- Shared stage mention during Experience production
 - Priority booth placement
 - Lead retrieval access
 - Social media mentions (minimum 2-3 posts)
@@ -2069,7 +2069,7 @@ MilCrunch includes the following default placement types:
 - Email Banner — Logo or banner in an email campaign
 - Email Dedicated Send — Full email sent on behalf of the sponsor
 - Stage Signage — Physical branding at the event venue
-- Stage Mention — Verbal sponsor mention during PDX segments
+- Stage Mention — Verbal sponsor mention during Experience segments
 - Attendee App Feature — Prominent placement in the event app
 - Lead Retrieval Access — Access to the lead capture system
 
