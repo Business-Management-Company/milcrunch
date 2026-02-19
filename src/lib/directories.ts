@@ -55,8 +55,6 @@ export interface DirectoryMember {
   platforms: string[];
   platform_urls: Record<string, string>;
   enrichment_data: unknown;
-  paradedeck_verified: boolean;
-  influencersclub_verified: boolean;
   profile_slug: string | null;
   sort_order: number;
   approved: boolean;
@@ -380,8 +378,6 @@ function mapMemberRow(row: Record<string, unknown>): DirectoryMember {
     platforms: Array.isArray(row.platforms) ? (row.platforms as string[]) : [],
     platform_urls: (row.platform_urls as Record<string, string>) ?? {},
     enrichment_data: row.enrichment_data ?? null,
-    paradedeck_verified: (row.paradedeck_verified as boolean) ?? false,
-    influencersclub_verified: (row.influencersclub_verified as boolean) ?? false,
     profile_slug: (row.profile_slug as string) ?? null,
     sort_order: (row.sort_order as number) ?? 0,
     approved: (row.approved as boolean) ?? true,

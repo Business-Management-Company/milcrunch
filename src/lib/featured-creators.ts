@@ -27,8 +27,6 @@ export interface ShowcaseCreator extends FeaturedCreator {
   status: string | null;
   bio: string | null;
   platforms: string[];
-  paradedeck_verified: boolean;
-  influencersclub_verified: boolean;
   profile_slug: string | null;
   ic_avatar_url: string | null;
   platform_urls?: Record<string, string>;
@@ -61,8 +59,7 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
     status: "veteran",
     bio: "Download \"The Marines' Hymn\" Now!!",
     platforms: ["instagram"],
-    paradedeck_verified: true,
-    influencersclub_verified: true,
+    featured_homepage: true,
     profile_slug: "davebrayusa",
     ic_avatar_url: null,
     featured_homepage: true,
@@ -85,8 +82,7 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
     status: "veteran",
     bio: "They Call Me: Doc Todd — Mr. Post Traumatic Growth",
     platforms: ["instagram"],
-    paradedeck_verified: true,
-    influencersclub_verified: true,
+    featured_homepage: true,
     profile_slug: "therealdoctodd",
     ic_avatar_url: null,
     featured_homepage: true,
@@ -109,8 +105,7 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
     status: "milspouse",
     bio: "Military lifestyle | wife + furr momma",
     platforms: ["instagram", "tiktok"],
-    paradedeck_verified: true,
-    influencersclub_verified: true,
+    featured_homepage: true,
     profile_slug: "brittanyyycampbelll",
     ic_avatar_url: null,
     featured_homepage: true,
@@ -124,9 +119,8 @@ export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]
   try {
     const { data, error } = await supabase
       .from("directory_members")
-      .select("id, creator_handle, creator_name, platform, avatar_url, ic_avatar_url, follower_count, engagement_rate, post_count, avg_comments, category, sort_order, branch, status, bio, platforms, paradedeck_verified, influencersclub_verified, profile_slug, platform_urls, enrichment_data, featured_homepage, approved")
+      .select("id, creator_handle, creator_name, platform, avatar_url, ic_avatar_url, follower_count, engagement_rate, post_count, avg_comments, category, sort_order, branch, status, bio, platforms, profile_slug, platform_urls, enrichment_data, featured_homepage, approved")
       .eq("featured_homepage", true)
-      .eq("approved", true)
       .order("sort_order", { ascending: true })
       .limit(3);
 
@@ -396,8 +390,6 @@ function mapFeaturedRow(r: Record<string, unknown>): ShowcaseCreator {
     status: (r.status as string) ?? null,
     bio: (r.bio as string) ?? null,
     platforms: Array.isArray(r.platforms) ? r.platforms as string[] : [],
-    paradedeck_verified: (r.paradedeck_verified as boolean) ?? false,
-    influencersclub_verified: (r.influencersclub_verified as boolean) ?? false,
     profile_slug: (r.profile_slug as string) ?? null,
     ic_avatar_url: (r.ic_avatar_url as string) ?? null,
     platform_urls: (r.platform_urls as Record<string, string>) ?? {},
@@ -431,8 +423,6 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     status: (r.status as string) ?? null,
     bio: (r.bio as string) ?? null,
     platforms: Array.isArray(r.platforms) ? r.platforms as string[] : [],
-    paradedeck_verified: (r.paradedeck_verified as boolean) ?? false,
-    influencersclub_verified: (r.influencersclub_verified as boolean) ?? false,
     profile_slug: (r.profile_slug as string) ?? null,
     ic_avatar_url: (r.ic_avatar_url as string) ?? null,
     platform_urls: (r.platform_urls as Record<string, string>) ?? {},

@@ -15,7 +15,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Shield,
   ShieldCheck,
-  BadgeCheck,
   Users,
   Mic2,
   BarChart3,
@@ -242,7 +241,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       <div className="relative -mt-10 mb-3">
         <div
           className={`w-[72px] h-[72px] rounded-full overflow-hidden ${
-            c.paradedeck_verified
+            c.featured_homepage
               ? "ring-[3px] ring-purple-500 ring-offset-2"
               : "ring-1 ring-gray-200 ring-offset-2"
           } bg-white`}
@@ -268,20 +267,12 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         <h3 className="font-semibold text-[#1A1A2E] text-sm leading-tight break-words">
           {c.display_name}
         </h3>
-        {c.paradedeck_verified && (
+        {c.featured_homepage && (
           <Tooltip>
             <TooltipTrigger asChild>
               <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
-          </Tooltip>
-        )}
-        {c.influencersclub_verified && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0" />
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">Creator Verified</TooltipContent>
           </Tooltip>
         )}
       </div>

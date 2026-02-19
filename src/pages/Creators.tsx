@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/tooltip";
 import {
   ShieldCheck,
-  BadgeCheck,
   Instagram,
   Youtube,
   Twitter,
@@ -179,7 +178,7 @@ function CreatorCard({
   const platforms = c.platforms ?? [];
   const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
-  const isVerified = c.paradedeck_verified || c.influencersclub_verified;
+  const isVerified = !!c.featured_homepage;
 
   return (
     <Link
@@ -248,20 +247,12 @@ function CreatorCard({
           <h3 className="font-semibold text-gray-900 text-sm text-center leading-snug break-words">
             {c.display_name}
           </h3>
-          {c.paradedeck_verified && (
+          {c.featured_homepage && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <ShieldCheck className="h-3.5 w-3.5 text-purple-500 shrink-0" />
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
-            </Tooltip>
-          )}
-          {c.influencersclub_verified && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <BadgeCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">Creator Verified</TooltipContent>
             </Tooltip>
           )}
         </div>

@@ -9,7 +9,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ShieldCheck,
-  BadgeCheck,
   Instagram,
   Youtube,
   Twitter,
@@ -457,7 +456,7 @@ export default function CreatorPublicProfile() {
   const platforms = creator.platforms ?? [];
   const bannerGradient = BRANCH_BANNER[creator.branch ?? ""] ?? DEFAULT_BANNER;
   const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-600 text-white";
-  const isVerified = creator.paradedeck_verified || creator.influencersclub_verified;
+  const isVerified = !!creator.featured_homepage;
   const bannerImg = enrichment.bannerImage && !bannerFailed ? enrichment.bannerImage : null;
 
   const bio = creator.bio || "";
@@ -566,20 +565,12 @@ export default function CreatorPublicProfile() {
                         {creator.branch}
                       </span>
                     )}
-                    {creator.paradedeck_verified && (
+                    {creator.featured_homepage && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <ShieldCheck className="h-5 w-5 text-purple-500 shrink-0" />
                         </TooltipTrigger>
                         <TooltipContent>MilCrunch Verified</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {creator.influencersclub_verified && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <BadgeCheck className="h-5 w-5 text-blue-500 shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent>Creator Verified</TooltipContent>
                       </Tooltip>
                     )}
                     {hasUpcomingEvents && (
