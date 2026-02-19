@@ -186,6 +186,78 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Browser Mockup Wrapper                                              */
+/* ------------------------------------------------------------------ */
+
+function BrowserMockup({
+  src,
+  alt,
+  caption,
+  dark,
+  className,
+}: {
+  src: string;
+  alt: string;
+  caption?: string;
+  dark: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("group", className)}>
+      <div
+        className={cn(
+          "rounded-xl overflow-hidden shadow-lg shadow-[#6C5CE7]/10 transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl group-hover:shadow-[#6C5CE7]/20",
+          dark ? "border border-white/10" : "border border-gray-200"
+        )}
+      >
+        {/* Browser chrome bar */}
+        <div
+          className={cn(
+            "flex items-center gap-2 px-3 py-2",
+            dark ? "bg-[#1A1D27]" : "bg-gray-800"
+          )}
+        >
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
+          </div>
+          <div className="flex-1 ml-2">
+            <div
+              className={cn(
+                "rounded px-2.5 py-0.5 text-[10px] truncate max-w-[200px]",
+                dark
+                  ? "bg-white/5 text-gray-500"
+                  : "bg-gray-700 text-gray-400"
+              )}
+            >
+              milcrunch.com
+            </div>
+          </div>
+        </div>
+        {/* Screenshot */}
+        <img
+          src={src}
+          alt={alt}
+          className="w-full object-cover"
+          loading="lazy"
+        />
+      </div>
+      {caption && (
+        <p
+          className={cn(
+            "text-xs text-center mt-2.5 transition-colors duration-300",
+            dark ? "text-gray-500" : "text-[#9CA3AF]"
+          )}
+        >
+          {caption}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -266,6 +338,92 @@ function OverviewTab({ dark }: { dark: boolean }) {
             That directory became a network. That network became a platform. And that platform
             became MilCrunch.
           </p>
+        </div>
+      </section>
+
+      {/* Hero Screenshots */}
+      <section className="max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/793c49f2-627f-4b6c-a068-959ee32f9455"
+            alt="Military Spouses Discovery — Grid View"
+            caption="Creator & Influencer Discovery"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/81220ee5-6067-4000-be29-070a86d1c697"
+            alt="Event Creation & Management Dashboard"
+            caption="Event Creation & Management"
+            dark={dark}
+          />
+        </div>
+      </section>
+
+      {/* Platform Screenshots Gallery */}
+      <section className="max-w-5xl mx-auto">
+        <h3
+          className={cn(
+            "text-lg font-bold text-center mb-6 transition-colors duration-300",
+            dark ? "text-white" : "text-[#111827]"
+          )}
+        >
+          Platform Screenshots
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/7c2779c6-e671-4414-b2b8-4845f2868db1"
+            alt="Military Spouses Discovery — List View"
+            caption="Discovery — List View"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/bfc4df0d-9d52-41de-afaa-f08120ef16b7"
+            alt="Expanded Discovery Slide-out"
+            caption="Creator Profile Slide-out"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/9e5a3f58-8f1d-42d4-b40a-1a1b27614ed7"
+            alt="Verification Overview"
+            caption="Military Verification Pipeline"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/15e3af5b-ec16-4bdc-bb9d-ef729ed8579f"
+            alt="Public Event Page"
+            caption="Public Event Page"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/d1428098-0f83-4d14-9dce-9630c388a521"
+            alt="Event Registration Flow"
+            caption="Attendee Registration"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/06f7dd0c-8457-4450-99e8-55f87b34cbe0"
+            alt="Registration List"
+            caption="Registration Dashboard"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/b425c680-03be-498a-8b95-e69f3b3dfdb5"
+            alt="Event Campaign AI Generated"
+            caption="AI Campaign Builder"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/4730f6ce-b2ca-4871-8e33-8124ae33fe6c"
+            alt="Event Registration Admin"
+            caption="Registration Admin"
+            dark={dark}
+          />
+          <BrowserMockup
+            src="https://github.com/user-attachments/assets/cd8b3385-f6a4-4c7a-8e79-ba3d64d6e15e"
+            alt="Event Mobile Experience"
+            caption="Mobile Attendee App"
+            dark={dark}
+          />
         </div>
       </section>
 
