@@ -165,7 +165,7 @@ export default function SummaryDashboard() {
   };
 
   return (
-    <div className="space-y-10 max-w-5xl mx-auto">
+    <div className="space-y-10 max-w-5xl mx-auto -m-6 p-6 min-h-full bg-[#F8F9FA] dark:bg-transparent rounded-xl">
       {/* Greeting Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-white to-gray-50 dark:from-[#1A1D27] dark:to-[#1A1D27] border border-gray-100 dark:border-gray-800 px-8 py-6">
         <h1 className="text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
@@ -186,10 +186,10 @@ export default function SummaryDashboard() {
             type="text"
             placeholder="Ask me anything about creators, events, or campaigns..."
             className={cn(
-              "w-full pl-12 pr-14 py-4 rounded-2xl text-base",
+              "w-full pl-12 pr-14 h-[48px] rounded-2xl text-base",
               "border-2 border-purple-200 dark:border-purple-800 focus:border-[#6C5CE7]",
               "bg-white dark:bg-[#1A1D27]",
-              "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#6C5CE7]/30",
+              "shadow-sm hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-[#6C5CE7]/40 focus:shadow-[0_0_20px_rgba(108,92,231,0.15)]",
               "outline-none transition-all placeholder:text-gray-400",
             )}
             value={prompt}
@@ -231,7 +231,7 @@ export default function SummaryDashboard() {
             key={pill.label}
             type="button"
             onClick={() => setPrompt(`${pill.emoji} ${pill.label}`)}
-            className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-medium text-[#6C5CE7] text-center hover:border-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer transition flex items-center justify-center gap-2"
+            className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-medium text-[#6C5CE7] text-center hover:border-[#6C5CE7]/60 hover:bg-[#6C5CE7]/5 dark:hover:bg-purple-900/20 cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
           >
             <span>{pill.emoji}</span>
             {pill.label}
@@ -242,9 +242,9 @@ export default function SummaryDashboard() {
       {/* Three-column section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Recent Activity */}
-        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-          <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border-l-[3px] border-l-[#6C5CE7]">
+          <h2 className="font-bold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-[#6C5CE7]" />
             Recent Activity
           </h2>
           <ul className="space-y-3">
@@ -263,9 +263,9 @@ export default function SummaryDashboard() {
         </div>
 
         {/* Upcoming Events */}
-        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-          <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border-l-[3px] border-l-[#0EA5E9]">
+          <h2 className="font-bold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-[#0EA5E9]" />
             Upcoming Events
           </h2>
           {events.length > 0 ? (
@@ -309,9 +309,9 @@ export default function SummaryDashboard() {
         </div>
 
         {/* Network Stats */}
-        <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-          <h2 className="font-semibold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border-l-[3px] border-l-[#22C55E]">
+          <h2 className="font-bold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-[#22C55E]" />
             Network Stats
           </h2>
           <div className="space-y-4">

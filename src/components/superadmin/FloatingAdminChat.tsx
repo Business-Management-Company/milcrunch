@@ -89,7 +89,7 @@ export default function FloatingAdminChat() {
         <div className="fixed bottom-6 right-6 z-50">
           <button
             className={cn(
-              "flex items-center gap-2 px-5 h-12 rounded-full shadow-lg text-white font-medium text-sm transition-all duration-200",
+              "flex items-center gap-2.5 px-6 h-14 rounded-full shadow-lg text-white font-medium text-sm transition-all duration-200",
               "hover:shadow-xl hover:-translate-y-0.5",
               open
                 ? "bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500"
@@ -97,7 +97,7 @@ export default function FloatingAdminChat() {
             )}
             onClick={() => setOpen((o) => !o)}
             aria-label={open ? "Close AI chat" : "Open AI chat"}
-            style={{ minWidth: 180 }}
+            style={{ minWidth: 200 }}
           >
             {open ? (
               <>
@@ -187,8 +187,8 @@ export default function FloatingAdminChat() {
               <div className="flex gap-2">
                 <textarea
                   ref={inputRef}
-                  className="flex-1 min-h-[40px] max-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]"
-                  placeholder="Ask me anything..."
+                  className="flex-1 min-h-[48px] max-h-[100px] rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/40 focus:border-[#6C5CE7] focus:shadow-[0_0_0_3px_rgba(108,92,231,0.12)] transition-all"
+                  placeholder="Ask me anything about creators, events, or campaigns..."
                   rows={1}
                   onKeyDown={handleKeyDown}
                 />
