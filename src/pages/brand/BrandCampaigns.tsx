@@ -1030,12 +1030,30 @@ Make the captions authentic and engaging for a military community audience. Refe
             )}
 
             {!generating && !campaign && (
-              <div className="flex flex-col items-center justify-center h-full bg-gray-50 dark:bg-[#0F1117] border border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center">
-                <Megaphone className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                <p className="text-gray-500 font-medium">Your campaign will appear here</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Fill out the form and click Generate Campaign.
-                </p>
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-[#0F1117] rounded-xl p-8">
+                {/* Mock phone frame */}
+                <div className="relative w-[280px] rounded-[2.5rem] border-[6px] border-gray-800 dark:border-gray-600 bg-white dark:bg-[#1A1D27] shadow-xl overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-gray-800 dark:bg-gray-600 rounded-b-2xl z-10" />
+                  {/* Screen content */}
+                  <div className="pt-10 pb-8 px-5 min-h-[420px] flex flex-col items-center justify-center text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#8B7CF7] flex items-center justify-center mb-5 shadow-md">
+                      <Megaphone className="h-7 w-7 text-white" />
+                    </div>
+                    <p className="text-gray-800 dark:text-gray-200 font-semibold text-sm mb-1.5">Campaign Preview</p>
+                    <p className="text-xs text-gray-400 leading-relaxed max-w-[200px]">
+                      Fill out the form and click Generate to see your campaign posts here.
+                    </p>
+                    <div className="mt-6 w-full space-y-2.5">
+                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-full" />
+                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-4/5" />
+                      <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full w-3/5" />
+                      <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl w-full mt-3" />
+                    </div>
+                  </div>
+                  {/* Home indicator */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-24 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                </div>
               </div>
             )}
 
