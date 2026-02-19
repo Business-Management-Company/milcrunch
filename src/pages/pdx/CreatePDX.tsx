@@ -281,7 +281,7 @@ const CreatePDX = () => {
   };
 
   const handleLaunch = () => {
-    toast.success("PDX launched successfully! (Demo)");
+    toast.success("Experience launched successfully! (Demo)");
   };
 
   return (
@@ -328,7 +328,7 @@ const CreatePDX = () => {
                   id="event-name"
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
-                  placeholder="e.g. PDX at VFW National Convention"
+                  placeholder="e.g. Experience at VFW National Convention"
                   className="mt-1 rounded-lg"
                 />
               </div>
@@ -679,7 +679,7 @@ const CreatePDX = () => {
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]" onClick={handleLaunch}>
-                Launch PDX
+                Launch Experience
               </Button>
               <Button variant="outline" className="rounded-lg">
                 <FileDown className="h-4 w-4 mr-2" />
@@ -702,7 +702,7 @@ const CreatePDX = () => {
           onClick={() => (step === 1 ? navigate("/pdx") : setStep((s) => s - 1))}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          {step === 1 ? "Back to PDX" : "Back"}
+          {step === 1 ? "Back to Experience" : "Back"}
         </Button>
         {step < 5 && (
           <Button className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]" onClick={() => setStep((s) => s + 1)}>

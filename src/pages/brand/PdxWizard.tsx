@@ -138,7 +138,7 @@ export default function PdxWizard() {
     const { error } = await sb.from("pdx_events").insert(payload);
     setSaving(false);
     if (error) { console.error(error); toast.error("Failed to save — check if pdx_events table exists"); }
-    else toast.success("PDX event saved!");
+    else toast.success("Experience event saved!");
   };
 
   const generateAar = async () => {
@@ -150,7 +150,7 @@ export default function PdxWizard() {
         headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           model: "claude-sonnet-4-5-20250929", max_tokens: 1024,
-          messages: [{ role: "user", content: `Write a polished executive After Action Report summary for this PDX event:\n\nOrganization: ${d.orgName}\nEvent: ${d.eventName}\nDates: ${d.startDate} to ${d.endDate}\nLive Attendance: ${d.aarLiveAttendance}\nVirtual Viewers: ${d.aarVirtualViewers}\nCreators: ${d.creators.length} (total reach: ${totalReach.toLocaleString()})\nSponsors: ${d.sponsors.length} (total revenue: ${fmt(sponsorRevenue)})\nBudget: ${fmt(estTotal)} estimated, ${fmt(actTotal)} actual\nContracted Price: ${fmt(d.contractedPrice)}\nKey Wins: ${d.aarKeyWins}\nRecommendations: ${d.aarRecommendations}\n\nWrite 4-5 paragraphs covering: event overview, audience impact, sponsor ROI, creator performance, and strategic recommendations. Professional tone.` }],
+          messages: [{ role: "user", content: `Write a polished executive After Action Report summary for this Experience event:\n\nOrganization: ${d.orgName}\nEvent: ${d.eventName}\nDates: ${d.startDate} to ${d.endDate}\nLive Attendance: ${d.aarLiveAttendance}\nVirtual Viewers: ${d.aarVirtualViewers}\nCreators: ${d.creators.length} (total reach: ${totalReach.toLocaleString()})\nSponsors: ${d.sponsors.length} (total revenue: ${fmt(sponsorRevenue)})\nBudget: ${fmt(estTotal)} estimated, ${fmt(actTotal)} actual\nContracted Price: ${fmt(d.contractedPrice)}\nKey Wins: ${d.aarKeyWins}\nRecommendations: ${d.aarRecommendations}\n\nWrite 4-5 paragraphs covering: event overview, audience impact, sponsor ROI, creator performance, and strategic recommendations. Professional tone.` }],
         }),
       });
       const data = await resp.json();
@@ -162,7 +162,7 @@ export default function PdxWizard() {
   const exportPdf = () => {
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><title>PDX AAR — ${d.eventName}</title><style>body{font-family:system-ui;background:#0A0F1E;color:#fff;padding:40px;max-width:800px;margin:0 auto}h1{color:#6C5CE7}h2{color:#10B981;margin-top:24px;font-size:18px}p{line-height:1.6}.stat{display:inline-block;margin-right:32px;margin-bottom:16px}.stat-num{font-size:24px;font-weight:800}.stat-label{font-size:12px;color:#9CA3AF}</style></head><body><h1>After Action Report</h1><h2>${d.eventName} — ${d.orgName}</h2><p>${d.startDate} to ${d.endDate}</p><div class="stat"><div class="stat-num">${d.aarLiveAttendance.toLocaleString()}</div><div class="stat-label">Live Attendance</div></div><div class="stat"><div class="stat-num">${d.aarVirtualViewers.toLocaleString()}</div><div class="stat-label">Virtual Viewers</div></div><div class="stat"><div class="stat-num">${d.creators.length}</div><div class="stat-label">Creators</div></div><div class="stat"><div class="stat-num">${fmt(sponsorRevenue)}</div><div class="stat-label">Sponsor Revenue</div></div><h2>Executive Summary</h2><p>${(d.aarAiSummary || "Not yet generated.").replace(/\n/g, "</p><p>")}</p><h2>Budget</h2><p>Estimated: ${fmt(estTotal)} | Actual: ${fmt(actTotal)} | Contracted: ${fmt(d.contractedPrice)}</p><h2>Key Wins</h2><p>${d.aarKeyWins || "—"}</p><h2>Recommendations</h2><p>${d.aarRecommendations || "—"}</p><p style="color:#6B7280;font-size:12px;margin-top:40px">&copy; ${new Date().getFullYear()} MilCrunch &middot; Confidential</p></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><title>Experience AAR — ${d.eventName}</title><style>body{font-family:system-ui;background:#0A0F1E;color:#fff;padding:40px;max-width:800px;margin:0 auto}h1{color:#6C5CE7}h2{color:#10B981;margin-top:24px;font-size:18px}p{line-height:1.6}.stat{display:inline-block;margin-right:32px;margin-bottom:16px}.stat-num{font-size:24px;font-weight:800}.stat-label{font-size:12px;color:#9CA3AF}</style></head><body><h1>After Action Report</h1><h2>${d.eventName} — ${d.orgName}</h2><p>${d.startDate} to ${d.endDate}</p><div class="stat"><div class="stat-num">${d.aarLiveAttendance.toLocaleString()}</div><div class="stat-label">Live Attendance</div></div><div class="stat"><div class="stat-num">${d.aarVirtualViewers.toLocaleString()}</div><div class="stat-label">Virtual Viewers</div></div><div class="stat"><div class="stat-num">${d.creators.length}</div><div class="stat-label">Creators</div></div><div class="stat"><div class="stat-num">${fmt(sponsorRevenue)}</div><div class="stat-label">Sponsor Revenue</div></div><h2>Executive Summary</h2><p>${(d.aarAiSummary || "Not yet generated.").replace(/\n/g, "</p><p>")}</p><h2>Budget</h2><p>Estimated: ${fmt(estTotal)} | Actual: ${fmt(actTotal)} | Contracted: ${fmt(d.contractedPrice)}</p><h2>Key Wins</h2><p>${d.aarKeyWins || "—"}</p><h2>Recommendations</h2><p>${d.aarRecommendations || "—"}</p><p style="color:#6B7280;font-size:12px;margin-top:40px">&copy; ${new Date().getFullYear()} MilCrunch &middot; Confidential</p></body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 300);
   };
@@ -176,7 +176,7 @@ export default function PdxWizard() {
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 gap-4">
         <div><Label className={labelCls}>Organization Name</Label><Input className={inputCls} value={d.orgName} onChange={e => up({ orgName: e.target.value })} placeholder="e.g. Military Influencer Conference" /></div>
-        <div><Label className={labelCls}>Event Name</Label><Input className={inputCls} value={d.eventName} onChange={e => up({ eventName: e.target.value })} placeholder="e.g. PDX at MIC 2026" /></div>
+        <div><Label className={labelCls}>Event Name</Label><Input className={inputCls} value={d.eventName} onChange={e => up({ eventName: e.target.value })} placeholder="e.g. Experience at MIC 2026" /></div>
       </div>
       <div className="grid md:grid-cols-3 gap-4">
         <div><Label className={labelCls}>Start Date</Label><Input className={inputCls} type="date" value={d.startDate} onChange={e => up({ startDate: e.target.value })} /></div>
@@ -196,7 +196,7 @@ export default function PdxWizard() {
         </div>
       </div>
       <div className={cardCls}>
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-4">PDX Team Assignment</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-4">Experience Team Assignment</p>
         <div className="grid md:grid-cols-3 gap-4">
           <div><Label className={labelCls}>Event Planner</Label><Input className={inputCls} value={d.pdxTeam.planner} onChange={e => up({ pdxTeam: { ...d.pdxTeam, planner: e.target.value } })} /></div>
           <div><Label className={labelCls}>A/V Producer</Label><Input className={inputCls} value={d.pdxTeam.avProducer} onChange={e => up({ pdxTeam: { ...d.pdxTeam, avProducer: e.target.value } })} /></div>
@@ -316,7 +316,7 @@ export default function PdxWizard() {
           <div className={cardCls}>
             <Label className={labelCls}>Sponsor Contributions</Label>
             <Input className={cn(inputCls, "mt-1")} type="number" value={d.sponsorContributions || ""} onChange={e => up({ sponsorContributions: Number(e.target.value) || 0 })} />
-            <p className="text-xs text-[#10B981] mt-2 font-medium">{sponsorPct}% of PDX cost covered</p>
+            <p className="text-xs text-[#10B981] mt-2 font-medium">{sponsorPct}% of Experience cost covered</p>
           </div>
         </div>
       </div>
@@ -484,7 +484,7 @@ export default function PdxWizard() {
           <div><p className="text-[#6B7280]">Organization</p><p className="text-[#111827] font-medium">{d.orgName || "—"}</p></div>
           <div><p className="text-[#6B7280]">Event</p><p className="text-[#111827] font-medium">{d.eventName || "—"}</p></div>
           <div><p className="text-[#6B7280]">Dates</p><p className="text-[#111827] font-medium">{d.startDate || "—"} to {d.endDate || "—"}</p></div>
-          <div><p className="text-[#6B7280]">PDX Team</p><p className="text-[#111827] font-medium">{[d.pdxTeam.planner, d.pdxTeam.avProducer, d.pdxTeam.mcHost].filter(Boolean).join(", ") || "—"}</p></div>
+          <div><p className="text-[#6B7280]">Experience Team</p><p className="text-[#111827] font-medium">{[d.pdxTeam.planner, d.pdxTeam.avProducer, d.pdxTeam.mcHost].filter(Boolean).join(", ") || "—"}</p></div>
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-4">
@@ -537,8 +537,8 @@ export default function PdxWizard() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-6 md:p-10">
-      <h1 className="text-2xl font-bold text-[#111827] mb-1">Create PDX Experience</h1>
-      <p className="text-[#6B7280] text-sm mb-8">Parade Deck Experience — end-to-end event stage setup wizard.</p>
+      <h1 className="text-2xl font-bold text-[#111827] mb-1">Create Experience</h1>
+      <p className="text-[#6B7280] text-sm mb-8">MilCrunch Experience — end-to-end live event stage setup wizard.</p>
 
       {/* Stepper */}
       <div className="flex items-center gap-1 mb-10 overflow-x-auto pb-2 bg-white rounded-xl border border-[#E5E7EB] px-4 py-3">
@@ -573,7 +573,7 @@ export default function PdxWizard() {
         <div className="flex gap-3">
           {phase === 6 ? (
             <Button onClick={save} disabled={saving} className="bg-[#10B981] hover:bg-[#059669] text-white px-8">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}Save PDX Event
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}Save Experience Event
             </Button>
           ) : (
             <Button onClick={() => setPhase(Math.min(6, phase + 1))} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8">

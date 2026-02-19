@@ -22,7 +22,7 @@ const PDX_BRINGS = [
   {
     icon: Briefcase,
     title: "Brand Integration",
-    description: "Messaging through PDX creator community",
+    description: "Messaging through MilCrunch creator community",
   },
   {
     icon: Medal,
@@ -34,21 +34,21 @@ const PDX_BRINGS = [
 const PAST_EXPERIENCES = [
   {
     id: "1",
-    name: "PDX at VFW National Convention",
+    name: "Experience at VFW National Convention",
     location: "Columbus, OH",
     date: "Aug 2025",
     detail: "32 speakers, 4 days",
   },
   {
     id: "2",
-    name: "PDX at Military Influencer Conference",
+    name: "Experience at Military Influencer Conference",
     location: "Washington, DC",
     date: "Oct 2024",
     detail: "15 panels",
   },
   {
     id: "3",
-    name: "PDX at MBA Basketball",
+    name: "Experience at MBA Basketball",
     location: "Live sports broadcasting",
     date: "—",
     detail: "Collaboration",
@@ -91,16 +91,16 @@ const PDXHome = () => {
             size="lg"
             className="mt-10 bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8 py-6 text-base rounded-xl"
           >
-            <Link to="/pdx/create">Create a PDX</Link>
+            <Link to="/pdx/create">Create an Experience</Link>
           </Button>
         </div>
       </section>
 
-      {/* What PDX Brings */}
+      {/* What Experience Brings */}
       <section className="px-4 py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-center text-2xl font-bold text-pd-navy dark:text-white md:text-3xl">
-            What PDX Brings
+            What the Experience Brings
           </h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {PDX_BRINGS.map((item) => (
