@@ -167,26 +167,27 @@ export default function SummaryDashboard() {
   return (
     <div className="space-y-10 max-w-5xl mx-auto -m-6 p-6 min-h-full bg-[#F8F9FA] dark:bg-transparent rounded-xl">
       {/* Greeting Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-white to-gray-50 dark:from-[#1A1D27] dark:to-[#1A1D27] border border-gray-100 dark:border-gray-800 px-8 py-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6C5CE7]/[0.06] via-white to-[#0EA5E9]/[0.04] dark:from-[#6C5CE7]/[0.12] dark:via-[#1A1D27] dark:to-[#0EA5E9]/[0.06] border border-[#6C5CE7]/15 dark:border-[#6C5CE7]/20 px-8 py-6">
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#6C5CE7]/[0.08] blur-3xl pointer-events-none" aria-hidden />
+        <h1 className="relative text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
           {getGreeting()},{" "}
           <span className="text-[#6C5CE7]">{firstName}</span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">{formatDateTime()}</p>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <p className="relative text-sm text-muted-foreground mt-1">{formatDateTime()}</p>
+        <p className="relative text-sm text-muted-foreground mt-0.5">
           What can I help you build today?
         </p>
       </div>
 
       {/* AI Prompt Bar */}
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="relative flex items-center">
           <Sparkles className="absolute left-4 h-5 w-5 text-[#6C5CE7]" />
           <input
             type="text"
             placeholder="Ask me anything about creators, events, or campaigns..."
             className={cn(
-              "w-full pl-12 pr-14 h-[48px] rounded-2xl text-base",
+              "w-full pl-12 pr-14 h-[56px] rounded-2xl text-base",
               "border-2 border-purple-200 dark:border-purple-800 focus:border-[#6C5CE7]",
               "bg-white dark:bg-[#1A1D27]",
               "shadow-sm hover:shadow-md focus:shadow-lg focus:ring-2 focus:ring-[#6C5CE7]/40 focus:shadow-[0_0_20px_rgba(108,92,231,0.15)]",
@@ -218,20 +219,24 @@ export default function SummaryDashboard() {
       {/* Quick Action Pills */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto mt-4">
         {[
-          { emoji: "🔍", label: "Find Military Creators" },
-          { emoji: "📋", label: "Build a Creator List" },
-          { emoji: "🎙️", label: "Browse Podcast Network" },
-          { emoji: "📊", label: "View Event Analytics" },
-          { emoji: "🎤", label: "Find Keynote Speakers" },
-          { emoji: "✅", label: "Verify a Creator" },
-          { emoji: "📅", label: "Manage Events" },
-          { emoji: "✉️", label: "Email Campaigns" },
+          { emoji: "🔍", label: "Find Military Creators", hoverBorder: "hover:border-[#6C5CE7]/60", hoverBg: "hover:bg-[#6C5CE7]/5 dark:hover:bg-purple-900/20" },
+          { emoji: "📋", label: "Build a Creator List", hoverBorder: "hover:border-[#0EA5E9]/60", hoverBg: "hover:bg-[#0EA5E9]/5 dark:hover:bg-blue-900/20" },
+          { emoji: "🎙️", label: "Browse Podcast Network", hoverBorder: "hover:border-amber-400/60", hoverBg: "hover:bg-amber-50 dark:hover:bg-amber-900/20" },
+          { emoji: "📊", label: "View Event Analytics", hoverBorder: "hover:border-[#22C55E]/60", hoverBg: "hover:bg-[#22C55E]/5 dark:hover:bg-green-900/20" },
+          { emoji: "🎤", label: "Find Keynote Speakers", hoverBorder: "hover:border-pink-400/60", hoverBg: "hover:bg-pink-50 dark:hover:bg-pink-900/20" },
+          { emoji: "✅", label: "Verify a Creator", hoverBorder: "hover:border-teal-400/60", hoverBg: "hover:bg-teal-50 dark:hover:bg-teal-900/20" },
+          { emoji: "📅", label: "Manage Events", hoverBorder: "hover:border-[#0EA5E9]/60", hoverBg: "hover:bg-[#0EA5E9]/5 dark:hover:bg-blue-900/20" },
+          { emoji: "✉️", label: "Email Campaigns", hoverBorder: "hover:border-rose-400/60", hoverBg: "hover:bg-rose-50 dark:hover:bg-rose-900/20" },
         ].map((pill) => (
           <button
             key={pill.label}
             type="button"
             onClick={() => setPrompt(`${pill.emoji} ${pill.label}`)}
-            className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-medium text-[#6C5CE7] text-center hover:border-[#6C5CE7]/60 hover:bg-[#6C5CE7]/5 dark:hover:bg-purple-900/20 cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+            className={cn(
+              "bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm font-medium text-[#000741] dark:text-gray-200 text-center cursor-pointer transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2",
+              pill.hoverBorder,
+              pill.hoverBg,
+            )}
           >
             <span>{pill.emoji}</span>
             {pill.label}
@@ -242,98 +247,116 @@ export default function SummaryDashboard() {
       {/* Three-column section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Recent Activity */}
-        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border-l-[3px] border-l-[#6C5CE7]">
-          <h2 className="font-bold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-[#6C5CE7]" />
-            Recent Activity
-          </h2>
-          <ul className="space-y-3">
-            {activity.map((item, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7] mt-2 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm text-[#000741] dark:text-white truncate">
-                    {item.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{item.time}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Upcoming Events */}
-        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border-l-[3px] border-l-[#0EA5E9]">
-          <h2 className="font-bold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-[#0EA5E9]" />
-            Upcoming Events
-          </h2>
-          {events.length > 0 ? (
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="px-6 py-3 bg-gradient-to-r from-[#6C5CE7]/10 to-[#6C5CE7]/5 border-b border-[#6C5CE7]/10">
+            <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-[#6C5CE7]/15">
+                <Clock className="h-4 w-4 text-[#6C5CE7]" />
+              </span>
+              Recent Activity
+            </h2>
+          </div>
+          <div className="p-6">
             <ul className="space-y-3">
-              {events.map((event) => (
-                <li key={event.id} className="flex items-start gap-3">
-                  <span className="shrink-0 rounded-md bg-[#6C5CE7]/10 text-[#6C5CE7] text-xs font-semibold px-2 py-1">
-                    {event.date_label}
-                  </span>
+              {activity.map((item, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7] mt-2 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[#000741] dark:text-white truncate">
-                      {event.name}
+                    <p className="text-sm text-[#000741] dark:text-white truncate">
+                      {item.label}
                     </p>
-                    {event.location && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {event.location}
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">{item.time}</p>
                   </div>
                 </li>
               ))}
             </ul>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <p className="text-sm">No upcoming events</p>
-              <Link
-                to="/brand/events/create"
-                className="text-sm text-[#6C5CE7] hover:underline font-medium mt-1 inline-block"
-              >
-                Create one →
-              </Link>
-            </div>
-          )}
-          <Link
-            to="/events"
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#6C5CE7] hover:underline"
-          >
-            View All <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          </div>
+        </div>
+
+        {/* Upcoming Events */}
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="px-6 py-3 bg-gradient-to-r from-[#0EA5E9]/10 to-[#0EA5E9]/5 border-b border-[#0EA5E9]/10">
+            <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-[#0EA5E9]/15">
+                <Calendar className="h-4 w-4 text-[#0EA5E9]" />
+              </span>
+              Upcoming Events
+            </h2>
+          </div>
+          <div className="p-6">
+            {events.length > 0 ? (
+              <ul className="space-y-3">
+                {events.map((event) => (
+                  <li key={event.id} className="flex items-start gap-3">
+                    <span className="shrink-0 rounded-md bg-[#0EA5E9]/10 text-[#0EA5E9] text-xs font-semibold px-2 py-1">
+                      {event.date_label}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[#000741] dark:text-white truncate">
+                        {event.name}
+                      </p>
+                      {event.location && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {event.location}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <p className="text-sm">No upcoming events</p>
+                <Link
+                  to="/brand/events/create"
+                  className="text-sm text-[#0EA5E9] hover:underline font-medium mt-1 inline-block"
+                >
+                  Create one →
+                </Link>
+              </div>
+            )}
+            <Link
+              to="/events"
+              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#0EA5E9] hover:underline"
+            >
+              View All <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
 
         {/* Network Stats */}
-        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.06)] border-l-[3px] border-l-[#22C55E]">
-          <h2 className="font-bold text-[#000741] dark:text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-[#22C55E]" />
-            Network Stats
-          </h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Creators in Directory</span>
-              <span className="text-lg font-bold text-[#000741] dark:text-white">
-                {directoryCount != null ? formatCount(directoryCount) : "—"}
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="px-6 py-3 bg-gradient-to-r from-[#22C55E]/10 to-[#22C55E]/5 border-b border-[#22C55E]/10">
+            <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-[#22C55E]/15">
+                <BarChart3 className="h-4 w-4 text-[#22C55E]" />
               </span>
-            </div>
-            <div className="h-px bg-gray-100 dark:bg-gray-800" />
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Combined Reach</span>
-              <span className="text-lg font-bold text-[#000741] dark:text-white">
-                {totalReach != null ? formatCount(totalReach) : "—"}
-              </span>
-            </div>
-            <div className="h-px bg-gray-100 dark:bg-gray-800" />
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Active Lists</span>
-              <span className="text-lg font-bold text-[#000741] dark:text-white">
-                {listCount != null ? listCount : "—"}
-              </span>
+              Network Stats
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Creators in Directory</span>
+                <span className="text-lg font-bold text-[#000741] dark:text-white">
+                  {directoryCount != null ? formatCount(directoryCount) : "—"}
+                </span>
+              </div>
+              <div className="h-px bg-gray-100 dark:bg-gray-800" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Combined Reach</span>
+                <span className="text-lg font-bold text-[#000741] dark:text-white">
+                  {totalReach != null ? formatCount(totalReach) : "—"}
+                </span>
+              </div>
+              <div className="h-px bg-gray-100 dark:bg-gray-800" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Active Lists</span>
+                <span className="text-lg font-bold text-[#000741] dark:text-white">
+                  {listCount != null ? listCount : "—"}
+                </span>
+              </div>
             </div>
           </div>
         </div>

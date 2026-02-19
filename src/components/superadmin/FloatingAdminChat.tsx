@@ -118,13 +118,13 @@ export default function FloatingAdminChat() {
       {open && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-hidden />
-          <div className="relative w-full max-w-md bg-background border-l shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="relative w-full max-w-xl bg-background border-l shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-[#6C5CE7]/5 to-transparent">
+            <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-[#6C5CE7]/10 via-[#6C5CE7]/5 to-transparent">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-[#6C5CE7]" />
                 <div>
-                  <span className="font-semibold text-sm">MilCrunch AI</span>
+                  <span className="font-bold text-base">MilCrunch AI</span>
                   <span className="text-xs text-muted-foreground ml-2">Assistant</span>
                 </div>
               </div>
@@ -183,13 +183,13 @@ export default function FloatingAdminChat() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSubmit} className="p-3 border-t">
-              <div className="flex gap-2">
+            <form onSubmit={handleSubmit} className="p-4 border-t">
+              <div className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
-                  className="flex-1 min-h-[48px] max-h-[100px] rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/40 focus:border-[#6C5CE7] focus:shadow-[0_0_0_3px_rgba(108,92,231,0.12)] transition-all"
+                  className="flex-1 min-h-[80px] max-h-[160px] rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/40 focus:border-[#6C5CE7] focus:shadow-[0_0_0_3px_rgba(108,92,231,0.12)] transition-all"
                   placeholder="Ask me anything about creators, events, or campaigns..."
-                  rows={1}
+                  rows={2}
                   onKeyDown={handleKeyDown}
                 />
                 <Button type="submit" size="icon" className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
