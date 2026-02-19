@@ -7,6 +7,7 @@ import {
   DollarSign, ClipboardList, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -28,6 +29,7 @@ const TABS = [
   "365 Insights",
   "Streaming & Media",
   "Partnership Model",
+  "Financial Model",
 ] as const;
 
 type TabId = (typeof TABS)[number];
@@ -2476,7 +2478,10 @@ export default function Prospectus() {
         {activeTab === "365 Insights" && (
           <InsightsTab dark={darkMode} />
         )}
-        {activeTab !== "Overview" && activeTab !== "PDX Experience" && activeTab !== "Events & Attendee App" && activeTab !== "Creator Network" && activeTab !== "365 Insights" && (
+        {activeTab === "Financial Model" && (
+          <FinancialModelTab dark={darkMode} />
+        )}
+        {activeTab !== "Overview" && activeTab !== "PDX Experience" && activeTab !== "Events & Attendee App" && activeTab !== "Creator Network" && activeTab !== "365 Insights" && activeTab !== "Financial Model" && (
           <PlaceholderTab
             title={activeTab}
             description={TAB_PLACEHOLDERS[activeTab] ?? "Content coming soon."}
