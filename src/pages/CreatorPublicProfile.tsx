@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +6,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ShieldCheck,
   BadgeCheck,
@@ -15,20 +16,37 @@ import {
   ArrowLeft,
   Users,
   TrendingUp,
-  Monitor,
+  Eye,
+  LayoutGrid,
   UserPlus,
   UserCheck,
   Loader2,
+  Heart,
+  MessageCircle,
+  Calendar,
+  MapPin,
+  Mail,
+  ExternalLink,
+  Image,
+  Hash,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchDirectoryMemberByHandle,
   formatFollowerCount,
   getInitials,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
+import { cn } from "@/lib/utils";
+
+/* ------------------------------------------------------------------ */
+/* Icons                                                               */
+/* ------------------------------------------------------------------ */
 
 const TikTokIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -36,13 +54,27 @@ const TikTokIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
   </svg>
 );
 
+/* ------------------------------------------------------------------ */
+/* Constants                                                           */
+/* ------------------------------------------------------------------ */
+
+const BRANCH_BANNER: Record<string, string> = {
+  Army: "bg-gradient-to-br from-green-800 via-green-700 to-green-900",
+  Navy: "bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900",
+  "Air Force": "bg-gradient-to-br from-sky-600 via-blue-600 to-sky-800",
+  Marines: "bg-gradient-to-br from-red-800 via-red-700 to-red-900",
+  "Coast Guard": "bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700",
+  "Space Force": "bg-gradient-to-br from-indigo-700 via-indigo-600 to-purple-800",
+};
+const DEFAULT_BANNER = "bg-gradient-to-br from-[#6C5CE7] via-[#7C6CF7] to-[#8B7CF7]";
+
 const BRANCH_STYLES: Record<string, string> = {
-  Army: "bg-green-800/10 text-green-800 border-green-800/20",
-  Navy: "bg-blue-900/10 text-blue-900 border-blue-900/20",
-  "Air Force": "bg-sky-600/10 text-sky-700 border-sky-600/20",
-  Marines: "bg-red-700/10 text-red-700 border-red-700/20",
-  "Coast Guard": "bg-orange-600/10 text-orange-700 border-orange-600/20",
-  "Space Force": "bg-indigo-600/10 text-indigo-700 border-indigo-600/20",
+  Army: "bg-green-700 text-white",
+  Navy: "bg-blue-800 text-white",
+  "Air Force": "bg-blue-600 text-white",
+  Marines: "bg-red-700 text-white",
+  "Coast Guard": "bg-orange-600 text-white",
+  "Space Force": "bg-indigo-600 text-white",
 };
 
 const PLATFORM_URLS: Record<string, (handle: string) => string> = {
@@ -53,10 +85,10 @@ const PLATFORM_URLS: Record<string, (handle: string) => string> = {
 };
 
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
-  instagram: <Instagram className="h-5 w-5" />,
-  tiktok: <TikTokIcon className="h-5 w-5" />,
-  youtube: <Youtube className="h-5 w-5" />,
-  twitter: <Twitter className="h-5 w-5" />,
+  instagram: <Instagram className="h-4 w-4" />,
+  tiktok: <TikTokIcon className="h-4 w-4" />,
+  youtube: <Youtube className="h-4 w-4" />,
+  twitter: <Twitter className="h-4 w-4" />,
 };
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -66,15 +98,204 @@ const PLATFORM_LABEL: Record<string, string> = {
   twitter: "X / Twitter",
 };
 
+/* ------------------------------------------------------------------ */
+/* Types                                                               */
+/* ------------------------------------------------------------------ */
+
+interface PostItem {
+  id: string;
+  thumbnail?: string;
+  caption?: string;
+  likes: number;
+  comments: number;
+  date?: string;
+  permalink?: string;
+}
+
+interface EventRow {
+  id: string;
+  title: string;
+  slug: string;
+  start_date: string | null;
+  end_date: string | null;
+  venue: string | null;
+  city: string | null;
+  state: string | null;
+  cover_image_url: string | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Enrichment Extraction Helpers                                       */
+/* ------------------------------------------------------------------ */
+
+function extractBannerImage(enrichData: unknown): string | null {
+  if (!enrichData || typeof enrichData !== "object") return null;
+  const data = enrichData as Record<string, unknown>;
+  const ig = data.instagram as Record<string, unknown> | undefined;
+  const result = data.result as Record<string, unknown> | undefined;
+
+  // Check explicit cover fields
+  for (const obj of [ig, result, data]) {
+    if (!obj) continue;
+    for (const key of ["cover_photo", "profile_cover", "banner_url", "cover_image"]) {
+      if (obj[key] && typeof obj[key] === "string") return obj[key] as string;
+    }
+  }
+
+  // Fallback: first post thumbnail
+  const postData = ig?.post_data;
+  if (Array.isArray(postData) && postData.length > 0) {
+    const first = postData[0] as Record<string, unknown>;
+    const media = first.media as unknown[] | undefined;
+    if (Array.isArray(media) && media[0]) {
+      const m = media[0] as Record<string, unknown>;
+      if (m.url && typeof m.url === "string") return m.url as string;
+    }
+    if (first.thumbnail && typeof first.thumbnail === "string") return first.thumbnail as string;
+    if (first.image_url && typeof first.image_url === "string") return first.image_url as string;
+  }
+
+  return null;
+}
+
+function extractEmailFromEnrichment(enrichData: unknown): string | null {
+  if (!enrichData || typeof enrichData !== "object") return null;
+  const data = enrichData as Record<string, unknown>;
+  const result = data.result as Record<string, unknown> | undefined;
+  if (result?.email && typeof result.email === "string") return result.email as string;
+  const ig = data.instagram as Record<string, unknown> | undefined;
+  if (ig?.email && typeof ig.email === "string") return ig.email as string;
+  if (data.email && typeof data.email === "string") return data.email as string;
+  return null;
+}
+
+function extractPosts(enrichData: unknown): PostItem[] {
+  if (!enrichData || typeof enrichData !== "object") return [];
+  const data = enrichData as Record<string, unknown>;
+  const ig = data.instagram as Record<string, unknown> | undefined;
+  const raw = ig?.post_data;
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 12).map((item: Record<string, unknown>, i: number) => {
+    const media = item.media as unknown[] | undefined;
+    const firstMedia =
+      Array.isArray(media) && media[0] && typeof media[0] === "object"
+        ? (media[0] as Record<string, unknown>)
+        : undefined;
+    const engagement = item.engagement as Record<string, unknown> | undefined;
+    return {
+      id: String(item.post_id ?? item.id ?? i),
+      thumbnail: (firstMedia?.url ?? item.thumbnail ?? item.image_url) as string | undefined,
+      caption: (item.caption as string) ?? undefined,
+      likes: Number(engagement?.likes ?? item.likes ?? item.like_count ?? 0),
+      comments: Number(engagement?.comments ?? item.comments ?? item.comment_count ?? 0),
+      date: (item.created_at as string) ?? undefined,
+      permalink: (item.post_url as string) ?? undefined,
+    };
+  });
+}
+
+function extractOtherLinks(enrichData: unknown): { label: string; url: string }[] {
+  if (!enrichData || typeof enrichData !== "object") return [];
+  const data = enrichData as Record<string, unknown>;
+  const result = data.result as Record<string, unknown> | undefined;
+  const raw = result?.other_links;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item) => item && typeof item === "object")
+    .map((item: Record<string, unknown>) => ({
+      label: (item.label as string) || (item.title as string) || (item.url as string) || "Link",
+      url: (item.url as string) || (item.link as string) || "#",
+    }))
+    .filter((l) => l.url !== "#");
+}
+
+function extractHashtags(enrichData: unknown): string[] {
+  if (!enrichData || typeof enrichData !== "object") return [];
+  const data = enrichData as Record<string, unknown>;
+  const ig = data.instagram as Record<string, unknown> | undefined;
+  const raw = ig?.hashtags ?? ig?.frequently_used_hashtags;
+  if (Array.isArray(raw)) return raw.filter((h) => typeof h === "string").slice(0, 10) as string[];
+  return [];
+}
+
+/* ------------------------------------------------------------------ */
+/* Skeleton Loader                                                     */
+/* ------------------------------------------------------------------ */
+
+function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <PublicNav />
+      <main className="max-w-3xl mx-auto px-4 md:px-8 pt-20 pb-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Banner skeleton */}
+          <div className="h-36 md:h-52 bg-gray-200 animate-pulse" />
+          {/* Avatar skeleton */}
+          <div className="-mt-10 md:-mt-12 ml-4 md:ml-8">
+            <div className="w-20 h-20 md:w-[100px] md:h-[100px] rounded-full bg-gray-300 animate-pulse border-4 border-white" />
+          </div>
+          <div className="p-4 md:p-6 pt-3 space-y-3">
+            <div className="h-7 w-48 bg-gray-200 animate-pulse rounded" />
+            <div className="h-4 w-32 bg-gray-100 animate-pulse rounded" />
+            <div className="flex gap-2 mt-3">
+              <div className="h-6 w-16 bg-gray-100 animate-pulse rounded-full" />
+              <div className="h-6 w-6 bg-gray-100 animate-pulse rounded-full" />
+            </div>
+            <div className="h-12 w-full bg-gray-100 animate-pulse rounded mt-4" />
+            {/* Stats skeleton */}
+            <div className="grid grid-cols-2 md:flex gap-3 md:gap-8 mt-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="text-center space-y-1">
+                  <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mx-auto" />
+                  <div className="h-3 w-12 bg-gray-100 animate-pulse rounded mx-auto" />
+                </div>
+              ))}
+            </div>
+            {/* Tab bar skeleton */}
+            <div className="flex gap-6 mt-6 border-b border-gray-200 pb-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-4 w-16 bg-gray-100 animate-pulse rounded" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Main Component                                                      */
+/* ------------------------------------------------------------------ */
+
 export default function CreatorPublicProfile() {
   const { handle } = useParams<{ handle: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Core state
   const [creator, setCreator] = useState<ShowcaseCreator | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [following, setFollowing] = useState(false);
 
+  // UI state
+  const [bioExpanded, setBioExpanded] = useState(false);
+
+  // Events state
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsFetched, setEventsFetched] = useState(false);
+  const [hasUpcomingEvents, setHasUpcomingEvents] = useState(false);
+
+  // Image fallback
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  // Banner image
+  const [bannerFailed, setBannerFailed] = useState(false);
+
+  /* ---- Fetch creator ---- */
   useEffect(() => {
     if (!handle) return;
     setLoading(true);
@@ -88,9 +309,110 @@ export default function CreatorPublicProfile() {
       }
       setLoading(false);
     });
-    return () => { document.title = "MilCrunch"; };
+    return () => {
+      document.title = "MilCrunch";
+    };
   }, [handle]);
 
+  /* ---- Image fallback ---- */
+  useEffect(() => {
+    if (creator) {
+      setImgSrc(creator.avatar_url || creator.ic_avatar_url || null);
+      setImgFailed(false);
+    }
+  }, [creator]);
+
+  const handleImgError = () => {
+    if (
+      creator &&
+      imgSrc === creator.avatar_url &&
+      creator.ic_avatar_url &&
+      creator.ic_avatar_url !== creator.avatar_url
+    ) {
+      setImgSrc(creator.ic_avatar_url);
+    } else {
+      setImgFailed(true);
+    }
+  };
+  const showImage = !!imgSrc && !imgFailed;
+
+  /* ---- Parse enrichment data ---- */
+  const enrichment = useMemo(() => {
+    const data = creator?.enrichment_data;
+    return {
+      bannerImage: extractBannerImage(data),
+      email: extractEmailFromEnrichment(data),
+      posts: extractPosts(data),
+      otherLinks: extractOtherLinks(data),
+      hashtags: extractHashtags(data),
+    };
+  }, [creator?.enrichment_data]);
+
+  /* ---- Check upcoming events badge ---- */
+  useEffect(() => {
+    if (!enrichment.email) return;
+    const email = enrichment.email;
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: regs } = await (supabase as any)
+          .from("event_registrations")
+          .select("event_id")
+          .ilike("email", email)
+          .eq("status", "confirmed");
+        if (!regs || regs.length === 0) return;
+        const ids = regs.map((r: { event_id: string }) => r.event_id);
+        const { count } = await supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .in("id", ids)
+          .gte("start_date", new Date().toISOString())
+          .eq("is_published", true);
+        if ((count ?? 0) > 0) setHasUpcomingEvents(true);
+      } catch {
+        /* silently fail */
+      }
+    })();
+  }, [enrichment.email]);
+
+  /* ---- Fetch events for tab ---- */
+  const fetchEvents = async (email: string) => {
+    setEventsLoading(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: regs } = await (supabase as any)
+        .from("event_registrations")
+        .select("event_id")
+        .ilike("email", email)
+        .eq("status", "confirmed");
+      if (!regs || regs.length === 0) {
+        setEvents([]);
+        setEventsLoading(false);
+        setEventsFetched(true);
+        return;
+      }
+      const ids = [...new Set(regs.map((r: { event_id: string }) => r.event_id))];
+      const { data: evts } = await supabase
+        .from("events")
+        .select("id, title, slug, start_date, end_date, venue, city, state, cover_image_url")
+        .in("id", ids)
+        .eq("is_published", true)
+        .order("start_date", { ascending: true });
+      setEvents((evts ?? []) as EventRow[]);
+    } catch {
+      setEvents([]);
+    }
+    setEventsLoading(false);
+    setEventsFetched(true);
+  };
+
+  const handleTabChange = (value: string) => {
+    if (value === "events" && !eventsFetched && enrichment.email) {
+      fetchEvents(enrichment.email);
+    }
+  };
+
+  /* ---- Follow toggle ---- */
   const handleFollowClick = () => {
     if (!user) {
       navigate("/login");
@@ -99,53 +421,29 @@ export default function CreatorPublicProfile() {
     setFollowing((prev) => !prev);
   };
 
-  // Image fallback
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const [imgFailed, setImgFailed] = useState(false);
-  useEffect(() => {
-    if (creator) {
-      setImgSrc(creator.avatar_url || creator.ic_avatar_url || null);
-      setImgFailed(false);
-    }
-  }, [creator]);
-  const handleImgError = () => {
-    if (creator && imgSrc === creator.avatar_url && creator.ic_avatar_url && creator.ic_avatar_url !== creator.avatar_url) {
-      setImgSrc(creator.ic_avatar_url);
-    } else {
-      setImgFailed(true);
-    }
-  };
-  const showImage = !!imgSrc && !imgFailed;
-
-  // Platform URLs from enrichment or constructed
+  /* ---- Platform URL builder ---- */
   const getPlatformUrl = (platform: string): string => {
-    const enrichment = creator?.enrichment_data as Record<string, unknown> | undefined;
-    if (enrichment) {
-      const urls = enrichment.platform_urls as Record<string, string> | undefined;
+    const ed = creator?.enrichment_data as Record<string, unknown> | undefined;
+    if (ed) {
+      const urls = ed.platform_urls as Record<string, string> | undefined;
       if (urls?.[platform]) return urls[platform];
     }
-    // Check platform_urls on the directory member directly
     if (creator?.platform_urls?.[platform]) return creator.platform_urls[platform];
-    // Build from handle
     const builder = PLATFORM_URLS[platform];
     return builder ? builder(creator?.handle ?? "") : "#";
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
-      </div>
-    );
-  }
+  /* ---- Loading state ---- */
+  if (loading) return <ProfileSkeleton />;
 
+  /* ---- Not found ---- */
   if (notFound || !creator) {
     return (
       <div className="min-h-screen bg-white text-[#1A1A2E]">
         <PublicNav />
         <div className="flex flex-col items-center justify-center py-32 pt-28 px-4">
           <h1 className="text-3xl font-bold mb-4">Creator Not Found</h1>
-          <p className="text-[#6B7280] mb-8">We couldn't find a creator with that profile.</p>
+          <p className="text-[#6B7280] mb-8">We couldn&apos;t find a creator with that profile.</p>
           <Link to="/creators">
             <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">Browse All Creators</Button>
           </Link>
@@ -155,172 +453,558 @@ export default function CreatorPublicProfile() {
     );
   }
 
+  /* ---- Computed values ---- */
   const platforms = creator.platforms ?? [];
-  const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-100 text-gray-700 border-gray-200";
+  const bannerGradient = BRANCH_BANNER[creator.branch ?? ""] ?? DEFAULT_BANNER;
+  const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-600 text-white";
+  const isVerified = creator.paradedeck_verified || creator.influencersclub_verified;
+  const bannerImg = enrichment.bannerImage && !bannerFailed ? enrichment.bannerImage : null;
+
+  const bio = creator.bio || "";
+  const bioNeedsToggle = bio.length > 180;
+  const bioDisplay = bioExpanded || !bioNeedsToggle ? bio : bio.slice(0, 180) + "...";
+
+  // Build stats array — only real data
+  const stats: { label: string; value: string; icon: React.ReactNode }[] = [];
+  if (creator.follower_count && creator.follower_count > 0) {
+    stats.push({ label: "Followers", value: formatFollowerCount(creator.follower_count), icon: <Users className="h-4 w-4 text-[#6C5CE7]" /> });
+  }
+  if (creator.engagement_rate != null && creator.engagement_rate > 0) {
+    stats.push({ label: "Engagement", value: `${creator.engagement_rate.toFixed(1)}%`, icon: <TrendingUp className="h-4 w-4 text-green-600" /> });
+  }
+  if (creator.avg_views) {
+    stats.push({ label: "Avg Views", value: creator.avg_views, icon: <Eye className="h-4 w-4 text-blue-500" /> });
+  }
+  if (creator.media_count && creator.media_count > 0) {
+    stats.push({ label: "Posts", value: formatFollowerCount(creator.media_count), icon: <LayoutGrid className="h-4 w-4 text-gray-500" /> });
+  }
+
+  // Upcoming vs past events
+  const now = new Date().toISOString();
+  const upcomingEvents = events.filter((e) => !e.start_date || e.start_date >= now);
+  const pastEvents = events.filter((e) => e.start_date && e.start_date < now);
 
   return (
     <div className="min-h-screen bg-gray-50 text-[#1A1A2E]">
       <PublicNav />
 
-      <main className="max-w-4xl mx-auto px-4 md:px-8 pt-22 pb-8">
-        <Link to="/creators" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6">
+      <main className="max-w-3xl mx-auto px-4 md:px-8 pt-20 pb-12">
+        {/* Back link */}
+        <Link
+          to="/creators"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-4 transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" /> Back to Creators
         </Link>
 
-        {/* Hero Card */}
+        {/* Profile Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Gradient banner */}
-          <div className="h-32 w-full bg-gradient-to-r from-[#6C5CE7] to-[#8B7CF7]" />
-
-          {/* Avatar overlapping banner */}
-          <div className="mt-[-48px] ml-8">
-            <div className={`w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg ${
-              creator.paradedeck_verified ? "ring-[3px] ring-purple-500 ring-offset-2" : ""
-            }`}>
-              {showImage ? (
+          {/* ====== BANNER ====== */}
+          <div className={cn("relative h-36 md:h-52 w-full overflow-hidden", !bannerImg && bannerGradient)}>
+            {bannerImg ? (
+              <>
                 <img
-                  src={imgSrc!}
-                  alt={creator.display_name}
+                  src={bannerImg}
+                  alt=""
                   className="w-full h-full object-cover"
-                  onError={handleImgError}
+                  onError={() => setBannerFailed(true)}
                 />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl">
-                  {getInitials(creator.display_name, creator.handle)}
+                {/* Dark gradient overlay for contrast */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+              </>
+            ) : (
+              /* Subtle diagonal stripe pattern */
+              <div
+                className="absolute inset-0 opacity-[0.07]"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.5) 10px, rgba(255,255,255,0.5) 12px)",
+                }}
+              />
+            )}
+          </div>
+
+          {/* ====== AVATAR + HEADER ====== */}
+          <div className="px-4 md:px-6">
+            {/* Avatar overlapping banner */}
+            <div className="-mt-10 md:-mt-12">
+              <div
+                className={cn(
+                  "w-20 h-20 md:w-[100px] md:h-[100px] rounded-full overflow-hidden border-4 border-white shadow-lg",
+                  isVerified && "ring-[3px] ring-[#6C5CE7] ring-offset-2 ring-offset-white"
+                )}
+              >
+                {showImage ? (
+                  <img
+                    src={imgSrc!}
+                    alt={creator.display_name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={handleImgError}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl">
+                    {getInitials(creator.display_name, creator.handle)}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Name + handle + badges + follow */}
+            <div className="mt-3 pb-4">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
+                    {creator.display_name}
+                  </h1>
+                  <p className="text-sm text-gray-400 mt-0.5">@{creator.handle}</p>
+
+                  {/* Badges row */}
+                  <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                    {creator.branch && (
+                      <span className={cn("text-xs font-semibold px-3 py-1 rounded-full", branchStyle)}>
+                        {creator.branch}
+                      </span>
+                    )}
+                    {creator.paradedeck_verified && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ShieldCheck className="h-5 w-5 text-purple-500 shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>MilCrunch Verified</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {creator.influencersclub_verified && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <BadgeCheck className="h-5 w-5 text-blue-500 shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>Creator Verified</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {hasUpcomingEvents && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">
+                        <Calendar className="h-3 w-3" />
+                        Attending Events
+                      </span>
+                    )}
+                    {creator.status && (
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        {creator.status}
+                      </span>
+                    )}
+                    {creator.category && (
+                      <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-3 py-1 rounded-full">
+                        {creator.category}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Follow button */}
+                <div className="shrink-0">
+                  {following ? (
+                    <Button
+                      onClick={handleFollowClick}
+                      className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6 rounded-xl w-full md:w-auto"
+                    >
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Following
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleFollowClick}
+                      variant="outline"
+                      className="border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-6 rounded-xl w-full md:w-auto"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Follow
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* ====== BIO ====== */}
+              {bio && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                    {bioDisplay}
+                  </p>
+                  {bioNeedsToggle && (
+                    <button
+                      onClick={() => setBioExpanded(!bioExpanded)}
+                      className="text-sm font-medium text-[#6C5CE7] hover:text-[#5B4BD1] mt-1 inline-flex items-center gap-0.5"
+                    >
+                      {bioExpanded ? (
+                        <>
+                          See less <ChevronUp className="h-3 w-3" />
+                        </>
+                      ) : (
+                        <>
+                          See more <ChevronDown className="h-3 w-3" />
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* ====== STATS ROW ====== */}
+              {stats.length > 0 && (
+                <div className="mt-5 grid grid-cols-2 md:flex md:items-center gap-3 md:gap-8">
+                  {stats.map((s) => (
+                    <div key={s.label} className="flex items-center gap-2 md:text-center">
+                      {s.icon}
+                      <div>
+                        <p className="text-lg font-bold text-gray-900 leading-tight">{s.value}</p>
+                        <p className="text-xs text-gray-500">{s.label}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Name, handle, badges — in white content area */}
-          <div className="p-6 pt-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{creator.display_name}</h1>
-                <p className="text-base text-gray-400 mt-1">@{creator.handle}</p>
-                <div className="flex items-center gap-2 flex-wrap mt-3">
-                  {creator.branch && (
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${branchStyle}`}>
-                      {creator.branch}
-                    </span>
+          {/* ====== TABS ====== */}
+          <Tabs defaultValue="overview" onValueChange={handleTabChange}>
+            <div className="border-t border-gray-100">
+              <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto px-4 md:px-6">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="content"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Content
+                </TabsTrigger>
+                <TabsTrigger
+                  value="events"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Events
+                </TabsTrigger>
+                <TabsTrigger
+                  value="contact"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Contact
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* ====== OVERVIEW TAB ====== */}
+            <TabsContent value="overview" className="px-4 md:px-6 py-5 space-y-6">
+              {/* About */}
+              {bio && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-2">About</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{bio}</p>
+                </div>
+              )}
+
+              {/* Platforms */}
+              {platforms.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Platforms</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {platforms.map((p) => (
+                      <a
+                        key={p}
+                        href={getPlatformUrl(p)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/5 transition-colors"
+                      >
+                        {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
+                        {PLATFORM_LABEL[p] ?? p}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other links */}
+              {enrichment.otherLinks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Links</h3>
+                  <div className="space-y-2">
+                    {enrichment.otherLinks.map((link, i) => (
+                      <a
+                        key={i}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+                      >
+                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-[#6C5CE7]" />
+                        <span className="text-sm text-gray-700 group-hover:text-[#6C5CE7] truncate">
+                          {link.label}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Hashtags */}
+              {enrichment.hashtags.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Topics</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichment.hashtags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full"
+                      >
+                        <Hash className="h-3 w-3" />
+                        {tag.replace(/^#/, "")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!bio && platforms.length === 0 && enrichment.otherLinks.length === 0 && (
+                <div className="text-center py-10 text-gray-400">
+                  <Users className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Profile details coming soon.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ====== CONTENT TAB ====== */}
+            <TabsContent value="content" className="px-4 md:px-6 py-5">
+              {enrichment.posts.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                  {enrichment.posts.map((post) => (
+                    <a
+                      key={post.id}
+                      href={post.permalink ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="relative group rounded-lg overflow-hidden bg-gray-100 aspect-square"
+                    >
+                      {post.thumbnail ? (
+                        <img
+                          src={post.thumbnail}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Image className="h-8 w-8 text-gray-300" />
+                        </div>
+                      )}
+                      {/* Hover overlay with engagement */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-4">
+                        {post.likes > 0 && (
+                          <span className="flex items-center gap-1 text-white text-sm font-medium">
+                            <Heart className="h-4 w-4 fill-white" />
+                            {formatFollowerCount(post.likes)}
+                          </span>
+                        )}
+                        {post.comments > 0 && (
+                          <span className="flex items-center gap-1 text-white text-sm font-medium">
+                            <MessageCircle className="h-4 w-4 fill-white" />
+                            {formatFollowerCount(post.comments)}
+                          </span>
+                        )}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 text-gray-400">
+                  <Image className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">Content coming soon</p>
+                  <p className="text-xs mt-1">This creator&apos;s posts will appear here.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ====== EVENTS TAB ====== */}
+            <TabsContent value="events" className="px-4 md:px-6 py-5">
+              {eventsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#6C5CE7]" />
+                </div>
+              ) : events.length > 0 ? (
+                <div className="space-y-6">
+                  {upcomingEvents.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Upcoming</h3>
+                      <div className="space-y-3">
+                        {upcomingEvents.map((evt) => (
+                          <EventCard key={evt.id} event={evt} />
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  {creator.paradedeck_verified && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ShieldCheck className="h-5 w-5 text-purple-500 shrink-0" />
-                      </TooltipTrigger>
-                      <TooltipContent>MilCrunch Verified</TooltipContent>
-                    </Tooltip>
-                  )}
-                  {creator.influencersclub_verified && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <BadgeCheck className="h-5 w-5 text-blue-500 shrink-0" />
-                      </TooltipTrigger>
-                      <TooltipContent>Creator Verified</TooltipContent>
-                    </Tooltip>
-                  )}
-                  {creator.status && (
-                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                      {creator.status}
-                    </span>
-                  )}
-                  {creator.category && (
-                    <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-3 py-1 rounded-full">
-                      {creator.category}
-                    </span>
+                  {pastEvents.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Past Events</h3>
+                      <div className="space-y-3">
+                        {pastEvents.map((evt) => (
+                          <EventCard key={evt.id} event={evt} />
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-16 text-gray-400">
+                  <Calendar className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">No events yet</p>
+                  <p className="text-xs mt-1">Events this creator is attending will appear here.</p>
+                </div>
+              )}
+            </TabsContent>
 
-              {/* Follow button */}
-              <div className="shrink-0">
-                {following ? (
-                  <Button
-                    onClick={handleFollowClick}
-                    className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6 rounded-xl"
-                  >
-                    <UserCheck className="h-4 w-4 mr-2" />
-                    Following
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleFollowClick}
-                    variant="outline"
-                    className="border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-6 rounded-xl"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Follow
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4 mt-6">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
-            <Users className="h-5 w-5 text-[#6C5CE7] mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#000741]">{formatFollowerCount(creator.follower_count)}</p>
-            <p className="text-xs text-gray-500 mt-1">Followers</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
-            <TrendingUp className="h-5 w-5 text-green-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#000741]">
-              {creator.engagement_rate != null ? `${creator.engagement_rate.toFixed(1)}%` : "—"}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Engagement Rate</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
-            <Monitor className="h-5 w-5 text-purple-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-[#000741]">{platforms.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Platforms</p>
-          </div>
-        </div>
-
-        {/* Bio + Platforms */}
-        <div className="grid md:grid-cols-3 gap-6 mt-6">
-          {/* Bio */}
-          <div className="md:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-            <h2 className="font-semibold text-[#000741] mb-3">About</h2>
-            {creator.bio ? (
-              <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{creator.bio}</p>
-            ) : (
-              <p className="text-gray-400 text-sm italic">No bio available yet.</p>
-            )}
-          </div>
-
-          {/* Platform links */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-            <h2 className="font-semibold text-[#000741] mb-3">Platforms</h2>
-            {platforms.length > 0 ? (
-              <div className="space-y-3">
-                {platforms.map((p) => (
+            {/* ====== CONTACT TAB ====== */}
+            <TabsContent value="contact" className="px-4 md:px-6 py-5 space-y-5">
+              {/* Email */}
+              {enrichment.email && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Email</h3>
                   <a
-                    key={p}
-                    href={getPlatformUrl(p)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+                    href={`mailto:${enrichment.email}`}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/5 transition-colors"
                   >
-                    <span className="text-gray-500 group-hover:text-[#6C5CE7] transition-colors">
-                      {PLATFORM_ICON[p] ?? <Monitor className="h-5 w-5" />}
-                    </span>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-[#6C5CE7]">
-                      {PLATFORM_LABEL[p] ?? p}
-                    </span>
+                    <Mail className="h-4 w-4" />
+                    {enrichment.email}
                   </a>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 text-sm italic">No platforms linked yet.</p>
-            )}
-          </div>
+                </div>
+              )}
+
+              {/* Social platforms */}
+              {platforms.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Social</h3>
+                  <div className="space-y-2">
+                    {platforms.map((p) => (
+                      <a
+                        key={p}
+                        href={getPlatformUrl(p)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+                      >
+                        <span className="text-gray-500 group-hover:text-[#6C5CE7] transition-colors">
+                          {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
+                        </span>
+                        <span className="text-sm font-medium text-gray-700 group-hover:text-[#6C5CE7]">
+                          {PLATFORM_LABEL[p] ?? p}
+                        </span>
+                        <ExternalLink className="h-3.5 w-3.5 text-gray-300 ml-auto" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other links */}
+              {enrichment.otherLinks.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Websites</h3>
+                  <div className="space-y-2">
+                    {enrichment.otherLinks.map((link, i) => (
+                      <a
+                        key={i}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+                      >
+                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-[#6C5CE7]" />
+                        <span className="text-sm text-gray-700 group-hover:text-[#6C5CE7] truncate">
+                          {link.label}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!enrichment.email && platforms.length === 0 && enrichment.otherLinks.length === 0 && (
+                <div className="text-center py-16 text-gray-400">
+                  <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">No contact info available</p>
+                  <p className="text-xs mt-1">Contact information will appear here when available.</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
       <PublicFooter />
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Event Card Sub-Component                                            */
+/* ------------------------------------------------------------------ */
+
+function EventCard({ event }: { event: EventRow }) {
+  const formatDate = (dateStr: string | null): string => {
+    if (!dateStr) return "";
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const dateRange = event.start_date
+    ? event.end_date && event.end_date !== event.start_date
+      ? `${formatDate(event.start_date)} — ${formatDate(event.end_date)}`
+      : formatDate(event.start_date)
+    : "Date TBD";
+
+  const location = [event.city, event.state].filter(Boolean).join(", ");
+
+  return (
+    <Link
+      to={`/events/${event.id}`}
+      className="flex gap-4 p-3 rounded-xl border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+    >
+      {/* Event cover thumbnail */}
+      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-[#6C5CE7]/20 to-[#6C5CE7]/5 shrink-0 flex items-center justify-center">
+        {event.cover_image_url ? (
+          <img src={event.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <Calendar className="h-6 w-6 text-[#6C5CE7]/40" />
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <h4 className="text-sm font-semibold text-gray-900 group-hover:text-[#6C5CE7] truncate transition-colors">
+          {event.title}
+        </h4>
+        <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+          <Calendar className="h-3 w-3 shrink-0" />
+          {dateRange}
+        </p>
+        {(location || event.venue) && (
+          <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
+            <MapPin className="h-3 w-3 shrink-0" />
+            {event.venue ? `${event.venue}${location ? `, ${location}` : ""}` : location}
+          </p>
+        )}
+      </div>
+    </Link>
   );
 }
