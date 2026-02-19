@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import {
   TrendingUp, DollarSign, Percent, Download, ArrowRight,
   Rocket, Shield, Tv, Building2, Users, Mic, Radio, ShoppingBag,
-  Briefcase, Database, GraduationCap, BarChart3,
+  Briefcase, Database, GraduationCap, BarChart3, Tag, FileBarChart,
 } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -11,125 +11,164 @@ import {
 } from "recharts";
 
 /* ================================================================== */
-/* Data                                                                */
+/* Data — computed from MilCrunch_Financial_Model.xlsx (Assumptions)   */
 /* ================================================================== */
 
 const KPIS = [
-  { label: "Year 1 Revenue", value: "$466K", sub: "Launch year", icon: DollarSign },
+  { label: "Year 1 Revenue", value: "$217K", sub: "Launch year", icon: DollarSign },
   { label: "Year 3 Revenue", value: "$2.1M", sub: "Scale phase", icon: TrendingUp },
-  { label: "Year 5 Revenue", value: "$8.4M", sub: "Mature operations", icon: BarChart3 },
-  { label: "Year 5 EBITDA", value: "$2.9M", sub: "Operating profit", icon: DollarSign },
-  { label: "Year 5 Margin", value: "34%", sub: "EBITDA margin", icon: Percent },
+  { label: "Year 5 Revenue", value: "$14.4M", sub: "Mature operations", icon: BarChart3 },
+  { label: "Year 5 EBITDA", value: "$9.1M", sub: "Operating profit", icon: DollarSign },
+  { label: "Year 5 Margin", value: "64%", sub: "EBITDA margin", icon: Percent },
 ];
 
-/* Revenue by stream per year ($K) */
+/* Revenue by stream per year ($K) — from P&L Model */
 const REVENUE_BY_STREAM = [
-  { year: "Y1", Events: 220, Platform: 100, Creator: 56, Media: 50, Community: 40 },
-  { year: "Y2", Events: 480, Platform: 260, Creator: 140, Media: 160, Community: 110 },
-  { year: "Y3", Events: 680, Platform: 520, Creator: 320, Media: 360, Community: 220 },
-  { year: "Y4", Events: 1050, Platform: 900, Creator: 580, Media: 720, Community: 450 },
-  { year: "Y5", Events: 1600, Platform: 1800, Creator: 1200, Media: 2000, Community: 1800 },
+  { year: "Y1", Events: 166, Platform: 16, Marketplace: 5, Media: 15, Community: 15 },
+  { year: "Y2", Events: 443, Platform: 88, Marketplace: 24, Media: 72, Community: 58 },
+  { year: "Y3", Events: 914, Platform: 330, Marketplace: 108, Media: 582, Community: 215 },
+  { year: "Y4", Events: 1613, Platform: 847, Marketplace: 380, Media: 2130, Community: 675 },
+  { year: "Y5", Events: 2720, Platform: 1908, Marketplace: 1425, Media: 6350, Community: 1975 },
 ];
 
 const STREAM_COLORS: Record<string, string> = {
   Events: "#6C5CE7",
-  Platform: "#8B5CF6",
-  Creator: "#A78BFA",
-  Media: "#7C3AED",
-  Community: "#C4B5FD",
+  Platform: "#3B82F6",
+  Marketplace: "#8B5CF6",
+  Media: "#14B8A6",
+  Community: "#F59E0B",
 };
 
 const EBITDA_DATA = [
-  { year: "Y1", ebitda: -120, margin: -26 },
-  { year: "Y2", ebitda: 80, margin: 7 },
-  { year: "Y3", ebitda: 520, margin: 25 },
-  { year: "Y4", ebitda: 1300, margin: 35 },
-  { year: "Y5", ebitda: 2900, margin: 34 },
+  { year: "Y1", ebitda: -208, margin: -96 },
+  { year: "Y2", ebitda: -149, margin: -22 },
+  { year: "Y3", ebitda: 531, margin: 25 },
+  { year: "Y4", ebitda: 2707, margin: 48 },
+  { year: "Y5", ebitda: 9147, margin: 64 },
 ];
 
 /* Revenue streams detail table ($K) */
 interface StreamRow {
   name: string;
-  category: "Events" | "Platform" | "Media" | "Community";
+  category: "Events" | "Platform" | "Marketplace" | "Media" | "Community";
   y1: number; y2: number; y3: number; y4: number; y5: number;
   newIn?: string;
   icon: React.ElementType;
 }
 
 const STREAM_ROWS: StreamRow[] = [
-  { name: "Ticket Sales", category: "Events", y1: 120, y2: 260, y3: 380, y4: 600, y5: 900, icon: Users },
-  { name: "Sponsorships", category: "Events", y1: 80, y2: 180, y3: 250, y4: 380, y5: 580, icon: Shield },
-  { name: "Exhibition Fees", category: "Events", y1: 20, y2: 40, y3: 50, y4: 70, y5: 120, icon: Building2 },
-  { name: "SaaS Licensing", category: "Platform", y1: 60, y2: 150, y3: 300, y4: 520, y5: 1000, icon: Rocket },
-  { name: "Creator Badges", category: "Platform", y1: 24, y2: 60, y3: 120, y4: 200, y5: 400, icon: Shield },
-  { name: "Marketplace Commissions", category: "Platform", y1: 16, y2: 50, y3: 100, y4: 180, y5: 400, icon: ShoppingBag },
-  { name: "Podcast Ads", category: "Media", y1: 30, y2: 80, y3: 160, y4: 300, y5: 500, icon: Mic },
-  { name: "Streaming (Roku/Apple TV)", category: "Media", y1: 0, y2: 40, y3: 120, y4: 280, y5: 800, newIn: "Y2", icon: Tv },
-  { name: "Content Licensing", category: "Media", y1: 20, y2: 40, y3: 80, y4: 140, y5: 700, newIn: "Y4", icon: Radio },
-  { name: "Merch", category: "Community", y1: 16, y2: 40, y3: 60, y4: 120, y5: 300, icon: ShoppingBag },
-  { name: "Job Board", category: "Community", y1: 10, y2: 30, y3: 80, y4: 160, y5: 500, icon: Briefcase },
-  { name: "Data Insights", category: "Community", y1: 10, y2: 30, y3: 60, y4: 120, y5: 600, newIn: "Y2", icon: Database },
-  { name: "Academy", category: "Community", y1: 4, y2: 10, y3: 20, y4: 50, y5: 400, newIn: "Y3", icon: GraduationCap },
+  /* Events — tickets = events × price × attendees × conversion; sponsorships = events × avg; exhibitor = events × avg */
+  { name: "Ticket Sales", category: "Events", y1: 72, y2: 215, y3: 464, y4: 829, y5: 1440, icon: Users },
+  { name: "Event Sponsorships", category: "Events", y1: 70, y2: 168, y3: 330, y4: 560, y5: 900, icon: Shield },
+  { name: "Exhibitor Fees", category: "Events", y1: 24, y2: 60, y3: 120, y4: 224, y5: 380, icon: Building2 },
+
+  /* Platform & SaaS — licensing = clients × fee; badges = subs × monthly × 12; reports = sold × fee */
+  { name: "White-Label Licensing", category: "Platform", y1: 0, y2: 24, y3: 90, y4: 216, y5: 504, icon: Rocket },
+  { name: "Creator Badge Subs", category: "Platform", y1: 11, y2: 46, y3: 180, y4: 487, y5: 1044, icon: Shield },
+  { name: "Sponsor ROI Reports", category: "Platform", y1: 5, y2: 19, y3: 60, y4: 144, y5: 360, icon: FileBarChart },
+
+  /* Creator Marketplace — rentals = qty × fee; commissions = deals × value × rate */
+  { name: "Creator List Rentals", category: "Marketplace", y1: 3, y2: 15, y3: 60, y4: 188, y5: 525, icon: Tag },
+  { name: "Deal Commissions", category: "Marketplace", y1: 2, y2: 9, y3: 48, y4: 192, y5: 900, icon: ShoppingBag },
+
+  /* Media & Streaming — podcast = rev/ep × episodes; streaming ads in $K; subs = qty × fee × 12; licensing in $K */
+  { name: "Podcast Advertising", category: "Media", y1: 15, y2: 72, y3: 312, y4: 1000, y5: 2600, icon: Mic },
+  { name: "Streaming Channel Ads", category: "Media", y1: 0, y2: 0, y3: 150, y4: 400, y5: 900, newIn: "Y3", icon: Tv },
+  { name: "Streaming Subscriptions", category: "Media", y1: 0, y2: 0, y3: 120, y4: 480, y5: 2100, newIn: "Y3", icon: Tv },
+  { name: "Content Licensing", category: "Media", y1: 0, y2: 0, y3: 0, y4: 250, y5: 750, newIn: "Y4", icon: Radio },
+
+  /* Community & Other */
+  { name: "Merch / SWAG", category: "Community", y1: 15, y2: 35, y3: 80, y4: 180, y5: 350, icon: ShoppingBag },
+  { name: "Job Board", category: "Community", y1: 0, y2: 13, y3: 70, y4: 300, y5: 1125, newIn: "Y2", icon: Briefcase },
+  { name: "Data Insights Reports", category: "Community", y1: 0, y2: 0, y3: 25, y4: 75, y5: 200, newIn: "Y3", icon: Database },
+  { name: "Academy / Courses", category: "Community", y1: 0, y2: 10, y3: 40, y4: 120, y5: 300, newIn: "Y2", icon: GraduationCap },
 ];
 
 const CAT_COLORS: Record<string, { bg: string; text: string; border: string; darkBg: string; darkBorder: string }> = {
-  Events:    { bg: "bg-purple-50",  text: "text-purple-700",  border: "border-purple-200",  darkBg: "bg-purple-950/30",  darkBorder: "border-purple-800/40" },
-  Platform:  { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",    darkBg: "bg-blue-950/30",    darkBorder: "border-blue-800/40" },
-  Media:     { bg: "bg-teal-50",    text: "text-teal-700",    border: "border-teal-200",    darkBg: "bg-teal-950/30",    darkBorder: "border-teal-800/40" },
-  Community: { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   darkBg: "bg-amber-950/30",   darkBorder: "border-amber-800/40" },
+  Events:      { bg: "bg-purple-50",  text: "text-purple-700",  border: "border-purple-200",  darkBg: "bg-purple-950/30",  darkBorder: "border-purple-800/40" },
+  Platform:    { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",    darkBg: "bg-blue-950/30",    darkBorder: "border-blue-800/40" },
+  Marketplace: { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200",  darkBg: "bg-violet-950/30",  darkBorder: "border-violet-800/40" },
+  Media:       { bg: "bg-teal-50",    text: "text-teal-700",    border: "border-teal-200",    darkBg: "bg-teal-950/30",    darkBorder: "border-teal-800/40" },
+  Community:   { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   darkBg: "bg-amber-950/30",   darkBorder: "border-amber-800/40" },
 };
 
 const CAT_HEADER: Record<string, string> = {
   Events: "#6C5CE7",
   Platform: "#3B82F6",
+  Marketplace: "#8B5CF6",
   Media: "#14B8A6",
   Community: "#F59E0B",
 };
 
-/* Assumptions data */
+/* Assumptions data — directly from the Assumptions tab of the financial model */
 const ASSUMPTIONS = [
   {
-    title: "Events",
+    title: "Live Events",
     color: "#6C5CE7",
     items: [
-      { label: "Events per year (Y1 → Y5)", value: "4 → 24" },
-      { label: "Avg attendees per event", value: "250 → 1,200" },
-      { label: "Avg ticket price", value: "$75 → $120" },
-      { label: "Avg sponsorship per event", value: "$20K → $50K" },
-      { label: "Exhibition booths per event", value: "10 → 40" },
+      { label: "Events per year (Y1 \u2192 Y5)", value: "2 \u2192 10" },
+      { label: "Avg ticket price", value: "$150 \u2192 $200" },
+      { label: "Avg attendees per event", value: "400 \u2192 1,000" },
+      { label: "Ticket conversion rate", value: "60% \u2192 72%" },
+      { label: "Avg sponsorship per event", value: "$35K \u2192 $90K" },
+      { label: "Avg exhibitor revenue per event", value: "$12K \u2192 $38K" },
     ],
   },
   {
-    title: "Platform",
+    title: "Platform & SaaS",
     color: "#3B82F6",
     items: [
-      { label: "White-label license clients", value: "2 → 40" },
-      { label: "SaaS license fee (annual)", value: "$25K → $25K" },
-      { label: "Creator badge subscribers", value: "200 → 8,000" },
-      { label: "Badge monthly fee", value: "$10/mo" },
-      { label: "Marketplace take rate", value: "15%" },
+      { label: "White-label license clients", value: "0 \u2192 12" },
+      { label: "Annual license fee", value: "$24K \u2192 $42K" },
+      { label: "Creator badge subscribers", value: "50 \u2192 3,000" },
+      { label: "Monthly badge fee", value: "$19 \u2192 $29" },
+      { label: "Sponsor reports sold per year", value: "10 \u2192 240" },
+      { label: "Report fee per report", value: "$500 \u2192 $1,500" },
     ],
   },
   {
-    title: "Media",
+    title: "Creator Marketplace",
+    color: "#8B5CF6",
+    items: [
+      { label: "List rentals per year", value: "5 \u2192 350" },
+      { label: "Avg list rental fee", value: "$500 \u2192 $1,500" },
+      { label: "Brand-creator deals facilitated", value: "10 \u2192 500" },
+      { label: "Avg deal value", value: "$2K \u2192 $12K" },
+      { label: "Platform commission rate", value: "10% \u2192 15%" },
+    ],
+  },
+  {
+    title: "Media & Streaming",
     color: "#14B8A6",
     items: [
-      { label: "Podcast episodes per year", value: "100 → 500" },
-      { label: "CPM (podcast ads)", value: "$25" },
-      { label: "Streaming subscribers (Y3+)", value: "0 → 80K" },
-      { label: "Streaming monthly fee", value: "$4.99/mo" },
-      { label: "Content licensing deals (Y4+)", value: "0 → 8" },
+      { label: "Podcast ad revenue per episode", value: "$300 \u2192 $5K" },
+      { label: "Episodes produced per year", value: "50 \u2192 520" },
+      { label: "Streaming subscribers (Y3+)", value: "0 \u2192 25K" },
+      { label: "Monthly streaming fee", value: "$5 \u2192 $7" },
+      { label: "Content licensing (Y4+)", value: "$0 \u2192 $750K" },
+    ],
+  },
+  {
+    title: "Community & Other",
+    color: "#F59E0B",
+    items: [
+      { label: "Merch / SWAG revenue", value: "$15K \u2192 $350K" },
+      { label: "Job board postings per year", value: "0 \u2192 1,500" },
+      { label: "Avg job board fee", value: "$250 \u2192 $750" },
+      { label: "Data insights revenue (Y3+)", value: "$0 \u2192 $200K" },
+      { label: "Academy / course revenue", value: "$0 \u2192 $300K" },
     ],
   },
   {
     title: "Costs & Team",
-    color: "#F59E0B",
+    color: "#EF4444",
     items: [
-      { label: "Full-time employees (Y1 → Y5)", value: "5 → 35" },
-      { label: "Avg fully-loaded salary", value: "$85K" },
-      { label: "Marketing spend (% of rev)", value: "20% → 12%" },
-      { label: "Hosting & infrastructure", value: "$2K → $15K/mo" },
-      { label: "Content production (annual)", value: "$50K → $400K" },
+      { label: "Event production per event", value: "$45K \u2192 $100K" },
+      { label: "Full-time employees (Y1 \u2192 Y5)", value: "3 \u2192 25" },
+      { label: "Avg fully-loaded salary", value: "$85K \u2192 $105K" },
+      { label: "Technology / hosting / APIs", value: "$24K \u2192 $150K" },
+      { label: "Marketing spend", value: "$30K \u2192 $450K" },
+      { label: "G&A as % of revenue", value: "12% \u2192 7%" },
     ],
   },
 ];
@@ -140,25 +179,25 @@ const THESIS_CARDS = [
     number: "01",
     title: "Captive Audience",
     headline: "18M+ veterans. Deeply loyal. Massively underserved.",
-    body: "The military and veteran community is one of the largest, most engaged, and most brand-loyal demographics in America — yet no platform owns this vertical. MilCrunch is building the community layer that Military.com never did: events, creators, streaming, and commerce in a single ecosystem. First-mover advantage in a $12B+ addressable market.",
+    body: "The military and veteran community is one of the largest, most engaged, and most brand-loyal demographics in America \u2014 yet no platform owns this vertical. MilCrunch is building the community layer that Military.com never did: events, creators, streaming, and commerce in a single ecosystem. First-mover advantage in a $12B+ addressable market.",
   },
   {
     number: "02",
     title: "Year-Round Revenue Engine",
     headline: "Events become 365-day engagement, not 3-day spikes.",
-    body: "Traditional military events generate revenue for one weekend and go dark. MilCrunch converts every event into a persistent community with year-round platform access, creator content, sponsor dashboards, and automated renewal workflows. Sponsors stop writing one-time checks and start signing annual contracts — increasing LTV 4x while reducing sales cycles.",
+    body: "Traditional military events generate revenue for one weekend and go dark. MilCrunch converts every event into a persistent community with year-round platform access, creator content, sponsor dashboards, and automated renewal workflows. Sponsors stop writing one-time checks and start signing annual contracts \u2014 increasing LTV 4x while reducing sales cycles.",
   },
   {
     number: "03",
     title: "Streaming = Asymmetric Upside",
-    headline: "Roku/Apple TV in Y3. Netflix partnership potential in Y5.",
-    body: "Military content is a proven winner — documentaries, reality formats, and veteran stories consistently over-index on streaming platforms. MilCrunch is building the production pipeline and content library now. By Y3, a dedicated Roku/Apple TV channel creates a direct-to-consumer subscription revenue stream. By Y5, the content catalog and audience data make MilCrunch an acquisition target or licensing partner for major streamers.",
+    headline: "Streaming subs hit 25K by Y5. Content licensing adds $750K.",
+    body: "Military content is a proven winner \u2014 documentaries, reality formats, and veteran stories consistently over-index on streaming platforms. MilCrunch is building the production pipeline and content library now. By Y3, streaming subscriptions and channel ads contribute $270K. By Y5, streaming revenue reaches $5.7M with content licensing to major platforms adding another $750K.",
   },
   {
     number: "04",
     title: "White-Label Moat",
-    headline: "License to VFW, MOAA, AUSA — recurring SaaS with zero CAC.",
-    body: "Every Veterans Service Organization, military association, and base MWR office needs what MilCrunch built — but can't build it themselves. White-label licensing creates $25K+/year recurring SaaS contracts with organizations that have built-in member bases. Zero customer acquisition cost, near-zero churn, and every deployment deepens the MilCrunch ecosystem and data moat.",
+    headline: "License to VFW, MOAA, AUSA \u2014 12 clients at $42K/yr by Y5.",
+    body: "Every Veterans Service Organization, military association, and base MWR office needs what MilCrunch built \u2014 but can\u2019t build it themselves. White-label licensing grows from 1 client in Y2 to 12 by Y5, generating $504K in pure recurring SaaS revenue. Zero customer acquisition cost, near-zero churn, and every deployment deepens the MilCrunch ecosystem and data moat.",
   },
 ];
 
@@ -362,7 +401,8 @@ function OverviewSub({ dark }: { dark: boolean }) {
                 tickLine={false}
                 tickFormatter={(v) => {
                   if (v === 0) return "$0";
-                  return v > 0 ? `$${v >= 1000 ? `${v / 1000}M` : `${v}K`}` : `-$${Math.abs(v)}K`;
+                  if (v > 0) return v >= 1000 ? `$${(v / 1000).toFixed(0)}M` : `$${v}K`;
+                  return `-$${Math.abs(v)}K`;
                 }}
               />
               <RechartsTooltip
@@ -374,7 +414,7 @@ function OverviewSub({ dark }: { dark: boolean }) {
                 }}
                 labelStyle={{ color: dark ? "#fff" : "#111", fontWeight: 600 }}
                 formatter={(value: number, name: string) => {
-                  if (name === "ebitda") return [value >= 0 ? `$${value}K` : `-$${Math.abs(value)}K`, "EBITDA"];
+                  if (name === "ebitda") return [value >= 0 ? fmtK(value) : `-${fmtK(Math.abs(value))}`, "EBITDA"];
                   return [`${value}%`, "Margin"];
                 }}
               />
@@ -405,6 +445,58 @@ function OverviewSub({ dark }: { dark: boolean }) {
         </div>
       </div>
 
+      {/* Cost breakdown table */}
+      <div
+        className={cn(
+          "rounded-xl border overflow-hidden transition-colors duration-300",
+          dark ? "border-white/[0.08]" : "border-[#E5E7EB]"
+        )}
+      >
+        <div className="px-4 py-3 bg-[#EF4444] flex items-center gap-2">
+          <span className="text-white text-sm font-semibold">Operating Costs ($K)</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className={cn(dark ? "bg-white/[0.03]" : "bg-[#F9FAFB]")}>
+                <th className={cn("text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wide", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+                  Cost Line
+                </th>
+                {["Y1", "Y2", "Y3", "Y4", "Y5"].map((y) => (
+                  <th key={y} className={cn("text-right px-4 py-2.5 font-medium text-xs uppercase tracking-wide", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
+                    {y}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { name: "Event Production", vals: [90, 220, 390, 640, 1000] },
+                { name: "Personnel", vals: [255, 450, 855, 1500, 2625] },
+                { name: "Technology / Hosting", vals: [24, 36, 60, 96, 150] },
+                { name: "Marketing & Growth", vals: [30, 60, 120, 250, 450] },
+                { name: "G&A", vals: [26, 68, 193, 452, 1006] },
+              ].map((row, i) => (
+                <tr key={row.name} className={cn(i % 2 === 0 ? (dark ? "bg-transparent" : "bg-white") : (dark ? "bg-white/[0.02]" : "bg-[#FAFAFA]"))}>
+                  <td className={cn("px-4 py-3 font-medium", dark ? "text-gray-200" : "text-[#111827]")}>{row.name}</td>
+                  {row.vals.map((v, j) => (
+                    <td key={j} className={cn("text-right px-4 py-3 tabular-nums", dark ? "text-gray-300" : "text-[#374151]")}>
+                      {fmtK(v)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr className={cn("font-semibold border-t", dark ? "border-white/[0.08] bg-white/[0.03]" : "border-[#E5E7EB] bg-[#F9FAFB]")}>
+                <td className={cn("px-4 py-3", dark ? "text-white" : "text-[#111827]")}>Total Costs</td>
+                {[425, 834, 1618, 2938, 5231].map((v, j) => (
+                  <td key={j} className={cn("text-right px-4 py-3 tabular-nums", dark ? "text-white" : "text-[#111827]")}>{fmtK(v)}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Download button */}
       <div className="flex justify-center">
         <button
@@ -412,7 +504,7 @@ function OverviewSub({ dark }: { dark: boolean }) {
           onClick={() => window.open("mailto:andrew@recurrentx.com?subject=MilCrunch%20Financial%20Model%20Request&body=I'd%20like%20to%20request%20the%20full%20financial%20model%20Excel%20file.", "_blank")}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold text-sm transition-colors"
         >
-          <Download className="h-4 w-4" /> Download Full Model
+          <Download className="h-4 w-4" /> Request Full Model (.xlsx)
         </button>
       </div>
     </div>
@@ -424,7 +516,7 @@ function OverviewSub({ dark }: { dark: boolean }) {
 /* ================================================================== */
 
 function RevenueStreamsSub({ dark }: { dark: boolean }) {
-  const categories = ["Events", "Platform", "Media", "Community"] as const;
+  const categories = ["Events", "Platform", "Marketplace", "Media", "Community"] as const;
 
   return (
     <div className="space-y-8">
@@ -521,7 +613,7 @@ function RevenueStreamsSub({ dark }: { dark: boolean }) {
                                   : dark ? "text-gray-300" : "text-[#374151]"
                               )}
                             >
-                              {v === 0 ? "—" : `$${v}K`}
+                              {v === 0 ? "\u2014" : fmtK(v)}
                             </td>
                           ))}
                         </tr>
@@ -571,7 +663,7 @@ function RevenueStreamsSub({ dark }: { dark: boolean }) {
           dark ? "border-[#6C5CE7]/40 bg-[#6C5CE7]/10" : "border-[#6C5CE7]/20 bg-[#6C5CE7]/[0.04]"
         )}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <span className={cn(
             "text-base font-bold",
             dark ? "text-white" : "text-[#111827]"
@@ -615,7 +707,7 @@ function AssumptionsSub({ dark }: { dark: boolean }) {
         "text-sm max-w-2xl",
         dark ? "text-gray-400" : "text-[#6B7280]"
       )}>
-        Key assumptions underlying the five-year financial model. All projections use conservative growth estimates with staged market entry.
+        Key assumptions from the 5-year financial model. All figures in USD. Blue cells in the source model are editable inputs.
       </p>
 
       <div className="grid md:grid-cols-2 gap-5">
@@ -688,7 +780,7 @@ function InvestorThesisSub({ dark }: { dark: boolean }) {
           "text-base leading-relaxed",
           dark ? "text-gray-400" : "text-[#6B7280]"
         )}>
-          Four structural advantages that make MilCrunch a category-defining platform — not just another event tool.
+          Four structural advantages that make MilCrunch a category-defining platform &mdash; not just another event tool.
         </p>
       </section>
 
@@ -737,7 +829,7 @@ function InvestorThesisSub({ dark }: { dark: boolean }) {
             Ready to see the full picture?
           </h3>
           <p className="text-gray-300 text-base mb-6 max-w-lg mx-auto">
-            Get the complete investor package — financial model, market analysis, product roadmap, and founder deck.
+            Get the complete investor package &mdash; financial model, market analysis, product roadmap, and founder deck.
           </p>
           <button
             type="button"
