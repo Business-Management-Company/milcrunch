@@ -71,10 +71,11 @@ export default function PublicFooter() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/10 text-center">
+        <div className="mt-12 pt-8 border-t border-white/10 flex items-center justify-between">
           <p className="text-sm text-gray-500">
             &copy; 2026 MilCrunch. All rights reserved.
           </p>
+          <Link to="/login" className="text-xs text-gray-400 hover:text-gray-300 transition-colors">Demo</Link>
         </div>
       </div>
     </footer>
