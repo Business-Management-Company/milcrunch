@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,12 @@ import {
   Search,
   MapPin,
   Users,
+  Pencil,
+  Check,
+  Wifi,
+  WifiOff,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { uploadText, type UploadPostPlatform } from "@/services/upload-post";
+import { useUploadPostConnect } from "@/hooks/useUploadPostConnect";
 import { useDemoMode } from "@/hooks/useDemoMode";
 
 /* ------------------------------------------------------------------ */
@@ -566,12 +573,33 @@ function TagGroupModal({
 function PostCard({
   post,
   onSchedule,
+  onUpdate,
   scheduling,
+  scheduled,
+  accountHandle,
 }: {
   post: CampaignPost;
   onSchedule: () => void;
+  onUpdate: (patch: Partial<CampaignPost>) => void;
   scheduling: boolean;
+  scheduled: boolean;
+  accountHandle?: string | null;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editCaption, setEditCaption] = useState(post.caption);
+  const [editHashtags, setEditHashtags] = useState(post.hashtags);
+
+  const saveEdit = () => {
+    onUpdate({ caption: editCaption, hashtags: editHashtags });
+    setEditing(false);
+  };
+
+  const cancelEdit = () => {
+    setEditCaption(post.caption);
+    setEditHashtags(post.hashtags);
+    setEditing(false);
+  };
+
   return (
     <div className="bg-white dark:bg-[#1A1D27] border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
@@ -593,35 +621,77 @@ function PostCard({
             <Clock className="h-3 w-3" />
             {post.best_time}
           </span>
+          {!editing ? (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="p-1 rounded-md text-gray-400 hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors"
+              title="Edit post"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={saveEdit} className="p-1 rounded-md text-green-600 hover:bg-green-50 transition-colors" title="Save"><Check className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={cancelEdit} className="p-1 rounded-md text-gray-400 hover:bg-gray-100 transition-colors" title="Cancel"><X className="h-3.5 w-3.5" /></button>
+            </div>
+          )}
         </div>
       </div>
 
-      <p className="text-sm text-gray-800 dark:text-gray-200 mb-2 leading-relaxed">{post.caption}</p>
-
-      {post.hashtags && (
-        <p className="text-xs text-[#6C5CE7] font-medium mb-2">{post.hashtags}</p>
+      {editing ? (
+        <div className="space-y-2 mb-3">
+          <textarea
+            value={editCaption}
+            onChange={(e) => setEditCaption(e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 rounded-lg border border-[#6C5CE7]/30 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+          />
+          <input
+            value={editHashtags}
+            onChange={(e) => setEditHashtags(e.target.value)}
+            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-xs text-[#6C5CE7] focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+            placeholder="Hashtags..."
+          />
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-gray-800 dark:text-gray-200 mb-2 leading-relaxed">{post.caption}</p>
+          {post.hashtags && (
+            <p className="text-xs text-[#6C5CE7] font-medium mb-2">{post.hashtags}</p>
+          )}
+        </>
       )}
 
-      {post.suggested_visual && (
+      {post.suggested_visual && !editing && (
         <p className="text-xs text-gray-400 italic mb-3">
           Visual: {post.suggested_visual}
         </p>
       )}
 
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={onSchedule}
-        disabled={scheduling}
-        className="text-xs"
-      >
-        {scheduling ? (
-          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-        ) : (
-          <CalendarClock className="h-3 w-3 mr-1" />
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onSchedule}
+          disabled={scheduling || scheduled}
+          className={cn("text-xs", scheduled && "border-green-300 text-green-600")}
+        >
+          {scheduling ? (
+            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+          ) : scheduled ? (
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+          ) : (
+            <CalendarClock className="h-3 w-3 mr-1" />
+          )}
+          {scheduled ? "Scheduled" : "Schedule"}
+        </Button>
+        {accountHandle && (
+          <span className="text-[10px] text-gray-400">
+            {PLATFORM_ICONS[post.platform] ? <span className="inline-flex items-center gap-1">{PLATFORM_ICONS[post.platform]} @{accountHandle}</span> : `@${accountHandle}`}
+          </span>
         )}
-        Schedule
-      </Button>
+      </div>
     </div>
   );
 }
@@ -769,6 +839,127 @@ function CampaignLivePreview({
 }
 
 /* ------------------------------------------------------------------ */
+/* Campaign Calendar                                                   */
+/* ------------------------------------------------------------------ */
+
+function CampaignCalendar({ campaign, startDate }: { campaign: CampaignData; startDate: string }) {
+  const eventDate = startDate ? new Date(startDate + "T00:00") : new Date();
+  const [viewMonth, setViewMonth] = useState(() => new Date(eventDate.getFullYear(), eventDate.getMonth(), 1));
+
+  // Build map: YYYY-MM-DD → count of posts
+  const postsByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const phase of campaign.phases) {
+      for (const post of phase.posts) {
+        const d = new Date(eventDate);
+        d.setDate(d.getDate() + post.day);
+        const key = d.toISOString().split("T")[0];
+        map[key] = (map[key] ?? 0) + 1;
+      }
+    }
+    return map;
+  }, [campaign, eventDate]);
+
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date().toISOString().split("T")[0];
+
+  const prevMonth = () => setViewMonth(new Date(year, month - 1, 1));
+  const nextMonth = () => setViewMonth(new Date(year, month + 1, 1));
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <button type="button" onClick={prevMonth} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"><ChevronLeft className="h-4 w-4 text-gray-500" /></button>
+        <h4 className="text-sm font-semibold text-gray-800 dark:text-white">
+          {viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </h4>
+        <button type="button" onClick={nextMonth} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"><ChevronRight className="h-4 w-4 text-gray-500" /></button>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 text-center">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+          <div key={d} className="text-[10px] font-medium text-gray-400 pb-1">{d}</div>
+        ))}
+        {cells.map((day, i) => {
+          if (day === null) return <div key={`e-${i}`} />;
+          const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const count = postsByDate[dateKey] ?? 0;
+          const isToday = dateKey === today;
+          return (
+            <div
+              key={dateKey}
+              className={cn(
+                "relative flex flex-col items-center justify-center h-8 rounded-md text-xs",
+                isToday && "ring-1 ring-[#6C5CE7]",
+                count > 0 ? "font-semibold text-gray-900 dark:text-white" : "text-gray-400"
+              )}
+            >
+              {day}
+              {count > 0 && (
+                <span className="absolute -bottom-0.5 w-4 h-1.5 rounded-full bg-[#6C5CE7] text-[7px] text-white flex items-center justify-center leading-none">
+                  {count}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Connected Socials Banner                                            */
+/* ------------------------------------------------------------------ */
+
+function ConnectedSocialsBanner({
+  accounts,
+  loading,
+  onConnect,
+}: {
+  accounts: { platform: string; platform_username: string | null }[];
+  loading: boolean;
+  onConnect: () => void;
+}) {
+  if (loading) return null;
+
+  if (accounts.length === 0) {
+    return (
+      <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-2.5 mb-4">
+        <WifiOff className="h-4 w-4 text-amber-500 shrink-0" />
+        <p className="text-xs text-amber-700 dark:text-amber-300 flex-1">
+          No social accounts connected. Connect your accounts to schedule posts.
+        </p>
+        <Button size="sm" variant="outline" onClick={onConnect} className="text-xs shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100">
+          Connect
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-2 mb-4">
+      <Wifi className="h-4 w-4 text-green-600 shrink-0" />
+      <div className="flex items-center gap-2 flex-wrap flex-1">
+        <span className="text-xs font-medium text-green-700 dark:text-green-300">Connected:</span>
+        {accounts.map((a) => (
+          <span key={`${a.platform}-${a.platform_username}`} className="flex items-center gap-1 text-[10px] font-medium text-green-800 dark:text-green-200 bg-green-100 dark:bg-green-800/40 px-2 py-0.5 rounded-full">
+            {PLATFORM_ICONS[a.platform.toLowerCase()] ?? null}
+            {a.platform_username ? `@${a.platform_username}` : a.platform}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Main Page                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -776,6 +967,17 @@ export default function BrandCampaigns() {
   const { user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+  const { accounts: connectedAccounts, loading: socialsLoading, openConnectPopup } = useUploadPostConnect();
+
+  // Map platform → connected account handle
+  const platformHandles = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const a of connectedAccounts) {
+      const p = a.platform.toLowerCase();
+      if (a.platform_username) map[p] = a.platform_username;
+    }
+    return map;
+  }, [connectedAccounts]);
 
   // Form state
   const [events, setEvents] = useState<EventOption[]>([]);
@@ -1184,6 +1386,19 @@ Make the captions authentic and engaging for a military community audience. Refe
     });
   }, [campaign, schedulePost]);
 
+  // Update a post inline
+  const updatePost = useCallback((phaseIdx: number, postIdx: number, patch: Partial<CampaignPost>) => {
+    setCampaign((prev) => {
+      if (!prev) return prev;
+      const phases = prev.phases.map((phase, pi) => {
+        if (pi !== phaseIdx) return phase;
+        const posts = phase.posts.map((post, pj) => (pj === postIdx ? { ...post, ...patch } : post));
+        return { ...phase, posts };
+      });
+      return { ...prev, phases };
+    });
+  }, []);
+
   // Export CSV
   const exportCsv = useCallback(() => {
     if (!campaign) return;
@@ -1519,6 +1734,13 @@ Make the captions authentic and engaging for a military community audience. Refe
 
             {!generating && campaign && (
               <div className="space-y-4">
+                {/* Connected socials status */}
+                <ConnectedSocialsBanner
+                  accounts={connectedAccounts}
+                  loading={socialsLoading}
+                  onConnect={openConnectPopup}
+                />
+
                 {/* Campaign header */}
                 <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm">
                   <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1595,8 +1817,8 @@ Make the captions authentic and engaging for a military community audience. Refe
                   </div>
                 )}
 
-                {/* Post cards */}
-                <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+                {/* Post cards — natural page scroll, no fixed container */}
+                <div className="space-y-3">
                   {campaign.phases[activePhase]?.posts.map((post, postIdx) => {
                     const globalIdx = getGlobalIndex(activePhase, postIdx);
                     return (
@@ -1604,11 +1826,17 @@ Make the captions authentic and engaging for a military community audience. Refe
                         key={`${activePhase}-${postIdx}`}
                         post={post}
                         onSchedule={() => schedulePost(post, globalIdx)}
-                        scheduling={schedulingPosts.has(globalIdx) || scheduledPosts.has(globalIdx)}
+                        onUpdate={(patch) => updatePost(activePhase, postIdx, patch)}
+                        scheduling={schedulingPosts.has(globalIdx)}
+                        scheduled={scheduledPosts.has(globalIdx)}
+                        accountHandle={platformHandles[post.platform] ?? null}
                       />
                     );
                   })}
                 </div>
+
+                {/* Campaign calendar */}
+                <CampaignCalendar campaign={campaign} startDate={startDate} />
               </div>
             )}
           </div>
