@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, ArrowLeft, Loader2, Trash2, Copy, LayoutTemplate, Eye, ChevronDown, ChevronRight, Code, GripVertical, X, Image, Type, MousePointer, Minus, Heading, Footprints, Columns2, AlignLeft } from "lucide-react";
+import TemplateIcon from "@/components/brand/email/TemplateIcon";
 import { getEmailTemplates, upsertEmailTemplate, deleteEmailTemplate } from "@/lib/email-db";
 import { BUILT_IN_TEMPLATES } from "@/lib/email-templates-html";
 import type { EmailTemplate } from "@/lib/email-types";
@@ -490,7 +491,7 @@ const EmailTemplates = () => {
         {BUILT_IN_TEMPLATES.map(tpl => (
           <Card key={tpl.category} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleUseBuiltIn(tpl)}>
             <div className="h-32 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color}, ${tpl.thumbnail_color}dd)` }}>
-              <LayoutTemplate className="h-12 w-12 text-white/80" />
+              <TemplateIcon category={tpl.category} className="h-12 w-12" />
             </div>
             <div className="p-4">
               <h3 className="font-semibold text-foreground">{tpl.name}</h3>

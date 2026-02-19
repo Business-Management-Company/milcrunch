@@ -25,6 +25,7 @@ import {
 } from "@/lib/email-db";
 import { getEmailTemplates } from "@/lib/email-db";
 import { BUILT_IN_TEMPLATES } from "@/lib/email-templates-html";
+import TemplateIcon from "@/components/brand/email/TemplateIcon";
 import { CAMPAIGN_STEPS, STATUS_COLORS } from "@/lib/email-types";
 import type { EmailCampaign, EmailList, EmailTemplate, CampaignStats } from "@/lib/email-types";
 import { supabase } from "@/integrations/supabase/client";
@@ -603,7 +604,7 @@ const EmailCampaigns = () => {
               {BUILT_IN_TEMPLATES.map(tpl => (
                 <Card key={tpl.category} className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-pd-blue transition-all" onClick={() => { setHtmlContent(tpl.html); setShowTemplatePicker(false); toast.success(`"${tpl.name}" template loaded`); }}>
                   <div className="h-20 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color}, ${tpl.thumbnail_color}dd)` }}>
-                    <Mail className="h-8 w-8 text-white/80" />
+                    <TemplateIcon category={tpl.category} className="h-10 w-10" />
                   </div>
                   <div className="p-3">
                     <p className="font-medium text-sm">{tpl.name}</p>
