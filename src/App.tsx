@@ -154,6 +154,7 @@ import KnowledgeBase from "./pages/kb/KnowledgeBase";
 import KbCategoryPage from "./pages/kb/KbCategory";
 import KbArticlePage from "./pages/kb/KbArticle";
 import KbAdmin from "./pages/kb/KbAdmin";
+import SharedReport from "./pages/SharedReport";
 
 const queryClient = new QueryClient();
 
@@ -339,6 +340,8 @@ const App = () => (
               <Route path="/kb/:category/:slug" element={<KbArticlePage />} />
               {/* CMS dynamic pages */}
               <Route path="/p/:slug" element={<DynamicPage />} />
+              {/* Public shared report page */}
+              <Route path="/shared/:reportId" element={<SharedReport />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

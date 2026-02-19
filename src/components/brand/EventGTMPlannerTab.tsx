@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, ShieldAlert, CalendarCheck, Copy, Printer, Sparkles, Search,
-  AlertTriangle, CheckCircle2, FileText, Shield, Info, MapPin,
+  AlertTriangle, CheckCircle2, FileText, Shield, Info, MapPin, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { scrapeFirecrawl } from "@/lib/verification";
@@ -355,6 +355,7 @@ function renderMarkdown(text: string) {
 
 /* ======================================== */
 export default function EventGTMPlannerTab({
+  eventId,
   eventTitle,
   eventDescription,
   eventType,
@@ -380,6 +381,10 @@ export default function EventGTMPlannerTab({
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
+  const gtmRef = useRef<HTMLDivElement>(null);
+
+  /* Share state */
+  const [sharing, setSharing] = useState(false);
 
   const location = [city, state].filter(Boolean).join(", ");
   const dateRange = startDate
@@ -620,6 +625,66 @@ Keep it concise — this should fit on one printed page. Use bullet points where
     printWin.print();
   };
 
+  const printGTM = () => {
+    const el = gtmRef.current;
+    if (!el) return;
+    const printWin = window.open("", "_blank");
+    if (!printWin) { toast.error("Popup blocked — allow popups to print"); return; }
+    printWin.document.write(`<!DOCTYPE html><html><head><title>${eventTitle} — GTM Strategy</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #111; font-size: 13px; line-height: 1.5; }
+        h2 { font-size: 16px; margin-top: 20px; margin-bottom: 6px; }
+        h3 { font-size: 14px; margin-top: 16px; margin-bottom: 4px; }
+        h4 { font-size: 13px; margin-top: 12px; margin-bottom: 4px; }
+        ul { margin: 4px 0; padding-left: 20px; }
+        li { margin-bottom: 2px; }
+        p { margin: 4px 0; }
+        strong { font-weight: 600; }
+        .header { text-align: center; border-bottom: 2px solid #6C5CE7; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { font-size: 18px; margin: 0; }
+        .header p { font-size: 12px; color: #555; margin: 2px 0 0; }
+        .brand { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+        .brand span { color: #6C5CE7; }
+      </style></head><body>
+      <div class="brand">MilCrunch<span>X</span></div>
+      <div class="header"><h1>${eventTitle}</h1><p>Go-To-Market Strategy — ${dateRange}</p><p>Generated ${format(new Date(), "dd MMM yyyy HHmm")}</p></div>
+      ${el.innerHTML}
+      </body></html>`);
+    printWin.document.close();
+    printWin.print();
+  };
+
+  const shareReport = async (type: "gtm" | "summary", content: string) => {
+    if (!content || sharing) return;
+    setSharing(true);
+    try {
+      const res = await fetch("/api/shared-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_id: eventId,
+          report_type: type,
+          event_title: eventTitle,
+          event_date_range: dateRange,
+          content,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || `Server ${res.status}`);
+      }
+      const { id } = await res.json();
+      const shareUrl = `${window.location.origin}/shared/${id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Share link copied!");
+    } catch (e) {
+      console.error("[GTM] Share error:", e);
+      toast.error(`Failed to create share link: ${(e as Error).message}`);
+    } finally {
+      setSharing(false);
+    }
+  };
+
   /* ======================================== */
   return (
     <div className="space-y-6">
@@ -828,9 +893,17 @@ Keep it concise — this should fit on one printed page. Use bullet points where
           </h3>
           <div className="flex gap-2">
             {gtmPlan && (
-              <Button size="sm" variant="outline" onClick={() => copyText(gtmPlan, "GTM plan")}>
-                <Copy className="h-4 w-4 mr-1.5" /> Copy
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={() => copyText(gtmPlan, "GTM plan")}>
+                  <Copy className="h-4 w-4 mr-1.5" /> Copy
+                </Button>
+                <Button size="sm" variant="outline" onClick={printGTM}>
+                  <Printer className="h-4 w-4 mr-1.5" /> Print
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => shareReport("gtm", gtmPlan)} disabled={sharing}>
+                  {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
+                </Button>
+              </>
             )}
             <Button size="sm" onClick={generateGTM} disabled={generatingGTM}>
               {generatingGTM ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
@@ -844,7 +917,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
         </p>
 
         {gtmPlan && (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
+          <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
             {renderMarkdown(gtmPlan)}
           </div>
         )}
@@ -864,6 +937,9 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                 </Button>
                 <Button size="sm" variant="outline" onClick={printSummary}>
                   <Printer className="h-4 w-4 mr-1.5" /> Print
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => shareReport("summary", summary)} disabled={sharing}>
+                  {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
                 </Button>
               </>
             )}
