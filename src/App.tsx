@@ -73,7 +73,7 @@ import CreatorHelp from "./pages/creator/CreatorHelp";
 import SimilarCreators from "./pages/creator/SimilarCreators";
 import Leaderboard from "./pages/creator/Leaderboard";
 import CreatorOpportunities from "./pages/creator/CreatorOpportunities";
-import BrandDashboard from "./pages/brand/BrandDashboard";
+
 import BrandDiscover from "./pages/brand/BrandDiscover";
 import BrandLists from "./pages/brand/BrandLists";
 import BrandDirectory from "./pages/brand/BrandDirectory";
@@ -204,9 +204,9 @@ const App = () => (
                 <Route path="kb" element={<KbAdmin />} />
               </Route>
               <Route element={<BrandRoute><RoleAwareChatProvider><AppLayout /></RoleAwareChatProvider></BrandRoute>}>
-                <Route path="/dashboard" element={<SummaryDashboard />} />
+                <Route path="/dashboard" element={<Navigate to="/brand/dashboard" replace />} />
                 <Route path="/lists" element={<BrandLists />} />
-                <Route path="/brand/dashboard" element={<BrandDashboard />} />
+                <Route path="/brand/dashboard" element={<SummaryDashboard />} />
                 <Route path="/brand/discover" element={<BrandDiscover />} />
                 <Route path="/brand/directories" element={<BrandDirectory />} />
                 <Route path="/brand/lists" element={<BrandLists />} />

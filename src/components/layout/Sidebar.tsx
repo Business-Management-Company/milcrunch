@@ -69,7 +69,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     key: "main",
     label: "MAIN",
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/brand/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ],
   },
   {
@@ -278,7 +278,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
       ]
     : SIDEBAR_SECTIONS;
 
-  const isActive = (href: string) => location.pathname === href || (href !== "/dashboard" && location.pathname.startsWith(href + "/"));
+  const isActive = (href: string) => location.pathname === href || (href !== "/brand/dashboard" && location.pathname.startsWith(href + "/"));
 
   return (
     <aside
