@@ -459,8 +459,9 @@ export default function CreatorProfileModal({
     (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username ?? username ?? "";
   const displayName =
     (igRecord?.full_name as string) ?? (resultTop.first_name as string) ?? creator?.name ?? displayUsername ?? "—";
+  const creatorIcAvatar = (creator as Record<string, unknown> | null)?.ic_avatar_url as string | undefined;
   const pictureRaw =
-    (igRecord?.profile_picture_hd as string) ?? (igRecord?.profile_picture as string) ?? creator?.avatar ?? "";
+    (igRecord?.profile_picture_hd as string) ?? (igRecord?.profile_picture as string) ?? creatorIcAvatar ?? creator?.avatar ?? "";
   const picture = safeImageUrl(pictureRaw) ?? "";
   const bio = useMemo(() => {
     if (selectedPlatform === "tiktok" && tiktokData) {

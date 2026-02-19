@@ -444,24 +444,33 @@ export default function FeaturedCreators() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {row.avatar_url ? (
-                      <img
-                        src={safeImageUrl(row.avatar_url)!}
-                        alt={row.display_name}
-                        className="h-10 w-10 rounded-full object-cover"
-                        onError={(e) => {
-                          const el = e.currentTarget;
-                          el.onerror = null;
-                          el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.display_name)}&background=6C5CE7&color=fff&size=128`;
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#6C5CE7]"
-                      >
-                        {getInitials(row.display_name, row.handle)}
-                      </div>
-                    )}
+                    {(() => {
+                      const icAvatar = (row as Record<string, unknown>).ic_avatar_url as string | null;
+                      const src = safeImageUrl(icAvatar) || safeImageUrl(row.avatar_url);
+                      if (!src) return (
+                        <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#6C5CE7]">
+                          {getInitials(row.display_name, row.handle)}
+                        </div>
+                      );
+                      return (
+                        <img
+                          src={src}
+                          alt={row.display_name}
+                          className="h-10 w-10 rounded-full object-cover"
+                          onError={(e) => {
+                            const el = e.currentTarget;
+                            const fallback = safeImageUrl(row.avatar_url);
+                            if (!el.dataset.retried && fallback && el.src !== fallback) {
+                              el.dataset.retried = "1";
+                              el.src = fallback;
+                              return;
+                            }
+                            el.onerror = null;
+                            el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.display_name)}&background=6C5CE7&color=fff&size=128`;
+                          }}
+                        />
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="font-medium">{row.display_name}</TableCell>
                   <TableCell className="text-gray-600">@{row.handle}</TableCell>

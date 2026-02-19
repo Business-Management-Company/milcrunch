@@ -214,13 +214,16 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
-  // 3-tier fallback: Supabase Storage → Influencers.club URL → Initials
-  const [imgSrc, setImgSrc] = useState<string | null>(safeImageUrl(c.avatar_url) || safeImageUrl(c.ic_avatar_url) || null);
+  // 3-tier fallback: ic_avatar_url → avatar_url → profile_image_url → Initials
+  const [imgSrc, setImgSrc] = useState<string | null>(safeImageUrl(c.ic_avatar_url) || safeImageUrl(c.avatar_url) || safeImageUrl((c as Record<string, unknown>).profile_image_url as string) || null);
   const [imgFailed, setImgFailed] = useState(false);
   const handleImgError = () => {
-    const safeFallback = safeImageUrl(c.ic_avatar_url);
-    if (imgSrc === safeImageUrl(c.avatar_url) && safeFallback && safeFallback !== imgSrc) {
-      setImgSrc(safeFallback);
+    const fallback1 = safeImageUrl(c.avatar_url);
+    const fallback2 = safeImageUrl((c as Record<string, unknown>).profile_image_url as string);
+    if (imgSrc !== fallback1 && fallback1) {
+      setImgSrc(fallback1);
+    } else if (imgSrc !== fallback2 && fallback2) {
+      setImgSrc(fallback2);
     } else {
       setImgFailed(true);
     }
@@ -717,7 +720,7 @@ export default function HomePage() {
 
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
-                    const avatar = db.avatar_url || db.ic_avatar_url || null;
+                    const avatar = db.ic_avatar_url || db.avatar_url || db.profile_image_url || null;
 
                     // Build stats in priority order, filter to non-null/non-zero, take up to 4
                     const allStats: { value: string; label: string; color: string }[] = [];
