@@ -722,7 +722,7 @@ export default function HomePage() {
                             <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">{db.category}</span>
                           )}
                         </div>
-                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-4 gap-3">
+                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-2 gap-3">
                           <div>
                             <p className="text-[16px] font-bold text-gray-900 leading-tight">{followers}</p>
                             <p className="text-[10px] text-gray-400 uppercase">Followers</p>
@@ -730,14 +730,6 @@ export default function HomePage() {
                           <div>
                             <p className="text-[16px] font-bold text-teal-500 leading-tight">{engagement}</p>
                             <p className="text-[10px] text-gray-400 uppercase">Engagement</p>
-                          </div>
-                          <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{db.avg_views || "—"}</p>
-                            <p className="text-[10px] text-gray-400 uppercase">Avg Views</p>
-                          </div>
-                          <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{db.avg_likes || "—"}</p>
-                            <p className="text-[10px] text-gray-400 uppercase">Avg Likes</p>
                           </div>
                         </div>
                       </div>
