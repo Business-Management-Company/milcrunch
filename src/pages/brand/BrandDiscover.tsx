@@ -297,18 +297,9 @@ function safeImgUrl(url: string | null | undefined): string | null {
   return url.replace(/^http:\/\//i, "https://");
 }
 
-/** Fallback avatar URL using ui-avatars when the real image fails to load. */
-function avatarFallback(name: string) {
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6C5CE7&color=fff&size=128`;
-}
-
-/** onError handler for creator avatar <img> tags — swaps to initials on failure. */
-function onAvatarError(e: React.SyntheticEvent<HTMLImageElement>, name: string) {
-  const img = e.currentTarget;
-  if (img.dataset.retried) return;
-  img.dataset.retried = "1";
-  img.onerror = null;
-  img.src = avatarFallback(name);
+/** Generate initials from name for avatar fallback. */
+function getDiscoverInitials(name: string): string {
+  return name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 }
 
 /** If this handle matches a directory_members row, upload the enrichment avatar
@@ -1607,13 +1598,20 @@ const BrandDiscover = () => {
             </p>
             {contactConfirmCreator && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <img
-                  src={safeImgUrl(contactConfirmCreator.avatar) ?? avatarFallback(contactConfirmCreator.name)}
-                  alt=""
-                  loading="lazy"
-                  onError={(e) => onAvatarError(e, contactConfirmCreator.name)}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
+                <div className="relative w-10 h-10 shrink-0">
+                  {safeImgUrl(contactConfirmCreator.avatar) && (
+                    <img
+                      src={safeImgUrl(contactConfirmCreator.avatar)!}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      className="w-10 h-10 rounded-full object-cover absolute inset-0 z-10"
+                    />
+                  )}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs">
+                    {getDiscoverInitials(contactConfirmCreator.name)}
+                  </div>
+                </div>
                 <div>
                   <p className="font-semibold text-sm">{contactConfirmCreator.name}</p>
                   <p className="text-xs text-muted-foreground">@{contactConfirmCreator.username}</p>
@@ -2208,16 +2206,21 @@ const BrandDiscover = () => {
                             {/* Creator */}
                             <td className="p-3">
                               <div className="flex items-center gap-3">
-                                <div className="relative shrink-0">
-                                  <img
-                                    src={safeImgUrl(creator.avatar) ?? avatarFallback(creator.name)}
-                                    alt={creator.name}
-                                    loading="lazy"
-                                    onError={(e) => onAvatarError(e, creator.name)}
-                                    className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-                                  />
+                                <div className="relative shrink-0 w-10 h-10">
+                                  {safeImgUrl(creator.avatar) && (
+                                    <img
+                                      src={safeImgUrl(creator.avatar)!}
+                                      alt={creator.name}
+                                      loading="lazy"
+                                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                      className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 absolute inset-0 z-10"
+                                    />
+                                  )}
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs border border-gray-200 dark:border-gray-700">
+                                    {getDiscoverInitials(creator.name)}
+                                  </div>
                                   {creator.isVerified && (
-                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-blue-500 bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
+                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-blue-500 bg-white dark:bg-[#1A1D27] rounded-full z-20" aria-label="Verified" />
                                   )}
                                 </div>
                                 <div className="min-w-0">
@@ -2407,16 +2410,21 @@ const BrandDiscover = () => {
                           />
                         </div>
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="relative shrink-0">
-                            <img
-                              src={safeImgUrl(creator.avatar) ?? avatarFallback(creator.name)}
-                              alt={creator.name}
-                              loading="lazy"
-                              onError={(e) => onAvatarError(e, creator.name)}
-                              className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md"
-                            />
+                          <div className="relative shrink-0 w-14 h-14">
+                            {safeImgUrl(creator.avatar) && (
+                              <img
+                                src={safeImgUrl(creator.avatar)!}
+                                alt={creator.name}
+                                loading="lazy"
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md absolute inset-0 z-10"
+                              />
+                            )}
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm border-2 border-white dark:border-slate-700 shadow-md">
+                              {getDiscoverInitials(creator.name)}
+                            </div>
                             {creator.isVerified && (
-                              <BadgeCheck className="absolute -top-1 -left-1 h-5 w-5 text-[#6C5CE7] bg-white dark:bg-[#1A1D27] rounded-full" aria-label="Verified" />
+                              <BadgeCheck className="absolute -top-1 -left-1 h-5 w-5 text-[#6C5CE7] bg-white dark:bg-[#1A1D27] rounded-full z-20" aria-label="Verified" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">

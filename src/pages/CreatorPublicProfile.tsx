@@ -288,8 +288,7 @@ export default function CreatorPublicProfile() {
   const [hasUpcomingEvents, setHasUpcomingEvents] = useState(false);
 
   // Image fallback
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const [imgFailed, setImgFailed] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   // Banner image
   const [bannerFailed, setBannerFailed] = useState(false);
@@ -314,22 +313,12 @@ export default function CreatorPublicProfile() {
   }, [handle]);
 
   /* ---- Image fallback ---- */
-  useEffect(() => {
-    if (creator) {
-      setImgSrc(creatorAvatarUrl(creator.ic_avatar_url, creator.avatar_url, (creator as Record<string, unknown>).profile_image_url as string));
-      setImgFailed(false);
-    }
-  }, [creator]);
+  const imgSrc = creator ? creatorAvatarUrl(creator.ic_avatar_url, creator.avatar_url, (creator as Record<string, unknown>).profile_image_url as string) : null;
 
-  const handleImgError = () => {
-    const fallback = safeImageUrl(creator?.avatar_url);
-    if (creator && imgSrc !== fallback && fallback) {
-      setImgSrc(fallback);
-    } else {
-      setImgFailed(true);
-    }
-  };
-  const showImage = !!imgSrc && !imgFailed;
+  // Reset error state when creator changes
+  useEffect(() => {
+    setImgError(false);
+  }, [creator]);
 
   /* ---- Parse enrichment data ---- */
   const enrichment = useMemo(() => {
@@ -525,23 +514,22 @@ export default function CreatorPublicProfile() {
             <div className="-mt-10 md:-mt-12">
               <div
                 className={cn(
-                  "w-20 h-20 md:w-[100px] md:h-[100px] rounded-full overflow-hidden border-4 border-white shadow-lg",
+                  "w-20 h-20 md:w-[100px] md:h-[100px] rounded-full overflow-hidden border-4 border-white shadow-lg relative",
                   isVerified && "ring-[3px] ring-[#6C5CE7] ring-offset-2 ring-offset-white"
                 )}
               >
-                {showImage ? (
+                {imgSrc && !imgError && (
                   <img
-                    src={imgSrc!}
+                    src={imgSrc}
                     alt={creator.display_name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover absolute inset-0 z-10"
                     loading="lazy"
-                    onError={handleImgError}
+                    onError={() => setImgError(true)}
                   />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl">
-                    {getInitials(creator.display_name, creator.handle)}
-                  </div>
                 )}
+                <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl">
+                  {getInitials(creator.display_name, creator.handle)}
+                </div>
               </div>
             </div>
 

@@ -192,20 +192,22 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 
 function HeroAvatar({ src, name, handle }: { src: string | null; name: string; handle: string }) {
   const safeSrc = safeImageUrl(src);
-  const [failed, setFailed] = useState(false);
-  if (safeSrc && !failed) {
-    return (
-      <img
-        src={safeSrc}
-        alt={name}
-        className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
+  const [imgError, setImgError] = useState(false);
   return (
-    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm ring-2 ring-gray-100">
-      {getInitials(name, handle)}
+    <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
+      {safeSrc && !imgError && (
+        <img
+          src={safeSrc}
+          alt={name}
+          className="w-full h-full object-cover absolute inset-0 z-10"
+          onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
+          onError={() => setImgError(true)}
+          style={{ opacity: 1 }}
+        />
+      )}
+      <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm">
+        {getInitials(name, handle)}
+      </div>
     </div>
   );
 }
@@ -215,12 +217,8 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
   // 3-tier fallback: ic_avatar_url → avatar_url → profile_image_url → Initials
-  const [imgSrc] = useState<string | null>(creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, (c as Record<string, unknown>).profile_image_url as string));
-  const [imgFailed, setImgFailed] = useState(false);
-  const handleImgError = () => {
-    setImgFailed(true);
-  };
-  const showImage = !!imgSrc && !imgFailed;
+  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, (c as Record<string, unknown>).profile_image_url as string);
+  const [imgError, setImgError] = useState(false);
 
   return (
     <Link
@@ -238,25 +236,24 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       {/* Avatar overlapping banner */}
       <div className="relative -mt-10 mb-3">
         <div
-          className={`w-[72px] h-[72px] rounded-full overflow-hidden ${
+          className={`w-[72px] h-[72px] rounded-full overflow-hidden relative ${
             c.featured_homepage
               ? "ring-[3px] ring-purple-500 ring-offset-2"
               : "ring-1 ring-gray-200 ring-offset-2"
           } bg-white`}
         >
-          {showImage ? (
+          {imgSrc && !imgError && (
             <img
-              src={imgSrc!}
+              src={imgSrc}
               alt={c.display_name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
-              onError={handleImgError}
+              onError={() => setImgError(true)}
             />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
-              {getInitials(c.display_name, c.handle)}
-            </div>
           )}
+          <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
+            {getInitials(c.display_name, c.handle)}
+          </div>
         </div>
       </div>
 

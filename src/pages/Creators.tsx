@@ -161,21 +161,8 @@ function CreatorCard({
   inView: boolean;
   index: number;
 }) {
-  const [imgSrc, setImgSrc] = useState<string | null>(
-    creatorAvatarUrl(c.ic_avatar_url, c.avatar_url) || null,
-  );
-  const [imgFailed, setImgFailed] = useState(false);
-
-  const handleImgError = () => {
-    const fallback = safeImageUrl(c.avatar_url);
-    if (imgSrc !== fallback && fallback) {
-      setImgSrc(fallback);
-    } else {
-      setImgFailed(true);
-    }
-  };
-
-  const showImage = !!imgSrc && !imgFailed;
+  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url) || null;
+  const [imgError, setImgError] = useState(false);
   const platforms = c.platforms ?? [];
   const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
@@ -218,19 +205,18 @@ function CreatorCard({
             isVerified ? "border-[#6C5CE7]" : "border-white",
           )}
         >
-          {showImage ? (
+          {imgSrc && !imgError && (
             <img
-              src={imgSrc!}
+              src={imgSrc}
               alt={c.display_name}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
-              onError={handleImgError}
+              onError={() => setImgError(true)}
             />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-base">
-              {getInitials(c.display_name, c.handle)}
-            </div>
           )}
+          <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-base">
+            {getInitials(c.display_name, c.handle)}
+          </div>
 
           {/* Verified checkmark overlay */}
           {isVerified && (
