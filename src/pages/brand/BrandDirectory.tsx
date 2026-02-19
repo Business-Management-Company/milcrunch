@@ -720,7 +720,7 @@ const BrandDirectory = () => {
                 const platforms = m.platforms ?? [];
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
-                    <div className="w-[72px] h-[72px] rounded-full overflow-hidden mb-3 border border-gray-200 dark:border-gray-700 relative">
+                    <div className="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-full overflow-hidden mb-3 border-[3px] border-white dark:border-gray-700 ring-1 ring-gray-200 dark:ring-gray-600 relative shadow-sm">
                       {imgSrc && (
                         <img
                           src={imgSrc}
