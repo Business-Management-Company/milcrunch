@@ -5,10 +5,9 @@ import { fetchCredits } from "@/lib/influencers-club";
 import { useLists } from "@/contexts/ListContext";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import DemoWelcomeModal from "@/components/demo/DemoWelcomeModal";
 import DemoTour from "@/components/demo/DemoTour";
-import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, CalendarDays, Radio } from "lucide-react";
+import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, CalendarDays, Radio, Mail, Handshake } from "lucide-react";
 import { getChatResponse } from "@/lib/chat-responses";
 import {
   AreaChart,
@@ -77,6 +76,37 @@ const INSIGHTS_STATS = [
   { value: "+34%", label: "YoY Growth", icon: TrendingUp, color: "text-teal-600" },
 ];
 
+/* ── Demo-specific data ──────────────────────────────────────── */
+
+const DEMO_CHART_DATA = [
+  { month: "Mar", value: 45000 },
+  { month: "Apr", value: 52000 },
+  { month: "May", value: 68000 },
+  { month: "Jun", value: 74000 },
+  { month: "Jul", value: 82000 },
+  { month: "Aug", value: 95000 },
+  { month: "Sep", value: 120000 },
+  { month: "Oct", value: 145000 },
+  { month: "Nov", value: 178000 },
+  { month: "Dec", value: 165000 },
+  { month: "Jan", value: 192000 },
+  { month: "Feb", value: 210000 },
+];
+
+const DEMO_INSIGHTS_STATS = [
+  { value: "1.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
+  { value: "450", label: "Community Members", icon: Users, color: "text-blue-600" },
+  { value: "87", label: "Active Creators", icon: Mic, color: "text-green-600" },
+  { value: "+127%", label: "YoY Growth", icon: TrendingUp, color: "text-teal-600" },
+];
+
+const DEMO_STAT_CARDS = [
+  { label: "Total Events", value: "3", icon: CalendarDays, iconBg: "bg-purple-100 dark:bg-purple-900/30", iconColor: "text-purple-600 dark:text-purple-400" },
+  { label: "Total Registrations", value: "15", icon: Users, iconBg: "bg-blue-100 dark:bg-blue-900/30", iconColor: "text-blue-600 dark:text-blue-400" },
+  { label: "Active Sponsors", value: "5", icon: Handshake, iconBg: "bg-green-100 dark:bg-green-900/30", iconColor: "text-green-600 dark:text-green-400" },
+  { label: "Email Campaigns", value: "3", icon: Mail, iconBg: "bg-amber-100 dark:bg-amber-900/30", iconColor: "text-amber-600 dark:text-amber-400" },
+];
+
 /* ── Component ────────────────────────────────────────────────── */
 
 const BrandDashboard = () => {
@@ -87,16 +117,18 @@ const BrandDashboard = () => {
   const { user, creatorProfile } = useAuth();
   const [tourActive, setTourActive] = useState(false);
 
-  // Dynamic welcome name
-  const displayName =
-    creatorProfile?.display_name ||
-    (user?.user_metadata?.full_name as string) ||
-    "";
-  const firstName = displayName.split(" ")[0] || "there";
+  // Dynamic welcome name — profile → metadata → demo fallback
+  const firstName = (() => {
+    const name =
+      creatorProfile?.display_name ||
+      (user?.user_metadata?.full_name as string | undefined) ||
+      (isDemo ? "MilCrunch" : "");
+    return name.split(" ")[0] || "there";
+  })();
 
-  // DB-sourced 365 Insights (overrides static fallback when available)
-  const [chartData, setChartData] = useState(INSIGHTS_CHART_DATA);
-  const [insightsStats, setInsightsStats] = useState(INSIGHTS_STATS);
+  // 365 Insights: demo uses curated data, others use static defaults
+  const chartData = isDemo ? DEMO_CHART_DATA : INSIGHTS_CHART_DATA;
+  const insightsStats = isDemo ? DEMO_INSIGHTS_STATS : INSIGHTS_STATS;
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -107,68 +139,6 @@ const BrandDashboard = () => {
   useEffect(() => {
     fetchCredits().then((c) => { setCredits(c); setLoading(false); });
   }, []);
-
-  // Fetch 365 Insights from event_engagement_metrics for this user's events
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      const { data: userEvents } = await supabase
-        .from("events")
-        .select("id")
-        .eq("created_by", user.id);
-
-      if (!userEvents || userEvents.length === 0) return;
-
-      const eventIds = userEvents.map((e: any) => e.id);
-
-      const { data: metrics } = await supabase
-        .from("event_engagement_metrics")
-        .select("metric_type, value, period_start")
-        .in("event_id", eventIds)
-        .order("period_start", { ascending: true });
-
-      if (!metrics || metrics.length === 0) return;
-
-      // Chart: sponsor_impressions by month
-      const impressions = metrics.filter((m: any) => m.metric_type === "sponsor_impressions");
-      if (impressions.length > 0) {
-        setChartData(
-          impressions.map((m: any) => ({
-            month: new Date(m.period_start).toLocaleDateString("en-US", { month: "short" }),
-            value: Math.round(m.value),
-          })),
-        );
-      }
-
-      // Summary stats
-      const totalImp = impressions.reduce((s: number, m: any) => s + (m.value || 0), 0);
-      const community = metrics.filter((m: any) => m.metric_type === "community_growth");
-      const latestComm = community.length > 0 ? Math.round(community[community.length - 1].value) : 0;
-      const engagement = metrics.filter((m: any) => m.metric_type === "creator_engagement");
-      const avgEng =
-        engagement.length > 0
-          ? engagement.reduce((s: number, m: any) => s + (m.value || 0), 0) / engagement.length
-          : 0;
-
-      const halfIdx = Math.floor(impressions.length / 2);
-      const firstHalf = impressions.slice(0, halfIdx).reduce((s: number, m: any) => s + m.value, 0);
-      const secondHalf = impressions.slice(halfIdx).reduce((s: number, m: any) => s + m.value, 0);
-      const growth = firstHalf > 0 ? Math.round(((secondHalf - firstHalf) / firstHalf) * 100) : 0;
-
-      const fmtVal = (n: number) => {
-        if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-        if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-        return n.toLocaleString();
-      };
-
-      setInsightsStats([
-        { value: fmtVal(totalImp), label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
-        { value: latestComm.toLocaleString(), label: "Community Members", icon: Users, color: "text-blue-600" },
-        { value: `${avgEng.toFixed(1)}%`, label: "Avg Engagement", icon: Mic, color: "text-green-600" },
-        { value: growth >= 0 ? `+${growth}%` : `${growth}%`, label: "YoY Growth", icon: TrendingUp, color: "text-teal-600" },
-      ]);
-    })();
-  }, [user?.id]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -204,54 +174,73 @@ const BrandDashboard = () => {
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <CreditCard className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Credits Available</p>
-          </div>
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-          ) : (
-            <p className="text-2xl font-bold text-[#000741] dark:text-white">
-              {credits?.credits_remaining != null ? Number(credits.credits_remaining).toLocaleString() : "—"}
-            </p>
-          )}
-        </Card>
-        <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <CreditCard className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Credits Used</p>
-          </div>
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-          ) : (
-            <p className="text-2xl font-bold text-[#000741] dark:text-white">
-              {credits?.credits_remaining != null ? (500 - Number(credits.credits_remaining)).toLocaleString() : "—"}
-            </p>
-          )}
-        </Card>
-        <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <ListChecks className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Lists</p>
-          </div>
-          <p className="text-2xl font-bold text-[#000741] dark:text-white">{lists.length}</p>
-        </Card>
-        <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Creators in Lists</p>
-          </div>
-          <p className="text-2xl font-bold text-[#000741] dark:text-white">{totalCreators}</p>
-        </Card>
+        {isDemo ? (
+          DEMO_STAT_CARDS.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.label} className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`p-2 rounded-lg ${card.iconBg}`}>
+                    <Icon className={`h-5 w-5 ${card.iconColor}`} />
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
+                </div>
+                <p className="text-2xl font-bold text-[#000741] dark:text-white">{card.value}</p>
+              </Card>
+            );
+          })
+        ) : (
+          <>
+            <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <CreditCard className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Credits Available</p>
+              </div>
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              ) : (
+                <p className="text-2xl font-bold text-[#000741] dark:text-white">
+                  {credits?.credits_remaining != null ? Number(credits.credits_remaining).toLocaleString() : "—"}
+                </p>
+              )}
+            </Card>
+            <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                  <CreditCard className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Credits Used</p>
+              </div>
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              ) : (
+                <p className="text-2xl font-bold text-[#000741] dark:text-white">
+                  {credits?.credits_remaining != null ? (500 - Number(credits.credits_remaining)).toLocaleString() : "—"}
+                </p>
+              )}
+            </Card>
+            <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <ListChecks className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Lists</p>
+              </div>
+              <p className="text-2xl font-bold text-[#000741] dark:text-white">{lists.length}</p>
+            </Card>
+            <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Creators in Lists</p>
+              </div>
+              <p className="text-2xl font-bold text-[#000741] dark:text-white">{totalCreators}</p>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* AI Chat + Quick Actions */}
