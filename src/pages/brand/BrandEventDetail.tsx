@@ -7,7 +7,7 @@ import {
   MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
   Film, Sparkles, Target, Type, Clapperboard, Palette, Captions, Scissors,
   Monitor, Youtube, Facebook, Twitter, Twitch, Linkedin, Wifi, CheckCircle,
-  Pencil, ShieldCheck, Megaphone, Send, Smartphone, Upload,
+  Pencil, ShieldCheck, Megaphone, Send, Smartphone, Upload, Car,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -76,6 +76,7 @@ interface EventRow {
   capacity: number | null;
   created_at: string | null;
   directory_id: string | null;
+  rideshare_enabled?: boolean | null;
 }
 interface AgendaRow {
   id: string;
@@ -296,6 +297,7 @@ const BrandEventDetail = () => {
   const [editState, setEditState] = useState("");
   const [editCover, setEditCover] = useState("");
   const [editCapacity, setEditCapacity] = useState("");
+  const [editRideshare, setEditRideshare] = useState(false);
   const [showAIBanner, setShowAIBanner] = useState(false);
   const bannerFileRef = useRef<HTMLInputElement>(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -333,6 +335,7 @@ const BrandEventDetail = () => {
       setEditState(ev.state || "");
       setEditCover(ev.cover_image_url || "");
       setEditCapacity(ev.capacity ? String(ev.capacity) : "");
+      setEditRideshare(!!(ev as Record<string, unknown>).rideshare_enabled);
       setAgenda((agRes.data || []) as AgendaRow[]);
       setSpeakers((spkRes.data || []) as SpeakerRow[]);
       setSponsors((spsRes.data || []) as SponsorRow[]);
@@ -478,6 +481,7 @@ const BrandEventDetail = () => {
           state: editState.trim() || null,
           cover_image_url: editCover.trim() || null,
           capacity: editCapacity ? parseInt(editCapacity) : null,
+          rideshare_enabled: editRideshare,
         } as Record<string, unknown>)
         .eq("id", eventId);
       if (error) throw error;
@@ -766,6 +770,29 @@ const BrandEventDetail = () => {
 
           {/* ===== OVERVIEW ===== */}
           <TabsContent value="overview">
+            {/* Event AI Assistant — top of overview */}
+            {event && (
+              <div className="mb-6">
+                <EventAIAssistant
+                  eventTitle={event.title}
+                  eventDescription={event.description}
+                  eventType={event.event_type}
+                  startDate={event.start_date}
+                  endDate={event.end_date}
+                  venue={event.venue}
+                  city={event.city}
+                  state={event.state}
+                  capacity={event.capacity}
+                  status={event.is_published ? "published" : "draft"}
+                  sponsors={sponsors.map(s => ({ sponsor_name: s.sponsor_name, tier: s.tier }))}
+                  speakers={speakers.map(s => ({ creator_name: s.creator_name, role: s.role, confirmed: s.confirmed }))}
+                  tickets={eventTickets.map(t => ({ name: t.name, price: t.price, quantity: t.quantity, sold: t.sold }))}
+                  registrationCount={registrations.length}
+                  agendaSessionCount={agenda.length}
+                />
+              </div>
+            )}
+
             <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 space-y-5">
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="md:col-span-2">
@@ -875,6 +902,29 @@ const BrandEventDetail = () => {
                   />
                 </div>
               </div>
+              {/* Event Settings */}
+              <div className="md:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-gray-400" /> Event Settings
+                </h3>
+                <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                      <Car className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Enable Ride Share</p>
+                      <p className="text-xs text-muted-foreground">Allow attendees to offer and request rides to this event.</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={editRideshare}
+                    onCheckedChange={setEditRideshare}
+                    aria-label="Toggle ride share"
+                  />
+                </div>
+              </div>
+
               <div className="flex justify-end pt-2">
                 <Button onClick={saveOverview} disabled={saving} className="bg-pd-blue hover:bg-pd-darkblue text-white">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
@@ -883,27 +933,6 @@ const BrandEventDetail = () => {
               </div>
             </Card>
 
-            {event && (
-              <div className="mt-6">
-                <EventAIAssistant
-                  eventTitle={event.title}
-                  eventDescription={event.description}
-                  eventType={event.event_type}
-                  startDate={event.start_date}
-                  endDate={event.end_date}
-                  venue={event.venue}
-                  city={event.city}
-                  state={event.state}
-                  capacity={event.capacity}
-                  status={event.is_published ? "published" : "draft"}
-                  sponsors={sponsors.map(s => ({ sponsor_name: s.sponsor_name, tier: s.tier }))}
-                  speakers={speakers.map(s => ({ creator_name: s.creator_name, role: s.role, confirmed: s.confirmed }))}
-                  tickets={eventTickets.map(t => ({ name: t.name, price: t.price, quantity: t.quantity, sold: t.sold }))}
-                  registrationCount={registrations.length}
-                  agendaSessionCount={agenda.length}
-                />
-              </div>
-            )}
           </TabsContent>
 
           {/* ===== AGENDA ===== */}
