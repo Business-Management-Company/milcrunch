@@ -79,6 +79,7 @@ import BrandLists from "./pages/brand/BrandLists";
 import BrandDirectory from "./pages/brand/BrandDirectory";
 import BrandCampaigns from "./pages/brand/BrandCampaigns";
 import BrandEvents from "./pages/brand/BrandEvents";
+import ConflictsCollabs from "./pages/brand/ConflictsCollabs";
 import BrandEventCreate from "./pages/brand/BrandEventCreate";
 import BrandEventDetail from "./pages/brand/BrandEventDetail";
 import BrandAttribution from "./pages/brand/BrandAttribution";
@@ -216,6 +217,7 @@ const App = () => (
                 <Route path="/brand/campaigns" element={<BrandCampaigns />} />
                 <Route path="/brand/tags" element={<BrandTags />} />
                 <Route path="/brand/events" element={<BrandEvents />} />
+                <Route path="/brand/events/conflicts" element={<ConflictsCollabs />} />
                 <Route path="/brand/events/create" element={<BrandEventCreate />} />
                 <Route path="/brand/events/:eventId" element={<BrandEventDetail />} />
                 <Route path="/brand/venues" element={<BrandVenueFinder />} />

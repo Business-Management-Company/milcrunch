@@ -32,6 +32,7 @@ import {
   Send,
   Megaphone,
   Tags,
+  GitCompareArrows,
   Mail,
   ContactRound,
   LayoutTemplate,
@@ -74,6 +75,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "EVENTS",
     items: [
       { href: "/brand/events", label: "Events", icon: Calendar },
+      { href: "/brand/events/conflicts", label: "Conflicts & Collabs", icon: GitCompareArrows },
       { href: "/brand/venues", label: "Venues", icon: MapPin },
       { href: "/brand/pdx/new", label: "Experiences", icon: Radio },
       { href: "/brand/calculators", label: "Calculators", icon: Calculator },
