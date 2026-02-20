@@ -248,6 +248,16 @@ export default function BrandPosting() {
   const connectedPlatformIds = new Set(connectedAccounts.map((a) => a.platform));
   const availablePlatforms = PLATFORMS.filter((p) => connectedPlatformIds.has(p.id));
 
+  // Default all available platforms to checked once accounts load
+  useEffect(() => {
+    if (availablePlatforms.length > 0 && selectedPlatforms.length === 0) {
+      setSelectedPlatforms(availablePlatforms.map((p) => p.id));
+    }
+  }, [connectedAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scheduled posts (filtered from recent)
+  const scheduledPosts = recentPosts.filter((p) => p.status === "scheduled");
+
   // Character limit
   const minCharLimit = selectedPlatforms.reduce((min, pid) => {
     const p = PLATFORMS.find((x) => x.id === pid);
@@ -876,11 +886,30 @@ export default function BrandPosting() {
               />
             </div>
 
-            {/* Platform selector */}
+            {/* Platform selector — checkbox style */}
             <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Platforms
-              </label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Publish To
+                </label>
+                {availablePlatforms.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedPlatforms(
+                        selectedPlatforms.length === availablePlatforms.length
+                          ? []
+                          : availablePlatforms.map((p) => p.id)
+                      )
+                    }
+                    className="text-xs font-medium text-[#6C5CE7] hover:underline"
+                  >
+                    {selectedPlatforms.length === availablePlatforms.length
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
+                )}
+              </div>
               {loadingAccounts ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading connected accounts...
@@ -896,28 +925,56 @@ export default function BrandPosting() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {availablePlatforms.map((p) => {
                     const selected = selectedPlatforms.includes(p.id);
                     const Icon = p.id === "tiktok" ? TikTokIcon : p.icon;
+                    const account = connectedAccounts.find(
+                      (a) => a.platform === p.id
+                    );
                     return (
-                      <button
+                      <label
                         key={p.id}
-                        type="button"
-                        onClick={() => togglePlatform(p.id)}
                         className={cn(
-                          "flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium border transition-all",
+                          "flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all",
                           selected
-                            ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                            : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
+                            ? "border-[#6C5CE7] bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10"
+                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                         )}
                       >
-                        {Icon && <Icon className="h-4 w-4" />}
-                        {p.name}
-                        {selected && <Check className="h-3.5 w-3.5" />}
-                      </button>
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                            selected
+                              ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]"
+                          )}
+                          onClick={(e) => { e.preventDefault(); togglePlatform(p.id); }}
+                        >
+                          {selected && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                          {Icon && <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</p>
+                          {account?.platform_username && (
+                            <p className="text-[10px] text-gray-400 truncate">@{account.platform_username}</p>
+                          )}
+                        </div>
+                        {selected && (
+                          <span className="text-[10px] font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2 py-0.5 rounded-full shrink-0">
+                            Active
+                          </span>
+                        )}
+                      </label>
                     );
                   })}
+                  {selectedPlatforms.length > 0 && (
+                    <p className="text-xs text-gray-400 pt-1">
+                      Posting simultaneously to {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -1103,6 +1160,90 @@ export default function BrandPosting() {
                 />
               </div>
             )}
+
+            {/* Scheduled Queue */}
+            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-[#6C5CE7]" />
+                  Scheduled Posts
+                </h3>
+                {scheduledPosts.length > 0 && (
+                  <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-0.5 rounded-full">
+                    {scheduledPosts.length} queued
+                  </span>
+                )}
+              </div>
+              {loadingPosts ? (
+                <div className="flex items-center justify-center py-6 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : scheduledPosts.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm px-5">
+                  <Calendar className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p>No scheduled posts yet.</p>
+                  <p className="text-xs mt-1">Use "Schedule for..." above or schedule from the Campaign Builder.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {scheduledPosts.map((post) => {
+                    const platforms = (post.platforms as string[] | null) ?? [];
+                    const schedTime = post.scheduled_time
+                      ? new Date(post.scheduled_time)
+                      : null;
+                    return (
+                      <div
+                        key={post.id}
+                        className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-[#0F1117]/50 transition-colors"
+                      >
+                        {/* Platform icons */}
+                        <div className="flex -space-x-1.5 shrink-0">
+                          {platforms.slice(0, 3).map((pid) => {
+                            const plat = PLATFORMS.find((pp) => pp.id === pid);
+                            const Icon = pid === "tiktok" ? TikTokIcon : plat?.icon;
+                            return (
+                              <div
+                                key={pid}
+                                className="w-7 h-7 rounded-full bg-white dark:bg-[#1A1D27] border-2 border-white dark:border-[#1A1D27] shadow-sm flex items-center justify-center"
+                              >
+                                <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                  {Icon && <Icon className="h-3 w-3 text-gray-600 dark:text-gray-400" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {platforms.length > 3 && (
+                            <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-[#1A1D27] flex items-center justify-center">
+                              <span className="text-[9px] font-bold text-gray-500">+{platforms.length - 3}</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Caption preview */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {post.caption || "No caption"}
+                          </p>
+                          <p className="text-[10px] text-gray-400 capitalize">
+                            {platforms.join(", ")}
+                          </p>
+                        </div>
+                        {/* Scheduled time */}
+                        {schedTime && (
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                              {schedTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </p>
+                            <p className="text-[10px] text-gray-400">
+                              {schedTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Recent posts */}
             <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
