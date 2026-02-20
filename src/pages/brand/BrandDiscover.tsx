@@ -1472,7 +1472,7 @@ const BrandDiscover = () => {
       status: "veteran",
       platforms: socialPlatforms.length > 0 ? socialPlatforms : creator.platforms,
       category: creator.category ?? null,
-      ic_avatar_url: bestAvatar,
+      ic_avatar_url: persistedAvatarUrl || bestAvatar,
       enrichment_data: raw || null,
       added_by: effectiveUserId ?? null,
       directory_id: directoryId || null,

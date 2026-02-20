@@ -764,8 +764,9 @@ export async function approveForDirectory(data: {
     creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: permanentAvatarUrl,
-    // Always store CDN URL in ic_avatar_url (as fallback); prefer permanent if no CDN available
-    ic_avatar_url: cdnSourceUrl || permanentAvatarUrl,
+    // Store the permanent Supabase URL in ic_avatar_url too (UI reads this first);
+    // fall back to CDN only if no permanent URL is available
+    ic_avatar_url: permanentAvatarUrl || cdnSourceUrl,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,
