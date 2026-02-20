@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -158,6 +158,53 @@ function extractBannerImage(enrichData: unknown): string | null {
   return null;
 }
 
+/** Fetch recent posts from Influencers.club and return the first high-quality image URL. */
+async function fetchBannerFromPosts(handle: string, platform = "instagram"): Promise<string | null> {
+  try {
+    const apiKey = import.meta.env.VITE_INFLUENCERS_CLUB_API_KEY as string | undefined;
+    if (!apiKey) return null;
+    const res = await fetch(
+      `/api/enrich/public/v1/creators/enrich/handle/raw/${platform}/${encodeURIComponent(handle)}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    // Try to extract banner from the enrichment response
+    const banner = extractBannerImage(data);
+    if (banner) return banner.replace(/^http:\/\//i, "https://");
+
+    // Dig into nested result structures
+    const ig =
+      data?.instagram ?? data?.result?.instagram ?? data?.result ?? data;
+    const posts = ig?.post_data ?? ig?.posts ?? ig?.recent_posts;
+    if (!Array.isArray(posts) || posts.length === 0) return null;
+
+    // Find the first post with an image (prefer landscape/high-res)
+    for (const post of posts.slice(0, 6)) {
+      const media = post.media as unknown[] | undefined;
+      if (Array.isArray(media) && media.length > 0) {
+        const m = media[0] as Record<string, unknown>;
+        if (m.url && typeof m.url === "string") return (m.url as string).replace(/^http:\/\//i, "https://");
+      }
+      if (post.thumbnail && typeof post.thumbnail === "string")
+        return (post.thumbnail as string).replace(/^http:\/\//i, "https://");
+      if (post.image_url && typeof post.image_url === "string")
+        return (post.image_url as string).replace(/^http:\/\//i, "https://");
+    }
+    return null;
+  } catch (err) {
+    console.error("[fetchBannerFromPosts] error:", err);
+    return null;
+  }
+}
+
 function extractEmailFromEnrichment(enrichData: unknown): string | null {
   if (!enrichData || typeof enrichData !== "object") return null;
   const data = enrichData as Record<string, unknown>;
@@ -294,6 +341,7 @@ export default function CreatorPublicProfile() {
 
   // Banner image
   const [bannerFailed, setBannerFailed] = useState(false);
+  const [resolvedBanner, setResolvedBanner] = useState<string | null>(null);
 
   /* ---- Fetch creator ---- */
   useEffect(() => {
@@ -344,6 +392,48 @@ export default function CreatorPublicProfile() {
       hashtags: extractHashtags(data),
     };
   }, [creator?.enrichment_data]);
+
+  /* ---- Resolve banner image ---- */
+  const resolveBanner = useCallback(async () => {
+    if (!creator) return;
+    // 1. Already have a stored banner URL
+    if (creator.banner_image_url) {
+      setResolvedBanner(creator.banner_image_url);
+      return;
+    }
+    // 2. Extracted from enrichment data
+    if (enrichment.bannerImage) {
+      setResolvedBanner(enrichment.bannerImage);
+      // Persist so future loads skip the API call
+      if (creator.id) {
+        supabase
+          .from("directory_members")
+          .update({ banner_image_url: enrichment.bannerImage })
+          .eq("id", creator.id)
+          .then(() => {});
+      }
+      return;
+    }
+    // 3. Fetch from IC API
+    const handle = creator.handle;
+    const platform = creator.platform || "instagram";
+    const fetched = await fetchBannerFromPosts(handle, platform);
+    if (fetched) {
+      setResolvedBanner(fetched);
+      // Persist
+      if (creator.id) {
+        supabase
+          .from("directory_members")
+          .update({ banner_image_url: fetched })
+          .eq("id", creator.id)
+          .then(() => {});
+      }
+    }
+  }, [creator, enrichment.bannerImage]);
+
+  useEffect(() => {
+    resolveBanner();
+  }, [resolveBanner]);
 
   /* ---- Check upcoming events badge ---- */
   useEffect(() => {
@@ -455,7 +545,7 @@ export default function CreatorPublicProfile() {
   const bannerGradient = BRANCH_BANNER[creator.branch ?? ""] ?? DEFAULT_BANNER;
   const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-600 text-white";
   const isVerified = !!creator.featured_homepage;
-  const bannerImg = enrichment.bannerImage && !bannerFailed ? enrichment.bannerImage : null;
+  const bannerImg = !bannerFailed ? (resolvedBanner || enrichment.bannerImage || null) : null;
 
   const bio = creator.bio || "";
   const bioNeedsToggle = bio.length > 180;
@@ -504,6 +594,7 @@ export default function CreatorPublicProfile() {
                   src={bannerImg}
                   alt=""
                   className="w-full h-full object-cover"
+                  style={{ objectPosition: "center top" }}
                   onError={() => setBannerFailed(true)}
                 />
                 {/* Dark gradient overlay for contrast */}
