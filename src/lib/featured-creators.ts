@@ -518,7 +518,7 @@ export async function fetchShowcaseByDirectoryName(
     .from("directory_members")
     .select("*")
     .eq("approved", true)
-    .order("sort_order", { ascending: true })
+    .order("follower_count", { ascending: false, nullsFirst: false })
     .limit(limit * 3);
 
   // Look up directory UUID by name, then filter

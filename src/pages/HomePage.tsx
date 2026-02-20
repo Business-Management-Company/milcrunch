@@ -642,7 +642,7 @@ export default function HomePage() {
 
   useEffect(() => {
     (async () => {
-      const showcase = await fetchShowcaseByDirectoryName("Military Creator Network", 25);
+      const showcase = await fetchShowcaseByDirectoryName("Military Creator Network", 15);
       setShowcaseCreators(showcase);
       // Fill missing avatars from enrichment cache (no API calls)
       const withAvatars = await fillShowcaseAvatarsFromCache(showcase);
