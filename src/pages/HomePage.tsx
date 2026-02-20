@@ -197,6 +197,7 @@ function HeroAvatar({ src, name, handle }: { src: string | null; name: string; h
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const prevSrc = useRef(safeSrc);
+  const lastGoodSrc = useRef<string | null>(null);
 
   // Reset error/loaded state when src changes (e.g. after enrichment fills in a URL)
   useEffect(() => {
@@ -207,17 +208,19 @@ function HeroAvatar({ src, name, handle }: { src: string | null; name: string; h
     }
   }, [safeSrc]);
 
+  const displaySrc = (safeSrc && !imgError) ? safeSrc : lastGoodSrc.current;
+
   return (
     <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
-      {safeSrc && !imgError && (
+      {displaySrc && (
         <img
-          src={safeSrc}
+          src={displaySrc}
           alt={name}
           fetchPriority="high"
           loading="eager"
           className="w-full h-full object-cover absolute inset-0 z-10"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => setImgError(true)}
+          onLoad={() => { setImgLoaded(true); lastGoodSrc.current = displaySrc; }}
+          onError={() => { if (displaySrc === safeSrc) setImgError(true); }}
         />
       )}
       <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm">
@@ -237,6 +240,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const prevSrc = useRef(imgSrc);
+  const lastGoodSrc = useRef<string | null>(null);
 
   // Reset error/loaded state when imgSrc changes (e.g. after cache fill)
   useEffect(() => {
@@ -247,18 +251,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
     }
   }, [imgSrc]);
 
-
-  // Debug logging for specific creators
-  if (c.handle === "davebrayusa" || c.handle === "therealdoctodd") {
-    console.log("[ShowcaseCard]", c.handle, {
-      ic_avatar_url: c.ic_avatar_url,
-      avatar_url: c.avatar_url,
-      enrichAvatar,
-      resolved: imgSrc,
-      imgError,
-      imgLoaded,
-    });
-  }
+  const displaySrc = (imgSrc && !imgError) ? imgSrc : lastGoodSrc.current;
 
   return (
     <Link
@@ -282,14 +275,14 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               : "ring-1 ring-gray-200 ring-offset-2"
           } bg-white`}
         >
-          {imgSrc && !imgError && (
+          {displaySrc && (
             <img
-              src={imgSrc}
+              src={displaySrc}
               alt={c.display_name}
               className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setImgError(true)}
+              onLoad={() => { setImgLoaded(true); lastGoodSrc.current = displaySrc; }}
+              onError={() => { if (displaySrc === imgSrc) setImgError(true); }}
             />
           )}
           <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
@@ -757,14 +750,6 @@ export default function HomePage() {
                     // Static fallback: /creators/{handle}.jpg (checked into public/)
                     const staticFallback = `/creators/${db.handle}.jpg`;
                     const avatar = creatorAvatarUrl(db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string) || staticFallback;
-                    if (db.handle === "davebrayusa" || db.handle === "therealdoctodd") {
-                      console.log("[Hero] Avatar debug for", db.handle, {
-                        ic_avatar_url: db.ic_avatar_url,
-                        avatar_url: db.avatar_url,
-                        enrichAvatar,
-                        resolved: avatar,
-                      });
-                    }
 
                     // Build stats in priority order, filter to non-null/non-zero, take up to 4
                     const allStats: { value: string; label: string; color: string }[] = [];

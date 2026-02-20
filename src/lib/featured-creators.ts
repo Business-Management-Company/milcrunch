@@ -39,6 +39,13 @@ export interface ShowcaseCreator extends FeaturedCreator {
   media_count?: number | null;
 }
 
+/** Permanent Supabase Storage URLs for hero creators — never expire */
+const HERO_PERMANENT_AVATARS: Record<string, string> = {
+  davebrayusa: "https://zribaooztsaatufbulku.supabase.co/storage/v1/object/public/creator-avatars/davebrayusa.jpg",
+  therealdoctodd: "https://zribaooztsaatufbulku.supabase.co/storage/v1/object/public/creator-avatars/therealdoctodd.jpg",
+  brittanyyycampbelll: "https://zribaooztsaatufbulku.supabase.co/storage/v1/object/public/creator-avatars/brittanyyycampbelll.jpg",
+};
+
 /** Hardcoded fallback creators shown when directory_members table is unavailable. */
 const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
   {
@@ -46,7 +53,7 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
     display_name: "DAVE BRAY USA",
     handle: "davebrayusa",
     platform: "instagram",
-    avatar_url: "/creators/davebrayusa.jpg",
+    avatar_url: HERO_PERMANENT_AVATARS.davebrayusa,
     follower_count: 14304,
     engagement_rate: null,
     category: "Musician/Band",
@@ -61,15 +68,14 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
     platforms: ["instagram"],
     featured_homepage: true,
     profile_slug: "davebrayusa",
-    ic_avatar_url: null,
-    featured_homepage: true,
+    ic_avatar_url: HERO_PERMANENT_AVATARS.davebrayusa,
   },
   {
     id: "hero-therealdoctodd",
     display_name: "Doc Todd",
     handle: "therealdoctodd",
     platform: "instagram",
-    avatar_url: "/creators/therealdoctodd.jpg",
+    avatar_url: HERO_PERMANENT_AVATARS.therealdoctodd,
     follower_count: 17535,
     engagement_rate: null,
     category: "Health & Wellness",
@@ -84,15 +90,14 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
     platforms: ["instagram"],
     featured_homepage: true,
     profile_slug: "therealdoctodd",
-    ic_avatar_url: null,
-    featured_homepage: true,
+    ic_avatar_url: HERO_PERMANENT_AVATARS.therealdoctodd,
   },
   {
     id: "hero-brittanyyycampbelll",
     display_name: "Brittany Campbell",
     handle: "brittanyyycampbelll",
     platform: "instagram",
-    avatar_url: "/creators/brittanyyycampbelll.jpg",
+    avatar_url: HERO_PERMANENT_AVATARS.brittanyyycampbelll,
     follower_count: 8355,
     engagement_rate: null,
     category: "Military Lifestyle",
@@ -107,8 +112,7 @@ const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
     platforms: ["instagram", "tiktok"],
     featured_homepage: true,
     profile_slug: "brittanyyycampbelll",
-    ic_avatar_url: null,
-    featured_homepage: true,
+    ic_avatar_url: HERO_PERMANENT_AVATARS.brittanyyycampbelll,
   },
 ];
 
@@ -292,12 +296,15 @@ export async function enrichHomepageHeroCreators(
         }
 
         // 4. Merge: prefer API data when > 0, keep existing data as fallback
+        //    IMPORTANT: Never overwrite a permanent Supabase Storage URL with an expiring CDN URL
+        const existingAvatarIsPermanent = (c.avatar_url || "").includes("supabase.co/storage");
+        const existingIcIsPermanent = (c.ic_avatar_url || "").includes("supabase.co/storage");
         return {
           ...c,
           follower_count: stats.follower_count || c.follower_count,
           engagement_rate: stats.engagement_rate || c.engagement_rate,
-          avatar_url: enrichAvatar || c.avatar_url,
-          ic_avatar_url: enrichAvatar || c.ic_avatar_url,
+          avatar_url: existingAvatarIsPermanent ? c.avatar_url : (enrichAvatar || c.avatar_url),
+          ic_avatar_url: existingIcIsPermanent ? c.ic_avatar_url : (enrichAvatar || c.ic_avatar_url),
           enrichment_data: responseData,
           avg_views: stats.avg_views > 0 ? formatFollowerCount(stats.avg_views) : (c.avg_views || null),
           avg_likes: stats.avg_likes > 0 ? formatFollowerCount(stats.avg_likes) : (c.avg_likes || null),

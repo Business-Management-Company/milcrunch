@@ -303,6 +303,57 @@ function getDiscoverInitials(name: string): string {
   return name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 }
 
+/** Module-level cache: last successfully loaded avatar URL per creator username */
+const _goodAvatarCache = new Map<string, string>();
+
+/** Avatar component that caches the last good image and never flashes to initials
+ *  if a previously loaded image exists for this creator. */
+function DiscoverAvatar({ url, name, username, size = "w-10 h-10", borderClass = "border border-gray-200 dark:border-gray-700", verified, badgeClass }: {
+  url: string | null | undefined;
+  name: string;
+  username?: string;
+  size?: string;
+  borderClass?: string;
+  verified?: boolean;
+  badgeClass?: string;
+}) {
+  const safeSrc = safeImgUrl(url);
+  const cacheKey = username || name;
+  const [errCount, setErrCount] = useState(0);
+  const prevUrl = useRef(safeSrc);
+
+  if (safeSrc !== prevUrl.current) {
+    prevUrl.current = safeSrc;
+    setErrCount(0);
+  }
+
+  const cachedSrc = _goodAvatarCache.get(cacheKey) || null;
+  let displaySrc: string | null = null;
+  if (errCount === 0 && safeSrc) displaySrc = safeSrc;
+  else if (errCount <= 1 && cachedSrc && cachedSrc !== safeSrc) displaySrc = cachedSrc;
+
+  return (
+    <div className={`relative shrink-0 ${size}`}>
+      {displaySrc && (
+        <img
+          src={displaySrc}
+          alt={name}
+          loading="lazy"
+          onLoad={() => _goodAvatarCache.set(cacheKey, displaySrc!)}
+          onError={() => setErrCount((c) => c + 1)}
+          className={`${size} rounded-full object-cover ${borderClass} absolute inset-0 z-10`}
+        />
+      )}
+      <div className={`${size} rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold ${size === "w-14 h-14" ? "text-sm" : "text-xs"} ${borderClass}`}>
+        {getDiscoverInitials(name)}
+      </div>
+      {verified && (
+        <BadgeCheck className={`absolute -top-1 -left-1 ${badgeClass || "h-4 w-4"} text-blue-500 bg-white dark:bg-[#1A1D27] rounded-full z-20`} aria-label="Verified" />
+      )}
+    </div>
+  );
+}
+
 /** If this handle matches a directory_members row, upload the enrichment avatar
  *  to Supabase storage and update the row with the permanent URL (fire-and-forget). */
 function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse) {
@@ -524,9 +575,6 @@ const BrandDiscover = () => {
   const enrichAbortRef = useRef<AbortController | null>(null);
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
-
-  // Track avatar URLs that returned 410/404/error so we never retry them across re-renders
-  const failedAvatarsRef = useRef<Set<string>>(new Set());
 
   // Credit balance state
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
@@ -1591,20 +1639,7 @@ const BrandDiscover = () => {
             </p>
             {contactConfirmCreator && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div className="relative w-10 h-10 shrink-0">
-                  {(() => { const u = safeImgUrl(contactConfirmCreator.avatar); return u && !failedAvatarsRef.current.has(u); })() && (
-                    <img
-                      src={safeImgUrl(contactConfirmCreator.avatar)!}
-                      alt=""
-                      loading="lazy"
-                      onError={(e) => { const u = e.currentTarget.src; e.currentTarget.onerror = null; e.currentTarget.src = ""; failedAvatarsRef.current.add(u); }}
-                      className="w-10 h-10 rounded-full object-cover absolute inset-0 z-10"
-                    />
-                  )}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs">
-                    {getDiscoverInitials(contactConfirmCreator.name)}
-                  </div>
-                </div>
+                <DiscoverAvatar url={contactConfirmCreator.avatar} name={contactConfirmCreator.name} username={contactConfirmCreator.username} />
                 <div>
                   <p className="font-semibold text-sm">{contactConfirmCreator.name}</p>
                   <p className="text-xs text-muted-foreground">@{contactConfirmCreator.username}</p>
@@ -2199,23 +2234,7 @@ const BrandDiscover = () => {
                             {/* Creator */}
                             <td className="p-3">
                               <div className="flex items-center gap-3">
-                                <div className="relative shrink-0 w-10 h-10">
-                                  {(() => { const u = safeImgUrl(creator.avatar); return u && !failedAvatarsRef.current.has(u); })() && (
-                                    <img
-                                      src={safeImgUrl(creator.avatar)!}
-                                      alt={creator.name}
-                                      loading="lazy"
-                                      onError={(e) => { const u = e.currentTarget.src; e.currentTarget.onerror = null; e.currentTarget.src = ""; failedAvatarsRef.current.add(u); }}
-                                      className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 absolute inset-0 z-10"
-                                    />
-                                  )}
-                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs border border-gray-200 dark:border-gray-700">
-                                    {getDiscoverInitials(creator.name)}
-                                  </div>
-                                  {creator.isVerified && (
-                                    <BadgeCheck className="absolute -top-1 -left-1 h-4 w-4 text-blue-500 bg-white dark:bg-[#1A1D27] rounded-full z-20" aria-label="Verified" />
-                                  )}
-                                </div>
+                                <DiscoverAvatar url={creator.avatar} name={creator.name} username={creator.username} verified={creator.isVerified} />
                                 <div className="min-w-0">
                                   <p className="font-semibold text-[#000741] dark:text-white truncate flex items-center gap-1">
                                     {creator.name}
@@ -2403,23 +2422,7 @@ const BrandDiscover = () => {
                           />
                         </div>
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="relative shrink-0 w-14 h-14">
-                            {(() => { const u = safeImgUrl(creator.avatar); return u && !failedAvatarsRef.current.has(u); })() && (
-                              <img
-                                src={safeImgUrl(creator.avatar)!}
-                                alt={creator.name}
-                                loading="lazy"
-                                onError={(e) => { const u = e.currentTarget.src; e.currentTarget.onerror = null; e.currentTarget.src = ""; failedAvatarsRef.current.add(u); }}
-                                className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md absolute inset-0 z-10"
-                              />
-                            )}
-                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm border-2 border-white dark:border-slate-700 shadow-md">
-                              {getDiscoverInitials(creator.name)}
-                            </div>
-                            {creator.isVerified && (
-                              <BadgeCheck className="absolute -top-1 -left-1 h-5 w-5 text-[#6C5CE7] bg-white dark:bg-[#1A1D27] rounded-full z-20" aria-label="Verified" />
-                            )}
-                          </div>
+                          <DiscoverAvatar url={creator.avatar} name={creator.name} username={creator.username} size="w-14 h-14" borderClass="border-2 border-white dark:border-slate-700 shadow-md" verified={creator.isVerified} badgeClass="h-5 w-5 text-[#6C5CE7]" />
                           <div className="min-w-0 flex-1">
                             <h3 className="font-bold text-base text-[#000741] dark:text-white truncate flex items-center gap-1.5">
                               {creator.name}
