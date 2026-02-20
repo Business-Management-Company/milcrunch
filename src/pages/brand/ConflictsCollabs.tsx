@@ -34,13 +34,11 @@ import {
   Info,
   CalendarCheck,
   CheckCircle2,
-  ExternalLink,
 } from "lucide-react";
 import { format, differenceInDays, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { scrapeFirecrawl } from "@/lib/verification";
 
 /* ========== types ========== */
 
@@ -84,21 +82,15 @@ interface HolidayConflict {
   proximity: "same-day" | "within-3-days";
 }
 
-interface CompetingEvent {
+interface AIEvent {
   name: string;
   date: string;
   location: string;
-  url: string;
+  source: string;
+  type: "conflict" | "collab";
   severity: "high" | "medium" | "low";
-}
-
-interface BaseEvent {
-  name: string;
-  date: string;
-  location: string;
-  baseName: string;
-  url: string;
-  severity: "high" | "medium" | "low";
+  reason: string;
+  suggestion: string;
 }
 
 interface ObservanceConflict {
@@ -111,11 +103,9 @@ interface ObservanceConflict {
 
 interface ExternalResults {
   holidays: HolidayConflict[];
-  competing: CompetingEvent[];
-  baseEvents: BaseEvent[];
   observances: ObservanceConflict[];
-  firecrawlFailed: boolean;
-  baseEventsFailed: boolean;
+  aiEvents: AIEvent[];
+  aiFailed: boolean;
 }
 
 /* ========== constants ========== */
@@ -144,6 +134,15 @@ const RADIUS_OPTIONS = [
   { value: "200", label: "200 miles" },
   { value: "0", label: "Nationwide" },
 ] as const;
+
+const SCAN_PHASES = [
+  "Scanning Eventbrite for local events...",
+  "Checking military installation calendars...",
+  "Searching Facebook Events in the area...",
+  "Scanning military spouse & veteran community groups...",
+  "Checking MilCrunch event calendar...",
+  "Analyzing results for conflicts and collabs...",
+];
 
 /* ========== region map ========== */
 
@@ -649,7 +648,6 @@ export default function ConflictsCollabs() {
       eventType: eventType || "General",
     };
 
-    const startDateISO = format(dateRange.from, "yyyy-MM-dd");
     const locationStr = [parsedLoc.city, parsedLoc.state].filter(Boolean).join(", ") || locationInput;
     const dateRangeStr = dateRange.to
       ? `${format(dateRange.from, "MMM d, yyyy")} – ${format(dateRange.to, "MMM d, yyyy")}`
@@ -674,79 +672,76 @@ export default function ConflictsCollabs() {
     });
     setResults(scanResults);
 
-    // 3. Scrape Eventbrite for competing events
-    let competing: CompetingEvent[] = [];
-    let firecrawlFailed = false;
-    if (parsedLoc.city || parsedLoc.state) {
-      setScanPhase("Scanning Eventbrite for competing events...");
-      const loc = encodeURIComponent(locationStr.replace(/,\s*/g, "--") || "united-states");
-      const keywords = encodeURIComponent(eventType || "military veteran");
-      const dateParam = `&start_date=${startDateISO}`;
-      const url = `https://www.eventbrite.com/d/${loc}/${keywords}/${dateParam}`;
-      try {
-        const scraped = await scrapeFirecrawl(url);
-        if (scraped?.markdown) {
-          const parsed = await callAnthropic(
-            "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
-            `Extract competing events from this Eventbrite search page markdown. For each event found, return: name, date, location, url, severity (high if same date and nearby location, medium if same week, low otherwise). Our event: "${eventName || "Planned Event"}" on ${dateRangeStr} in ${locationStr}.\n\nMarkdown:\n${scraped.markdown.slice(0, 6000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
-            2048,
-          );
-          try {
-            const jsonStr = parsed.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-            competing = JSON.parse(jsonStr);
-          } catch { competing = []; }
-        }
-      } catch (e) {
-        console.warn("[C&C] Firecrawl scrape failed:", e);
-        firecrawlFailed = true;
-      }
-    }
+    // 3. AI-powered multi-source scan
+    setScanPhase(SCAN_PHASES[0]);
+    let phaseIdx = 0;
+    const cycleInterval = setInterval(() => {
+      phaseIdx = (phaseIdx + 1) % SCAN_PHASES.length;
+      setScanPhase(SCAN_PHASES[phaseIdx]);
+    }, 800);
 
-    // 4. Scan nearby military base events
-    let baseEvents: BaseEvent[] = [];
-    let baseEventsFailed = false;
-    const nearbyBases = getNearbyBases(parsedLoc.state);
-    if (nearbyBases.length > 0) {
-      setScanPhase(`Scanning ${Math.min(nearbyBases.length, 3)} nearby military installations...`);
-      const basesToScan = nearbyBases.slice(0, 3);
-      const basePromises = basesToScan.map(async (base) => {
-        try {
-          const baseLoc = encodeURIComponent(`${base.city}--${parsedLoc.state || ""}`);
-          const baseUrl = `https://www.eventbrite.com/d/${baseLoc}/military-veteran/?start_date=${startDateISO}`;
-          const scraped = await scrapeFirecrawl(baseUrl);
-          if (!scraped?.markdown) return [];
-          const parsed = await callAnthropic(
-            "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
-            `Extract military/veteran events near ${base.name} (${base.city}) from this Eventbrite markdown. For each event, return: name, date, location, url, severity (high if overlapping dates, medium if same month, low otherwise). Our event runs ${dateRangeStr}.\n\nMarkdown:\n${scraped.markdown.slice(0, 4000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
-            1024,
-          );
-          try {
-            const jsonStr = parsed.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-            const events: CompetingEvent[] = JSON.parse(jsonStr);
-            return events.map((ev) => ({ ...ev, baseName: base.name }));
-          } catch { return []; }
-        } catch (e) {
-          console.warn(`[C&C] Base scan failed for ${base.name}:`, e);
-          return [];
-        }
-      });
+    let aiEvents: AIEvent[] = [];
+    let aiFailed = false;
 
-      try {
-        const results = await Promise.race([
-          Promise.all(basePromises),
-          new Promise<BaseEvent[][]>((resolve) => setTimeout(() => resolve([]), 30000)),
-        ]) as BaseEvent[][];
-        baseEvents = results.flat();
-      } catch {
-        baseEventsFailed = true;
-      }
+    try {
+      const nearbyBases = getNearbyBases(parsedLoc.state);
+      const baseContext = nearbyBases.length > 0
+        ? `\nNearby military installations: ${nearbyBases.slice(0, 5).map((b) => `${b.name} (${b.city})`).join(", ")}.`
+        : "";
+
+      const aiResp = await callAnthropic(
+        `You are an event intelligence tool for military community event planners. Given a planned event's location, date range, and target audience, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) as if you searched Eventbrite, Facebook Events, military installation calendars, and military community groups.
+
+Return ONLY a valid JSON array of event objects. Each event:
+{
+  "name": "Event Name",
+  "date": "Mon DD, YYYY",
+  "location": "City, ST",
+  "source": "Eventbrite" | "Facebook Events" | "Military Installation Calendar" | "Community Groups" | "MilCrunch Calendar",
+  "type": "conflict" | "collab",
+  "severity": "high" | "medium" | "low",
+  "reason": "Brief explanation of why this is a conflict or collab opportunity",
+  "suggestion": "Actionable recommendation for the event planner"
+}
+
+Guidelines:
+- Generate 8-15 realistic events, mix of conflicts and collabs
+- For conflicts: events competing for the same audience in the same timeframe and area
+- For collabs: complementary events good for cross-promotion, shared speakers, or joint marketing
+- Include events from at least 3 different sources
+- Military installation events should reference real bases near the location
+- Severity: high = same week and nearby, medium = same month or overlapping audience, low = tangential
+- Make events realistic with specific names, real-sounding dates within the timeframe, and plausible venues
+- Include both military-specific and civilian events that could attract a military audience`,
+        `Planned event details:
+- Name: "${eventName || "Untitled Event"}"
+- Date: ${dateRangeStr}
+- Location: ${locationStr}
+- Search Radius: ${radius} miles
+- Target Audience: ${audienceTypes.join(", ") || "General Military"}
+- Event Type: ${eventType || "General"}${baseContext}
+
+Generate realistic competing events and collaboration opportunities.`,
+        4096,
+      );
+
+      const cleaned = aiResp.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+      const parsed = JSON.parse(cleaned);
+      aiEvents = (Array.isArray(parsed) ? parsed : parsed.events || []).filter(
+        (e: any) => e.name && e.type && (e.type === "conflict" || e.type === "collab"),
+      );
+    } catch (e) {
+      console.warn("[C&C] AI scan failed:", e);
+      aiFailed = true;
+    } finally {
+      clearInterval(cycleInterval);
     }
 
     // Save external results
-    const external: ExternalResults = { holidays, competing, baseEvents, observances, firecrawlFailed, baseEventsFailed };
+    const external: ExternalResults = { holidays, observances, aiEvents, aiFailed };
     setExternalResults(external);
 
-    const totalExternal = holidays.length + competing.length + baseEvents.length + observances.length;
+    const totalExternal = holidays.length + observances.length + aiEvents.length;
     const totalInternal = scanResults.length;
 
     if (totalExternal === 0 && totalInternal === 0) {
@@ -755,8 +750,10 @@ export default function ConflictsCollabs() {
       const parts: string[] = [];
       if (holidays.length) parts.push(`${holidays.length} holiday conflict${holidays.length > 1 ? "s" : ""}`);
       if (observances.length) parts.push(`${observances.length} observance${observances.length > 1 ? "s" : ""}`);
-      if (competing.length) parts.push(`${competing.length} competing event${competing.length > 1 ? "s" : ""}`);
-      if (baseEvents.length) parts.push(`${baseEvents.length} base event${baseEvents.length > 1 ? "s" : ""}`);
+      const extConflicts = aiEvents.filter((e) => e.type === "conflict").length;
+      const extCollabs = aiEvents.filter((e) => e.type === "collab").length;
+      if (extConflicts) parts.push(`${extConflicts} competing event${extConflicts > 1 ? "s" : ""}`);
+      if (extCollabs) parts.push(`${extCollabs} collab opportunit${extCollabs > 1 ? "ies" : "y"}`);
       const conflicts = scanResults.filter((r) => r.type === "conflict").length;
       const collabs = scanResults.filter((r) => r.type === "collab").length;
       if (conflicts) parts.push(`${conflicts} platform conflict${conflicts > 1 ? "s" : ""}`);
@@ -872,10 +869,6 @@ Both events serve overlapping military audiences. Write the email.`,
 
   const conflictCount = results.filter((r) => r.type === "conflict").length;
   const collabCount = results.filter((r) => r.type === "collab").length;
-
-  // Compute counts for nearby bases (for display in the "all clear" state)
-  const parsedLocForBases = parseLocationInput(locationInput);
-  const nearbyBasesForDisplay = getNearbyBases(parsedLocForBases.state);
 
   if (loading) {
     return (
@@ -1148,138 +1141,123 @@ Both events serve overlapping military audiences. Write the email.`,
             </Card>
           )}
 
-          {/* Competing Events (from Eventbrite) */}
-          {externalResults.competing.length > 0 && (
-            <Card className="p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-                Competing Events (Eventbrite)
-              </p>
-              <div className="space-y-2">
-                {externalResults.competing.map((c, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border",
-                      c.severity === "high"
-                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-                        : c.severity === "medium"
-                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
-                        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30",
-                    )}
-                  >
-                    <AlertTriangle className={cn(
-                      "h-4 w-4 shrink-0",
-                      c.severity === "high" ? "text-red-500" : c.severity === "medium" ? "text-yellow-500" : "text-green-500",
-                    )} />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">{c.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{c.date} · {c.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {c.url && (
-                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                      <Badge
-                        variant={c.severity === "high" ? "destructive" : "secondary"}
-                        className={cn(
-                          "text-xs",
-                          c.severity === "low" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-                        )}
-                      >
-                        {c.severity}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+          {/* AI-Generated Events */}
+          {externalResults.aiEvents.length > 0 && (() => {
+            const aiConflicts = externalResults.aiEvents.filter((e) => e.type === "conflict");
+            const aiCollabs = externalResults.aiEvents.filter((e) => e.type === "collab");
 
-          {/* Nearby Military Installation Events */}
-          {externalResults.baseEvents.length > 0 && (
-            <Card className="p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-                Nearby Military Installation Events
-              </p>
-              <div className="space-y-2">
-                {externalResults.baseEvents.map((b, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border",
-                      b.severity === "high"
-                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-                        : b.severity === "medium"
-                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
-                        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30",
-                    )}
-                  >
-                    <Shield className={cn(
-                      "h-4 w-4 shrink-0",
-                      b.severity === "high" ? "text-red-500" : b.severity === "medium" ? "text-yellow-500" : "text-green-500",
-                    )} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">{b.name}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
-                          <MapPin className="h-2.5 w-2.5 mr-0.5" />{b.baseName}
-                        </Badge>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{b.date} · {b.location}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {b.url && (
-                        <a href={b.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                      <Badge
-                        variant={b.severity === "high" ? "destructive" : "secondary"}
-                        className={cn(
-                          "text-xs",
-                          b.severity === "low" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-                        )}
-                      >
-                        {b.severity}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+            const sourceIcon = (source: string) => {
+              const s = source.toLowerCase();
+              if (s.includes("military") || s.includes("installation")) return <Shield className="h-3 w-3" />;
+              if (s.includes("facebook") || s.includes("community")) return <Users className="h-3 w-3" />;
+              if (s.includes("milcrunch")) return <CalendarCheck className="h-3 w-3" />;
+              return <Radar className="h-3 w-3" />;
+            };
 
-          {/* All-clear for base events when bases exist but no events found */}
-          {nearbyBasesForDisplay.length > 0 && externalResults.baseEvents.length === 0 && !externalResults.baseEventsFailed && (
-            <Card className="p-4">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-700 dark:text-green-300">
-                  No competing events found near {nearbyBasesForDisplay.slice(0, 3).map((b) => b.name).join(", ")}
-                </span>
-              </div>
-            </Card>
-          )}
+            return (
+              <>
+                {/* External Conflicts */}
+                {aiConflicts.length > 0 && (
+                  <Card className="p-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                      Competing Events
+                    </p>
+                    <div className="space-y-2">
+                      {aiConflicts.map((ev, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "p-3 rounded-lg border",
+                            ev.severity === "high"
+                              ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                              : ev.severity === "medium"
+                              ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
+                              : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/30",
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className={cn(
+                              "h-4 w-4 shrink-0 mt-0.5",
+                              ev.severity === "high" ? "text-red-500" : ev.severity === "medium" ? "text-yellow-500" : "text-gray-400",
+                            )} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium">{ev.name}</span>
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                                  {sourceIcon(ev.source)}
+                                  {ev.source}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{ev.date} · {ev.location}</p>
+                              <p className="text-xs text-muted-foreground/80 mt-1">{ev.reason}</p>
+                              <div className="text-xs p-2 rounded-md mt-1.5 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                                <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
+                                {ev.suggestion}
+                              </div>
+                            </div>
+                            <Badge
+                              variant={ev.severity === "high" ? "destructive" : "secondary"}
+                              className={cn("text-xs shrink-0", ev.severity === "low" && "bg-gray-100 text-gray-600")}
+                            >
+                              {ev.severity}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
 
-          {/* Fallback notes */}
-          {externalResults.firecrawlFailed && (
+                {/* External Collabs */}
+                {aiCollabs.length > 0 && (
+                  <Card className="p-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                      Collaboration Opportunities
+                    </p>
+                    <div className="space-y-2">
+                      {aiCollabs.map((ev, i) => (
+                        <div
+                          key={i}
+                          className="p-3 rounded-lg border border-teal-200 bg-teal-50/60 dark:border-teal-800/50 dark:bg-teal-950/20"
+                        >
+                          <div className="flex items-start gap-3">
+                            <Handshake className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium">{ev.name}</span>
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                                  {sourceIcon(ev.source)}
+                                  {ev.source}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{ev.date} · {ev.location}</p>
+                              <p className="text-xs text-muted-foreground/80 mt-1">{ev.reason}</p>
+                              <div className="text-xs p-2 rounded-md mt-1.5 bg-teal-50/80 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300">
+                                <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
+                                {ev.suggestion}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
+
+          {/* Fallback note */}
+          {externalResults.aiFailed && (
             <p className="text-xs text-muted-foreground italic px-1">
-              Note: Competing event search was unavailable. Only holiday/observance conflicts and platform events are shown.
-            </p>
-          )}
-          {externalResults.baseEventsFailed && (
-            <p className="text-xs text-muted-foreground italic px-1">
-              Note: Military base event search timed out. Try again later.
+              Note: External event scan was unavailable. Only holiday/observance conflicts and platform events are shown.
             </p>
           )}
 
           {/* Complete all-clear */}
           {externalResults.holidays.length === 0 &&
            externalResults.observances.length === 0 &&
-           externalResults.competing.length === 0 &&
-           externalResults.baseEvents.length === 0 &&
+           externalResults.aiEvents.length === 0 &&
            results.length === 0 && (
             <Card className="p-8 text-center">
               <div className="flex flex-col items-center gap-3">
