@@ -40,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { cn, safeImageUrl } from "@/lib/utils";
+import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -459,10 +459,19 @@ export default function CreatorProfileModal({
     (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username ?? username ?? "";
   const displayName =
     (igRecord?.full_name as string) ?? (resultTop.first_name as string) ?? creator?.name ?? displayUsername ?? "—";
+  // Avatar priority: enrichment extraction → ic_avatar_url → creator.avatar → ""
+  // Matches the same chain used by the directory grid cards
+  const enrichedAvatarUrl = extractAvatarFromEnrichment(enriched);
   const creatorIcAvatar = (creator as Record<string, unknown> | null)?.ic_avatar_url as string | undefined;
-  const pictureRaw =
-    (igRecord?.profile_picture_hd as string) ?? (igRecord?.profile_picture as string) ?? creatorIcAvatar ?? creator?.avatar ?? "";
-  const picture = safeImageUrl(pictureRaw) ?? "";
+  const picture = creatorAvatarUrl(
+    enrichedAvatarUrl,
+    creatorIcAvatar,
+    creator?.avatar,
+  ) ?? "";
+  // Build a fallback chain for onError retry (skip the primary, try the rest)
+  const avatarFallbacks = [enrichedAvatarUrl, creatorIcAvatar, creator?.avatar]
+    .map((u) => safeImageUrl(u))
+    .filter((u): u is string => !!u && u !== picture && !u.includes("ui-avatars.com"));
   const bio = useMemo(() => {
     if (selectedPlatform === "tiktok" && tiktokData) {
       return (tiktokData.biography as string) ?? (tiktokData.bio as string) ?? creator?.bio ?? "";
@@ -727,12 +736,22 @@ export default function CreatorProfileModal({
           {/* Left panel - fixed ~350px */}
           <div className="flex w-full flex-col border-r border-border dark:border-gray-800 bg-white dark:bg-[#0F1117] p-6 md:w-[350px] shrink-0">
             <div className="mx-auto mb-4 h-40 w-40 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
-              {picture && (
+              {picture && !picture.includes("ui-avatars.com") && (
                 <img
                   src={picture}
                   alt={displayName}
                   className="w-full h-full object-cover absolute inset-0 z-10"
-                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  onError={(e) => {
+                    const el = e.currentTarget;
+                    if (el.dataset.retried) { el.style.display = "none"; return; }
+                    el.dataset.retried = "1";
+                    const fallback = avatarFallbacks.find((u) => u !== el.src);
+                    if (fallback) {
+                      el.src = fallback;
+                    } else {
+                      el.style.display = "none";
+                    }
+                  }}
                 />
               )}
               <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-3xl">
