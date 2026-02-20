@@ -562,7 +562,7 @@ const BrandDiscover = () => {
   } | null>(null);
 
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
-  const { user, effectiveUserId } = useAuth();
+  const { user, effectiveUserId, isSuperAdmin } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
 
@@ -769,8 +769,16 @@ const BrandDiscover = () => {
       return;
     }
 
+    // Super admin demo: pre-load "mil spouse" search
+    if (isSuperAdmin) {
+      setSearchQuery("mil spouse");
+      searchQueryRef.current = "mil spouse";
+      pendingAutoSearch.current = true;
+      return;
+    }
+
     // localStorage auto-load removed — only pre-populate from URL params
-  }, [applyFilters, urlSearchParams]);
+  }, [applyFilters, urlSearchParams, isSuperAdmin]);
 
   const runSearch = useCallback(() => {
     const q = searchQuery.trim().replace(/^@/, "");

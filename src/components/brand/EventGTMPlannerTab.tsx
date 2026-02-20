@@ -1,15 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, ShieldAlert, CalendarCheck, Copy, Printer, Sparkles, Search,
-  AlertTriangle, CheckCircle2, FileText, Shield, Info, MapPin, Link2,
+  AlertTriangle, CheckCircle2, FileText, Shield, Info, MapPin, Link2, Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { scrapeFirecrawl } from "@/lib/verification";
 import { format, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ---------- types ---------- */
 interface Props {
@@ -335,6 +336,27 @@ export default function EventGTMPlannerTab({
   /* Share state */
   const [sharing, setSharing] = useState(false);
 
+  /* Super admin demo persistence */
+  const { isSuperAdmin } = useAuth();
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    try {
+      const savedConflicts = localStorage.getItem("demo_conflicts");
+      const savedGtm = localStorage.getItem("demo_gtm");
+      const savedSummary = localStorage.getItem("demo_summary");
+      if (savedConflicts) setConflicts(JSON.parse(savedConflicts));
+      if (savedGtm) setGtmPlan(savedGtm);
+      if (savedSummary) setSummary(savedSummary);
+    } catch { /* ignore parse errors */ }
+  }, [isSuperAdmin]);
+
+  const saveDemoState = (key: string, value: unknown) => {
+    const serialized = typeof value === "string" ? value : JSON.stringify(value);
+    localStorage.setItem(key, serialized);
+    toast.success("Saved as demo state");
+  };
+
   const location = [city, state].filter(Boolean).join(", ");
   const dateRange = startDate
     ? endDate && endDate !== startDate
@@ -643,10 +665,18 @@ Keep it concise — this should fit on one printed page. Use bullet points where
           <h3 className="font-semibold flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-amber-500" /> Conflict Scanner
           </h3>
-          <Button size="sm" onClick={runConflictScan} disabled={scanning}>
-            {scanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
-            {scanning ? "Scanning…" : "Scan for Conflicts"}
-          </Button>
+          <div className="flex gap-2">
+            {isSuperAdmin && conflicts && (
+              <Button size="sm" variant="outline" className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/5"
+                onClick={() => saveDemoState("demo_conflicts", conflicts)}>
+                <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+              </Button>
+            )}
+            <Button size="sm" onClick={runConflictScan} disabled={scanning}>
+              {scanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
+              {scanning ? "Scanning…" : "Scan for Conflicts"}
+            </Button>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           Check for US holidays, military observance dates, and competing events near your event dates.
@@ -852,6 +882,12 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                 <Button size="sm" variant="outline" onClick={() => shareReport("gtm", gtmPlan)} disabled={sharing}>
                   {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
                 </Button>
+                {isSuperAdmin && (
+                  <Button size="sm" variant="outline" className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/5"
+                    onClick={() => saveDemoState("demo_gtm", gtmPlan)}>
+                    <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+                  </Button>
+                )}
               </>
             )}
             <Button size="sm" onClick={generateGTM} disabled={generatingGTM}>
@@ -891,6 +927,12 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                 <Button size="sm" variant="outline" onClick={() => shareReport("summary", summary)} disabled={sharing}>
                   {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
                 </Button>
+                {isSuperAdmin && (
+                  <Button size="sm" variant="outline" className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/5"
+                    onClick={() => saveDemoState("demo_summary", summary)}>
+                    <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+                  </Button>
+                )}
               </>
             )}
             <Button size="sm" onClick={generateSummary} disabled={generatingSummary}>
