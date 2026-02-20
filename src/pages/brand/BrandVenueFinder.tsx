@@ -21,33 +21,40 @@ import {
   Bookmark,
   BookmarkCheck,
   ExternalLink,
-  Users,
   Loader2,
   SlidersHorizontal,
   X,
   ChevronDown,
   ChevronUp,
   Navigation,
+  DollarSign,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
 
-interface PlaceResult {
+interface YelpBusiness {
   id: string;
-  displayName: { text: string; languageCode?: string };
-  formattedAddress: string;
-  websiteUri?: string;
-  nationalPhoneNumber?: string;
-  googleMapsUri?: string;
-  rating?: number;
-  userRatingCount?: number;
-  photos?: { name: string; widthPx: number; heightPx: number }[];
-  types?: string[];
-  primaryType?: string;
-  editorialSummary?: { text: string };
-  priceLevel?: string;
-  accessibilityOptions?: Record<string, boolean>;
-  location?: { latitude: number; longitude: number };
+  name: string;
+  image_url: string;
+  url: string;
+  review_count: number;
+  categories: { alias: string; title: string }[];
+  rating: number;
+  location: {
+    address1: string;
+    address2: string;
+    address3: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    country: string;
+    display_address: string[];
+  };
+  phone: string;
+  display_phone: string;
+  distance?: number;
+  price?: string;
+  is_closed: boolean;
 }
 
 interface SavedVenue {
@@ -66,26 +73,25 @@ interface SavedVenue {
 
 // ─── Constants ──────────────────────────────────────────────
 
-const VENUE_TYPES = [
+const VENUE_CATEGORIES = [
   { value: "", label: "All Types" },
-  { value: "convention_center", label: "Convention Center" },
-  { value: "event_venue", label: "Event Venue" },
-  { value: "hotel", label: "Hotel" },
-  { value: "restaurant", label: "Restaurant" },
-  { value: "bar", label: "Bar / Lounge" },
-  { value: "community_center", label: "Community Center" },
-  { value: "stadium", label: "Stadium / Arena" },
-  { value: "park", label: "Park / Outdoor" },
-  { value: "museum", label: "Museum" },
-  { value: "church", label: "Church / Worship" },
+  { value: "venues,eventspaces", label: "Event Venues" },
+  { value: "hotelconference", label: "Hotel / Conference" },
+  { value: "conventioncenter", label: "Convention Center" },
+  { value: "restaurants", label: "Restaurant" },
+  { value: "bars,lounges", label: "Bar / Lounge" },
+  { value: "communitycenters", label: "Community Center" },
+  { value: "stadiumsarenas", label: "Stadium / Arena" },
+  { value: "parks", label: "Park / Outdoor" },
+  { value: "museums", label: "Museum" },
+  { value: "churches", label: "Church / Worship" },
 ];
 
-const CAPACITY_OPTIONS = [
-  { value: "", label: "Any Capacity" },
-  { value: "small", label: "Small (< 100)" },
-  { value: "medium", label: "Medium (100-500)" },
-  { value: "large", label: "Large (500-2000)" },
-  { value: "xlarge", label: "Very Large (2000+)" },
+const SORT_OPTIONS = [
+  { value: "best_match", label: "Best Match" },
+  { value: "rating", label: "Highest Rated" },
+  { value: "review_count", label: "Most Reviewed" },
+  { value: "distance", label: "Distance" },
 ];
 
 const AMENITIES = [
@@ -99,28 +105,6 @@ const AMENITIES = [
   "Breakout Rooms",
 ];
 
-// ─── Photo URL helper ───────────────────────────────────────
-
-const photoCache = new Map<string, string>();
-
-async function getPhotoUrl(photoName: string): Promise<string | null> {
-  if (photoCache.has(photoName)) return photoCache.get(photoName)!;
-  try {
-    const resp = await fetch(
-      `/api/places?photoName=${encodeURIComponent(photoName)}&maxWidth=600`
-    );
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (data.url) {
-      photoCache.set(photoName, data.url);
-      return data.url;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 // ─── Component ──────────────────────────────────────────────
 
 export default function BrandVenueFinder() {
@@ -128,15 +112,16 @@ export default function BrandVenueFinder() {
   const { toast } = useToast();
 
   // Search state
-  const [query, setQuery] = useState("");
-  const [venueType, setVenueType] = useState("");
-  const [capacity, setCapacity] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [location, setLocation] = useState("");
+  const [category, setCategory] = useState("");
+  const [sortBy, setSortBy] = useState("best_match");
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Results
-  const [results, setResults] = useState<PlaceResult[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [results, setResults] = useState<YelpBusiness[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -166,30 +151,22 @@ export default function BrandVenueFinder() {
 
   // ─── Search ─────────────────────────────────────────────
   const handleSearch = async () => {
-    if (!query.trim()) return;
+    if (!location.trim()) {
+      toast({
+        title: "Location Required",
+        description: "Enter a city or location to search for venues.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     setSearched(true);
     setShowSaved(false);
 
-    // Build query string with filters
-    let searchQuery = query.trim();
-    if (venueType) {
-      const typeLabel = VENUE_TYPES.find((t) => t.value === venueType)?.label;
-      if (typeLabel && !searchQuery.toLowerCase().includes(typeLabel.toLowerCase())) {
-        searchQuery += ` ${typeLabel}`;
-      }
-    }
-    if (capacity) {
-      const capMap: Record<string, string> = {
-        small: "small venue",
-        medium: "medium venue",
-        large: "large venue",
-        xlarge: "large convention center",
-      };
-      if (capMap[capacity]) searchQuery += ` ${capMap[capacity]}`;
-    }
+    // Build search term with amenity keywords
+    let term = searchTerm.trim() || "event venue";
     if (selectedAmenities.length > 0) {
-      searchQuery += ` ${selectedAmenities.join(" ")}`;
+      term += ` ${selectedAmenities.join(" ")}`;
     }
 
     try {
@@ -197,32 +174,23 @@ export default function BrandVenueFinder() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: searchQuery,
-          type: venueType || undefined,
-          maxResultCount: 20,
+          term,
+          location: location.trim(),
+          categories: category || "venues,eventspaces,hotelconference",
+          limit: 20,
+          sort_by: sortBy,
         }),
       });
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || `API returned ${resp.status}`);
+        throw new Error(err.error?.description || err.error || `API returned ${resp.status}`);
       }
 
       const data = await resp.json();
-      const places: PlaceResult[] = data.places || [];
-      setResults(places);
-
-      // Resolve photos in background
-      const photoMap: Record<string, string> = {};
-      const photoPromises = places
-        .filter((p) => p.photos && p.photos.length > 0)
-        .slice(0, 10) // limit photo fetches
-        .map(async (p) => {
-          const url = await getPhotoUrl(p.photos![0].name);
-          if (url) photoMap[p.id] = url;
-        });
-      await Promise.all(photoPromises);
-      setPhotoUrls((prev) => ({ ...prev, ...photoMap }));
+      const businesses: YelpBusiness[] = data.businesses || [];
+      setResults(businesses);
+      setTotalResults(data.total || businesses.length);
     } catch (err) {
       console.error("[VenueFinder] Search error:", err);
       toast({
@@ -231,26 +199,30 @@ export default function BrandVenueFinder() {
         variant: "destructive",
       });
       setResults([]);
+      setTotalResults(0);
     } finally {
       setLoading(false);
     }
   };
 
   // ─── Save venue ─────────────────────────────────────────
-  const saveVenue = async (place: PlaceResult) => {
+  const saveVenue = async (biz: YelpBusiness) => {
     if (!user) return;
-    setSavingIds((prev) => new Set(prev).add(place.id));
+    setSavingIds((prev) => new Set(prev).add(biz.id));
+
+    const address = biz.location.display_address?.join(", ") || "";
+    const primaryCategory = biz.categories?.[0]?.title || null;
 
     const payload = {
       user_id: user.id,
-      place_id: place.id,
-      venue_name: place.displayName.text,
-      address: place.formattedAddress,
-      website: place.websiteUri || null,
-      phone: place.nationalPhoneNumber || null,
-      rating: place.rating || null,
-      photo_url: photoUrls[place.id] || null,
-      venue_type: place.primaryType || null,
+      place_id: biz.id,
+      venue_name: biz.name,
+      address,
+      website: biz.url || null,
+      phone: biz.display_phone || null,
+      rating: biz.rating || null,
+      photo_url: biz.image_url || null,
+      venue_type: primaryCategory,
     };
 
     const { error } = await supabase.from("saved_venues").upsert(payload, {
@@ -272,7 +244,7 @@ export default function BrandVenueFinder() {
 
     setSavingIds((prev) => {
       const next = new Set(prev);
-      next.delete(place.id);
+      next.delete(biz.id);
       return next;
     });
   };
@@ -303,19 +275,15 @@ export default function BrandVenueFinder() {
   };
 
   const clearFilters = () => {
-    setVenueType("");
-    setCapacity("");
+    setCategory("");
+    setSortBy("best_match");
     setSelectedAmenities([]);
   };
 
   const activeFilterCount =
-    (venueType ? 1 : 0) + (capacity ? 1 : 0) + selectedAmenities.length;
-
-  // ─── Format type label ─────────────────────────────────
-  const formatType = (type: string) =>
-    type
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    (category ? 1 : 0) +
+    (sortBy !== "best_match" ? 1 : 0) +
+    selectedAmenities.length;
 
   // ─── Render ────────────────────────────────────────────
   return (
@@ -328,7 +296,7 @@ export default function BrandVenueFinder() {
             Venue Finder
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Search for event venues powered by Google Places
+            Search for event venues powered by Yelp
           </p>
         </div>
         <Button
@@ -347,9 +315,19 @@ export default function BrandVenueFinder() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search venues by name or city (e.g. 'event venues in San Diego')"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search term (e.g. 'conference venue', 'ballroom')"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="pl-9"
+            />
+          </div>
+          <div className="relative w-56">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="City or location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               className="pl-9"
             />
@@ -369,7 +347,7 @@ export default function BrandVenueFinder() {
           </Button>
           <Button
             onClick={handleSearch}
-            disabled={loading || !query.trim()}
+            disabled={loading || !location.trim()}
             className="bg-purple-600 hover:bg-purple-700 text-white px-6"
           >
             {loading ? (
@@ -388,12 +366,12 @@ export default function BrandVenueFinder() {
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
                   Venue Type
                 </label>
-                <Select value={venueType} onValueChange={setVenueType}>
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
-                    {VENUE_TYPES.map((t) => (
+                    {VENUE_CATEGORIES.map((t) => (
                       <SelectItem key={t.value || "all"} value={t.value || "all"}>
                         {t.label}
                       </SelectItem>
@@ -403,16 +381,16 @@ export default function BrandVenueFinder() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                  Capacity
+                  Sort By
                 </label>
-                <Select value={capacity} onValueChange={setCapacity}>
+                <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Any Capacity" />
+                    <SelectValue placeholder="Best Match" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CAPACITY_OPTIONS.map((c) => (
-                      <SelectItem key={c.value || "any"} value={c.value || "any"}>
-                        {c.label}
+                    {SORT_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -505,18 +483,17 @@ export default function BrandVenueFinder() {
           {!loading && results.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-gray-500">
-                {results.length} venue{results.length !== 1 ? "s" : ""} found
+                Showing {results.length} of {totalResults.toLocaleString()} venue{totalResults !== 1 ? "s" : ""}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {results.map((place) => (
+                {results.map((biz) => (
                   <VenueCard
-                    key={place.id}
-                    place={place}
-                    photoUrl={photoUrls[place.id]}
-                    isSaved={savedPlaceIds.has(place.id)}
-                    saving={savingIds.has(place.id)}
-                    onSave={() => saveVenue(place)}
-                    onUnsave={() => unsaveVenue(place.id)}
+                    key={biz.id}
+                    business={biz}
+                    isSaved={savedPlaceIds.has(biz.id)}
+                    saving={savingIds.has(biz.id)}
+                    onSave={() => saveVenue(biz)}
+                    onUnsave={() => unsaveVenue(biz.id)}
                   />
                 ))}
               </div>
@@ -532,7 +509,7 @@ export default function BrandVenueFinder() {
                 Search for event venues
               </p>
               <p className="text-sm text-gray-400 mt-1 max-w-md mx-auto">
-                Enter a city, venue name, or description to find available event spaces. Results powered by Google Places.
+                Enter a city and search term to find event spaces, hotels, conference centers, and more.
               </p>
             </div>
           )}
@@ -545,33 +522,33 @@ export default function BrandVenueFinder() {
 // ─── Venue Card ─────────────────────────────────────────────
 
 function VenueCard({
-  place,
-  photoUrl,
+  business,
   isSaved,
   saving,
   onSave,
   onUnsave,
 }: {
-  place: PlaceResult;
-  photoUrl?: string;
+  business: YelpBusiness;
   isSaved: boolean;
   saving: boolean;
   onSave: () => void;
   onUnsave: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-
-  const formatType = (type: string) =>
-    type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const address = business.location.display_address?.join(", ") || "";
+  const primaryCategory = business.categories?.[0]?.title;
+  const distanceMiles = business.distance
+    ? (business.distance / 1609.34).toFixed(1)
+    : null;
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow group">
       {/* Photo */}
       <div className="h-40 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
-        {photoUrl ? (
+        {business.image_url ? (
           <img
-            src={photoUrl}
-            alt={place.displayName.text}
+            src={business.image_url}
+            alt={business.name}
             className="w-full h-full object-cover"
             loading="lazy"
           />
@@ -597,10 +574,17 @@ function VenueCard({
           )}
         </button>
 
-        {/* Type badge */}
-        {place.primaryType && (
+        {/* Category badge */}
+        {primaryCategory && (
           <Badge className="absolute bottom-2 left-2 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300 text-xs border-0">
-            {formatType(place.primaryType)}
+            {primaryCategory}
+          </Badge>
+        )}
+
+        {/* Price level */}
+        {business.price && (
+          <Badge className="absolute top-2 left-2 bg-white/90 dark:bg-gray-800/90 text-green-700 dark:text-green-400 text-xs border-0">
+            {business.price}
           </Badge>
         )}
       </div>
@@ -608,84 +592,78 @@ function VenueCard({
       {/* Content */}
       <div className="p-4 space-y-2">
         <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">
-          {place.displayName.text}
+          {business.name}
         </h3>
 
         <div className="flex items-start gap-1.5 text-sm text-gray-500">
           <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          <span className="line-clamp-2">{place.formattedAddress}</span>
+          <span className="line-clamp-2">{address}</span>
         </div>
 
-        {/* Rating */}
-        {place.rating && (
-          <div className="flex items-center gap-1 text-sm">
-            <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-            <span className="font-medium text-gray-700 dark:text-gray-300">
-              {place.rating}
-            </span>
-            {place.userRatingCount && (
-              <span className="text-gray-400">
-                ({place.userRatingCount.toLocaleString()} reviews)
+        {/* Rating + reviews */}
+        <div className="flex items-center gap-2 text-sm">
+          {business.rating > 0 && (
+            <div className="flex items-center gap-1">
+              <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                {business.rating}
               </span>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+          {business.review_count > 0 && (
+            <span className="text-gray-400">
+              ({business.review_count.toLocaleString()} reviews)
+            </span>
+          )}
+          {distanceMiles && (
+            <span className="text-gray-400 ml-auto text-xs">
+              {distanceMiles} mi
+            </span>
+          )}
+        </div>
 
-        {/* Editorial summary */}
-        {place.editorialSummary?.text && (
-          <p className="text-xs text-gray-500 line-clamp-2">
-            {place.editorialSummary.text}
-          </p>
+        {/* Categories */}
+        {business.categories && business.categories.length > 1 && (
+          <div className="flex flex-wrap gap-1">
+            {business.categories.slice(0, 3).map((cat) => (
+              <Badge
+                key={cat.alias}
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0"
+              >
+                {cat.title}
+              </Badge>
+            ))}
+          </div>
         )}
 
         {/* Expanded details */}
         {expanded && (
           <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-            {place.nationalPhoneNumber && (
+            {business.display_phone && (
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Phone className="w-3.5 h-3.5" />
-                <a href={`tel:${place.nationalPhoneNumber}`} className="hover:text-purple-600">
-                  {place.nationalPhoneNumber}
+                <a href={`tel:${business.phone}`} className="hover:text-purple-600">
+                  {business.display_phone}
                 </a>
               </div>
             )}
-            {place.websiteUri && (
-              <div className="flex items-center gap-2 text-sm">
-                <Globe className="w-3.5 h-3.5 text-gray-400" />
-                <a
-                  href={place.websiteUri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-purple-600 hover:text-purple-700 truncate"
-                >
-                  {place.websiteUri.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
-                </a>
-              </div>
-            )}
-            {place.googleMapsUri && (
+            {business.url && (
               <a
-                href={place.googleMapsUri}
+                href={business.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700"
               >
-                <Navigation className="w-3.5 h-3.5" />
-                View on Google Maps
+                <Globe className="w-3.5 h-3.5" />
+                View on Yelp
                 <ExternalLink className="w-3 h-3" />
               </a>
             )}
-            {place.types && place.types.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {place.types.slice(0, 5).map((t) => (
-                  <Badge
-                    key={t}
-                    variant="secondary"
-                    className="text-[10px] px-1.5 py-0"
-                  >
-                    {formatType(t)}
-                  </Badge>
-                ))}
-              </div>
+            {business.is_closed && (
+              <Badge variant="destructive" className="text-xs">
+                Permanently Closed
+              </Badge>
             )}
           </div>
         )}
@@ -744,7 +722,7 @@ function SavedVenueCard({
         </button>
         {venue.venue_type && (
           <Badge className="absolute bottom-2 left-2 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300 text-xs border-0">
-            {venue.venue_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+            {venue.venue_type}
           </Badge>
         )}
       </div>
@@ -783,7 +761,7 @@ function SavedVenueCard({
               className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1"
             >
               <Globe className="w-3 h-3" />
-              Website
+              Yelp Page
             </a>
           )}
         </div>

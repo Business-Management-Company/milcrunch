@@ -1,86 +1,40 @@
 export default async function handler(req, res) {
-  const key = process.env.GOOGLE_PLACES_API_KEY || process.env.VITE_GOOGLE_PLACES_API_KEY;
+  const key = process.env.YELP_API_KEY || process.env.VITE_YELP_API_KEY;
   if (!key) {
-    return res.status(500).json({ error: "GOOGLE_PLACES_API_KEY not configured" });
+    return res.status(500).json({ error: "YELP_API_KEY not configured" });
   }
 
-  if (req.method === "POST") {
-    // Text Search (New) — POST to Google Places API v1
-    const { query, type, maxResultCount, locationBias } = req.body || {};
-    if (!query) {
-      return res.status(400).json({ error: "Missing 'query' in request body" });
-    }
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-    const body = {
-      textQuery: query,
-      maxResultCount: maxResultCount || 20,
-      languageCode: "en",
-    };
+  const { term, location, categories, limit, offset, sort_by } = req.body || {};
+  if (!location) {
+    return res.status(400).json({ error: "Missing 'location' in request body" });
+  }
 
-    // Add venue type filter
-    if (type) {
-      body.includedType = type;
-    }
+  const params = new URLSearchParams();
+  params.set("location", location);
+  params.set("limit", String(limit || 20));
+  if (term) params.set("term", term);
+  if (categories) params.set("categories", categories);
+  if (offset) params.set("offset", String(offset));
+  if (sort_by) params.set("sort_by", sort_by);
 
-    // Add location bias if provided
-    if (locationBias) {
-      body.locationBias = locationBias;
-    }
-
-    try {
-      const resp = await fetch(
-        "https://places.googleapis.com/v1/places:searchText",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": key,
-            "X-Goog-FieldMask": [
-              "places.id",
-              "places.displayName",
-              "places.formattedAddress",
-              "places.websiteUri",
-              "places.nationalPhoneNumber",
-              "places.googleMapsUri",
-              "places.rating",
-              "places.userRatingCount",
-              "places.photos",
-              "places.types",
-              "places.primaryType",
-              "places.editorialSummary",
-              "places.currentOpeningHours",
-              "places.priceLevel",
-              "places.accessibilityOptions",
-              "places.location",
-            ].join(","),
-          },
-          body: JSON.stringify(body),
-        }
-      );
-      const data = await resp.text();
-      res.status(resp.status).setHeader("Content-Type", "application/json").send(data);
-    } catch (e) {
-      res.status(502).json({ error: "Google Places proxy error", message: e.message });
-    }
-  } else if (req.method === "GET") {
-    // Photo fetch — proxy a photo reference
-    const { photoName, maxWidth } = req.query || {};
-    if (!photoName) {
-      return res.status(400).json({ error: "Missing 'photoName' query param" });
-    }
-
-    try {
-      const photoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=${maxWidth || 400}&key=${key}`;
-      const resp = await fetch(photoUrl);
-      if (!resp.ok) {
-        return res.status(resp.status).json({ error: "Photo fetch failed" });
+  try {
+    const resp = await fetch(
+      `https://api.yelp.com/v3/businesses/search?${params.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          Accept: "application/json",
+        },
       }
-      // Return the final redirected URL
-      return res.status(200).json({ url: resp.url });
-    } catch (e) {
-      res.status(502).json({ error: "Photo proxy error", message: e.message });
-    }
-  } else {
-    res.status(405).json({ error: "Method not allowed" });
+    );
+    const data = await resp.text();
+    res.status(resp.status).setHeader("Content-Type", "application/json").send(data);
+  } catch (e) {
+    res.status(502).json({ error: "Yelp API proxy error", message: e.message });
   }
 }
