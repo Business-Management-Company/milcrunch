@@ -56,7 +56,7 @@ function BrandEventCover({ event }: { event: EventWithCounts }) {
         <img
           src={event.cover_image_url!}
           alt={event.title}
-          className="w-full h-[200px] object-cover block"
+          className="w-full h-full object-cover block"
           referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
         />
