@@ -798,6 +798,18 @@ const BrandDiscover = () => {
         const match = ENGAGEMENT_OPTIONS.find((o) => o.min === engVal);
         if (match) setEngagementMin(match.value);
       }
+      const urlBranch = urlSearchParams.get("branch");
+      if (urlBranch) {
+        const branches = urlBranch.split(",").filter((b) =>
+          (BRANCHES as readonly string[]).includes(b)
+        ) as Branch[];
+        if (branches.length > 0) setSelectedBranches(new Set(branches));
+      }
+      const urlCategory = urlSearchParams.get("category");
+      if (urlCategory) {
+        const match = CREATOR_TYPES.find((ct) => ct.value === urlCategory);
+        if (match) setCreatorType(match.value);
+      }
       pendingAutoSearch.current = true;
       return;
     }

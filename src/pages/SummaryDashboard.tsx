@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -17,9 +17,12 @@ import {
   Mail,
   Presentation,
   FolderOpen,
+  Loader2,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchDirectoriesWithCounts, type Directory } from "@/lib/directories";
+import { classifyIntent, type ClassificationResult } from "@/lib/intent-classifier";
 
 /* ------------------------------------------------------------------ */
 /* Quick-action card definitions                                       */
@@ -58,6 +61,9 @@ export default function SummaryDashboard() {
   const { user, effectiveUserId, creatorProfile } = useAuth();
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState("");
+  const [routing, setRouting] = useState(false);
+  const [followUp, setFollowUp] = useState<{ question: string; originalQuery: string } | null>(null);
+  const [followUpAnswer, setFollowUpAnswer] = useState("");
 
   const fullName =
     creatorProfile?.display_name ||
@@ -131,36 +137,91 @@ export default function SummaryDashboard() {
     ]);
   }, []);
 
-  // Smart command router — clear intents navigate, unclear ones open AI chat panel
-  const handleSubmit = () => {
-    const q = prompt.trim();
-    if (!q) return;
-    const lc = q.toLowerCase();
-    setPrompt("");
-
-    if (lc.includes("creator") || lc.includes("influencer") || lc.includes("discover")) {
-      navigate("/brand/discover");
-    } else if (lc.includes("speaker") || lc.includes("keynote")) {
-      navigate("/brand/discover", { state: { speakerFilter: true } });
-    } else if (lc.includes("list") || lc.includes("directory")) {
-      navigate("/brand/lists");
-    } else if (lc.includes("podcast") || lc.includes("audio")) {
-      navigate("/brand/podcasts");
-    } else if (lc.includes("verif")) {
-      navigate("/brand/verification");
-    } else if (lc.includes("campaign") || lc.includes("email")) {
-      navigate("/brand/campaigns");
-    } else if (lc.includes("event") || lc.includes("conference")) {
-      navigate("/brand/events");
-    } else if (lc.includes("analytics") || lc.includes("report") || lc.includes("insight")) {
-      navigate("/brand/attribution");
-    } else if (lc.includes("sponsor")) {
-      navigate("/brand/events");
-    } else {
-      // Unclear intent — open the AI chat panel with the query pre-loaded
-      window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: q } }));
+  // Route based on classification result
+  const executeIntent = useCallback((result: ClassificationResult, query: string) => {
+    switch (result.intent) {
+      case "FIND_CREATORS": {
+        const params = new URLSearchParams();
+        const f = result.filters;
+        if (f?.keyword) params.set("q", f.keyword);
+        if (f?.platform) params.set("platform", f.platform);
+        if (f?.min_followers) params.set("min_followers", String(f.min_followers));
+        if (f?.max_followers) params.set("max_followers", String(f.max_followers));
+        if (f?.min_engagement) params.set("min_engagement", String(f.min_engagement));
+        if (f?.branch) params.set("branch", f.branch);
+        if (f?.category) params.set("category", f.category);
+        // If no keyword was extracted, use the raw query
+        if (!f?.keyword) params.set("q", query);
+        navigate(`/brand/discover?${params.toString()}`);
+        break;
+      }
+      case "BUILD_LIST":
+        navigate("/brand/lists/new");
+        break;
+      case "MANAGE_EVENT":
+        navigate("/brand/events");
+        break;
+      case "RUN_CAMPAIGN":
+        navigate("/brand/campaigns");
+        break;
+      case "VERIFY_CREATOR":
+        navigate("/brand/verification");
+        break;
+      case "UNCLEAR":
+      default:
+        window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: query } }));
+        break;
     }
-  };
+  }, [navigate]);
+
+  // AI-powered command router
+  const handleSubmit = useCallback(async () => {
+    const q = prompt.trim();
+    if (!q || routing) return;
+    setRouting(true);
+    setFollowUp(null);
+
+    try {
+      const result = await classifyIntent(q);
+
+      // If the AI wants a follow-up question, show it inline
+      if (result.followUp) {
+        setFollowUp({ question: result.followUp, originalQuery: q });
+        setPrompt("");
+        return;
+      }
+
+      setPrompt("");
+      executeIntent(result, q);
+    } catch {
+      // Fallback: open chat on error
+      setPrompt("");
+      window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: q } }));
+    } finally {
+      setRouting(false);
+    }
+  }, [prompt, routing, executeIntent]);
+
+  // Handle follow-up answer submission
+  const handleFollowUpSubmit = useCallback(async () => {
+    if (!followUp || !followUpAnswer.trim() || routing) return;
+    setRouting(true);
+
+    try {
+      const combined = `${followUp.originalQuery} — ${followUpAnswer.trim()}`;
+      const result = await classifyIntent(combined);
+      setFollowUp(null);
+      setFollowUpAnswer("");
+      setPrompt("");
+      executeIntent(result, combined);
+    } catch {
+      setFollowUp(null);
+      setFollowUpAnswer("");
+      window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: followUp.originalQuery } }));
+    } finally {
+      setRouting(false);
+    }
+  }, [followUp, followUpAnswer, routing, executeIntent]);
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto -m-6 p-6 min-h-full bg-[#F8F9FA] dark:bg-transparent rounded-xl">
@@ -179,7 +240,7 @@ export default function SummaryDashboard() {
       <div className="max-w-3xl mx-auto">
         <div className={cn(
           "rounded-2xl border-2 bg-white dark:bg-[#1A1D27] transition-all",
-          prompt.trim()
+          prompt.trim() || followUp
             ? "border-[#6C5CE7] shadow-[0_0_20px_rgba(108,92,231,0.15)]"
             : "border-[#6C5CE7]/25 hover:border-[#6C5CE7]/40 shadow-sm hover:shadow-md",
         )}>
@@ -188,32 +249,88 @@ export default function SummaryDashboard() {
             className="w-full min-h-[80px] px-6 pt-5 pb-2 text-base bg-transparent outline-none resize-none placeholder:text-gray-400 dark:text-white"
             rows={2}
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => { setPrompt(e.target.value); if (followUp) setFollowUp(null); }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSubmit();
               }
             }}
+            disabled={routing}
           />
           <div className="flex items-center justify-between px-6 pb-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-[#6C5CE7]/40" />
+              {routing ? (
+                <span className="flex items-center gap-1.5 text-xs text-[#6C5CE7] font-medium">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Understanding your request...
+                </span>
+              ) : (
+                <Sparkles className="h-5 w-5 text-[#6C5CE7]/40" />
+              )}
             </div>
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={!prompt.trim()}
+              disabled={!prompt.trim() || routing}
               className={cn(
-                "px-5 py-2 rounded-xl text-sm font-semibold transition-all",
-                prompt.trim()
+                "px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2",
+                prompt.trim() && !routing
                   ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1] shadow-md"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed",
               )}
             >
+              {routing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Get started
             </button>
           </div>
+
+          {/* Inline follow-up question */}
+          {followUp && (
+            <div className="px-6 pb-4 border-t border-[#6C5CE7]/10">
+              <div className="flex items-center gap-2 pt-3 pb-2">
+                <MessageCircle className="h-4 w-4 text-[#6C5CE7] shrink-0" />
+                <p className="text-sm font-medium text-[#6C5CE7]">{followUp.question}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={followUpAnswer}
+                  onChange={(e) => setFollowUpAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleFollowUpSubmit();
+                    }
+                  }}
+                  placeholder="Type your answer..."
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                  autoFocus
+                  disabled={routing}
+                />
+                <button
+                  type="button"
+                  onClick={handleFollowUpSubmit}
+                  disabled={!followUpAnswer.trim() || routing}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
+                    followUpAnswer.trim() && !routing
+                      ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed",
+                  )}
+                >
+                  {routing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Go"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFollowUp(null); setFollowUpAnswer(""); }}
+                  className="text-xs text-gray-400 hover:text-gray-600 px-2"
+                >
+                  Skip
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
