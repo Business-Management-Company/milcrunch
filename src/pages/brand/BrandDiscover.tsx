@@ -27,7 +27,7 @@ import CreateListModal from "@/components/CreateListModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { approveForDirectory, detectBranch, extractAvatarFromEnrichment } from "@/lib/featured-creators";
+import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import { saveCreatorAvatar } from "@/lib/directories";
 import { parseSmartQuery } from "@/lib/smart-search-parser";
 import { toast } from "sonner";
@@ -1329,7 +1329,24 @@ const BrandDiscover = () => {
   };
 
   const doApproveForDirectory = async (creator: CreatorCard, directoryId?: string) => {
-    const raw = enrichRawCache[creator.id];
+    let raw = enrichRawCache[creator.id];
+    const handle = creator.username ?? creator.id;
+
+    // If creator hasn't been enriched yet, call enrichment API to get real avatar
+    if (!raw) {
+      console.log("[doApproveForDirectory] No enrichment cache for", handle, "— calling enrich API");
+      try {
+        const enrichResult = await enrichCreatorProfile(handle, undefined, creator.platforms?.[0] ?? "instagram");
+        if (enrichResult) {
+          raw = enrichResult as unknown as EnrichedProfileResponse;
+          // Cache it for future use
+          setEnrichRawCache((prev) => ({ ...prev, [creator.id]: raw! }));
+        }
+      } catch (err) {
+        console.warn("[doApproveForDirectory] Enrichment failed for", handle, ":", err);
+      }
+    }
+
     const igData = raw?.instagram as Record<string, unknown> | undefined;
     // Resolve the best avatar URL: enrichment first, then search-API avatar
     let enrichedAvatar = extractAvatarFromEnrichment(raw) ?? creator.avatar ?? null;
@@ -1340,12 +1357,15 @@ const BrandDiscover = () => {
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];
-    const handle = creator.username ?? creator.id;
+
+    // Extract banner image from enrichment data
+    const bannerUrl = extractBannerImage(raw) ?? null;
 
     console.log("[doApproveForDirectory] Avatar debug:", {
       handle,
       creatorAvatar: creator.avatar,
       enrichedAvatar,
+      bannerUrl,
       hasEnrichRaw: !!raw,
       igPicture: igData?.picture,
       igProfilePic: igData?.profile_picture,
@@ -1384,6 +1404,7 @@ const BrandDiscover = () => {
       platform: creator.platforms?.[0] ?? "instagram",
       avatar_url: persistedAvatarUrl,
       ic_avatar_url: enrichedAvatar,
+      banner_image_url: bannerUrl,
     });
 
     const { error } = await approveForDirectory({
@@ -1402,6 +1423,7 @@ const BrandDiscover = () => {
       enrichment_data: raw || null,
       added_by: effectiveUserId ?? null,
       directory_id: directoryId || null,
+      banner_image_url: bannerUrl,
     });
 
     if (error) {

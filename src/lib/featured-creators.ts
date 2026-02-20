@@ -652,6 +652,7 @@ export async function approveForDirectory(data: {
   source_list_id?: string | null;
   added_by?: string | null;
   directory_id?: string | null;
+  banner_image_url?: string | null;
 }): Promise<{ error: string | null }> {
   const handle = data.handle.replace(/^@/, "").trim();
 
@@ -704,6 +705,7 @@ export async function approveForDirectory(data: {
 
   if (data.enrichment_data) payload.enrichment_data = data.enrichment_data;
   if (data.source_list_id) payload.source_list_id = data.source_list_id;
+  if (data.banner_image_url) payload.banner_image_url = data.banner_image_url;
 
   console.log("[approveForDirectory] Upserting to directory_members:", {
     creator_handle: handle,

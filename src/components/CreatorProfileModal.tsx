@@ -44,7 +44,7 @@ import { cn, safeImageUrl, creatorAvatarUrl, goodAvatarCache } from "@/lib/utils
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { approveForDirectory, detectBranch, extractAvatarFromEnrichment } from "@/lib/featured-creators";
+import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import CreateListModal from "@/components/CreateListModal";
 
 const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "twitter", "linkedin"];
@@ -326,6 +326,8 @@ export default function CreatorProfileModal({
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];
+    // Extract banner image from enrichment data
+    const bannerUrl = extractBannerImage(enriched) ?? null;
 
     const { error: err } = await approveForDirectory({
       handle: creator.username ?? creator.id,
@@ -343,6 +345,7 @@ export default function CreatorProfileModal({
       enrichment_data: enriched || null,
       added_by: user?.id ?? null,
       directory_id: directoryId || null,
+      banner_image_url: bannerUrl,
     });
     return err;
   };
