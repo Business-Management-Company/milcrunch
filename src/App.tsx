@@ -85,6 +85,7 @@ import BrandAttribution from "./pages/brand/BrandAttribution";
 import BrandSettings from "./pages/brand/BrandSettings";
 import BrandPosting from "./pages/brand/BrandPosting";
 import BrandTags from "./pages/brand/BrandTags";
+import BrandVenueFinder from "./pages/brand/BrandVenueFinder";
 import PdxWizard from "./pages/brand/PdxWizard";
 import AdminPodcasts from "./pages/admin/media/Podcasts";
 import PDTV from "./pages/admin/media/PDTV";
@@ -217,6 +218,7 @@ const App = () => (
                 <Route path="/brand/events" element={<BrandEvents />} />
                 <Route path="/brand/events/create" element={<BrandEventCreate />} />
                 <Route path="/brand/events/:eventId" element={<BrandEventDetail />} />
+                <Route path="/brand/venues" element={<BrandVenueFinder />} />
                 <Route path="/brand/pdx/new" element={<PdxWizard />} />
                 <Route path="/brand/calculators" element={<Calculators />} />
                 <Route path="/brand/attribution" element={<BrandAttribution />} />

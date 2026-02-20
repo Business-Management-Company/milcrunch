@@ -18,6 +18,7 @@
     {"source": "/api/serp/:path(.*)", "destination": "/api/serp"},
     {"source": "/api/firecrawl/:path(.*)", "destination": "/api/firecrawl"},
     {"source": "/api/pdl/:path(.*)", "destination": "/api/pdl"},
+    {"source": "/api/places", "destination": "/api/places"},
     {"source": "/api/anthropic", "destination": "/api/anthropic"},
     {"source": "/api/upload-creator-image", "destination": "/api/upload-creator-image"},
     {"source": "/api/upload-image", "destination": "/api/upload-image"},

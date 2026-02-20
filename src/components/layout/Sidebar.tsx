@@ -41,6 +41,7 @@ import {
   TrendingUp,
   Target,
   UserPlus,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,6 +74,7 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     label: "EVENTS",
     items: [
       { href: "/brand/events", label: "Events", icon: Calendar },
+      { href: "/brand/venues", label: "Venues", icon: MapPin },
       { href: "/brand/pdx/new", label: "Experiences", icon: Radio },
       { href: "/brand/calculators", label: "Calculators", icon: Calculator },
       { href: "/speakers", label: "Speakers", icon: Mic },
