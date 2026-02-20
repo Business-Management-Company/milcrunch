@@ -57,12 +57,8 @@ export default async function handler(req, res) {
       hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       rows: (all || []).map((r) => ({
         handle: r.creator_handle,
-        ic_avatar_url: r.ic_avatar_url
-          ? r.ic_avatar_url.substring(0, 80)
-          : r.ic_avatar_url,
-        avatar_url: r.avatar_url
-          ? r.avatar_url.substring(0, 80)
-          : r.avatar_url,
+        ic_avatar_url: r.ic_avatar_url || null,
+        avatar_url: r.avatar_url || null,
       })),
       error: allErr?.message,
     });
