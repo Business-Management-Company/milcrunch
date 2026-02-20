@@ -22,6 +22,7 @@ import PublicFooter from "@/components/layout/PublicFooter";
 import {
   fetchShowcaseByDirectoryName,
   fillShowcaseAvatarsFromCache,
+  fillMissingAvatarsFromApi,
   resolveBannerImages,
   formatFollowerCount,
   getInitials,
@@ -391,8 +392,12 @@ export default function Creators() {
           const withAvatars = await fillShowcaseAvatarsFromCache(fresh);
           setAllCreators(withAvatars);
           setCachedCreators(withAvatars);
+          // Fetch missing avatars from IC API (0.03 credits each, capped)
+          const withApiAvatars = await fillMissingAvatarsFromApi(withAvatars);
+          setAllCreators(withApiAvatars);
+          setCachedCreators(withApiAvatars);
           // Resolve banner images (from enrichment_data + IC API)
-          const withBanners = await resolveBannerImages(withAvatars);
+          const withBanners = await resolveBannerImages(withApiAvatars);
           setAllCreators(withBanners);
           setCachedCreators(withBanners);
         }
@@ -405,8 +410,12 @@ export default function Creators() {
         const withAvatars = await fillShowcaseAvatarsFromCache(data);
         setAllCreators(withAvatars);
         if (withAvatars.length > 0) setCachedCreators(withAvatars);
+        // Fetch missing avatars from IC API (0.03 credits each, capped)
+        const withApiAvatars = await fillMissingAvatarsFromApi(withAvatars);
+        setAllCreators(withApiAvatars);
+        if (withApiAvatars.length > 0) setCachedCreators(withApiAvatars);
         // Resolve banner images (from enrichment_data + IC API)
-        const withBanners = await resolveBannerImages(withAvatars);
+        const withBanners = await resolveBannerImages(withApiAvatars);
         setAllCreators(withBanners);
         if (withBanners.length > 0) setCachedCreators(withBanners);
       });

@@ -400,6 +400,73 @@ export async function fillShowcaseAvatarsFromCache(
   return result;
 }
 
+/** Fetch avatars from the IC API for creators still missing a profile photo.
+ *  Runs AFTER fillShowcaseAvatarsFromCache (which only checks the local cache).
+ *  Calls enrichCreatorProfile (0.03 credits each), capped at maxApiFetches.
+ *  Persists results to Supabase storage + updates directory_members. */
+export async function fillMissingAvatarsFromApi(
+  creators: ShowcaseCreator[],
+  maxApiFetches = 15,
+): Promise<ShowcaseCreator[]> {
+  const hasAvatar = (c: ShowcaseCreator) =>
+    !!c.ic_avatar_url || !!c.avatar_url || !!extractAvatarFromEnrichment(c.enrichment_data);
+
+  const missing = creators.filter((c) => !hasAvatar(c));
+  if (missing.length === 0) return creators;
+
+  console.log("[FillAvatars] Creators still missing avatars:", missing.length, "— fetching up to", maxApiFetches, "from IC API");
+  const toFetch = missing.slice(0, maxApiFetches);
+
+  const avatarMap = new Map<string, string>();
+
+  await Promise.allSettled(
+    toFetch.map(async (c) => {
+      try {
+        const enrichment = await enrichCreatorProfile(c.handle, undefined, c.platform || "instagram");
+        if (!enrichment) return;
+
+        // Extract avatar from enrichment response
+        const avatar = extractAvatarFromEnrichment(enrichment as unknown as Record<string, unknown>);
+        if (!avatar) {
+          console.log("[FillAvatars] No avatar found in enrichment for", c.handle);
+          return;
+        }
+
+        console.log("[FillAvatars] Found avatar for", c.handle);
+
+        // Persist to Supabase storage (fire-and-forget for permanent URL)
+        const permanentUrl = await saveCreatorAvatar(c.handle, avatar);
+        const finalUrl = permanentUrl || avatar;
+        avatarMap.set(c.handle.toLowerCase(), finalUrl);
+
+        // Also cache the enrichment data on directory_members for future use
+        supabase
+          .from("directory_members")
+          .update({
+            ic_avatar_url: finalUrl,
+            avatar_url: finalUrl,
+            enrichment_data: enrichment,
+          })
+          .eq("creator_handle", c.handle)
+          .then(({ error }) => {
+            if (error) console.warn("[FillAvatars] DB update failed for", c.handle, error.message);
+          });
+      } catch (err) {
+        console.warn("[FillAvatars] API call failed for", c.handle, ":", err);
+      }
+    }),
+  );
+
+  if (avatarMap.size === 0) return creators;
+
+  console.log("[FillAvatars] Resolved avatars for", avatarMap.size, "creators");
+  return creators.map((c) => {
+    const url = avatarMap.get(c.handle.toLowerCase());
+    if (url) return { ...c, ic_avatar_url: url, avatar_url: url };
+    return c;
+  });
+}
+
 /** For hero: top 3 active + approved featured creators by sort_order. */
 export async function fetchFeaturedHero(limit = 3): Promise<FeaturedCreator[]> {
   const { data, error } = await supabase
