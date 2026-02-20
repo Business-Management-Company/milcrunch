@@ -27,34 +27,23 @@ import {
   ChevronDown,
   ChevronUp,
   Navigation,
-  DollarSign,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
 
-interface YelpBusiness {
-  id: string;
+interface Venue {
+  place_id: string;
   name: string;
-  image_url: string;
-  url: string;
-  review_count: number;
-  categories: { alias: string; title: string }[];
+  address: string;
   rating: number;
-  location: {
-    address1: string;
-    address2: string;
-    address3: string;
-    city: string;
-    state: string;
-    zip_code: string;
-    country: string;
-    display_address: string[];
-  };
-  phone: string;
-  display_phone: string;
-  distance?: number;
-  price?: string;
-  is_closed: boolean;
+  user_ratings_total: number;
+  photo_url: string | null;
+  phone: string | null;
+  website: string | null;
+  maps_url: string | null;
+  types: string[];
+  price_level: number | null;
+  business_status: string;
 }
 
 interface SavedVenue {
@@ -75,23 +64,22 @@ interface SavedVenue {
 
 const VENUE_CATEGORIES = [
   { value: "", label: "All Types" },
-  { value: "venues,eventspaces", label: "Event Venues" },
-  { value: "hotelconference", label: "Hotel / Conference" },
-  { value: "conventioncenter", label: "Convention Center" },
-  { value: "restaurants", label: "Restaurant" },
-  { value: "bars,lounges", label: "Bar / Lounge" },
-  { value: "communitycenters", label: "Community Center" },
-  { value: "stadiumsarenas", label: "Stadium / Arena" },
-  { value: "parks", label: "Park / Outdoor" },
-  { value: "museums", label: "Museum" },
-  { value: "churches", label: "Church / Worship" },
+  { value: "Event Venue", label: "Event Venues" },
+  { value: "Hotel Conference Center", label: "Hotel / Conference" },
+  { value: "Convention Center", label: "Convention Center" },
+  { value: "Restaurant", label: "Restaurant" },
+  { value: "Bar Lounge", label: "Bar / Lounge" },
+  { value: "Community Center", label: "Community Center" },
+  { value: "Stadium Arena", label: "Stadium / Arena" },
+  { value: "Park Outdoor", label: "Park / Outdoor" },
+  { value: "Museum", label: "Museum" },
+  { value: "Church", label: "Church / Worship" },
 ];
 
 const SORT_OPTIONS = [
   { value: "best_match", label: "Best Match" },
   { value: "rating", label: "Highest Rated" },
   { value: "review_count", label: "Most Reviewed" },
-  { value: "distance", label: "Distance" },
 ];
 
 const AMENITIES = [
@@ -104,6 +92,8 @@ const AMENITIES = [
   "Stage",
   "Breakout Rooms",
 ];
+
+const PRICE_LABELS: Record<number, string> = { 0: "Free", 1: "$", 2: "$$", 3: "$$$", 4: "$$$$" };
 
 // ─── Component ──────────────────────────────────────────────
 
@@ -120,7 +110,7 @@ export default function BrandVenueFinder() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Results
-  const [results, setResults] = useState<YelpBusiness[]>([]);
+  const [results, setResults] = useState<Venue[]>([]);
   const [totalResults, setTotalResults] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -163,10 +153,15 @@ export default function BrandVenueFinder() {
     setSearched(true);
     setShowSaved(false);
 
-    // Build search term with amenity keywords
-    let term = searchTerm.trim() || "event venue";
+    // Build query: search term + category + amenity keywords
+    const parts: string[] = [];
+    const term = searchTerm.trim();
+    if (term) parts.push(term);
+    const catValue = VENUE_CATEGORIES.find((c) => c.value === category)?.value;
+    if (catValue) parts.push(catValue);
+    if (parts.length === 0) parts.push("event venue");
     if (selectedAmenities.length > 0) {
-      term += ` ${selectedAmenities.join(" ")}`;
+      parts.push(selectedAmenities.join(" "));
     }
 
     try {
@@ -174,23 +169,29 @@ export default function BrandVenueFinder() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          term,
+          query: parts.join(" "),
           location: location.trim(),
-          categories: category || "venues,eventspaces,hotelconference",
-          limit: 20,
-          sort_by: sortBy,
         }),
       });
 
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error?.description || err.error || `API returned ${resp.status}`);
+        throw new Error(err.error || `API returned ${resp.status}`);
       }
 
       const data = await resp.json();
-      const businesses: YelpBusiness[] = data.businesses || [];
-      setResults(businesses);
-      setTotalResults(data.total || businesses.length);
+      let venues: Venue[] = data.results || [];
+
+      // Client-side sort
+      if (sortBy === "rating") {
+        venues = [...venues].sort((a, b) => b.rating - a.rating);
+      } else if (sortBy === "review_count") {
+        venues = [...venues].sort((a, b) => b.user_ratings_total - a.user_ratings_total);
+      }
+      // "best_match" keeps Google's default relevance order
+
+      setResults(venues);
+      setTotalResults(data.total || venues.length);
     } catch (err) {
       console.error("[VenueFinder] Search error:", err);
       toast({
@@ -206,23 +207,22 @@ export default function BrandVenueFinder() {
   };
 
   // ─── Save venue ─────────────────────────────────────────
-  const saveVenue = async (biz: YelpBusiness) => {
+  const saveVenue = async (venue: Venue) => {
     if (!user) return;
-    setSavingIds((prev) => new Set(prev).add(biz.id));
+    setSavingIds((prev) => new Set(prev).add(venue.place_id));
 
-    const address = biz.location.display_address?.join(", ") || "";
-    const primaryCategory = biz.categories?.[0]?.title || null;
+    const primaryType = venue.types?.[0]?.replace(/_/g, " ") || null;
 
     const payload = {
       user_id: user.id,
-      place_id: biz.id,
-      venue_name: biz.name,
-      address,
-      website: biz.url || null,
-      phone: biz.display_phone || null,
-      rating: biz.rating || null,
-      photo_url: biz.image_url || null,
-      venue_type: primaryCategory,
+      place_id: venue.place_id,
+      venue_name: venue.name,
+      address: venue.address,
+      website: venue.website || venue.maps_url || null,
+      phone: venue.phone || null,
+      rating: venue.rating || null,
+      photo_url: venue.photo_url || null,
+      venue_type: primaryType,
     };
 
     const { error } = await supabase.from("saved_venues").upsert(payload, {
@@ -244,7 +244,7 @@ export default function BrandVenueFinder() {
 
     setSavingIds((prev) => {
       const next = new Set(prev);
-      next.delete(biz.id);
+      next.delete(venue.place_id);
       return next;
     });
   };
@@ -296,7 +296,7 @@ export default function BrandVenueFinder() {
             Venue Finder
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Search for event venues powered by Yelp
+            Search for event venues powered by Google Places
           </p>
         </div>
         <Button
@@ -483,17 +483,17 @@ export default function BrandVenueFinder() {
           {!loading && results.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-gray-500">
-                Showing {results.length} of {totalResults.toLocaleString()} venue{totalResults !== 1 ? "s" : ""}
+                Showing {results.length} venue{results.length !== 1 ? "s" : ""}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {results.map((biz) => (
+                {results.map((venue) => (
                   <VenueCard
-                    key={biz.id}
-                    business={biz}
-                    isSaved={savedPlaceIds.has(biz.id)}
-                    saving={savingIds.has(biz.id)}
-                    onSave={() => saveVenue(biz)}
-                    onUnsave={() => unsaveVenue(biz.id)}
+                    key={venue.place_id}
+                    venue={venue}
+                    isSaved={savedPlaceIds.has(venue.place_id)}
+                    saving={savingIds.has(venue.place_id)}
+                    onSave={() => saveVenue(venue)}
+                    onUnsave={() => unsaveVenue(venue.place_id)}
                   />
                 ))}
               </div>
@@ -522,33 +522,31 @@ export default function BrandVenueFinder() {
 // ─── Venue Card ─────────────────────────────────────────────
 
 function VenueCard({
-  business,
+  venue,
   isSaved,
   saving,
   onSave,
   onUnsave,
 }: {
-  business: YelpBusiness;
+  venue: Venue;
   isSaved: boolean;
   saving: boolean;
   onSave: () => void;
   onUnsave: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const address = business.location.display_address?.join(", ") || "";
-  const primaryCategory = business.categories?.[0]?.title;
-  const distanceMiles = business.distance
-    ? (business.distance / 1609.34).toFixed(1)
-    : null;
+  const priceLabel =
+    venue.price_level != null ? PRICE_LABELS[venue.price_level] ?? null : null;
+  const isClosed = venue.business_status === "CLOSED_PERMANENTLY";
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow group">
       {/* Photo */}
       <div className="h-40 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
-        {business.image_url ? (
+        {venue.photo_url ? (
           <img
-            src={business.image_url}
-            alt={business.name}
+            src={venue.photo_url}
+            alt={venue.name}
             className="w-full h-full object-cover"
             loading="lazy"
           />
@@ -574,17 +572,10 @@ function VenueCard({
           )}
         </button>
 
-        {/* Category badge */}
-        {primaryCategory && (
-          <Badge className="absolute bottom-2 left-2 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300 text-xs border-0">
-            {primaryCategory}
-          </Badge>
-        )}
-
         {/* Price level */}
-        {business.price && (
+        {priceLabel && (
           <Badge className="absolute top-2 left-2 bg-white/90 dark:bg-gray-800/90 text-green-700 dark:text-green-400 text-xs border-0">
-            {business.price}
+            {priceLabel}
           </Badge>
         )}
       </div>
@@ -592,75 +583,67 @@ function VenueCard({
       {/* Content */}
       <div className="p-4 space-y-2">
         <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">
-          {business.name}
+          {venue.name}
         </h3>
 
         <div className="flex items-start gap-1.5 text-sm text-gray-500">
           <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          <span className="line-clamp-2">{address}</span>
+          <span className="line-clamp-2">{venue.address}</span>
         </div>
 
         {/* Rating + reviews */}
         <div className="flex items-center gap-2 text-sm">
-          {business.rating > 0 && (
+          {venue.rating > 0 && (
             <div className="flex items-center gap-1">
               <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
               <span className="font-medium text-gray-700 dark:text-gray-300">
-                {business.rating}
+                {venue.rating}
               </span>
             </div>
           )}
-          {business.review_count > 0 && (
+          {venue.user_ratings_total > 0 && (
             <span className="text-gray-400">
-              ({business.review_count.toLocaleString()} reviews)
-            </span>
-          )}
-          {distanceMiles && (
-            <span className="text-gray-400 ml-auto text-xs">
-              {distanceMiles} mi
+              ({venue.user_ratings_total.toLocaleString()} reviews)
             </span>
           )}
         </div>
 
-        {/* Categories */}
-        {business.categories && business.categories.length > 1 && (
-          <div className="flex flex-wrap gap-1">
-            {business.categories.slice(0, 3).map((cat) => (
-              <Badge
-                key={cat.alias}
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0"
-              >
-                {cat.title}
-              </Badge>
-            ))}
-          </div>
-        )}
-
         {/* Expanded details */}
         {expanded && (
           <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-            {business.display_phone && (
+            {venue.phone && (
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Phone className="w-3.5 h-3.5" />
-                <a href={`tel:${business.phone}`} className="hover:text-purple-600">
-                  {business.display_phone}
+                <a href={`tel:${venue.phone}`} className="hover:text-purple-600">
+                  {venue.phone}
                 </a>
               </div>
             )}
-            {business.url && (
+            {venue.website && (
               <a
-                href={business.url}
+                href={venue.website}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700"
               >
                 <Globe className="w-3.5 h-3.5" />
-                View on Yelp
+                Website
                 <ExternalLink className="w-3 h-3" />
               </a>
             )}
-            {business.is_closed && (
+            {venue.maps_url && (
+              <a
+                href={venue.maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-700"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                View on Google Maps
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            {isClosed && (
               <Badge variant="destructive" className="text-xs">
                 Permanently Closed
               </Badge>
@@ -761,7 +744,7 @@ function SavedVenueCard({
               className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1"
             >
               <Globe className="w-3 h-3" />
-              Yelp Page
+              Website
             </a>
           )}
         </div>
