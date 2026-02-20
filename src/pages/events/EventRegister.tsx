@@ -103,7 +103,7 @@ const EventRegister = () => {
       const [evRes, tkRes] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, start_date, end_date, venue, city, state, timezone, cover_image_url")
+          .select("id, title, start_date, end_date, venue, city, state, timezone, cover_image_url, rideshare_enabled")
           .eq("id", eventId!)
           .single(),
         supabase
@@ -586,6 +586,8 @@ const EventRegister = () => {
             </Card>
 
             {/* Ride Share CTA */}
+            {(event as Record<string, unknown>).rideshare_enabled && (
+            <>
             <Card className="p-5 border-purple-200 bg-purple-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
@@ -613,6 +615,8 @@ const EventRegister = () => {
                 <RidesharePanel eventId={eventId!} />
               </DialogContent>
             </Dialog>
+            </>
+            )}
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3">

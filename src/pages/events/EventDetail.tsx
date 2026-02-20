@@ -110,7 +110,7 @@ const EventDetail = () => {
       const [evRes, agRes, spkRes, spsRes] = await Promise.all([
         supabase
           .from("events")
-          .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published, slug")
+          .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published, slug, rideshare_enabled")
           .eq("id", eventId!)
           .single(),
         supabase
@@ -485,6 +485,7 @@ const EventDetail = () => {
       )}
 
       {/* ===== RIDE SHARE ===== */}
+      {(event as Record<string, unknown>).rideshare_enabled && (
       <section className="py-14 md:py-16 border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-6">
           <div className="flex items-center gap-3 mb-2">
@@ -497,6 +498,7 @@ const EventDetail = () => {
           <RidesharePanel eventId={event.id} />
         </div>
       </section>
+      )}
 
       {/* ===== REGISTER CTA ===== */}
       <section className="py-16 md:py-20">
