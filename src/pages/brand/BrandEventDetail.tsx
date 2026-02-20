@@ -56,6 +56,7 @@ import EditSpeakerModal from "@/components/brand/EditSpeakerModal";
 import AttendeeAppTab from "@/components/brand/AttendeeAppTab";
 import AIBannerModal from "@/components/brand/AIBannerModal";
 import EventGTMPlannerTab from "@/components/brand/EventGTMPlannerTab";
+import AgendaBuilder from "@/components/brand/AgendaBuilder";
 import EventAIAssistant from "@/components/brand/EventAIAssistant";
 import { useDemoMode } from "@/hooks/useDemoMode";
 
@@ -937,47 +938,15 @@ const BrandEventDetail = () => {
 
           {/* ===== AGENDA ===== */}
           <TabsContent value="agenda">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-muted-foreground">{agenda.length} session{agenda.length !== 1 ? "s" : ""}</p>
-              <Button size="sm" variant="outline" onClick={addAgendaItem}>
-                <Plus className="h-4 w-4 mr-1" /> Add Session
-              </Button>
-            </div>
-            <div className="space-y-3">
-              {agenda.map((a) => (
-                <Card key={a.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs capitalize">{a.session_type}</Badge>
-                        <span className="text-xs text-muted-foreground">Day {a.day_number}</span>
-                        {a.start_time && <span className="text-xs text-muted-foreground">{a.start_time}\u2013{a.end_time}</span>}
-                        {a.location_room && <span className="text-xs text-muted-foreground">| {a.location_room}</span>}
-                      </div>
-                      <Input
-                        defaultValue={a.title}
-                        className="font-medium mb-1"
-                        onBlur={(e) => updateAgendaField(a.id, "title", e.target.value)}
-                      />
-                      <Input
-                        defaultValue={a.description || ""}
-                        placeholder="Description..."
-                        className="text-sm text-muted-foreground"
-                        onBlur={(e) => updateAgendaField(a.id, "description", e.target.value || null)}
-                      />
-                    </div>
-                    <Button variant="ghost" size="icon" className="shrink-0 text-red-500 hover:text-red-700" onClick={() => deleteAgenda(a.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-              {agenda.length === 0 && (
-                <Card className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] p-8 text-center text-muted-foreground">
-                  No agenda sessions yet.
-                </Card>
-              )}
-            </div>
+            {eventId && event && (
+              <AgendaBuilder
+                eventId={eventId}
+                startDate={event.start_date}
+                endDate={event.end_date}
+                speakers={speakers}
+                onRefresh={fetchAll}
+              />
+            )}
           </TabsContent>
 
           {/* ===== SPEAKERS ===== */}
