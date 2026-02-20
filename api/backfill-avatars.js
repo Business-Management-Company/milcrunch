@@ -1,11 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * One-time backfill: populate ic_avatar_url for all directory_members
- * where it's currently NULL, using the Influencers.club raw enrich API.
+ * Backfill: refresh ic_avatar_url for all directory_members.
+ * Calls IC raw enrich API for fresh signed URLs, then downloads
+ * each image and uploads to Supabase Storage for permanent avatar_url.
  *
- * POST /api/backfill-avatars  (no body needed)
+ * POST /api/backfill-avatars           — refresh all creators
+ * POST /api/backfill-avatars?debug=1   — return current avatar state
  */
+export const config = { maxDuration: 300 };
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
@@ -15,7 +19,6 @@ export default async function handler(req, res) {
   const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  // IC API key: accept from Authorization header, request body, or env
   const icApiKey =
     (req.headers.authorization || "").replace(/^Bearer\s+/i, "") ||
     (req.body && req.body.ic_api_key) ||
@@ -31,71 +34,47 @@ export default async function handler(req, res) {
 
   const sb = createClient(supabaseUrl, supabaseKey);
 
-  // Debug: check if we can see the table at all
-  const { count: totalCount, error: countErr } = await sb
-    .from("directory_members")
-    .select("id", { count: "exact", head: true });
-
-  if (countErr) {
-    return res.status(500).json({
-      error: `Cannot read directory_members: ${countErr.message}`,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      keyPrefix: supabaseKey.substring(0, 30),
-    });
-  }
-
-  // Debug mode: if ?debug=1 or body.debug, return current state
-  const debugMode =
-    req.query?.debug === "1" || (req.body && req.body.debug);
-  if (debugMode) {
-    const { data: all, error: allErr } = await sb
+  // Debug mode: return current avatar state
+  if (req.query?.debug === "1" || (req.body && req.body.debug)) {
+    const { data: all, error } = await sb
       .from("directory_members")
       .select("id, creator_handle, platform, ic_avatar_url, avatar_url")
-      .limit(30);
+      .limit(50);
     return res.json({
-      totalInTable: totalCount,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       rows: (all || []).map((r) => ({
         handle: r.creator_handle,
         ic_avatar_url: r.ic_avatar_url || null,
         avatar_url: r.avatar_url || null,
       })),
-      error: allErr?.message,
+      error: error?.message,
     });
   }
 
-  // 1. Fetch directory_members needing avatar backfill:
-  //    ic_avatar_url IS NULL OR ic_avatar_url = '' OR avatar broken
+  // Fetch ALL directory_members (refresh all avatars since signed URLs expire)
   const { data: members, error: fetchErr } = await sb
     .from("directory_members")
-    .select("id, creator_handle, platform, ic_avatar_url, avatar_url")
-    .or("ic_avatar_url.is.null,ic_avatar_url.eq.");
+    .select("id, creator_handle, platform");
 
   if (fetchErr) {
     return res.status(500).json({ error: fetchErr.message });
   }
   if (!members || members.length === 0) {
-    return res.json({
-      message: "No rows to backfill",
-      updated: 0,
-      total: 0,
-      totalInTable: totalCount,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    });
+    return res.json({ message: "No creators found", updated: 0, total: 0 });
   }
 
   const IC_BASE = "https://api-dashboard.influencers.club";
   const results = [];
   let updated = 0;
   let failed = 0;
+  let permanentUploads = 0;
 
   for (const member of members) {
     const handle = member.creator_handle;
     const platform = member.platform || "instagram";
-    const row = { handle, platform, avatar: null, error: null };
+    const row = { handle, ic_avatar: null, permanent: null, error: null };
 
     try {
-      // 2. Call IC raw enrich API
+      // 1. Call IC raw enrich API for fresh signed URL
       const resp = await fetch(
         `${IC_BASE}/public/v1/creators/enrich/handle/raw/`,
         {
@@ -114,38 +93,83 @@ export default async function handler(req, res) {
       );
 
       if (!resp.ok) {
-        row.error = `HTTP ${resp.status}`;
+        row.error = `IC API HTTP ${resp.status}`;
         failed++;
         results.push(row);
-        // Rate limit: wait a bit before continuing
         await sleep(500);
         continue;
       }
 
       const data = await resp.json();
+      const freshUrl = extractAvatar(data);
 
-      // 3. Extract avatar URL from response
-      const avatarUrl = extractAvatar(data);
-      if (!avatarUrl) {
-        row.error = "no avatar found in response";
+      if (!freshUrl) {
+        row.error = "no avatar in IC response";
         failed++;
         results.push(row);
         await sleep(300);
         continue;
       }
 
-      // 4. Force https
-      const httpsUrl = avatarUrl.replace(/^http:\/\//i, "https://");
-      row.avatar = httpsUrl;
+      const httpsUrl = freshUrl.replace(/^http:\/\//i, "https://");
+      row.ic_avatar = httpsUrl.substring(0, 100);
 
-      // 5. Update directory_members
+      // 2. Download image and upload to Supabase Storage for permanent URL
+      let permanentUrl = null;
+      try {
+        const imgResp = await fetch(httpsUrl, {
+          redirect: "follow",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; MilCrunch/1.0)",
+            Accept: "image/*,*/*",
+          },
+        });
+
+        if (imgResp.ok) {
+          const buffer = Buffer.from(await imgResp.arrayBuffer());
+          const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+          const ext = contentType.includes("png")
+            ? "png"
+            : contentType.includes("webp")
+              ? "webp"
+              : "jpg";
+          const safeName = handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+          const path = `directory-avatars/${safeName}.${ext}`;
+
+          const { error: uploadErr } = await sb.storage
+            .from("creator-images")
+            .upload(path, buffer, { contentType, upsert: true });
+
+          if (!uploadErr) {
+            const { data: urlData } = sb.storage
+              .from("creator-images")
+              .getPublicUrl(path);
+            permanentUrl = urlData.publicUrl;
+            row.permanent = permanentUrl;
+            permanentUploads++;
+          } else {
+            row.error = `upload: ${uploadErr.message}`;
+          }
+        } else {
+          row.error = `img fetch: ${imgResp.status}`;
+        }
+      } catch (imgErr) {
+        row.error = `img: ${imgErr.message}`;
+      }
+
+      // 3. Update directory_members with both URLs
+      const updatePayload = { ic_avatar_url: httpsUrl };
+      if (permanentUrl) {
+        updatePayload.avatar_url = permanentUrl;
+      }
+
       const { error: updateErr } = await sb
         .from("directory_members")
-        .update({ ic_avatar_url: httpsUrl })
+        .update(updatePayload)
         .eq("id", member.id);
 
       if (updateErr) {
-        row.error = `update failed: ${updateErr.message}`;
+        row.error = `db update: ${updateErr.message}`;
         failed++;
       } else {
         updated++;
@@ -156,8 +180,6 @@ export default async function handler(req, res) {
     }
 
     results.push(row);
-
-    // Rate limit: 300ms between requests
     await sleep(300);
   }
 
@@ -165,6 +187,7 @@ export default async function handler(req, res) {
     total: members.length,
     updated,
     failed,
+    permanentUploads,
     results,
   });
 }
@@ -173,11 +196,6 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Extract avatar URL from IC raw enrich response.
- * Checks multiple nesting levels: instagram.picture, result.instagram.*,
- * result.profile.*, top-level profile.*, top-level fields.
- */
 function extractAvatar(data) {
   if (!data || typeof data !== "object") return null;
 
@@ -194,7 +212,6 @@ function extractAvatar(data) {
     if (url && typeof url === "string" && url.trim() && !url.includes("ui-avatars.com")) {
       return url;
     }
-    // Check basicInfo.profilePicture
     if (obj.basicInfo && obj.basicInfo.profilePicture) {
       const bi = obj.basicInfo.profilePicture;
       if (typeof bi === "string" && bi.trim() && !bi.includes("ui-avatars.com")) return bi;
@@ -202,28 +219,22 @@ function extractAvatar(data) {
     return null;
   };
 
-  // 1. instagram level
   const ig = data.instagram;
   const igResult = tryFields(ig);
   if (igResult) return igResult;
 
-  // 2. result.instagram
   const result = data.result;
   if (result && typeof result === "object") {
     const riResult = tryFields(result.instagram);
     if (riResult) return riResult;
-    // result.profile
     const rpResult = tryFields(result.profile);
     if (rpResult) return rpResult;
-    // result level
     const rlResult = tryFields(result);
     if (rlResult) return rlResult;
   }
 
-  // 3. top-level profile
   const tpResult = tryFields(data.profile);
   if (tpResult) return tpResult;
 
-  // 4. top-level fields directly
   return tryFields(data);
 }
