@@ -281,10 +281,9 @@ function OverviewTab({ dark }: { dark: boolean }) {
           </p>
 
           <img
-            src="https://github.com/user-attachments/assets/2244c6ca-d608-40d0-8f88-32c59b7f4f76"
-            alt="MilCrunch platform overview"
-            className="w-full mt-8"
-            style={{ borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,0.10)" }}
+            src="/screenshots/milcrunch-overview.png"
+            alt="MilCrunch Platform Overview"
+            style={{ width: "100%", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,0.10)", margin: "24px 0" }}
           />
         </div>
       </section>
