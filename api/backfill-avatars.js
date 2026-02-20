@@ -31,17 +31,36 @@ export default async function handler(req, res) {
 
   const sb = createClient(supabaseUrl, supabaseKey);
 
+  // Debug: check if we can see the table at all
+  const { count: totalCount, error: countErr } = await sb
+    .from("directory_members")
+    .select("id", { count: "exact", head: true });
+
+  if (countErr) {
+    return res.status(500).json({
+      error: `Cannot read directory_members: ${countErr.message}`,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      keyPrefix: supabaseKey.substring(0, 30),
+    });
+  }
+
   // 1. Fetch all directory_members with NULL ic_avatar_url
   const { data: members, error: fetchErr } = await sb
     .from("directory_members")
-    .select("id, creator_handle, platform")
+    .select("id, creator_handle, platform, ic_avatar_url, avatar_url")
     .is("ic_avatar_url", null);
 
   if (fetchErr) {
     return res.status(500).json({ error: fetchErr.message });
   }
   if (!members || members.length === 0) {
-    return res.json({ message: "No rows to backfill", updated: 0, total: 0 });
+    return res.json({
+      message: "No rows to backfill",
+      updated: 0,
+      total: 0,
+      totalInTable: totalCount,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
   }
 
   const IC_BASE = "https://api-dashboard.influencers.club";
