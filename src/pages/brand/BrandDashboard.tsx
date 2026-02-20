@@ -9,6 +9,7 @@ import DemoWelcomeModal from "@/components/demo/DemoWelcomeModal";
 import DemoTour from "@/components/demo/DemoTour";
 import { Loader2, CreditCard, Users, ListChecks, Sparkles, Send, Eye, Mic, TrendingUp, Search, ClipboardList, Headphones, BarChart3, CalendarDays, Radio, Mail, Handshake } from "lucide-react";
 import { getChatResponse } from "@/lib/chat-responses";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import {
   AreaChart,
   Area,
@@ -277,7 +278,11 @@ const BrandDashboard = () => {
                         : "bg-gray-50 dark:bg-[#111827] text-gray-800 dark:text-gray-200 rounded-2xl px-4 py-2 max-w-[70%] text-sm"
                     }
                   >
-                    {msg.text}
+                    {msg.role === "assistant" ? (
+                      <MarkdownRenderer content={msg.text} className="text-inherit" />
+                    ) : (
+                      msg.text
+                    )}
                     {msg.cta && (
                       <Link
                         to={msg.cta.to}
