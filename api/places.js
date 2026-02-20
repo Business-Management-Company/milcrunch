@@ -4,11 +4,38 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "GOOGLE_PLACES_API_KEY not configured" });
   }
 
+  // ── Photo selection helper ─────────────────────────────────
+  // Google Places photos[0] is often an exterior/pool shot.
+  // Look at up to 3 photos and prefer one whose attribution
+  // hints at an interior/event space. Fallback: use the 2nd photo.
+  function pickBestPhoto(photos) {
+    if (!Array.isArray(photos) || photos.length === 0) return null;
+
+    const candidates = photos.slice(0, 3);
+
+    // Keywords in html_attributions that hint at interior/event shots
+    const INTERIOR_HINTS = /interior|ballroom|banquet|conference|meeting|event|hall|stage|reception|lounge|dining/i;
+
+    for (const p of candidates) {
+      const attr = (p.html_attributions || []).join(" ");
+      if (INTERIOR_HINTS.test(attr)) {
+        return p.photo_reference;
+      }
+    }
+
+    // No attribution match — skip the first (exterior) if we have alternatives
+    if (candidates.length >= 2) {
+      return candidates[1].photo_reference;
+    }
+
+    return candidates[0].photo_reference;
+  }
+
   // ── Photo proxy: GET /api/places?photo=1&ref=XXXX ──────────
   if (req.method === "GET" && req.query.photo && req.query.ref) {
     const photoUrl =
       `https://maps.googleapis.com/maps/api/place/photo` +
-      `?maxwidth=400&photo_reference=${encodeURIComponent(req.query.ref)}&key=${key}`;
+      `?maxwidth=800&photo_reference=${encodeURIComponent(req.query.ref)}&key=${key}`;
     try {
       const photoResp = await fetch(photoUrl, { redirect: "follow" });
       if (!photoResp.ok) {
@@ -89,8 +116,9 @@ export default async function handler(req, res) {
           // Skip details on error for this place
         }
 
-        const photoRef =
-          place.photos && place.photos[0] ? place.photos[0].photo_reference : null;
+        // Pick the best photo: prefer interior/event-space shots over
+        // exterior/pool images that Google often ranks first.
+        const photoRef = pickBestPhoto(place.photos);
         const photoUrl = photoRef
           ? `/api/places?photo=1&ref=${encodeURIComponent(photoRef)}`
           : null;

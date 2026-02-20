@@ -704,12 +704,12 @@ function VenueCard({
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow group">
       {/* Photo */}
-      <div className="h-40 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
+      <div className="aspect-[16/9] bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
         {venue.photo_url ? (
           <img
             src={venue.photo_url}
             alt={venue.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
             loading="lazy"
           />
         ) : (
@@ -828,12 +828,12 @@ function SavedVenueCard({
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
       {/* Photo */}
-      <div className="h-32 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
+      <div className="aspect-[16/9] bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
         {venue.photo_url ? (
           <img
             src={venue.photo_url}
             alt={venue.venue_name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
             loading="lazy"
           />
         ) : (
