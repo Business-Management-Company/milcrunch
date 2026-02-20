@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1742,35 +1743,72 @@ function RawSourceCard({ url, markdown }: { url: string; markdown: string }) {
 }
 
 function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
+  const { user } = useAuth();
   const [narrative, setNarrative] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
-  const [lastAnalyzedAt, setLastAnalyzedAt] = useState<string | null>(null);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<string | null>(null);
   const redFlags = (record.red_flags ?? []) as RedFlag[];
   const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
 
-  // Load saved dossier on mount
+  // Load saved dossier on mount — try dedicated table first, fall back to manual_checks
   useEffect(() => {
     (async () => {
+      if (user) {
+        const { data: dossierRow } = await supabase
+          .from("verification_dossiers")
+          .select("dossier_content, generated_at")
+          .eq("user_id", user.id)
+          .eq("creator_name", record.person_name)
+          .order("generated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (dossierRow?.dossier_content) {
+          setNarrative(dossierRow.dossier_content);
+          setLastGeneratedAt(dossierRow.generated_at ?? null);
+          return;
+        }
+      }
+      // Fallback: load from legacy manual_checks
       const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
       const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
       const saved = checks.deep_analysis as { narrative?: string; analyzed_at?: string } | undefined;
       if (saved?.narrative) {
         setNarrative(saved.narrative);
-        setLastAnalyzedAt(saved.analyzed_at ?? null);
+        setLastGeneratedAt(saved.analyzed_at ?? null);
       }
     })();
-  }, [record.id]);
+  }, [record.id, record.person_name, user]);
 
-  const saveNarrative = async (text: string) => {
+  // Save dossier to dedicated table + legacy manual_checks
+  const saveDossier = async (text: string) => {
+    const now = new Date().toISOString();
+
+    // Save to verification_dossiers table
+    if (user) {
+      await supabase.from("verification_dossiers").upsert(
+        {
+          user_id: user.id,
+          creator_name: record.person_name,
+          creator_handle: record.source_username ?? null,
+          dossier_content: text,
+          confidence_score: record.verification_score ?? null,
+          sources_count: sources.length,
+          generated_at: now,
+        },
+        { onConflict: "user_id,creator_name" },
+      );
+    }
+
+    // Also save to legacy manual_checks for backwards compat
     const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
     const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
-    const now = new Date().toISOString();
     await supabase.from("verifications").update({
       manual_checks: { ...existing, deep_analysis: { narrative: text, analyzed_at: now } },
     }).eq("id", record.id);
-    setLastAnalyzedAt(now);
+
+    setLastGeneratedAt(now);
   };
 
   const handleGenerate = async () => {
@@ -1785,7 +1823,7 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
         aiAnalysis: record.ai_analysis ?? "",
       });
       setNarrative(result || null);
-      if (result) await saveNarrative(result);
+      if (result) await saveDossier(result);
     } catch {
       setNarrative(null);
     } finally {
@@ -1836,16 +1874,18 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-[#6C5CE7]" /> Background Dossier
-              {lastAnalyzedAt && (
-                <span className="text-xs font-normal text-muted-foreground ml-auto">Last analyzed: {new Date(lastAnalyzedAt).toLocaleDateString()}</span>
-              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <MarkdownRenderer content={narrative ?? ""} />
+            {lastGeneratedAt && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Last generated: {new Date(lastGeneratedAt).toLocaleString()}
+              </p>
+            )}
             <div className="mt-3 flex gap-2">
               <Button variant="outline" size="sm" onClick={handleGenerate}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Re-run Deep Analysis
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
               </Button>
               <Button variant="outline" size="sm" onClick={() => {
                 navigator.clipboard.writeText(narrative ?? "");

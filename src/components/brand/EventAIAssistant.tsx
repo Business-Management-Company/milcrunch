@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, Send, Trash2 } from "lucide-react";
+import { Loader2, Sparkles, Send, Trash2, ArrowRight, MapPin, AlertTriangle, CalendarPlus } from "lucide-react";
 import { parseISO, differenceInDays } from "date-fns";
-import MarkdownRenderer from "@/components/ui/markdown-renderer";
+import { MarkdownResponse } from "@/components/MarkdownResponse";
+import { supabase } from "@/integrations/supabase/client";
 
 /* ---------- types ---------- */
 interface Props {
@@ -51,7 +53,53 @@ async function callAnthropic(
   return (data.content?.[0]?.text ?? "").trim();
 }
 
-/* ---------- markdown rendering handled by shared MarkdownRenderer component ---------- */
+/* ---------- smart CTA detection ---------- */
+interface SmartCTA {
+  label: string;
+  icon: typeof ArrowRight;
+  action: "link" | "draft";
+  path?: string;
+  draftTitle?: string;
+  draftLocation?: string;
+}
+
+function detectCTAs(text: string): SmartCTA[] {
+  const lower = text.toLowerCase();
+  const ctas: SmartCTA[] = [];
+
+  if (/conflict|competing event|schedule clash|date overlap/i.test(lower)) {
+    ctas.push({
+      label: "Check Conflicts & Collabs",
+      icon: AlertTriangle,
+      action: "link",
+      path: "/brand/conflicts-collabs",
+    });
+  }
+
+  if (/\bvenue\b|location|space|facility|auditorium|conference center/i.test(lower)) {
+    ctas.push({
+      label: "Find a Venue",
+      icon: MapPin,
+      action: "link",
+      path: "/brand/venues",
+    });
+  }
+
+  // Detect event idea: look for a quoted title or "**Title**" pattern with a location hint
+  const titleMatch = text.match(/\*\*([A-Z][^*]{4,60})\*\*/);
+  const locationMatch = text.match(/(?:in|at|@)\s+([A-Z][A-Za-z\s,]{3,40})/);
+  if (titleMatch) {
+    ctas.push({
+      label: "Save as Draft Event",
+      icon: CalendarPlus,
+      action: "draft",
+      draftTitle: titleMatch[1].trim(),
+      draftLocation: locationMatch?.[1]?.trim() ?? undefined,
+    });
+  }
+
+  return ctas;
+}
 
 /* ---------- quick prompts ---------- */
 const QUICK_PROMPTS = [
@@ -68,10 +116,12 @@ export default function EventAIAssistant({
   startDate, endDate, venue, city, state, capacity, status,
   sponsors, speakers, tickets, registrationCount, agendaSessionCount,
 }: Props) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll on new messages
@@ -156,6 +206,33 @@ Keep answers concise but thorough. Use bullet points and headers for readability
     }
   };
 
+  const handleSaveDraft = async (title: string, locationStr?: string) => {
+    setSavingDraft(true);
+    try {
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + `-${Date.now()}`;
+      const { data: user } = await supabase.auth.getUser();
+      const payload: Record<string, unknown> = {
+        title,
+        slug,
+        is_published: false,
+        created_by: user?.user?.id ?? null,
+      };
+      if (locationStr) payload.venue = locationStr;
+      const { data: event, error: err } = await supabase
+        .from("events")
+        .insert(payload)
+        .select("id")
+        .single();
+      if (err) throw err;
+      navigate(`/brand/events/${event.id}`);
+    } catch (e) {
+      console.error("[EventAI] Draft save failed:", e);
+      setError("Failed to create draft event.");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
   /* ======================================== */
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
@@ -203,10 +280,42 @@ Keep answers concise but thorough. Use bullet points and headers for readability
                 </div>
               </div>
             ) : (
-              <div key={i} className="flex justify-start">
+              <div key={i} className="flex flex-col items-start gap-2">
                 <div className="max-w-[90%] rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                  <MarkdownRenderer content={m.content} />
+                  <MarkdownResponse content={m.content} />
                 </div>
+                {/* Smart CTAs */}
+                {(() => {
+                  const ctas = detectCTAs(m.content);
+                  if (ctas.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1.5 ml-1">
+                      {ctas.map((cta) => (
+                        <button
+                          key={cta.label}
+                          type="button"
+                          disabled={savingDraft}
+                          onClick={() => {
+                            if (cta.action === "link" && cta.path) {
+                              navigate(cta.path);
+                            } else if (cta.action === "draft" && cta.draftTitle) {
+                              handleSaveDraft(cta.draftTitle, cta.draftLocation);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors disabled:opacity-50"
+                        >
+                          {savingDraft && cta.action === "draft" ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <cta.icon className="h-3 w-3" />
+                          )}
+                          {cta.label}
+                          {cta.action === "link" && <ArrowRight className="h-3 w-3" />}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             ),
           )}
