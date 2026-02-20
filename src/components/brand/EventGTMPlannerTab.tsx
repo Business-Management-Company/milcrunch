@@ -1,16 +1,24 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, ShieldAlert, CalendarCheck, Copy, Printer, Sparkles, Search,
   AlertTriangle, CheckCircle2, FileText, Shield, Info, MapPin, Link2, Save,
+  Handshake, Send, Filter, Users, Radar, Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
-import { scrapeFirecrawl } from "@/lib/verification";
 import { format, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /* ---------- types ---------- */
 interface Props {
@@ -35,22 +43,18 @@ interface HolidayConflict {
   proximity: "same-day" | "within-3-days";
 }
 
-interface CompetingEvent {
+interface AIEvent {
   name: string;
   date: string;
   location: string;
-  url: string;
+  source: string;
+  type: "conflict" | "collab";
   severity: "high" | "medium" | "low";
+  reason: string;
+  suggestion: string;
 }
 
-interface BaseEvent {
-  name: string;
-  date: string;
-  location: string;
-  baseName: string;
-  url: string;
-  severity: "high" | "medium" | "low";
-}
+type FilterMode = "all" | "conflicts" | "collabs";
 
 interface ObservanceConflict {
   name: string;
@@ -62,11 +66,9 @@ interface ObservanceConflict {
 
 interface ConflictResults {
   holidays: HolidayConflict[];
-  competing: CompetingEvent[];
-  baseEvents: BaseEvent[];
   observances: ObservanceConflict[];
-  firecrawlFailed: boolean;
-  baseEventsFailed: boolean;
+  aiEvents: AIEvent[];
+  aiFailed: boolean;
 }
 
 /* ---------- holidays ---------- */
@@ -301,7 +303,15 @@ async function callAnthropic(system: string, userMessage: string, maxTokens = 40
   return (data.content?.[0]?.text ?? "").trim();
 }
 
-/* ---------- markdown rendering handled by shared MarkdownRenderer component ---------- */
+/* ---------- source icon helper ---------- */
+function sourceIcon(source: string) {
+  const s = source.toLowerCase();
+  if (s.includes("chamber")) return <Landmark className="h-3 w-3" />;
+  if (s.includes("military") || s.includes("installation")) return <Shield className="h-3 w-3" />;
+  if (s.includes("facebook") || s.includes("community")) return <Users className="h-3 w-3" />;
+  if (s.includes("milcrunch")) return <CalendarCheck className="h-3 w-3" />;
+  return <Radar className="h-3 w-3" />;
+}
 
 /* ======================================== */
 export default function EventGTMPlannerTab({
@@ -322,6 +332,13 @@ export default function EventGTMPlannerTab({
   /* Conflict Scanner */
   const [scanning, setScanning] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictResults | null>(null);
+  const [dateWindow, setDateWindow] = useState<"15" | "30" | "60">("15");
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+
+  /* Pitch email */
+  const [pitchTarget, setPitchTarget] = useState<AIEvent | null>(null);
+  const [generatingPitch, setGeneratingPitch] = useState(false);
+  const [generatedPitch, setGeneratedPitch] = useState("");
 
   /* GTM Strategy */
   const [generatingGTM, setGeneratingGTM] = useState(false);
@@ -345,7 +362,15 @@ export default function EventGTMPlannerTab({
       const savedConflicts = localStorage.getItem("demo_conflicts");
       const savedGtm = localStorage.getItem("demo_gtm");
       const savedSummary = localStorage.getItem("demo_summary");
-      if (savedConflicts) setConflicts(JSON.parse(savedConflicts));
+      if (savedConflicts) {
+        const parsed = JSON.parse(savedConflicts);
+        setConflicts({
+          holidays: parsed.holidays ?? [],
+          observances: parsed.observances ?? [],
+          aiEvents: parsed.aiEvents ?? [],
+          aiFailed: parsed.aiFailed ?? false,
+        });
+      }
       if (savedGtm) setGtmPlan(savedGtm);
       if (savedSummary) setSummary(savedSummary);
     } catch { /* ignore parse errors */ }
@@ -364,93 +389,152 @@ export default function EventGTMPlannerTab({
       : format(parseISO(startDate), "MMM d, yyyy")
     : "TBD";
 
-  /* ---- Conflict Scanner ---- */
+  /* Filtered AI events */
+  const filteredAIEvents = useMemo(() => {
+    const list = conflicts?.aiEvents ?? [];
+    if (filterMode === "conflicts") return list.filter((e) => e.type === "conflict");
+    if (filterMode === "collabs") return list.filter((e) => e.type === "collab");
+    return list;
+  }, [conflicts, filterMode]);
+
+  const aiConflictCount = conflicts?.aiEvents?.filter((e) => e.type === "conflict").length ?? 0;
+  const aiCollabCount = conflicts?.aiEvents?.filter((e) => e.type === "collab").length ?? 0;
+
+  /* ---- Conflicts & Collabs Scanner ---- */
   const runConflictScan = async () => {
+    if (!startDate) {
+      toast.error("Set an event date to enable conflict scanning");
+      return;
+    }
+
     setScanning(true);
     setConflicts(null);
+    setFilterMode("all");
+
     try {
+      // 1. Local checks (instant)
       const holidays = findHolidayConflicts(startDate, endDate);
       const observances = findObservanceConflicts(startDate, endDate);
-      let competing: CompetingEvent[] = [];
-      let baseEvents: BaseEvent[] = [];
-      let firecrawlFailed = false;
-      let baseEventsFailed = false;
 
-      // Try Eventbrite scrape for general competing events
-      if (city || state) {
-        const loc = encodeURIComponent(location || "united-states");
-        const keywords = encodeURIComponent(eventType || "military veteran");
-        const dateParam = startDate ? `&start_date=${startDate}` : "";
-        const url = `https://www.eventbrite.com/d/${loc}/${keywords}/${dateParam}`;
-        try {
-          const scraped = await scrapeFirecrawl(url);
-          if (scraped?.markdown) {
-            const parsed = await callAnthropic(
-              "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
-              `Extract competing events from this Eventbrite search page markdown. For each event found, return: name, date, location, url, severity (high if same date and nearby location, medium if same week, low otherwise). Our event: "${eventTitle}" on ${dateRange} in ${location}.\n\nMarkdown:\n${scraped.markdown.slice(0, 6000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
-              2048
-            );
-            try {
-              const jsonStr = parsed.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-              competing = JSON.parse(jsonStr);
-            } catch { competing = []; }
-          }
-        } catch (e) {
-          console.warn("[GTM] Firecrawl scrape failed:", e);
-          firecrawlFailed = true;
-        }
-      }
+      // 2. AI-powered multi-source scan
+      let aiEvents: AIEvent[] = [];
+      let aiFailed = false;
 
-      // Scan nearby military bases for competing events
       const nearbyBases = getNearbyBases(state);
-      if (nearbyBases.length > 0 && startDate) {
-        // Scrape up to 3 base cities (to keep it fast)
-        const basesToScan = nearbyBases.slice(0, 3);
-        const basePromises = basesToScan.map(async (base) => {
-          try {
-            const baseLoc = encodeURIComponent(`${base.city}--${state || ""}`);
-            const baseUrl = `https://www.eventbrite.com/d/${baseLoc}/military-veteran/?start_date=${startDate}`;
-            const scraped = await scrapeFirecrawl(baseUrl);
-            if (!scraped?.markdown) return [];
-            const parsed = await callAnthropic(
-              "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
-              `Extract military/veteran events near ${base.name} (${base.city}) from this Eventbrite markdown. For each event, return: name, date, location, url, severity (high if overlapping dates, medium if same month, low otherwise). Our event runs ${dateRange}.\n\nMarkdown:\n${scraped.markdown.slice(0, 4000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
-              1024
-            );
-            try {
-              const jsonStr = parsed.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-              const events: CompetingEvent[] = JSON.parse(jsonStr);
-              return events.map((ev) => ({ ...ev, baseName: base.name }));
-            } catch { return []; }
-          } catch (e) {
-            console.warn(`[GTM] Base scan failed for ${base.name}:`, e);
-            return [];
-          }
-        });
+      const baseContext = nearbyBases.length > 0
+        ? `\nNearby military installations: ${nearbyBases.slice(0, 5).map((b) => `${b.name} (${b.city})`).join(", ")}.`
+        : "";
 
-        try {
-          const results = await Promise.race([
-            Promise.all(basePromises),
-            new Promise<BaseEvent[][]>((resolve) => setTimeout(() => resolve([]), 30000)),
-          ]) as BaseEvent[][];
-          baseEvents = results.flat();
-        } catch {
-          baseEventsFailed = true;
-        }
+      const windowDays = Number(dateWindow);
+
+      try {
+        const aiResp = await callAnthropic(
+          `You are an event intelligence tool for military community event planners. Given a planned event's details, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) within a specified date window, as if you searched Eventbrite, Facebook Events, military installation calendars, local Chamber of Commerce event calendars, MilSpouse Network groups, and the MilCrunch Calendar.
+
+Return ONLY a valid JSON array of event objects. Each event:
+{
+  "name": "Event Name",
+  "date": "Mon DD, YYYY",
+  "location": "City, ST",
+  "source": "Eventbrite" | "Facebook Events" | "Military Installation Calendar" | "MilSpouse Network" | "MilCrunch Calendar" | "Chamber of Commerce",
+  "type": "conflict" | "collab",
+  "severity": "high" | "medium" | "low",
+  "reason": "Brief explanation of why this is a conflict or collab opportunity",
+  "suggestion": "Actionable recommendation for the event planner"
+}
+
+Guidelines:
+- Only generate events that fall within ${windowDays} days before to 7 days after the planned event date
+- Generate 8-15 realistic events, mix of conflicts and collabs
+- For conflicts: events competing for the same audience in the same timeframe and area
+- For collabs: complementary events good for cross-promotion, shared speakers, or joint marketing
+- Include events from at least 3 different sources
+- Military installation events should reference real bases near the location
+- Severity: high = same week and nearby, medium = same month or overlapping audience, low = tangential
+- Make events realistic with specific names, real-sounding dates within the timeframe, and plausible venues
+- Include both military-specific and civilian events that could attract a military audience
+- Include 1-3 Chamber of Commerce events (networking mixers, business expos, small business workshops)
+- Chamber of Commerce events should be COLLAB when they serve overlapping audiences (veteran business owners, military spouse entrepreneurs)
+- Chamber of Commerce events should be CONFLICT only when they directly compete for the same date, location, and audience`,
+          `Planned event details:
+- Name: "${eventTitle}"
+- Type: ${eventType || "General"}
+- Date: ${dateRange}
+- Location: ${venue ? `${venue}, ` : ""}${location || "TBD"}
+- Capacity: ${capacity || "TBD"}
+- Description: ${eventDescription || "N/A"}
+- Date Window: ${windowDays} days before to 7 days after event date${baseContext}
+
+Generate realistic competing events and collaboration opportunities within the date window.`,
+          4096,
+        );
+
+        const cleaned = aiResp.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+        const parsed = JSON.parse(cleaned);
+        aiEvents = (Array.isArray(parsed) ? parsed : parsed.events || []).filter(
+          (e: any) => e.name && e.type && (e.type === "conflict" || e.type === "collab"),
+        );
+      } catch (e) {
+        console.warn("[GTM] AI scan failed:", e);
+        aiFailed = true;
       }
 
-      const totalConflicts = holidays.length + competing.length + baseEvents.length + observances.length;
-      setConflicts({ holidays, competing, baseEvents, observances, firecrawlFailed, baseEventsFailed });
-      if (totalConflicts === 0) {
-        toast.success("No conflicts detected!");
+      setConflicts({ holidays, observances, aiEvents, aiFailed });
+
+      const total = holidays.length + observances.length + aiEvents.length;
+      if (total === 0) {
+        toast.success("No conflicts or collabs detected!");
       } else {
-        toast.info(`Found ${totalConflicts} potential conflict(s)`);
+        const parts: string[] = [];
+        if (holidays.length) parts.push(`${holidays.length} holiday conflict${holidays.length > 1 ? "s" : ""}`);
+        if (observances.length) parts.push(`${observances.length} observance${observances.length > 1 ? "s" : ""}`);
+        const extConflicts = aiEvents.filter((e) => e.type === "conflict").length;
+        const extCollabs = aiEvents.filter((e) => e.type === "collab").length;
+        if (extConflicts) parts.push(`${extConflicts} competing event${extConflicts > 1 ? "s" : ""}`);
+        if (extCollabs) parts.push(`${extCollabs} collab opportunit${extCollabs > 1 ? "ies" : "y"}`);
+        toast.info(`Found ${parts.join(", ")}`);
       }
     } catch (e) {
       console.error("[GTM] Conflict scan error:", e);
       toast.error("Conflict scan failed");
     } finally {
       setScanning(false);
+    }
+  };
+
+  /* ---- Generate collab pitch email ---- */
+  const generateCollabPitch = async (ev: AIEvent) => {
+    setPitchTarget(ev);
+    setGeneratingPitch(true);
+    setGeneratedPitch("");
+
+    const isChamber = ev.source.toLowerCase().includes("chamber");
+    const chamberContext = isChamber
+      ? `\n\nIMPORTANT: This is a Chamber of Commerce event. Emphasize co-marketing opportunities targeting veteran-owned businesses and military spouse entrepreneurs in the ${location || "local"} area. Suggest joint outreach to veteran business owners, military spouse entrepreneur networks, and local business community leaders.`
+      : "";
+
+    try {
+      const pitch = await callAnthropic(
+        `You are writing a collaboration outreach email for a military community event organizer on MilCrunch. Write a professional, warm, and specific collaboration pitch email. Include a subject line. Keep it concise but compelling. Suggest 3-4 specific collaboration ideas relevant to these events.${chamberContext}`,
+        `Write a collab pitch email from:
+- Event: "${eventTitle}" on ${dateRange} in ${location || "TBD"}
+- Type: ${eventType || "Event"}
+
+To the organizers of:
+- Event: "${ev.name}" on ${ev.date} in ${ev.location}
+- Source: ${ev.source}
+
+Both events serve overlapping military audiences. Write the email.`,
+        1500,
+      );
+      setGeneratedPitch(pitch);
+    } catch (err) {
+      console.error("[GTM] Pitch generation failed:", err);
+      setGeneratedPitch(
+        `Subject: Collaboration Opportunity — ${eventTitle} x ${ev.name}\n\nHi there,\n\nI'm reaching out from ${eventTitle} (${dateRange}, ${location || "location TBD"}).\n\nWe noticed your upcoming event, ${ev.name} (${ev.date}, ${ev.location}), targets a similar military community audience. We think there's a great opportunity to collaborate:\n\n- Cross-promote to each other's attendee lists\n- Share speakers or panelists between events\n- Offer bundled ticket discounts for both events\n- Co-create content leading up to both events\n\nWould you be open to a quick call to explore this?\n\nBest,\n[Your Name]`,
+      );
+    } finally {
+      setGeneratingPitch(false);
     }
   };
 
@@ -463,12 +547,16 @@ export default function EventGTMPlannerTab({
         ? `\n\nKnown scheduling conflicts:\n${
             conflicts.holidays.map((h) => `- Holiday: ${h.name} (${format(h.date, "MMM d, yyyy")}, ${h.proximity})`).join("\n")
           }${
-            conflicts.competing.length > 0
-              ? "\n" + conflicts.competing.map((c) => `- Competing event: ${c.name} on ${c.date} in ${c.location} (${c.severity} severity)`).join("\n")
+            conflicts.aiEvents.filter((e) => e.type === "conflict").length > 0
+              ? "\n" + conflicts.aiEvents
+                  .filter((e) => e.type === "conflict")
+                  .map((e) => `- Competing event: ${e.name} on ${e.date} in ${e.location} (${e.severity} severity, source: ${e.source})`).join("\n")
               : ""
           }${
-            conflicts.baseEvents.length > 0
-              ? "\n" + conflicts.baseEvents.map((b) => `- Military base event near ${b.baseName}: ${b.name} on ${b.date} in ${b.location} (${b.severity})`).join("\n")
+            conflicts.aiEvents.filter((e) => e.type === "collab").length > 0
+              ? "\n\nPotential collaboration opportunities:\n" + conflicts.aiEvents
+                  .filter((e) => e.type === "collab")
+                  .map((e) => `- Collab: ${e.name} on ${e.date} in ${e.location} (${e.reason})`).join("\n")
               : ""
           }${
             conflicts.observances.length > 0
@@ -659,28 +747,87 @@ Keep it concise — this should fit on one printed page. Use bullet points where
   /* ======================================== */
   return (
     <div className="space-y-6">
-      {/* Section A — Conflict Scanner */}
+      {/* Section A — Conflicts & Collabs */}
       <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="font-semibold flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-amber-500" /> Conflict Scanner
+            <ShieldAlert className="h-5 w-5 text-amber-500" /> Conflicts & Collabs
           </h3>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Date window dropdown */}
+            <Select value={dateWindow} onValueChange={(v) => setDateWindow(v as "15" | "30" | "60")}>
+              <SelectTrigger className="w-[190px] h-8 text-xs">
+                <SelectValue placeholder="Date window" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 days before event</SelectItem>
+                <SelectItem value="30">30 days before event</SelectItem>
+                <SelectItem value="60">60 days before event</SelectItem>
+              </SelectContent>
+            </Select>
+
             {isSuperAdmin && conflicts && (
               <Button size="sm" variant="outline" className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/5"
                 onClick={() => saveDemoState("demo_conflicts", conflicts)}>
                 <Save className="h-4 w-4 mr-1.5" /> Save as Demo
               </Button>
             )}
-            <Button size="sm" onClick={runConflictScan} disabled={scanning}>
+            <Button size="sm" onClick={runConflictScan} disabled={scanning || !startDate}>
               {scanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
-              {scanning ? "Scanning…" : "Scan for Conflicts"}
+              {scanning ? "Scanning\u2026" : "Scan for Conflicts"}
             </Button>
           </div>
         </div>
+
+        {/* No-date warning */}
+        {!startDate && (
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 mb-4">
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-sm text-amber-700 dark:text-amber-300">
+              Set an event date to enable date-filtered conflict scanning.
+            </span>
+          </div>
+        )}
+
         <p className="text-sm text-muted-foreground mb-4">
-          Check for US holidays, military observance dates, and competing events near your event dates.
+          Check for US holidays, military observance dates, competing events, and collaboration opportunities near your event dates.
         </p>
+
+        {/* Filter bar — shown when AI events exist */}
+        {conflicts && conflicts.aiEvents.length > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <div className="flex gap-1 rounded-lg border p-0.5 bg-muted/30">
+              <button
+                onClick={() => setFilterMode("all")}
+                className={cn(
+                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                  filterMode === "all" ? "bg-white shadow-sm text-foreground dark:bg-gray-800" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                All ({conflicts.aiEvents.length})
+              </button>
+              <button
+                onClick={() => setFilterMode("conflicts")}
+                className={cn(
+                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                  filterMode === "conflicts" ? "bg-red-50 shadow-sm text-red-700 dark:bg-red-950 dark:text-red-300" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Conflicts ({aiConflictCount})
+              </button>
+              <button
+                onClick={() => setFilterMode("collabs")}
+                className={cn(
+                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                  filterMode === "collabs" ? "bg-teal-50 shadow-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Collabs ({aiCollabCount})
+              </button>
+            </div>
+          </div>
+        )}
 
         {conflicts && (
           <div className="space-y-4">
@@ -713,85 +860,6 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                     </Badge>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {/* Competing events */}
-            {conflicts.competing.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Competing Events</p>
-                {conflicts.competing.map((c, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      c.severity === "high"
-                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-                        : c.severity === "medium"
-                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
-                        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30"
-                    }`}
-                  >
-                    <AlertTriangle className={`h-4 w-4 shrink-0 ${
-                      c.severity === "high" ? "text-red-500" : c.severity === "medium" ? "text-yellow-500" : "text-green-500"
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">{c.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{c.date} · {c.location}</span>
-                    </div>
-                    <Badge
-                      variant={c.severity === "high" ? "destructive" : "secondary"}
-                      className={`text-xs shrink-0 ${c.severity === "low" ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : ""}`}
-                    >
-                      {c.severity}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Nearby Military Installations */}
-            {conflicts.baseEvents.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nearby Military Installation Events</p>
-                {conflicts.baseEvents.map((b, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      b.severity === "high"
-                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-                        : b.severity === "medium"
-                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
-                        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30"
-                    }`}
-                  >
-                    <Shield className={`h-4 w-4 shrink-0 ${
-                      b.severity === "high" ? "text-red-500" : b.severity === "medium" ? "text-yellow-500" : "text-green-500"
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">{b.name}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
-                          <MapPin className="h-2.5 w-2.5 mr-0.5" />{b.baseName}
-                        </Badge>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{b.date} · {b.location}</span>
-                    </div>
-                    <Badge
-                      variant={b.severity === "high" ? "destructive" : "secondary"}
-                      className={`text-xs shrink-0 ${b.severity === "low" ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : ""}`}
-                    >
-                      {b.severity}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-            {getNearbyBases(state).length > 0 && conflicts.baseEvents.length === 0 && !conflicts.baseEventsFailed && (
-              <div className="flex items-center gap-2 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
-                <Shield className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-700 dark:text-green-300">
-                  No competing events found near {getNearbyBases(state).slice(0, 3).map((b) => b.name).join(", ")}
-                </span>
               </div>
             )}
 
@@ -841,28 +909,179 @@ Keep it concise — this should fit on one printed page. Use bullet points where
               </div>
             )}
 
+            {/* AI-Scanned Events (Conflicts & Collabs) */}
+            {filteredAIEvents.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {filterMode === "conflicts" ? "Competing Events" : filterMode === "collabs" ? "Collaboration Opportunities" : "Events & Opportunities"}
+                </p>
+                {filteredAIEvents.map((ev, i) => {
+                  const isConflict = ev.type === "conflict";
+                  const isChamber = ev.source.toLowerCase().includes("chamber");
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "p-3 rounded-lg border border-l-4",
+                        isConflict ? "border-l-red-500" : "border-l-teal-500",
+                        isConflict
+                          ? ev.severity === "high"
+                            ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                            : ev.severity === "medium"
+                            ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
+                            : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/30"
+                          : "border-teal-200 bg-teal-50/60 dark:border-teal-800/50 dark:bg-teal-950/20",
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        {isConflict ? (
+                          <AlertTriangle className={cn(
+                            "h-4 w-4 shrink-0 mt-0.5",
+                            ev.severity === "high" ? "text-red-500" : ev.severity === "medium" ? "text-yellow-500" : "text-gray-400",
+                          )} />
+                        ) : (
+                          <Handshake className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium">{ev.name}</span>
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0",
+                                isConflict
+                                  ? "bg-red-100 text-red-700 border-red-200"
+                                  : "bg-teal-100 text-teal-700 border-teal-200",
+                              )}
+                            >
+                              {isConflict ? "Conflict" : "Collab"}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                              {sourceIcon(ev.source)}
+                              {ev.source}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{ev.date} · {ev.location}</p>
+                          <p className="text-xs text-muted-foreground/80 mt-1">{ev.reason}</p>
+                          {isChamber && !isConflict && (
+                            <p className="text-xs text-teal-700 dark:text-teal-300 font-medium mt-1">
+                              <Landmark className="h-3 w-3 inline mr-1" />
+                              Chamber partnership could drive local business sponsor leads.
+                            </p>
+                          )}
+                          <div className={cn(
+                            "text-xs p-2 rounded-md mt-1.5",
+                            isConflict
+                              ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                              : "bg-teal-50/80 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300",
+                          )}>
+                            <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
+                            {ev.suggestion}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <Badge
+                            variant={ev.severity === "high" ? "destructive" : "secondary"}
+                            className={cn("text-xs", ev.severity === "low" && "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400")}
+                          >
+                            {ev.severity}
+                          </Badge>
+                          {!isConflict && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs border-teal-300 text-teal-700 hover:bg-teal-50"
+                              onClick={() => generateCollabPitch(ev)}
+                            >
+                              <Send className="h-3 w-3 mr-1" />
+                              Reach Out
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* All clear */}
-            {conflicts.holidays.length === 0 && conflicts.competing.length === 0 && conflicts.baseEvents.length === 0 && conflicts.observances.length === 0 && (
+            {conflicts.holidays.length === 0 && conflicts.observances.length === 0 && conflicts.aiEvents.length === 0 && (
               <div className="flex items-center gap-2 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <span className="text-sm text-green-700 dark:text-green-300">No scheduling conflicts detected</span>
               </div>
             )}
 
-            {/* Fallback notes */}
-            {conflicts.firecrawlFailed && (
+            {/* Fallback note */}
+            {conflicts.aiFailed && (
               <p className="text-xs text-muted-foreground italic">
-                Note: Competing event search was unavailable. Only holiday/observance conflicts are shown.
-              </p>
-            )}
-            {conflicts.baseEventsFailed && (
-              <p className="text-xs text-muted-foreground italic">
-                Note: Military base event search timed out. Try again later.
+                Note: External event scan was unavailable. Only holiday/observance conflicts are shown.
               </p>
             )}
           </div>
         )}
       </Card>
+
+      {/* Pitch email modal */}
+      {pitchTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPitchTarget(null)}>
+          <div
+            className="bg-white dark:bg-[#1A1D27] rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">Collab Pitch Email</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {eventTitle} → {pitchTarget.name}
+                </p>
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setPitchTarget(null)} className="h-7 w-7 p-0">
+                &times;
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {generatingPitch ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-600 mr-2" />
+                  <span className="text-sm text-muted-foreground">Generating pitch with AI...</span>
+                </div>
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border text-gray-800 dark:text-gray-200 leading-relaxed">
+                  {generatedPitch}
+                </pre>
+              )}
+            </div>
+            {!generatingPitch && generatedPitch && (
+              <div className="p-4 border-t flex gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedPitch);
+                    toast.success("Copied to clipboard");
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-1" /> Copy
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const subjectMatch = generatedPitch.match(/^Subject:\s*(.+)/m);
+                    const subject = encodeURIComponent(subjectMatch?.[1] || `Collab Opportunity — ${eventTitle} x ${pitchTarget.name}`);
+                    const body = encodeURIComponent(generatedPitch.replace(/^Subject:.+\n\n?/, ""));
+                    window.open(`mailto:?subject=${subject}&body=${body}`);
+                  }}
+                >
+                  <Send className="h-3 w-3 mr-1" />
+                  Open in Email
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Section B — AI GTM Strategy */}
       <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
@@ -892,7 +1111,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
             )}
             <Button size="sm" onClick={generateGTM} disabled={generatingGTM}>
               {generatingGTM ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
-              {generatingGTM ? "Generating…" : "Generate GTM Plan"}
+              {generatingGTM ? "Generating\u2026" : "Generate GTM Plan"}
             </Button>
           </div>
         </div>
@@ -937,7 +1156,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
             )}
             <Button size="sm" onClick={generateSummary} disabled={generatingSummary}>
               {generatingSummary ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileText className="h-4 w-4 mr-1.5" />}
-              {generatingSummary ? "Generating…" : "Generate Summary"}
+              {generatingSummary ? "Generating\u2026" : "Generate Summary"}
             </Button>
           </div>
         </div>
