@@ -51,19 +51,19 @@ function BrandEventCover({ event }: { event: EventWithCounts }) {
   const hasImage = !!event.cover_image_url && !imgFailed;
 
   return (
-    <div className={`h-48 overflow-hidden flex items-center justify-center relative ${hasImage ? "" : "bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20"}`}>
+    <div className={`h-48 overflow-hidden relative ${hasImage ? "" : "flex items-center justify-center bg-gradient-to-br from-pd-blue/20 to-pd-darkblue/30 dark:from-pd-blue/10 dark:to-pd-darkblue/20"}`}>
       {hasImage ? (
         <img
           src={event.cover_image_url!}
           alt={event.title}
-          className="w-full h-full object-cover block"
+          className="absolute inset-0 w-full h-full object-cover"
           referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
         />
       ) : (
         <Calendar className="h-12 w-12 text-pd-blue/40" />
       )}
-      <div className="absolute top-3 right-3 flex gap-1.5">
+      <div className="absolute top-3 right-3 flex gap-1.5 z-10">
         <Badge className={STATUS_STYLES[event.is_published ? "published" : "draft"] + " text-xs font-medium capitalize"}>
           {event.is_published ? "published" : "draft"}
         </Badge>
