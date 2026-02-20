@@ -36,6 +36,11 @@ import {
   ChevronUp,
   Calendar,
   Target,
+  ImagePlus,
+  Upload,
+  Trash2,
+  RefreshCw,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { uploadText, type UploadPostPlatform } from "@/services/upload-post";
+import { uploadText, uploadPhotos, uploadVideo, type UploadPostPlatform } from "@/services/upload-post";
 import { useUploadPostConnect } from "@/hooks/useUploadPostConnect";
 import { useDemoMode } from "@/hooks/useDemoMode";
 
@@ -581,6 +586,11 @@ function PostCard({
   scheduling,
   scheduled,
   accountHandle,
+  mediaUrl,
+  mediaType,
+  mediaUploading,
+  onMediaUpload,
+  onMediaRemove,
 }: {
   post: CampaignPost;
   onSchedule: () => void;
@@ -588,10 +598,16 @@ function PostCard({
   scheduling: boolean;
   scheduled: boolean;
   accountHandle?: string | null;
+  mediaUrl?: string | null;
+  mediaType?: "image" | "video" | null;
+  mediaUploading?: boolean;
+  onMediaUpload?: (file: File) => void;
+  onMediaRemove?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption);
   const [editHashtags, setEditHashtags] = useState(post.hashtags);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const saveEdit = () => {
     onUpdate({ caption: editCaption, hashtags: editHashtags });
@@ -602,6 +618,12 @@ function PostCard({
     setEditCaption(post.caption);
     setEditHashtags(post.hashtags);
     setEditing(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onMediaUpload) onMediaUpload(file);
+    if (e.target) e.target.value = "";
   };
 
   return (
@@ -671,6 +693,60 @@ function PostCard({
         <p className="text-xs text-gray-400 italic mb-3">
           Visual: {post.suggested_visual}
         </p>
+      )}
+
+      {/* Media preview / upload */}
+      {mediaUrl ? (
+        <div className="relative mb-3 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+          {mediaType === "video" ? (
+            <video
+              src={mediaUrl}
+              className="w-full max-h-40 object-cover"
+              controls={false}
+              muted
+            />
+          ) : (
+            <img
+              src={mediaUrl}
+              alt="Post media"
+              className="w-full max-h-40 object-cover"
+            />
+          )}
+          <button
+            type="button"
+            onClick={onMediaRemove}
+            className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+            title="Remove media"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-medium text-white bg-black/50 px-1.5 py-0.5 rounded">
+            {mediaType === "video" ? "Video" : "Image"} attached
+          </span>
+        </div>
+      ) : (
+        <div className="mb-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={mediaUploading}
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 transition-colors"
+          >
+            {mediaUploading ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <ImagePlus className="h-3 w-3" />
+            )}
+            {mediaUploading ? "Uploading..." : "+ Add Media"}
+          </button>
+        </div>
       )}
 
       <div className="flex items-center gap-2">
@@ -1191,6 +1267,14 @@ export default function BrandCampaigns() {
   const [scheduleAllLoading, setScheduleAllLoading] = useState(false);
   const [scheduleFeedback, setScheduleFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
+  // Saved campaign state
+  const [savedCampaignId, setSavedCampaignId] = useState<string | null>(null);
+  const [loadedFromSaved, setLoadedFromSaved] = useState(false);
+
+  // Media state: keyed by global post index
+  const [postMedia, setPostMedia] = useState<Record<number, { file: File; url: string; type: "image" | "video" }>>({});
+  const [uploadingMedia, setUploadingMedia] = useState<Set<number>>(new Set());
+
   // Computed: date-based duration
   const hasDateRange = !!(startDate && endDate && endDate >= startDate);
   const dateDuration = hasDateRange ? daysBetween(startDate, endDate) : null;
@@ -1287,6 +1371,37 @@ export default function BrandCampaigns() {
       });
     })();
   }, [selectedEventId, events, allSponsors]);
+
+  // Load saved campaign when event is selected
+  useEffect(() => {
+    if (!selectedEventId) {
+      setCampaign(null);
+      setSavedCampaignId(null);
+      setLoadedFromSaved(false);
+      setPostMedia({});
+      setUploadingMedia(new Set());
+      return;
+    }
+    (async () => {
+      const { data, error } = await supabase
+        .from("event_campaigns")
+        .select("id, campaign_data")
+        .eq("event_id", selectedEventId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (error || !data) return;
+      const cd = data.campaign_data as unknown as CampaignData;
+      if (cd && cd.campaign_name && cd.phases) {
+        setCampaign(cd);
+        setSavedCampaignId(data.id);
+        setLoadedFromSaved(true);
+        setActivePhase(0);
+        setPostMedia({});
+        setScheduledPosts(new Set());
+      }
+    })();
+  }, [selectedEventId]);
 
   // Load ALL sponsors on mount (not tied to event)
   useEffect(() => {
@@ -1480,14 +1595,22 @@ Make the captions authentic and engaging for a military community audience. Refe
 
       setCampaign(parsed);
       setActivePhase(0);
+      setPostMedia({});
+      setScheduledPosts(new Set());
 
       // Save to Supabase
-      await supabase.from("event_campaigns").insert({
-        event_id: selectedEventId,
-        campaign_name: parsed.campaign_name,
-        campaign_data: parsed as any,
-        status: "draft",
-      });
+      const { data: insertedCampaign } = await supabase
+        .from("event_campaigns")
+        .insert({
+          event_id: selectedEventId,
+          campaign_name: parsed.campaign_name,
+          campaign_data: parsed as any,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+      setSavedCampaignId(insertedCampaign?.id ?? null);
+      setLoadedFromSaved(false);
     } catch (err: any) {
       console.error("Campaign generation failed:", err);
       setError(
@@ -1519,13 +1642,34 @@ Make the captions authentic and engaging for a military community audience. Refe
           postDate.setHours(hour, minute, 0, 0);
         }
 
-        await uploadText({
-          title: post.caption.slice(0, 100),
-          user: effectiveUserId,
-          platform: [post.platform as UploadPostPlatform],
-          scheduled_date: postDate.toISOString(),
-          async_upload: true,
-        });
+        const media = postMedia[globalIndex];
+        if (media?.type === "video") {
+          await uploadVideo({
+            title: post.caption.slice(0, 100),
+            user: effectiveUserId,
+            platform: [post.platform as UploadPostPlatform],
+            video: media.url,
+            scheduled_date: postDate.toISOString(),
+            async_upload: true,
+          });
+        } else if (media?.type === "image") {
+          await uploadPhotos({
+            title: post.caption.slice(0, 100),
+            user: effectiveUserId,
+            platform: [post.platform as UploadPostPlatform],
+            photos: [media.url],
+            scheduled_date: postDate.toISOString(),
+            async_upload: true,
+          });
+        } else {
+          await uploadText({
+            title: post.caption.slice(0, 100),
+            user: effectiveUserId,
+            platform: [post.platform as UploadPostPlatform],
+            scheduled_date: postDate.toISOString(),
+            async_upload: true,
+          });
+        }
 
         setScheduledPosts((prev) => new Set(prev).add(globalIndex));
       } catch (err) {
@@ -1538,7 +1682,7 @@ Make the captions authentic and engaging for a military community audience. Refe
         });
       }
     },
-    [selectedEvent, user]
+    [selectedEvent, user, postMedia]
   );
 
   // Schedule all posts
@@ -1577,6 +1721,48 @@ Make the captions authentic and engaging for a military community audience. Refe
         return { ...phase, posts };
       });
       return { ...prev, phases };
+    });
+  }, []);
+
+  // Upload media for a post
+  const handleMediaUpload = useCallback(async (file: File, globalIndex: number) => {
+    if (!selectedEventId) return;
+    setUploadingMedia((prev) => new Set(prev).add(globalIndex));
+    try {
+      const ext = file.name.split(".").pop() ?? "bin";
+      const path = `${selectedEventId}/${globalIndex}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("campaign-media")
+        .upload(path, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) {
+        console.error("Media upload failed:", uploadError);
+        return;
+      }
+      const { data: urlData } = supabase.storage
+        .from("campaign-media")
+        .getPublicUrl(path);
+      const mediaType: "image" | "video" = file.type.startsWith("video/") ? "video" : "image";
+      setPostMedia((prev) => ({
+        ...prev,
+        [globalIndex]: { file, url: urlData.publicUrl, type: mediaType },
+      }));
+    } catch (err) {
+      console.error("Media upload error:", err);
+    } finally {
+      setUploadingMedia((prev) => {
+        const next = new Set(prev);
+        next.delete(globalIndex);
+        return next;
+      });
+    }
+  }, [selectedEventId]);
+
+  // Remove media from a post
+  const removeMedia = useCallback((globalIndex: number) => {
+    setPostMedia((prev) => {
+      const next = { ...prev };
+      delete next[globalIndex];
+      return next;
     });
   }, []);
 
@@ -1868,6 +2054,11 @@ Make the captions authentic and engaging for a military community audience. Refe
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Generating...
                   </>
+                ) : loadedFromSaved ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Regenerate Campaign
+                  </>
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4 mr-2" />
@@ -1938,7 +2129,18 @@ Make the captions authentic and engaging for a military community audience. Refe
                 <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm">
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">{campaign.campaign_name}</h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">{campaign.campaign_name}</h2>
+                        {savedCampaignId && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
+                            <Save className="h-3 w-3" />
+                            Saved
+                          </span>
+                        )}
+                        {loadedFromSaved && (
+                          <span className="text-xs text-gray-400">(loaded from saved)</span>
+                        )}
+                      </div>
                       <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-1 rounded-full">
                         {campaign.total_posts} posts
                       </span>
@@ -2023,6 +2225,11 @@ Make the captions authentic and engaging for a military community audience. Refe
                         scheduling={schedulingPosts.has(globalIdx)}
                         scheduled={scheduledPosts.has(globalIdx)}
                         accountHandle={platformHandles[post.platform] ?? null}
+                        mediaUrl={postMedia[globalIdx]?.url ?? null}
+                        mediaType={postMedia[globalIdx]?.type ?? null}
+                        mediaUploading={uploadingMedia.has(globalIdx)}
+                        onMediaUpload={(file) => handleMediaUpload(file, globalIdx)}
+                        onMediaRemove={() => removeMedia(globalIdx)}
                       />
                     );
                   })}
