@@ -1,11 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
+const BUCKET = "creator-avatars";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { imageUrl, handle: h, creatorHandle } = req.body || {};
+  const { imageUrl, handle: h, creatorHandle, updateDb } = req.body || {};
   const handle = h || creatorHandle;
   if (!imageUrl || !handle) {
     return res.status(400).json({ error: "imageUrl and handle (or creatorHandle) are required" });
@@ -19,6 +21,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Supabase not configured" });
   }
 
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
     console.log("[upload-creator-image] Fetching:", imageUrl.substring(0, 120));
 
@@ -26,7 +30,7 @@ export default async function handler(req, res) {
       redirect: "follow",
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; MilCrunch/1.0)",
-        "Accept": "image/*,*/*",
+        Accept: "image/*,*/*",
       },
     });
 
@@ -42,26 +46,42 @@ export default async function handler(req, res) {
     const contentType = imgResp.headers.get("content-type") || "image/jpeg";
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
     const safeName = handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-    const path = `directory-avatars/${safeName}.${ext}`;
+    const path = `${safeName}.${ext}`;
 
-    console.log("[upload-creator-image] Uploading to creator-images:", path, `(${buffer.length} bytes)`);
+    // Ensure bucket exists (idempotent — ignores "already exists" error)
+    await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log("[upload-creator-image] Uploading to", BUCKET, path, `(${buffer.length} bytes)`);
+
     const { error: uploadError } = await supabase.storage
-      .from("creator-images")
+      .from(BUCKET)
       .upload(path, buffer, { contentType, upsert: true });
 
     if (uploadError) {
-      console.error("[upload-creator-image] Supabase upload error:", uploadError.message);
+      console.error("[upload-creator-image] Upload error:", uploadError.message);
       return res.status(500).json({ error: uploadError.message });
     }
 
     const { data: urlData } = supabase.storage
-      .from("creator-images")
+      .from(BUCKET)
       .getPublicUrl(path);
 
-    console.log("[upload-creator-image] Success:", urlData.publicUrl);
-    return res.status(200).json({ url: urlData.publicUrl });
+    const permanentUrl = urlData.publicUrl;
+    console.log("[upload-creator-image] Success:", permanentUrl);
+
+    // Optionally update directory_members with the permanent URL
+    if (updateDb !== false) {
+      supabase
+        .from("directory_members")
+        .update({ ic_avatar_url: permanentUrl, avatar_url: permanentUrl })
+        .eq("creator_handle", handle.toLowerCase())
+        .then(({ error }) => {
+          if (error) console.warn("[upload-creator-image] DB update failed:", error.message);
+          else console.log("[upload-creator-image] Updated directory_members for", handle);
+        });
+    }
+
+    return res.status(200).json({ url: permanentUrl });
   } catch (e) {
     console.error("[upload-creator-image] Exception:", e.message, e.stack);
     return res.status(502).json({ error: "Image upload failed", message: e.message });

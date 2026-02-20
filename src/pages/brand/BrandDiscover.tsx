@@ -28,6 +28,7 @@ import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment } from "@/lib/featured-creators";
+import { saveCreatorAvatar } from "@/lib/directories";
 import { parseSmartQuery } from "@/lib/smart-search-parser";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -315,27 +316,8 @@ function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse
       null;
     if (!avatarUrl) return;
 
-    // Upload to Supabase storage first, then update the row with the permanent URL
-    fetch("/api/upload-creator-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl: avatarUrl, handle }),
-    })
-      .then((resp) => (resp.ok ? resp.json() : null))
-      .then((result) => {
-        const permanentUrl = result?.url || avatarUrl;
-        supabase
-          .from("directory_members")
-          .update({ avatar_url: permanentUrl, ic_avatar_url: avatarUrl })
-          .eq("creator_handle", handle.toLowerCase())
-          .then(({ error }) => {
-            if (error) return;
-            console.log(`[BrandDiscover] Updated directory_members avatar for @${handle}`);
-          });
-      })
-      .catch(() => {
-        // non-critical — ignore
-      });
+    // Save to permanent Supabase Storage (fire-and-forget, also updates DB)
+    saveCreatorAvatar(handle, avatarUrl).catch(() => {});
   } catch {
     // non-critical — ignore
   }

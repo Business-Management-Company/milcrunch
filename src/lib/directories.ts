@@ -25,6 +25,39 @@ export async function uploadCreatorImage(
   }
 }
 
+/**
+ * Save a creator's avatar to permanent Supabase Storage and update the DB.
+ * Call this whenever a fresh IC API image URL is available.
+ * - Uploads image to creator-avatars/{handle}.jpg via serverless proxy
+ * - Updates directory_members.ic_avatar_url with the permanent URL
+ * Returns the permanent URL or null on failure.
+ */
+export async function saveCreatorAvatar(
+  handle: string,
+  imageUrl: string
+): Promise<string | null> {
+  if (!handle || !imageUrl) return null;
+  // Skip if already a permanent Supabase Storage URL
+  if (imageUrl.includes("supabase.co/storage")) return imageUrl;
+  try {
+    const resp = await fetch("/api/upload-creator-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl, handle, updateDb: true }),
+    });
+    if (!resp.ok) {
+      console.warn("[saveCreatorAvatar] Upload failed for", handle, resp.status);
+      return null;
+    }
+    const data = await resp.json();
+    console.log("[saveCreatorAvatar] Cached avatar for", handle, data.url);
+    return data.url || null;
+  } catch (err) {
+    console.warn("[saveCreatorAvatar] Error for", handle, err);
+    return null;
+  }
+}
+
 export interface Directory {
   id: string;
   name: string;
@@ -231,7 +264,7 @@ export async function addToDirectory(
     creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: permanentAvatarUrl,
-    ic_avatar_url: data.ic_avatar_url || null,
+    ic_avatar_url: permanentAvatarUrl || data.ic_avatar_url || null,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,

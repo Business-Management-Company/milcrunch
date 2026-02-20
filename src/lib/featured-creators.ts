@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { generateProfileSlug, uploadCreatorImage } from "@/lib/directories";
+import { generateProfileSlug, uploadCreatorImage, saveCreatorAvatar } from "@/lib/directories";
 import { enrichCreatorProfile, type EnrichedProfileResponse } from "@/lib/influencers-club";
 
 // Homepage showcase functions use `featured_creators` table.
@@ -286,16 +286,9 @@ export async function enrichHomepageHeroCreators(
         // 3. Extract avatar from enrichment
         const enrichAvatar = extractAvatarFromEnrichment(responseData);
 
-        // 3b. Write avatar back to directory_members if it was missing
-        if (enrichAvatar && !c.avatar_url && !c.ic_avatar_url) {
-          supabase
-            .from("directory_members")
-            .update({ avatar_url: enrichAvatar })
-            .eq("id", c.id)
-            .then(({ error: writeErr }) => {
-              if (writeErr) console.warn("[HeroEnrich] avatar write-back failed for", handle, writeErr.message);
-              else console.log("[HeroEnrich] Wrote avatar_url back for", handle);
-            });
+        // 3b. Cache avatar to permanent Supabase Storage (fire-and-forget)
+        if (enrichAvatar && !enrichAvatar.includes("supabase.co/storage")) {
+          saveCreatorAvatar(handle, enrichAvatar).catch(() => {});
         }
 
         // 4. Merge: prefer API data when > 0, keep existing data as fallback
@@ -366,20 +359,13 @@ export async function fillShowcaseAvatarsFromCache(
       const cached = cacheMap.get(c.handle.toLowerCase());
       if (cached) {
         avatar = extractAvatarFromEnrichment(cached);
-        if (avatar) {
-          // Fire-and-forget: persist avatar_url back to directory_members
-          supabase
-            .from("directory_members")
-            .update({ avatar_url: avatar })
-            .eq("id", c.id)
-            .then(({ error }) => {
-              if (error) console.warn("[ShowcaseEnrich] avatar write-back failed for", c.handle, error.message);
-              else console.log("[ShowcaseEnrich] Wrote avatar_url back for", c.handle);
-            });
-        }
       }
     }
     if (avatar) {
+      // Cache to permanent Storage (fire-and-forget)
+      if (!avatar.includes("supabase.co/storage")) {
+        saveCreatorAvatar(c.handle, avatar).catch(() => {});
+      }
       return { ...c, avatar_url: avatar, ic_avatar_url: avatar };
     }
     return c;
@@ -671,7 +657,7 @@ export async function approveForDirectory(data: {
     creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: permanentAvatarUrl,
-    ic_avatar_url: data.ic_avatar_url || null,
+    ic_avatar_url: permanentAvatarUrl || data.ic_avatar_url || null,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,

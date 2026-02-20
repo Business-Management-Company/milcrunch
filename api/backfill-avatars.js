@@ -50,6 +50,9 @@ export default async function handler(req, res) {
     });
   }
 
+  // Ensure creator-avatars bucket exists (idempotent)
+  await sb.storage.createBucket("creator-avatars", { public: true }).catch(() => {});
+
   // Fetch ALL directory_members (refresh all avatars since signed URLs expire)
   const { data: members, error: fetchErr } = await sb
     .from("directory_members")
@@ -134,15 +137,15 @@ export default async function handler(req, res) {
               ? "webp"
               : "jpg";
           const safeName = handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-          const path = `directory-avatars/${safeName}.${ext}`;
+          const path = `${safeName}.${ext}`;
 
           const { error: uploadErr } = await sb.storage
-            .from("creator-images")
+            .from("creator-avatars")
             .upload(path, buffer, { contentType, upsert: true });
 
           if (!uploadErr) {
             const { data: urlData } = sb.storage
-              .from("creator-images")
+              .from("creator-avatars")
               .getPublicUrl(path);
             permanentUrl = urlData.publicUrl;
             row.permanent = permanentUrl;
@@ -157,11 +160,9 @@ export default async function handler(req, res) {
         row.error = `img: ${imgErr.message}`;
       }
 
-      // 3. Update directory_members with both URLs
-      const updatePayload = { ic_avatar_url: httpsUrl };
-      if (permanentUrl) {
-        updatePayload.avatar_url = permanentUrl;
-      }
+      // 3. Update directory_members — prefer permanent URL for both columns
+      const finalUrl = permanentUrl || httpsUrl;
+      const updatePayload = { ic_avatar_url: finalUrl, avatar_url: finalUrl };
 
       const { error: updateErr } = await sb
         .from("directory_members")

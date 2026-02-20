@@ -63,7 +63,7 @@ import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, enrichCreatorProfile } from "@/lib/influencers-club";
-import { uploadCreatorImage } from "@/lib/directories";
+import { uploadCreatorImage, saveCreatorAvatar } from "@/lib/directories";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
@@ -374,26 +374,15 @@ const BrandDirectory = () => {
         const avatarUrl = extractAvatarFromEnrichment(data);
         if (!avatarUrl) continue;
 
-        // Upload to Supabase storage for a permanent URL
-        let permanentUrl = avatarUrl;
-        const uploaded = await uploadCreatorImage(avatarUrl, m.creator_handle);
-        if (uploaded) permanentUrl = uploaded;
+        // Save to permanent Supabase Storage (also updates DB)
+        const permanentUrl = await saveCreatorAvatar(m.creator_handle, avatarUrl) || avatarUrl;
 
-        const { error } = await supabase
-          .from("directory_members")
-          .update({ avatar_url: permanentUrl, ic_avatar_url: avatarUrl })
-          .eq("id", m.id);
-
-        if (!error) {
-          updated++;
-          setMembers((prev) =>
-            prev.map((mem) =>
-              mem.id === m.id ? { ...mem, avatar_url: permanentUrl, ic_avatar_url: avatarUrl } : mem
-            )
-          );
-        } else {
-          console.warn("[RefreshPhotos] Update failed for", m.creator_handle, error.message);
-        }
+        updated++;
+        setMembers((prev) =>
+          prev.map((mem) =>
+            mem.id === m.id ? { ...mem, avatar_url: permanentUrl, ic_avatar_url: permanentUrl } : mem
+          )
+        );
       } catch (err) {
         console.warn("[RefreshPhotos] Enrichment failed for", m.creator_handle, err);
       }
