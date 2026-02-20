@@ -15,7 +15,12 @@ export default async function handler(req, res) {
   const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  const icApiKey = process.env.VITE_INFLUENCERS_CLUB_API_KEY;
+  // IC API key: accept from Authorization header, request body, or env
+  const icApiKey =
+    (req.headers.authorization || "").replace(/^Bearer\s+/i, "") ||
+    (req.body && req.body.ic_api_key) ||
+    process.env.VITE_INFLUENCERS_CLUB_API_KEY ||
+    process.env.INFLUENCERS_CLUB_API_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: "Supabase not configured" });
