@@ -60,8 +60,17 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name A\u2013Z" },
 ];
 
-/* Neutral fallback banner when no banner_image_url */
-const DEFAULT_BANNER = "bg-[#E5E7EB]";
+/* Branch → animated gradient mesh for card banners (when no banner_image_url) */
+const BRANCH_GRADIENT: Record<string, string> = {
+  default: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B73FF 100%)",
+  veteran: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B73FF 100%)",
+  Marines: "linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #e8294b 100%)",
+  Army: "linear-gradient(135deg, #56ab2f 0%, #a8e063 50%, #2d6a4f 100%)",
+  Navy: "linear-gradient(135deg, #2193b0 0%, #6dd5ed 50%, #1a6fa8 100%)",
+  "Air Force": "linear-gradient(135deg, #89f7fe 0%, #66a6ff 50%, #0066cc 100%)",
+  "Coast Guard": "linear-gradient(135deg, #f7971e 0%, #ffd200 50%, #ff6b35 100%)",
+  "National Guard": "linear-gradient(135deg, #B8860B 0%, #DAA520 50%, #6B6B2A 100%)",
+};
 
 /* Branch filter badge colors (selected state) */
 const BRANCH_SELECTED: Record<string, string> = {
@@ -173,10 +182,10 @@ function CreatorCard({
   }, [initialSrc]);
   const [bannerError, setBannerError] = useState(false);
   const platforms = c.platforms ?? [];
-  const bannerClass = DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
   const isVerified = !!c.featured_homepage;
   const bannerImg = !bannerError && c.banner_image_url ? c.banner_image_url : null;
+  const branchGradient = BRANCH_GRADIENT[c.branch ?? ""] ?? BRANCH_GRADIENT.default;
 
   return (
     <Link
@@ -190,8 +199,8 @@ function CreatorCard({
       onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
     >
-      {/* Banner — Instagram post image or branch-colored gradient */}
-      <div className={cn("h-20 w-full relative overflow-hidden", !bannerImg && bannerClass)}>
+      {/* Banner — real image or animated branch gradient mesh */}
+      <div className="h-20 w-full relative overflow-hidden">
         {bannerImg ? (
           <>
             <img
@@ -206,10 +215,8 @@ function CreatorCard({
           </>
         ) : (
           <div
-            className="absolute inset-0 opacity-[0.08]"
-            style={{
-              backgroundImage: `repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 11px)`,
-            }}
+            className="absolute inset-0 animate-mesh-shift"
+            style={{ backgroundImage: branchGradient, opacity: 0.75 }}
           />
         )}
         {/* Branch label on banner */}

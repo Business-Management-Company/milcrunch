@@ -150,6 +150,17 @@
     50% { transform: translateY(-20px); }
   }
 
+  .animate-mesh-shift {
+    background-size: 200% 200%;
+    animation: meshShift 6s ease infinite;
+  }
+
+  @keyframes meshShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
   .animate-pulse-glow {
     animation: pulse-glow 3s ease-in-out infinite;
   }
