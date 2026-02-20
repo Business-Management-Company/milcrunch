@@ -60,16 +60,8 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name A\u2013Z" },
 ];
 
-/* Branch-specific banner gradients (fallback when no banner_image_url) */
-const BRANCH_BANNER: Record<string, string> = {
-  Army: "bg-gradient-to-br from-[#2D5016] to-[#1A3009]",
-  Navy: "bg-gradient-to-br from-[#1B3A6B] to-[#0F2240]",
-  "Air Force": "bg-gradient-to-br from-[#4A90D9] to-[#2E6AB0]",
-  Marines: "bg-gradient-to-br from-[#8B0000] to-[#5C0000]",
-  "Coast Guard": "bg-gradient-to-br from-[#FF6B00] to-[#CC5500]",
-  "Space Force": "bg-gradient-to-br from-[#1C1C3A] to-[#0E0E1F]",
-};
-const DEFAULT_BANNER = "bg-gradient-to-br from-[#6B46C1] to-[#553C9A]";
+/* Neutral fallback banner when no banner_image_url */
+const DEFAULT_BANNER = "bg-[#E5E7EB]";
 
 /* Branch filter badge colors (selected state) */
 const BRANCH_SELECTED: Record<string, string> = {
@@ -120,7 +112,7 @@ function SkeletonCard() {
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col animate-pulse">
       {/* Banner shimmer */}
-      <div className="h-20 w-full bg-gradient-to-br from-[#6C5CE7]/40 via-[#8B7CF7]/30 to-[#6C5CE7]/40" />
+      <div className="h-20 w-full bg-gray-200" />
       {/* Avatar placeholder */}
       <div className="flex justify-center -mt-8">
         <div className="w-16 h-16 rounded-full border-4 border-white bg-gray-200 shadow-lg" />
@@ -181,7 +173,7 @@ function CreatorCard({
   }, [imgSrc]);
   const [bannerError, setBannerError] = useState(false);
   const platforms = c.platforms ?? [];
-  const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
+  const bannerClass = DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
   const isVerified = !!c.featured_homepage;
   const bannerImg = !bannerError && c.banner_image_url ? c.banner_image_url : null;

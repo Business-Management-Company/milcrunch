@@ -263,8 +263,8 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         transition: `opacity 0.5s ease-out ${index * 70}ms, transform 0.5s ease-out ${index * 70}ms, box-shadow 0.3s ease`,
       }}
     >
-      {/* Purple gradient banner */}
-      <div className="h-20 w-full bg-gradient-to-r from-[#6C5CE7] to-[#8B7CF7]" />
+      {/* Neutral grey banner */}
+      <div className="h-20 w-full bg-[#E5E7EB]" />
 
       {/* Avatar overlapping banner */}
       <div className="relative -mt-10 mb-3">
