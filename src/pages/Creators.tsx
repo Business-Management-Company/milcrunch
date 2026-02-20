@@ -21,6 +21,7 @@ import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 import {
   fetchShowcaseByDirectoryName,
+  fillShowcaseAvatarsFromCache,
   formatFollowerCount,
   getInitials,
   extractAvatarFromEnrichment,
@@ -167,14 +168,15 @@ function CreatorCard({
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
 
-  // 3-second timeout: if image hasn't loaded, give up
+  // Reset error state when src changes (e.g. after CDN URL persisted to permanent storage)
+  const prevSrc = useRef(imgSrc);
   useEffect(() => {
-    if (!imgSrc || imgLoaded || imgError) return;
-    const timer = setTimeout(() => {
-      if (!imgLoaded) setImgError(true);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [imgSrc, imgLoaded, imgError]);
+    if (imgSrc !== prevSrc.current) {
+      prevSrc.current = imgSrc;
+      setImgError(false);
+      setImgLoaded(false);
+    }
+  }, [imgSrc]);
   const platforms = c.platforms ?? [];
   const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
@@ -365,18 +367,24 @@ export default function Creators() {
     if (cached && cached.length > 0) {
       setAllCreators(cached);
       setLoading(false);
-      // Refresh in background
-      fetchShowcaseByDirectoryName("Military Creator Network", 500).then((fresh) => {
+      // Refresh in background + persist CDN avatars
+      fetchShowcaseByDirectoryName("Military Creator Network", 500).then(async (fresh) => {
         if (fresh.length > 0) {
           setAllCreators(fresh);
           setCachedCreators(fresh);
+          const withAvatars = await fillShowcaseAvatarsFromCache(fresh);
+          setAllCreators(withAvatars);
+          setCachedCreators(withAvatars);
         }
       });
     } else {
-      fetchShowcaseByDirectoryName("Military Creator Network", 500).then((data) => {
+      fetchShowcaseByDirectoryName("Military Creator Network", 500).then(async (data) => {
         setAllCreators(data);
         setLoading(false);
         if (data.length > 0) setCachedCreators(data);
+        const withAvatars = await fillShowcaseAvatarsFromCache(data);
+        setAllCreators(withAvatars);
+        if (withAvatars.length > 0) setCachedCreators(withAvatars);
       });
     }
   }, []);
