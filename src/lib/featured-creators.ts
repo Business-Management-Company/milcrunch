@@ -822,3 +822,147 @@ export function getInitials(displayName: string, handle: string): string {
   if (handle.length >= 2) return handle.slice(0, 2).toUpperCase();
   return "?";
 }
+
+/* ================================================================
+   Banner Image Helpers (shared by Creators.tsx + CreatorPublicProfile.tsx)
+   ================================================================ */
+
+/** Extract banner image from stored enrichment_data. Checks cover fields + first post thumbnail. */
+export function extractBannerImage(enrichData: unknown): string | null {
+  if (!enrichData || typeof enrichData !== "object") return null;
+  const data = enrichData as Record<string, unknown>;
+  const ig = data.instagram as Record<string, unknown> | undefined;
+  const result = data.result as Record<string, unknown> | undefined;
+
+  // Check explicit cover fields
+  for (const obj of [ig, result, data]) {
+    if (!obj) continue;
+    for (const key of ["cover_photo", "profile_cover", "banner_url", "cover_image"]) {
+      if (obj[key] && typeof obj[key] === "string") {
+        return (obj[key] as string).replace(/^http:\/\//i, "https://");
+      }
+    }
+  }
+
+  // Fallback: first post thumbnail
+  const postData = ig?.post_data;
+  if (Array.isArray(postData) && postData.length > 0) {
+    const first = postData[0] as Record<string, unknown>;
+    const media = first.media as unknown[] | undefined;
+    if (Array.isArray(media) && media[0]) {
+      const m = media[0] as Record<string, unknown>;
+      if (m.url && typeof m.url === "string") return (m.url as string).replace(/^http:\/\//i, "https://");
+    }
+    if (first.thumbnail && typeof first.thumbnail === "string") return (first.thumbnail as string).replace(/^http:\/\//i, "https://");
+    if (first.image_url && typeof first.image_url === "string") return (first.image_url as string).replace(/^http:\/\//i, "https://");
+  }
+
+  return null;
+}
+
+/** Fetch recent posts from Influencers.club raw enrichment and return the first image URL. */
+export async function fetchBannerFromPosts(handle: string, platform = "instagram"): Promise<string | null> {
+  try {
+    const apiKey = import.meta.env.VITE_INFLUENCERS_CLUB_API_KEY as string | undefined;
+    if (!apiKey) return null;
+    const res = await fetch(
+      `/api/enrich/public/v1/creators/enrich/handle/raw/${platform}/${encodeURIComponent(handle)}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    // Try extracting from the enrichment response
+    const banner = extractBannerImage(data);
+    if (banner) return banner;
+
+    // Dig into nested result structures
+    const ig = data?.instagram ?? data?.result?.instagram ?? data?.result ?? data;
+    const posts = ig?.post_data ?? ig?.posts ?? ig?.recent_posts;
+    if (!Array.isArray(posts) || posts.length === 0) return null;
+
+    for (const post of posts.slice(0, 6)) {
+      const media = post.media as unknown[] | undefined;
+      if (Array.isArray(media) && media.length > 0) {
+        const m = media[0] as Record<string, unknown>;
+        if (m.url && typeof m.url === "string") return (m.url as string).replace(/^http:\/\//i, "https://");
+      }
+      if (post.thumbnail && typeof post.thumbnail === "string")
+        return (post.thumbnail as string).replace(/^http:\/\//i, "https://");
+      if (post.image_url && typeof post.image_url === "string")
+        return (post.image_url as string).replace(/^http:\/\//i, "https://");
+    }
+    return null;
+  } catch (err) {
+    console.error("[fetchBannerFromPosts] error:", err);
+    return null;
+  }
+}
+
+/** Resolve banner images for a batch of creators.
+ *  1. Check existing banner_image_url
+ *  2. Try extracting from enrichment_data
+ *  3. For up to N creators still missing, fetch from IC API and persist back.
+ *  Returns the updated array (optimistic — DB writes are fire-and-forget). */
+export async function resolveBannerImages(
+  creators: ShowcaseCreator[],
+  maxApiFetches = 10,
+): Promise<ShowcaseCreator[]> {
+  let result = creators.map((c) => {
+    // Already has a banner
+    if (c.banner_image_url) return c;
+    // Try enrichment_data
+    const banner = extractBannerImage(c.enrichment_data);
+    if (banner) {
+      // Persist back (fire-and-forget)
+      if (c.id) {
+        supabase
+          .from("directory_members")
+          .update({ banner_image_url: banner } as Record<string, unknown>)
+          .eq("id", c.id)
+          .then(() => {});
+      }
+      return { ...c, banner_image_url: banner };
+    }
+    return c;
+  });
+
+  // For creators still missing banners, fetch from IC API (capped to avoid burning credits)
+  const needsFetch = result.filter((c) => !c.banner_image_url);
+  const toFetch = needsFetch.slice(0, maxApiFetches);
+
+  if (toFetch.length > 0) {
+    const fetched = await Promise.allSettled(
+      toFetch.map(async (c) => {
+        const url = await fetchBannerFromPosts(c.handle, c.platform || "instagram");
+        return url ? { id: c.id, handle: c.handle, url } : null;
+      }),
+    );
+    const bannerMap = new Map<string, string>();
+    for (const r of fetched) {
+      if (r.status === "fulfilled" && r.value) {
+        bannerMap.set(r.value.id, r.value.url);
+        // Persist (fire-and-forget)
+        supabase
+          .from("directory_members")
+          .update({ banner_image_url: r.value.url } as Record<string, unknown>)
+          .eq("id", r.value.id)
+          .then(() => {});
+      }
+    }
+    if (bannerMap.size > 0) {
+      result = result.map((c) => {
+        const url = bannerMap.get(c.id);
+        return url ? { ...c, banner_image_url: url } : c;
+      });
+    }
+  }
+
+  return result;
+}

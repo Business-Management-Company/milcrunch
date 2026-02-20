@@ -40,6 +40,8 @@ import {
   formatFollowerCount,
   getInitials,
   extractAvatarFromEnrichment,
+  extractBannerImage,
+  fetchBannerFromPosts,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
@@ -59,14 +61,14 @@ const TikTokIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
 /* ------------------------------------------------------------------ */
 
 const BRANCH_BANNER: Record<string, string> = {
-  Army: "bg-gradient-to-br from-green-800 via-green-700 to-green-900",
-  Navy: "bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900",
-  "Air Force": "bg-gradient-to-br from-sky-600 via-blue-600 to-sky-800",
-  Marines: "bg-gradient-to-br from-red-800 via-red-700 to-red-900",
-  "Coast Guard": "bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700",
-  "Space Force": "bg-gradient-to-br from-indigo-700 via-indigo-600 to-purple-800",
+  Army: "bg-gradient-to-br from-[#2D5016] to-[#1A3009]",
+  Navy: "bg-gradient-to-br from-[#1B3A6B] to-[#0F2240]",
+  "Air Force": "bg-gradient-to-br from-[#4A90D9] to-[#2E6AB0]",
+  Marines: "bg-gradient-to-br from-[#8B0000] to-[#5C0000]",
+  "Coast Guard": "bg-gradient-to-br from-[#FF6B00] to-[#CC5500]",
+  "Space Force": "bg-gradient-to-br from-[#1C1C3A] to-[#0E0E1F]",
 };
-const DEFAULT_BANNER = "bg-gradient-to-br from-[#6C5CE7] via-[#7C6CF7] to-[#8B7CF7]";
+const DEFAULT_BANNER = "bg-gradient-to-br from-[#6B46C1] to-[#553C9A]";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-700 text-white",
@@ -127,83 +129,6 @@ interface EventRow {
 /* ------------------------------------------------------------------ */
 /* Enrichment Extraction Helpers                                       */
 /* ------------------------------------------------------------------ */
-
-function extractBannerImage(enrichData: unknown): string | null {
-  if (!enrichData || typeof enrichData !== "object") return null;
-  const data = enrichData as Record<string, unknown>;
-  const ig = data.instagram as Record<string, unknown> | undefined;
-  const result = data.result as Record<string, unknown> | undefined;
-
-  // Check explicit cover fields
-  for (const obj of [ig, result, data]) {
-    if (!obj) continue;
-    for (const key of ["cover_photo", "profile_cover", "banner_url", "cover_image"]) {
-      if (obj[key] && typeof obj[key] === "string") return obj[key] as string;
-    }
-  }
-
-  // Fallback: first post thumbnail
-  const postData = ig?.post_data;
-  if (Array.isArray(postData) && postData.length > 0) {
-    const first = postData[0] as Record<string, unknown>;
-    const media = first.media as unknown[] | undefined;
-    if (Array.isArray(media) && media[0]) {
-      const m = media[0] as Record<string, unknown>;
-      if (m.url && typeof m.url === "string") return m.url as string;
-    }
-    if (first.thumbnail && typeof first.thumbnail === "string") return first.thumbnail as string;
-    if (first.image_url && typeof first.image_url === "string") return first.image_url as string;
-  }
-
-  return null;
-}
-
-/** Fetch recent posts from Influencers.club and return the first high-quality image URL. */
-async function fetchBannerFromPosts(handle: string, platform = "instagram"): Promise<string | null> {
-  try {
-    const apiKey = import.meta.env.VITE_INFLUENCERS_CLUB_API_KEY as string | undefined;
-    if (!apiKey) return null;
-    const res = await fetch(
-      `/api/enrich/public/v1/creators/enrich/handle/raw/${platform}/${encodeURIComponent(handle)}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-      }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-
-    // Try to extract banner from the enrichment response
-    const banner = extractBannerImage(data);
-    if (banner) return banner.replace(/^http:\/\//i, "https://");
-
-    // Dig into nested result structures
-    const ig =
-      data?.instagram ?? data?.result?.instagram ?? data?.result ?? data;
-    const posts = ig?.post_data ?? ig?.posts ?? ig?.recent_posts;
-    if (!Array.isArray(posts) || posts.length === 0) return null;
-
-    // Find the first post with an image (prefer landscape/high-res)
-    for (const post of posts.slice(0, 6)) {
-      const media = post.media as unknown[] | undefined;
-      if (Array.isArray(media) && media.length > 0) {
-        const m = media[0] as Record<string, unknown>;
-        if (m.url && typeof m.url === "string") return (m.url as string).replace(/^http:\/\//i, "https://");
-      }
-      if (post.thumbnail && typeof post.thumbnail === "string")
-        return (post.thumbnail as string).replace(/^http:\/\//i, "https://");
-      if (post.image_url && typeof post.image_url === "string")
-        return (post.image_url as string).replace(/^http:\/\//i, "https://");
-    }
-    return null;
-  } catch (err) {
-    console.error("[fetchBannerFromPosts] error:", err);
-    return null;
-  }
-}
 
 function extractEmailFromEnrichment(enrichData: unknown): string | null {
   if (!enrichData || typeof enrichData !== "object") return null;

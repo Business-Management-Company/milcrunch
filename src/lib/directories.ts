@@ -98,6 +98,7 @@ export interface DirectoryMember {
   avg_likes: string | null;
   avg_comments: number | null;
   post_count: number | null;
+  banner_image_url: string | null;
 }
 
 // ─── Directory CRUD ─────────────────────────────────────────

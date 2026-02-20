@@ -22,6 +22,7 @@ import PublicFooter from "@/components/layout/PublicFooter";
 import {
   fetchShowcaseByDirectoryName,
   fillShowcaseAvatarsFromCache,
+  resolveBannerImages,
   formatFollowerCount,
   getInitials,
   extractAvatarFromEnrichment,
@@ -58,16 +59,16 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: "name", label: "Name A\u2013Z" },
 ];
 
-/* Branch-specific banner gradients */
+/* Branch-specific banner gradients (fallback when no banner_image_url) */
 const BRANCH_BANNER: Record<string, string> = {
-  Army: "bg-gradient-to-br from-green-800 via-green-700 to-green-900",
-  Navy: "bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900",
-  "Air Force": "bg-gradient-to-br from-sky-600 via-blue-600 to-sky-800",
-  Marines: "bg-gradient-to-br from-red-800 via-red-700 to-red-900",
-  "Coast Guard": "bg-gradient-to-br from-orange-600 via-orange-500 to-orange-700",
-  "Space Force": "bg-gradient-to-br from-indigo-700 via-indigo-600 to-purple-800",
+  Army: "bg-gradient-to-br from-[#2D5016] to-[#1A3009]",
+  Navy: "bg-gradient-to-br from-[#1B3A6B] to-[#0F2240]",
+  "Air Force": "bg-gradient-to-br from-[#4A90D9] to-[#2E6AB0]",
+  Marines: "bg-gradient-to-br from-[#8B0000] to-[#5C0000]",
+  "Coast Guard": "bg-gradient-to-br from-[#FF6B00] to-[#CC5500]",
+  "Space Force": "bg-gradient-to-br from-[#1C1C3A] to-[#0E0E1F]",
 };
-const DEFAULT_BANNER = "bg-gradient-to-br from-[#6C5CE7] via-[#7C6CF7] to-[#8B7CF7]";
+const DEFAULT_BANNER = "bg-gradient-to-br from-[#6B46C1] to-[#553C9A]";
 
 /* Branch filter badge colors (selected state) */
 const BRANCH_SELECTED: Record<string, string> = {
@@ -177,10 +178,12 @@ function CreatorCard({
       setImgLoaded(false);
     }
   }, [imgSrc]);
+  const [bannerError, setBannerError] = useState(false);
   const platforms = c.platforms ?? [];
   const bannerClass = BRANCH_BANNER[c.branch ?? ""] ?? DEFAULT_BANNER;
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
   const isVerified = !!c.featured_homepage;
+  const bannerImg = !bannerError && c.banner_image_url ? c.banner_image_url : null;
 
   return (
     <Link
@@ -194,18 +197,31 @@ function CreatorCard({
       onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
     >
-      {/* Banner — branch-colored gradient with subtle pattern overlay */}
-      <div className={cn("h-20 w-full relative", bannerClass)}>
-        {/* Subtle diagonal pattern overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.08]"
-          style={{
-            backgroundImage: `repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 11px)`,
-          }}
-        />
+      {/* Banner — Instagram post image or branch-colored gradient */}
+      <div className={cn("h-20 w-full relative overflow-hidden", !bannerImg && bannerClass)}>
+        {bannerImg ? (
+          <>
+            <img
+              src={bannerImg}
+              alt=""
+              className="w-full h-full object-cover"
+              style={{ objectPosition: "center top" }}
+              loading="lazy"
+              onError={() => setBannerError(true)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+          </>
+        ) : (
+          <div
+            className="absolute inset-0 opacity-[0.08]"
+            style={{
+              backgroundImage: `repeating-linear-gradient(135deg, transparent, transparent 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 11px)`,
+            }}
+          />
+        )}
         {/* Branch label on banner */}
         {c.branch && (
-          <span className="absolute top-2.5 right-2.5 text-[10px] font-bold uppercase tracking-wider text-white/80">
+          <span className="absolute top-2.5 right-2.5 text-[10px] font-bold uppercase tracking-wider text-white/80 drop-shadow-sm">
             {c.branch}
           </span>
         )}
@@ -375,6 +391,10 @@ export default function Creators() {
           const withAvatars = await fillShowcaseAvatarsFromCache(fresh);
           setAllCreators(withAvatars);
           setCachedCreators(withAvatars);
+          // Resolve banner images (from enrichment_data + IC API)
+          const withBanners = await resolveBannerImages(withAvatars);
+          setAllCreators(withBanners);
+          setCachedCreators(withBanners);
         }
       });
     } else {
@@ -385,6 +405,10 @@ export default function Creators() {
         const withAvatars = await fillShowcaseAvatarsFromCache(data);
         setAllCreators(withAvatars);
         if (withAvatars.length > 0) setCachedCreators(withAvatars);
+        // Resolve banner images (from enrichment_data + IC API)
+        const withBanners = await resolveBannerImages(withAvatars);
+        setAllCreators(withBanners);
+        if (withBanners.length > 0) setCachedCreators(withBanners);
       });
     }
   }, []);
