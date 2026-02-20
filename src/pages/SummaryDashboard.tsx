@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePresentationMode } from "@/hooks/usePresentationMode";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar,
@@ -65,11 +66,8 @@ export default function SummaryDashboard() {
   const [followUp, setFollowUp] = useState<{ question: string; originalQuery: string } | null>(null);
   const [followUpAnswer, setFollowUpAnswer] = useState("");
 
-  const fullName =
-    creatorProfile?.display_name ||
-    (user?.user_metadata?.full_name as string) ||
-    (user?.email === "demo@recurrentx.com" ? "MilCrunch" : "");
-  const firstName = fullName.split(" ")[0] || "there";
+  const pres = usePresentationMode();
+  const firstName = pres.firstName;
 
   // Network stats — top 3 directories with member counts
   const [topDirectories, setTopDirectories] = useState<Directory[]>([]);

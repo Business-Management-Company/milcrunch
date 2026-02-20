@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePresentationMode } from "@/hooks/usePresentationMode";
 import {
   LayoutDashboard,
   User,
@@ -113,8 +114,9 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
     navigate("/login");
   };
 
+  const pres = usePresentationMode();
   const handle = creatorProfile?.handle ?? "";
-  const displayName = creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator";
+  const displayName = pres.active ? pres.displayName : (creatorProfile?.display_name ?? user?.user_metadata?.full_name ?? "Creator");
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const bioUrl = handle ? `${origin}/c/${handle}` : "";
 

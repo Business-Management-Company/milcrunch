@@ -4,6 +4,7 @@ import { Bell, ChevronDown, TrendingUp, Star, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePresentationMode } from "@/hooks/usePresentationMode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,8 +44,9 @@ const MOCK_ALERTS = [
 export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavProps) {
   const { user, isSuperAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-  const displayName = user?.user_metadata?.full_name ?? user?.email ?? "User";
-  const initials = getInitials(user?.user_metadata?.full_name as string, user?.email ?? "");
+  const pres = usePresentationMode();
+  const displayName = pres.displayName;
+  const initials = pres.initials ?? getInitials(user?.user_metadata?.full_name as string, user?.email ?? "");
   const [alerts, setAlerts] = useState(MOCK_ALERTS);
   const unreadCount = alerts.filter((a) => !a.is_read).length;
 

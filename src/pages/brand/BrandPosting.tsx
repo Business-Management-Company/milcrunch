@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePresentationMode } from "@/hooks/usePresentationMode";
 import { supabase } from "@/integrations/supabase/client";
 import {
   uploadVideo,
@@ -478,8 +479,9 @@ export default function BrandPosting() {
 
   const hasResults = Object.keys(platformResults).length > 0;
 
-  const displayName = user?.user_metadata?.display_name || "MilCrunch";
-  const displayInitial = displayName[0]?.toUpperCase() || "R";
+  const pres = usePresentationMode();
+  const displayName = pres.displayName;
+  const displayInitial = (pres.initials?.[0] ?? displayName[0])?.toUpperCase() || "R";
 
   /* ---------------------------------------------------------------- */
   /* Preview Renderers                                                 */
