@@ -30,11 +30,17 @@ import {
   Users,
   Target,
   Radar,
+  Shield,
+  Info,
+  CalendarCheck,
+  CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { format, differenceInDays, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { scrapeFirecrawl } from "@/lib/verification";
 
 /* ========== types ========== */
 
@@ -68,6 +74,48 @@ type FilterMode = "both" | "conflicts" | "collabs";
 interface ParsedLocation {
   city: string | null;
   state: string | null;
+}
+
+/* ---- external results (ported from GTM scanner) ---- */
+
+interface HolidayConflict {
+  name: string;
+  date: Date;
+  proximity: "same-day" | "within-3-days";
+}
+
+interface CompetingEvent {
+  name: string;
+  date: string;
+  location: string;
+  url: string;
+  severity: "high" | "medium" | "low";
+}
+
+interface BaseEvent {
+  name: string;
+  date: string;
+  location: string;
+  baseName: string;
+  url: string;
+  severity: "high" | "medium" | "low";
+}
+
+interface ObservanceConflict {
+  name: string;
+  date: Date;
+  daysAway: number;
+  direction: "before" | "after" | "same-day";
+  suggestion: "leverage" | "caution";
+}
+
+interface ExternalResults {
+  holidays: HolidayConflict[];
+  competing: CompetingEvent[];
+  baseEvents: BaseEvent[];
+  observances: ObservanceConflict[];
+  firecrawlFailed: boolean;
+  baseEventsFailed: boolean;
 }
 
 /* ========== constants ========== */
@@ -136,7 +184,6 @@ function computeAudienceOverlap(selectedAudience: string[], candidateEventType: 
   if (!candidateEventType || selectedAudience.length === 0) return 30;
   const et = candidateEventType.toLowerCase();
 
-  // Collect all keywords from selected audience types
   const keywords = new Set<string>();
   for (const aud of selectedAudience) {
     for (const kw of AUDIENCE_KEYWORDS[aud] ?? []) {
@@ -152,8 +199,6 @@ function computeAudienceOverlap(selectedAudience: string[], candidateEventType: 
   if (matchCount >= 3) return 90;
   if (matchCount >= 2) return 75;
   if (matchCount >= 1) return 55;
-
-  // If "General Military" is selected, give moderate overlap to anything
   if (selectedAudience.includes("General Military")) return 40;
   return 20;
 }
@@ -166,26 +211,22 @@ function parseLocationInput(input: string): ParsedLocation {
   const trimmed = input.trim();
   if (!trimmed) return { city: null, state: null };
 
-  // "City, ST" or "City, State"
   const commaMatch = trimmed.match(/^(.+?),\s*([A-Za-z]{2})\s*$/);
   if (commaMatch) {
     const st = commaMatch[2].toUpperCase();
     if (US_STATES.has(st)) return { city: commaMatch[1].trim(), state: st };
   }
 
-  // "City ST" (space separated, state at end)
   const spaceMatch = trimmed.match(/^(.+)\s+([A-Za-z]{2})$/);
   if (spaceMatch) {
     const st = spaceMatch[2].toUpperCase();
     if (US_STATES.has(st)) return { city: spaceMatch[1].trim(), state: st };
   }
 
-  // Just a state code
   if (trimmed.length === 2 && US_STATES.has(trimmed.toUpperCase())) {
     return { city: null, state: trimmed.toUpperCase() };
   }
 
-  // Assume it's a city name without state
   return { city: trimmed, state: null };
 }
 
@@ -197,7 +238,6 @@ function geoMatches(
   radiusMiles: number,
 ): { matches: boolean; reason: string | null; score: number } {
   if (radiusMiles === 0) {
-    // Nationwide — everything matches, no geo bonus
     return { matches: true, reason: null, score: 0 };
   }
 
@@ -226,14 +266,219 @@ function geoMatches(
     if (sameState) return { matches: true, reason: "Same state", score: 20 };
     return { matches: false, reason: null, score: 0 };
   }
-  // 200 mi → same region
   if (sameCity) return { matches: true, reason: "Same city", score: 30 };
   if (sameState) return { matches: true, reason: "Same state", score: 20 };
   if (sameRegion) return { matches: true, reason: `Same region (${candRegion})`, score: 12 };
   return { matches: false, reason: null, score: 0 };
 }
 
-/* ========== analysis ========== */
+/* ========== holidays (ported from GTM scanner) ========== */
+
+function getHolidays(year: number): { name: string; date: Date }[] {
+  const fixed = [
+    { name: "New Year's Day", month: 0, day: 1 },
+    { name: "Independence Day", month: 6, day: 4 },
+    { name: "Veterans Day", month: 10, day: 11 },
+    { name: "Christmas Day", month: 11, day: 25 },
+    { name: "Armed Forces Day", month: 4, day: 17 },
+    { name: "Flag Day", month: 5, day: 14 },
+    { name: "Patriot Day (9/11)", month: 8, day: 11 },
+    { name: "Pearl Harbor Remembrance Day", month: 11, day: 7 },
+    { name: "National Guard Birthday", month: 11, day: 13 },
+  ];
+
+  const nthWeekday = (m: number, weekday: number, n: number): Date => {
+    const first = new Date(year, m, 1);
+    let day = 1 + ((weekday - first.getDay() + 7) % 7);
+    day += (n - 1) * 7;
+    return new Date(year, m, day);
+  };
+  const lastMonday = (m: number): Date => {
+    const last = new Date(year, m + 1, 0);
+    const diff = (last.getDay() - 1 + 7) % 7;
+    return new Date(year, m, last.getDate() - diff);
+  };
+
+  return [
+    ...fixed.map((h) => ({ name: h.name, date: new Date(year, h.month, h.day) })),
+    { name: "Martin Luther King Jr. Day", date: nthWeekday(0, 1, 3) },
+    { name: "Presidents' Day", date: nthWeekday(1, 1, 3) },
+    { name: "Memorial Day", date: lastMonday(4) },
+    { name: "Labor Day", date: nthWeekday(8, 1, 1) },
+    { name: "Columbus Day", date: nthWeekday(9, 1, 2) },
+    { name: "Thanksgiving", date: nthWeekday(10, 4, 4) },
+  ];
+}
+
+function findHolidayConflicts(startDate: Date, endDate: Date | null): HolidayConflict[] {
+  const end = endDate ?? startDate;
+  const years = new Set([startDate.getFullYear(), end.getFullYear()]);
+  const conflicts: HolidayConflict[] = [];
+
+  for (const y of years) {
+    for (const h of getHolidays(y)) {
+      const eventInterval = { start: subDays(startDate, 0), end: addDays(end, 0) };
+      if (isWithinInterval(h.date, eventInterval)) {
+        conflicts.push({ name: h.name, date: h.date, proximity: "same-day" });
+      } else {
+        const nearInterval = { start: subDays(startDate, 3), end: addDays(end, 3) };
+        if (isWithinInterval(h.date, nearInterval)) {
+          conflicts.push({ name: h.name, date: h.date, proximity: "within-3-days" });
+        }
+      }
+    }
+  }
+  return conflicts;
+}
+
+/* ========== military observances (ported from GTM scanner) ========== */
+
+function getMilitaryObservances(year: number): { name: string; date: Date }[] {
+  const nthWeekday = (m: number, weekday: number, n: number): Date => {
+    const first = new Date(year, m, 1);
+    let day = 1 + ((weekday - first.getDay() + 7) % 7);
+    day += (n - 1) * 7;
+    return new Date(year, m, day);
+  };
+  const lastWeekday = (m: number, weekday: number): Date => {
+    const last = new Date(year, m + 1, 0);
+    const diff = (last.getDay() - weekday + 7) % 7;
+    return new Date(year, m, last.getDate() - diff);
+  };
+
+  const mothersDay = nthWeekday(4, 0, 2);
+  const milSpouseDay = new Date(mothersDay);
+  milSpouseDay.setDate(milSpouseDay.getDate() - 2);
+
+  return [
+    { name: "Veterans Day", date: new Date(year, 10, 11) },
+    { name: "Memorial Day", date: lastWeekday(4, 1) },
+    { name: "Armed Forces Day", date: nthWeekday(4, 6, 3) },
+    { name: "Military Spouse Appreciation Day", date: milSpouseDay },
+    { name: "Gold Star Mother's Day", date: lastWeekday(8, 0) },
+    { name: "POW/MIA Recognition Day", date: nthWeekday(8, 5, 3) },
+    { name: "Pearl Harbor Remembrance Day", date: new Date(year, 11, 7) },
+  ];
+}
+
+function findObservanceConflicts(startDate: Date, endDate: Date | null): ObservanceConflict[] {
+  const end = endDate ?? startDate;
+  const years = new Set([startDate.getFullYear(), end.getFullYear()]);
+  const conflicts: ObservanceConflict[] = [];
+
+  for (const y of years) {
+    for (const obs of getMilitaryObservances(y)) {
+      const obsTime = obs.date.getTime();
+      const startTime = startDate.getTime();
+      const endTime = end.getTime();
+      const msPerDay = 86400000;
+
+      if (obsTime >= startTime && obsTime <= endTime) {
+        conflicts.push({ name: obs.name, date: obs.date, daysAway: 0, direction: "same-day", suggestion: "leverage" });
+        continue;
+      }
+
+      const daysBefore = Math.round((startTime - obsTime) / msPerDay);
+      if (daysBefore > 0 && daysBefore <= 7) {
+        conflicts.push({
+          name: obs.name, date: obs.date, daysAway: daysBefore,
+          direction: "before",
+          suggestion: daysBefore <= 3 ? "leverage" : "caution",
+        });
+        continue;
+      }
+
+      const daysAfter = Math.round((obsTime - endTime) / msPerDay);
+      if (daysAfter > 0 && daysAfter <= 7) {
+        conflicts.push({
+          name: obs.name, date: obs.date, daysAway: daysAfter,
+          direction: "after",
+          suggestion: daysAfter <= 3 ? "leverage" : "caution",
+        });
+      }
+    }
+  }
+  return conflicts;
+}
+
+/* ========== military installations by state (ported from GTM scanner) ========== */
+
+const INSTALLATIONS_BY_STATE: Record<string, { name: string; city: string }[]> = {
+  "Alabama": [{ name: "Fort Novosel", city: "Ozark" }, { name: "Redstone Arsenal", city: "Huntsville" }],
+  "Alaska": [{ name: "Joint Base Elmendorf-Richardson", city: "Anchorage" }, { name: "Fort Wainwright", city: "Fairbanks" }],
+  "Arizona": [{ name: "Fort Huachuca", city: "Sierra Vista" }, { name: "Davis-Monthan AFB", city: "Tucson" }, { name: "Luke AFB", city: "Glendale" }],
+  "Arkansas": [{ name: "Little Rock AFB", city: "Jacksonville" }],
+  "California": [{ name: "Camp Pendleton", city: "Oceanside" }, { name: "Naval Base San Diego", city: "San Diego" }, { name: "Edwards AFB", city: "Edwards" }, { name: "Travis AFB", city: "Fairfield" }, { name: "Fort Irwin", city: "Barstow" }, { name: "Vandenberg SFB", city: "Lompoc" }, { name: "NAS Lemoore", city: "Lemoore" }],
+  "Colorado": [{ name: "Fort Carson", city: "Colorado Springs" }, { name: "Peterson SFB", city: "Colorado Springs" }, { name: "Buckley SFB", city: "Aurora" }, { name: "Schriever SFB", city: "Colorado Springs" }],
+  "Connecticut": [{ name: "Naval Submarine Base New London", city: "Groton" }],
+  "Delaware": [{ name: "Dover AFB", city: "Dover" }],
+  "Florida": [{ name: "MacDill AFB", city: "Tampa" }, { name: "Eglin AFB", city: "Valparaiso" }, { name: "NAS Jacksonville", city: "Jacksonville" }, { name: "NAS Pensacola", city: "Pensacola" }, { name: "Patrick SFB", city: "Cocoa Beach" }, { name: "Hurlburt Field", city: "Mary Esther" }, { name: "Tyndall AFB", city: "Panama City" }],
+  "Georgia": [{ name: "Fort Moore", city: "Columbus" }, { name: "Fort Stewart", city: "Hinesville" }, { name: "Moody AFB", city: "Valdosta" }, { name: "Robins AFB", city: "Warner Robins" }, { name: "Hunter Army Airfield", city: "Savannah" }, { name: "NAS Kings Bay", city: "Kings Bay" }],
+  "Hawaii": [{ name: "Joint Base Pearl Harbor-Hickam", city: "Honolulu" }, { name: "Schofield Barracks", city: "Wahiawa" }, { name: "Marine Corps Base Hawaii", city: "Kaneohe" }],
+  "Idaho": [{ name: "Mountain Home AFB", city: "Mountain Home" }],
+  "Illinois": [{ name: "Scott AFB", city: "Belleville" }, { name: "Naval Station Great Lakes", city: "North Chicago" }],
+  "Indiana": [{ name: "Crane Naval Surface Warfare Center", city: "Crane" }],
+  "Kansas": [{ name: "Fort Riley", city: "Junction City" }, { name: "McConnell AFB", city: "Wichita" }, { name: "Fort Leavenworth", city: "Leavenworth" }],
+  "Kentucky": [{ name: "Fort Campbell", city: "Hopkinsville" }, { name: "Fort Knox", city: "Radcliff" }],
+  "Louisiana": [{ name: "Fort Johnson", city: "Leesville" }, { name: "Barksdale AFB", city: "Bossier City" }, { name: "NAS JRB New Orleans", city: "New Orleans" }],
+  "Maine": [{ name: "Portsmouth Naval Shipyard", city: "Kittery" }],
+  "Maryland": [{ name: "Fort Meade", city: "Fort Meade" }, { name: "Joint Base Andrews", city: "Camp Springs" }, { name: "Aberdeen Proving Ground", city: "Aberdeen" }, { name: "NAS Patuxent River", city: "Patuxent River" }],
+  "Massachusetts": [{ name: "Hanscom AFB", city: "Bedford" }, { name: "Joint Base Cape Cod", city: "Buzzards Bay" }],
+  "Michigan": [{ name: "Selfridge ANGB", city: "Harrison Township" }],
+  "Mississippi": [{ name: "Keesler AFB", city: "Biloxi" }, { name: "Columbus AFB", city: "Columbus" }, { name: "NAS Meridian", city: "Meridian" }],
+  "Missouri": [{ name: "Whiteman AFB", city: "Knob Noster" }, { name: "Fort Leonard Wood", city: "Waynesville" }],
+  "Montana": [{ name: "Malmstrom AFB", city: "Great Falls" }],
+  "Nebraska": [{ name: "Offutt AFB", city: "Bellevue" }],
+  "Nevada": [{ name: "Nellis AFB", city: "Las Vegas" }, { name: "Creech AFB", city: "Indian Springs" }],
+  "New Hampshire": [{ name: "Portsmouth Naval Shipyard", city: "Portsmouth" }],
+  "New Jersey": [{ name: "Joint Base McGuire-Dix-Lakehurst", city: "Wrightstown" }],
+  "New Mexico": [{ name: "Holloman AFB", city: "Alamogordo" }, { name: "Cannon AFB", city: "Clovis" }, { name: "Kirtland AFB", city: "Albuquerque" }, { name: "White Sands Missile Range", city: "Las Cruces" }],
+  "New York": [{ name: "Fort Drum", city: "Watertown" }, { name: "West Point", city: "West Point" }],
+  "North Carolina": [{ name: "Fort Liberty", city: "Fayetteville" }, { name: "Camp Lejeune", city: "Jacksonville" }, { name: "MCAS Cherry Point", city: "Havelock" }, { name: "Seymour Johnson AFB", city: "Goldsboro" }],
+  "North Dakota": [{ name: "Minot AFB", city: "Minot" }, { name: "Grand Forks AFB", city: "Grand Forks" }],
+  "Ohio": [{ name: "Wright-Patterson AFB", city: "Dayton" }],
+  "Oklahoma": [{ name: "Fort Sill", city: "Lawton" }, { name: "Tinker AFB", city: "Oklahoma City" }, { name: "Altus AFB", city: "Altus" }, { name: "Vance AFB", city: "Enid" }],
+  "Pennsylvania": [{ name: "Carlisle Barracks", city: "Carlisle" }],
+  "Rhode Island": [{ name: "Naval Station Newport", city: "Newport" }],
+  "South Carolina": [{ name: "Fort Jackson", city: "Columbia" }, { name: "Joint Base Charleston", city: "Charleston" }, { name: "MCAS Beaufort", city: "Beaufort" }, { name: "Shaw AFB", city: "Sumter" }],
+  "South Dakota": [{ name: "Ellsworth AFB", city: "Rapid City" }],
+  "Tennessee": [{ name: "NSA Mid-South", city: "Millington" }],
+  "Texas": [{ name: "Fort Cavazos", city: "Killeen" }, { name: "Fort Sam Houston", city: "San Antonio" }, { name: "Fort Bliss", city: "El Paso" }, { name: "Dyess AFB", city: "Abilene" }, { name: "Laughlin AFB", city: "Del Rio" }, { name: "Sheppard AFB", city: "Wichita Falls" }, { name: "Joint Base San Antonio", city: "San Antonio" }, { name: "NAS Corpus Christi", city: "Corpus Christi" }, { name: "NAS JRB Fort Worth", city: "Fort Worth" }],
+  "Utah": [{ name: "Hill AFB", city: "Ogden" }, { name: "Dugway Proving Ground", city: "Dugway" }],
+  "Virginia": [{ name: "Naval Station Norfolk", city: "Norfolk" }, { name: "Fort Gregg-Adams", city: "Petersburg" }, { name: "Joint Base Langley-Eustis", city: "Hampton" }, { name: "MCB Quantico", city: "Quantico" }, { name: "Fort Belvoir", city: "Fort Belvoir" }, { name: "NAS Oceana", city: "Virginia Beach" }, { name: "Pentagon", city: "Arlington" }, { name: "Dam Neck", city: "Virginia Beach" }],
+  "Washington": [{ name: "Joint Base Lewis-McChord", city: "Tacoma" }, { name: "Naval Base Kitsap", city: "Bremerton" }, { name: "Fairchild AFB", city: "Spokane" }, { name: "NAS Whidbey Island", city: "Oak Harbor" }],
+  "West Virginia": [{ name: "Yeager Airport ANG", city: "Charleston" }],
+  "Wisconsin": [{ name: "Fort McCoy", city: "Sparta" }],
+  "Wyoming": [{ name: "F.E. Warren AFB", city: "Cheyenne" }],
+  "District of Columbia": [{ name: "Joint Base Anacostia-Bolling", city: "Washington" }, { name: "Fort McNair", city: "Washington" }],
+};
+
+const ABBREV_TO_STATE: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
+  MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
+  OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+  VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+  DC: "District of Columbia",
+};
+
+function getNearbyBases(stateInput: string | null): { name: string; city: string }[] {
+  if (!stateInput) return [];
+  const norm = stateInput.trim().toLowerCase();
+  for (const [key, bases] of Object.entries(INSTALLATIONS_BY_STATE)) {
+    if (key.toLowerCase() === norm) return bases;
+  }
+  const fullName = ABBREV_TO_STATE[stateInput.trim().toUpperCase()];
+  if (fullName && INSTALLATIONS_BY_STATE[fullName]) return INSTALLATIONS_BY_STATE[fullName];
+  return [];
+}
+
+/* ========== analysis (internal events) ========== */
 
 interface PlanInput {
   location: ParsedLocation;
@@ -255,25 +500,20 @@ function analyzePlannedEvent(plan: PlanInput, candidate: EventRow): ScanResult |
   const reasons: string[] = [];
   let score = 0;
 
-  // --- CONFLICT detection ---
   const isConflict = daysDiff <= 14 && geo.matches && audienceScore >= 50;
 
   if (isConflict) {
-    // Date proximity score
     if (daysDiff === 0) { score += 40; reasons.push("Same date"); }
     else if (daysDiff <= 3) { score += 35; reasons.push(`${daysDiff} day${daysDiff > 1 ? "s" : ""} apart`); }
     else if (daysDiff <= 7) { score += 25; reasons.push(`${daysDiff} days apart`); }
     else { score += 15; reasons.push(`${daysDiff} days apart`); }
 
-    // Geo score
     score += geo.score;
     if (geo.reason) reasons.push(geo.reason);
 
-    // Audience overlap
     score += Math.round(audienceScore * 0.35);
     reasons.push(`~${audienceScore}% audience overlap`);
 
-    // Static fallback suggestion (AI will replace later)
     let aiSuggestion: string;
     if (daysDiff <= 3 && geo.score >= 20) {
       aiSuggestion = "Direct scheduling conflict. Consider rescheduling to avoid competition, or explore a joint event.";
@@ -286,28 +526,23 @@ function analyzePlannedEvent(plan: PlanInput, candidate: EventRow): ScanResult |
     return { type: "conflict", event: candidate, score: Math.min(score, 100), dateProximity: daysDiff, reasons, aiSuggestion };
   }
 
-  // --- COLLAB detection ---
   if (daysDiff > 60) return null;
 
   const isCollab = (audienceScore >= 30 || geo.matches) && daysDiff > 0;
   if (!isCollab) return null;
 
-  // Proximity bonus
   if (daysDiff <= 7) { score += 20; reasons.push(`${daysDiff} day${daysDiff > 1 ? "s" : ""} apart`); }
   else if (daysDiff <= 21) { score += 15; reasons.push(`${daysDiff} days apart`); }
   else { score += 8; reasons.push(`${daysDiff} days apart`); }
 
-  // Geo synergy
   if (geo.matches && geo.reason) {
     score += geo.score;
     reasons.push(geo.reason);
   }
 
-  // Audience synergy
   if (audienceScore >= 50) { score += 25; reasons.push("Strong audience overlap"); }
   else if (audienceScore >= 30) { score += 15; reasons.push("Overlapping audience"); }
 
-  // Complementary event type
   const candType = (candidate.event_type || "").toLowerCase();
   const planType = plan.eventType.toLowerCase();
   if (planType && candType && planType !== candType) {
@@ -357,7 +592,9 @@ export default function ConflictsCollabs() {
   const [allEvents, setAllEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [scanPhase, setScanPhase] = useState("");
   const [results, setResults] = useState<ScanResult[]>([]);
+  const [externalResults, setExternalResults] = useState<ExternalResults | null>(null);
   const [filter, setFilter] = useState<FilterMode>("both");
   const [searchQuery, setSearchQuery] = useState("");
   const [pitchModal, setPitchModal] = useState<{ target: EventRow } | null>(null);
@@ -380,14 +617,13 @@ export default function ConflictsCollabs() {
     })();
   }, []);
 
-  // Toggle audience type
   const toggleAudience = (aud: string) => {
     setAudienceTypes((prev) =>
       prev.includes(aud) ? prev.filter((a) => a !== aud) : [...prev, aud],
     );
   };
 
-  // Run scan
+  // Run scan — now includes external scanning
   const runScan = async () => {
     if (!locationInput.trim()) {
       toast.error("Enter a city, state, or zip code");
@@ -400,6 +636,7 @@ export default function ConflictsCollabs() {
 
     setScanning(true);
     setResults([]);
+    setExternalResults(null);
     setFilter("both");
 
     const parsedLoc = parseLocationInput(locationInput);
@@ -412,33 +649,124 @@ export default function ConflictsCollabs() {
       eventType: eventType || "General",
     };
 
-    // Run local analysis
+    const startDateISO = format(dateRange.from, "yyyy-MM-dd");
+    const locationStr = [parsedLoc.city, parsedLoc.state].filter(Boolean).join(", ") || locationInput;
+    const dateRangeStr = dateRange.to
+      ? `${format(dateRange.from, "MMM d, yyyy")} – ${format(dateRange.to, "MMM d, yyyy")}`
+      : format(dateRange.from, "MMM d, yyyy");
+
+    // 1. Holidays & observances (instant, local computation)
+    setScanPhase("Checking holidays & military observances...");
+    const holidays = findHolidayConflicts(dateRange.from, dateRange.to ?? null);
+    const observances = findObservanceConflicts(dateRange.from, dateRange.to ?? null);
+
+    // 2. Internal platform events
+    setScanPhase("Scanning platform events...");
     const scanResults: ScanResult[] = [];
     for (const candidate of allEvents) {
       const result = analyzePlannedEvent(plan, candidate);
       if (result) scanResults.push(result);
     }
-
-    // Sort: conflicts first, then by score desc
     scanResults.sort((a, b) => {
       if (a.type !== b.type) return a.type === "conflict" ? -1 : 1;
       if (b.score !== a.score) return b.score - a.score;
       return a.dateProximity - b.dateProximity;
     });
-
     setResults(scanResults);
 
-    const conflicts = scanResults.filter((r) => r.type === "conflict").length;
-    const collabs = scanResults.filter((r) => r.type === "collab").length;
-
-    if (scanResults.length === 0) {
-      toast.success("No conflicts or collab opportunities found — you're clear!");
-    } else {
-      toast.info(`Found ${conflicts} conflict${conflicts !== 1 ? "s" : ""} and ${collabs} collab opportunit${collabs !== 1 ? "ies" : "y"}`);
+    // 3. Scrape Eventbrite for competing events
+    let competing: CompetingEvent[] = [];
+    let firecrawlFailed = false;
+    if (parsedLoc.city || parsedLoc.state) {
+      setScanPhase("Scanning Eventbrite for competing events...");
+      const loc = encodeURIComponent(locationStr.replace(/,\s*/g, "--") || "united-states");
+      const keywords = encodeURIComponent(eventType || "military veteran");
+      const dateParam = `&start_date=${startDateISO}`;
+      const url = `https://www.eventbrite.com/d/${loc}/${keywords}/${dateParam}`;
+      try {
+        const scraped = await scrapeFirecrawl(url);
+        if (scraped?.markdown) {
+          const parsed = await callAnthropic(
+            "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
+            `Extract competing events from this Eventbrite search page markdown. For each event found, return: name, date, location, url, severity (high if same date and nearby location, medium if same week, low otherwise). Our event: "${eventName || "Planned Event"}" on ${dateRangeStr} in ${locationStr}.\n\nMarkdown:\n${scraped.markdown.slice(0, 6000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
+            2048,
+          );
+          try {
+            const jsonStr = parsed.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+            competing = JSON.parse(jsonStr);
+          } catch { competing = []; }
+        }
+      } catch (e) {
+        console.warn("[C&C] Firecrawl scrape failed:", e);
+        firecrawlFailed = true;
+      }
     }
 
-    // Enhance top results with AI suggestions
+    // 4. Scan nearby military base events
+    let baseEvents: BaseEvent[] = [];
+    let baseEventsFailed = false;
+    const nearbyBases = getNearbyBases(parsedLoc.state);
+    if (nearbyBases.length > 0) {
+      setScanPhase(`Scanning ${Math.min(nearbyBases.length, 3)} nearby military installations...`);
+      const basesToScan = nearbyBases.slice(0, 3);
+      const basePromises = basesToScan.map(async (base) => {
+        try {
+          const baseLoc = encodeURIComponent(`${base.city}--${parsedLoc.state || ""}`);
+          const baseUrl = `https://www.eventbrite.com/d/${baseLoc}/military-veteran/?start_date=${startDateISO}`;
+          const scraped = await scrapeFirecrawl(baseUrl);
+          if (!scraped?.markdown) return [];
+          const parsed = await callAnthropic(
+            "You extract structured event data from Eventbrite search result markdown. Return ONLY a valid JSON array.",
+            `Extract military/veteran events near ${base.name} (${base.city}) from this Eventbrite markdown. For each event, return: name, date, location, url, severity (high if overlapping dates, medium if same month, low otherwise). Our event runs ${dateRangeStr}.\n\nMarkdown:\n${scraped.markdown.slice(0, 4000)}\n\nReturn a JSON array like: [{"name":"...","date":"...","location":"...","url":"...","severity":"high|medium|low"}]. If no events found, return [].`,
+            1024,
+          );
+          try {
+            const jsonStr = parsed.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+            const events: CompetingEvent[] = JSON.parse(jsonStr);
+            return events.map((ev) => ({ ...ev, baseName: base.name }));
+          } catch { return []; }
+        } catch (e) {
+          console.warn(`[C&C] Base scan failed for ${base.name}:`, e);
+          return [];
+        }
+      });
+
+      try {
+        const results = await Promise.race([
+          Promise.all(basePromises),
+          new Promise<BaseEvent[][]>((resolve) => setTimeout(() => resolve([]), 30000)),
+        ]) as BaseEvent[][];
+        baseEvents = results.flat();
+      } catch {
+        baseEventsFailed = true;
+      }
+    }
+
+    // Save external results
+    const external: ExternalResults = { holidays, competing, baseEvents, observances, firecrawlFailed, baseEventsFailed };
+    setExternalResults(external);
+
+    const totalExternal = holidays.length + competing.length + baseEvents.length + observances.length;
+    const totalInternal = scanResults.length;
+
+    if (totalExternal === 0 && totalInternal === 0) {
+      toast.success("No conflicts or collab opportunities found — you're clear!");
+    } else {
+      const parts: string[] = [];
+      if (holidays.length) parts.push(`${holidays.length} holiday conflict${holidays.length > 1 ? "s" : ""}`);
+      if (observances.length) parts.push(`${observances.length} observance${observances.length > 1 ? "s" : ""}`);
+      if (competing.length) parts.push(`${competing.length} competing event${competing.length > 1 ? "s" : ""}`);
+      if (baseEvents.length) parts.push(`${baseEvents.length} base event${baseEvents.length > 1 ? "s" : ""}`);
+      const conflicts = scanResults.filter((r) => r.type === "conflict").length;
+      const collabs = scanResults.filter((r) => r.type === "collab").length;
+      if (conflicts) parts.push(`${conflicts} platform conflict${conflicts > 1 ? "s" : ""}`);
+      if (collabs) parts.push(`${collabs} collab opportunit${collabs > 1 ? "ies" : "y"}`);
+      toast.info(`Found ${parts.join(", ")}`);
+    }
+
+    // AI-enhance top internal results
     if (scanResults.length > 0) {
+      setScanPhase("Generating AI insights...");
       try {
         const topResults = scanResults.slice(0, 8);
         const planSummary = {
@@ -476,7 +804,6 @@ Return ONLY a JSON array: [{"id":"event-id","suggestion":"your suggestion"}]`,
         const suggestions: { id: string; suggestion: string }[] = JSON.parse(cleaned);
         const suggMap = new Map(suggestions.map((s) => [s.id, s.suggestion]));
 
-        // Update results with AI suggestions
         setResults((prev) =>
           prev.map((r) => {
             const aiSug = suggMap.get(r.event.id);
@@ -484,12 +811,12 @@ Return ONLY a JSON array: [{"id":"event-id","suggestion":"your suggestion"}]`,
           }),
         );
       } catch (err) {
-        console.warn("[ConflictsCollabs] AI enhancement failed, using fallback suggestions:", err);
-        // Keep static suggestions already set
+        console.warn("[C&C] AI enhancement failed:", err);
       }
     }
 
     setScanning(false);
+    setScanPhase("");
   };
 
   // Generate AI collab pitch
@@ -519,8 +846,7 @@ Both events serve overlapping military audiences. Write the email.`,
       );
       setGeneratedPitch(pitch);
     } catch (err) {
-      console.error("[ConflictsCollabs] Pitch generation failed:", err);
-      // Fallback to static template
+      console.error("[C&C] Pitch generation failed:", err);
       setGeneratedPitch(
         `Subject: Collaboration Opportunity — ${planName} x ${target.title}\n\nHi there,\n\nI'm reaching out from ${planName} (${planDate}, ${locationInput || "location TBD"}).\n\nWe noticed your upcoming event, ${target.title} (${targetDate}, ${getLocation(target) || "location TBD"}), targets a similar military community audience. We think there's a great opportunity to collaborate:\n\n- Cross-promote to each other's attendee lists\n- Share speakers or panelists between events\n- Offer bundled ticket discounts for both events\n- Co-create content leading up to both events\n\nWould you be open to a quick call to explore this?\n\nBest,\n[Your Name]`,
       );
@@ -529,7 +855,7 @@ Both events serve overlapping military audiences. Write the email.`,
     }
   };
 
-  // Filtered results
+  // Filtered results (internal only — external shown separately)
   const filtered = useMemo(() => {
     let list = results;
     if (filter === "conflicts") list = list.filter((r) => r.type === "conflict");
@@ -547,6 +873,10 @@ Both events serve overlapping military audiences. Write the email.`,
   const conflictCount = results.filter((r) => r.type === "conflict").length;
   const collabCount = results.filter((r) => r.type === "collab").length;
 
+  // Compute counts for nearby bases (for display in the "all clear" state)
+  const parsedLocForBases = parseLocationInput(locationInput);
+  const nearbyBasesForDisplay = getNearbyBases(parsedLocForBases.state);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -561,7 +891,7 @@ Both events serve overlapping military audiences. Write the email.`,
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Conflicts & Collabs</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Plan a new event and scan for scheduling conflicts or collaboration opportunities across all platform events.
+          Plan a new event and scan for scheduling conflicts, competing events, and collaboration opportunities.
         </p>
       </div>
 
@@ -716,211 +1046,446 @@ Both events serve overlapping military audiences. Write the email.`,
         </div>
       </Card>
 
-      {/* Filter bar */}
-      {results.length > 0 && (
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="flex gap-1 rounded-lg border p-0.5 bg-muted/30">
-              <button
-                onClick={() => setFilter("both")}
-                className={cn(
-                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
-                  filter === "both" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Both ({results.length})
-              </button>
-              <button
-                onClick={() => setFilter("conflicts")}
-                className={cn(
-                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
-                  filter === "conflicts" ? "bg-red-50 shadow-sm text-red-700" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Conflicts ({conflictCount})
-              </button>
-              <button
-                onClick={() => setFilter("collabs")}
-                className={cn(
-                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
-                  filter === "collabs" ? "bg-teal-50 shadow-sm text-teal-700" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Collabs ({collabCount})
-              </button>
-            </div>
-          </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Filter results..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-sm"
-            />
-          </div>
-        </div>
-      )}
-
       {/* Scanning state */}
       {scanning && (
         <div className="flex items-center justify-center py-16">
           <div className="text-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
             <p className="text-sm text-muted-foreground">
-              Scanning {allEvents.length} events for conflicts & opportunities...
+              {scanPhase || "Scanning..."}
             </p>
           </div>
         </div>
       )}
 
-      {/* No results after filter */}
-      {!scanning && results.length > 0 && filtered.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          No results match your filter.
-        </div>
-      )}
-
-      {/* No results at all */}
-      {!scanning && results.length === 0 && dateRange?.from && locationInput.trim() && (
-        <Card className="p-8 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-green-600" />
-            </div>
-            <p className="font-medium">All clear!</p>
-            <p className="text-sm text-muted-foreground max-w-md">
-              No scheduling conflicts or collaboration opportunities found for your planned event.
-              You&apos;re in the clear to proceed.
-            </p>
-          </div>
-        </Card>
-      )}
-
-      {/* Result cards */}
-      <div className="space-y-3">
-        {filtered.map((result) => {
-          const isConflict = result.type === "conflict";
-          const ev = result.event;
-          return (
-            <Card
-              key={ev.id}
-              className={cn(
-                "p-4 border-l-4 transition-shadow hover:shadow-md",
-                isConflict ? "border-l-red-500" : "border-l-teal-500",
-              )}
-            >
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Left: info */}
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5",
-                        isConflict
-                          ? "bg-red-100 text-red-700 border-red-200"
-                          : "bg-teal-100 text-teal-700 border-teal-200",
-                      )}
-                    >
-                      {isConflict ? (
-                        <><AlertTriangle className="h-3 w-3 mr-1 inline" />Conflict</>
-                      ) : (
-                        <><Handshake className="h-3 w-3 mr-1 inline" />Collab</>
-                      )}
-                    </Badge>
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-sm leading-tight">{ev.title}</h3>
+      {/* ========== EXTERNAL RESULTS ========== */}
+      {!scanning && externalResults && (
+        <div className="space-y-4">
+          {/* Holiday Conflicts */}
+          {externalResults.holidays.length > 0 && (
+            <Card className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                Federal Holiday Conflicts
+              </p>
+              <div className="space-y-2">
+                {externalResults.holidays.map((h, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border",
+                      h.proximity === "same-day"
+                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                        : "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30",
+                    )}
+                  >
+                    {h.proximity === "same-day" ? (
+                      <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                    ) : (
+                      <CalendarCheck className="h-4 w-4 text-yellow-500 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium">{h.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {format(h.date, "MMM d, yyyy")}
+                      </span>
                     </div>
+                    <Badge variant={h.proximity === "same-day" ? "destructive" : "secondary"} className="text-xs shrink-0">
+                      {h.proximity === "same-day" ? "Same day" : "Within 3 days"}
+                    </Badge>
                   </div>
-
-                  {/* Meta row */}
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    {ev.start_date && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(parseISO(ev.start_date), "MMM d, yyyy")}
-                      </span>
-                    )}
-                    {getLocation(ev) && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {getLocation(ev)}
-                      </span>
-                    )}
-                    {ev.event_type && (
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {ev.event_type}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Reason tags */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {result.reasons.map((reason, i) => (
-                      <span
-                        key={i}
-                        className={cn(
-                          "text-[10px] px-2 py-0.5 rounded-full font-medium",
-                          isConflict
-                            ? "bg-red-50 text-red-600"
-                            : "bg-teal-50 text-teal-600",
-                        )}
-                      >
-                        {reason}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* AI suggestion */}
-                  <div className={cn(
-                    "text-xs p-2.5 rounded-md mt-1",
-                    isConflict ? "bg-amber-50 text-amber-800" : "bg-teal-50 text-teal-800",
-                  )}>
-                    <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
-                    {result.aiSuggestion}
-                  </div>
-                </div>
-
-                {/* Right: score + action */}
-                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0">
-                  {/* Score ring */}
-                  <div className="relative h-12 w-12 shrink-0">
-                    <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48">
-                      <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor"
-                        className="text-gray-100" strokeWidth="4" />
-                      <circle cx="24" cy="24" r="20" fill="none"
-                        stroke="currentColor"
-                        className={isConflict ? "text-red-500" : "text-teal-500"}
-                        strokeWidth="4"
-                        strokeDasharray={`${(result.score / 100) * 125.6} 125.6`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">
-                      {result.score}
-                    </span>
-                  </div>
-
-                  {!isConflict && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs border-teal-300 text-teal-700 hover:bg-teal-50"
-                      onClick={() => generatePitch(ev)}
-                    >
-                      <Send className="h-3 w-3 mr-1" />
-                      Reach Out
-                    </Button>
-                  )}
-                </div>
+                ))}
               </div>
             </Card>
-          );
-        })}
-      </div>
+          )}
+
+          {/* Military Observance Conflicts */}
+          {externalResults.observances.length > 0 && (
+            <Card className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                Military Observances
+              </p>
+              <div className="space-y-2">
+                {externalResults.observances.map((obs, i) => {
+                  const isSameDay = obs.direction === "same-day";
+                  const isLeverage = obs.suggestion === "leverage";
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-start gap-3 p-3 rounded-lg border border-purple-200 bg-purple-50/60 dark:border-purple-800/50 dark:bg-purple-950/20"
+                    >
+                      <Info className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-purple-900 dark:text-purple-200">{obs.name}</span>
+                          <span className="text-xs text-purple-600 dark:text-purple-400">
+                            {format(obs.date, "MMM d, yyyy")}
+                          </span>
+                        </div>
+                        <p className="text-xs text-purple-700/80 dark:text-purple-300/70 mt-1">
+                          {isSameDay
+                            ? `Falls during your event. Consider theming sessions or marketing around ${obs.name} to boost engagement.`
+                            : obs.direction === "before"
+                            ? `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} before your event. ${
+                                isLeverage
+                                  ? `Close enough to tie in ${obs.name} messaging — use it to build pre-event momentum.`
+                                  : `Be aware that attendees may have ${obs.name}-related commitments.`
+                              }`
+                            : `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} after your event. ${
+                                isLeverage
+                                  ? `Leverage proximity to ${obs.name} in post-event content and follow-up campaigns.`
+                                  : `Some attendees may be traveling or attending ${obs.name} events.`
+                              }`
+                          }
+                        </p>
+                      </div>
+                      <Badge className="text-[10px] shrink-0 bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0">
+                        {isLeverage ? "Leverage" : "Caution"}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Competing Events (from Eventbrite) */}
+          {externalResults.competing.length > 0 && (
+            <Card className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                Competing Events (Eventbrite)
+              </p>
+              <div className="space-y-2">
+                {externalResults.competing.map((c, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border",
+                      c.severity === "high"
+                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                        : c.severity === "medium"
+                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
+                        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30",
+                    )}
+                  >
+                    <AlertTriangle className={cn(
+                      "h-4 w-4 shrink-0",
+                      c.severity === "high" ? "text-red-500" : c.severity === "medium" ? "text-yellow-500" : "text-green-500",
+                    )} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium">{c.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">{c.date} · {c.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {c.url && (
+                        <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      <Badge
+                        variant={c.severity === "high" ? "destructive" : "secondary"}
+                        className={cn(
+                          "text-xs",
+                          c.severity === "low" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                        )}
+                      >
+                        {c.severity}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Nearby Military Installation Events */}
+          {externalResults.baseEvents.length > 0 && (
+            <Card className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                Nearby Military Installation Events
+              </p>
+              <div className="space-y-2">
+                {externalResults.baseEvents.map((b, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border",
+                      b.severity === "high"
+                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                        : b.severity === "medium"
+                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
+                        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30",
+                    )}
+                  >
+                    <Shield className={cn(
+                      "h-4 w-4 shrink-0",
+                      b.severity === "high" ? "text-red-500" : b.severity === "medium" ? "text-yellow-500" : "text-green-500",
+                    )} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium">{b.name}</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
+                          <MapPin className="h-2.5 w-2.5 mr-0.5" />{b.baseName}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{b.date} · {b.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {b.url && (
+                        <a href={b.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      <Badge
+                        variant={b.severity === "high" ? "destructive" : "secondary"}
+                        className={cn(
+                          "text-xs",
+                          b.severity === "low" && "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                        )}
+                      >
+                        {b.severity}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* All-clear for base events when bases exist but no events found */}
+          {nearbyBasesForDisplay.length > 0 && externalResults.baseEvents.length === 0 && !externalResults.baseEventsFailed && (
+            <Card className="p-4">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-700 dark:text-green-300">
+                  No competing events found near {nearbyBasesForDisplay.slice(0, 3).map((b) => b.name).join(", ")}
+                </span>
+              </div>
+            </Card>
+          )}
+
+          {/* Fallback notes */}
+          {externalResults.firecrawlFailed && (
+            <p className="text-xs text-muted-foreground italic px-1">
+              Note: Competing event search was unavailable. Only holiday/observance conflicts and platform events are shown.
+            </p>
+          )}
+          {externalResults.baseEventsFailed && (
+            <p className="text-xs text-muted-foreground italic px-1">
+              Note: Military base event search timed out. Try again later.
+            </p>
+          )}
+
+          {/* Complete all-clear */}
+          {externalResults.holidays.length === 0 &&
+           externalResults.observances.length === 0 &&
+           externalResults.competing.length === 0 &&
+           externalResults.baseEvents.length === 0 &&
+           results.length === 0 && (
+            <Card className="p-8 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-green-50 flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="font-medium">All clear!</p>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  No scheduling conflicts, competing events, or collaboration opportunities found.
+                  You&apos;re in the clear to proceed.
+                </p>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ========== INTERNAL PLATFORM RESULTS ========== */}
+      {!scanning && results.length > 0 && (
+        <>
+          {/* Section header for platform events */}
+          {externalResults && (
+            <div className="border-t pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                Platform Events
+              </p>
+            </div>
+          )}
+
+          {/* Filter bar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <div className="flex gap-1 rounded-lg border p-0.5 bg-muted/30">
+                <button
+                  onClick={() => setFilter("both")}
+                  className={cn(
+                    "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                    filter === "both" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Both ({results.length})
+                </button>
+                <button
+                  onClick={() => setFilter("conflicts")}
+                  className={cn(
+                    "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                    filter === "conflicts" ? "bg-red-50 shadow-sm text-red-700" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Conflicts ({conflictCount})
+                </button>
+                <button
+                  onClick={() => setFilter("collabs")}
+                  className={cn(
+                    "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                    filter === "collabs" ? "bg-teal-50 shadow-sm text-teal-700" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Collabs ({collabCount})
+                </button>
+              </div>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Filter results..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* No results after filter */}
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              No results match your filter.
+            </div>
+          )}
+
+          {/* Result cards */}
+          <div className="space-y-3">
+            {filtered.map((result) => {
+              const isConflict = result.type === "conflict";
+              const ev = result.event;
+              return (
+                <Card
+                  key={ev.id}
+                  className={cn(
+                    "p-4 border-l-4 transition-shadow hover:shadow-md",
+                    isConflict ? "border-l-red-500" : "border-l-teal-500",
+                  )}
+                >
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {/* Left: info */}
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5",
+                            isConflict
+                              ? "bg-red-100 text-red-700 border-red-200"
+                              : "bg-teal-100 text-teal-700 border-teal-200",
+                          )}
+                        >
+                          {isConflict ? (
+                            <><AlertTriangle className="h-3 w-3 mr-1 inline" />Conflict</>
+                          ) : (
+                            <><Handshake className="h-3 w-3 mr-1 inline" />Collab</>
+                          )}
+                        </Badge>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-sm leading-tight">{ev.title}</h3>
+                        </div>
+                      </div>
+
+                      {/* Meta row */}
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        {ev.start_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(parseISO(ev.start_date), "MMM d, yyyy")}
+                          </span>
+                        )}
+                        {getLocation(ev) && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {getLocation(ev)}
+                          </span>
+                        )}
+                        {ev.event_type && (
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {ev.event_type}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Reason tags */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {result.reasons.map((reason, i) => (
+                          <span
+                            key={i}
+                            className={cn(
+                              "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                              isConflict
+                                ? "bg-red-50 text-red-600"
+                                : "bg-teal-50 text-teal-600",
+                            )}
+                          >
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* AI suggestion */}
+                      <div className={cn(
+                        "text-xs p-2.5 rounded-md mt-1",
+                        isConflict ? "bg-amber-50 text-amber-800" : "bg-teal-50 text-teal-800",
+                      )}>
+                        <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
+                        {result.aiSuggestion}
+                      </div>
+                    </div>
+
+                    {/* Right: score + action */}
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0">
+                      {/* Score ring */}
+                      <div className="relative h-12 w-12 shrink-0">
+                        <svg className="h-12 w-12 -rotate-90" viewBox="0 0 48 48">
+                          <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor"
+                            className="text-gray-100" strokeWidth="4" />
+                          <circle cx="24" cy="24" r="20" fill="none"
+                            stroke="currentColor"
+                            className={isConflict ? "text-red-500" : "text-teal-500"}
+                            strokeWidth="4"
+                            strokeDasharray={`${(result.score / 100) * 125.6} 125.6`}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">
+                          {result.score}
+                        </span>
+                      </div>
+
+                      {!isConflict && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs border-teal-300 text-teal-700 hover:bg-teal-50"
+                          onClick={() => generatePitch(ev)}
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Reach Out
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Pitch modal */}
       {pitchModal && (
