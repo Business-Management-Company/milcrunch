@@ -44,9 +44,8 @@ export default async function handler(req, res) {
 
     const buffer = Buffer.from(await imgResp.arrayBuffer());
     const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-    const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
     const safeName = handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-    const path = `${safeName}.${ext}`;
+    const path = `${safeName}/avatar.jpg`;
 
     // Ensure bucket exists (idempotent — ignores "already exists" error)
     await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});

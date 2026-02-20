@@ -166,13 +166,8 @@ export default async function handler(req, res) {
           if (imgResp.ok) {
             const buffer = Buffer.from(await imgResp.arrayBuffer());
             const contentType = imgResp.headers.get("content-type") || "image/jpeg";
-            const ext = contentType.includes("png")
-              ? "png"
-              : contentType.includes("webp")
-                ? "webp"
-                : "jpg";
             const safeName = handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-            const path = `${safeName}.${ext}`;
+            const path = `${safeName}/avatar.jpg`;
 
             const { error: uploadErr } = await sb.storage
               .from("creator-avatars")
