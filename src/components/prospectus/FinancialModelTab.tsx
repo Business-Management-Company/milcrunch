@@ -204,7 +204,7 @@ const THESIS_CARDS = [
 /* ================================================================== */
 /* Sub-tab type                                                        */
 /* ================================================================== */
-const SUB_TABS = ["Overview", "Revenue Streams", "Assumptions", "Investor Thesis"] as const;
+const SUB_TABS = ["5-Year Forecast", "3-Year Forecast", "Revenue Streams", "Assumptions", "Investor Thesis"] as const;
 type SubTabId = (typeof SUB_TABS)[number];
 
 /* ================================================================== */
@@ -220,7 +220,7 @@ function fmtK(v: number) {
 /* ================================================================== */
 
 export default function FinancialModelTab({ dark }: { dark: boolean }) {
-  const [subTab, setSubTab] = useState<SubTabId>("Overview");
+  const [subTab, setSubTab] = useState<SubTabId>("5-Year Forecast");
 
   return (
     <div className="space-y-8">
@@ -247,7 +247,8 @@ export default function FinancialModelTab({ dark }: { dark: boolean }) {
         ))}
       </div>
 
-      {subTab === "Overview" && <OverviewSub dark={dark} />}
+      {subTab === "5-Year Forecast" && <ForecastSub dark={dark} years={5} />}
+      {subTab === "3-Year Forecast" && <ForecastSub dark={dark} years={3} />}
       {subTab === "Revenue Streams" && <RevenueStreamsSub dark={dark} />}
       {subTab === "Assumptions" && <AssumptionsSub dark={dark} />}
       {subTab === "Investor Thesis" && <InvestorThesisSub dark={dark} />}
@@ -256,15 +257,31 @@ export default function FinancialModelTab({ dark }: { dark: boolean }) {
 }
 
 /* ================================================================== */
-/* Sub-tab 1: Overview                                                 */
+/* Forecast Sub-tab (3-Year or 5-Year)                                 */
 /* ================================================================== */
 
-function OverviewSub({ dark }: { dark: boolean }) {
+function ForecastSub({ dark, years }: { dark: boolean; years: 3 | 5 }) {
+  const yearLabels = years === 3 ? ["Y1", "Y2", "Y3"] : ["Y1", "Y2", "Y3", "Y4", "Y5"];
+  const revenueData = REVENUE_BY_STREAM.slice(0, years);
+  const ebitdaData = EBITDA_DATA.slice(0, years);
+  const kpis = years === 3
+    ? KPIS.filter((k) => !k.label.includes("Year 5"))
+    : KPIS;
+
+  const COST_ROWS = [
+    { name: "Event Production", vals: [90, 220, 390, 640, 1000] },
+    { name: "Personnel", vals: [255, 450, 855, 1500, 2625] },
+    { name: "Technology / Hosting", vals: [24, 36, 60, 96, 150] },
+    { name: "Marketing & Growth", vals: [30, 60, 120, 250, 450] },
+    { name: "G&A", vals: [26, 68, 193, 452, 1006] },
+  ];
+  const COST_TOTALS = [425, 834, 1618, 2938, 5231];
+
   return (
     <div className="space-y-8">
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {KPIS.map((kpi) => {
+      <div className={cn("grid gap-3", years === 3 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-2 md:grid-cols-5")}>
+        {kpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
             <div
@@ -319,10 +336,10 @@ function OverviewSub({ dark }: { dark: boolean }) {
             "text-sm font-semibold mb-4",
             dark ? "text-white" : "text-[#111827]"
           )}>
-            Revenue by Stream ($K)
+            Revenue by Stream ($K) — {years}-Year
           </h4>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={REVENUE_BY_STREAM} barCategoryGap="20%">
+            <BarChart data={revenueData} barCategoryGap="20%">
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke={dark ? "rgba(255,255,255,0.06)" : "#F3F4F6"}
@@ -381,10 +398,10 @@ function OverviewSub({ dark }: { dark: boolean }) {
             "text-sm font-semibold mb-4",
             dark ? "text-white" : "text-[#111827]"
           )}>
-            EBITDA Trend ($K)
+            EBITDA Trend ($K) — {years}-Year
           </h4>
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={EBITDA_DATA}>
+            <LineChart data={ebitdaData}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke={dark ? "rgba(255,255,255,0.06)" : "#F3F4F6"}
@@ -453,7 +470,7 @@ function OverviewSub({ dark }: { dark: boolean }) {
         )}
       >
         <div className="px-4 py-3 bg-[#EF4444] flex items-center gap-2">
-          <span className="text-white text-sm font-semibold">Operating Costs ($K)</span>
+          <span className="text-white text-sm font-semibold">Operating Costs ($K) — {years}-Year</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -462,7 +479,7 @@ function OverviewSub({ dark }: { dark: boolean }) {
                 <th className={cn("text-left px-4 py-2.5 font-medium text-xs uppercase tracking-wide", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
                   Cost Line
                 </th>
-                {["Y1", "Y2", "Y3", "Y4", "Y5"].map((y) => (
+                {yearLabels.map((y) => (
                   <th key={y} className={cn("text-right px-4 py-2.5 font-medium text-xs uppercase tracking-wide", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
                     {y}
                   </th>
@@ -470,16 +487,10 @@ function OverviewSub({ dark }: { dark: boolean }) {
               </tr>
             </thead>
             <tbody>
-              {[
-                { name: "Event Production", vals: [90, 220, 390, 640, 1000] },
-                { name: "Personnel", vals: [255, 450, 855, 1500, 2625] },
-                { name: "Technology / Hosting", vals: [24, 36, 60, 96, 150] },
-                { name: "Marketing & Growth", vals: [30, 60, 120, 250, 450] },
-                { name: "G&A", vals: [26, 68, 193, 452, 1006] },
-              ].map((row, i) => (
+              {COST_ROWS.map((row, i) => (
                 <tr key={row.name} className={cn(i % 2 === 0 ? (dark ? "bg-transparent" : "bg-white") : (dark ? "bg-white/[0.02]" : "bg-[#FAFAFA]"))}>
                   <td className={cn("px-4 py-3 font-medium", dark ? "text-gray-200" : "text-[#111827]")}>{row.name}</td>
-                  {row.vals.map((v, j) => (
+                  {row.vals.slice(0, years).map((v, j) => (
                     <td key={j} className={cn("text-right px-4 py-3 tabular-nums", dark ? "text-gray-300" : "text-[#374151]")}>
                       {fmtK(v)}
                     </td>
@@ -488,7 +499,7 @@ function OverviewSub({ dark }: { dark: boolean }) {
               ))}
               <tr className={cn("font-semibold border-t", dark ? "border-white/[0.08] bg-white/[0.03]" : "border-[#E5E7EB] bg-[#F9FAFB]")}>
                 <td className={cn("px-4 py-3", dark ? "text-white" : "text-[#111827]")}>Total Costs</td>
-                {[425, 834, 1618, 2938, 5231].map((v, j) => (
+                {COST_TOTALS.slice(0, years).map((v, j) => (
                   <td key={j} className={cn("text-right px-4 py-3 tabular-nums", dark ? "text-white" : "text-[#111827]")}>{fmtK(v)}</td>
                 ))}
               </tr>

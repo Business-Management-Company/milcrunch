@@ -34,6 +34,18 @@ const TABS = [
 
 type TabId = (typeof TABS)[number];
 
+/** Abbreviated labels so all tabs fit on one line */
+const TAB_LABELS: Record<TabId, string> = {
+  "Overview": "Overview",
+  "Events & Attendee App": "Events & App",
+  "MilCrunch Experience": "Experience",
+  "Creator Network": "Creators",
+  "365 Insights": "365 Insights",
+  "Streaming & Media": "Streaming",
+  "Partnership Model": "Partnership",
+  "Financial Model": "Financials",
+};
+
 
 const SAAS_ROWS = [
   { tool: "Event Management Platform", cost: 500, replaces: "Event Management" },
@@ -267,6 +279,13 @@ function OverviewTab({ dark }: { dark: boolean }) {
             That directory became a network. That network became a platform. And that platform
             became MilCrunch.
           </p>
+
+          <img
+            src="https://github.com/user-attachments/assets/2244c6ca-d608-40d0-8f88-32c59b7f4f76"
+            alt="MilCrunch platform overview"
+            className="w-full mt-8"
+            style={{ borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,0.10)" }}
+          />
         </div>
       </section>
 
@@ -2276,7 +2295,7 @@ export default function Prospectus() {
             {/* Explore Demo */}
             <a
               href="/login?demo=true"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#10B981] hover:bg-[#059669] text-white transition-all duration-300"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all duration-300"
             >
               🎯 Explore Demo
             </a>
@@ -2310,23 +2329,31 @@ export default function Prospectus() {
         {/* Tab navigation */}
         <div className="max-w-6xl mx-auto px-4 md:px-8 pb-3 overflow-x-auto">
           <div className="flex items-center gap-1.5 min-w-max">
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300",
-                  activeTab === tab
-                    ? "bg-[#6C5CE7] text-white"
-                    : darkMode
-                      ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
-                      : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
-                )}
-              >
-                {tab}
-              </button>
-            ))}
+            {TABS.map((tab) => {
+              const isFinancials = tab === "Financial Model";
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300",
+                    isFinancials
+                      ? activeTab === tab
+                        ? "bg-[#6C5CE7] text-white shadow-lg shadow-[#6C5CE7]/30"
+                        : "bg-[#6C5CE7]/90 text-white hover:bg-[#6C5CE7] shadow-md shadow-[#6C5CE7]/20"
+                      : activeTab === tab
+                        ? "bg-[#6C5CE7] text-white"
+                        : darkMode
+                          ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
+                          : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
+                  )}
+                >
+                  {isFinancials && <DollarSign className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />}
+                  {TAB_LABELS[tab]}
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>
