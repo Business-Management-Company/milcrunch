@@ -40,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { cn, safeImageUrl, creatorAvatarUrl, goodAvatarCache } from "@/lib/utils";
+import { cn, safeImageUrl, goodAvatarCache } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -467,20 +467,21 @@ export default function CreatorProfileModal({
     (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username ?? username ?? "";
   const displayName =
     (igRecord?.full_name as string) ?? (resultTop.first_name as string) ?? creator?.name ?? displayUsername ?? "—";
-  // Avatar priority: cached working URL (from grid card) → enrichment → ic_avatar_url → creator.avatar → ""
-  const enrichedAvatarUrl = extractAvatarFromEnrichment(enriched);
-  const creatorIcAvatar = (creator as Record<string, unknown> | null)?.ic_avatar_url as string | undefined;
+  // Avatar: ic_avatar_url → avatar (from grid card) → enrichment → cached working URL
+  const enrichedAvatarUrl = safeImageUrl(extractAvatarFromEnrichment(enriched));
+  const creatorIcAvatar = safeImageUrl((creator as Record<string, unknown> | null)?.ic_avatar_url as string | undefined);
+  const creatorAvatar = safeImageUrl(creator?.avatar);
   const cachedWorkingUrl = goodAvatarCache.get(displayUsername || creator?.username || "") || null;
-  const picture = creatorAvatarUrl(
-    cachedWorkingUrl,
-    enrichedAvatarUrl,
-    creatorIcAvatar,
-    creator?.avatar,
-  ) ?? "";
-  // Build a fallback chain for onError retry (skip the primary, try the rest)
-  const avatarFallbacks = [cachedWorkingUrl, enrichedAvatarUrl, creatorIcAvatar, creator?.avatar]
-    .map((u) => safeImageUrl(u))
-    .filter((u): u is string => !!u && u !== picture && !u.includes("ui-avatars.com"));
+  const modalAvatarInitial = creatorIcAvatar ?? creatorAvatar ?? enrichedAvatarUrl ?? cachedWorkingUrl ?? null;
+  const [modalAvatarSrc, setModalAvatarSrc] = useState<string | null>(modalAvatarInitial);
+  // Reset when the modal opens for a different creator or enrichment arrives
+  const prevModalAvatar = useRef(modalAvatarInitial);
+  useEffect(() => {
+    if (modalAvatarInitial !== prevModalAvatar.current) {
+      prevModalAvatar.current = modalAvatarInitial;
+      setModalAvatarSrc(modalAvatarInitial);
+    }
+  }, [modalAvatarInitial]);
   const bio = useMemo(() => {
     if (selectedPlatform === "tiktok" && tiktokData) {
       return (tiktokData.biography as string) ?? (tiktokData.bio as string) ?? creator?.bio ?? "";
@@ -745,25 +746,24 @@ export default function CreatorProfileModal({
           {/* Left panel - fixed ~350px */}
           <div className="flex w-full flex-col border-r border-border dark:border-gray-800 bg-white dark:bg-[#0F1117] p-6 md:w-[350px] shrink-0">
             <div className="mx-auto mb-4 h-40 w-40 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
-              {picture && !picture.includes("ui-avatars.com") && (
+              {modalAvatarSrc && (
                 <img
-                  src={picture}
+                  src={modalAvatarSrc}
                   alt={displayName}
                   className="w-full h-full object-cover absolute inset-0 z-10"
                   onLoad={() => {
                     const key = displayUsername || creator?.username || "";
-                    if (key && picture) goodAvatarCache.set(key, picture);
+                    if (key && modalAvatarSrc) goodAvatarCache.set(key, modalAvatarSrc);
                   }}
-                  onError={(e) => {
-                    const el = e.currentTarget;
-                    const retryCount = Number(el.dataset.retried || "0");
-                    if (retryCount >= avatarFallbacks.length) { el.style.display = "none"; return; }
-                    el.dataset.retried = String(retryCount + 1);
-                    const fallback = avatarFallbacks.find((u) => u !== el.src);
-                    if (fallback) {
-                      el.src = fallback;
+                  onError={() => {
+                    if (modalAvatarSrc === creatorIcAvatar && creatorAvatar) {
+                      setModalAvatarSrc(creatorAvatar);
+                    } else if (modalAvatarSrc !== enrichedAvatarUrl && enrichedAvatarUrl) {
+                      setModalAvatarSrc(enrichedAvatarUrl);
+                    } else if (modalAvatarSrc !== cachedWorkingUrl && cachedWorkingUrl) {
+                      setModalAvatarSrc(cachedWorkingUrl);
                     } else {
-                      el.style.display = "none";
+                      setModalAvatarSrc(null);
                     }
                   }}
                 />

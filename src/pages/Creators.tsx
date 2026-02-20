@@ -29,7 +29,7 @@ import {
   extractAvatarFromEnrichment,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
-import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
+import { cn, safeImageUrl } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
 /* Icons                                                               */
@@ -157,20 +157,20 @@ function CreatorCard({
   inView: boolean;
   index: number;
 }) {
-  const enrichAvatar = extractAvatarFromEnrichment(c.enrichment_data);
-  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, enrichAvatar) || null;
-  const [imgError, setImgError] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const icUrl = safeImageUrl(c.ic_avatar_url);
+  const avUrl = safeImageUrl(c.avatar_url);
+  const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
+  const initialSrc = icUrl ?? avUrl ?? enrichUrl;
+  const [imgSrc, setImgSrc] = useState<string | null>(initialSrc);
 
-  // Reset error state when src changes (e.g. after CDN URL persisted to permanent storage)
-  const prevSrc = useRef(imgSrc);
+  // Reset when upstream data changes (e.g. after CDN URL persisted)
+  const prevInitial = useRef(initialSrc);
   useEffect(() => {
-    if (imgSrc !== prevSrc.current) {
-      prevSrc.current = imgSrc;
-      setImgError(false);
-      setImgLoaded(false);
+    if (initialSrc !== prevInitial.current) {
+      prevInitial.current = initialSrc;
+      setImgSrc(initialSrc);
     }
-  }, [imgSrc]);
+  }, [initialSrc]);
   const [bannerError, setBannerError] = useState(false);
   const platforms = c.platforms ?? [];
   const bannerClass = DEFAULT_BANNER;
@@ -228,14 +228,21 @@ function CreatorCard({
             isVerified ? "border-[#6C5CE7]" : "border-white",
           )}
         >
-          {imgSrc && !imgError && (
+          {imgSrc && (
             <img
               src={imgSrc}
               alt={c.display_name}
               className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setImgError(true)}
+              onError={() => {
+                if (imgSrc === icUrl && avUrl) {
+                  setImgSrc(avUrl);
+                } else if (imgSrc !== enrichUrl && enrichUrl) {
+                  setImgSrc(enrichUrl);
+                } else {
+                  setImgSrc(null);
+                }
+              }}
             />
           )}
           <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-base">

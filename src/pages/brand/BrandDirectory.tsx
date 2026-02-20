@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,7 @@ import {
   Pencil,
   ExternalLink,
 } from "lucide-react";
-import { cn, creatorAvatarUrl, buildAvatarFallbacks, avatarOnError } from "@/lib/utils";
+import { cn, safeImageUrl } from "@/lib/utils";
 import {
   fetchDirectoriesWithCounts,
   fetchDirectoryMembers,
@@ -91,6 +91,52 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
+/** Small avatar component with cascading fallback for directory cards/rows. */
+function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" }) {
+  const icUrl = safeImageUrl(m.ic_avatar_url);
+  const avUrl = safeImageUrl(m.avatar_url);
+  const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(m.enrichment_data));
+  const initialSrc = icUrl ?? avUrl ?? enrichUrl;
+  const [imgSrc, setImgSrc] = useState<string | null>(initialSrc);
+  const prevInitial = useRef(initialSrc);
+  useEffect(() => {
+    if (initialSrc !== prevInitial.current) {
+      prevInitial.current = initialSrc;
+      setImgSrc(initialSrc);
+    }
+  }, [initialSrc]);
+  const isLg = size === "lg";
+  return (
+    <div className={cn(
+      "rounded-full overflow-hidden relative",
+      isLg ? "w-[72px] h-[72px] md:w-[88px] md:h-[88px] mb-3 border-[3px] border-white dark:border-gray-700 ring-1 ring-gray-200 dark:ring-gray-600 shadow-sm" : "w-10 h-10 shrink-0 border border-gray-200 dark:border-gray-700",
+    )}>
+      {imgSrc && (
+        <img
+          src={imgSrc}
+          alt={m.creator_name ?? ""}
+          className="w-full h-full object-cover absolute inset-0 z-10"
+          onError={() => {
+            if (imgSrc === icUrl && avUrl) {
+              setImgSrc(avUrl);
+            } else if (imgSrc !== enrichUrl && enrichUrl) {
+              setImgSrc(enrichUrl);
+            } else {
+              setImgSrc(null);
+            }
+          }}
+        />
+      )}
+      <div className={cn(
+        "w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold",
+        isLg ? "text-lg" : "text-xs",
+      )}>
+        {getInitials(m.creator_name ?? "", m.creator_handle)}
+      </div>
+    </div>
+  );
+}
+
 /** Map a DirectoryMember to the CreatorCard shape the profile drawer expects. */
 function memberToCreatorCard(m: DirectoryMember): CreatorCard {
   const enrichAvatar = extractAvatarFromEnrichment(m.enrichment_data);
@@ -98,7 +144,7 @@ function memberToCreatorCard(m: DirectoryMember): CreatorCard {
     id: m.id,
     name: m.creator_name ?? m.creator_handle,
     username: m.creator_handle,
-    avatar: creatorAvatarUrl(m.ic_avatar_url, m.avatar_url, enrichAvatar, (m as Record<string, unknown>).profile_image_url as string) || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.creator_name ?? m.creator_handle)}&background=random&size=128`,
+    avatar: safeImageUrl(m.ic_avatar_url) ?? safeImageUrl(m.avatar_url) ?? safeImageUrl(enrichAvatar) ?? "",
     followers: m.follower_count ?? 0,
     engagementRate: m.engagement_rate ?? 0,
     platforms: m.platforms ?? ["instagram"],
@@ -704,27 +750,12 @@ const BrandDirectory = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((m) => {
-                const enrichAvatar = extractAvatarFromEnrichment(m.enrichment_data);
-                const fallbacks = buildAvatarFallbacks(m.ic_avatar_url, m.avatar_url, enrichAvatar, (m as Record<string, unknown>).profile_image_url as string);
-                const imgSrc = fallbacks[0] ?? null;
                 const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                 const isToggling = togglingIds.has(m.id);
                 const platforms = m.platforms ?? [];
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
-                    <div className="w-[72px] h-[72px] md:w-[88px] md:h-[88px] rounded-full overflow-hidden mb-3 border-[3px] border-white dark:border-gray-700 ring-1 ring-gray-200 dark:ring-gray-600 relative shadow-sm">
-                      {imgSrc && (
-                        <img
-                          src={imgSrc}
-                          alt={m.creator_name ?? ""}
-                          className="w-full h-full object-cover absolute inset-0"
-                          onError={avatarOnError(fallbacks)}
-                        />
-                      )}
-                      <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
-                        {getInitials(m.creator_name ?? "", m.creator_handle)}
-                      </div>
-                    </div>
+                    <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#6C5CE7] mb-2 truncate max-w-full">@{m.creator_handle}</p>
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
@@ -789,28 +820,13 @@ const BrandDirectory = () => {
               </thead>
               <tbody>
                 {filtered.map((m) => {
-                  const tblEnrichAvatar = extractAvatarFromEnrichment(m.enrichment_data);
-                  const tblFallbacks = buildAvatarFallbacks(m.ic_avatar_url, m.avatar_url, tblEnrichAvatar, (m as Record<string, unknown>).profile_image_url as string);
-                  const tblImgSrc = tblFallbacks[0] ?? null;
                   const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                   const isToggling = togglingIds.has(m.id);
                   return (
                     <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 relative">
-                            {tblImgSrc && (
-                              <img
-                                src={tblImgSrc}
-                                alt={m.creator_name ?? ""}
-                                className="w-full h-full object-cover absolute inset-0"
-                                onError={avatarOnError(tblFallbacks)}
-                              />
-                            )}
-                            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs">
-                              {getInitials(m.creator_name ?? "", m.creator_handle)}
-                            </div>
-                          </div>
+                          <DirAvatar m={m} size="sm" />
                           <div className="min-w-0">
                             <p className="font-semibold text-[#000741] dark:text-white truncate">{m.creator_name}</p>
                             <p className="text-xs text-[#6C5CE7] truncate">@{m.creator_handle}</p>

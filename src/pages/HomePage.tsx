@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { safeImageUrl, creatorAvatarUrl, buildAvatarFallbacks } from "@/lib/utils";
+import { safeImageUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -192,38 +192,31 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
-function HeroAvatar({ fallbacks, name, handle }: { fallbacks: string[]; name: string; handle: string }) {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [allFailed, setAllFailed] = useState(false);
-  const lastGoodSrc = useRef<string | null>(null);
+function HeroAvatar({ sources, name, handle }: { sources: (string | null | undefined)[]; name: string; handle: string }) {
+  const chain = sources.map((s) => safeImageUrl(s)).filter((s): s is string => !!s);
+  const [imgSrc, setImgSrc] = useState<string | null>(chain[0] ?? null);
 
-  // Reset when fallbacks change
-  const key = fallbacks.join("|");
+  // Reset when sources change
+  const key = chain.join("|");
   const prevKey = useRef(key);
   if (key !== prevKey.current) {
     prevKey.current = key;
-    setCurrentIdx(0);
-    setAllFailed(false);
+    setImgSrc(chain[0] ?? null);
   }
-
-  const displaySrc = !allFailed ? (fallbacks[currentIdx] ?? null) : lastGoodSrc.current;
 
   return (
     <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
-      {displaySrc && (
+      {imgSrc && (
         <img
-          src={displaySrc}
+          src={imgSrc}
           alt={name}
           fetchPriority="high"
           loading="eager"
           className="w-full h-full object-cover absolute inset-0 z-10"
-          onLoad={() => { lastGoodSrc.current = displaySrc; }}
           onError={() => {
-            if (currentIdx + 1 < fallbacks.length) {
-              setCurrentIdx((i) => i + 1);
-            } else {
-              setAllFailed(true);
-            }
+            const idx = chain.indexOf(imgSrc);
+            const next = chain[idx + 1];
+            setImgSrc(next ?? null);
           }}
         />
       )}
@@ -238,23 +231,18 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
-  // Build fallback chain: ic_avatar_url → avatar_url → enrichment avatar → profile_image_url
-  const enrichAvatar = extractAvatarFromEnrichment(c.enrichment_data);
-  const fallbacks = buildAvatarFallbacks(c.ic_avatar_url, c.avatar_url, enrichAvatar, (c as Record<string, unknown>).profile_image_url as string);
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [allFailed, setAllFailed] = useState(false);
-  const lastGoodSrc = useRef<string | null>(null);
+  const icUrl = safeImageUrl(c.ic_avatar_url);
+  const avUrl = safeImageUrl(c.avatar_url);
+  const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
+  const initialSrc = icUrl ?? avUrl ?? enrichUrl;
+  const [imgSrc, setImgSrc] = useState<string | null>(initialSrc);
 
-  // Reset when fallbacks change (e.g. after cache fill)
-  const key = fallbacks.join("|");
-  const prevKey = useRef(key);
-  if (key !== prevKey.current) {
-    prevKey.current = key;
-    setCurrentIdx(0);
-    setAllFailed(false);
+  // Reset when upstream data changes (e.g. after cache fill)
+  const prevInitial = useRef(initialSrc);
+  if (initialSrc !== prevInitial.current) {
+    prevInitial.current = initialSrc;
+    setImgSrc(initialSrc);
   }
-
-  const displaySrc = !allFailed ? (fallbacks[currentIdx] ?? null) : lastGoodSrc.current;
 
   return (
     <Link
@@ -278,18 +266,19 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               : "ring-1 ring-gray-200 ring-offset-2"
           } bg-white`}
         >
-          {displaySrc && (
+          {imgSrc && (
             <img
-              src={displaySrc}
+              src={imgSrc}
               alt={c.display_name}
               className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
-              onLoad={() => { lastGoodSrc.current = displaySrc; }}
               onError={() => {
-                if (currentIdx + 1 < fallbacks.length) {
-                  setCurrentIdx((i) => i + 1);
+                if (imgSrc === icUrl && avUrl) {
+                  setImgSrc(avUrl);
+                } else if (imgSrc !== enrichUrl && enrichUrl) {
+                  setImgSrc(enrichUrl);
                 } else {
-                  setAllFailed(true);
+                  setImgSrc(null);
                 }
               }}
             />
@@ -756,9 +745,7 @@ export default function HomePage() {
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
-                    // Static fallback: /creators/{handle}.jpg (checked into public/)
-                    const staticFallback = `/creators/${db.handle}.jpg`;
-                    const heroFallbacks = buildAvatarFallbacks(db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string, staticFallback);
+                    const heroSources = [db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string];
 
                     // Build stats in priority order, filter to non-null/non-zero, take up to 4
                     const allStats: { value: string; label: string; color: string }[] = [];
@@ -779,7 +766,7 @@ export default function HomePage() {
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
                         <div className="flex items-center gap-4">
-                          <HeroAvatar fallbacks={heroFallbacks} name={db.display_name} handle={db.handle} />
+                          <HeroAvatar sources={heroSources} name={db.display_name} handle={db.handle} />
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-[17px] text-gray-900">{db.display_name}</p>
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>
@@ -1001,9 +988,13 @@ export default function HomePage() {
                 const location = [event.city, event.state].filter(Boolean).join(", ") || event.location || "";
                 const tag = event.event_type ?? event.tag ?? "";
 
+                const eventHref = event.slug || event.id
+                  ? `/events/${event.slug || event.id}`
+                  : "/events";
+
                 return (
                   <Link
-                    to={`/events/${event.slug || event.id}`}
+                    to={eventHref}
                     key={event.id ?? event.slug ?? title}
                     className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
                   >
