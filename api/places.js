@@ -29,33 +29,45 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { query, location } = req.body || {};
-  if (!location) {
-    return res.status(400).json({ error: "Missing 'location' in request body" });
+  const { queries } = req.body || {};
+  if (!Array.isArray(queries) || queries.length === 0) {
+    return res.status(400).json({ error: "Missing 'queries' array in request body" });
   }
 
-  const searchQuery = [query || "event venue", location].filter(Boolean).join(" ");
-
   try {
-    // Step 1: Google Places Text Search
-    const textSearchUrl =
-      `https://maps.googleapis.com/maps/api/place/textsearch/json` +
-      `?query=${encodeURIComponent(searchQuery)}&key=${key}`;
+    // Step 1: Run all text searches in parallel (cap at 5 queries)
+    const searchPromises = queries.slice(0, 5).map(async (q) => {
+      try {
+        const url =
+          `https://maps.googleapis.com/maps/api/place/textsearch/json` +
+          `?query=${encodeURIComponent(q)}&key=${key}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        return data.status === "OK" ? (data.results || []).slice(0, 20) : [];
+      } catch {
+        return [];
+      }
+    });
 
-    const searchResp = await fetch(textSearchUrl);
-    const searchData = await searchResp.json();
+    const allResults = await Promise.all(searchPromises);
 
-    if (searchData.status !== "OK" && searchData.status !== "ZERO_RESULTS") {
-      return res
-        .status(502)
-        .json({ error: `Google Places error: ${searchData.status}`, detail: searchData.error_message });
+    // Step 2: Merge and deduplicate by place_id
+    const seen = new Set();
+    const unique = [];
+    for (const results of allResults) {
+      for (const place of results) {
+        if (!seen.has(place.place_id)) {
+          seen.add(place.place_id);
+          unique.push(place);
+        }
+      }
     }
 
-    const places = (searchData.results || []).slice(0, 20);
-
-    // Step 2: Fetch Place Details in parallel for phone, website, maps URL
+    // Step 3: Fetch Place Details in parallel for phone, website, maps URL
+    // Cap at 30 to stay within serverless timeout
+    const toDetail = unique.slice(0, 30);
     const detailed = await Promise.all(
-      places.map(async (place) => {
+      toDetail.map(async (place) => {
         let phone = null;
         let website = null;
         let mapsUrl = null;
@@ -68,18 +80,17 @@ export default async function handler(req, res) {
             `&key=${key}`;
           const detailResp = await fetch(detailUrl);
           const detailData = await detailResp.json();
-
           if (detailData.status === "OK" && detailData.result) {
             phone = detailData.result.formatted_phone_number || null;
             website = detailData.result.website || null;
             mapsUrl = detailData.result.url || null;
           }
         } catch {
-          // If details fail for one place, skip it
+          // Skip details on error for this place
         }
 
-        // Build photo URL through our own proxy so the API key stays server-side
-        const photoRef = place.photos && place.photos[0] ? place.photos[0].photo_reference : null;
+        const photoRef =
+          place.photos && place.photos[0] ? place.photos[0].photo_reference : null;
         const photoUrl = photoRef
           ? `/api/places?photo=1&ref=${encodeURIComponent(photoRef)}`
           : null;
