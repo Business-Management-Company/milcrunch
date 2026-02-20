@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { marked } from "marked";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1841,9 +1842,16 @@ function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-              {narrative}
-            </div>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none
+                [&_h2]:text-[1.1rem] [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2
+                [&_h3]:text-[1.05rem] [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1.5
+                [&_p]:mb-2 [&_p]:leading-relaxed
+                [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2
+                [&_li]:mb-1 [&_li]:leading-relaxed
+                [&_strong]:font-semibold"
+              dangerouslySetInnerHTML={{ __html: marked.parse(narrative ?? "", { async: false }) as string }}
+            />
             <div className="mt-3 flex gap-2">
               <Button variant="outline" size="sm" onClick={handleGenerate}>
                 <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Re-run Deep Analysis
