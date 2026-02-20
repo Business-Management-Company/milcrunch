@@ -34,6 +34,7 @@ import {
   Info,
   CalendarCheck,
   CheckCircle2,
+  Landmark,
 } from "lucide-react";
 import { format, differenceInDays, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -139,6 +140,8 @@ const SCAN_PHASES = [
   "Scanning Eventbrite for local events...",
   "Checking military installation calendars...",
   "Searching Facebook Events in the area...",
+  "Scanning local Chamber of Commerce calendars...",
+  "Checking regional business & networking events...",
   "Scanning military spouse & veteran community groups...",
   "Checking MilCrunch event calendar...",
   "Analyzing results for conflicts and collabs...",
@@ -597,6 +600,7 @@ export default function ConflictsCollabs() {
   const [filter, setFilter] = useState<FilterMode>("both");
   const [searchQuery, setSearchQuery] = useState("");
   const [pitchModal, setPitchModal] = useState<{ target: EventRow } | null>(null);
+  const [aiPitchTarget, setAiPitchTarget] = useState<AIEvent | null>(null);
   const [generatingPitch, setGeneratingPitch] = useState(false);
   const [generatedPitch, setGeneratedPitch] = useState("");
 
@@ -690,14 +694,14 @@ export default function ConflictsCollabs() {
         : "";
 
       const aiResp = await callAnthropic(
-        `You are an event intelligence tool for military community event planners. Given a planned event's location, date range, and target audience, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) as if you searched Eventbrite, Facebook Events, military installation calendars, and military community groups.
+        `You are an event intelligence tool for military community event planners. Given a planned event's location, date range, and target audience, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) as if you searched Eventbrite, Facebook Events, military installation calendars, local and regional Chamber of Commerce event calendars, and military community groups.
 
 Return ONLY a valid JSON array of event objects. Each event:
 {
   "name": "Event Name",
   "date": "Mon DD, YYYY",
   "location": "City, ST",
-  "source": "Eventbrite" | "Facebook Events" | "Military Installation Calendar" | "Community Groups" | "MilCrunch Calendar",
+  "source": "Eventbrite" | "Facebook Events" | "Military Installation Calendar" | "Community Groups" | "MilCrunch Calendar" | "Chamber of Commerce",
   "type": "conflict" | "collab",
   "severity": "high" | "medium" | "low",
   "reason": "Brief explanation of why this is a conflict or collab opportunity",
@@ -712,7 +716,10 @@ Guidelines:
 - Military installation events should reference real bases near the location
 - Severity: high = same week and nearby, medium = same month or overlapping audience, low = tangential
 - Make events realistic with specific names, real-sounding dates within the timeframe, and plausible venues
-- Include both military-specific and civilian events that could attract a military audience`,
+- Include both military-specific and civilian events that could attract a military audience
+- Include 1-3 Chamber of Commerce events (networking mixers, business expos, small business workshops, etc.)
+- Chamber of Commerce events should be COLLAB when they serve overlapping audiences (veteran business owners, military spouse entrepreneurs, local business community) — include reason "Chamber partnership could drive local business sponsor leads"
+- Chamber of Commerce events should be CONFLICT only when they directly compete for the same date, location, and audience`,
         `Planned event details:
 - Name: "${eventName || "Untitled Event"}"
 - Date: ${dateRangeStr}
@@ -847,6 +854,53 @@ Both events serve overlapping military audiences. Write the email.`,
       setGeneratedPitch(
         `Subject: Collaboration Opportunity — ${planName} x ${target.title}\n\nHi there,\n\nI'm reaching out from ${planName} (${planDate}, ${locationInput || "location TBD"}).\n\nWe noticed your upcoming event, ${target.title} (${targetDate}, ${getLocation(target) || "location TBD"}), targets a similar military community audience. We think there's a great opportunity to collaborate:\n\n- Cross-promote to each other's attendee lists\n- Share speakers or panelists between events\n- Offer bundled ticket discounts for both events\n- Co-create content leading up to both events\n\nWould you be open to a quick call to explore this?\n\nBest,\n[Your Name]`,
       );
+    } finally {
+      setGeneratingPitch(false);
+    }
+  };
+
+  // Generate AI pitch for external (AI-scanned) collab events
+  const generateExternalPitch = async (ev: AIEvent) => {
+    setPitchModal(null);
+    setAiPitchTarget(ev);
+    setGeneratingPitch(true);
+    setGeneratedPitch("");
+
+    const isChamber = ev.source.toLowerCase().includes("chamber");
+    const planDate = dateRange?.from ? format(dateRange.from, "MMM d, yyyy") : "TBD";
+    const planEndDate = dateRange?.to ? ` - ${format(dateRange.to, "MMM d, yyyy")}` : "";
+    const planName = eventName || "our upcoming event";
+
+    const chamberContext = isChamber
+      ? `\n\nIMPORTANT: This is a Chamber of Commerce event. Specifically emphasize co-marketing opportunities targeting veteran-owned businesses and military spouse entrepreneurs in the ${locationInput || "local"} area. Suggest joint outreach to veteran business owners, military spouse entrepreneur networks, and local business community leaders. Frame the partnership as a way to drive local business sponsor leads for both organizations.`
+      : "";
+
+    try {
+      const pitch = await callAnthropic(
+        `You are writing a collaboration outreach email for a military community event organizer on MilCrunch. Write a professional, warm, and specific collaboration pitch email. Include a subject line. Keep it concise but compelling. Suggest 3-4 specific collaboration ideas relevant to these events.${chamberContext}`,
+        `Write a collab pitch email from:
+- Event: "${planName}" on ${planDate}${planEndDate} in ${locationInput || "TBD"}
+- Type: ${eventType || "Event"}, Audience: ${audienceTypes.join(", ") || "Military community"}
+
+To the organizers of:
+- Event: "${ev.name}" on ${ev.date} in ${ev.location}
+- Source: ${ev.source}
+
+Both events serve overlapping audiences. Write the email.`,
+        1500,
+      );
+      setGeneratedPitch(pitch);
+    } catch (err) {
+      console.error("[C&C] External pitch generation failed:", err);
+      if (isChamber) {
+        setGeneratedPitch(
+          `Subject: Partnership Opportunity — ${planName} x ${ev.name}\n\nHi there,\n\nI'm reaching out from ${planName} (${planDate}, ${locationInput || "location TBD"}).\n\nWe noticed your upcoming event, ${ev.name} (${ev.date}, ${ev.location}), and believe there's a strong opportunity to collaborate — especially around supporting veteran-owned businesses and military spouse entrepreneurs in the ${locationInput || "local"} area.\n\nHere are some ideas:\n\n- Co-market to veteran-owned businesses and military spouse entrepreneurs in the area\n- Cross-promote to each other's attendee and member lists\n- Joint sponsor packages targeting businesses that want to reach the military community\n- Feature veteran and military spouse business owners as speakers or panelists\n\nWould you be open to a quick call to explore this?\n\nBest,\n[Your Name]`,
+        );
+      } else {
+        setGeneratedPitch(
+          `Subject: Collaboration Opportunity — ${planName} x ${ev.name}\n\nHi there,\n\nI'm reaching out from ${planName} (${planDate}, ${locationInput || "location TBD"}).\n\nWe noticed your upcoming event, ${ev.name} (${ev.date}, ${ev.location}), targets a similar military community audience. We think there's a great opportunity to collaborate:\n\n- Cross-promote to each other's attendee lists\n- Share speakers or panelists between events\n- Offer bundled ticket discounts for both events\n- Co-create content leading up to both events\n\nWould you be open to a quick call to explore this?\n\nBest,\n[Your Name]`,
+        );
+      }
     } finally {
       setGeneratingPitch(false);
     }
@@ -1148,6 +1202,7 @@ Both events serve overlapping military audiences. Write the email.`,
 
             const sourceIcon = (source: string) => {
               const s = source.toLowerCase();
+              if (s.includes("chamber")) return <Landmark className="h-3 w-3" />;
               if (s.includes("military") || s.includes("installation")) return <Shield className="h-3 w-3" />;
               if (s.includes("facebook") || s.includes("community")) return <Users className="h-3 w-3" />;
               if (s.includes("milcrunch")) return <CalendarCheck className="h-3 w-3" />;
@@ -1215,31 +1270,49 @@ Both events serve overlapping military audiences. Write the email.`,
                       Collaboration Opportunities
                     </p>
                     <div className="space-y-2">
-                      {aiCollabs.map((ev, i) => (
-                        <div
-                          key={i}
-                          className="p-3 rounded-lg border border-teal-200 bg-teal-50/60 dark:border-teal-800/50 dark:bg-teal-950/20"
-                        >
-                          <div className="flex items-start gap-3">
-                            <Handshake className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-medium">{ev.name}</span>
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
-                                  {sourceIcon(ev.source)}
-                                  {ev.source}
-                                </Badge>
+                      {aiCollabs.map((ev, i) => {
+                        const isChamber = ev.source.toLowerCase().includes("chamber");
+                        return (
+                          <div
+                            key={i}
+                            className="p-3 rounded-lg border border-teal-200 bg-teal-50/60 dark:border-teal-800/50 dark:bg-teal-950/20"
+                          >
+                            <div className="flex items-start gap-3">
+                              <Handshake className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium">{ev.name}</span>
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                                    {sourceIcon(ev.source)}
+                                    {ev.source}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5">{ev.date} · {ev.location}</p>
+                                <p className="text-xs text-muted-foreground/80 mt-1">{ev.reason}</p>
+                                {isChamber && (
+                                  <p className="text-xs text-teal-700 dark:text-teal-300 font-medium mt-1">
+                                    <Landmark className="h-3 w-3 inline mr-1" />
+                                    Chamber partnership could drive local business sponsor leads.
+                                  </p>
+                                )}
+                                <div className="text-xs p-2 rounded-md mt-1.5 bg-teal-50/80 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300">
+                                  <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
+                                  {ev.suggestion}
+                                </div>
                               </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{ev.date} · {ev.location}</p>
-                              <p className="text-xs text-muted-foreground/80 mt-1">{ev.reason}</p>
-                              <div className="text-xs p-2 rounded-md mt-1.5 bg-teal-50/80 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300">
-                                <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
-                                {ev.suggestion}
-                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs border-teal-300 text-teal-700 hover:bg-teal-50 shrink-0"
+                                onClick={() => generateExternalPitch(ev)}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                Reach Out
+                              </Button>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </Card>
                 )}
@@ -1466,8 +1539,8 @@ Both events serve overlapping military audiences. Write the email.`,
       )}
 
       {/* Pitch modal */}
-      {pitchModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPitchModal(null)}>
+      {(pitchModal || aiPitchTarget) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setPitchModal(null); setAiPitchTarget(null); }}>
           <div
             className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
@@ -1476,10 +1549,10 @@ Both events serve overlapping military audiences. Write the email.`,
               <div>
                 <h3 className="font-semibold text-sm">Collab Pitch Email</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {eventName || "Your Event"} → {pitchModal.target.title}
+                  {eventName || "Your Event"} → {pitchModal?.target.title ?? aiPitchTarget?.name ?? ""}
                 </p>
               </div>
-              <Button size="sm" variant="ghost" onClick={() => setPitchModal(null)} className="h-7 w-7 p-0">
+              <Button size="sm" variant="ghost" onClick={() => { setPitchModal(null); setAiPitchTarget(null); }} className="h-7 w-7 p-0">
                 &times;
               </Button>
             </div>
@@ -1511,7 +1584,8 @@ Both events serve overlapping military audiences. Write the email.`,
                   size="sm"
                   onClick={() => {
                     const subjectMatch = generatedPitch.match(/^Subject:\s*(.+)/m);
-                    const subject = encodeURIComponent(subjectMatch?.[1] || `Collab Opportunity — ${eventName || "Our Event"} x ${pitchModal.target.title}`);
+                    const targetName = pitchModal?.target.title ?? aiPitchTarget?.name ?? "";
+                    const subject = encodeURIComponent(subjectMatch?.[1] || `Collab Opportunity — ${eventName || "Our Event"} x ${targetName}`);
                     const body = encodeURIComponent(generatedPitch.replace(/^Subject:.+\n\n?/, ""));
                     window.open(`mailto:?subject=${subject}&body=${body}`);
                   }}
