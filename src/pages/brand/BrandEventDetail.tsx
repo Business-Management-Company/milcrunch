@@ -160,12 +160,9 @@ const STATUS_STYLES: Record<string, string> = {
   completed: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
 };
 const EVENT_TYPES = [
-  { value: "conference", label: "Conference" },
-  { value: "meetup", label: "Meetup" },
-  { value: "pdx_experience", label: "Experience" },
+  { value: "live", label: "In-Person" },
   { value: "virtual", label: "Virtual" },
   { value: "hybrid", label: "Hybrid" },
-  { value: "live", label: "In-Person" },
 ];
 const SESSION_TYPES = ["keynote", "panel", "breakout", "workshop", "networking", "meal", "pdx_experience"];
 const SPEAKER_ROLES = SPEAKER_TYPES.map((t) => t.value);
@@ -290,7 +287,7 @@ const BrandEventDetail = () => {
   /* editable overview fields */
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
-  const [editType, setEditType] = useState("conference");
+  const [editType, setEditType] = useState("live");
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
   const [editVenue, setEditVenue] = useState("");
@@ -328,7 +325,7 @@ const BrandEventDetail = () => {
       setEvent(ev);
       setEditTitle(ev.title || "");
       setEditDesc(ev.description || "");
-      setEditType(ev.event_type || "conference");
+      setEditType(ev.event_type || "live");
       setEditStart(ev.start_date ? ev.start_date.slice(0, 10) : "");
       setEditEnd(ev.end_date ? ev.end_date.slice(0, 10) : "");
       setEditVenue(ev.venue || "");
@@ -482,6 +479,7 @@ const BrandEventDetail = () => {
         capacity: editCapacity ? parseInt(editCapacity) : null,
       };
 
+      console.log("[EventDetail] Update payload:", payload);
       const { error } = await supabase
         .from("events")
         .update(payload)
