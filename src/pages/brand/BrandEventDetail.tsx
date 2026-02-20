@@ -480,14 +480,22 @@ const BrandEventDetail = () => {
       };
 
       console.log("[EventDetail] Update payload:", payload);
-      const { error } = await supabase
+      console.log("[EventDetail] cover_image_url being saved:", payload.cover_image_url);
+      const { data, error } = await supabase
         .from("events")
         .update(payload)
-        .eq("id", eventId);
+        .eq("id", eventId)
+        .select()
+        .single();
       if (error) {
         console.error("[EventDetail] Supabase update error:", JSON.stringify(error, null, 2));
         throw new Error(error.message);
       }
+      if (!data) {
+        console.error("[EventDetail] Update returned no data — row may not have been updated (RLS?)");
+        throw new Error("Update failed — no rows affected");
+      }
+      console.log("[EventDetail] Saved row cover_image_url:", (data as Record<string, unknown>).cover_image_url);
       toast.success("Event updated");
       fetchAll();
     } catch (err: unknown) {
