@@ -4,11 +4,12 @@ import {
   ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
   FileText, Layers, Target, XCircle, CheckCircle2,
   Smartphone, Search, TrendingUp, Radio, Handshake,
-  DollarSign, ClipboardList, BookOpen,
+  DollarSign, ClipboardList, BookOpen, Settings, X, Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -80,6 +81,180 @@ const TAB_KB_CATEGORY: Record<string, string> = {
   "Streaming & Media": "streaming-media",
   "Partnership Model": "sponsorship-revenue",
 };
+
+/* ------------------------------------------------------------------ */
+/* Video helpers                                                       */
+/* ------------------------------------------------------------------ */
+
+type VideoUrls = Record<string, string>;
+
+function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4"; embedUrl: string } | null {
+  if (!url?.trim()) return null;
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?rel=0` };
+  const vimeoMatch = url.match(/(?:vimeo\.com\/)(\d+)/);
+  if (vimeoMatch) return { type: "vimeo", embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  if (/\.mp4(\?|$)/i.test(url) || /\.webm(\?|$)/i.test(url)) return { type: "mp4", embedUrl: url };
+  return null;
+}
+
+function ProspectusVideo({ url, dark, isSuperAdmin }: { url?: string; dark: boolean; isSuperAdmin: boolean }) {
+  if (!url) {
+    if (!isSuperAdmin) return null;
+    return (
+      <div
+        className={cn(
+          "w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors duration-300",
+          dark ? "border-white/10 bg-white/[0.02]" : "border-gray-300 bg-gray-50"
+        )}
+      >
+        <Play className={cn("h-10 w-10", dark ? "text-gray-600" : "text-gray-400")} />
+        <p className={cn("text-sm font-medium", dark ? "text-gray-500" : "text-gray-400")}>
+          No video uploaded yet
+        </p>
+        <p className={cn("text-xs", dark ? "text-gray-600" : "text-gray-400")}>
+          Use &ldquo;Manage Videos&rdquo; to add one
+        </p>
+      </div>
+    );
+  }
+
+  const parsed = parseVideoEmbed(url);
+  if (!parsed) return null;
+
+  if (parsed.type === "mp4") {
+    return (
+      <video
+        src={parsed.embedUrl}
+        controls
+        className="w-full aspect-video rounded-xl bg-black"
+        preload="metadata"
+      />
+    );
+  }
+
+  return (
+    <iframe
+      src={parsed.embedUrl}
+      title="Video"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowFullScreen
+      className="w-full aspect-video rounded-xl"
+      style={{ border: 0 }}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Manage Videos Panel (super_admin)                                   */
+/* ------------------------------------------------------------------ */
+
+function ManageVideosPanel({
+  open,
+  onClose,
+  videos,
+  onSave,
+  dark,
+}: {
+  open: boolean;
+  onClose: () => void;
+  videos: VideoUrls;
+  onSave: (updated: VideoUrls) => void;
+  dark: boolean;
+}) {
+  const [draft, setDraft] = useState<VideoUrls>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) setDraft({ ...videos });
+  }, [open, videos]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const upserts = TABS.map((tab) => ({
+      tab_name: tab,
+      video_url: draft[tab]?.trim() || null,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase
+      .from("prospectus_videos")
+      .upsert(upserts, { onConflict: "tab_name" });
+    setSaving(false);
+    if (error) {
+      console.error("[ManageVideosPanel] save error:", error);
+      alert("Failed to save — check console");
+      return;
+    }
+    onSave(draft);
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} />
+      {/* Panel */}
+      <div
+        className={cn(
+          "fixed top-0 right-0 z-[61] h-full w-full max-w-md shadow-2xl flex flex-col transition-colors duration-300",
+          dark ? "bg-[#111827] text-white" : "bg-white text-[#111827]"
+        )}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
+          <h3 className="text-base font-bold">Manage Tab Videos</h3>
+          <button type="button" onClick={onClose} className="p-1 hover:opacity-70">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {TABS.map((tab) => {
+            const val = draft[tab] ?? "";
+            const parsed = val ? parseVideoEmbed(val) : null;
+            return (
+              <div key={tab}>
+                <label className="text-sm font-semibold block mb-1.5">
+                  {TAB_LABELS[tab]}
+                </label>
+                <input
+                  type="text"
+                  value={val}
+                  onChange={(e) => setDraft((d) => ({ ...d, [tab]: e.target.value }))}
+                  placeholder="Paste YouTube, Vimeo, or .mp4 URL"
+                  className={cn(
+                    "w-full rounded-lg px-3 py-2 text-sm border transition-colors",
+                    dark
+                      ? "bg-white/5 border-white/10 placeholder:text-gray-500 focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7]"
+                      : "bg-white border-gray-300 placeholder:text-gray-400 focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7]"
+                  )}
+                />
+                {val && (
+                  <p className={cn("text-xs mt-1", parsed ? "text-emerald-500" : "text-amber-500")}>
+                    {parsed ? `${parsed.type.toUpperCase()} detected` : "Unrecognized URL format"}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-white/10">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white text-sm font-semibold transition-colors disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? "Saving…" : "Save All"}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Access Gate (always dark)                                           */
@@ -202,7 +377,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark }: { dark: boolean }) {
+function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl?: string; isSuperAdmin: boolean }) {
   const saasTotal = SAAS_ROWS.reduce((s, r) => s + r.cost, 0);
 
   return (
@@ -280,11 +455,9 @@ function OverviewTab({ dark }: { dark: boolean }) {
             became MilCrunch.
           </p>
 
-          <img
-            src="/screenshots/milcrunch-overview.png"
-            alt="MilCrunch Platform Overview"
-            style={{ width: "100%", borderRadius: 12, boxShadow: "0 4px 24px rgba(0,0,0,0.10)", margin: "24px 0" }}
-          />
+          <div style={{ margin: "24px 0" }}>
+            <ProspectusVideo url={videoUrl} dark={dark} isSuperAdmin={isSuperAdmin} />
+          </div>
         </div>
       </section>
 
@@ -2181,6 +2354,10 @@ export default function Prospectus() {
   const [systemPrefersDark, setSystemPrefersDark] = useState(
     () => window.matchMedia("(prefers-color-scheme: dark)").matches
   );
+  const [videoUrls, setVideoUrls] = useState<VideoUrls>({});
+  const [manageOpen, setManageOpen] = useState(false);
+
+  const { isSuperAdmin } = useAuth();
 
   const darkMode =
     themeMode === "dark" || (themeMode === "system" && systemPrefersDark);
@@ -2189,6 +2366,22 @@ export default function Prospectus() {
     if (sessionStorage.getItem(SESSION_KEY) === "1") {
       setHasAccess(true);
     }
+  }, []);
+
+  // Fetch saved video URLs
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("prospectus_videos")
+        .select("tab_name, video_url");
+      if (data) {
+        const map: VideoUrls = {};
+        for (const row of data as { tab_name: string; video_url: string | null }[]) {
+          if (row.video_url) map[row.tab_name] = row.video_url;
+        }
+        setVideoUrls(map);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -2322,6 +2515,23 @@ export default function Prospectus() {
                 </>
               )}
             </button>
+
+            {/* Manage Tab Videos — super_admin only */}
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => setManageOpen(true)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300",
+                  darkMode
+                    ? "bg-white/[0.06] text-gray-400 border border-white/10 hover:bg-white/[0.1] hover:text-gray-200"
+                    : "bg-white text-gray-500 border border-gray-200 hover:bg-gray-50 hover:text-gray-700"
+                )}
+              >
+                <Settings className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Manage Videos</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -2359,7 +2569,14 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} />}
+        {/* Tab video — rendered above content for non-Overview tabs */}
+        {activeTab !== "Overview" && (videoUrls[activeTab] || isSuperAdmin) && (
+          <div className="mb-8">
+            <ProspectusVideo url={videoUrls[activeTab]} dark={darkMode} isSuperAdmin={!!isSuperAdmin} />
+          </div>
+        )}
+
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} />}
         {activeTab === "MilCrunch Experience" && (
           <PdxTab dark={darkMode} />
         )}
@@ -2402,6 +2619,17 @@ export default function Prospectus() {
           </span>
         </div>
       </footer>
+
+      {/* Manage Videos Panel */}
+      {isSuperAdmin && (
+        <ManageVideosPanel
+          open={manageOpen}
+          onClose={() => setManageOpen(false)}
+          videos={videoUrls}
+          onSave={(updated) => setVideoUrls(updated)}
+          dark={darkMode}
+        />
+      )}
     </div>
   );
 }
