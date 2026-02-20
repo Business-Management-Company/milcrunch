@@ -37,7 +37,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
@@ -194,18 +194,21 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 
 function HeroAvatar({ sources, name, handle }: { sources: (string | null | undefined)[]; name: string; handle: string }) {
   const chain = sources.map((s) => safeImageUrl(s)).filter((s): s is string => !!s);
-  const [imgSrc, setImgSrc] = useState<string | null>(chain[0] ?? null);
+  const [failedSrcs, setFailedSrcs] = useState<Set<string>>(new Set());
 
-  // Reset when sources change
-  const key = chain.join("|");
-  const prevKey = useRef(key);
-  if (key !== prevKey.current) {
-    prevKey.current = key;
-    setImgSrc(chain[0] ?? null);
+  // Reset failed set when the source chain changes (e.g. enrichment loaded)
+  const chainKey = chain.join("|");
+  const prevChainKey = useRef(chainKey);
+  if (chainKey !== prevChainKey.current) {
+    prevChainKey.current = chainKey;
+    if (failedSrcs.size > 0) setFailedSrcs(new Set());
   }
 
+  // Always derived from latest props — no stale state
+  const imgSrc = chain.find((s) => !failedSrcs.has(s)) ?? null;
+
   return (
-    <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
+    <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100">
       {imgSrc ? (
         <img
           src={imgSrc}
@@ -213,10 +216,9 @@ function HeroAvatar({ sources, name, handle }: { sources: (string | null | undef
           fetchPriority="high"
           loading="eager"
           className="w-full h-full object-cover"
-          onError={() => {
-            const idx = chain.indexOf(imgSrc);
-            const next = chain[idx + 1];
-            setImgSrc(next ?? null);
+          onError={(e) => {
+            const src = e.currentTarget.src;
+            setFailedSrcs((prev) => new Set(prev).add(src));
           }}
         />
       ) : (
@@ -235,15 +237,19 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const icUrl = safeImageUrl(c.ic_avatar_url);
   const avUrl = safeImageUrl(c.avatar_url);
   const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
-  const initialSrc = icUrl ?? avUrl ?? enrichUrl;
-  const [imgSrc, setImgSrc] = useState<string | null>(initialSrc);
+  const chain = [icUrl, avUrl, enrichUrl].filter((s): s is string => !!s);
+  const [failedSrcs, setFailedSrcs] = useState<Set<string>>(new Set());
 
-  // Reset when upstream data changes (e.g. after cache fill)
-  const prevInitial = useRef(initialSrc);
-  if (initialSrc !== prevInitial.current) {
-    prevInitial.current = initialSrc;
-    setImgSrc(initialSrc);
+  // Reset failed set when the source chain changes (e.g. after cache fill)
+  const chainKey = chain.join("|");
+  const prevChainKey = useRef(chainKey);
+  if (chainKey !== prevChainKey.current) {
+    prevChainKey.current = chainKey;
+    if (failedSrcs.size > 0) setFailedSrcs(new Set());
   }
+
+  // Always derived from latest props — no stale state
+  const imgSrc = chain.find((s) => !failedSrcs.has(s)) ?? null;
 
   return (
     <Link
@@ -261,7 +267,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       {/* Avatar overlapping banner */}
       <div className="relative -mt-10 mb-3">
         <div
-          className={`w-[72px] h-[72px] rounded-full overflow-hidden relative ${
+          className={`w-[72px] h-[72px] rounded-full overflow-hidden ${
             c.featured_homepage
               ? "ring-[3px] ring-purple-500 ring-offset-2"
               : "ring-1 ring-gray-200 ring-offset-2"
@@ -273,14 +279,9 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               alt={c.display_name}
               className="w-full h-full object-cover"
               loading="lazy"
-              onError={() => {
-                if (imgSrc === icUrl && avUrl) {
-                  setImgSrc(avUrl);
-                } else if (imgSrc !== enrichUrl && enrichUrl) {
-                  setImgSrc(enrichUrl);
-                } else {
-                  setImgSrc(null);
-                }
+              onError={(e) => {
+                const src = e.currentTarget.src;
+                setFailedSrcs((prev) => new Set(prev).add(src));
               }}
             />
           ) : (
@@ -552,7 +553,7 @@ function InsightsPreview() {
                   tick={{ fontSize: 12, fill: "#9CA3AF" }}
                 />
                 <YAxis hide />
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{ borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 12 }}
                   labelStyle={{ fontWeight: 600, color: "#374151" }}
                 />
