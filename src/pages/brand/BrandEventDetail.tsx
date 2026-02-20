@@ -469,26 +469,31 @@ const BrandEventDetail = () => {
     if (!eventId) return;
     setSaving(true);
     try {
+      const payload: Record<string, unknown> = {
+        title: editTitle.trim(),
+        description: editDesc.trim() || null,
+        event_type: editType,
+        start_date: editStart || null,
+        end_date: editEnd || null,
+        venue: editVenue.trim() || null,
+        city: editCity.trim() || null,
+        state: editState.trim() || null,
+        cover_image_url: editCover.trim() || null,
+        capacity: editCapacity ? parseInt(editCapacity) : null,
+      };
+
       const { error } = await supabase
         .from("events")
-        .update({
-          title: editTitle.trim(),
-          description: editDesc.trim() || null,
-          event_type: editType,
-          start_date: editStart || null,
-          end_date: editEnd || null,
-          venue: editVenue.trim() || null,
-          city: editCity.trim() || null,
-          state: editState.trim() || null,
-          cover_image_url: editCover.trim() || null,
-          capacity: editCapacity ? parseInt(editCapacity) : null,
-          rideshare_enabled: editRideshare,
-        } as Record<string, unknown>)
+        .update(payload)
         .eq("id", eventId);
-      if (error) throw error;
+      if (error) {
+        console.error("[EventDetail] Supabase update error:", JSON.stringify(error, null, 2));
+        throw new Error(error.message);
+      }
       toast.success("Event updated");
       fetchAll();
     } catch (err: unknown) {
+      console.error("[EventDetail] Save failed:", err);
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
@@ -502,14 +507,16 @@ const BrandEventDetail = () => {
     try {
       const { error } = await supabase
         .from("events")
-        .update({
-          slug: editSubdomain.trim() || null,
-        } as Record<string, unknown>)
+        .update({ slug: editSubdomain.trim() || null } as Record<string, unknown>)
         .eq("id", eventId);
-      if (error) throw error;
+      if (error) {
+        console.error("[EventDetail] Supabase slug update error:", JSON.stringify(error, null, 2));
+        throw new Error(error.message);
+      }
       toast.success("Public page settings saved");
       fetchAll();
     } catch (err: unknown) {
+      console.error("[EventDetail] Save public page failed:", err);
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSavingPublic(false);
