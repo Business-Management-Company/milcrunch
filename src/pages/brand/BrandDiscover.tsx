@@ -543,6 +543,9 @@ const BrandDiscover = () => {
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
 
+  // Track avatar URLs that returned 410/404/error so we never retry them across re-renders
+  const failedAvatarsRef = useRef<Set<string>>(new Set());
+
   // Credit balance state
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
   const [creditLoading, setCreditLoading] = useState(false);
@@ -1607,12 +1610,12 @@ const BrandDiscover = () => {
             {contactConfirmCreator && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
                 <div className="relative w-10 h-10 shrink-0">
-                  {safeImgUrl(contactConfirmCreator.avatar) && (
+                  {(() => { const u = safeImgUrl(contactConfirmCreator.avatar); return u && !failedAvatarsRef.current.has(u); })() && (
                     <img
                       src={safeImgUrl(contactConfirmCreator.avatar)!}
                       alt=""
                       loading="lazy"
-                      onError={(e) => { e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }}
+                      onError={(e) => { const u = e.currentTarget.src; e.currentTarget.onerror = null; e.currentTarget.src = ""; failedAvatarsRef.current.add(u); }}
                       className="w-10 h-10 rounded-full object-cover absolute inset-0 z-10"
                     />
                   )}
@@ -2215,12 +2218,12 @@ const BrandDiscover = () => {
                             <td className="p-3">
                               <div className="flex items-center gap-3">
                                 <div className="relative shrink-0 w-10 h-10">
-                                  {safeImgUrl(creator.avatar) && (
+                                  {(() => { const u = safeImgUrl(creator.avatar); return u && !failedAvatarsRef.current.has(u); })() && (
                                     <img
                                       src={safeImgUrl(creator.avatar)!}
                                       alt={creator.name}
                                       loading="lazy"
-                                      onError={(e) => { e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }}
+                                      onError={(e) => { const u = e.currentTarget.src; e.currentTarget.onerror = null; e.currentTarget.src = ""; failedAvatarsRef.current.add(u); }}
                                       className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 absolute inset-0 z-10"
                                     />
                                   )}
@@ -2419,12 +2422,12 @@ const BrandDiscover = () => {
                         </div>
                         <div className="flex items-center gap-3 mb-2">
                           <div className="relative shrink-0 w-14 h-14">
-                            {safeImgUrl(creator.avatar) && (
+                            {(() => { const u = safeImgUrl(creator.avatar); return u && !failedAvatarsRef.current.has(u); })() && (
                               <img
                                 src={safeImgUrl(creator.avatar)!}
                                 alt={creator.name}
                                 loading="lazy"
-                                onError={(e) => { e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }}
+                                onError={(e) => { const u = e.currentTarget.src; e.currentTarget.onerror = null; e.currentTarget.src = ""; failedAvatarsRef.current.add(u); }}
                                 className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md absolute inset-0 z-10"
                               />
                             )}
