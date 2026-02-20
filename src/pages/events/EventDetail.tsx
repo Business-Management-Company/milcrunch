@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Calendar, MapPin, ChevronRight, AlertCircle, Loader2,
-  ExternalLink, Eye, Radio, Play, Smartphone,
+  ExternalLink, Eye, Radio, Play, Smartphone, Car,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
+import RidesharePanel from "@/components/rideshare/RidesharePanel";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -482,6 +483,20 @@ const EventDetail = () => {
           </div>
         </section>
       )}
+
+      {/* ===== RIDE SHARE ===== */}
+      <section className="py-14 md:py-16 border-b border-gray-100">
+        <div className="max-w-2xl mx-auto px-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Car className="w-6 h-6 text-purple-500" />
+            <h2 className="text-2xl font-bold text-gray-900">Ride Share</h2>
+          </div>
+          <p className="text-gray-500 mb-6">
+            Coordinate rides with fellow military community attendees.
+          </p>
+          <RidesharePanel eventId={event.id} />
+        </div>
+      </section>
 
       {/* ===== REGISTER CTA ===== */}
       <section className="py-16 md:py-20">

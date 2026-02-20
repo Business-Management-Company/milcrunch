@@ -15,8 +15,15 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft, ArrowRight, Check, Ticket, User,
-  Loader2, Calendar, MapPin, AlertCircle, Copy, CalendarPlus,
+  Loader2, Calendar, MapPin, AlertCircle, Copy, CalendarPlus, Car,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import RidesharePanel from "@/components/rideshare/RidesharePanel";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -85,6 +92,7 @@ const EventRegister = () => {
   /* Step 3 state */
   const [regCode, setRegCode] = useState<string | null>(null);
   const [regId, setRegId] = useState<string | null>(null);
+  const [showRideshare, setShowRideshare] = useState(false);
 
   useEffect(() => {
     if (eventId) fetchData();
@@ -576,6 +584,35 @@ const EventRegister = () => {
                 </div>
               </div>
             </Card>
+
+            {/* Ride Share CTA */}
+            <Card className="p-5 border-purple-200 bg-purple-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                  <Car className="w-5 h-5 text-purple-600" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-gray-900">Need a ride? Offering one?</p>
+                  <p className="text-sm text-gray-500">Coordinate rides with fellow attendees</p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="border-purple-300 text-purple-700 hover:bg-purple-100 shrink-0"
+                  onClick={() => setShowRideshare(true)}
+                >
+                  Set Up
+                </Button>
+              </div>
+            </Card>
+
+            <Dialog open={showRideshare} onOpenChange={setShowRideshare}>
+              <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Ride Share</DialogTitle>
+                </DialogHeader>
+                <RidesharePanel eventId={eventId!} />
+              </DialogContent>
+            </Dialog>
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3">
