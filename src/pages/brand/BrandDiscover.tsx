@@ -1348,10 +1348,34 @@ const BrandDiscover = () => {
     }
 
     const igData = raw?.instagram as Record<string, unknown> | undefined;
+    const resultData = (raw as Record<string, unknown> | undefined)?.result as Record<string, unknown> | undefined;
 
     // Log the FULL creator object from search API so we can see exact field names
     console.log("[doApproveForDirectory] FULL creator object:", JSON.parse(JSON.stringify(creator)));
     if (raw) console.log("[doApproveForDirectory] FULL enrichment raw:", JSON.parse(JSON.stringify(raw)));
+
+    // Dump ALL IG data keys + values so we can find the avatar field
+    if (igData) {
+      console.log("[doApproveForDirectory] IG data — ALL 19 keys + values:");
+      for (const [k, v] of Object.entries(igData)) {
+        const display = typeof v === "string" ? v.substring(0, 200)
+          : typeof v === "number" || typeof v === "boolean" ? v
+          : Array.isArray(v) ? `[Array(${v.length})]`
+          : v && typeof v === "object" ? `{Object(${Object.keys(v).length} keys)}`
+          : String(v);
+        console.log(`  igData.${k} =`, display);
+      }
+    }
+    // Also dump result-level keys (avatar might live here)
+    if (resultData && resultData !== igData) {
+      console.log("[doApproveForDirectory] result-level keys:", Object.keys(resultData));
+      // Log any URL-like string values at the result level
+      for (const [k, v] of Object.entries(resultData)) {
+        if (typeof v === "string" && v.startsWith("http")) {
+          console.log(`  result.${k} =`, v.substring(0, 200));
+        }
+      }
+    }
 
     // Resolve the best avatar URL from enrichment data
     const enrichAvatar = extractAvatarFromEnrichment(raw);

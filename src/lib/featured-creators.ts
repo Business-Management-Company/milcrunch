@@ -844,16 +844,32 @@ export function extractAvatarFromEnrichment(enrichData: unknown): string | null 
   if (!enrichData || typeof enrichData !== "object") return null;
   const data = enrichData as Record<string, unknown>;
 
+  // All known IC API avatar field names
+  const AVATAR_FIELDS = [
+    "profile_picture_hd",
+    "profile_pic_url_hd",
+    "profile_picture",
+    "profile_pic_url",
+    "picture",
+    "picture_url",
+    "avatar",
+    "avatar_url",
+    "image_url",
+    "profile_image_url",
+    "photo",
+    "thumbnail",
+    "profile_pic",
+  ];
+
   const tryFields = (obj: Record<string, unknown> | undefined): string | null => {
     if (!obj) return null;
-    const url =
-      (obj.profile_picture_hd as string) ||
-      (obj.profile_picture as string) ||
-      (obj.picture as string) ||
-      (obj.profile_pic_url as string) ||
-      (obj.avatar as string) ||
-      null;
-    if (url && typeof url === "string" && url.trim() && !url.includes("ui-avatars.com")) return url.replace(/^http:\/\//i, "https://");
+    for (const key of AVATAR_FIELDS) {
+      const val = obj[key];
+      if (val && typeof val === "string" && val.trim() && !val.includes("ui-avatars.com")) {
+        return val.replace(/^http:\/\//i, "https://");
+      }
+    }
+    // Check nested basicInfo.profilePicture
     const bi = obj.basicInfo as Record<string, unknown> | undefined;
     if (bi) {
       const biUrl = (bi.profilePicture as string) || null;
@@ -877,15 +893,32 @@ export function extractAvatarFromEnrichment(enrichData: unknown): string | null 
     const profile = result.profile as Record<string, unknown> | undefined;
     const rpResult = tryFields(profile);
     if (rpResult) return rpResult;
+    // 4. result top-level
+    const rlResult = tryFields(result);
+    if (rlResult) return rlResult;
   }
 
-  // 4. Top-level profile
+  // 5. Top-level profile
   const topProfile = data.profile as Record<string, unknown> | undefined;
   const tpResult = tryFields(topProfile);
   if (tpResult) return tpResult;
 
-  // 5. Top-level fields directly
-  return tryFields(data);
+  // 6. Top-level fields directly
+  const topResult = tryFields(data);
+  if (topResult) return topResult;
+
+  // Nothing found — log all keys at each level for debugging
+  console.warn("[extractAvatarFromEnrichment] NO AVATAR FOUND. Keys at each level:", {
+    topKeys: Object.keys(data),
+    igKeys: ig ? Object.keys(ig) : null,
+    resultKeys: result ? Object.keys(result) : null,
+    // Log all string values from IG data that look like URLs (to find the avatar field)
+    igUrlValues: ig ? Object.entries(ig)
+      .filter(([, v]) => typeof v === "string" && (v as string).startsWith("http"))
+      .map(([k, v]) => `${k}: ${(v as string).substring(0, 100)}`)
+      : null,
+  });
+  return null;
 }
 
 export function formatFollowerCount(n: number | null | undefined): string {

@@ -444,6 +444,14 @@ export async function enrichCreatorProfile(
 
   console.log("[Enrich] OK for", handle, "— platform:", platKey, "data:", !!platformData, "platforms:", result?.creator_has);
 
+  // Dump all URL-like values from platform data to find the avatar field
+  if (platformData && typeof platformData === "object") {
+    const urlFields = Object.entries(platformData)
+      .filter(([, v]) => typeof v === "string" && ((v as string).startsWith("http") || (v as string).includes("cdninstagram")))
+      .map(([k, v]) => `${k}: ${(v as string).substring(0, 120)}`);
+    console.log(`[Enrich] ${handle} — URL fields in platformData (${Object.keys(platformData).length} keys):`, urlFields);
+  }
+
   if (!platformData || typeof platformData !== "object") {
     console.warn("[Enrich] No platform data in result for", handle, "(tried:", platKey, ")");
     return null;
