@@ -756,17 +756,28 @@ export async function approveForDirectory(data: {
     // Already a permanent URL — no re-upload needed
   } else if (cdnSourceUrl) {
     const uploaded = await uploadCreatorImage(cdnSourceUrl, handle);
-    if (uploaded) permanentAvatarUrl = uploaded;
+    if (uploaded) {
+      permanentAvatarUrl = uploaded;
+    } else {
+      // Upload failed — never persist an expired CDN URL (scontent-* returns 410)
+      permanentAvatarUrl = null;
+    }
   }
+
+  // Never save Instagram CDN URLs — they expire and return 410
+  const isSafeUrl = (u: string | null) =>
+    !!u && !u.includes("scontent") && !u.includes("cdninstagram") && !u.includes("ui-avatars.com");
+
+  const safeAvatar = isSafeUrl(permanentAvatarUrl) ? permanentAvatarUrl : null;
 
   const payload: Record<string, unknown> = {
     creator_handle: handle,
     creator_name: data.display_name,
     platform: data.platform || "instagram",
-    avatar_url: permanentAvatarUrl,
+    avatar_url: safeAvatar,
     // Store the permanent Supabase URL in ic_avatar_url too (UI reads this first);
-    // fall back to CDN only if no permanent URL is available
-    ic_avatar_url: permanentAvatarUrl || cdnSourceUrl,
+    // never fall back to CDN URLs — they expire
+    ic_avatar_url: safeAvatar,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,

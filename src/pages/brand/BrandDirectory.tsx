@@ -398,10 +398,20 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
+    // Catch: missing URLs, placeholder URLs, and expired Instagram CDN URLs (scontent-*.cdninstagram.com returns 410)
+    const isExpiredCdn = (url: string | null | undefined) =>
+      !!url && (url.includes("scontent") || url.includes("cdninstagram"));
+    const isPermanent = (url: string | null | undefined) =>
+      !!url && url.includes("supabase.co/storage");
+
     const needsPhoto = members.filter((m) => {
-      const url = m.avatar_url;
-      return !url || url.includes("ui-avatars.com");
+      // Already has a permanent Supabase Storage URL → skip
+      if (isPermanent(m.ic_avatar_url) || isPermanent(m.avatar_url)) return false;
+      // No URL, placeholder, or expired CDN → needs refresh
+      const url = m.ic_avatar_url || m.avatar_url;
+      return !url || url.includes("ui-avatars.com") || isExpiredCdn(url);
     });
+
     if (needsPhoto.length === 0) {
       toast.info("All creators already have photos");
       return;
@@ -422,8 +432,12 @@ const BrandDirectory = () => {
         const avatarUrl = extractAvatarFromEnrichment(data);
         if (!avatarUrl) continue;
 
-        // Save to permanent Supabase Storage (also updates DB)
-        const permanentUrl = await saveCreatorAvatar(m.creator_handle, avatarUrl) || avatarUrl;
+        // Upload blob to Supabase Storage for a permanent URL (also updates DB row)
+        const permanentUrl = await saveCreatorAvatar(m.creator_handle, avatarUrl);
+        if (!permanentUrl) {
+          console.warn("[RefreshPhotos] Storage upload failed for", m.creator_handle);
+          continue;
+        }
 
         updated++;
         setMembers((prev) =>
