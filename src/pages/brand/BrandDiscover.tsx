@@ -1604,7 +1604,7 @@ const BrandDiscover = () => {
                       src={safeImgUrl(contactConfirmCreator.avatar)!}
                       alt=""
                       loading="lazy"
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      onError={(e) => { e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }}
                       className="w-10 h-10 rounded-full object-cover absolute inset-0 z-10"
                     />
                   )}
@@ -2212,7 +2212,7 @@ const BrandDiscover = () => {
                                       src={safeImgUrl(creator.avatar)!}
                                       alt={creator.name}
                                       loading="lazy"
-                                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                      onError={(e) => { e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }}
                                       className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 absolute inset-0 z-10"
                                     />
                                   )}
@@ -2416,7 +2416,7 @@ const BrandDiscover = () => {
                                 src={safeImgUrl(creator.avatar)!}
                                 alt={creator.name}
                                 loading="lazy"
-                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                onError={(e) => { e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"; }}
                                 className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md absolute inset-0 z-10"
                               />
                             )}

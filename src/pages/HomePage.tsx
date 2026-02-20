@@ -207,22 +207,14 @@ function HeroAvatar({ src, name, handle }: { src: string | null; name: string; h
     }
   }, [safeSrc]);
 
-  // 3-second timeout: if image hasn't loaded, hide it
-  useEffect(() => {
-    if (!safeSrc || imgLoaded || imgError) return;
-    const timer = setTimeout(() => {
-      console.warn("[HeroAvatar] 3s timeout — hiding image for", handle, "src:", safeSrc);
-      setImgError(true);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [safeSrc, imgLoaded, imgError, handle]);
-
   return (
     <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
       {safeSrc && !imgError && (
         <img
           src={safeSrc}
           alt={name}
+          fetchPriority="high"
+          loading="eager"
           className="w-full h-full object-cover absolute inset-0 z-10"
           onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
@@ -255,15 +247,6 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
     }
   }, [imgSrc]);
 
-  // 3-second timeout: if image hasn't loaded, give up
-  useEffect(() => {
-    if (!imgSrc || imgLoaded || imgError) return;
-    const timer = setTimeout(() => {
-      console.warn("[ShowcaseCard] 3s timeout — hiding image for", c.handle, "src:", imgSrc);
-      setImgError(true);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [imgSrc, imgLoaded, imgError, c.handle]);
 
   // Debug logging for specific creators
   if (c.handle === "davebrayusa" || c.handle === "therealdoctodd") {
@@ -789,12 +772,12 @@ export default function HomePage() {
                       allStats.push({ value: formatFollowerCount(db.follower_count), label: "Followers", color: "text-gray-900" });
                     if (db.engagement_rate != null && db.engagement_rate > 0)
                       allStats.push({ value: `${db.engagement_rate.toFixed(2)}%`, label: "Engagement", color: "text-teal-500" });
+                    if (db.avg_likes && db.avg_likes !== "—" && db.avg_likes !== "0")
+                      allStats.push({ value: db.avg_likes, label: "Avg Likes", color: "text-gray-900" });
                     if (db.avg_comments != null && db.avg_comments > 0)
                       allStats.push({ value: formatFollowerCount(db.avg_comments), label: "Avg Comments", color: "text-gray-900" });
                     if (db.avg_views && db.avg_views !== "—" && db.avg_views !== "0")
                       allStats.push({ value: db.avg_views, label: "Avg Views", color: "text-gray-900" });
-                    if (db.avg_likes && db.avg_likes !== "—" && db.avg_likes !== "0")
-                      allStats.push({ value: db.avg_likes, label: "Avg Likes", color: "text-gray-900" });
                     if (db.post_count != null && db.post_count > 0)
                       allStats.push({ value: formatFollowerCount(db.post_count), label: "Posts", color: "text-gray-900" });
                     const stats = allStats.slice(0, 4);
