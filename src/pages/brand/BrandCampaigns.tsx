@@ -32,6 +32,10 @@ import {
   WifiOff,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Calendar,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -834,6 +838,183 @@ function CampaignLivePreview({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Campaign Summary (collapsible)                                      */
+/* ------------------------------------------------------------------ */
+
+function CampaignSummary({
+  campaign,
+  eventTitle,
+  startDate,
+  endDate,
+  goal,
+  platforms,
+  speakerNames,
+  sponsorNames,
+}: {
+  campaign: CampaignData;
+  eventTitle: string;
+  startDate: string;
+  endDate: string;
+  goal: string;
+  platforms: string[];
+  speakerNames: string[];
+  sponsorNames: string[];
+}) {
+  const [open, setOpen] = useState(true);
+
+  // Compute per-phase post counts
+  const phaseCounts = campaign.phases.map((p) => ({
+    label: p.phase,
+    count: p.posts.length,
+  }));
+
+  // Compute campaign window (min/max day)
+  let minDay = 0;
+  let maxDay = 0;
+  for (const phase of campaign.phases) {
+    for (const post of phase.posts) {
+      if (post.day < minDay) minDay = post.day;
+      if (post.day > maxDay) maxDay = post.day;
+    }
+  }
+
+  // Duration in days
+  const hasDateRange = !!(startDate && endDate && endDate >= startDate);
+  const durationDays = hasDateRange ? daysBetween(startDate, endDate) : null;
+
+  return (
+    <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
+      <div className="border-l-4 border-[#6C5CE7]">
+        {/* Header row */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-[#0F1117]/50 transition-colors"
+        >
+          <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Campaign Summary
+          </span>
+          {open ? (
+            <ChevronUp className="h-4 w-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          )}
+        </button>
+
+        {/* Collapsible body */}
+        {open && (
+          <div className="px-5 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-800">
+            {/* Event + Date + Duration row */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-3">
+              <div>
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Event</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{eventTitle}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Date</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatDate(startDate)}
+                  {startDate && endDate && startDate !== endDate && ` — ${formatDate(endDate)}`}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Duration</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {durationDays ? `${durationDays} day${durationDays !== 1 ? "s" : ""}` : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Goal</p>
+                <span className="inline-flex items-center gap-1 text-sm text-[#6C5CE7] font-medium">
+                  <Target className="h-3.5 w-3.5" />
+                  {goal}
+                </span>
+              </div>
+            </div>
+
+            {/* Total Posts with phase breakdown */}
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Total Posts</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-gray-900 dark:text-white">
+                  {campaign.total_posts}
+                </span>
+                <span className="text-xs text-gray-400">
+                  ({phaseCounts.map((pc) => `${pc.label}: ${pc.count}`).join(" | ")})
+                </span>
+              </div>
+            </div>
+
+            {/* Platforms */}
+            {platforms.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1.5">Platforms</p>
+                <div className="flex gap-1.5">
+                  {platforms.map((p) => (
+                    <span
+                      key={p}
+                      className="w-7 h-7 rounded-lg bg-[#6C5CE7]/10 text-[#6C5CE7] flex items-center justify-center"
+                      title={p}
+                    >
+                      {PLATFORM_ICONS[p]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Speakers */}
+            {speakerNames.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1.5">Speakers</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {speakerNames.map((name) => (
+                    <span
+                      key={name}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sponsors */}
+            {sponsorNames.length > 0 && (
+              <div>
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1.5">Sponsors</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {sponsorNames.map((name) => (
+                    <span
+                      key={name}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Campaign window */}
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Campaign Window</p>
+              <div className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+                <Calendar className="h-3.5 w-3.5 text-[#6C5CE7]" />
+                <span>
+                  Day {minDay < 0 ? minDay : `+${minDay}`} through Day {maxDay > 0 ? `+${maxDay}` : maxDay}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1739,6 +1920,18 @@ Make the captions authentic and engaging for a military community audience. Refe
                   accounts={connectedAccounts}
                   loading={socialsLoading}
                   onConnect={openConnectPopup}
+                />
+
+                {/* Campaign Summary card */}
+                <CampaignSummary
+                  campaign={campaign}
+                  eventTitle={selectedEvent?.title ?? ""}
+                  startDate={startDate}
+                  endDate={endDate}
+                  goal={goal}
+                  platforms={platforms}
+                  speakerNames={speakerNames}
+                  sponsorNames={resolvedSponsorNames}
                 />
 
                 {/* Campaign header */}
