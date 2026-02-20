@@ -40,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
+import { cn, safeImageUrl, creatorAvatarUrl, goodAvatarCache } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -459,17 +459,18 @@ export default function CreatorProfileModal({
     (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username ?? username ?? "";
   const displayName =
     (igRecord?.full_name as string) ?? (resultTop.first_name as string) ?? creator?.name ?? displayUsername ?? "—";
-  // Avatar priority: enrichment extraction → ic_avatar_url → creator.avatar → ""
-  // Matches the same chain used by the directory grid cards
+  // Avatar priority: cached working URL (from grid card) → enrichment → ic_avatar_url → creator.avatar → ""
   const enrichedAvatarUrl = extractAvatarFromEnrichment(enriched);
   const creatorIcAvatar = (creator as Record<string, unknown> | null)?.ic_avatar_url as string | undefined;
+  const cachedWorkingUrl = goodAvatarCache.get(displayUsername || creator?.username || "") || null;
   const picture = creatorAvatarUrl(
+    cachedWorkingUrl,
     enrichedAvatarUrl,
     creatorIcAvatar,
     creator?.avatar,
   ) ?? "";
   // Build a fallback chain for onError retry (skip the primary, try the rest)
-  const avatarFallbacks = [enrichedAvatarUrl, creatorIcAvatar, creator?.avatar]
+  const avatarFallbacks = [cachedWorkingUrl, enrichedAvatarUrl, creatorIcAvatar, creator?.avatar]
     .map((u) => safeImageUrl(u))
     .filter((u): u is string => !!u && u !== picture && !u.includes("ui-avatars.com"));
   const bio = useMemo(() => {
@@ -741,10 +742,15 @@ export default function CreatorProfileModal({
                   src={picture}
                   alt={displayName}
                   className="w-full h-full object-cover absolute inset-0 z-10"
+                  onLoad={() => {
+                    const key = displayUsername || creator?.username || "";
+                    if (key && picture) goodAvatarCache.set(key, picture);
+                  }}
                   onError={(e) => {
                     const el = e.currentTarget;
-                    if (el.dataset.retried) { el.style.display = "none"; return; }
-                    el.dataset.retried = "1";
+                    const retryCount = Number(el.dataset.retried || "0");
+                    if (retryCount >= avatarFallbacks.length) { el.style.display = "none"; return; }
+                    el.dataset.retried = String(retryCount + 1);
                     const fallback = avatarFallbacks.find((u) => u !== el.src);
                     if (fallback) {
                       el.src = fallback;

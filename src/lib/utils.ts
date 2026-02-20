@@ -24,6 +24,11 @@ export function creatorAvatarUrl(
   return null;
 }
 
+/** Shared module-level cache: last successfully loaded avatar URL per creator username.
+ *  Used by DiscoverAvatar (grid cards) and CreatorProfileModal (slideout)
+ *  so the modal can reuse the URL that already loaded in the browser cache. */
+export const goodAvatarCache = new Map<string, string>();
+
 /**
  * Escape HTML to prevent XSS, then convert basic markdown (**bold**, *italic*) to HTML.
  * Safe to use with dangerouslySetInnerHTML for AI/user message content.

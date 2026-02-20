@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, goodAvatarCache } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { searchCreators, searchByUsername, searchLookalike, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
 import { upsertCreator } from "@/lib/creators-db";
@@ -303,8 +303,8 @@ function getDiscoverInitials(name: string): string {
   return name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase() || "?";
 }
 
-/** Module-level cache: last successfully loaded avatar URL per creator username */
-const _goodAvatarCache = new Map<string, string>();
+/** Use shared avatar cache from utils so CreatorProfileModal can also read it */
+const _goodAvatarCache = goodAvatarCache;
 
 /** Avatar component that caches the last good image and never flashes to initials
  *  if a previously loaded image exists for this creator. */
