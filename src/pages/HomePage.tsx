@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
+import { safeImageUrl, creatorAvatarUrl, buildAvatarFallbacks } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -192,23 +192,21 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
-function HeroAvatar({ src, name, handle }: { src: string | null; name: string; handle: string }) {
-  const safeSrc = safeImageUrl(src);
-  const [imgError, setImgError] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const prevSrc = useRef(safeSrc);
+function HeroAvatar({ fallbacks, name, handle }: { fallbacks: string[]; name: string; handle: string }) {
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [allFailed, setAllFailed] = useState(false);
   const lastGoodSrc = useRef<string | null>(null);
 
-  // Reset error/loaded state when src changes (e.g. after enrichment fills in a URL)
-  useEffect(() => {
-    if (safeSrc !== prevSrc.current) {
-      prevSrc.current = safeSrc;
-      setImgError(false);
-      setImgLoaded(false);
-    }
-  }, [safeSrc]);
+  // Reset when fallbacks change
+  const key = fallbacks.join("|");
+  const prevKey = useRef(key);
+  if (key !== prevKey.current) {
+    prevKey.current = key;
+    setCurrentIdx(0);
+    setAllFailed(false);
+  }
 
-  const displaySrc = (safeSrc && !imgError) ? safeSrc : lastGoodSrc.current;
+  const displaySrc = !allFailed ? (fallbacks[currentIdx] ?? null) : lastGoodSrc.current;
 
   return (
     <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
@@ -219,8 +217,14 @@ function HeroAvatar({ src, name, handle }: { src: string | null; name: string; h
           fetchPriority="high"
           loading="eager"
           className="w-full h-full object-cover absolute inset-0 z-10"
-          onLoad={() => { setImgLoaded(true); lastGoodSrc.current = displaySrc; }}
-          onError={() => { if (displaySrc === safeSrc) setImgError(true); }}
+          onLoad={() => { lastGoodSrc.current = displaySrc; }}
+          onError={() => {
+            if (currentIdx + 1 < fallbacks.length) {
+              setCurrentIdx((i) => i + 1);
+            } else {
+              setAllFailed(true);
+            }
+          }}
         />
       )}
       <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm">
@@ -234,24 +238,23 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
 
-  // 4-tier fallback: ic_avatar_url → avatar_url → enrichment_data avatar → profile_image_url → Initials
+  // Build fallback chain: ic_avatar_url → avatar_url → enrichment avatar → profile_image_url
   const enrichAvatar = extractAvatarFromEnrichment(c.enrichment_data);
-  const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, enrichAvatar, (c as Record<string, unknown>).profile_image_url as string);
-  const [imgError, setImgError] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const prevSrc = useRef(imgSrc);
+  const fallbacks = buildAvatarFallbacks(c.ic_avatar_url, c.avatar_url, enrichAvatar, (c as Record<string, unknown>).profile_image_url as string);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [allFailed, setAllFailed] = useState(false);
   const lastGoodSrc = useRef<string | null>(null);
 
-  // Reset error/loaded state when imgSrc changes (e.g. after cache fill)
-  useEffect(() => {
-    if (imgSrc !== prevSrc.current) {
-      prevSrc.current = imgSrc;
-      setImgError(false);
-      setImgLoaded(false);
-    }
-  }, [imgSrc]);
+  // Reset when fallbacks change (e.g. after cache fill)
+  const key = fallbacks.join("|");
+  const prevKey = useRef(key);
+  if (key !== prevKey.current) {
+    prevKey.current = key;
+    setCurrentIdx(0);
+    setAllFailed(false);
+  }
 
-  const displaySrc = (imgSrc && !imgError) ? imgSrc : lastGoodSrc.current;
+  const displaySrc = !allFailed ? (fallbacks[currentIdx] ?? null) : lastGoodSrc.current;
 
   return (
     <Link
@@ -281,8 +284,14 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               alt={c.display_name}
               className="w-full h-full object-cover absolute inset-0 z-10"
               loading="lazy"
-              onLoad={() => { setImgLoaded(true); lastGoodSrc.current = displaySrc; }}
-              onError={() => { if (displaySrc === imgSrc) setImgError(true); }}
+              onLoad={() => { lastGoodSrc.current = displaySrc; }}
+              onError={() => {
+                if (currentIdx + 1 < fallbacks.length) {
+                  setCurrentIdx((i) => i + 1);
+                } else {
+                  setAllFailed(true);
+                }
+              }}
             />
           )}
           <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
@@ -749,7 +758,7 @@ export default function HomePage() {
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
                     // Static fallback: /creators/{handle}.jpg (checked into public/)
                     const staticFallback = `/creators/${db.handle}.jpg`;
-                    const avatar = creatorAvatarUrl(db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string) || staticFallback;
+                    const heroFallbacks = buildAvatarFallbacks(db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string, staticFallback);
 
                     // Build stats in priority order, filter to non-null/non-zero, take up to 4
                     const allStats: { value: string; label: string; color: string }[] = [];
@@ -770,7 +779,7 @@ export default function HomePage() {
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
                         <div className="flex items-center gap-4">
-                          <HeroAvatar src={avatar} name={db.display_name} handle={db.handle} />
+                          <HeroAvatar fallbacks={heroFallbacks} name={db.display_name} handle={db.handle} />
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-[17px] text-gray-900">{db.display_name}</p>
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>

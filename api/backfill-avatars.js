@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
  *
  * POST /api/backfill-avatars              — refresh ALL creators
  * POST /api/backfill-avatars?nullOnly=1   — only creators missing ic_avatar_url
+ * POST /api/backfill-avatars?missingAvatars=1 — only rows where BOTH avatar_url AND ic_avatar_url are NULL (and creator_handle is set)
  * POST /api/backfill-avatars?debug=1      — return current avatar state
  */
 export const config = { maxDuration: 300 };
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
 
   const sb = createClient(supabaseUrl, supabaseKey);
   const nullOnly = req.query?.nullOnly === "1" || (req.body && req.body.nullOnly);
+  const missingAvatars = req.query?.missingAvatars === "1" || (req.body && req.body.missingAvatars);
 
   // Debug mode: return current avatar state
   if (req.query?.debug === "1" || (req.body && req.body.debug)) {
@@ -59,9 +61,15 @@ export default async function handler(req, res) {
   // Fetch directory_members to process
   let query = sb
     .from("directory_members")
-    .select("id, creator_handle, platform, ic_avatar_url, banner_image_url");
+    .select("id, creator_handle, platform, ic_avatar_url, avatar_url, banner_image_url");
 
-  if (nullOnly) {
+  if (missingAvatars) {
+    // Only rows where BOTH avatar fields are NULL and creator_handle is set
+    query = query
+      .is("avatar_url", null)
+      .is("ic_avatar_url", null)
+      .not("creator_handle", "is", null);
+  } else if (nullOnly) {
     // Only fetch records missing avatar or banner
     query = query.or("ic_avatar_url.is.null,banner_image_url.is.null");
   }
@@ -90,10 +98,11 @@ export default async function handler(req, res) {
     // Skip if already has permanent avatar AND banner (when nullOnly)
     const hasPermanent = member.ic_avatar_url && member.ic_avatar_url.includes("supabase.co/storage");
     const hasBanner = !!member.banner_image_url;
-    if (nullOnly && hasPermanent && hasBanner) {
+    if (nullOnly && !missingAvatars && hasPermanent && hasBanner) {
       results.push({ ...row, error: "already complete — skipped" });
       continue;
     }
+    // missingAvatars mode: pre-filter ensures both are null, no skip needed
 
     try {
       // 1. Call IC raw enrich API for fresh signed URL

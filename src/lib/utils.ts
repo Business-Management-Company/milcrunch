@@ -24,6 +24,48 @@ export function creatorAvatarUrl(
   return null;
 }
 
+/** Build a de-duped array of fallback avatar URLs (all forced to HTTPS).
+ *  Pass all potential sources; null/empty/ui-avatars URLs are excluded.
+ *  Use with onError to walk through the chain before falling back to initials. */
+export function buildAvatarFallbacks(
+  ...sources: (string | null | undefined)[]
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const src of sources) {
+    const safe = safeImageUrl(src);
+    if (safe && !safe.includes("ui-avatars.com") && !seen.has(safe)) {
+      seen.add(safe);
+      result.push(safe);
+    }
+  }
+  return result;
+}
+
+/** Create an onError handler that walks through a fallback chain.
+ *  Attach the returned handler to an <img> tag. When each URL 404s,
+ *  it tries the next in the chain. After all fail, hides the img
+ *  so the underlying initials div shows through. */
+export function avatarOnError(fallbacks: string[]) {
+  return (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const el = e.currentTarget;
+    const retryCount = Number(el.dataset.avatarRetry || "0");
+    const currentSrc = el.src;
+
+    // Find next fallback that isn't the current (failed) src
+    const remaining = fallbacks.filter((u) => u !== currentSrc);
+    const nextIdx = Math.min(retryCount, remaining.length - 1);
+
+    if (retryCount < remaining.length && remaining[nextIdx]) {
+      el.dataset.avatarRetry = String(retryCount + 1);
+      el.src = remaining[nextIdx];
+    } else {
+      // All fallbacks exhausted — hide img to show initials beneath
+      el.style.display = "none";
+    }
+  };
+}
+
 /** Shared module-level cache: last successfully loaded avatar URL per creator username.
  *  Used by DiscoverAvatar (grid cards) and CreatorProfileModal (slideout)
  *  so the modal can reuse the URL that already loaded in the browser cache. */

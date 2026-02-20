@@ -43,7 +43,7 @@ import {
   Pencil,
   ExternalLink,
 } from "lucide-react";
-import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
+import { cn, creatorAvatarUrl, buildAvatarFallbacks, avatarOnError } from "@/lib/utils";
 import {
   fetchDirectoriesWithCounts,
   fetchDirectoryMembers,
@@ -93,11 +93,12 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 
 /** Map a DirectoryMember to the CreatorCard shape the profile drawer expects. */
 function memberToCreatorCard(m: DirectoryMember): CreatorCard {
+  const enrichAvatar = extractAvatarFromEnrichment(m.enrichment_data);
   return {
     id: m.id,
     name: m.creator_name ?? m.creator_handle,
     username: m.creator_handle,
-    avatar: creatorAvatarUrl(m.ic_avatar_url, m.avatar_url, (m as Record<string, unknown>).profile_image_url as string) || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.creator_name ?? m.creator_handle)}&background=random&size=128`,
+    avatar: creatorAvatarUrl(m.ic_avatar_url, m.avatar_url, enrichAvatar, (m as Record<string, unknown>).profile_image_url as string) || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.creator_name ?? m.creator_handle)}&background=random&size=128`,
     followers: m.follower_count ?? 0,
     engagementRate: m.engagement_rate ?? 0,
     platforms: m.platforms ?? ["instagram"],
@@ -703,7 +704,9 @@ const BrandDirectory = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map((m) => {
-                const imgSrc = creatorAvatarUrl(m.ic_avatar_url, m.avatar_url, (m as Record<string, unknown>).profile_image_url as string);
+                const enrichAvatar = extractAvatarFromEnrichment(m.enrichment_data);
+                const fallbacks = buildAvatarFallbacks(m.ic_avatar_url, m.avatar_url, enrichAvatar, (m as Record<string, unknown>).profile_image_url as string);
+                const imgSrc = fallbacks[0] ?? null;
                 const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                 const isToggling = togglingIds.has(m.id);
                 const platforms = m.platforms ?? [];
@@ -715,17 +718,7 @@ const BrandDirectory = () => {
                           src={imgSrc}
                           alt={m.creator_name ?? ""}
                           className="w-full h-full object-cover absolute inset-0"
-                          onError={(e) => {
-                            const el = e.currentTarget;
-                            if (el.dataset.retried) { el.style.display = "none"; return; }
-                            el.dataset.retried = "1";
-                            const fallback = safeImageUrl(m.avatar_url) || safeImageUrl(m.ic_avatar_url);
-                            if (fallback && el.src !== fallback) {
-                              el.src = fallback;
-                            } else {
-                              el.style.display = "none";
-                            }
-                          }}
+                          onError={avatarOnError(fallbacks)}
                         />
                       )}
                       <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
@@ -796,7 +789,9 @@ const BrandDirectory = () => {
               </thead>
               <tbody>
                 {filtered.map((m) => {
-                  const imgSrc = creatorAvatarUrl(m.ic_avatar_url, m.avatar_url, (m as Record<string, unknown>).profile_image_url as string);
+                  const tblEnrichAvatar = extractAvatarFromEnrichment(m.enrichment_data);
+                  const tblFallbacks = buildAvatarFallbacks(m.ic_avatar_url, m.avatar_url, tblEnrichAvatar, (m as Record<string, unknown>).profile_image_url as string);
+                  const tblImgSrc = tblFallbacks[0] ?? null;
                   const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                   const isToggling = togglingIds.has(m.id);
                   return (
@@ -804,22 +799,12 @@ const BrandDirectory = () => {
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700 relative">
-                            {imgSrc && (
+                            {tblImgSrc && (
                               <img
-                                src={imgSrc}
+                                src={tblImgSrc}
                                 alt={m.creator_name ?? ""}
                                 className="w-full h-full object-cover absolute inset-0"
-                                onError={(e) => {
-                                  const el = e.currentTarget;
-                                  if (el.dataset.retried) { el.style.display = "none"; return; }
-                                  el.dataset.retried = "1";
-                                  const fallback = safeImageUrl(m.avatar_url) || safeImageUrl(m.ic_avatar_url);
-                                  if (fallback && el.src !== fallback) {
-                                    el.src = fallback;
-                                  } else {
-                                    el.style.display = "none";
-                                  }
-                                }}
+                                onError={avatarOnError(tblFallbacks)}
                               />
                             )}
                             <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xs">

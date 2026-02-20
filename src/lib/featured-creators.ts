@@ -738,14 +738,25 @@ export async function approveForDirectory(data: {
   if (permanentAvatarUrl && permanentAvatarUrl.includes("ui-avatars.com")) {
     permanentAvatarUrl = null;
   }
+
+  // Resolve the best CDN source URL (pre-upload)
+  const cdnSourceUrl = (() => {
+    for (const u of [data.ic_avatar_url, data.avatar_url]) {
+      if (u && !u.includes("ui-avatars.com")) return u.replace(/^http:\/\//i, "https://");
+    }
+    // Last resort: try extracting from enrichment_data if passed
+    if (data.enrichment_data) {
+      const fromEnrich = extractAvatarFromEnrichment(data.enrichment_data);
+      if (fromEnrich) return fromEnrich;
+    }
+    return null;
+  })();
+
   if (permanentAvatarUrl && permanentAvatarUrl.includes("supabase.co/storage")) {
     // Already a permanent URL — no re-upload needed
-  } else {
-    const sourceImageUrl = data.ic_avatar_url || data.avatar_url;
-    if (sourceImageUrl && !sourceImageUrl.includes("ui-avatars.com")) {
-      const uploaded = await uploadCreatorImage(sourceImageUrl, handle);
-      if (uploaded) permanentAvatarUrl = uploaded;
-    }
+  } else if (cdnSourceUrl) {
+    const uploaded = await uploadCreatorImage(cdnSourceUrl, handle);
+    if (uploaded) permanentAvatarUrl = uploaded;
   }
 
   const payload: Record<string, unknown> = {
@@ -753,8 +764,8 @@ export async function approveForDirectory(data: {
     creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: permanentAvatarUrl,
-    ic_avatar_url: permanentAvatarUrl
-      || (data.ic_avatar_url && !data.ic_avatar_url.includes("ui-avatars.com") ? data.ic_avatar_url.replace(/^http:\/\//i, "https://") : null),
+    // Always store CDN URL in ic_avatar_url (as fallback); prefer permanent if no CDN available
+    ic_avatar_url: cdnSourceUrl || permanentAvatarUrl,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,
