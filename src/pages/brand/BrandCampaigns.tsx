@@ -1270,6 +1270,7 @@ export default function BrandCampaigns() {
   // Saved campaign state
   const [savedCampaignId, setSavedCampaignId] = useState<string | null>(null);
   const [loadedFromSaved, setLoadedFromSaved] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
 
   // Media state: keyed by global post index
   const [postMedia, setPostMedia] = useState<Record<number, { file: File; url: string; type: "image" | "video" }>>({});
@@ -1383,10 +1384,12 @@ export default function BrandCampaigns() {
       return;
     }
     (async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("event_campaigns")
         .select("id, campaign_data")
-        .eq("event_id", selectedEventId)
+        .eq("event_id", selectedEventId);
+      if (user?.id) query = query.eq("user_id", user.id);
+      const { data, error } = await query
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
@@ -1401,7 +1404,7 @@ export default function BrandCampaigns() {
         setScheduledPosts(new Set());
       }
     })();
-  }, [selectedEventId]);
+  }, [selectedEventId, user?.id]);
 
   // Load ALL sponsors on mount (not tied to event)
   useEffect(() => {
@@ -1598,19 +1601,33 @@ Make the captions authentic and engaging for a military community audience. Refe
       setPostMedia({});
       setScheduledPosts(new Set());
 
+      // Flatten all posts into a single array for the posts column
+      const allPosts = parsed.phases.flatMap((ph) =>
+        ph.posts.map((p) => ({ ...p, phase: ph.phase })),
+      );
+
       // Save to Supabase
       const { data: insertedCampaign } = await supabase
         .from("event_campaigns")
         .insert({
           event_id: selectedEventId,
+          user_id: user?.id ?? null,
+          title: parsed.campaign_name,
           campaign_name: parsed.campaign_name,
           campaign_data: parsed as any,
+          posts: allPosts as any,
           status: "draft",
         })
         .select("id")
         .single();
       setSavedCampaignId(insertedCampaign?.id ?? null);
       setLoadedFromSaved(false);
+
+      // Flash "Saved" indicator
+      if (insertedCampaign?.id) {
+        setSaveFlash(true);
+        setTimeout(() => setSaveFlash(false), 2500);
+      }
     } catch (err: any) {
       console.error("Campaign generation failed:", err);
       setError(
@@ -2132,9 +2149,12 @@ Make the captions authentic and engaging for a military community audience. Refe
                       <div className="flex items-center gap-2">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">{campaign.campaign_name}</h2>
                         {savedCampaignId && (
-                          <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
-                            <Save className="h-3 w-3" />
-                            Saved
+                          <span className={cn(
+                            "flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800 transition-all duration-300",
+                            saveFlash && "ring-2 ring-green-400 ring-offset-1 scale-105",
+                          )}>
+                            <CheckCircle2 className="h-3 w-3" />
+                            {saveFlash ? "Saved!" : "Saved"}
                           </span>
                         )}
                         {loadedFromSaved && (
