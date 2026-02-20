@@ -44,11 +44,36 @@ export default async function handler(req, res) {
     });
   }
 
-  // 1. Fetch all directory_members with NULL ic_avatar_url
+  // Debug mode: if ?debug=1 or body.debug, return current state
+  const debugMode =
+    req.query?.debug === "1" || (req.body && req.body.debug);
+  if (debugMode) {
+    const { data: all, error: allErr } = await sb
+      .from("directory_members")
+      .select("id, creator_handle, platform, ic_avatar_url, avatar_url")
+      .limit(30);
+    return res.json({
+      totalInTable: totalCount,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      rows: (all || []).map((r) => ({
+        handle: r.creator_handle,
+        ic_avatar_url: r.ic_avatar_url
+          ? r.ic_avatar_url.substring(0, 80)
+          : r.ic_avatar_url,
+        avatar_url: r.avatar_url
+          ? r.avatar_url.substring(0, 80)
+          : r.avatar_url,
+      })),
+      error: allErr?.message,
+    });
+  }
+
+  // 1. Fetch directory_members needing avatar backfill:
+  //    ic_avatar_url IS NULL OR ic_avatar_url = '' OR avatar broken
   const { data: members, error: fetchErr } = await sb
     .from("directory_members")
     .select("id, creator_handle, platform, ic_avatar_url, avatar_url")
-    .is("ic_avatar_url", null);
+    .or("ic_avatar_url.is.null,ic_avatar_url.eq.");
 
   if (fetchErr) {
     return res.status(500).json({ error: fetchErr.message });
