@@ -49,6 +49,23 @@ export default function FloatingAdminChat() {
     }
   }, [open, messages]);
 
+  // Listen for "open-ai-chat" events from the dashboard command bar
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const msg = detail?.message;
+      if (msg) {
+        setOpen(true);
+        // Small delay so panel renders before adding the message
+        setTimeout(() => addResponse(msg), 150);
+      } else {
+        setOpen(true);
+      }
+    };
+    window.addEventListener("open-ai-chat", handler);
+    return () => window.removeEventListener("open-ai-chat", handler);
+  }, []);
+
   const addResponse = (input: string) => {
     const userMsg: ChatMessage = { id: makeId(), role: "user", text: input };
     setMessages((prev) => [...prev, userMsg]);

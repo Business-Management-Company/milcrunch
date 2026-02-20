@@ -2,7 +2,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import {
   Calendar,
   BarChart3,
@@ -132,26 +131,34 @@ export default function SummaryDashboard() {
     ]);
   }, []);
 
-  // Smart command router
+  // Smart command router — clear intents navigate, unclear ones open AI chat panel
   const handleSubmit = () => {
-    const q = prompt.trim().toLowerCase();
+    const q = prompt.trim();
     if (!q) return;
+    const lc = q.toLowerCase();
     setPrompt("");
 
-    if (q.includes("creator") || q.includes("influencer")) {
+    if (lc.includes("creator") || lc.includes("influencer") || lc.includes("discover")) {
       navigate("/brand/discover");
-    } else if (q.includes("event")) {
-      navigate("/brand/events");
-    } else if (q.includes("podcast")) {
+    } else if (lc.includes("speaker") || lc.includes("keynote")) {
+      navigate("/brand/discover", { state: { speakerFilter: true } });
+    } else if (lc.includes("list") || lc.includes("directory")) {
+      navigate("/brand/lists");
+    } else if (lc.includes("podcast") || lc.includes("audio")) {
       navigate("/brand/podcasts");
-    } else if (q.includes("sponsor")) {
+    } else if (lc.includes("verif")) {
+      navigate("/brand/verification");
+    } else if (lc.includes("campaign") || lc.includes("email")) {
+      navigate("/brand/campaigns");
+    } else if (lc.includes("event") || lc.includes("conference")) {
       navigate("/brand/events");
-    } else if (q.includes("analytics") || q.includes("report")) {
+    } else if (lc.includes("analytics") || lc.includes("report") || lc.includes("insight")) {
       navigate("/brand/attribution");
-    } else if (q.includes("list") || q.includes("directory")) {
-      navigate("/brand/directory");
+    } else if (lc.includes("sponsor")) {
+      navigate("/brand/events");
     } else {
-      toast("I can help with creators, events, podcasts, sponsors, and analytics. Try asking about one of those!");
+      // Unclear intent — open the AI chat panel with the query pre-loaded
+      window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: q } }));
     }
   };
 
@@ -213,19 +220,19 @@ export default function SummaryDashboard() {
       {/* Quick Action Pills — flowing layout */}
       <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto">
         {[
-          { icon: Search, label: "Find Creators", color: "#6C5CE7" },
-          { icon: ListPlus, label: "Build a List", color: "#0EA5E9" },
-          { icon: Mic, label: "Browse Podcasts", color: "#F59E0B" },
-          { icon: BarChart3, label: "Event Analytics", color: "#22C55E" },
-          { icon: Presentation, label: "Find Speakers", color: "#EC4899" },
-          { icon: CheckCircle, label: "Verify Creator", color: "#14B8A6" },
-          { icon: Calendar, label: "Manage Events", color: "#0EA5E9" },
-          { icon: Mail, label: "Email Campaigns", color: "#F43F5E" },
+          { icon: Search, label: "Find Creators", color: "#6C5CE7", path: "/brand/discover" },
+          { icon: ListPlus, label: "Build a List", color: "#0EA5E9", path: "/brand/lists/new" },
+          { icon: Mic, label: "Browse Podcasts", color: "#F59E0B", path: "/brand/podcasts" },
+          { icon: BarChart3, label: "Event Analytics", color: "#22C55E", path: "/brand/attribution" },
+          { icon: Presentation, label: "Find Speakers", color: "#EC4899", path: "/brand/discover", state: { speakerFilter: true } },
+          { icon: CheckCircle, label: "Verify Creator", color: "#14B8A6", path: "/brand/verification" },
+          { icon: Calendar, label: "Manage Events", color: "#0EA5E9", path: "/brand/events" },
+          { icon: Mail, label: "Email Campaigns", color: "#F43F5E", path: "/brand/campaigns" },
         ].map((pill) => (
           <button
             key={pill.label}
             type="button"
-            onClick={() => setPrompt(pill.label)}
+            onClick={() => navigate(pill.path, pill.state ? { state: pill.state } : undefined)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-sm font-medium text-[#000741] dark:text-gray-200 hover:border-current hover:shadow-sm transition-all"
             style={{ "--tw-border-opacity": 1 } as React.CSSProperties}
             onMouseEnter={(e) => {
