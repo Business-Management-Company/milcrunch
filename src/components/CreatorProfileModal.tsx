@@ -746,11 +746,11 @@ export default function CreatorProfileModal({
           {/* Left panel - fixed ~350px */}
           <div className="flex w-full flex-col border-r border-border dark:border-gray-800 bg-white dark:bg-[#0F1117] p-6 md:w-[350px] shrink-0">
             <div className="mx-auto mb-4 h-40 w-40 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
-              {modalAvatarSrc && (
+              {modalAvatarSrc ? (
                 <img
                   src={modalAvatarSrc}
                   alt={displayName}
-                  className="w-full h-full object-cover absolute inset-0 z-10"
+                  className="w-full h-full object-cover"
                   onLoad={() => {
                     const key = displayUsername || creator?.username || "";
                     if (key && modalAvatarSrc) goodAvatarCache.set(key, modalAvatarSrc);
@@ -767,10 +767,11 @@ export default function CreatorProfileModal({
                     }
                   }}
                 />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-3xl">
+                  {displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
               )}
-              <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-3xl">
-                {displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
-              </div>
             </div>
             <p className="text-lg font-bold text-center text-gray-900 dark:text-white">
               {displayName}

@@ -111,11 +111,11 @@ function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" 
       "rounded-full overflow-hidden relative",
       isLg ? "w-[72px] h-[72px] md:w-[88px] md:h-[88px] mb-3 border-[3px] border-white dark:border-gray-700 ring-1 ring-gray-200 dark:ring-gray-600 shadow-sm" : "w-10 h-10 shrink-0 border border-gray-200 dark:border-gray-700",
     )}>
-      {imgSrc && (
+      {imgSrc ? (
         <img
           src={imgSrc}
           alt={m.creator_name ?? ""}
-          className="w-full h-full object-cover absolute inset-0 z-10"
+          className="w-full h-full object-cover"
           onError={() => {
             if (imgSrc === icUrl && avUrl) {
               setImgSrc(avUrl);
@@ -126,13 +126,14 @@ function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" 
             }
           }}
         />
+      ) : (
+        <div className={cn(
+          "w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold",
+          isLg ? "text-lg" : "text-xs",
+        )}>
+          {getInitials(m.creator_name ?? "", m.creator_handle)}
+        </div>
       )}
-      <div className={cn(
-        "w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold",
-        isLg ? "text-lg" : "text-xs",
-      )}>
-        {getInitials(m.creator_name ?? "", m.creator_handle)}
-      </div>
     </div>
   );
 }

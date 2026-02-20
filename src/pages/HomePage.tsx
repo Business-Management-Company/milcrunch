@@ -206,23 +206,24 @@ function HeroAvatar({ sources, name, handle }: { sources: (string | null | undef
 
   return (
     <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100 relative">
-      {imgSrc && (
+      {imgSrc ? (
         <img
           src={imgSrc}
           alt={name}
           fetchPriority="high"
           loading="eager"
-          className="w-full h-full object-cover absolute inset-0 z-10"
+          className="w-full h-full object-cover"
           onError={() => {
             const idx = chain.indexOf(imgSrc);
             const next = chain[idx + 1];
             setImgSrc(next ?? null);
           }}
         />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm">
+          {getInitials(name, handle)}
+        </div>
       )}
-      <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm">
-        {getInitials(name, handle)}
-      </div>
     </div>
   );
 }
@@ -266,11 +267,11 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               : "ring-1 ring-gray-200 ring-offset-2"
           } bg-white`}
         >
-          {imgSrc && (
+          {imgSrc ? (
             <img
               src={imgSrc}
               alt={c.display_name}
-              className="w-full h-full object-cover absolute inset-0 z-10"
+              className="w-full h-full object-cover"
               loading="lazy"
               onError={() => {
                 if (imgSrc === icUrl && avUrl) {
@@ -282,10 +283,11 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
                 }
               }}
             />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
+              {getInitials(c.display_name, c.handle)}
+            </div>
           )}
-          <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
-            {getInitials(c.display_name, c.handle)}
-          </div>
         </div>
       </div>
 

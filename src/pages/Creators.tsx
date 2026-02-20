@@ -228,11 +228,11 @@ function CreatorCard({
             isVerified ? "border-[#6C5CE7]" : "border-white",
           )}
         >
-          {imgSrc && (
+          {imgSrc ? (
             <img
               src={imgSrc}
               alt={c.display_name}
-              className="w-full h-full object-cover absolute inset-0 z-10"
+              className="w-full h-full object-cover"
               loading="lazy"
               onError={() => {
                 if (imgSrc === icUrl && avUrl) {
@@ -244,10 +244,11 @@ function CreatorCard({
                 }
               }}
             />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-base">
+              {getInitials(c.display_name, c.handle)}
+            </div>
           )}
-          <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-base">
-            {getInitials(c.display_name, c.handle)}
-          </div>
 
           {/* Verified checkmark overlay */}
           {isVerified && (
