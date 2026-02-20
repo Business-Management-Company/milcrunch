@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresentationMode } from "@/hooks/usePresentationMode";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,6 @@ import {
   BarChart3,
   Sparkles,
   ArrowRight,
-  Send,
   MapPin,
   Clock,
   Search,
@@ -20,10 +19,12 @@ import {
   FolderOpen,
   Loader2,
   MessageCircle,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchDirectoriesWithCounts, type Directory } from "@/lib/directories";
 import { classifyIntent, type ClassificationResult } from "@/lib/intent-classifier";
+import { MarkdownResponse } from "@/components/MarkdownResponse";
 
 /* ------------------------------------------------------------------ */
 /* Quick-action card definitions                                       */
@@ -65,6 +66,9 @@ export default function SummaryDashboard() {
   const [routing, setRouting] = useState(false);
   const [followUp, setFollowUp] = useState<{ question: string; originalQuery: string } | null>(null);
   const [followUpAnswer, setFollowUpAnswer] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiPanelRef = useRef<HTMLDivElement>(null);
 
   const pres = usePresentationMode();
   const firstName = pres.firstName;
@@ -135,6 +139,35 @@ export default function SummaryDashboard() {
     ]);
   }, []);
 
+  // Ask Claude AI for a conversational answer (shown inline)
+  const askAI = useCallback(async (query: string) => {
+    setAiLoading(true);
+    setAiResponse("");
+    try {
+      const res = await fetch("/api/anthropic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          temperature: 0.4,
+          system: `You are the MilCrunch AI assistant — a military creator & event management platform. Answer the user's question helpfully and concisely. Use markdown formatting (bold, bullets, etc.) for readability. If the question relates to a specific feature, mention how to access it in MilCrunch (e.g. "Head to **Discover** to search creators"). Keep answers under 200 words.`,
+          messages: [{ role: "user", content: query }],
+        }),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const data = await res.json();
+      const text = data.content?.[0]?.text ?? "Sorry, I couldn't generate a response.";
+      setAiResponse(text);
+      // Scroll panel into view
+      setTimeout(() => aiPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
+    } catch {
+      setAiResponse("Something went wrong. Please try again or use the quick actions below.");
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+
   // Route based on classification result
   const executeIntent = useCallback((result: ClassificationResult, query: string) => {
     switch (result.intent) {
@@ -167,10 +200,10 @@ export default function SummaryDashboard() {
         break;
       case "UNCLEAR":
       default:
-        window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: query } }));
+        askAI(query);
         break;
     }
-  }, [navigate]);
+  }, [navigate, askAI]);
 
   // AI-powered command router
   const handleSubmit = useCallback(async () => {
@@ -192,13 +225,13 @@ export default function SummaryDashboard() {
       setPrompt("");
       executeIntent(result, q);
     } catch {
-      // Fallback: open chat on error
+      // Fallback: show AI response panel on error
       setPrompt("");
-      window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: q } }));
+      askAI(q);
     } finally {
       setRouting(false);
     }
-  }, [prompt, routing, executeIntent]);
+  }, [prompt, routing, executeIntent, askAI]);
 
   // Handle follow-up answer submission
   const handleFollowUpSubmit = useCallback(async () => {
@@ -215,11 +248,11 @@ export default function SummaryDashboard() {
     } catch {
       setFollowUp(null);
       setFollowUpAnswer("");
-      window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: followUp.originalQuery } }));
+      askAI(followUp.originalQuery);
     } finally {
       setRouting(false);
     }
-  }, [followUp, followUpAnswer, routing, executeIntent]);
+  }, [followUp, followUpAnswer, routing, executeIntent, askAI]);
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto -m-6 p-6 min-h-full bg-[#F8F9FA] dark:bg-transparent rounded-xl">
@@ -247,7 +280,7 @@ export default function SummaryDashboard() {
             className="w-full min-h-[80px] px-6 pt-5 pb-2 text-base bg-transparent outline-none resize-none placeholder:text-gray-400 dark:text-white"
             rows={2}
             value={prompt}
-            onChange={(e) => { setPrompt(e.target.value); if (followUp) setFollowUp(null); }}
+            onChange={(e) => { setPrompt(e.target.value); if (followUp) setFollowUp(null); if (aiResponse) setAiResponse(""); }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -331,6 +364,43 @@ export default function SummaryDashboard() {
           )}
         </div>
       </div>
+
+      {/* AI Response Panel */}
+      {(aiLoading || aiResponse) && (
+        <div ref={aiPanelRef} className="max-w-3xl mx-auto -mt-4">
+          <div className="rounded-2xl border border-[#6C5CE7]/20 bg-white dark:bg-[#1A1D27] shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-[#6C5CE7]/10 to-transparent border-b border-[#6C5CE7]/10">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-lg bg-[#6C5CE7]/15">
+                  <Sparkles className="h-4 w-4 text-[#6C5CE7]" />
+                </span>
+                <span className="text-sm font-semibold text-[#000741] dark:text-white">
+                  MilCrunch AI
+                </span>
+              </div>
+              {!aiLoading && (
+                <button
+                  type="button"
+                  onClick={() => setAiResponse("")}
+                  className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="px-5 py-4">
+              {aiLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" />
+                  Thinking...
+                </div>
+              ) : (
+                <MarkdownResponse content={aiResponse} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Action Pills — flowing layout */}
       <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto">
