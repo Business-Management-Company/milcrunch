@@ -1348,12 +1348,22 @@ const BrandDiscover = () => {
     }
 
     const igData = raw?.instagram as Record<string, unknown> | undefined;
-    // Resolve the best avatar URL: enrichment first, then search-API avatar
-    let enrichedAvatar = extractAvatarFromEnrichment(raw) ?? creator.avatar ?? null;
-    // Never save ui-avatars fallback URLs — they're generic placeholders, not real photos
-    if (enrichedAvatar && enrichedAvatar.includes("ui-avatars.com")) enrichedAvatar = null;
-    // Force https:// on the resolved Influencers.club image URL
-    if (enrichedAvatar) enrichedAvatar = enrichedAvatar.replace(/^http:\/\//i, "https://");
+
+    // Log the FULL creator object from search API so we can see exact field names
+    console.log("[doApproveForDirectory] FULL creator object:", JSON.parse(JSON.stringify(creator)));
+    if (raw) console.log("[doApproveForDirectory] FULL enrichment raw:", JSON.parse(JSON.stringify(raw)));
+
+    // Resolve the best avatar URL from enrichment data
+    const enrichAvatar = extractAvatarFromEnrichment(raw);
+
+    // Resolve the search-API avatar (already mapped from picture/profile_picture/etc.)
+    const searchAvatar = (creator.avatar && !creator.avatar.includes("ui-avatars.com"))
+      ? creator.avatar.replace(/^http:\/\//i, "https://")
+      : null;
+
+    // Best avatar: enrichment first, then search-API avatar
+    const bestAvatar = enrichAvatar || searchAvatar || null;
+
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];
@@ -1361,21 +1371,17 @@ const BrandDiscover = () => {
     // Extract banner image from enrichment data
     const bannerUrl = extractBannerImage(raw) ?? null;
 
-    console.log("[doApproveForDirectory] Avatar debug:", {
+    console.log("[doApproveForDirectory] Avatar resolution:", {
       handle,
-      creatorAvatar: creator.avatar,
-      enrichedAvatar,
-      bannerUrl,
-      hasEnrichRaw: !!raw,
-      igPicture: igData?.picture,
-      igProfilePic: igData?.profile_picture,
-      igProfilePicHd: igData?.profile_picture_hd,
-      igProfilePicUrl: igData?.profile_pic_url,
+      searchAvatar,
+      enrichAvatar,
+      bestAvatar,
+      creatorFollowers: creator.followers,
+      creatorEngagement: creator.engagementRate,
     });
 
     // Persist avatar to Supabase storage if it's an external URL
-    let persistedAvatarUrl = enrichedAvatar || creator.avatar || null;
-    // Don't save ui-avatars fallback URLs — keep null so display shows real initials
+    let persistedAvatarUrl = bestAvatar;
     if (persistedAvatarUrl && persistedAvatarUrl.includes("ui-avatars.com")) {
       persistedAvatarUrl = null;
     }
@@ -1397,33 +1403,47 @@ const BrandDiscover = () => {
       }
     }
 
-    console.log("[doApproveForDirectory] Adding to directory:", {
+    // Resolve follower count: enrichment may have fresher data than search
+    const followerCount =
+      (igData?.follower_count as number) ||
+      (igData?.followers as number) ||
+      (igData?.number_of_followers as number) ||
+      creator.followers ||
+      null;
+
+    // Resolve engagement rate
+    const engagementRate =
+      (igData?.engagement_percent as number) ||
+      (igData?.engagement_rate as number) ||
+      creator.engagementRate ||
+      null;
+
+    console.log("[doApproveForDirectory] INSERT payload:", {
       handle,
       name: creator.name,
       directoryId,
-      platform: creator.platforms?.[0] ?? "instagram",
       avatar_url: persistedAvatarUrl,
-      ic_avatar_url: enrichedAvatar,
-      banner_image_url: bannerUrl,
+      ic_avatar_url: bestAvatar,
+      follower_count: followerCount,
+      engagement_rate: engagementRate,
     });
 
     const { error } = await approveForDirectory({
       handle,
       display_name: creator.name,
       platform: creator.platforms?.[0] ?? "instagram",
-      avatar_url: persistedAvatarUrl,
-      follower_count: creator.followers ?? null,
-      engagement_rate: creator.engagementRate ?? null,
+      avatar_url: persistedAvatarUrl || bestAvatar,
+      follower_count: followerCount,
+      engagement_rate: engagementRate,
       bio: bioText || null,
       branch,
       status: "veteran",
       platforms: socialPlatforms.length > 0 ? socialPlatforms : creator.platforms,
       category: creator.category ?? null,
-      ic_avatar_url: enrichedAvatar || null,
+      ic_avatar_url: bestAvatar,
       enrichment_data: raw || null,
       added_by: effectiveUserId ?? null,
       directory_id: directoryId || null,
-      banner_image_url: bannerUrl,
     });
 
     if (error) {
