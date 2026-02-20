@@ -1329,8 +1329,32 @@ const BrandDiscover = () => {
   };
 
   const doApproveForDirectory = async (creator: CreatorCard, directoryId?: string) => {
-    let raw = enrichRawCache[creator.id];
     const handle = creator.username ?? creator.id;
+    const creatorAny = creator as unknown as Record<string, unknown>;
+
+    // ── Log search-API creator BEFORE enrichment call ──
+    console.log("[ADD] creator top-level keys:", Object.keys(creatorAny));
+    console.log("[ADD] avatar candidates:", {
+      picture: creatorAny.picture,
+      avatar: creatorAny.avatar,
+      profile_picture: creatorAny.profile_picture,
+      profile_pic_url: creatorAny.profile_pic_url,
+      thumbnail: creatorAny.thumbnail,
+      image: creatorAny.image,
+      photo: creatorAny.photo,
+      image_url: creatorAny.image_url,
+      picture_url: creatorAny.picture_url,
+      profile_image_url: creatorAny.profile_image_url,
+    });
+    // Also log any string value that looks like an image URL
+    const creatorUrls = Object.entries(creatorAny)
+      .filter(([, v]) => typeof v === "string" && (v as string).match(/^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)/i))
+      .map(([k, v]) => `${k}: ${(v as string).substring(0, 150)}`);
+    if (creatorUrls.length > 0) {
+      console.log("[ADD] image-like URLs on creator:", creatorUrls);
+    }
+
+    let raw = enrichRawCache[creator.id];
 
     // If creator hasn't been enriched yet, call enrichment API to get real avatar
     if (!raw) {
@@ -1348,42 +1372,26 @@ const BrandDiscover = () => {
     }
 
     const igData = raw?.instagram as Record<string, unknown> | undefined;
-    const resultData = (raw as Record<string, unknown> | undefined)?.result as Record<string, unknown> | undefined;
-
-    // Log the FULL creator object from search API so we can see exact field names
-    console.log("[doApproveForDirectory] FULL creator object:", JSON.parse(JSON.stringify(creator)));
-    if (raw) console.log("[doApproveForDirectory] FULL enrichment raw:", JSON.parse(JSON.stringify(raw)));
-
-    // Dump ALL IG data keys + values so we can find the avatar field
-    if (igData) {
-      console.log("[doApproveForDirectory] IG data — ALL 19 keys + values:");
-      for (const [k, v] of Object.entries(igData)) {
-        const display = typeof v === "string" ? v.substring(0, 200)
-          : typeof v === "number" || typeof v === "boolean" ? v
-          : Array.isArray(v) ? `[Array(${v.length})]`
-          : v && typeof v === "object" ? `{Object(${Object.keys(v).length} keys)}`
-          : String(v);
-        console.log(`  igData.${k} =`, display);
-      }
-    }
-    // Also dump result-level keys (avatar might live here)
-    if (resultData && resultData !== igData) {
-      console.log("[doApproveForDirectory] result-level keys:", Object.keys(resultData));
-      // Log any URL-like string values at the result level
-      for (const [k, v] of Object.entries(resultData)) {
-        if (typeof v === "string" && v.startsWith("http")) {
-          console.log(`  result.${k} =`, v.substring(0, 200));
-        }
-      }
-    }
 
     // Resolve the best avatar URL from enrichment data
     const enrichAvatar = extractAvatarFromEnrichment(raw);
 
-    // Resolve the search-API avatar (already mapped from picture/profile_picture/etc.)
-    const searchAvatar = (creator.avatar && !creator.avatar.includes("ui-avatars.com"))
-      ? creator.avatar.replace(/^http:\/\//i, "https://")
-      : null;
+    // Resolve the search-API avatar — check CreatorCard.avatar AND any raw image fields
+    // that mapAccountToCard may have resolved from the IC search response
+    const searchAvatar = (() => {
+      // 1. The mapped avatar field (from mapAccountToCard)
+      if (creator.avatar && !creator.avatar.includes("ui-avatars.com")) {
+        return creator.avatar.replace(/^http:\/\//i, "https://");
+      }
+      // 2. Check raw fields that might exist on the object but aren't in the TS interface
+      for (const key of ["picture", "profile_picture", "profile_pic_url", "image_url", "thumbnail", "photo", "picture_url", "profile_image_url"]) {
+        const val = creatorAny[key];
+        if (val && typeof val === "string" && (val as string).trim() && !(val as string).includes("ui-avatars.com")) {
+          return (val as string).replace(/^http:\/\//i, "https://");
+        }
+      }
+      return null;
+    })();
 
     // Best avatar: enrichment first, then search-API avatar
     const bestAvatar = enrichAvatar || searchAvatar || null;
