@@ -285,7 +285,7 @@ export async function addToDirectory(
 
   const { error } = await supabase.from("directory_members").upsert(
     payload,
-    { onConflict: "directory_id,creator_handle,platform", ignoreDuplicates: false }
+    { onConflict: "creator_handle", ignoreDuplicates: false }
   );
   if (error) {
     console.error("[addToDirectory] UPSERT FAILED:", error.message, error.details, error.hint, error.code);

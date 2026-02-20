@@ -37,6 +37,7 @@ export interface ShowcaseCreator extends FeaturedCreator {
   avg_comments?: number | null;
   post_count?: number | null;
   media_count?: number | null;
+  banner_image_url?: string | null;
 }
 
 /** Permanent Supabase Storage URLs for hero creators — never expire */
@@ -472,6 +473,7 @@ function mapFeaturedRow(r: Record<string, unknown>): ShowcaseCreator {
     avg_comments: r.avg_comments != null ? Number(r.avg_comments) : null,
     post_count: r.post_count != null ? Number(r.post_count) : null,
     media_count: (r.media_count as number) ?? null,
+    banner_image_url: (r.banner_image_url as string) ?? null,
   };
 }
 
@@ -505,6 +507,7 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     avg_comments: r.avg_comments != null ? Number(r.avg_comments) : null,
     post_count: r.post_count != null ? Number(r.post_count) : null,
     media_count: (r.media_count as number) ?? null,
+    banner_image_url: (r.banner_image_url as string) ?? null,
   };
 }
 
@@ -691,7 +694,7 @@ export async function approveForDirectory(data: {
 
   const { error } = await supabase
     .from("directory_members")
-    .upsert(payload, { onConflict: "platform,creator_handle", ignoreDuplicates: false });
+    .upsert(payload, { onConflict: "creator_handle", ignoreDuplicates: false });
 
   if (error) {
     console.error("[approveForDirectory] UPSERT FAILED:", error.message, error.details, error.hint, error.code);
