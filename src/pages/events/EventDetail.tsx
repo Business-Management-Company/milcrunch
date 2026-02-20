@@ -102,37 +102,45 @@ const EventDetail = () => {
   const daysUntil = useDaysUntil(event?.start_date ?? null);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (eventId) fetchAll();
   }, [eventId]);
 
   const fetchAll = async () => {
     try {
-      const [evRes, agRes, spkRes, spsRes] = await Promise.all([
-        supabase
-          .from("events")
-          .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published, slug, rideshare_enabled")
-          .eq("id", eventId!)
-          .single(),
+      // Support both UUID and slug-based lookups
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId!);
+      const eventQuery = supabase
+        .from("events")
+        .select("id, title, description, event_type, start_date, end_date, venue, city, state, timezone, cover_image_url, capacity, is_published, slug, rideshare_enabled");
+      const evRes = await (isUuid
+        ? eventQuery.eq("id", eventId!).single()
+        : eventQuery.eq("slug", eventId!).single());
+
+      if (evRes.error) throw evRes.error;
+      const eventData = evRes.data as unknown as EventRow & { rideshare_enabled?: boolean };
+      const realId = eventData.id;
+      setEvent(eventData);
+
+      const [agRes, spkRes, spsRes] = await Promise.all([
         supabase
           .from("event_agenda")
           .select("*")
-          .eq("event_id", eventId!)
+          .eq("event_id", realId)
           .order("day_number")
           .order("sort_order"),
         supabase
           .from("event_speakers")
           .select("*")
-          .eq("event_id", eventId!)
+          .eq("event_id", realId)
           .order("sort_order"),
         supabase
           .from("event_sponsors")
           .select("*")
-          .eq("event_id", eventId!)
+          .eq("event_id", realId)
           .order("sort_order"),
       ]);
 
-      if (evRes.error) throw evRes.error;
-      setEvent(evRes.data as unknown as EventRow);
       setAgenda((agRes.data || []) as AgendaRow[]);
       setSpeakers((spkRes.data || []) as SpeakerRow[]);
       setSponsors((spsRes.data || []) as SponsorRow[]);
@@ -141,7 +149,7 @@ const EventDetail = () => {
         const stRes = await supabase
           .from("event_streams")
           .select("id, title, status, recording_url, viewer_count")
-          .eq("event_id", eventId!);
+          .eq("event_id", realId);
         setStreams((stRes.data || []) as StreamRow[]);
       } catch { setStreams([]); }
     } catch (err) {

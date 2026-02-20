@@ -52,7 +52,7 @@ const CARD_GRADIENTS = [
   "from-sky-500 to-blue-700",
 ];
 
-function EventCard({ event, index }: { event: EventRow; index: number }) {
+function EventCard({ event, index }: { event: EventRow & { slug?: string | null }; index: number }) {
   const [imgFailed, setImgFailed] = useState(false);
   const past = isPastEvent(event.end_date, event.start_date);
   const location = getLocationLabel(event.city, event.state);
@@ -61,7 +61,7 @@ function EventCard({ event, index }: { event: EventRow; index: number }) {
 
   return (
     <Link
-      to={`/events/${event.id}`}
+      to={`/events/${event.slug || event.id}`}
       className="group relative rounded-2xl overflow-hidden h-[340px] block shadow-sm hover:shadow-xl transition-shadow duration-300"
     >
       {/* Background image or gradient fallback */}
@@ -118,11 +118,16 @@ export default function PublicEvents() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Scroll to top on mount (e.g. when arriving from homepage "View All Events" link)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
         .from("events")
-        .select("id, title, start_date, end_date, city, state, venue, cover_image_url, is_published, description")
+        .select("id, title, start_date, end_date, city, state, venue, cover_image_url, is_published, description, slug")
         .eq("is_published", true)
         .order("start_date", { ascending: true });
       if (error) console.error("Failed to load events:", error);

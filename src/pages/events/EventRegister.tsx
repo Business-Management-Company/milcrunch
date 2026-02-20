@@ -100,22 +100,25 @@ const EventRegister = () => {
 
   const fetchData = async () => {
     try {
-      const [evRes, tkRes] = await Promise.all([
-        supabase
-          .from("events")
-          .select("id, title, start_date, end_date, venue, city, state, timezone, cover_image_url, rideshare_enabled")
-          .eq("id", eventId!)
-          .single(),
-        supabase
-          .from("event_tickets")
-          .select("id, name, description, price, quantity, sold")
-          .eq("event_id", eventId!)
-          .eq("is_active", true)
-          .order("sort_order"),
-      ]);
+      // Support both UUID and slug-based lookups
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(eventId!);
+      const eventQuery = supabase
+        .from("events")
+        .select("id, title, start_date, end_date, venue, city, state, timezone, cover_image_url, rideshare_enabled");
+      const evRes = await (isUuid
+        ? eventQuery.eq("id", eventId!).single()
+        : eventQuery.eq("slug", eventId!).single());
 
       if (evRes.error) throw evRes.error;
-      setEvent(evRes.data as unknown as EventRow);
+      const eventData = evRes.data as unknown as EventRow;
+      setEvent(eventData);
+
+      const tkRes = await supabase
+        .from("event_tickets")
+        .select("id, name, description, price, quantity, sold")
+        .eq("event_id", eventData.id)
+        .eq("is_active", true)
+        .order("sort_order");
       setTickets((tkRes.data || []) as TicketRow[]);
     } catch (err) {
       console.error("Error loading event:", err);

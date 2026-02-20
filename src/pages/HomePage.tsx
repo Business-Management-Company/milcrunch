@@ -994,8 +994,8 @@ export default function HomePage() {
 
                 return (
                   <Link
-                    to={`/events/${event.id}`}
-                    key={event.id ?? title}
+                    to={`/events/${event.slug || event.id}`}
+                    key={event.id ?? event.slug ?? title}
                     className="rounded-xl border border-[#E5E7EB] bg-white flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
                   >
                     {/* Cover image with fallback */}
