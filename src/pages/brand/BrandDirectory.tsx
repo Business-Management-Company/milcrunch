@@ -398,16 +398,13 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    // Catch: missing URLs, placeholder URLs, and expired Instagram CDN URLs (scontent-*.cdninstagram.com returns 410)
     const isExpiredCdn = (url: string | null | undefined) =>
       !!url && (url.includes("scontent") || url.includes("cdninstagram"));
     const isPermanent = (url: string | null | undefined) =>
       !!url && url.includes("supabase.co/storage");
 
     const needsPhoto = members.filter((m) => {
-      // Already has a permanent Supabase Storage URL → skip
       if (isPermanent(m.ic_avatar_url) || isPermanent(m.avatar_url)) return false;
-      // No URL, placeholder, or expired CDN → needs refresh
       const url = m.ic_avatar_url || m.avatar_url;
       return !url || url.includes("ui-avatars.com") || isExpiredCdn(url);
     });
@@ -421,10 +418,75 @@ const BrandDirectory = () => {
     setRefreshProgress({ current: 0, total: needsPhoto.length });
     let updated = 0;
 
+    // ── Pre-scan storage buckets for existing avatars ──
+    // Files may exist from prior uploads under creator-avatars or creator-images.
+    // Two path formats: "{safeName}/avatar.jpg" (proxy) or "{safeName}.{ext}" (backfill).
+    const existingInStorage = new Map<string, string>(); // safeName → publicUrl
+    for (const bucket of ["creator-avatars", "creator-images"] as const) {
+      try {
+        // List root-level files (flat format: handle.jpg)
+        const { data: rootFiles } = await supabase.storage.from(bucket).list("", { limit: 1000 });
+        if (rootFiles) {
+          for (const f of rootFiles) {
+            // Skip folder entries (id is null for virtual folders in some cases)
+            if (!f.name || f.name.endsWith("/")) continue;
+            const safeName = f.name.replace(/\.(jpg|jpeg|png|webp|gif)$/i, "");
+            if (!existingInStorage.has(safeName)) {
+              const { data: u } = supabase.storage.from(bucket).getPublicUrl(f.name);
+              existingInStorage.set(safeName, u.publicUrl);
+            }
+          }
+        }
+        // List subdirectories (nested format: handle/avatar.jpg)
+        // Supabase list returns folder names; check each for avatar.jpg
+        if (rootFiles) {
+          const folders = rootFiles.filter((f) => f.id === null || (f.metadata === null && !f.name.includes(".")));
+          for (const folder of folders) {
+            const { data: subFiles } = await supabase.storage.from(bucket).list(folder.name, { limit: 10 });
+            if (subFiles && subFiles.length > 0) {
+              const avatar = subFiles.find((sf) => sf.name.startsWith("avatar"));
+              if (avatar) {
+                const path = `${folder.name}/${avatar.name}`;
+                const { data: u } = supabase.storage.from(bucket).getPublicUrl(path);
+                if (!existingInStorage.has(folder.name)) {
+                  existingInStorage.set(folder.name, u.publicUrl);
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Bucket may not exist — skip silently
+      }
+    }
+
+    console.log("[RefreshPhotos] Found", existingInStorage.size, "existing avatars in storage");
+
     for (let i = 0; i < needsPhoto.length; i++) {
       const m = needsPhoto[i];
       setRefreshProgress({ current: i + 1, total: needsPhoto.length });
 
+      const safeName = m.creator_handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+
+      // 1. Check if avatar already exists in storage buckets
+      const existingUrl = existingInStorage.get(safeName);
+      if (existingUrl) {
+        console.log("[RefreshPhotos] Using existing storage avatar for", m.creator_handle);
+        await supabase
+          .from("directory_members")
+          .update({ avatar_url: existingUrl, ic_avatar_url: existingUrl })
+          .eq("id", m.id);
+
+        updated++;
+        setMembers((prev) =>
+          prev.map((mem) =>
+            mem.id === m.id ? { ...mem, avatar_url: existingUrl, ic_avatar_url: existingUrl } : mem
+          )
+        );
+        continue;
+      }
+
+      // 2. No existing file — call IC API for fresh avatar, then upload via serverless proxy
       try {
         const data = await enrichCreatorProfile(m.creator_handle, undefined, m.platform || "instagram");
         if (!data) continue;
@@ -432,7 +494,6 @@ const BrandDirectory = () => {
         const avatarUrl = extractAvatarFromEnrichment(data);
         if (!avatarUrl) continue;
 
-        // Upload blob to Supabase Storage for a permanent URL (also updates DB row)
         const permanentUrl = await saveCreatorAvatar(m.creator_handle, avatarUrl);
         if (!permanentUrl) {
           console.warn("[RefreshPhotos] Storage upload failed for", m.creator_handle);
@@ -724,7 +785,7 @@ const BrandDirectory = () => {
           </Button>
           <Button variant="outline" size="sm" className="rounded-lg text-gray-600 dark:text-gray-400" onClick={handleRefreshPhotos} disabled={refreshingPhotos || membersLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-1.5", refreshingPhotos && "animate-spin")} />
-            {refreshProgress ? `Refreshing ${refreshProgress.current} of ${refreshProgress.total}...` : "Refresh Photos"}
+            {refreshProgress ? `Updating ${refreshProgress.current} of ${refreshProgress.total} creators...` : "Refresh Photos"}
           </Button>
           {/* View toggle */}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ml-auto">
