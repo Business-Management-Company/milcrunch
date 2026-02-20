@@ -264,7 +264,8 @@ export async function addToDirectory(
     creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: permanentAvatarUrl,
-    ic_avatar_url: permanentAvatarUrl || data.ic_avatar_url || null,
+    ic_avatar_url: permanentAvatarUrl
+      || (data.ic_avatar_url && !data.ic_avatar_url.includes("ui-avatars.com") ? data.ic_avatar_url.replace(/^http:\/\//i, "https://") : null),
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,

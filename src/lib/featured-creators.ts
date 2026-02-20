@@ -322,62 +322,80 @@ export async function enrichHomepageHeroCreators(
   return enriched;
 }
 
-/** Batch-fill avatars for showcase creators from the enrichment cache.
- *  Only reads from cache — does NOT call the IC API (too many credits).
- *  Also writes ic_avatar_url back to directory_members so future loads
- *  don't need the cache lookup. */
+/** Batch-fill avatars for showcase creators from the enrichment cache,
+ *  AND persist any non-permanent (CDN) avatar URLs to Supabase storage.
+ *  Does NOT call the IC API (too many credits). */
 export async function fillShowcaseAvatarsFromCache(
   creators: ShowcaseCreator[],
 ): Promise<ShowcaseCreator[]> {
-  // Only process creators with no usable avatar
+  const isPermanent = (url?: string | null) => !!url && url.includes("supabase.co/storage");
+
+  // --- Phase 1: Fill creators with NO avatar from enrichment cache ---
   const needsAvatar = creators.filter(
     (c) => !c.ic_avatar_url && !c.avatar_url && !extractAvatarFromEnrichment(c.enrichment_data),
   );
-  if (needsAvatar.length === 0) return creators;
-
-  console.log("[ShowcaseEnrich] Filling avatars from cache for", needsAvatar.length, "creators");
-
-  // Batch-fetch from enrichment cache
-  const handles = needsAvatar.map((c) => c.handle.toLowerCase());
-  const { data: cacheRows } = await supabase
-    .from("creator_enrichment_cache")
-    .select("username, enrichment_data")
-    .in("username", handles);
-
-  if (!cacheRows || cacheRows.length === 0) {
-    console.log("[ShowcaseEnrich] No cache hits");
-    return creators;
-  }
 
   const cacheMap = new Map<string, Record<string, unknown>>();
-  for (const row of cacheRows) {
-    cacheMap.set(
-      (row.username as string).toLowerCase(),
-      row.enrichment_data as Record<string, unknown>,
-    );
+  if (needsAvatar.length > 0) {
+    console.log("[ShowcaseEnrich] Filling avatars from cache for", needsAvatar.length, "creators");
+    const handles = needsAvatar.map((c) => c.handle.toLowerCase());
+    const { data: cacheRows } = await supabase
+      .from("creator_enrichment_cache")
+      .select("username, enrichment_data")
+      .in("username", handles);
+    if (cacheRows) {
+      for (const row of cacheRows) {
+        cacheMap.set(
+          (row.username as string).toLowerCase(),
+          row.enrichment_data as Record<string, unknown>,
+        );
+      }
+    }
+    console.log("[ShowcaseEnrich] Cache hits:", cacheMap.size, "of", handles.length);
   }
-  console.log("[ShowcaseEnrich] Cache hits:", cacheMap.size, "of", handles.length);
 
-  // Merge avatars and write back to directory_members
-  const result = creators.map((c) => {
-    if (c.ic_avatar_url || c.avatar_url) return c; // already has avatar
-    // Check enrichment_data on the row itself first
+  // Merge cache-found avatars
+  let result = creators.map((c) => {
+    if (c.ic_avatar_url || c.avatar_url) return c;
     let avatar = extractAvatarFromEnrichment(c.enrichment_data);
     if (!avatar) {
       const cached = cacheMap.get(c.handle.toLowerCase());
-      if (cached) {
-        avatar = extractAvatarFromEnrichment(cached);
-      }
+      if (cached) avatar = extractAvatarFromEnrichment(cached);
     }
-    if (avatar) {
-      // Cache to permanent Storage (fire-and-forget)
-      if (!avatar.includes("supabase.co/storage")) {
-        saveCreatorAvatar(c.handle, avatar).catch(() => {});
-      }
-      return { ...c, avatar_url: avatar, ic_avatar_url: avatar };
-    }
+    if (avatar) return { ...c, avatar_url: avatar, ic_avatar_url: avatar };
     return c;
   });
+
+  // --- Phase 2: Persist non-permanent CDN URLs to Supabase storage ---
+  const needsPersist = result.filter((c) => {
+    const url = c.ic_avatar_url || c.avatar_url || "";
+    return url && !isPermanent(url);
+  });
+
+  if (needsPersist.length > 0) {
+    console.log("[ShowcaseEnrich] Persisting", needsPersist.length, "CDN avatars to storage");
+    const persistResults = await Promise.allSettled(
+      needsPersist.map(async (c) => {
+        const cdnUrl = c.ic_avatar_url || c.avatar_url || "";
+        const permanentUrl = await saveCreatorAvatar(c.handle, cdnUrl);
+        return permanentUrl ? { handle: c.handle.toLowerCase(), url: permanentUrl } : null;
+      }),
+    );
+    const permanentMap = new Map<string, string>();
+    for (const r of persistResults) {
+      if (r.status === "fulfilled" && r.value) {
+        permanentMap.set(r.value.handle, r.value.url);
+      }
+    }
+    if (permanentMap.size > 0) {
+      console.log("[ShowcaseEnrich] Persisted", permanentMap.size, "avatars to permanent storage");
+      result = result.map((c) => {
+        const perm = permanentMap.get(c.handle.toLowerCase());
+        if (perm) return { ...c, ic_avatar_url: perm, avatar_url: perm };
+        return c;
+      });
+    }
+  }
 
   return result;
 }
@@ -667,7 +685,8 @@ export async function approveForDirectory(data: {
     creator_name: data.display_name,
     platform: data.platform || "instagram",
     avatar_url: permanentAvatarUrl,
-    ic_avatar_url: permanentAvatarUrl || data.ic_avatar_url || null,
+    ic_avatar_url: permanentAvatarUrl
+      || (data.ic_avatar_url && !data.ic_avatar_url.includes("ui-avatars.com") ? data.ic_avatar_url.replace(/^http:\/\//i, "https://") : null),
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,

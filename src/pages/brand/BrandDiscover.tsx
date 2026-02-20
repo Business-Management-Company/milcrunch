@@ -1331,7 +1331,12 @@ const BrandDiscover = () => {
   const doApproveForDirectory = async (creator: CreatorCard, directoryId?: string) => {
     const raw = enrichRawCache[creator.id];
     const igData = raw?.instagram as Record<string, unknown> | undefined;
-    const enrichedAvatar = extractAvatarFromEnrichment(raw) ?? creator.avatar ?? null;
+    // Resolve the best avatar URL: enrichment first, then search-API avatar
+    let enrichedAvatar = extractAvatarFromEnrichment(raw) ?? creator.avatar ?? null;
+    // Never save ui-avatars fallback URLs — they're generic placeholders, not real photos
+    if (enrichedAvatar && enrichedAvatar.includes("ui-avatars.com")) enrichedAvatar = null;
+    // Force https:// on the resolved Influencers.club image URL
+    if (enrichedAvatar) enrichedAvatar = enrichedAvatar.replace(/^http:\/\//i, "https://");
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];

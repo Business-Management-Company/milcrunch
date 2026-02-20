@@ -317,7 +317,12 @@ export default function CreatorProfileModal({
   const doApproveForDirectory = async (directoryId?: string) => {
     if (!creator) return null;
     const igData = ig as Record<string, unknown> | undefined;
-    const enrichedAvatar = extractAvatarFromEnrichment(enriched) ?? creator.avatar ?? null;
+    // Resolve the best avatar: enrichment first, then search-API avatar
+    let resolvedAvatar = extractAvatarFromEnrichment(enriched) ?? creator.avatar ?? null;
+    // Never save ui-avatars fallback URLs — they're generic placeholders, not real photos
+    if (resolvedAvatar && resolvedAvatar.includes("ui-avatars.com")) resolvedAvatar = null;
+    // Force https:// on the resolved Influencers.club image URL
+    if (resolvedAvatar) resolvedAvatar = resolvedAvatar.replace(/^http:\/\//i, "https://");
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
     const socialPlatforms = creator.socialPlatforms ?? [];
@@ -326,7 +331,7 @@ export default function CreatorProfileModal({
       handle: creator.username ?? creator.id,
       display_name: creator.name,
       platform: creator.platforms?.[0] ?? "instagram",
-      avatar_url: enrichedAvatar || creator.avatar || null,
+      avatar_url: resolvedAvatar || null,
       follower_count: creator.followers ?? null,
       engagement_rate: creator.engagementRate ?? null,
       bio: bioText || null,
@@ -334,7 +339,7 @@ export default function CreatorProfileModal({
       status: "veteran",
       platforms: socialPlatforms.length > 0 ? socialPlatforms : creator.platforms,
       category: creator.category ?? null,
-      ic_avatar_url: enrichedAvatar || null,
+      ic_avatar_url: resolvedAvatar || null,
       enrichment_data: enriched || null,
       added_by: user?.id ?? null,
       directory_id: directoryId || null,
