@@ -286,6 +286,18 @@ export async function enrichHomepageHeroCreators(
         // 3. Extract avatar from enrichment
         const enrichAvatar = extractAvatarFromEnrichment(responseData);
 
+        // 3b. Write avatar back to directory_members if it was missing
+        if (enrichAvatar && !c.avatar_url && !c.ic_avatar_url) {
+          supabase
+            .from("directory_members")
+            .update({ avatar_url: enrichAvatar })
+            .eq("id", c.id)
+            .then(({ error: writeErr }) => {
+              if (writeErr) console.warn("[HeroEnrich] avatar write-back failed for", handle, writeErr.message);
+              else console.log("[HeroEnrich] Wrote avatar_url back for", handle);
+            });
+        }
+
         // 4. Merge: prefer API data when > 0, keep existing data as fallback
         return {
           ...c,
@@ -307,6 +319,73 @@ export async function enrichHomepageHeroCreators(
     }),
   );
   return enriched;
+}
+
+/** Batch-fill avatars for showcase creators from the enrichment cache.
+ *  Only reads from cache — does NOT call the IC API (too many credits).
+ *  Also writes ic_avatar_url back to directory_members so future loads
+ *  don't need the cache lookup. */
+export async function fillShowcaseAvatarsFromCache(
+  creators: ShowcaseCreator[],
+): Promise<ShowcaseCreator[]> {
+  // Only process creators with no usable avatar
+  const needsAvatar = creators.filter(
+    (c) => !c.ic_avatar_url && !c.avatar_url && !extractAvatarFromEnrichment(c.enrichment_data),
+  );
+  if (needsAvatar.length === 0) return creators;
+
+  console.log("[ShowcaseEnrich] Filling avatars from cache for", needsAvatar.length, "creators");
+
+  // Batch-fetch from enrichment cache
+  const handles = needsAvatar.map((c) => c.handle.toLowerCase());
+  const { data: cacheRows } = await supabase
+    .from("creator_enrichment_cache")
+    .select("username, enrichment_data")
+    .in("username", handles);
+
+  if (!cacheRows || cacheRows.length === 0) {
+    console.log("[ShowcaseEnrich] No cache hits");
+    return creators;
+  }
+
+  const cacheMap = new Map<string, Record<string, unknown>>();
+  for (const row of cacheRows) {
+    cacheMap.set(
+      (row.username as string).toLowerCase(),
+      row.enrichment_data as Record<string, unknown>,
+    );
+  }
+  console.log("[ShowcaseEnrich] Cache hits:", cacheMap.size, "of", handles.length);
+
+  // Merge avatars and write back to directory_members
+  const result = creators.map((c) => {
+    if (c.ic_avatar_url || c.avatar_url) return c; // already has avatar
+    // Check enrichment_data on the row itself first
+    let avatar = extractAvatarFromEnrichment(c.enrichment_data);
+    if (!avatar) {
+      const cached = cacheMap.get(c.handle.toLowerCase());
+      if (cached) {
+        avatar = extractAvatarFromEnrichment(cached);
+        if (avatar) {
+          // Fire-and-forget: persist avatar_url back to directory_members
+          supabase
+            .from("directory_members")
+            .update({ avatar_url: avatar })
+            .eq("id", c.id)
+            .then(({ error }) => {
+              if (error) console.warn("[ShowcaseEnrich] avatar write-back failed for", c.handle, error.message);
+              else console.log("[ShowcaseEnrich] Wrote avatar_url back for", c.handle);
+            });
+        }
+      }
+    }
+    if (avatar) {
+      return { ...c, avatar_url: avatar, ic_avatar_url: avatar };
+    }
+    return c;
+  });
+
+  return result;
 }
 
 /** For hero: top 3 active + approved featured creators by sort_order. */

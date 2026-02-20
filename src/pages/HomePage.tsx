@@ -59,6 +59,7 @@ import {
   fetchShowcaseByDirectoryName,
   fetchFeaturedHomepageCreators,
   enrichHomepageHeroCreators,
+  fillShowcaseAvatarsFromCache,
   extractAvatarFromEnrichment,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
@@ -195,15 +196,23 @@ function HeroAvatar({ src, name, handle }: { src: string | null; name: string; h
   const safeSrc = safeImageUrl(src);
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const prevSrc = useRef(safeSrc);
+
+  // Reset error/loaded state when src changes (e.g. after enrichment fills in a URL)
+  useEffect(() => {
+    if (safeSrc !== prevSrc.current) {
+      prevSrc.current = safeSrc;
+      setImgError(false);
+      setImgLoaded(false);
+    }
+  }, [safeSrc]);
 
   // 3-second timeout: if image hasn't loaded, hide it
   useEffect(() => {
     if (!safeSrc || imgLoaded || imgError) return;
     const timer = setTimeout(() => {
-      if (!imgLoaded) {
-        console.warn("[HeroAvatar] 3s timeout — hiding image for", handle, "src:", safeSrc);
-        setImgError(true);
-      }
+      console.warn("[HeroAvatar] 3s timeout — hiding image for", handle, "src:", safeSrc);
+      setImgError(true);
     }, 3000);
     return () => clearTimeout(timer);
   }, [safeSrc, imgLoaded, imgError, handle]);
@@ -235,18 +244,38 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const imgSrc = creatorAvatarUrl(c.ic_avatar_url, c.avatar_url, enrichAvatar, (c as Record<string, unknown>).profile_image_url as string);
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const prevSrc = useRef(imgSrc);
+
+  // Reset error/loaded state when imgSrc changes (e.g. after cache fill)
+  useEffect(() => {
+    if (imgSrc !== prevSrc.current) {
+      prevSrc.current = imgSrc;
+      setImgError(false);
+      setImgLoaded(false);
+    }
+  }, [imgSrc]);
 
   // 3-second timeout: if image hasn't loaded, give up
   useEffect(() => {
     if (!imgSrc || imgLoaded || imgError) return;
     const timer = setTimeout(() => {
-      if (!imgLoaded) {
-        console.warn("[ShowcaseCard] 3s timeout — hiding image for", c.handle, "src:", imgSrc);
-        setImgError(true);
-      }
+      console.warn("[ShowcaseCard] 3s timeout — hiding image for", c.handle, "src:", imgSrc);
+      setImgError(true);
     }, 3000);
     return () => clearTimeout(timer);
   }, [imgSrc, imgLoaded, imgError, c.handle]);
+
+  // Debug logging for specific creators
+  if (c.handle === "davebrayusa" || c.handle === "therealdoctodd") {
+    console.log("[ShowcaseCard]", c.handle, {
+      ic_avatar_url: c.ic_avatar_url,
+      avatar_url: c.avatar_url,
+      enrichAvatar,
+      resolved: imgSrc,
+      imgError,
+      imgLoaded,
+    });
+  }
 
   return (
     <Link
@@ -639,6 +668,9 @@ export default function HomePage() {
     (async () => {
       const showcase = await fetchShowcaseByDirectoryName("Military Creator Network", 25);
       setShowcaseCreators(showcase);
+      // Fill missing avatars from enrichment cache (no API calls)
+      const withAvatars = await fillShowcaseAvatarsFromCache(showcase);
+      setShowcaseCreators(withAvatars);
     })();
   }, []);
 
@@ -739,7 +771,9 @@ export default function HomePage() {
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
-                    const avatar = creatorAvatarUrl(db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string);
+                    // Static fallback: /creators/{handle}.jpg (checked into public/)
+                    const staticFallback = `/creators/${db.handle}.jpg`;
+                    const avatar = creatorAvatarUrl(db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string) || staticFallback;
                     if (db.handle === "davebrayusa" || db.handle === "therealdoctodd") {
                       console.log("[Hero] Avatar debug for", db.handle, {
                         ic_avatar_url: db.ic_avatar_url,
