@@ -27,10 +27,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Mic, Sparkles, Users, Coffee, Flag, Palette,
+  Mic, Zap, Shuffle, Coffee, PartyPopper, Pencil, Palette,
   GripVertical, Trash2, Plus, Loader2, Clock,
   PanelLeftClose, PanelLeftOpen, Search, X, Check,
-  Wand2, LayoutList, ChevronDown, ChevronUp,
+  Wand2, LayoutList, Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInCalendarDays } from "date-fns";
@@ -102,24 +102,43 @@ interface SessionTypeDef {
   key: string;
   label: string;
   icon: typeof Mic;
-  badgeClass: string;
-  borderColor: string;
+  color: string;
 }
 
 const SESSION_TYPES: SessionTypeDef[] = [
-  { key: "main_speaker", label: "Main Speaker", icon: Mic, badgeClass: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", borderColor: "border-l-purple-500" },
-  { key: "experience", label: "Experience", icon: Sparkles, badgeClass: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400", borderColor: "border-l-teal-500" },
-  { key: "breakout", label: "Breakout", icon: Users, badgeClass: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400", borderColor: "border-l-orange-500" },
-  { key: "break", label: "Break", icon: Coffee, badgeClass: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400", borderColor: "border-l-gray-400" },
-  { key: "opening", label: "Opening", icon: Flag, badgeClass: "bg-[#000741]/10 text-[#000741] dark:bg-blue-900/30 dark:text-blue-300", borderColor: "border-l-[#000741]" },
-  { key: "closing", label: "Closing", icon: Flag, badgeClass: "bg-[#000741]/10 text-[#000741] dark:bg-blue-900/30 dark:text-blue-300", borderColor: "border-l-[#000741]" },
-  { key: "custom", label: "Custom", icon: Palette, badgeClass: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400", borderColor: "border-l-pink-500" },
+  { key: "main_speaker", label: "Main Speaker", icon: Mic, color: "#7C3AED" },
+  { key: "experience", label: "Experience", icon: Zap, color: "#0891B2" },
+  { key: "breakout", label: "Breakout", icon: Shuffle, color: "#EA580C" },
+  { key: "break", label: "Break", icon: Coffee, color: "#6B7280" },
+  { key: "opening_closing", label: "Opening/Closing", icon: PartyPopper, color: "#1E3A5F" },
+  { key: "custom", label: "Custom", icon: Pencil, color: "#EC4899" },
 ];
 
-const SESSION_TYPE_MAP = Object.fromEntries(SESSION_TYPES.map((t) => [t.key, t]));
+const SESSION_TYPE_MAP: Record<string, SessionTypeDef> = Object.fromEntries(SESSION_TYPES.map((t) => [t.key, t]));
+// Backward compat for existing "opening" / "closing" rows
+SESSION_TYPE_MAP["opening"] = SESSION_TYPE_MAP["opening_closing"];
+SESSION_TYPE_MAP["closing"] = SESSION_TYPE_MAP["opening_closing"];
 
 function getSessionType(key: string | null): SessionTypeDef {
-  return SESSION_TYPE_MAP[key || ""] || SESSION_TYPE_MAP["custom"];
+  if (!key) return SESSION_TYPE_MAP["custom"];
+  if (key.startsWith("custom:")) {
+    return { ...SESSION_TYPE_MAP["custom"], color: key.slice(7) };
+  }
+  return SESSION_TYPE_MAP[key] || SESSION_TYPE_MAP["custom"];
+}
+
+function computeDuration(start: string | null, end: string | null): string | null {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins <= 0) return null;
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${mins}m`;
 }
 
 /* ================================================================
@@ -247,6 +266,7 @@ function SortableSessionCard({
   const assignedSpeakers = (session.speaker_ids || [])
     .map((id) => speakerMap.get(id))
     .filter(Boolean) as SpeakerRow[];
+  const duration = computeDuration(session.start_time, session.end_time);
 
   const showHighlight = overSpeaker || isOver;
 
@@ -256,11 +276,11 @@ function SortableSessionCard({
         setNodeRef(node);
         setDropRef(node);
       }}
-      style={style}
-      className={`group rounded-xl border bg-white dark:bg-[#1A1D27] border-l-4 ${typeDef.borderColor} ${showHighlight ? "ring-2 ring-purple-400 bg-purple-50 dark:bg-purple-900/10" : "border-gray-200 dark:border-gray-800"} transition-all`}
+      style={{ ...style, borderLeftColor: typeDef.color }}
+      className={`group rounded-xl border bg-white dark:bg-[#1A1D27] border-l-4 ${showHighlight ? "ring-2 ring-purple-400 bg-purple-50 dark:bg-purple-900/10" : "border-gray-200 dark:border-gray-800"} transition-all`}
     >
       <div className="p-3">
-        {/* Row 1: Handle + Badge + Times + Room */}
+        {/* Row 1: Handle + Badge + Times + Duration + Room */}
         <div className="flex items-center gap-2 mb-1.5">
           <button
             {...attributes}
@@ -269,7 +289,7 @@ function SortableSessionCard({
           >
             <GripVertical className="h-4 w-4" />
           </button>
-          <Badge className={`text-[10px] px-1.5 py-0 ${typeDef.badgeClass} gap-1`}>
+          <Badge className="text-[10px] px-1.5 py-0 gap-1 border-0" style={{ backgroundColor: `${typeDef.color}1A`, color: typeDef.color }}>
             <TypeIcon className="h-3 w-3" />
             {typeDef.label}
           </Badge>
@@ -286,6 +306,11 @@ function SortableSessionCard({
             className="text-xs bg-transparent border-transparent hover:border-gray-300 dark:hover:border-gray-600 border rounded px-1 py-0.5 w-[80px] focus:outline-none focus:border-purple-400"
             onBlur={(e) => onUpdate(session.id, "end_time", e.target.value || null)}
           />
+          {duration && (
+            <span className="text-[10px] text-muted-foreground/70 bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 shrink-0">
+              {duration}
+            </span>
+          )}
           <input
             defaultValue={session.location_room || ""}
             placeholder="Room"
@@ -425,11 +450,11 @@ function TimelineView({ sessions, speakerMap }: { sessions: AgendaRow[]; speaker
           return (
             <div
               key={s.id}
-              className={`absolute left-14 right-2 rounded-lg border-l-4 ${typeDef.borderColor} bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 px-3 py-1.5 overflow-hidden`}
-              style={{ top, height }}
+              className="absolute left-14 right-2 rounded-lg border-l-4 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 px-3 py-1.5 overflow-hidden"
+              style={{ top, height, borderLeftColor: typeDef.color }}
             >
               <div className="flex items-center gap-1.5">
-                <Badge className={`text-[9px] px-1 py-0 ${typeDef.badgeClass} gap-0.5`}>
+                <Badge className="text-[9px] px-1 py-0 gap-0.5 border-0" style={{ backgroundColor: `${typeDef.color}1A`, color: typeDef.color }}>
                   <TypeIcon className="h-2.5 w-2.5" />
                   {typeDef.label}
                 </Badge>
@@ -459,9 +484,9 @@ function TimelineView({ sessions, speakerMap }: { sessions: AgendaRow[]; speaker
               const typeDef = getSessionType(s.session_type);
               const TypeIcon = typeDef.icon;
               return (
-                <div key={s.id} className={`rounded-lg border-l-4 ${typeDef.borderColor} bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 px-3 py-2`}>
+                <div key={s.id} className="rounded-lg border-l-4 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 px-3 py-2" style={{ borderLeftColor: typeDef.color }}>
                   <div className="flex items-center gap-1.5">
-                    <Badge className={`text-[9px] px-1 py-0 ${typeDef.badgeClass} gap-0.5`}>
+                    <Badge className="text-[9px] px-1 py-0 gap-0.5 border-0" style={{ backgroundColor: `${typeDef.color}1A`, color: typeDef.color }}>
                       <TypeIcon className="h-2.5 w-2.5" />
                       {typeDef.label}
                     </Badge>
@@ -506,6 +531,7 @@ export default function AgendaBuilder({ eventId, startDate, endDate, speakers, o
   const [newDesc, setNewDesc] = useState("");
   const [newDay, setNewDay] = useState(1);
   const [newSpeakerIds, setNewSpeakerIds] = useState<string[]>([]);
+  const [newCustomColor, setNewCustomColor] = useState("#EC4899");
   const [addingSess, setAddingSess] = useState(false);
 
   // AI config
@@ -744,11 +770,12 @@ export default function AgendaBuilder({ eventId, startDate, endDate, speakers, o
       return;
     }
     setAddingSess(true);
+    const finalType = newType === "custom" ? `custom:${newCustomColor}` : newType;
     const { error } = await supabase.from("event_agenda").insert({
       event_id: eventId,
       title: newTitle.trim(),
       day_number: newDay,
-      session_type: newType,
+      session_type: finalType,
       start_time: newStart || null,
       end_time: newEnd || null,
       location_room: newRoom || null,
@@ -776,6 +803,7 @@ export default function AgendaBuilder({ eventId, startDate, endDate, speakers, o
     setNewDesc("");
     setNewDay(activeDay);
     setNewSpeakerIds([]);
+    setNewCustomColor("#EC4899");
   };
 
   /* ---- AI schedule ---- */
@@ -790,11 +818,11 @@ Return ONLY a JSON array. Each element must have these exact fields:
 - title (string)
 - description (string, 1 sentence)
 - location_room (string or null)
-- session_type (one of: main_speaker, experience, breakout, break, opening, closing, custom)
+- session_type (one of: main_speaker, experience, breakout, break, opening_closing, custom)
 
 Rules:
 - Sessions must not overlap within the same day
-- Use "opening" for the first session and "closing" for the last session of each day
+- Use "opening_closing" for the first and last session of each day
 - Use "break" for coffee/lunch breaks
 - Use "main_speaker" for keynote/speaker sessions
 - Use "breakout" for breakout sessions
@@ -966,20 +994,6 @@ Total days: ${dayCount}`;
               <Wand2 className="h-3.5 w-3.5" />
               AI Schedule
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                resetAddForm();
-                setNewDay(activeDay);
-                setAddSheetOpen(true);
-              }}
-              className="gap-1.5"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Session
-            </Button>
-
             <div className="ml-auto flex items-center gap-1.5">
               <button
                 onClick={() => setView("cards")}
@@ -1113,9 +1127,20 @@ Total days: ${dayCount}`;
                 <Card className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] p-8 text-center text-muted-foreground">
                   <LayoutList className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">No sessions for Day {activeDay}</p>
-                  <p className="text-xs mt-1">Click "+ Add Session" or drag a session here</p>
+                  <p className="text-xs mt-1">Click "Add Session" or use AI Schedule to get started</p>
                 </Card>
               )}
+              <button
+                onClick={() => {
+                  resetAddForm();
+                  setNewDay(activeDay);
+                  setAddSheetOpen(true);
+                }}
+                className="w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-sm text-muted-foreground hover:border-purple-300 hover:text-purple-600 dark:hover:border-purple-700 dark:hover:text-purple-400 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Session
+              </button>
             </DayContainer>
           ) : (
             <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
@@ -1139,11 +1164,13 @@ Total days: ${dayCount}`;
             <span className="text-xs font-medium">{activeDragItem.speaker.creator_name}</span>
           </div>
         )}
-        {activeDragItem?.type === "session" && (
-          <div className={`rounded-xl border-l-4 ${getSessionType(activeDragItem.session.session_type).borderColor} bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-3 shadow-lg opacity-90 max-w-[400px]`}>
+        {activeDragItem?.type === "session" && (() => {
+          const overlayType = getSessionType(activeDragItem.session.session_type);
+          return (
+          <div className="rounded-xl border-l-4 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-3 shadow-lg opacity-90 max-w-[400px]" style={{ borderLeftColor: overlayType.color }}>
             <div className="flex items-center gap-2">
-              <Badge className={`text-[10px] px-1.5 py-0 ${getSessionType(activeDragItem.session.session_type).badgeClass}`}>
-                {getSessionType(activeDragItem.session.session_type).label}
+              <Badge className="text-[10px] px-1.5 py-0 border-0" style={{ backgroundColor: `${overlayType.color}1A`, color: overlayType.color }}>
+                {overlayType.label}
               </Badge>
               {activeDragItem.session.start_time && (
                 <span className="text-xs text-muted-foreground">
@@ -1153,7 +1180,8 @@ Total days: ${dayCount}`;
             </div>
             <p className="text-sm font-medium mt-1">{activeDragItem.session.title}</p>
           </div>
-        )}
+          );
+        })()}
       </DragOverlay>
 
       {/* ── Add Session Sheet ── */}
@@ -1169,11 +1197,13 @@ Total days: ${dayCount}`;
               <div className="grid grid-cols-3 gap-1.5">
                 {SESSION_TYPES.map((t) => {
                   const Icon = t.icon;
+                  const isActive = newType === t.key;
                   return (
                     <button
                       key={t.key}
                       onClick={() => setNewType(t.key)}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs font-medium transition-all ${newType === t.key ? `border-2 ${t.borderColor.replace("border-l-", "border-")} ${t.badgeClass}` : "border-gray-200 dark:border-gray-700 text-muted-foreground hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 text-xs font-medium transition-all ${isActive ? "" : "border-gray-200 dark:border-gray-700 text-muted-foreground hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+                      style={isActive ? { borderColor: t.color, backgroundColor: `${t.color}15`, color: t.color } : undefined}
                     >
                       <Icon className="h-4 w-4" />
                       {t.label}
@@ -1181,6 +1211,18 @@ Total days: ${dayCount}`;
                   );
                 })}
               </div>
+              {newType === "custom" && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Label className="text-xs shrink-0">Color</Label>
+                  <input
+                    type="color"
+                    value={newCustomColor}
+                    onChange={(e) => setNewCustomColor(e.target.value)}
+                    className="h-7 w-7 rounded cursor-pointer border border-gray-200 dark:border-gray-700 p-0"
+                  />
+                  <span className="text-[10px] text-muted-foreground font-mono">{newCustomColor}</span>
+                </div>
+              )}
             </div>
 
             <div>
