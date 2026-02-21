@@ -484,6 +484,9 @@ export default function Verification() {
         setTimeout(() => {
           setAddOpen(false);
           setNewRecordId(null);
+          if (inserted?.id) {
+            setExpandedId(inserted.id);
+          }
         }, 1500);
       }
     } finally {
