@@ -718,18 +718,55 @@ export async function fetchDiscoveryAvatar(
     const accounts = (data as { accounts?: ApiAccount[] }).accounts;
     if (!Array.isArray(accounts) || accounts.length === 0) return null;
 
-    const p = accounts[0].profile;
-    const url =
-      (p?.picture as string) ??
-      (p?.profile_picture_hd as string) ??
-      (p?.profile_picture as string) ??
-      (p?.profile_pic_url as string) ??
-      (p?.avatar as string) ??
-      null;
+    const acc = accounts[0] as Record<string, unknown>;
+    const p = acc.profile as Record<string, unknown> | undefined;
 
-    if (url && typeof url === "string" && url.trim() && !url.includes("ui-avatars.com")) {
-      return url.replace(/^http:\/\//i, "https://");
+    // Check fields across profile, platformData, and account top-level
+    const AVATAR_FIELDS = [
+      "picture", "profile_picture_hd", "profile_picture",
+      "profile_pic_url", "profile_pic_url_hd", "avatar",
+      "avatar_url", "image_url", "photo", "thumbnail",
+    ];
+
+    const tryExtract = (obj: Record<string, unknown> | undefined): string | null => {
+      if (!obj) return null;
+      for (const key of AVATAR_FIELDS) {
+        const val = obj[key];
+        if (val && typeof val === "string" && val.trim() && !val.includes("ui-avatars.com")) {
+          return val.replace(/^http:\/\//i, "https://");
+        }
+      }
+      return null;
+    };
+
+    // 1. profile (most common)
+    const fromProfile = tryExtract(p);
+    if (fromProfile) return fromProfile;
+
+    // 2. platformData (confirmed in enrichment responses)
+    const platformData = acc.platformData as Record<string, unknown> | undefined;
+    const fromPlatform = tryExtract(platformData);
+    if (fromPlatform) return fromPlatform;
+
+    // 3. account top-level fields
+    const fromTop = tryExtract(acc);
+    if (fromTop) return fromTop;
+
+    // 4. nested instagram / result.instagram
+    const ig = acc.instagram as Record<string, unknown> | undefined;
+    const fromIg = tryExtract(ig);
+    if (fromIg) return fromIg;
+
+    const result = acc.result as Record<string, unknown> | undefined;
+    if (result) {
+      const resultIg = result.instagram as Record<string, unknown> | undefined;
+      const fromResultIg = tryExtract(resultIg);
+      if (fromResultIg) return fromResultIg;
+      const fromResult = tryExtract(result);
+      if (fromResult) return fromResult;
     }
+
+    console.warn("[fetchDiscoveryAvatar]", cleanHandle, "no avatar found in response keys:", Object.keys(acc));
     return null;
   } catch (err) {
     console.warn("[fetchDiscoveryAvatar]", cleanHandle, "error:", err);
