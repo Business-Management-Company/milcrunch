@@ -398,7 +398,7 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    // Instagram CDN URLs (scontent, cdninstagram, fbcdn) expire within 24 hours
+    // Instagram/Facebook CDN URLs expire within 24 hours
     const isExpiredCdn = (url: string | null | undefined) =>
       !!url && (url.includes("scontent") || url.includes("cdninstagram") || url.includes("fbcdn"));
     const isPermanent = (url: string | null | undefined) =>
@@ -418,76 +418,37 @@ const BrandDirectory = () => {
     setRefreshingPhotos(true);
     setRefreshProgress({ current: 0, total: needsPhoto.length });
     let updated = 0;
+    let failed = 0;
 
-    // ── Pre-scan storage buckets for avatars already uploaded ──
-    const existingInStorage = new Map<string, string>();
-    for (const bucket of ["creator-avatars", "creator-images"] as const) {
-      try {
-        const { data: rootFiles } = await supabase.storage.from(bucket).list("", { limit: 1000 });
-        if (!rootFiles) continue;
-        for (const f of rootFiles) {
-          if (!f.name || f.name.endsWith("/")) continue;
-          // Flat file: handle.jpg
-          if (f.name.includes(".")) {
-            const key = f.name.replace(/\.(jpg|jpeg|png|webp|gif)$/i, "");
-            if (!existingInStorage.has(key)) {
-              const { data: u } = supabase.storage.from(bucket).getPublicUrl(f.name);
-              existingInStorage.set(key, u.publicUrl);
-            }
-          } else {
-            // Subfolder: handle/avatar.jpg
-            const { data: sub } = await supabase.storage.from(bucket).list(f.name, { limit: 5 });
-            const av = sub?.find((s) => s.name.startsWith("avatar"));
-            if (av) {
-              const { data: u } = supabase.storage.from(bucket).getPublicUrl(`${f.name}/${av.name}`);
-              if (!existingInStorage.has(f.name)) existingInStorage.set(f.name, u.publicUrl);
-            }
-          }
-        }
-      } catch {
-        // Bucket may not exist
-      }
-    }
-    console.log("[RefreshPhotos] Found", existingInStorage.size, "existing avatars in storage");
-
+    // Process one creator at a time — each API call gets its own
+    // Vercel 10-second window so we never hit the function timeout.
     for (let i = 0; i < needsPhoto.length; i++) {
       const m = needsPhoto[i];
       setRefreshProgress({ current: i + 1, total: needsPhoto.length });
-      const safeName = m.creator_handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
 
-      // 1. Check if avatar already exists in a storage bucket
-      const existingUrl = existingInStorage.get(safeName);
-      if (existingUrl) {
-        console.log("[RefreshPhotos] Found in storage:", m.creator_handle);
-        await supabase
-          .from("directory_members")
-          .update({ avatar_url: existingUrl, ic_avatar_url: existingUrl })
-          .eq("id", m.id);
-        updated++;
-        setMembers((prev) =>
-          prev.map((mem) =>
-            mem.id === m.id ? { ...mem, avatar_url: existingUrl, ic_avatar_url: existingUrl } : mem
-          )
-        );
-        continue;
-      }
-
-      // 2. Use Discovery API to get a fresh avatar URL (0.01 credits — cheap)
       try {
+        // Step 1: Get a fresh avatar URL via Discovery API (0.01 credits)
         const freshUrl = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
         if (!freshUrl) {
-          console.warn("[RefreshPhotos] No avatar from Discovery for", m.creator_handle);
+          console.warn("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "— no avatar in Discovery response");
+          failed++;
+          // 500ms pause before next call even on skip
+          await new Promise((r) => setTimeout(r, 500));
           continue;
         }
 
-        // 3. Download + upload to Supabase Storage via serverless proxy
-        //    (Instagram CDN blocks browser CORS, so the proxy fetches server-side)
+        // Step 2: Download image + upload to Supabase Storage via serverless proxy
+        // (separate Vercel invocation — fresh 10s timeout)
         const permanentUrl = await saveCreatorAvatar(m.creator_handle, freshUrl);
         if (!permanentUrl) {
-          console.warn("[RefreshPhotos] Upload failed for", m.creator_handle);
+          console.warn("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "— upload proxy failed");
+          failed++;
+          await new Promise((r) => setTimeout(r, 500));
           continue;
         }
 
+        // Step 3: Update local state so the avatar shows immediately
+        console.log("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "✓", permanentUrl.substring(permanentUrl.lastIndexOf("/") + 1));
         updated++;
         setMembers((prev) =>
           prev.map((mem) =>
@@ -495,13 +456,23 @@ const BrandDirectory = () => {
           )
         );
       } catch (err) {
-        console.warn("[RefreshPhotos] Failed for", m.creator_handle, err);
+        console.warn("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "— error:", err);
+        failed++;
+      }
+
+      // 500ms delay between creators to avoid rate-limiting
+      if (i < needsPhoto.length - 1) {
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
 
     setRefreshingPhotos(false);
     setRefreshProgress(null);
-    toast.success(`Photos updated for ${updated} creator${updated !== 1 ? "s" : ""}`);
+    if (updated > 0) {
+      toast.success(`Photos updated for ${updated} of ${needsPhoto.length} creators${failed > 0 ? ` (${failed} failed)` : ""}`);
+    } else {
+      toast.error(`Could not refresh photos (${failed} failed). Check console for details.`);
+    }
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
