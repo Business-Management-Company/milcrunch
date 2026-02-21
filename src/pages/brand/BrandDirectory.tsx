@@ -459,58 +459,45 @@ const BrandDirectory = () => {
       }
     }
 
-    // ── Cleanup: null out stale Supabase URLs that point to missing files ──
-    // After refresh, some members may still have supabase.co URLs from earlier
-    // uploads that no longer exist in storage (shows favicon instead of photo).
-    const staleMembers = members.filter((m) => {
-      const url = m.ic_avatar_url || m.avatar_url;
-      return url && url.includes("supabase.co") && !needsPhoto.some((n) => n.id === m.id && updated > 0);
-    });
+    // ── Cleanup: delete corrupted files from storage + null DB URLs ──
     let cleaned = 0;
-    for (const m of staleMembers) {
-      const url = m.ic_avatar_url || m.avatar_url;
-      if (!url) continue;
-      try {
-        const check = await fetch(url, { method: "HEAD" });
-        if (!check.ok) {
-          // File doesn't exist — null out both URL columns
-          console.log("[RefreshPhotos] Cleaning stale URL for", m.creator_handle, "(", check.status, ")");
-          await supabase
-            .from("directory_members")
-            .update({ ic_avatar_url: null, avatar_url: null })
-            .eq("id", m.id);
-          cleaned++;
-          setMembers((prev) =>
-            prev.map((mem) =>
-              mem.id === m.id ? { ...mem, ic_avatar_url: null, avatar_url: null } : mem
-            )
-          );
+    try {
+      const cleanupResp = await fetch("/api/cleanup-avatars", { method: "POST" });
+      if (cleanupResp.ok) {
+        const result = await cleanupResp.json();
+        cleaned = result.deleted || 0;
+        if (cleaned > 0) {
+          console.log("[RefreshPhotos] Cleanup removed", cleaned, "corrupted files");
+          // Null out local state for cleaned members
+          const cleanedHandles = (result.details || [])
+            .filter((d: { deleted?: boolean }) => d.deleted)
+            .map((d: { handle: string }) => d.handle?.toLowerCase());
+          if (cleanedHandles.length > 0) {
+            setMembers((prev) =>
+              prev.map((mem) =>
+                cleanedHandles.includes(mem.creator_handle?.toLowerCase())
+                  ? { ...mem, ic_avatar_url: null, avatar_url: null }
+                  : mem
+              )
+            );
+          }
         }
-      } catch {
-        // Network error on HEAD — null it out to be safe
-        await supabase
-          .from("directory_members")
-          .update({ ic_avatar_url: null, avatar_url: null })
-          .eq("id", m.id);
-        cleaned++;
-        setMembers((prev) =>
-          prev.map((mem) =>
-            mem.id === m.id ? { ...mem, ic_avatar_url: null, avatar_url: null } : mem
-          )
-        );
       }
+    } catch (err) {
+      console.warn("[RefreshPhotos] Cleanup call failed:", err);
     }
-    if (cleaned > 0) console.log("[RefreshPhotos] Cleaned", cleaned, "stale storage URLs");
 
     setRefreshingPhotos(false);
     setRefreshProgress(null);
     const parts = [`${updated} updated`];
     if (failed > 0) parts.push(`${failed} failed`);
-    if (cleaned > 0) parts.push(`${cleaned} stale URLs cleaned`);
+    if (cleaned > 0) parts.push(`${cleaned} corrupted removed`);
     if (updated > 0 || cleaned > 0) {
       toast.success(`Photos: ${parts.join(", ")}`);
-    } else {
+    } else if (failed > 0) {
       toast.error(`Could not refresh photos (${failed} failed). Check console for details.`);
+    } else {
+      toast.info("No photos to update");
     }
   };
 
