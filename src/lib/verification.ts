@@ -158,44 +158,57 @@ export async function scrapeFirecrawl(url: string): Promise<{ markdown?: string 
 }
 
 // --- Scoring ---
-// GENEROUS scoring: starts at 50 baseline. Absence of evidence is NOT evidence of fraud.
+// Generous scoring: absence of evidence is NOT evidence of fraud.
 // Only deduct for actual negative evidence (stolen valor, criminal record, factual impossibility).
 export function computeVerificationScore(
   pdlScore: number,
   evidenceSources: EvidenceSource[],
   contentSignals: { hasUnitOrMOS: boolean; hasDates: boolean; hasAwards: boolean },
-  extra?: { claimedBranch?: string; linkedinUrl?: string }
+  extra?: { claimedBranch?: string; linkedinUrl?: string; pdlData?: unknown }
 ): number {
   let score = 0;
 
-  // Branch identified (+20)
+  // Branch confirmed (+20)
   const claimedBranch = extra?.claimedBranch;
   if (claimedBranch && claimedBranch !== "Unknown") score += 20;
 
-  // Background clean (+20)
+  // Clean background check — no red flags (+20)
   const redFlags = evidenceSources.filter((s) => s.isRedFlag);
   if (!redFlags || redFlags.length === 0) score += 20;
 
-  // Evidence sources (+20 if 10+, +10 if 5+)
+  // Evidence sources: 1-4 = +5, 5-9 = +10, 10-19 = +15, 20+ = +20
   const sourceCount = evidenceSources.length;
-  if (sourceCount >= 10) score += 20;
+  if (sourceCount >= 20) score += 20;
+  else if (sourceCount >= 10) score += 15;
   else if (sourceCount >= 5) score += 10;
+  else if (sourceCount >= 1) score += 5;
 
-  // PDL match (+15)
-  const pdlMatch = pdlScore > 0;
-  if (pdlMatch) score += 15;
+  // PDL record found (+15) — only if data actually returned
+  const hasPdlData = extra?.pdlData != null || pdlScore > 0;
+  if (hasPdlData) score += 15;
 
-  // LinkedIn confirmed (+10)
+  // LinkedIn found/confirmed (+10)
   const linkedinConfirmed = !!(extra?.linkedinUrl) || evidenceSources.some((s) => s.url?.includes("linkedin.com"));
   if (linkedinConfirmed) score += 10;
 
-  // Social profile found (+10)
-  const socialFound = evidenceSources.some((s) => s.category === "Social Media");
+  // Any social platform confirmed (+10)
+  const socialFound = evidenceSources.some((s) =>
+    s.category === "Social Media" ||
+    /instagram\.com|youtube\.com|tiktok\.com|twitter\.com|x\.com|facebook\.com/i.test(s.url ?? "")
+  );
   if (socialFound) score += 10;
 
   // Location confirmed (+5)
   const locationConfirmed = contentSignals.hasDates || contentSignals.hasUnitOrMOS;
   if (locationConfirmed) score += 5;
+
+  // Bonus: Instagram handle present (+5)
+  const hasInstagram = evidenceSources.some((s) => /instagram\.com/i.test(s.url ?? ""));
+  if (hasInstagram) score += 5;
+
+  // Bonus: YouTube results found (+5) — media presence confirmed
+  const hasYouTube = evidenceSources.some((s) => /youtube\.com|youtu\.be/i.test(s.url ?? ""));
+  if (hasYouTube) score += 5;
 
   return Math.min(100, Math.max(0, score));
 }
@@ -508,7 +521,7 @@ export async function runVerificationPipeline(
   onPhase({ phase: 4, name: "AI Analysis", status: "done", data: aiAnalysis });
 
   const hasCriminalFlags = evidenceSources.some((s) => s.isRedFlag);
-  const verificationScore = computeVerificationScore(pdlScore, evidenceSources, contentSignals, { claimedBranch: input.claimedBranch, linkedinUrl: input.linkedinUrl });
+  const verificationScore = computeVerificationScore(pdlScore, evidenceSources, contentSignals, { claimedBranch: input.claimedBranch, linkedinUrl: input.linkedinUrl, pdlData });
   const status = recommendStatus(verificationScore, hasCriminalFlags);
 
   return {
