@@ -22,9 +22,10 @@ import {
   BookmarkCheck,
   ExternalLink,
   Loader2,
-  SlidersHorizontal,
   X,
   Navigation,
+  Sparkles,
+  Send,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
@@ -158,6 +159,44 @@ function fitScoreColor(score: number): string {
   return "bg-gray-100 text-gray-600 border-gray-200";
 }
 
+// ─── AI Concierge ───────────────────────────────────────────
+
+const CONCIERGE_SYSTEM = `You are a venue search assistant. Based on the user's event description, extract search parameters and return JSON only — no markdown, no explanation. Return exactly this shape:
+{
+  "searchTerm": "venue type keywords",
+  "location": "city, state",
+  "venueStyle": "Hotel + Conference",
+  "minRating": "0",
+  "notes": "one sentence explaining your recommendations"
+}
+venueStyle must be one of: Hotel + Conference, Conference Only, Banquet Hall, Outdoor, Theater, Rooftop, Restaurant. Pick the best fit.
+minRating must be one of: 0, 3, 3.5, 4, 4.5. Default to 4 for professional events.
+If the user doesn't mention a city, set location to "" and note it in notes.`;
+
+async function callConcierge(prompt: string): Promise<{
+  searchTerm: string;
+  location: string;
+  venueStyle: string;
+  minRating: string;
+  notes: string;
+} | null> {
+  const res = await fetch("/api/anthropic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 512,
+      system: CONCIERGE_SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(`AI request failed (${res.status})`);
+  const data = await res.json();
+  const text = (data.content?.[0]?.text ?? "").trim();
+  const cleaned = text.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+  return JSON.parse(cleaned);
+}
+
 // ─── Component ──────────────────────────────────────────────
 
 export default function BrandVenueFinder() {
@@ -172,7 +211,12 @@ export default function BrandVenueFinder() {
   const [minRating, setMinRating] = useState("0");
   const [minReviews, setMinReviews] = useState("0");
   const [priceFilter, setPriceFilter] = useState("any");
-  const [showFilters, setShowFilters] = useState(false);
+
+  // AI Concierge state
+  const [conciergeInput, setConciergeInput] = useState("");
+  const [conciergeLoading, setConciergeLoading] = useState(false);
+  const [conciergeNotes, setConciergeNotes] = useState("");
+  const [autoSearchTrigger, setAutoSearchTrigger] = useState(0);
 
   // Results
   const [rawResults, setRawResults] = useState<Venue[]>([]);
@@ -269,6 +313,12 @@ export default function BrandVenueFinder() {
       setLoading(false);
     }
   };
+
+  // Auto-search after AI concierge populates fields (runs after state is committed)
+  useEffect(() => {
+    if (autoSearchTrigger > 0) handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSearchTrigger]);
 
   // ─── Filter + Score + Sort (client-side) ──────────────────
   const filteredResults: ScoredVenue[] = useMemo(() => {
@@ -394,6 +444,40 @@ export default function BrandVenueFinder() {
     setPriceFilter("any");
   };
 
+  // ─── AI Concierge submit ─────────────────────────────────
+  const handleConcierge = async () => {
+    const prompt = conciergeInput.trim();
+    if (!prompt) return;
+    setConciergeLoading(true);
+    setConciergeNotes("");
+    try {
+      const result = await callConcierge(prompt);
+      if (!result) throw new Error("No response from AI");
+      // Auto-populate fields
+      if (result.searchTerm) setSearchTerm(result.searchTerm);
+      if (result.location) setLocation(result.location);
+      if (result.venueStyle) {
+        const match = VENUE_STYLES.find((s) => s.label === result.venueStyle);
+        if (match) setSelectedStyles([match.label]);
+      }
+      if (result.minRating && result.minRating !== "0") setMinRating(result.minRating);
+      if (result.notes) setConciergeNotes(result.notes);
+      // Auto-trigger search after state updates commit
+      if (result.location) {
+        setAutoSearchTrigger((n) => n + 1);
+      }
+    } catch (err) {
+      console.error("[VenueConcierge] Error:", err);
+      toast({
+        title: "AI Concierge Error",
+        description: err instanceof Error ? err.message : "Failed to parse event description",
+        variant: "destructive",
+      });
+    } finally {
+      setConciergeLoading(false);
+    }
+  };
+
   const activeFilterCount =
     selectedStyles.length +
     (minRating !== "0" ? 1 : 0) +
@@ -425,7 +509,35 @@ export default function BrandVenueFinder() {
         </Button>
       </div>
 
-      {/* Search bar */}
+      {/* AI Venue Concierge */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border-2 border-purple-200 dark:border-purple-800 p-4">
+        <div className="flex gap-2 items-end">
+          <div className="relative flex-1">
+            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500" />
+            <Input
+              placeholder="Describe your event — e.g. 'MilSpouse conference for 300 attendees in San Diego, need breakout rooms and AV'"
+              value={conciergeInput}
+              onChange={(e) => setConciergeInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !conciergeLoading && handleConcierge()}
+              className="pl-9 border-purple-200 dark:border-purple-700 focus-visible:ring-purple-400"
+              disabled={conciergeLoading}
+            />
+          </div>
+          <Button
+            size="icon"
+            onClick={handleConcierge}
+            disabled={!conciergeInput.trim() || conciergeLoading}
+            className="shrink-0 bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white h-9 w-9"
+          >
+            {conciergeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        </div>
+        {conciergeNotes && (
+          <p className="text-sm text-gray-500 italic mt-2 pl-1">{conciergeNotes}</p>
+        )}
+      </div>
+
+      {/* Search bar + filters */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-4">
         <div className="flex flex-col md:flex-row gap-2">
           <div className="relative md:w-[55%]">
@@ -449,19 +561,6 @@ export default function BrandVenueFinder() {
             />
           </div>
           <Button
-            onClick={() => setShowFilters(!showFilters)}
-            variant="outline"
-            className="relative"
-          >
-            <SlidersHorizontal className="w-4 h-4 mr-2" />
-            Filters
-            {activeFilterCount > 0 && (
-              <Badge className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
-          <Button
             onClick={handleSearch}
             disabled={loading || !location.trim()}
             className="bg-purple-600 hover:bg-purple-700 text-white px-6"
@@ -474,113 +573,108 @@ export default function BrandVenueFinder() {
           </Button>
         </div>
 
-        {/* Filters panel */}
-        {showFilters && (
-          <div className="border-t pt-4 space-y-4">
-            {/* Venue Style chips */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                Venue Style
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {VENUE_STYLES.map((s) => (
-                  <button
-                    key={s.label}
-                    onClick={() => toggleStyle(s.label)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                      selectedStyles.includes(s.label)
-                        ? "bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/30 dark:border-purple-600 dark:text-purple-300"
-                        : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Dropdowns row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                  Sort By
-                </label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Fit Score" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SORT_OPTIONS.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                  Min Rating
-                </label>
-                <Select value={minRating} onValueChange={setMinRating}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Any Rating" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MIN_RATING_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                  Min Reviews
-                </label>
-                <Select value={minReviews} onValueChange={setMinReviews}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Any Reviews" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MIN_REVIEWS_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                  Price Level
-                </label>
-                <Select value={priceFilter} onValueChange={setPriceFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Any Price" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRICE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {activeFilterCount > 0 && (
+        {/* Venue Style chips */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+            Venue Style
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {VENUE_STYLES.map((s) => (
               <button
-                onClick={clearFilters}
-                className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                key={s.label}
+                onClick={() => toggleStyle(s.label)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  selectedStyles.includes(s.label)
+                    ? "bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/30 dark:border-purple-600 dark:text-purple-300"
+                    : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
+                }`}
               >
-                <X className="w-3 h-3" />
-                Clear all filters
+                {s.label}
               </button>
-            )}
+            ))}
           </div>
+        </div>
+
+        {/* Dropdowns row */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Sort By
+            </label>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Fit Score" />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Min Rating
+            </label>
+            <Select value={minRating} onValueChange={setMinRating}>
+              <SelectTrigger>
+                <SelectValue placeholder="Any Rating" />
+              </SelectTrigger>
+              <SelectContent>
+                {MIN_RATING_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Min Reviews
+            </label>
+            <Select value={minReviews} onValueChange={setMinReviews}>
+              <SelectTrigger>
+                <SelectValue placeholder="Any Reviews" />
+              </SelectTrigger>
+              <SelectContent>
+                {MIN_REVIEWS_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Price Level
+            </label>
+            <Select value={priceFilter} onValueChange={setPriceFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Any Price" />
+              </SelectTrigger>
+              <SelectContent>
+                {PRICE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {activeFilterCount > 0 && (
+          <button
+            onClick={clearFilters}
+            className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
+          >
+            <X className="w-3 h-3" />
+            Clear all filters
+          </button>
         )}
       </div>
 
