@@ -398,17 +398,14 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    // Instagram/Facebook CDN URLs expire within 24 hours
-    const isExpiredCdn = (url: string | null | undefined) =>
-      !!url && (url.includes("scontent") || url.includes("cdninstagram") || url.includes("fbcdn"));
+    // A URL is permanent only if it's hosted in our Supabase Storage.
+    // Everything else (expired Instagram CDN, fbcdn, random URLs, null) needs refresh.
     const isPermanent = (url: string | null | undefined) =>
-      !!url && url.includes("supabase.co/storage");
+      !!url && url.includes("supabase.co");
 
-    const needsPhoto = members.filter((m) => {
-      if (isPermanent(m.ic_avatar_url) || isPermanent(m.avatar_url)) return false;
-      const url = m.ic_avatar_url || m.avatar_url;
-      return !url || url.includes("ui-avatars.com") || isExpiredCdn(url);
-    });
+    const needsPhoto = members.filter((m) =>
+      !isPermanent(m.ic_avatar_url) && !isPermanent(m.avatar_url)
+    );
 
     if (needsPhoto.length === 0) {
       toast.info("All creators already have photos");
