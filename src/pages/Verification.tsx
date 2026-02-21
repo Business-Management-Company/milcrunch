@@ -934,7 +934,7 @@ export default function Verification() {
                       <TableCell>
                         {expandedId === row.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="text-base font-semibold text-gray-900 dark:text-gray-100">
                         <div className="flex items-center gap-1.5">
                           <NameStatusIcon score={row.verification_score ?? 0} />
                           <InlineNameEdit id={row.id} name={row.person_name} onSave={fetchVerifications} />
@@ -2422,7 +2422,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-2xl font-bold text-[#000741] dark:text-white">{record.person_name}</h2>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{record.person_name}</h2>
             <StatusBadge status={record.status ?? "pending"} />
           </div>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
