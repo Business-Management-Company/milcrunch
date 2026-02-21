@@ -319,7 +319,6 @@ export default function Verification() {
   const [addForm, setAddForm] = useState({
     fullName: "",
     claimedBranch: "",
-    claimedType: "",
     claimedStatus: "veteran",
     linkedinUrl: "",
     instagramHandle: "",
@@ -407,7 +406,7 @@ export default function Verification() {
         {
           fullName: addForm.fullName.trim(),
           claimedBranch: addForm.claimedBranch || "Unknown",
-          claimedType: addForm.claimedType.trim(),
+          claimedType: "",
           claimedStatus: addForm.claimedStatus,
           linkedinUrl: addForm.linkedinUrl.trim() || undefined,
           websiteUrl: addForm.websiteUrl.trim() || undefined,
@@ -424,7 +423,6 @@ export default function Verification() {
         .insert({
           person_name: addForm.fullName.trim(),
           claimed_branch: finalBranch,
-          claimed_type: addForm.claimedType || null,
           claimed_status: addForm.claimedStatus,
           linkedin_url: addForm.linkedinUrl.trim() || null,
           source_username: addForm.instagramHandle.trim() || null,
@@ -491,7 +489,7 @@ export default function Verification() {
             id: inserted.id,
             person_name: addForm.fullName.trim(),
             claimed_branch: finalBranch,
-            claimed_type: addForm.claimedType || null,
+            claimed_type: null,
             claimed_status: addForm.claimedStatus,
             linkedin_url: addForm.linkedinUrl.trim() || null,
             website_url: addForm.websiteUrl.trim() || null,
@@ -517,7 +515,7 @@ export default function Verification() {
           } as VerificationRecord,
           ...prev,
         ]);
-        setAddForm({ fullName: "", claimedBranch: "", claimedType: "", claimedStatus: "veteran", linkedinUrl: "", instagramHandle: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
+        setAddForm({ fullName: "", claimedBranch: "", claimedStatus: "veteran", linkedinUrl: "", instagramHandle: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
         setTimeout(() => {
           setAddOpen(false);
           setNewRecordId(null);
@@ -791,24 +789,16 @@ export default function Verification() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Type</Label>
-                  <Select value={addForm.claimedType} onValueChange={(v) => setAddForm((f) => ({ ...f, claimedType: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent>
-                      {TYPE_OPTIONS.map((t) => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
                   <Label>Status</Label>
                   <Select value={addForm.claimedStatus} onValueChange={(v) => setAddForm((f) => ({ ...f, claimedStatus: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                     <SelectContent>
-                      {CLAIMED_STATUS_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
+                      <SelectItem value="active_duty">Active Duty</SelectItem>
+                      <SelectItem value="veteran">Veteran</SelectItem>
+                      <SelectItem value="military_spouse">Military Spouse</SelectItem>
+                      <SelectItem value="gold_star">Gold Star Family</SelectItem>
+                      <SelectItem value="reservist">Reservist / Guard</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
