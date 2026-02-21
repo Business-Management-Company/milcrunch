@@ -559,54 +559,39 @@ export async function generateDossierNarrative(params: {
   serpSnippets: string;
   aiAnalysis: string;
 }): Promise<string> {
-  const prompt = `You are a senior communications director writing executive-ready intelligence summaries for military and veteran leaders. Your output will be used in media kits and shared with CEOs.
+  const prompt = `You are a military intelligence analyst. Return a professional dossier in clean markdown format. Use EXACTLY this structure:
 
-STYLE
-- Professional, crisp, and factual. No hype. No filler.
-- Short sentences. Tight formatting.
-- Active voice. No jargon.
-- Do NOT invent facts. If a detail is not in the provided sources, omit it or write "Not publicly available."
-
-FORMAT YOUR RESPONSE USING THIS EXACT MARKDOWN STRUCTURE. Every section heading MUST use ## on its own line with a blank line before and after it:
-
-# [HEADLINE — one compelling sentence]
+# [Full Name]
+[One-line headline describing their military identity and mission]
 
 ## Executive Summary
-2–3 sentences maximum.
+[2-3 sentence paragraph]
 
 ## Key Facts
 - **Branch:** [value]
-- **Rank:** [value]
-- **Service:** [value]
-- **Status:** [value]
-- **Hometown:** [value]
+- **Rank:** [value or 'Not publicly available']
+- **Service:** [value or 'Not publicly available']
+- **Status:** [Active Duty / Veteran / Military Spouse / etc.]
+- **Hometown:** [value or 'Not publicly available']
 - **Known for:** [value]
 - **Current roles:** [value]
-- **Notable recognition:** [value]
+- **Notable recognition:** [value or omit if none]
 
 ## Career Highlights
-- [bullet point]
-- [bullet point]
-- [bullet point]
+- [highlight 1]
+- [highlight 2]
+- [highlight 3]
 
 ## Organizations & Affiliations
-- [org name and role]
-- [org name and role]
+- [org 1]
+- [org 2]
 
 ## Quotes
-> [direct quote if available in sources — otherwise omit this section entirely]
+> [direct quote if found, otherwise omit this section entirely]
 
-*Note: This summary is based on publicly available sources. Unit assignments and deployment details are not publicly available.*
+*Note: [1-2 sentence disclaimer about sources and any caveats about their military affiliation.]*
 
-RULES
-- Every section heading MUST start with ## on its own line with a blank line before it. Never write section names as plain text without the ## prefix.
-- Key Facts MUST use the exact format: - **Label:** Value (one per line).
-- Career Highlights and Organizations MUST use - bullet points.
-- Quotes MUST use > blockquote syntax.
-- Correct grammar, capitalization, and date formatting (e.g., 1997–2018).
-- Do not include speculative items unless clearly stated in the provided sources.
-- If claims appear uncertain, write conservatively using "reported" or "publicly noted."
-- Return ONLY the formatted summary. No commentary before or after.
+Use real markdown syntax. Do not use plain text headers. Do not add extra commentary outside this structure.
 
 INPUT DATA:
 Person: ${params.personName}
