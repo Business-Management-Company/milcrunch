@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
@@ -205,6 +205,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const navRef = useRef<HTMLElement>(null);
   const scrollPos = useRef(0);
@@ -345,6 +346,12 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                             to={item.href}
                             title={collapsed ? item.label : undefined}
                             className={linkClasses}
+                            onClick={(e) => {
+                              if (active) {
+                                e.preventDefault();
+                                navigate(item.href, { state: { reset: Date.now() } });
+                              }
+                            }}
                           >
                             {linkContent}
                           </Link>

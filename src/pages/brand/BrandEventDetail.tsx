@@ -485,17 +485,16 @@ const BrandEventDetail = () => {
         .from("events")
         .update(payload)
         .eq("id", eventId)
-        .select()
-        .single();
+        .select();
       if (error) {
         console.error("[EventDetail] Supabase update error:", JSON.stringify(error, null, 2));
         throw new Error(error.message);
       }
-      if (!data) {
-        console.error("[EventDetail] Update returned no data — row may not have been updated (RLS?)");
-        throw new Error("Update failed — no rows affected");
+      if (!data || data.length === 0) {
+        console.error("[EventDetail] Update returned no rows — RLS may be blocking. Check that current user owns this event or has super_admin role.");
+        throw new Error("Update failed — no rows affected (permission issue)");
       }
-      console.log("[EventDetail] Saved row cover_image_url:", (data as Record<string, unknown>).cover_image_url);
+      console.log("[EventDetail] Saved row cover_image_url:", (data[0] as Record<string, unknown>).cover_image_url);
       toast.success("Event updated");
       fetchAll();
     } catch (err: unknown) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -149,6 +149,7 @@ function memberToCreatorCard(m: DirectoryMember): CreatorCard {
 
 const BrandDirectory = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isSuperAdmin, user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
   const { lists } = useLists();
@@ -216,6 +217,14 @@ const BrandDirectory = () => {
   }, []);
 
   useEffect(() => { loadDirectories(); }, [loadDirectories]);
+
+  // Reset to list view when nav link clicked while already on this page
+  useEffect(() => {
+    if (location.state?.reset && selectedDir) {
+      setSelectedDir(null);
+      setMembers([]);
+    }
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Load members when directory selected ──────────────────
 
