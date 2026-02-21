@@ -559,25 +559,54 @@ export async function generateDossierNarrative(params: {
   serpSnippets: string;
   aiAnalysis: string;
 }): Promise<string> {
-  const prompt = `Return ONLY a valid JSON object, no markdown, no explanation:
-{
-  "headline": "One compelling sentence about this person",
-  "executive_summary": "2-3 sentence paragraph",
-  "key_facts": {
-    "branch": "", "rank": "", "service": "", "status": "",
-    "hometown": "", "known_for": "", "current_roles": "", "notable_recognition": ""
-  },
-  "career_highlights": ["bullet 1", "bullet 2", "bullet 3"],
-  "organizations": ["org 1", "org 2"],
-  "quotes": ["quote 1"],
-  "note": "This summary is based on publicly available sources."
-}
+  const prompt = `You are a senior communications director writing executive-ready intelligence summaries for military and veteran leaders. Your output will be used in media kits and shared with CEOs.
 
-RULES:
-- Professional, crisp, factual. No hype. No filler.
-- Do NOT invent facts. If a detail is not in the provided sources, use "" for strings and [] for arrays.
+STYLE
+- Professional, crisp, and factual. No hype. No filler.
+- Short sentences. Tight formatting.
+- Active voice. No jargon.
+- Do NOT invent facts. If a detail is not in the provided sources, omit it or write "Not publicly available."
+
+FORMAT YOUR RESPONSE USING THIS EXACT MARKDOWN STRUCTURE. Every section heading MUST use ## on its own line with a blank line before and after it:
+
+# [HEADLINE — one compelling sentence]
+
+## Executive Summary
+2–3 sentences maximum.
+
+## Key Facts
+- **Branch:** [value]
+- **Rank:** [value]
+- **Service:** [value]
+- **Status:** [value]
+- **Hometown:** [value]
+- **Known for:** [value]
+- **Current roles:** [value]
+- **Notable recognition:** [value]
+
+## Career Highlights
+- [bullet point]
+- [bullet point]
+- [bullet point]
+
+## Organizations & Affiliations
+- [org name and role]
+- [org name and role]
+
+## Quotes
+> [direct quote if available in sources — otherwise omit this section entirely]
+
+*Note: This summary is based on publicly available sources. Unit assignments and deployment details are not publicly available.*
+
+RULES
+- Every section heading MUST start with ## on its own line with a blank line before it. Never write section names as plain text without the ## prefix.
+- Key Facts MUST use the exact format: - **Label:** Value (one per line).
+- Career Highlights and Organizations MUST use - bullet points.
+- Quotes MUST use > blockquote syntax.
+- Correct grammar, capitalization, and date formatting (e.g., 1997–2018).
+- Do not include speculative items unless clearly stated in the provided sources.
 - If claims appear uncertain, write conservatively using "reported" or "publicly noted."
-- Return ONLY the JSON object. No markdown fences, no explanation before or after.
+- Return ONLY the formatted summary. No commentary before or after.
 
 INPUT DATA:
 Person: ${params.personName}
@@ -606,42 +635,35 @@ ${params.aiAnalysis.slice(0, 2000)}`;
     if (!res.ok) throw new Error(`Anthropic ${res.status}`);
     const data = await res.json();
     const raw = (data.content?.[0]?.text ?? "").trim();
-    const jsonStr = raw.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-    const d = JSON.parse(jsonStr);
 
-    const lines: string[] = [];
-    if (d.headline) lines.push(`# ${d.headline}`, "");
-    if (d.executive_summary) lines.push("## Executive Summary", "", d.executive_summary, "");
-    if (d.key_facts) {
-      lines.push("## Key Facts", "", "| Field | Value |", "|-------|-------|");
-      const labels: Record<string, string> = {
-        branch: "Branch", rank: "Rank", service: "Service", status: "Status",
-        hometown: "Hometown", known_for: "Known for", current_roles: "Current roles",
-        notable_recognition: "Notable recognition",
-      };
-      for (const [key, label] of Object.entries(labels)) {
-        const val = (d.key_facts as Record<string, string>)[key];
-        if (val) lines.push(`| ${label} | ${val} |`);
-      }
-      lines.push("");
-    }
-    if (d.career_highlights?.length) {
-      lines.push("## Career Highlights", "");
-      for (const item of d.career_highlights) lines.push(`- ${item}`);
-      lines.push("");
-    }
-    if (d.organizations?.length) {
-      lines.push("## Organizations & Affiliations", "");
-      for (const item of d.organizations) lines.push(`- ${item}`);
-      lines.push("");
-    }
-    if (d.quotes?.length) {
-      lines.push("## Quotes", "");
-      for (const q of d.quotes) lines.push(`> ${q}`, "");
-    }
-    if (d.note) lines.push(`*${d.note}*`);
+    const DOSSIER_HEADERS = [
+      "Executive Summary",
+      "Key Facts",
+      "Career Highlights",
+      "Organizations & Affiliations",
+      "Organizations and Affiliations",
+      "Quotes",
+      "Notable Achievements",
+      "Post-Service Career",
+    ];
 
-    return lines.join("\n");
+    const formatted = raw
+      .split("\n")
+      .map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return line;
+        if (trimmed.startsWith("#")) return line;
+        const matchedHeader = DOSSIER_HEADERS.find(
+          (h) => trimmed.toLowerCase() === h.toLowerCase()
+        );
+        if (matchedHeader) {
+          return `\n## ${matchedHeader}\n`;
+        }
+        return line;
+      })
+      .join("\n");
+
+    return formatted;
   } catch (e) {
     console.error("[Verification] Dossier generation error:", e);
     return "";
