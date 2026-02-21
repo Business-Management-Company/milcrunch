@@ -322,6 +322,7 @@ export default function Verification() {
     claimedType: "",
     claimedStatus: "veteran",
     linkedinUrl: "",
+    instagramHandle: "",
     websiteUrl: "",
     notes: "",
     city: "",
@@ -426,6 +427,7 @@ export default function Verification() {
           claimed_type: addForm.claimedType || null,
           claimed_status: addForm.claimedStatus,
           linkedin_url: addForm.linkedinUrl.trim() || null,
+          source_username: addForm.instagramHandle.trim() || null,
           website_url: addForm.websiteUrl.trim() || null,
           notes: addForm.notes.trim() || null,
           verification_score: result.verificationScore,
@@ -515,7 +517,7 @@ export default function Verification() {
           } as VerificationRecord,
           ...prev,
         ]);
-        setAddForm({ fullName: "", claimedBranch: "", claimedType: "", claimedStatus: "veteran", linkedinUrl: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
+        setAddForm({ fullName: "", claimedBranch: "", claimedType: "", claimedStatus: "veteran", linkedinUrl: "", instagramHandle: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
         setTimeout(() => {
           setAddOpen(false);
           setNewRecordId(null);
@@ -817,6 +819,19 @@ export default function Verification() {
                     onChange={(e) => setAddForm((f) => ({ ...f, linkedinUrl: e.target.value }))}
                     placeholder="https://linkedin.com/in/..."
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Instagram Handle</label>
+                  <div className="flex items-center border rounded-lg overflow-hidden">
+                    <span className="px-3 py-2 bg-gray-50 dark:bg-gray-800 text-muted-foreground text-sm border-r">@</span>
+                    <input
+                      type="text"
+                      placeholder="username"
+                      value={addForm.instagramHandle}
+                      onChange={(e) => setAddForm({ ...addForm, instagramHandle: e.target.value.replace('@', '') })}
+                      className="flex-1 px-3 py-2 text-sm bg-transparent outline-none"
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label>Website</Label>
