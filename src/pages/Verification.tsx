@@ -916,7 +916,6 @@ export default function Verification() {
                   <TableHead className="w-8"></TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Branch</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Confidence</TableHead>
                   <TableHead>Sources</TableHead>
@@ -942,7 +941,6 @@ export default function Verification() {
                         </div>
                       </TableCell>
                       <TableCell>{row.claimed_branch ?? "—"}</TableCell>
-                      <TableCell>{row.claimed_type ?? "—"}</TableCell>
                       <TableCell><StatusIcon status={row.status ?? "pending"} /></TableCell>
                       <TableCell>
                         <TooltipProvider delayDuration={200}>
@@ -996,7 +994,7 @@ export default function Verification() {
                     </TableRow>
                     {expandedId === row.id && expanded && (
                       <TableRow key={`${row.id}-exp`} className="bg-muted/30 border-gray-200 dark:border-gray-800">
-                        <TableCell colSpan={9} className="p-0">
+                        <TableCell colSpan={8} className="p-0">
                           <ExpandedRow record={expanded} onRefresh={fetchVerifications} />
                         </TableCell>
                       </TableRow>
