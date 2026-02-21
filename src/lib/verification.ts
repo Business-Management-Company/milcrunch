@@ -549,7 +549,9 @@ export async function generateDossierNarrative(params: {
   serpSnippets: string;
   aiAnalysis: string;
 }): Promise<string> {
-  const prompt = `Summarize this person's background based on the following web content. Write a clean, professional 3-5 paragraph narrative dossier about ${params.personName} (claimed ${params.claimedType}, ${params.claimedBranch}).
+  const prompt = `Format your response using proper markdown: use ## for section headings, ** for bold labels, and - for bullet points. Do not use plain bullet characters (•) or plain text headings without markdown syntax.
+
+Summarize this person's background based on the following web content. Write a clean, professional 3-5 paragraph narrative dossier about ${params.personName} (claimed ${params.claimedType}, ${params.claimedBranch}).
 
 Include:
 - Military service background (branch, rank, dates, units if available)
