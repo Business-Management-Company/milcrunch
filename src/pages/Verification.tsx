@@ -665,6 +665,52 @@ export default function Verification() {
 
   return (
     <div className="space-y-6">
+      {pipelineRunning && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-10 w-full max-w-md mx-4 flex flex-col items-center gap-6">
+            <div className="relative w-20 h-20">
+              <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#6C5CE7" strokeWidth="8"
+                  strokeDasharray="100 183" strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <ShieldCheck className="h-8 w-8 text-[#6C5CE7]" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-[#000741] dark:text-white mb-1">Verifying {addForm.fullName}</p>
+              <p className="text-sm text-muted-foreground">Running AI-powered multi-source verification...</p>
+            </div>
+            <div className="w-full space-y-3">
+              {[1, 2, 3, 4].map((n) => {
+                const p = phases.find((x) => x.phase === n);
+                const labels = ["People Data Labs", "Web Search", "Deep Extraction", "AI Analysis"];
+                const isDone = p?.status === "done";
+                const isRunning = p?.status === "running";
+                return (
+                  <div key={n} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${isRunning ? "bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800" : isDone ? "opacity-50" : "opacity-30"}`}>
+                    {isDone ? (
+                      <Check className="h-4 w-4 text-purple-600 shrink-0" />
+                    ) : isRunning ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7] shrink-0" />
+                    ) : (
+                      <span className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
+                    )}
+                    <span className={`text-sm font-medium ${isRunning ? "text-[#6C5CE7]" : ""}`}>
+                      Phase {n}: {p?.name ?? labels[n - 1]}
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg opacity-30">
+                <span className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
+                <span className="text-sm font-medium">Background Review</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h1 className="text-2xl font-bold text-[#000741] dark:text-white">Military Verification Center</h1>
         <p className="text-muted-foreground mt-0.5">AI-powered multi-source verification for speakers and creators</p>
@@ -817,22 +863,6 @@ export default function Verification() {
                     rows={2}
                   />
                 </div>
-                {pipelineRunning && (
-                  <div className="space-y-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-muted/30">
-                    <p className="text-sm font-medium">Verification pipeline</p>
-                    {[1, 2, 3, 4].map((n) => {
-                      const p = phases.find((x) => x.phase === n);
-                      return (
-                        <div key={n} className="flex items-center gap-2 text-sm">
-                          {p?.status === "done" ? <Check className="h-4 w-4 text-purple-600" /> : p?.status === "running" ? <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" /> : <span className="w-4" />}
-                          <span className={p?.status === "done" ? "text-muted-foreground" : ""}>
-                            Phase {n}: {p?.name ?? ["People Data Labs", "Web Search", "Deep Extraction", "AI Analysis"][n - 1]}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
                 {newRecordId && <p className="text-sm text-purple-600">Verification saved. Redirecting...</p>}
                 <Button
                   onClick={handleStartVerification}
