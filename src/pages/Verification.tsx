@@ -2216,7 +2216,8 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   };
 
   // Avatar from PDL data
-  const avatarUrl = (pdlData as Record<string, unknown> | null)?.profile_pic_url as string | undefined;
+  const avatarUrl = (record.profile_photo_url as string | undefined)
+    || ((pdlData as Record<string, unknown> | null)?.profile_pic_url as string | undefined);
   const initials = record.person_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   // Group sources by category for accordion display
@@ -2234,7 +2235,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     <div className="p-6 space-y-8 max-w-5xl mx-auto">
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-6">
-        <div className="shrink-0">
+        <div className="rink-0 relative group">
           {avatarUrl ? (
             <img src={avatarUrl} alt={record.person_name} className="h-24 w-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" />
           ) : (
@@ -2242,6 +2243,29 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               {initials}
             </div>
           )}
+          <label className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const ext = file.name.split('.').pop();
+              const path = `verification-photos/${record.id}.${ext}`;
+              const { error: uploadError } = await supabase.storage
+                .from('creator-avatars')
+                .upload(path, file, { upsert: true });
+              if (uploadError) { toast.error('Upload failed'); return; }
+              const { data: urlData } = supabase.storage
+                .from('creator-avatars')
+                .getPublicUrl(path);
+              const publicUrl = urlData.publicUrl;
+              await supabase.from('verifications').update({ profile_photo_url: publicUrl }).eq('id', record.id);
+              toast.success('Photo updated');
+              onRefresh?.();
+            }} />
+            <span className="text-white text-xs font-medium flex flex-col items-center gap-1">
+              <User className="h-4 w-4" />
+              Upload
+            </span>
+          </label>
         </div>
 
         <div className="flex-1 min-w-0">
