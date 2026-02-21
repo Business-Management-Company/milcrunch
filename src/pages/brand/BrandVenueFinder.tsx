@@ -427,8 +427,8 @@ export default function BrandVenueFinder() {
 
       {/* Search bar */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-4">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-col md:flex-row gap-2">
+          <div className="relative md:w-[55%]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="Search term (e.g. 'conference venue', 'ballroom')"
@@ -438,7 +438,7 @@ export default function BrandVenueFinder() {
               className="pl-9"
             />
           </div>
-          <div className="relative w-56">
+          <div className="relative md:w-[35%]">
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="City or location"
