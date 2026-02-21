@@ -13,6 +13,8 @@ interface ChatMessage {
   text: string;
   cta?: { label: string; link: string };
   followUp?: string;
+  creators?: any[];
+  loading?: boolean;
 }
 
 function getQuickPrompts(pathname: string): string[] {
@@ -25,6 +27,22 @@ function getQuickPrompts(pathname: string): string[] {
   if (pathname.startsWith("/brand/dashboard") || pathname.startsWith("/admin/dashboard") || pathname === "/brand" || pathname === "/admin")
     return ["📊 Show my analytics", "🔍 Find creators", "📅 Upcoming events"];
   return ["🔍 Find creators", "🎙️ Browse podcasts", "📅 View events", "📊 Analytics"];
+}
+
+async function searchCreatorsIC(query: string): Promise<any[]> {
+  try {
+    const res = await fetch('/api/ic-discovery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: 'instagram',
+        filters: { ai_search: query },
+        paging: { limit: 6, page: 1 }
+      })
+    });
+    const data = await res.json();
+    return data.results ?? data.influencers ?? [];
+  } catch { return []; }
 }
 
 let idCounter = 0;
@@ -66,14 +84,35 @@ export default function FloatingAdminChat() {
     return () => window.removeEventListener("open-ai-chat", handler);
   }, []);
 
-  const addResponse = (input: string) => {
+  const addResponse = async (input: string) => {
     const userMsg: ChatMessage = { id: makeId(), role: "user", text: input };
     setMessages((prev) => [...prev, userMsg]);
 
+    const lower = input.toLowerCase();
+    const isCreatorSearch = lower.match(/find|show|give|list|search|looking for|need|want|creators?|influencers?|speakers?|veterans?|military|army|navy|marines|air force|coast guard/);
+
+    if (isCreatorSearch) {
+      const loadingId = makeId();
+      setMessages(m => [...m, { id: loadingId, role: 'assistant' as const, text: 'Searching our military creator network...', loading: true }]);
+      const results = await searchCreatorsIC(input);
+      setMessages(m => m.filter(msg => msg.id !== loadingId));
+      if (results.length > 0) {
+        setMessages(m => [...m, {
+          id: makeId(),
+          role: 'assistant' as const,
+          text: `Found ${results.length} creators matching your search:`,
+          creators: results.slice(0, 6)
+        }]);
+      } else {
+        setMessages(m => [...m, { id: makeId(), role: 'assistant' as const, text: "I couldn't find results for that search. Try adjusting your criteria or open Creator Discovery for advanced filters.", cta: { label: 'Open Discovery →', link: '/brand/discover' } }]);
+      }
+      return;
+    }
+
+    // Fall back to canned responses for non-creator queries
     setTimeout(() => {
       const response = getChatResponse(input);
-      const assistantMsg: ChatMessage = { id: makeId(), role: "assistant", text: response.text, cta: response.cta, followUp: response.followUp };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages(m => [...m, { id: makeId(), role: 'assistant' as const, ...response }]);
     }, 500);
   };
 
@@ -179,6 +218,25 @@ export default function FloatingAdminChat() {
                     <MarkdownRenderer content={m.text} />
                   ) : (
                     <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                  )}
+                  {m.creators && m.creators.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {m.creators.map((c: any, i: number) => (
+                        <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                          <img
+                            src={c.picture ?? c.avatar ?? `https://unavatar.io/instagram/${c.username}`}
+                            alt={c.fullname ?? c.username}
+                            className="h-10 w-10 rounded-full object-cover shrink-0"
+                            onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.fullname ?? c.username ?? 'C')}&background=6C5CE7&color=fff`; }}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold truncate">{c.fullname ?? c.username}</p>
+                            <p className="text-xs text-muted-foreground truncate">@{c.username}</p>
+                            <p className="text-xs text-muted-foreground">{c.followers ? (c.followers >= 1000 ? `${(c.followers/1000).toFixed(1)}K` : c.followers) : ''}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                   {m.cta && (
                     <button
