@@ -176,12 +176,13 @@ For all other questions, respond naturally and concisely.`,
           const { creators } = await searchCreators(parsed.query, { page: 1 });
           setMessages((m) => m.filter((msg) => msg.id !== loadingId));
 
+          const displayCount = Math.min(creators.length, parsed.count ?? 10);
+
           if (creators.length > 0) {
-            const contextMsg = `The user asked: "${input}". You found ${creators.length} military creators.
-Write a short, natural, conversational response (2 sentences max) acknowledging what you found
-and asking a relevant follow-up question to refine the search.
-Use authentic military culture naturally — not forced catchphrases.
-Vary your tone. Don't start every response the same way.`;
+            const actualCount = displayCount;
+            const creatorSummary = creators.slice(0, displayCount).map(r => r.full_name || r.name || r.username).join(', ');
+
+            const contextMsg = `The user asked: "${input}". The search returned exactly ${actualCount} creators: ${creatorSummary}. Write a natural 1-2 sentence response acknowledging this exact number. Do not invent or assume a different count. Ask a relevant follow-up question to refine the search. Use authentic military culture naturally — not forced catchphrases. Vary your tone.`;
 
             const responseRes = await fetch("/api/anthropic", {
               method: "POST",
@@ -193,14 +194,14 @@ Vary your tone. Don't start every response the same way.`;
               }),
             });
             const responseData = await responseRes.json();
-            const friendlyText = responseData.content?.[0]?.text ?? `Found ${Math.min(creators.length, 10)} creators matching your request.`;
+            const friendlyText = responseData.content?.[0]?.text ?? `Found ${actualCount} creators matching your request.`;
             setMessages((m) => [
               ...m,
               {
                 id: makeId(),
                 role: "assistant" as const,
                 text: friendlyText,
-                creators: creators.slice(0, parsed.count ?? 10),
+                creators: creators.slice(0, displayCount),
                 cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(parsed.query)}` },
               },
             ]);
