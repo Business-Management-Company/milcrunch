@@ -2384,17 +2384,27 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 space-y-8">
+    <div className="w-full py-6 mx-6 space-y-8">
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-6">
         <div className="rink-0 relative group">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={record.person_name} className="h-24 w-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" />
-          ) : (
-            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl border-2 border-gray-200 dark:border-gray-700">
-              {initials}
-            </div>
-          )}
+            <img
+              src={avatarUrl}
+              alt={record.person_name}
+              className="h-24 w-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                e.currentTarget.nextElementSibling?.classList.remove("hidden");
+              }}
+            />
+          ) : null}
+          <div className={cn(
+            "h-24 w-24 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl border-2 border-gray-200 dark:border-gray-700",
+            avatarUrl ? "hidden" : ""
+          )}>
+            {initials}
+          </div>
           <label className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
               const file = e.target.files?.[0];
