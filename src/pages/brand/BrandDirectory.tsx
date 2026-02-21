@@ -22,6 +22,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+} from "@/components/ui/dropdown-menu";
+import {
   Users,
   Search,
   Eye,
@@ -42,6 +53,10 @@ import {
   Star,
   Pencil,
   ExternalLink,
+  MoreHorizontal,
+  ShieldCheck,
+  ListPlus,
+  FolderPlus,
 } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import {
@@ -51,6 +66,7 @@ import {
   deleteDirectory,
   toggleMemberApproval,
   removeMember,
+  addToDirectory,
   promoteListToDirectory,
   type Directory,
   type DirectoryMember,
@@ -162,7 +178,7 @@ const BrandDirectory = () => {
   const location = useLocation();
   const { isSuperAdmin, user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
-  const { lists } = useLists();
+  const { lists, addCreatorToList } = useLists();
 
   // Directory-level state
   const [directories, setDirectories] = useState<Directory[]>([]);
@@ -318,6 +334,62 @@ const BrandDirectory = () => {
       setMembers((prev) => prev.filter((m) => m.id !== id));
       setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
       toast.success(`${name} removed from directory`);
+    }
+  };
+
+  const handleVerify = (m: DirectoryMember) => {
+    navigate("/brand/verification", {
+      state: {
+        prefill: {
+          fullName: m.creator_name ?? "",
+          claimedBranch: m.branch ?? "",
+          claimedType: "",
+          claimedStatus: "",
+          linkedinUrl: "",
+          websiteUrl: "",
+          notes: `Added from directory: ${selectedDir?.name ?? ""}`,
+          source: "instagram",
+          sourceUsername: m.creator_handle ?? "",
+        },
+      },
+    });
+  };
+
+  const handleAddToList = (m: DirectoryMember, listId: string) => {
+    addCreatorToList(listId, {
+      id: m.creator_handle ?? m.id,
+      name: m.creator_name ?? "",
+      username: m.creator_handle ?? "",
+      avatar: m.avatar_url ?? "",
+      followers: m.follower_count ?? 0,
+      engagementRate: m.engagement_rate ?? 0,
+      platforms: m.platforms ?? ["instagram"],
+      bio: m.bio ?? "",
+    });
+    const targetList = lists.find((l) => l.id === listId);
+    toast.success(`Added to ${targetList?.name ?? "list"}`);
+  };
+
+  const handleAddToOtherDirectory = async (m: DirectoryMember, dirId: string) => {
+    const { error } = await addToDirectory(dirId, {
+      handle: m.creator_handle ?? "",
+      display_name: m.creator_name ?? "",
+      platform: "instagram",
+      avatar_url: m.avatar_url,
+      ic_avatar_url: m.ic_avatar_url,
+      follower_count: m.follower_count,
+      engagement_rate: m.engagement_rate,
+      bio: m.bio,
+      branch: m.branch,
+      platforms: m.platforms,
+      platform_urls: m.platform_urls as Record<string, string> | undefined,
+      enrichment_data: m.enrichment_data,
+    });
+    if (error) {
+      toast.error(`Failed to add: ${error}`);
+    } else {
+      const targetDir = directories.find((d) => d.id === dirId);
+      toast.success(`Added to ${targetDir?.name ?? "directory"}`);
     }
   };
 
@@ -826,19 +898,64 @@ const BrandDirectory = () => {
                       >
                         <Star className={cn("h-4 w-4", m.featured_homepage && "fill-current")} />
                       </button>
-                      <button
-                        type="button"
-                        title="Edit stats"
-                        className="p-1 rounded text-gray-400 hover:text-pd-blue transition-colors"
-                        onClick={() => openEditModal(m)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      {m.approved && (
-                        <Button variant="ghost" size="sm" className="text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg h-7 px-2" onClick={() => handleRemove(m.id, m.creator_name ?? "")}>
-                          Remove
-                        </Button>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-colors">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleVerify(m)}>
+                            <ShieldCheck className="h-4 w-4 mr-2" />
+                            Verify
+                          </DropdownMenuItem>
+                          {lists.length > 0 && (
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <ListPlus className="h-4 w-4 mr-2" />
+                                Add to List
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                  {lists.map((l) => (
+                                    <DropdownMenuItem key={l.id} onClick={() => handleAddToList(m, l.id)}>
+                                      {l.name}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                            </DropdownMenuSub>
+                          )}
+                          {directories.filter((d) => d.id !== selectedDir?.id).length > 0 && (
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <FolderPlus className="h-4 w-4 mr-2" />
+                                Add to Directory
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                  {directories
+                                    .filter((d) => d.id !== selectedDir?.id)
+                                    .map((d) => (
+                                      <DropdownMenuItem key={d.id} onClick={() => handleAddToOtherDirectory(m, d.id)}>
+                                        {d.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                            </DropdownMenuSub>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openEditModal(m)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit Stats
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemove(m.id, m.creator_name ?? "")}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </Card>
                 );
@@ -931,21 +1048,64 @@ const BrandDirectory = () => {
                         </button>
                       </td>
                       <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
-                            title="Edit stats"
-                            className="p-1 rounded text-gray-400 hover:text-pd-blue transition-colors"
-                            onClick={() => openEditModal(m)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          {m.approved && (
-                            <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg" onClick={() => handleRemove(m.id, m.creator_name ?? "")}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button type="button" className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-colors">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleVerify(m)}>
+                              <ShieldCheck className="h-4 w-4 mr-2" />
+                              Verify
+                            </DropdownMenuItem>
+                            {lists.length > 0 && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <ListPlus className="h-4 w-4 mr-2" />
+                                  Add to List
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                  <DropdownMenuSubContent>
+                                    {lists.map((l) => (
+                                      <DropdownMenuItem key={l.id} onClick={() => handleAddToList(m, l.id)}>
+                                        {l.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                              </DropdownMenuSub>
+                            )}
+                            {directories.filter((d) => d.id !== selectedDir?.id).length > 0 && (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <FolderPlus className="h-4 w-4 mr-2" />
+                                  Add to Directory
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                  <DropdownMenuSubContent>
+                                    {directories
+                                      .filter((d) => d.id !== selectedDir?.id)
+                                      .map((d) => (
+                                        <DropdownMenuItem key={d.id} onClick={() => handleAddToOtherDirectory(m, d.id)}>
+                                          {d.name}
+                                        </DropdownMenuItem>
+                                      ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                              </DropdownMenuSub>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => openEditModal(m)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit Stats
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemove(m.id, m.creator_name ?? "")}>
+                              <Trash2 className="h-4 w-4 mr-2" />
                               Remove
-                            </Button>
-                          )}
-                        </div>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   );
