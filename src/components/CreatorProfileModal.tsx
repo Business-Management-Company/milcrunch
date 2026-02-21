@@ -47,6 +47,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import CreateListModal from "@/components/CreateListModal";
 
+const BRANCH_STYLES: Record<string, string> = {
+  Army: "bg-green-800/10 text-green-800 dark:bg-green-800/20 dark:text-green-400",
+  Navy: "bg-blue-900/10 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400",
+  "Air Force": "bg-sky-600/10 text-sky-700 dark:bg-sky-600/20 dark:text-sky-400",
+  Marines: "bg-red-700/10 text-red-700 dark:bg-red-700/20 dark:text-red-400",
+  "Coast Guard": "bg-orange-600/10 text-orange-700 dark:bg-orange-600/20 dark:text-orange-400",
+  "Space Force": "bg-indigo-600/10 text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-400",
+};
+
 const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "twitter", "linkedin"];
 const PLATFORM_LABELS: Record<string, string> = {
   instagram: "Instagram",
@@ -482,6 +491,11 @@ export default function CreatorProfileModal({
       setModalAvatarSrc(modalAvatarInitial);
     }
   }, [modalAvatarInitial]);
+  const detectedBranch = useMemo(() => {
+    const bioText = (igRecord?.biography as string) ?? creator?.bio ?? "";
+    return creator?.branch || detectBranch(bioText);
+  }, [igRecord, creator?.bio, creator?.branch]);
+
   const bio = useMemo(() => {
     if (selectedPlatform === "tiktok" && tiktokData) {
       return (tiktokData.biography as string) ?? (tiktokData.bio as string) ?? creator?.bio ?? "";
@@ -786,10 +800,20 @@ export default function CreatorProfileModal({
                 href={platformLink ?? `https://instagram.com/${displayUsername}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-center text-[#6C5CE7] hover:underline mb-4 block"
+                className="text-sm text-center text-[#6C5CE7] hover:underline mb-2 block"
               >
                 @{displayUsername}
               </a>
+            )}
+            {detectedBranch && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold", BRANCH_STYLES[detectedBranch] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400")}>
+                  {detectedBranch}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-0.5 text-[11px] font-semibold">
+                  Veteran
+                </span>
+              </div>
             )}
             <div className="space-y-2">
               {addedToList ? (
