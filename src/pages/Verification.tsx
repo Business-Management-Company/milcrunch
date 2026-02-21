@@ -2395,10 +2395,6 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 {record.claimed_branch}
               </Badge>
             )}
-            {record.claimed_type && <Badge variant="secondary" className="text-xs">{record.claimed_type}</Badge>}
-            {record.claimed_status && record.claimed_status.toLowerCase() !== (record.claimed_type ?? "").toLowerCase() && (
-              <Badge variant="outline" className="text-xs capitalize">{record.claimed_status?.replace("_", " ")}</Badge>
-            )}
             {locationStr && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{locationStr}</span>
             )}
