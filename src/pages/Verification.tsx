@@ -2220,6 +2220,22 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     || ((pdlData as Record<string, unknown> | null)?.profile_pic_url as string | undefined);
   const initials = record.person_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
+  useEffect(() => {
+    if (record.profile_photo_url) return; // already has a photo
+    (async () => {
+      // Try to find photo from directory_members by name or source_username
+      const handle = record.source_username;
+      const query = handle
+        ? supabase.from('directory_members').select('ic_avatar_url').eq('creator_handle', handle).maybeSingle()
+        : supabase.from('directory_members').select('ic_avatar_url').ilike('name', record.person_name).maybeSingle();
+      const { data } = await query;
+      if (data?.ic_avatar_url) {
+        await supabase.from('verifications').update({ profile_photo_url: data.ic_avatar_url }).eq('id', record.id);
+        onRefresh?.();
+      }
+    })();
+  }, [record.id]);
+
   // Group sources by category for accordion display
   const sourcesByCategory = useMemo(() => {
     const map = new Map<string, EvidenceSource[]>();
