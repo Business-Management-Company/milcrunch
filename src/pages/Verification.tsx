@@ -2618,7 +2618,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             <Globe className="h-5 w-5 text-[#6C5CE7]" />
             <h3 className="text-lg font-bold text-[#000741] dark:text-white">Social Verification</h3>
           </button>
-          {socialOpen && <SocialVerificationSection record={record} />}
+          {socialOpen && <div className="mt-3"><SocialVerificationSection record={record} /></div>}
         </section>
       )}
 
