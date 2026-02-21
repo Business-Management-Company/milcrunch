@@ -1584,7 +1584,7 @@ const READINESS_ITEMS: { key: string; label: string; auto: boolean }[] = [
 ];
 
 function SpeakerReadinessAssessment({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const rawChecks = (record.manual_checks ?? {}) as Record<string, unknown>;
   const [localChecks, setLocalChecks] = useState<Record<string, boolean>>(() => {
     const out: Record<string, boolean> = {};
@@ -2193,8 +2193,8 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [editNotes, setEditNotes] = useState(record.notes ?? "");
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
-  const [summaryOpen, setSummaryOpen] = useState(true);
-  const [careerOpen, setCareerOpen] = useState(true);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [careerOpen, setCareerOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
