@@ -733,18 +733,42 @@ export async function approveForDirectory(data: {
 
   const slug = generateProfileSlug(data.display_name, handle);
 
-  // Save the raw avatar URL directly — CDN URLs expire after ~24h
-  // but a daily cron job refreshes them via Discovery API.
-  let avatarUrl = data.ic_avatar_url || data.avatar_url || null;
-  if (avatarUrl && avatarUrl.includes("ui-avatars.com")) avatarUrl = null;
-  if (avatarUrl) avatarUrl = avatarUrl.replace(/^http:\/\//i, "https://");
+  // Upload avatar to permanent storage at add-time (CDN URL is fresh right now).
+  // If upload fails, save null — initials will show, and Refresh Photos can retry later.
+  let cdnUrl = data.ic_avatar_url || data.avatar_url || null;
+  if (cdnUrl && cdnUrl.includes("ui-avatars.com")) cdnUrl = null;
+  if (cdnUrl) cdnUrl = cdnUrl.replace(/^http:\/\//i, "https://");
+
+  let permanentUrl: string | null = null;
+  if (cdnUrl) {
+    // Skip upload if already a Supabase Storage URL
+    if (cdnUrl.includes("supabase.co/storage")) {
+      permanentUrl = cdnUrl;
+    } else {
+      try {
+        const resp = await fetch("/api/upload-creator-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ handle, imageUrl: cdnUrl, updateDb: false }),
+        });
+        if (resp.ok) {
+          const result = await resp.json();
+          if (result.url) permanentUrl = result.url;
+        } else {
+          console.warn("[approveForDirectory] avatar upload failed:", resp.status);
+        }
+      } catch (err) {
+        console.warn("[approveForDirectory] avatar upload error:", err);
+      }
+    }
+  }
 
   const payload: Record<string, unknown> = {
     creator_handle: handle,
     creator_name: data.display_name,
     platform: data.platform || "instagram",
-    avatar_url: avatarUrl,
-    ic_avatar_url: avatarUrl,
+    avatar_url: permanentUrl,
+    ic_avatar_url: permanentUrl,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,

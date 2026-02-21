@@ -91,27 +91,37 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
-/** Avatar component — renders ic_avatar_url with onError fallback to initials. */
+/** Avatar component — renders permanent Supabase URL with onError fallback to initials. */
 function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" }) {
   const src = m.ic_avatar_url || m.avatar_url || null;
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(!src);
   const prevSrc = useRef(src);
   if (src !== prevSrc.current) {
     prevSrc.current = src;
-    if (failed) setFailed(false);
+    setFailed(!src);
   }
   const isLg = size === "lg";
-  const showImg = src && !failed;
+
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    // Instagram returns a tiny default avatar when the real one is missing.
+    // Detect it by checking natural dimensions — real profile pics are > 50px.
+    const img = e.currentTarget;
+    if (img.naturalWidth < 50 || img.naturalHeight < 50) {
+      setFailed(true);
+    }
+  };
+
   return (
     <div className={cn(
       "rounded-full overflow-hidden relative",
       isLg ? "w-[72px] h-[72px] md:w-[88px] md:h-[88px] mb-3 border-[3px] border-white dark:border-gray-700 ring-1 ring-gray-200 dark:ring-gray-600 shadow-sm" : "w-10 h-10 shrink-0 border border-gray-200 dark:border-gray-700",
     )}>
-      {showImg ? (
+      {src && !failed ? (
         <img
           src={src}
           alt={m.creator_name ?? ""}
           className="w-full h-full object-cover"
+          onLoad={handleLoad}
           onError={() => setFailed(true)}
         />
       ) : (

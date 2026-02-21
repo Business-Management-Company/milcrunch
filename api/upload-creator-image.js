@@ -4,11 +4,12 @@ const BUCKET = "creator-avatars";
 
 /**
  * POST /api/upload-creator-image
- * Accepts pre-fetched image data (base64) from the browser and uploads to Supabase Storage.
- * The browser fetches Instagram CDN images directly (no CORS issue),
- * validates them, and sends the bytes here — no server-side CDN fetch needed.
  *
- * Body: { handle, imageBase64, mimeType?, updateDb? }
+ * Two modes:
+ *   1. { handle, imageUrl }     — server fetches the image from the URL, validates, uploads
+ *   2. { handle, imageBase64 }  — accepts pre-encoded base64 image data
+ *
+ * Returns { url } — the permanent Supabase Storage public URL.
  */
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -22,11 +23,11 @@ export default async function handler(req, res) {
     }
   }
 
-  const { handle: h, creatorHandle, imageBase64, mimeType, updateDb } = body || {};
+  const { handle: h, creatorHandle, imageBase64, imageUrl, mimeType, updateDb } = body || {};
   const handle = h || creatorHandle;
 
-  if (!handle || !imageBase64) {
-    return res.status(400).json({ error: "handle and imageBase64 are required" });
+  if (!handle || (!imageBase64 && !imageUrl)) {
+    return res.status(400).json({ error: "handle and (imageBase64 or imageUrl) required" });
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -39,15 +40,53 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Decode base64 to buffer
-    const buffer = Buffer.from(imageBase64, "base64");
+    let buffer;
+    let contentType = mimeType && mimeType.startsWith("image/") ? mimeType : "image/jpeg";
 
+    if (imageBase64) {
+      // ── Mode 1: base64 ──
+      buffer = Buffer.from(imageBase64, "base64");
+    } else {
+      // ── Mode 2: fetch from URL (server-side) ──
+      console.log("[upload]", handle, "fetching", imageUrl.substring(0, 120));
+      const imgResp = await fetch(imageUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        redirect: "follow",
+      });
+
+      if (!imgResp.ok) {
+        console.warn("[upload]", handle, "fetch failed:", imgResp.status);
+        return res.status(400).json({ error: `Image fetch failed: ${imgResp.status}` });
+      }
+
+      const respType = imgResp.headers.get("content-type") || "";
+      if (!respType.startsWith("image/")) {
+        console.warn("[upload]", handle, "not an image:", respType);
+        return res.status(400).json({ error: `Not an image: ${respType}` });
+      }
+      contentType = respType.split(";")[0];
+
+      const arrayBuf = await imgResp.arrayBuffer();
+      buffer = Buffer.from(arrayBuf);
+    }
+
+    // ── Validate ──
     if (buffer.length < 5000) {
-      console.error("[upload]", handle, "image too small:", buffer.length, "bytes");
+      console.warn("[upload]", handle, "too small:", buffer.length, "bytes");
       return res.status(400).json({ error: `Image too small (${buffer.length} bytes)` });
     }
 
-    const contentType = mimeType && mimeType.startsWith("image/") ? mimeType : "image/jpeg";
+    const head = buffer.slice(0, 200).toString("utf8").toLowerCase();
+    if (head.includes("<!doctype") || head.includes("<html")) {
+      console.warn("[upload]", handle, "response is HTML, not an image");
+      return res.status(400).json({ error: "Response is HTML, not an image" });
+    }
+
+    // ── Upload to Supabase Storage ──
     const safeName = handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
     const path = `${safeName}/avatar.jpg`;
 
@@ -68,6 +107,7 @@ export default async function handler(req, res) {
     const permanentUrl = urlData.publicUrl;
     console.log("[upload]", handle, "success:", permanentUrl);
 
+    // Optionally update directory_members rows
     if (updateDb !== false) {
       const { error: dbErr } = await supabase
         .from("directory_members")
