@@ -43,15 +43,48 @@ export async function saveCreatorAvatar(
     const resp = await fetch("/api/upload-creator-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, handle, updateDb: true }),
+      body: JSON.stringify({ imageUrl, handle, updateDb: false }),
     });
     if (!resp.ok) {
       console.warn("[saveCreatorAvatar] Upload failed for", handle, resp.status);
       return null;
     }
     const data = await resp.json();
-    console.log("[saveCreatorAvatar] Cached avatar for", handle, data.url);
-    return data.url || null;
+    const url: string | null = data.url || null;
+    if (!url) return null;
+
+    // Verify the file actually exists in storage before trusting the URL
+    try {
+      const head = await fetch(url, { method: "HEAD" });
+      if (!head.ok) {
+        console.warn("[saveCreatorAvatar] HEAD check failed for", handle, head.status, "— discarding URL");
+        return null;
+      }
+    } catch {
+      console.warn("[saveCreatorAvatar] HEAD check error for", handle, "— discarding URL");
+      return null;
+    }
+
+    // URL verified — now persist to DB
+    await supabase
+      .from("directory_members")
+      .update({ ic_avatar_url: url, avatar_url: url })
+      .eq("creator_handle", handle.replace(/[^a-zA-Z0-9_.-]/g, "").toLowerCase())
+      .then(({ error }) => {
+        if (error) {
+          // Retry with original handle casing
+          supabase
+            .from("directory_members")
+            .update({ ic_avatar_url: url, avatar_url: url })
+            .eq("creator_handle", handle)
+            .then(({ error: e2 }) => {
+              if (e2) console.warn("[saveCreatorAvatar] DB update failed for", handle, e2.message);
+            });
+        }
+      });
+
+    console.log("[saveCreatorAvatar] Verified + saved for", handle, url);
+    return url;
   } catch (err) {
     console.warn("[saveCreatorAvatar] Error for", handle, err);
     return null;

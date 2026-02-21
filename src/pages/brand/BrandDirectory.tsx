@@ -117,20 +117,9 @@ function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" 
           alt={m.creator_name ?? ""}
           className="w-full h-full object-cover"
           onError={() => {
-            // If a Supabase Storage URL fails, the file doesn't exist —
-            // skip the entire fallback chain and show initials.
-            // Trying other supabase.co URLs would just show the favicon.
-            if (imgSrc?.includes("supabase.co")) {
-              setImgSrc(null);
-              return;
-            }
-            if (imgSrc === icUrl && avUrl && !avUrl.includes("supabase.co")) {
-              setImgSrc(avUrl);
-            } else if (imgSrc !== enrichUrl && enrichUrl && !enrichUrl.includes("supabase.co")) {
-              setImgSrc(enrichUrl);
-            } else {
-              setImgSrc(null);
-            }
+            // Any failed image load → show initials immediately.
+            // Never try fallback URLs — they risk showing the app favicon.
+            setImgSrc(null);
           }}
         />
       ) : (
