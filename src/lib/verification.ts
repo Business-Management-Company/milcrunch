@@ -587,6 +587,7 @@ Only include if a direct quote is present in sources. Otherwise omit this sectio
 *Note: This summary is based on publicly available sources. Unit assignments and deployment details are not publicly available.*
 
 RULES
+- Every section heading MUST start with ## on its own line with a blank line before it. Never write section names as plain text without the ## prefix.
 - Correct grammar, capitalization, and date formatting (e.g., 1997–2018).
 - Do not include speculative items unless clearly stated in the provided sources.
 - If claims appear uncertain, write conservatively using "reported" or "publicly noted."
