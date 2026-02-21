@@ -364,9 +364,9 @@ export default function Verification() {
       setAddForm({
         fullName: p.fullName,
         claimedBranch: p.claimedBranch,
-        claimedType: p.claimedType || p.claimedRank || "",
         claimedStatus: p.claimedStatus || "veteran",
         linkedinUrl: p.linkedinUrl,
+        instagramHandle: p.sourceUsername || "",
         websiteUrl: p.websiteUrl,
         notes: p.notes,
         city: p.city || "",
@@ -426,6 +426,9 @@ export default function Verification() {
           claimed_status: addForm.claimedStatus,
           linkedin_url: addForm.linkedinUrl.trim() || null,
           source_username: addForm.instagramHandle.trim() || null,
+          profile_photo_url: addForm.instagramHandle.trim()
+            ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
+            : null,
           website_url: addForm.websiteUrl.trim() || null,
           notes: addForm.notes.trim() || null,
           verification_score: result.verificationScore,
