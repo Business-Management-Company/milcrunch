@@ -941,7 +941,15 @@ export default function Verification() {
                         </div>
                       </TableCell>
                       <TableCell>{row.claimed_branch ?? "—"}</TableCell>
-                      <TableCell><StatusIcon status={row.status ?? "pending"} /></TableCell>
+                      <TableCell>
+                        {row.claimed_status ? (
+                          <span className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
+                            {row.claimed_status.replace(/_/g, " ")}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <TooltipProvider delayDuration={200}>
                           <Tooltip>
