@@ -763,26 +763,24 @@ export default function HomePage() {
                     ));
                   }
 
+                  const TAG_COLORS = [
+                    "bg-blue-100 text-blue-700",
+                    "bg-purple-100 text-purple-700",
+                    "bg-green-100 text-green-700",
+                  ];
+
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
                     const heroSources = [db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string];
 
-                    // Build stats in priority order, filter to non-null/non-zero, take up to 4
-                    const allStats: { value: string; label: string; color: string }[] = [];
-                    if (db.follower_count != null && db.follower_count > 0)
-                      allStats.push({ value: formatFollowerCount(db.follower_count), label: "Followers", color: "text-gray-900" });
-                    if (db.engagement_rate != null && db.engagement_rate > 0)
-                      allStats.push({ value: `${db.engagement_rate.toFixed(2)}%`, label: "Engagement", color: "text-teal-500" });
-                    if (db.avg_likes && db.avg_likes !== "—" && db.avg_likes !== "0")
-                      allStats.push({ value: db.avg_likes, label: "Avg Likes", color: "text-gray-900" });
-                    if (db.avg_comments != null && db.avg_comments > 0)
-                      allStats.push({ value: formatFollowerCount(db.avg_comments), label: "Avg Comments", color: "text-gray-900" });
-                    if (db.avg_views && db.avg_views !== "—" && db.avg_views !== "0")
-                      allStats.push({ value: db.avg_views, label: "Avg Views", color: "text-gray-900" });
-                    if (db.post_count != null && db.post_count > 0)
-                      allStats.push({ value: formatFollowerCount(db.post_count), label: "Posts", color: "text-gray-900" });
-                    const stats = allStats.slice(0, 4);
+                    // Build 4 stats: Followers, Engagement Rate, Avg Likes, Posts/Month
+                    const stats: { value: string; label: string }[] = [
+                      { value: db.follower_count ? formatFollowerCount(db.follower_count) : "—", label: "Followers" },
+                      { value: db.engagement_rate ? `${db.engagement_rate.toFixed(2)}%` : "—", label: "Engagement" },
+                      { value: (db.avg_likes && db.avg_likes !== "—" && db.avg_likes !== "0") ? db.avg_likes : "—", label: "Avg Likes" },
+                      { value: db.post_count ? formatFollowerCount(db.post_count) : "—", label: "Posts/Mo" },
+                    ];
 
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
@@ -793,21 +791,17 @@ export default function HomePage() {
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>
                           </div>
                           {db.category && (
-                            <span className="text-[12px] font-medium px-3 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">{db.category}</span>
+                            <span className={`text-[12px] font-medium px-3 py-1.5 rounded-full ${TAG_COLORS[i % TAG_COLORS.length]}`}>{db.category}</span>
                           )}
                         </div>
-                        {stats.length > 0 && (
-                          <div className={`border-t border-gray-100 mt-2 pt-2 grid gap-x-3 gap-y-2 ${
-                            stats.length >= 4 ? "grid-cols-4" : stats.length === 3 ? "grid-cols-3" : stats.length === 2 ? "grid-cols-2" : "grid-cols-1"
-                          }`}>
-                            {stats.map((s) => (
-                              <div key={s.label}>
-                                <p className={`text-[16px] font-bold ${s.color} leading-tight`}>{s.value}</p>
-                                <p className="text-[10px] text-gray-400 uppercase tracking-wide">{s.label}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+                          {stats.map((s) => (
+                            <div key={s.label}>
+                              <p className="text-[16px] font-bold text-gray-900 leading-tight">{s.value}</p>
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wide">{s.label}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     );
                   });
