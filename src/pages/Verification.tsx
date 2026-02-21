@@ -2266,7 +2266,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
   const [additionalSearching, setAdditionalSearching] = useState(false);
-  const [imgError, setImgError] = useState(false);
+
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
   const redFlags = (record.red_flags ?? []) as RedFlag[];
   const pdlData = record.pdl_data as PDLResponse | null;
@@ -2385,23 +2385,22 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 mx-10 space-y-8">
+    <div className="w-full py-6 mx-10 space-y-8 overflow-visible">
       {/* ── 1. HERO ── */}
-      <div className="flex items-start gap-6 overflow-visible">
+      <div className="flex items-start justify-between w-full pr-6 overflow-visible">
         <div className="shrink-0 relative group">
-          {avatarUrl && !imgError ? (
-            <img
-              src={avatarUrl}
-              alt={record.person_name}
-              crossOrigin="anonymous"
-              className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg border-2 border-gray-200 dark:border-gray-700">
-              {initials}
-            </div>
-          )}
+          <img
+            src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(record.person_name)}&background=6366f1&color=fff&size=128`}
+            alt={record.person_name}
+            crossOrigin="anonymous"
+            className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-gray-200 dark:border-gray-700"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.src.includes("ui-avatars")) {
+                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(record.person_name)}&background=6366f1&color=fff&size=128`;
+              }
+            }}
+          />
           <label className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
               const file = e.target.files?.[0];
@@ -2592,24 +2591,24 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
 
       {/* ── 3. AI SUMMARY ── */}
-      <section>
+      <section className="pl-4">
         <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Intelligence Summary</h3>
+          <h3 className="text-lg font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
         </button>
         {summaryOpen && <IntelligenceSummary record={record} />}
       </section>
 
       {/* ── 3. EVIDENCE SOURCES — accordion ── */}
-      <section>
+      <section className="pl-4">
         <button
           onClick={() => setEvidenceOpen(!evidenceOpen)}
           className="flex items-center gap-2 w-full text-left group"
         >
           {evidenceOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Search className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Evidence Sources</h3>
+          <h3 className="text-lg font-semibold text-[#000741] dark:text-white">Evidence Sources</h3>
           <Badge variant="secondary" className="text-xs ml-1">{sources.length}</Badge>
         </button>
         {evidenceOpen && (
@@ -2645,33 +2644,33 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 4. CAREER TRACK — inline ── */}
-      <section>
+      <section className="pl-4">
         <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Military / Civilian Career</h3>
+          <h3 className="text-lg font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
         </button>
         {careerOpen && <CareerTrackTab record={record} />}
       </section>
 
       {/* ── 5. SOCIAL — only shown if source is discovery ── */}
       {(record.source === 'discovery' || record.source_username) && (
-        <section>
+        <section className="pl-4">
           <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group">
             {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
             <Globe className="h-5 w-5 text-[#6C5CE7]" />
-            <h3 className="text-lg font-bold text-[#000741] dark:text-white">Social Verification</h3>
+            <h3 className="text-lg font-semibold text-[#000741] dark:text-white">Social Verification</h3>
           </button>
           {socialOpen && <div className="mt-3"><SocialVerificationSection record={record} /></div>}
         </section>
       )}
 
       {/* ── 6. MEDIA — collapsible ── */}
-      <section>
+      <section className="pl-4">
         <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group">
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Media & Appearances</h3>
+          <h3 className="text-lg font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
         </button>
         {mediaOpen && (
           <div className="mt-4 pl-7">
@@ -2681,14 +2680,14 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 7. BACKGROUND — expandable ── */}
-      <section>
+      <section className="pl-4">
         <button
           onClick={() => setBackgroundOpen(!backgroundOpen)}
           className="flex items-center gap-2 w-full text-left group"
         >
           {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <ShieldAlert className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Background Review</h3>
+          <h3 className="text-lg font-semibold text-[#000741] dark:text-white">Background Review</h3>
         </button>
         {backgroundOpen && (
           <div className="mt-4 pl-7">
