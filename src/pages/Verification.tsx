@@ -449,8 +449,8 @@ export default function Verification() {
       if (!error && inserted) {
         setNewRecordId(inserted.id);
 
-        // Auto-run background review silently
-        try {
+        // Auto-run background review silently — fire and forget
+        void (async () => { try {
           const locCtx = [addForm.city, addForm.state].filter(Boolean).join(", ");
           const bgQueries = [
             `"${addForm.fullName.trim()}" controversy`,
@@ -481,6 +481,7 @@ export default function Verification() {
         } catch (e) {
           console.error("Background auto-run failed:", e);
         }
+        })();
 
         setList((prev) => [
           {
