@@ -721,6 +721,12 @@ export async function fetchDiscoveryAvatar(
     const acc = accounts[0] as Record<string, unknown>;
     const p = acc.profile as Record<string, unknown> | undefined;
 
+    // DEBUG: dump full account object so we can see where the real avatar lives
+    console.log("[fetchDiscoveryAvatar]", cleanHandle, "FULL ACCOUNT:", JSON.stringify(acc).substring(0, 3000));
+    console.log("[fetchDiscoveryAvatar]", cleanHandle, "profile keys:", p ? Object.keys(p) : "NO PROFILE");
+    console.log("[fetchDiscoveryAvatar]", cleanHandle, "top-level keys:", Object.keys(acc));
+    if (acc.platformData) console.log("[fetchDiscoveryAvatar]", cleanHandle, "platformData keys:", Object.keys(acc.platformData as Record<string, unknown>));
+
     // Check fields across profile, platformData, and account top-level
     const AVATAR_FIELDS = [
       "picture", "profile_picture_hd", "profile_picture",

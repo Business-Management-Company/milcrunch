@@ -425,6 +425,7 @@ const BrandDirectory = () => {
     for (const m of members) {
       try {
         const url = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
+        console.log("[RefreshPhotos]", m.creator_handle, "→ URL:", url?.substring(0, 150) ?? "NULL");
         if (url) {
           // Save fresh URL to DB
           await supabase
