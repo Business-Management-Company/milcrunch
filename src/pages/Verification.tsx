@@ -773,7 +773,7 @@ export default function Verification() {
                   <Input
                     value={addForm.fullName}
                     onChange={(e) => setAddForm((f) => ({ ...f, fullName: e.target.value }))}
-                    placeholder="e.g. Andrew Appleton"
+                    placeholder="e.g. Johnny Rocket"
                   />
                 </div>
                 <div>
