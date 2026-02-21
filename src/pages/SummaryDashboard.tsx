@@ -552,7 +552,7 @@ export default function SummaryDashboard() {
               <p className="text-sm text-muted-foreground text-center py-4">No directories yet</p>
             )}
             <Link
-              to="/brand/directory"
+              to="/brand/directories"
               className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#22C55E] hover:underline"
             >
               View All <ArrowRight className="h-3.5 w-3.5" />
