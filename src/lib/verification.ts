@@ -648,8 +648,11 @@ ${params.aiAnalysis.slice(0, 2000)}`;
         const trimmed = line.trim();
         if (!trimmed) return line;
         if (trimmed.startsWith("#")) return line;
-        if (DOSSIER_HEADERS.some((h) => trimmed.toLowerCase() === h.toLowerCase())) {
-          return `\n## ${trimmed}\n`;
+        const matchedHeader = DOSSIER_HEADERS.find(
+          (h) => trimmed.toLowerCase() === h.toLowerCase()
+        );
+        if (matchedHeader) {
+          return `\n## ${matchedHeader}\n`;
         }
         return line;
       })
