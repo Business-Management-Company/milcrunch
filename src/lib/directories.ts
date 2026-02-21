@@ -332,7 +332,7 @@ export async function toggleMemberApproval(
 export async function removeMember(id: string): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from("directory_members")
-    .update({ approved: false })
+    .delete()
     .eq("id", id);
   if (error) return { error: error.message };
   return { error: null };

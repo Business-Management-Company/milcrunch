@@ -63,7 +63,7 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  const apiKey = process.env.VITE_INFLUENCERS_CLUB_API_KEY;
+  const apiKey = process.env.INFLUENCERS_CLUB_API_KEY || process.env.VITE_INFLUENCERS_CLUB_API_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: "Supabase not configured" });
