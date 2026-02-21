@@ -630,18 +630,50 @@ const BrandDiscover = () => {
   const { user, effectiveUserId, isSuperAdmin } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
+  // Track which handles are already in each directory (dir_id → Set<handle>)
+  const [directoryHandles, setDirectoryHandles] = useState<Map<string, Set<string>>>(new Map());
 
-  // Load directories for "Add to Directory" dropdown (all brand users)
+  // Load directories + their member handles for duplicate detection
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
+      const { data: dirs } = await supabase
         .from("directories")
         .select("id, name")
         .order("created_at", { ascending: true });
-      if (data) setDirectoriesList(data as { id: string; name: string }[]);
+      if (dirs) {
+        setDirectoriesList(dirs as { id: string; name: string }[]);
+        // Fetch all member handles in one query
+        const { data: members } = await supabase
+          .from("directory_members")
+          .select("directory_id, creator_handle");
+        const map = new Map<string, Set<string>>();
+        for (const m of members ?? []) {
+          const did = (m as { directory_id: string }).directory_id;
+          const h = (m as { creator_handle: string }).creator_handle.toLowerCase();
+          if (!map.has(did)) map.set(did, new Set());
+          map.get(did)!.add(h);
+        }
+        setDirectoryHandles(map);
+      }
     })();
   }, [user]);
+
+  /** Check if a handle is already in a specific directory */
+  const isInDirectory = (handle: string | undefined, dirId: string): boolean => {
+    if (!handle) return false;
+    return directoryHandles.get(dirId)?.has(handle.replace(/^@/, "").toLowerCase()) ?? false;
+  };
+
+  /** Check if a handle is in ANY directory */
+  const isInAnyDirectory = (handle: string | undefined): boolean => {
+    if (!handle) return false;
+    const h = handle.replace(/^@/, "").toLowerCase();
+    for (const handles of directoryHandles.values()) {
+      if (handles.has(h)) return true;
+    }
+    return false;
+  };
 
   // --- Saved searches state ---
   const [savedSearches, setSavedSearches] = useState<SavedSearchRow[]>([]);
@@ -1495,6 +1527,16 @@ const BrandDiscover = () => {
   };
 
   const handleStandaloneApprove = async (creator: CreatorCard, directoryId?: string) => {
+    if (!directoryId) return;
+    const handle = creator.username ?? creator.id;
+
+    // Warn if already in this directory
+    if (isInDirectory(handle, directoryId)) {
+      const dirName = directoriesList.find((d) => d.id === directoryId)?.name ?? "directory";
+      toast.warning(`${creator.name} is already in ${dirName}`);
+      return;
+    }
+
     setApprovingDir(true);
     const error = await doApproveForDirectory(creator, directoryId);
     setApprovingDir(false);
@@ -1503,6 +1545,14 @@ const BrandDiscover = () => {
     } else {
       const dirName = directoriesList.find((d) => d.id === directoryId)?.name ?? "directory";
       toast.success(`${creator.name} added to ${dirName}`);
+      // Update local tracking
+      setDirectoryHandles((prev) => {
+        const next = new Map(prev);
+        const set = new Set(next.get(directoryId) ?? []);
+        set.add(handle.replace(/^@/, "").toLowerCase());
+        next.set(directoryId, set);
+        return next;
+      });
     }
   };
 
@@ -2321,6 +2371,9 @@ const BrandDiscover = () => {
                                   <p className="font-semibold text-[#000741] dark:text-white truncate flex items-center gap-1">
                                     {creator.name}
                                     {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
+                                    {isInAnyDirectory(creator.username) && (
+                                      <span className="inline-flex items-center gap-0.5 rounded bg-purple-50 dark:bg-purple-900/30 px-1 py-0.5 text-[9px] font-semibold text-purple-600 dark:text-purple-400" title="In directory"><ShieldCheck className="h-2.5 w-2.5" /></span>
+                                    )}
                                   </p>
                                   {creator.username && (
                                     <p className="text-xs text-gray-400 truncate">@{creator.username}</p>
@@ -2511,6 +2564,9 @@ const BrandDiscover = () => {
                               {(creator.hasEmail || contactEmails[creator.id]) && !contactEmails[creator.id] && (
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available for outreach"><Mail className="h-3 w-3" />Email</span>
                               )}
+                              {isInAnyDirectory(creator.username) && (
+                                <span className="inline-flex items-center gap-0.5 rounded bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 ml-1" title="Already in a directory"><ShieldCheck className="h-3 w-3" />In Directory</span>
+                              )}
                             </h3>
                             <p className="text-sm text-[#6C5CE7] truncate">
                               {creator.username ? `@${creator.username}` : "\u00A0"}
@@ -2661,7 +2717,9 @@ const BrandDiscover = () => {
                                 <DropdownMenuContent align="start" className="w-48">
                                   {directoriesList.map((dir) => (
                                     <DropdownMenuItem key={dir.id} onClick={() => handleStandaloneApprove(creator, dir.id)}>
+                                      {isInDirectory(creator.username, dir.id) && <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-purple-500 shrink-0" />}
                                       {dir.name}
+                                      {isInDirectory(creator.username, dir.id) && <span className="ml-auto text-[10px] text-purple-400">Added</span>}
                                     </DropdownMenuItem>
                                   ))}
                                 </DropdownMenuContent>
