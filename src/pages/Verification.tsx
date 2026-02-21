@@ -1630,9 +1630,11 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-bold text-[#000741] dark:text-white flex items-center gap-2 cursor-pointer w-full justify-center" onClick={() => setOpen(!open)}>
-          {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Mic className="h-5 w-5" /> Speaker Readiness Assessment
+        <CardTitle className="text-lg font-bold text-[#000741] dark:text-white flex items-center justify-between w-full cursor-pointer" onClick={() => setOpen(!open)}>
+          <div className="flex items-center gap-2 mx-auto">
+            {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+            <Mic className="h-5 w-5" /> Speaker Readiness Assessment
+          </div>
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           {checkedCount >= 5 ? (
             <Badge className="ml-auto bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
