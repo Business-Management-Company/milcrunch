@@ -433,6 +433,21 @@ export default function CreatorProfileModal({
     })();
     const platforms = availablePlatforms.map((p) => `${p}: @${displayUsername}`).join(", ");
     const notes = [bioText, platforms].filter(Boolean).join("\n\n");
+    // Extract city/state from location string (e.g. "San Diego, CA" or "San Diego, California, US")
+    let prefillCity = "";
+    let prefillState = "";
+    if (location) {
+      const parts = location.split(",").map((s: string) => s.trim());
+      if (parts.length >= 2) {
+        prefillCity = parts[0];
+        const stateCandidate = parts[1].replace(/,?\s*(US|USA|United States)$/i, "").trim();
+        // Accept 2-letter state codes or full state names
+        if (stateCandidate.length === 2) prefillState = stateCandidate.toUpperCase();
+        else prefillState = stateCandidate;
+      } else if (parts.length === 1) {
+        prefillCity = parts[0];
+      }
+    }
     onOpenChange(false);
     navigate("/verification", {
       state: {
@@ -444,6 +459,8 @@ export default function CreatorProfileModal({
           linkedinUrl,
           websiteUrl,
           notes,
+          city: prefillCity,
+          state: prefillState,
           source: "discovery",
           sourceUsername: displayUsername,
         },

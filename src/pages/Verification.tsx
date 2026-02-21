@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import MarkdownRenderer from "@/components/ui/markdown-renderer";
+import { MarkdownResponse } from "@/components/MarkdownResponse";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tabs removed — ExpandedRow now uses single scrolling layout
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
@@ -61,7 +61,6 @@ import {
   Save,
   GraduationCap,
   Award,
-  LayoutDashboard,
   Pencil,
   Video,
   Play,
@@ -110,6 +109,15 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const MILITARY_KEYWORDS = /military|veteran|army|navy|marine|air force|coast guard|served|deployment|dd-214|rank|sergeant|lieutenant|captain|medal|decorated|combat|reserve|guard|usmc|dod|veterans affairs/gi;
+
+const BRANCH_BADGE_STYLES: Record<string, string> = {
+  Army: "bg-green-800/10 text-green-800 dark:bg-green-800/20 dark:text-green-400",
+  Navy: "bg-blue-900/10 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400",
+  "Air Force": "bg-sky-600/10 text-sky-700 dark:bg-sky-600/20 dark:text-sky-400",
+  Marines: "bg-red-700/10 text-red-700 dark:bg-red-700/20 dark:text-red-400",
+  "Coast Guard": "bg-orange-600/10 text-orange-700 dark:bg-orange-600/20 dark:text-orange-400",
+  "Space Force": "bg-indigo-600/10 text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-400",
+};
 
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
@@ -1742,188 +1750,7 @@ function RawSourceCard({ url, markdown }: { url: string; markdown: string }) {
   );
 }
 
-function DeepAnalysisTab({ record }: { record: VerificationRecord }) {
-  const { user } = useAuth();
-  const [narrative, setNarrative] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [rawOpen, setRawOpen] = useState(false);
-  const [lastGeneratedAt, setLastGeneratedAt] = useState<string | null>(null);
-  const redFlags = (record.red_flags ?? []) as RedFlag[];
-  const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
-  const sources = (record.evidence_sources ?? []) as EvidenceSource[];
-
-  // Load saved dossier on mount — try dedicated table first, fall back to manual_checks
-  useEffect(() => {
-    (async () => {
-      if (user) {
-        const { data: dossierRow } = await supabase
-          .from("verification_dossiers")
-          .select("dossier_content, generated_at")
-          .eq("user_id", user.id)
-          .eq("creator_name", record.person_name)
-          .order("generated_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (dossierRow?.dossier_content) {
-          setNarrative(dossierRow.dossier_content);
-          setLastGeneratedAt(dossierRow.generated_at ?? null);
-          return;
-        }
-      }
-      // Fallback: load from legacy manual_checks
-      const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
-      const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
-      const saved = checks.deep_analysis as { narrative?: string; analyzed_at?: string } | undefined;
-      if (saved?.narrative) {
-        setNarrative(saved.narrative);
-        setLastGeneratedAt(saved.analyzed_at ?? null);
-      }
-    })();
-  }, [record.id, record.person_name, user]);
-
-  // Save dossier to dedicated table + legacy manual_checks
-  const saveDossier = async (text: string) => {
-    const now = new Date().toISOString();
-
-    // Save to verification_dossiers table
-    if (user) {
-      await supabase.from("verification_dossiers").upsert(
-        {
-          user_id: user.id,
-          creator_name: record.person_name,
-          creator_handle: record.source_username ?? null,
-          dossier_content: text,
-          confidence_score: record.verification_score ?? null,
-          sources_count: sources.length,
-          generated_at: now,
-        },
-        { onConflict: "user_id,creator_name" },
-      );
-    }
-
-    // Also save to legacy manual_checks for backwards compat
-    const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
-    const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
-    await supabase.from("verifications").update({
-      manual_checks: { ...existing, deep_analysis: { narrative: text, analyzed_at: now } },
-    }).eq("id", record.id);
-
-    setLastGeneratedAt(now);
-  };
-
-  const handleGenerate = async () => {
-    setGenerating(true);
-    try {
-      const result = await generateDossierNarrative({
-        personName: record.person_name,
-        claimedBranch: record.claimed_branch ?? "Unknown",
-        claimedType: record.claimed_type ?? "",
-        firecrawlContent: firecrawlData.map((f) => f.markdown ?? "").join("\n\n---\n\n"),
-        serpSnippets: sources.map((s) => `${s.title}: ${s.snippet}`).join("\n"),
-        aiAnalysis: record.ai_analysis ?? "",
-      });
-      setNarrative(result || null);
-      if (result) await saveDossier(result);
-    } catch {
-      setNarrative(null);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {redFlags.length > 0 && (
-        <Card className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2 text-red-700 dark:text-red-400"><AlertCircle className="h-4 w-4" /> Red Flags</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="list-disc list-inside space-y-1 text-sm text-red-800 dark:text-red-300">
-              {redFlags.map((f, i) => (
-                <li key={i}>{f.text} {f.source && <a href={f.source} target="_blank" rel="noopener noreferrer" className="underline">Source</a>}</li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* AI Narrative Dossier */}
-      {narrative === null && !generating ? (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-          <CardContent className="py-8 text-center">
-            <FileText className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground mb-4">
-              Generate an AI-powered narrative dossier from all collected web sources and analysis.
-            </p>
-            <Button onClick={handleGenerate} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
-              <Loader2 className={cn("h-4 w-4 mr-2", generating ? "animate-spin" : "hidden")} />
-              Generate Dossier
-            </Button>
-          </CardContent>
-        </Card>
-      ) : generating ? (
-        <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
-          <CardContent className="flex items-center gap-3 py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
-            <p className="text-sm text-blue-700 dark:text-blue-300">Generating narrative dossier for {record.person_name}...</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#6C5CE7]" /> Background Dossier
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MarkdownRenderer content={narrative ?? ""} />
-            {lastGeneratedAt && (
-              <p className="text-xs text-muted-foreground mt-3">
-                Last generated: {new Date(lastGeneratedAt).toLocaleString()}
-              </p>
-            )}
-            <div className="mt-3 flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleGenerate}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => {
-                navigator.clipboard.writeText(narrative ?? "");
-                toast.success("Dossier copied to clipboard");
-              }}>
-                <Download className="h-3.5 w-3.5 mr-1.5" /> Copy
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Collapsible Raw Sources */}
-      {firecrawlData.length > 0 && (
-        <div>
-          <button
-            onClick={() => setRawOpen(!rawOpen)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {rawOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            Web Sources ({firecrawlData.length})
-          </button>
-          {rawOpen && (
-            <div className="mt-3 space-y-3">
-              {firecrawlData.map((f, i) => (
-                <RawSourceCard key={i} url={f.url} markdown={f.markdown ?? ""} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {firecrawlData.length === 0 && narrative === null && !generating && (
-        <p className="text-sm text-muted-foreground">No scraped content available for deep analysis.</p>
-      )}
-    </div>
-  );
-}
+/* DeepAnalysisTab removed — replaced by IntelligenceSummary in ExpandedRow */
 
 function CareerTrackTab({ record }: { record: VerificationRecord }) {
   const pdlData = record.pdl_data as PDLResponse | null;
@@ -2292,13 +2119,16 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
 }
 
 function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
-  const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
-  const [additionalQuery, setAdditionalQuery] = useState("");
-  const [additionalSearching, setAdditionalSearching] = useState(false);
   const [reverifying, setReverifying] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [editNotes, setEditNotes] = useState(record.notes ?? "");
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
+  const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
+  const [additionalQuery, setAdditionalQuery] = useState("");
+  const [additionalSearching, setAdditionalSearching] = useState(false);
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
+  const redFlags = (record.red_flags ?? []) as RedFlag[];
   const pdlData = record.pdl_data as PDLResponse | null;
 
   const handleQuickReverify = async () => {
@@ -2382,235 +2212,413 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     }
   };
 
+  // Avatar from PDL data
+  const avatarUrl = (pdlData as Record<string, unknown> | null)?.profile_pic_url as string | undefined;
+  const initials = record.person_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  // Group sources by category for accordion display
+  const sourcesByCategory = useMemo(() => {
+    const map = new Map<string, EvidenceSource[]>();
+    for (const s of [...sources].sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0))) {
+      const cat = s.category || "Other";
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(s);
+    }
+    return map;
+  }, [sources]);
+
   return (
-    <div className="p-6">
-      <Tabs defaultValue="overview" className="w-full">
-        <TooltipProvider delayDuration={300}>
-          <TabsList className="grid w-full grid-cols-6 gap-1.5 rounded-lg bg-transparent p-0 border-b border-gray-200 dark:border-gray-700 pb-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="overview" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
-                  <LayoutDashboard className="h-3.5 w-3.5" /> Overview
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom"><p>Summary of verification score, speaker readiness checklist, and quick actions</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="evidence" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
-                  <Search className="h-3.5 w-3.5" /> Evidence
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom"><p>Web search results that corroborate or contradict military service claims</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="professional" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
-                  <Briefcase className="h-3.5 w-3.5" /> Career Track
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom"><p>Employment history, education, and professional background from PDL and web sources</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="media" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
-                  <Video className="h-3.5 w-3.5" /> Media
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom"><p>YouTube videos and media appearances featuring this person</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="criminal" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
-                  <ShieldAlert className="h-3.5 w-3.5" /> Background
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom"><p>Public records search for brand safety and due diligence</p></TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="deep" className="rounded-lg px-3 py-2 font-medium text-sm gap-1.5 border border-transparent data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:font-semibold data-[state=active]:border-blue-600 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-700 data-[state=inactive]:border-gray-200 data-[state=inactive]:hover:bg-gray-200 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700 dark:data-[state=inactive]:hover:bg-gray-700">
-                  <FileText className="h-3.5 w-3.5" /> Deep Analysis
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom"><p>Detailed content extracted from web pages with military keywords highlighted</p></TooltipContent>
-            </Tooltip>
-          </TabsList>
-        </TooltipProvider>
-        <TabsContent value="overview" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" /> Person</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <p className="font-medium">{record.person_name}</p>
-                <p className="text-muted-foreground">{record.claimed_branch ?? "—"} · {record.claimed_type ?? "—"} · {record.claimed_status ?? "—"}</p>
-                {locationStr && (
-                  <p className="text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" /> {locationStr}
-                  </p>
-                )}
-                {record.linkedin_url && (
-                  <a href={record.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#6C5CE7] hover:underline">
-                    <Link2 className="h-3.5 w-3.5" /> LinkedIn
-                  </a>
-                )}
-                {record.website_url && (
-                  <a href={record.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#6C5CE7] hover:underline">
-                    <Globe className="h-3.5 w-3.5" /> Website
-                  </a>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">AI Analysis</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center gap-4">
-                <ConfidenceGauge score={record.verification_score ?? 0} />
-                <StatusBadge status={record.status ?? "pending"} />
-                <p className="text-sm text-muted-foreground line-clamp-3">{record.ai_analysis ?? "No analysis."}</p>
-              </CardContent>
-            </Card>
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <Button variant="outline" size="sm" className="justify-start" onClick={handleQuickReverify} disabled={reverifying}>
-                  {reverifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                  Re-verify
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="justify-start">
-                      <ChevronDown className="h-4 w-4 mr-2" /> Change Status
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleStatusChange("verified")}>
-                      <ShieldCheck className="h-4 w-4 mr-2 text-purple-600" /> Verified
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange("pending")}>
-                      <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange("flagged")}>
-                      <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleStatusChange("denied")}>
-                      <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {!notesOpen ? (
-                  <Button variant="outline" size="sm" className="justify-start" onClick={() => setNotesOpen(true)}>
-                    <FileText className="h-4 w-4 mr-2" /> Add Notes
-                  </Button>
-                ) : (
-                  <div className="space-y-2">
-                    <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} placeholder="Add notes..." />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveNotes} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
-                        <Save className="h-3.5 w-3.5 mr-1.5" /> Save
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setNotesOpen(false)}>Cancel</Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+    <div className="p-6 space-y-8 max-w-5xl mx-auto">
+      {/* ── 1. HERO ── */}
+      <div className="flex items-start gap-6">
+        <div className="shrink-0">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={record.person_name} className="h-24 w-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" />
+          ) : (
+            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl border-2 border-gray-200 dark:border-gray-700">
+              {initials}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-2xl font-bold text-[#000741] dark:text-white">{record.person_name}</h2>
+            <StatusBadge status={record.status ?? "pending"} />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
-            <SocialVerificationSection record={record} />
-          </div>
-        </TabsContent>
-        <TabsContent value="evidence" className="mt-4">
-          <div className="flex items-center justify-between gap-4 mb-4">
-            <span className="text-sm text-muted-foreground">{sources.length} source(s)</span>
-            <Dialog open={additionalSearchOpen} onOpenChange={setAdditionalSearchOpen}>
-              <Button variant="outline" size="sm" onClick={() => setAdditionalSearchOpen(true)}>
-                Run Additional Search
-              </Button>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Run Additional Search</DialogTitle>
-                </DialogHeader>
-                <p className="text-sm text-muted-foreground">Add more web results to this verification. Results will be categorized and merged with existing evidence.</p>
-                <Input
-                  placeholder="e.g. John Smith military veteran"
-                  value={additionalQuery}
-                  onChange={(e) => setAdditionalQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleRunAdditionalSearch()}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setAdditionalSearchOpen(false)}>Cancel</Button>
-                  <Button onClick={handleRunAdditionalSearch} disabled={additionalSearching || !additionalQuery.trim()} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
-                    {additionalSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Search
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-          <div className="space-y-4">
-            {sources.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No evidence sources yet. Run a verification or use &quot;Run Additional Search&quot; to add custom queries.</p>
-            ) : (
-              sources
-                .sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0))
-                .map((s, i) => (
-                  <Card
-                    key={i}
-                    className={cn(
-                      "rounded-xl border shadow-sm",
-                      s.isRedFlag ? "border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20" : "border-gray-200 dark:border-gray-800"
-                    )}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <SourceIcon category={s.category} />
-                        <div className="flex-1 min-w-0">
-                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-[#6C5CE7] hover:underline flex items-center gap-1">
-                            {s.title} <ExternalLink className="h-3 w-3" />
-                          </a>
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(s.snippet) }} />
-                          <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            <Badge variant="secondary" className="text-xs">{s.category}</Badge>
-                            <span className="text-xs text-muted-foreground">{s.relevanceScore ?? 0}% relevance</span>
-                            {s.isRedFlag && (
-                              <Badge variant="destructive" className="gap-1"><AlertCircle className="h-3 w-3" /> Red flag</Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            {record.claimed_branch && (
+              <Badge className={cn("text-xs font-semibold", BRANCH_BADGE_STYLES[record.claimed_branch] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400")}>
+                {record.claimed_branch}
+              </Badge>
+            )}
+            {record.claimed_type && <Badge variant="secondary" className="text-xs">{record.claimed_type}</Badge>}
+            {record.claimed_status && <Badge variant="outline" className="text-xs capitalize">{record.claimed_status?.replace("_", " ")}</Badge>}
+            {locationStr && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{locationStr}</span>
             )}
           </div>
-        </TabsContent>
-        <TabsContent value="professional" className="mt-4 space-y-6">
-          <CareerTrackTab record={record} />
-        </TabsContent>
-        <TabsContent value="media" className="mt-4">
-          <MediaTab record={record} />
-        </TabsContent>
-        <TabsContent value="criminal" className="mt-4">
-          <BackgroundReviewTab
-            personName={record.person_name}
-            recordId={record.id}
-            claimedBranch={record.claimed_branch ?? undefined}
-            locationContext={locationStr || (pdlData?.location ? (pdlData.location as Array<{name: string}>).map((l) => l.name).join(", ") : undefined)}
-            onRefresh={onRefresh}
-          />
-        </TabsContent>
-        <TabsContent value="deep" className="mt-4">
-          <DeepAnalysisTab record={record} />
-        </TabsContent>
-      </Tabs>
+          {/* Links */}
+          <div className="flex items-center gap-4 mt-2 flex-wrap">
+            {record.linkedin_url && (
+              <a href={record.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-[#6C5CE7] hover:underline">
+                <Link2 className="h-3.5 w-3.5" /> LinkedIn
+              </a>
+            )}
+            {record.website_url && (
+              <a href={record.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-[#6C5CE7] hover:underline">
+                <Globe className="h-3.5 w-3.5" /> Website
+              </a>
+            )}
+            {record.source_username && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                Source: @{record.source_username}
+              </span>
+            )}
+          </div>
+          {/* Quick action buttons */}
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleQuickReverify} disabled={reverifying}>
+              {reverifying ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              Re-verify
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <ChevronDown className="h-3.5 w-3.5 mr-1.5" /> Change Status
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleStatusChange("verified")}>
+                  <ShieldCheck className="h-4 w-4 mr-2 text-purple-600" /> Verified
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusChange("pending")}>
+                  <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusChange("flagged")}>
+                  <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusChange("denied")}>
+                  <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" size="sm" onClick={() => setNotesOpen(!notesOpen)}>
+              <FileText className="h-3.5 w-3.5 mr-1.5" /> {notesOpen ? "Close Notes" : "Add Notes"}
+            </Button>
+          </div>
+          {notesOpen && (
+            <div className="mt-3 space-y-2 max-w-md">
+              <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} placeholder="Add notes..." />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveNotes} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+                  <Save className="h-3.5 w-3.5 mr-1.5" /> Save
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setNotesOpen(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Confidence Ring */}
+        <div className="shrink-0 hidden md:block">
+          <ConfidenceGauge score={record.verification_score ?? 0} />
+        </div>
+      </div>
+
+      {/* Red flags alert */}
+      {redFlags.length > 0 && (
+        <Card className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2 text-red-700 dark:text-red-400 font-semibold text-sm">
+              <AlertCircle className="h-4 w-4" /> Red Flags ({redFlags.length})
+            </div>
+            <ul className="list-disc list-inside space-y-1 text-sm text-red-800 dark:text-red-300">
+              {redFlags.map((f, i) => (
+                <li key={i}>{f.text} {f.source && <a href={f.source} target="_blank" rel="noopener noreferrer" className="underline text-red-600">Source</a>}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 2. AI SUMMARY ── */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <FileText className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Intelligence Summary</h3>
+        </div>
+        <IntelligenceSummary record={record} />
+      </section>
+
+      {/* ── 3. EVIDENCE SOURCES — accordion ── */}
+      <section>
+        <button
+          onClick={() => setEvidenceOpen(!evidenceOpen)}
+          className="flex items-center gap-2 w-full text-left group"
+        >
+          {evidenceOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+          <Search className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Evidence Sources</h3>
+          <Badge variant="secondary" className="text-xs ml-1">{sources.length}</Badge>
+        </button>
+        {evidenceOpen && (
+          <div className="mt-4 space-y-4 pl-7">
+            <div className="flex items-center justify-end">
+              <Dialog open={additionalSearchOpen} onOpenChange={setAdditionalSearchOpen}>
+                <Button variant="outline" size="sm" onClick={() => setAdditionalSearchOpen(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Run Additional Search
+                </Button>
+                <DialogContent className="max-w-md">
+                  <DialogHeader><DialogTitle>Run Additional Search</DialogTitle></DialogHeader>
+                  <p className="text-sm text-muted-foreground">Add more web results. Results will be categorized and merged with existing evidence.</p>
+                  <Input placeholder="e.g. John Smith military veteran" value={additionalQuery} onChange={(e) => setAdditionalQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRunAdditionalSearch()} />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setAdditionalSearchOpen(false)}>Cancel</Button>
+                    <Button onClick={handleRunAdditionalSearch} disabled={additionalSearching || !additionalQuery.trim()} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+                      {additionalSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Search
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            {sources.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No evidence sources yet.</p>
+            ) : (
+              Array.from(sourcesByCategory.entries()).map(([cat, catSources]) => (
+                <EvidenceAccordionGroup key={cat} category={cat} sources={catSources} />
+              ))
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ── 4. CAREER TRACK — inline ── */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Career Track</h3>
+        </div>
+        <CareerTrackTab record={record} />
+      </section>
+
+      {/* ── 5. SOCIAL STATS — inline ── */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <Globe className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Social Verification</h3>
+        </div>
+        <SocialVerificationSection record={record} />
+      </section>
+
+      {/* ── 6. BACKGROUND — expandable ── */}
+      <section>
+        <button
+          onClick={() => setBackgroundOpen(!backgroundOpen)}
+          className="flex items-center gap-2 w-full text-left group"
+        >
+          {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+          <ShieldAlert className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Background Review</h3>
+        </button>
+        {backgroundOpen && (
+          <div className="mt-4 pl-7">
+            <BackgroundReviewTab
+              personName={record.person_name}
+              recordId={record.id}
+              claimedBranch={record.claimed_branch ?? undefined}
+              locationContext={locationStr || (pdlData?.location ? (pdlData.location as Array<{name: string}>).map((l) => l.name).join(", ") : undefined)}
+              onRefresh={onRefresh}
+            />
+          </div>
+        )}
+      </section>
+
+      {/* Speaker Readiness */}
+      <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
     </div>
+  );
+}
+
+/** Collapsible evidence accordion group by category */
+function EvidenceAccordionGroup({ category, sources }: { category: string; sources: EvidenceSource[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+      >
+        <SourceIcon category={category} />
+        <span className="font-medium text-sm flex-1">{category}</span>
+        <Badge variant="secondary" className="text-xs">{sources.length}</Badge>
+        {sources.some(s => s.isRedFlag) && <AlertCircle className="h-4 w-4 text-red-500" />}
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="border-t border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
+          {sources.map((s, i) => (
+            <div key={i} className={cn("px-4 py-3", s.isRedFlag && "bg-red-50/50 dark:bg-red-950/10")}>
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-[#6C5CE7] hover:underline flex items-center gap-1">
+                {s.title} <ExternalLink className="h-3 w-3" />
+              </a>
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(s.snippet) }} />
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="text-xs text-muted-foreground">{s.relevanceScore ?? 0}% relevance</span>
+                {s.isRedFlag && <Badge variant="destructive" className="gap-1 text-xs"><AlertCircle className="h-3 w-3" /> Red flag</Badge>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** AI Intelligence Summary — auto-generates a unified narrative dossier from all evidence */
+function IntelligenceSummary({ record }: { record: VerificationRecord }) {
+  const { user } = useAuth();
+  const [narrative, setNarrative] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [lastGeneratedAt, setLastGeneratedAt] = useState<string | null>(null);
+  const sources = (record.evidence_sources ?? []) as EvidenceSource[];
+  const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
+  const autoTriggered = useRef(false);
+
+  // Load saved dossier on mount
+  useEffect(() => {
+    (async () => {
+      if (user) {
+        const { data: dossierRow } = await supabase
+          .from("verification_dossiers")
+          .select("dossier_content, generated_at")
+          .eq("user_id", user.id)
+          .eq("creator_name", record.person_name)
+          .order("generated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (dossierRow?.dossier_content) {
+          setNarrative(dossierRow.dossier_content);
+          setLastGeneratedAt(dossierRow.generated_at ?? null);
+          return;
+        }
+      }
+      // Fallback: legacy manual_checks
+      const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
+      const saved = checks.deep_analysis as { narrative?: string; analyzed_at?: string } | undefined;
+      if (saved?.narrative) {
+        setNarrative(saved.narrative);
+        setLastGeneratedAt(saved.analyzed_at ?? null);
+        return;
+      }
+      // Auto-generate if we have evidence data and haven't triggered yet
+      if (!autoTriggered.current && (firecrawlData.length > 0 || sources.length > 0 || record.ai_analysis)) {
+        autoTriggered.current = true;
+        handleGenerate();
+      }
+    })();
+  }, [record.id, record.person_name, user]);
+
+  const saveDossier = async (text: string) => {
+    const now = new Date().toISOString();
+    if (user) {
+      await supabase.from("verification_dossiers").upsert(
+        {
+          user_id: user.id,
+          creator_name: record.person_name,
+          creator_handle: record.source_username ?? null,
+          dossier_content: text,
+          confidence_score: record.verification_score ?? null,
+          sources_count: sources.length,
+          generated_at: now,
+        },
+        { onConflict: "user_id,creator_name" },
+      );
+    }
+    // Legacy save
+    const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+    const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
+    await supabase.from("verifications").update({
+      manual_checks: { ...existing, deep_analysis: { narrative: text, analyzed_at: now } },
+    }).eq("id", record.id);
+    setLastGeneratedAt(now);
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const result = await generateDossierNarrative({
+        personName: record.person_name,
+        claimedBranch: record.claimed_branch ?? "Unknown",
+        claimedType: record.claimed_type ?? "",
+        firecrawlContent: firecrawlData.map((f) => f.markdown ?? "").join("\n\n---\n\n"),
+        serpSnippets: sources.map((s) => `${s.title}: ${s.snippet}`).join("\n"),
+        aiAnalysis: record.ai_analysis ?? "",
+      });
+      setNarrative(result || null);
+      if (result) await saveDossier(result);
+    } catch {
+      setNarrative(null);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  if (generating) {
+    return (
+      <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+        <CardContent className="flex items-center gap-3 py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
+          <p className="text-sm text-blue-700 dark:text-blue-300">Generating intelligence summary for {record.person_name}...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!narrative) {
+    // Show AI analysis fallback or prompt to generate
+    if (record.ai_analysis) {
+      return (
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardContent className="p-4">
+            <MarkdownResponse content={record.ai_analysis} />
+            <Button variant="outline" size="sm" onClick={handleGenerate} className="mt-3">
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Generate Full Dossier
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    return (
+      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <CardContent className="py-6 text-center">
+          <FileText className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground mb-3">Generate an AI intelligence brief from all collected sources.</p>
+          <Button onClick={handleGenerate} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">Generate Summary</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800">
+      <CardContent className="p-5">
+        <MarkdownResponse content={narrative} />
+        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <Button variant="outline" size="sm" onClick={handleGenerate}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(narrative); toast.success("Copied to clipboard"); }}>
+            <Download className="h-3.5 w-3.5 mr-1.5" /> Copy
+          </Button>
+          {lastGeneratedAt && (
+            <span className="text-xs text-muted-foreground ml-auto">Generated {new Date(lastGeneratedAt).toLocaleDateString()}</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
