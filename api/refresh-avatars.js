@@ -63,19 +63,29 @@ async function uploadImageToStorage(sb, handle, cdnUrl) {
     redirect: "follow",
   });
 
-  if (!imgResp.ok) return null;
+  if (!imgResp.ok) {
+    console.warn("[upload]", handle, "CDN fetch failed:", imgResp.status);
+    return null;
+  }
 
   const respType = imgResp.headers.get("content-type") || "";
-  if (!respType.startsWith("image/")) return null;
+  if (!respType.startsWith("image/")) {
+    console.warn("[upload]", handle, "not image:", respType);
+    return null;
+  }
 
   const buf = Buffer.from(await imgResp.arrayBuffer());
 
-  // Too small = default avatar or error page
-  if (buf.length < 5000) return null;
+  if (buf.length < 5000) {
+    console.warn("[upload]", handle, "too small:", buf.length, "bytes");
+    return null;
+  }
 
-  // HTML error page saved as image
   const head = buf.slice(0, 200).toString("utf8").toLowerCase();
-  if (head.includes("<!doctype") || head.includes("<html")) return null;
+  if (head.includes("<!doctype") || head.includes("<html")) {
+    console.warn("[upload]", handle, "HTML not image");
+    return null;
+  }
 
   const safeName = handle.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
   const path = `${safeName}/avatar.jpg`;
@@ -148,24 +158,36 @@ export default async function handler(req, res) {
 
       // Step 1: Get fresh CDN URL from Discovery API
       const cdnUrl = await getAvatarUrlFromDiscovery(m.creator_handle, m.platform, apiKey);
-      if (!cdnUrl) { skipped++; continue; }
+      if (!cdnUrl) {
+        console.warn("[refresh]", m.creator_handle, "no avatar from Discovery API");
+        skipped++;
+        continue;
+      }
+      console.log("[refresh]", m.creator_handle, "got CDN URL:", cdnUrl.substring(0, 100));
 
       // Step 2: Fetch image bytes and upload to Supabase Storage
       const permanentUrl = await uploadImageToStorage(sb, m.creator_handle, cdnUrl);
-      if (!permanentUrl) {
-        // Upload failed — don't overwrite existing URL
-        failed++;
-        continue;
+
+      if (permanentUrl) {
+        // Step 3a: Save permanent Supabase Storage URL
+        console.log("[refresh]", m.creator_handle, "uploaded →", permanentUrl);
+        const { error: upErr } = await sb
+          .from("directory_members")
+          .update({ ic_avatar_url: permanentUrl, avatar_url: permanentUrl })
+          .eq("id", m.id);
+        if (!upErr) updated++;
+        else failed++;
+      } else {
+        // Step 3b: Upload failed — save the fresh CDN URL as fallback
+        // (will work for ~24h, better than nothing)
+        console.warn("[refresh]", m.creator_handle, "upload failed, saving CDN URL as fallback");
+        const { error: upErr } = await sb
+          .from("directory_members")
+          .update({ ic_avatar_url: cdnUrl, avatar_url: cdnUrl })
+          .eq("id", m.id);
+        if (!upErr) updated++;
+        else failed++;
       }
-
-      // Step 3: Save permanent URL to DB
-      const { error: upErr } = await sb
-        .from("directory_members")
-        .update({ ic_avatar_url: permanentUrl, avatar_url: permanentUrl })
-        .eq("id", m.id);
-
-      if (!upErr) updated++;
-      else failed++;
     } catch (err) {
       console.warn("[refresh-avatars]", m.creator_handle, "error:", err.message);
       failed++;
