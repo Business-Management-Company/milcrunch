@@ -1,4 +1,7 @@
 {
+  "crons": [
+    { "path": "/api/refresh-avatars", "schedule": "0 6 * * *" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -29,6 +32,7 @@
     {"source": "/api/shared-reports", "destination": "/api/shared-reports"},
     {"source": "/api/backfill-avatars", "destination": "/api/backfill-avatars"},
     {"source": "/api/cleanup-avatars", "destination": "/api/cleanup-avatars"},
+    {"source": "/api/refresh-avatars", "destination": "/api/refresh-avatars"},
     {"source": "/api/resend-verify-domain", "destination": "/api/resend-verify-domain"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
     {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"},

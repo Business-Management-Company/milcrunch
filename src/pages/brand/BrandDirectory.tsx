@@ -62,7 +62,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
-import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
+import { type CreatorCard } from "@/lib/influencers-club";
 // saveCreatorAvatar no longer used — avatars loaded live from Discovery API
 
 const BRANCH_STYLES: Record<string, string> = {
@@ -91,11 +91,10 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
-/** Small avatar component — shows fresh Discovery URL, falls back to initials. */
-function DirAvatar({ m, freshUrl, size = "lg" }: { m: DirectoryMember; freshUrl?: string | null; size?: "sm" | "lg" }) {
-  const src = freshUrl || null;
+/** Avatar component — renders ic_avatar_url with onError fallback to initials. */
+function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" }) {
+  const src = m.ic_avatar_url || m.avatar_url || null;
   const [failed, setFailed] = useState(false);
-  // Reset failed state when src changes (e.g. fresh URL arrives)
   const prevSrc = useRef(src);
   if (src !== prevSrc.current) {
     prevSrc.current = src;
@@ -177,10 +176,7 @@ const BrandDirectory = () => {
   const [promoteListId, setPromoteListId] = useState("");
   const [promoting, setPromoting] = useState(false);
 
-  // Fresh avatar URLs from IC Discovery API (local state only — not persisted)
-  const [freshAvatars, setFreshAvatars] = useState<Record<string, string>>({});
   const [refreshingPhotos, setRefreshingPhotos] = useState(false);
-  const [refreshProgress, setRefreshProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Edit modal state (avg_views, avg_likes)
   const [editMember, setEditMember] = useState<DirectoryMember | null>(null);
@@ -230,42 +226,16 @@ const BrandDirectory = () => {
     setMembersLoading(false);
   }, []);
 
-  // Auto-fetch fresh avatar URLs when members load.
-  // Runs in background — initials show until each URL resolves.
-  const fetchFreshAvatars = useCallback(async (memberList: DirectoryMember[]) => {
-    for (const m of memberList) {
-      try {
-        const url = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
-        if (url) {
-          setFreshAvatars((prev) => ({ ...prev, [m.creator_handle]: url }));
-        }
-      } catch {
-        // skip — initials will show
-      }
-      // Small delay to avoid hammering the API
-      await new Promise((r) => setTimeout(r, 300));
-    }
-  }, []);
-
   const openDirectory = (dir: Directory) => {
     setSelectedDir(dir);
     setSearchQuery("");
     setBranchFilter("all");
-    setFreshAvatars({});
     loadMembers(dir.id);
   };
-
-  // Kick off avatar fetching once members are loaded
-  useEffect(() => {
-    if (members.length > 0 && !membersLoading) {
-      fetchFreshAvatars(members);
-    }
-  }, [members, membersLoading, fetchFreshAvatars]);
 
   const goBack = () => {
     setSelectedDir(null);
     setMembers([]);
-    setFreshAvatars({});
     loadDirectories();
   };
 
@@ -414,40 +384,26 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    if (members.length === 0) return;
-
+    if (!selectedDir) return;
     setRefreshingPhotos(true);
-    setFreshAvatars({});
-    let updated = 0;
-    let failed = 0;
-    const total = members.length;
-    setRefreshProgress({ current: 0, total });
-
-    for (let i = 0; i < total; i++) {
-      const m = members[i];
-      setRefreshProgress({ current: i + 1, total });
-
-      try {
-        const url = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
-        if (url) {
-          setFreshAvatars((prev) => ({ ...prev, [m.creator_handle]: url }));
-          updated++;
-        } else {
-          failed++;
-        }
-      } catch {
-        failed++;
+    try {
+      const resp = await fetch("/api/refresh-avatars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directory_id: selectedDir.id }),
+      });
+      const result = await resp.json();
+      if (resp.ok) {
+        toast.success(`Refreshed ${result.updated} of ${result.total} avatars`);
+        // Reload members to show updated URLs
+        loadMembers(selectedDir.id);
+      } else {
+        toast.error(result.error || "Refresh failed");
       }
-
-      // 500ms delay between API calls
-      if (i < total - 1) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
+    } catch (err) {
+      toast.error("Refresh failed");
     }
-
     setRefreshingPhotos(false);
-    setRefreshProgress(null);
-    toast.success(`Photos: ${updated} loaded${failed > 0 ? `, ${failed} not found` : ""}`);
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
@@ -719,7 +675,7 @@ const BrandDirectory = () => {
           </Button>
           <Button variant="outline" size="sm" className="rounded-lg text-gray-600 dark:text-gray-400" onClick={handleRefreshPhotos} disabled={refreshingPhotos || membersLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-1.5", refreshingPhotos && "animate-spin")} />
-            {refreshProgress ? `Refreshing ${refreshProgress.current} of ${refreshProgress.total}...` : "Refresh Photos"}
+            {refreshingPhotos ? "Refreshing..." : "Refresh Photos"}
           </Button>
           {/* View toggle */}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ml-auto">
@@ -765,7 +721,7 @@ const BrandDirectory = () => {
                 const platforms = m.platforms ?? [];
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
-                    <DirAvatar m={m} freshUrl={freshAvatars[m.creator_handle]} size="lg" />
+                    <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#6C5CE7] mb-2 truncate max-w-full">@{m.creator_handle}</p>
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
@@ -836,7 +792,7 @@ const BrandDirectory = () => {
                     <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
-                          <DirAvatar m={m} freshUrl={freshAvatars[m.creator_handle]} size="sm" />
+                          <DirAvatar m={m} size="sm" />
                           <div className="min-w-0">
                             <p className="font-semibold text-[#000741] dark:text-white truncate">{m.creator_name}</p>
                             <p className="text-xs text-[#6C5CE7] truncate">@{m.creator_handle}</p>

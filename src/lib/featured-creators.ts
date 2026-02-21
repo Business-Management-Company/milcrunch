@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { generateProfileSlug, uploadCreatorImage, saveCreatorAvatar } from "@/lib/directories";
+import { generateProfileSlug } from "@/lib/directories";
 import { enrichCreatorProfile, type EnrichedProfileResponse } from "@/lib/influencers-club";
 
 // Homepage showcase functions use `featured_creators` table.
@@ -733,51 +733,18 @@ export async function approveForDirectory(data: {
 
   const slug = generateProfileSlug(data.display_name, handle);
 
-  // Upload profile image to Supabase storage for permanent URL
-  let permanentAvatarUrl = data.avatar_url || null;
-  if (permanentAvatarUrl && permanentAvatarUrl.includes("ui-avatars.com")) {
-    permanentAvatarUrl = null;
-  }
-
-  // Resolve the best CDN source URL (pre-upload)
-  const cdnSourceUrl = (() => {
-    for (const u of [data.ic_avatar_url, data.avatar_url]) {
-      if (u && !u.includes("ui-avatars.com")) return u.replace(/^http:\/\//i, "https://");
-    }
-    // Last resort: try extracting from enrichment_data if passed
-    if (data.enrichment_data) {
-      const fromEnrich = extractAvatarFromEnrichment(data.enrichment_data);
-      if (fromEnrich) return fromEnrich;
-    }
-    return null;
-  })();
-
-  if (permanentAvatarUrl && permanentAvatarUrl.includes("supabase.co/storage")) {
-    // Already a permanent URL — no re-upload needed
-  } else if (cdnSourceUrl) {
-    const uploaded = await uploadCreatorImage(cdnSourceUrl, handle);
-    if (uploaded) {
-      permanentAvatarUrl = uploaded;
-    } else {
-      // Upload failed — never persist an expired CDN URL (scontent-* returns 410)
-      permanentAvatarUrl = null;
-    }
-  }
-
-  // Never save Instagram/Facebook CDN URLs — they expire within 24h and return 410
-  const isSafeUrl = (u: string | null) =>
-    !!u && !u.includes("scontent") && !u.includes("cdninstagram") && !u.includes("fbcdn") && !u.includes("ui-avatars.com");
-
-  const safeAvatar = isSafeUrl(permanentAvatarUrl) ? permanentAvatarUrl : null;
+  // Save the raw avatar URL directly — CDN URLs expire after ~24h
+  // but a daily cron job refreshes them via Discovery API.
+  let avatarUrl = data.ic_avatar_url || data.avatar_url || null;
+  if (avatarUrl && avatarUrl.includes("ui-avatars.com")) avatarUrl = null;
+  if (avatarUrl) avatarUrl = avatarUrl.replace(/^http:\/\//i, "https://");
 
   const payload: Record<string, unknown> = {
     creator_handle: handle,
     creator_name: data.display_name,
     platform: data.platform || "instagram",
-    avatar_url: safeAvatar,
-    // Store the permanent Supabase URL in ic_avatar_url too (UI reads this first);
-    // never fall back to CDN URLs — they expire
-    ic_avatar_url: safeAvatar,
+    avatar_url: avatarUrl,
+    ic_avatar_url: avatarUrl,
     follower_count: data.follower_count ?? null,
     engagement_rate: data.engagement_rate ?? null,
     bio: data.bio || null,

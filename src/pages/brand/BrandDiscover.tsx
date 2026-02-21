@@ -1426,28 +1426,8 @@ const BrandDiscover = () => {
 
     const igData = raw?.instagram as Record<string, unknown> | undefined;
 
-    // Resolve the best avatar URL from enrichment data
-    const enrichAvatar = extractAvatarFromEnrichment(raw);
-
-    // Resolve the search-API avatar — check CreatorCard.avatar AND any raw image fields
-    // that mapAccountToCard may have resolved from the IC search response
-    const searchAvatar = (() => {
-      // 1. The mapped avatar field (from mapAccountToCard)
-      if (creator.avatar && !creator.avatar.includes("ui-avatars.com")) {
-        return creator.avatar.replace(/^http:\/\//i, "https://");
-      }
-      // 2. Check raw fields that might exist on the object but aren't in the TS interface
-      for (const key of ["picture", "profile_picture", "profile_pic_url", "image_url", "thumbnail", "photo", "picture_url", "profile_image_url"]) {
-        const val = creatorAny[key];
-        if (val && typeof val === "string" && (val as string).trim() && !(val as string).includes("ui-avatars.com")) {
-          return (val as string).replace(/^http:\/\//i, "https://");
-        }
-      }
-      return null;
-    })();
-
-    // Best avatar: enrichment first, then search-API avatar
-    const bestAvatar = enrichAvatar || searchAvatar || null;
+    // Just save the raw avatar URL — CDN URLs expire after ~24h but a daily cron refreshes them
+    const avatarUrl = creator.avatar || null;
 
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
@@ -1455,38 +1435,6 @@ const BrandDiscover = () => {
 
     // Extract banner image from enrichment data
     const bannerUrl = extractBannerImage(raw) ?? null;
-
-    console.log("[doApproveForDirectory] Avatar resolution:", {
-      handle,
-      searchAvatar,
-      enrichAvatar,
-      bestAvatar,
-      creatorFollowers: creator.followers,
-      creatorEngagement: creator.engagementRate,
-    });
-
-    // Persist avatar to Supabase storage if it's an external URL
-    let persistedAvatarUrl = bestAvatar;
-    if (persistedAvatarUrl && persistedAvatarUrl.includes("ui-avatars.com")) {
-      persistedAvatarUrl = null;
-    }
-    if (persistedAvatarUrl && !persistedAvatarUrl.includes("supabase.co")) {
-      try {
-        const resp = await fetch("/api/upload-creator-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: persistedAvatarUrl, handle }),
-        });
-        if (resp.ok) {
-          const { url } = await resp.json();
-          if (url) persistedAvatarUrl = url;
-        } else {
-          console.warn("[doApproveForDirectory] Image upload failed:", resp.status, "— keeping CDN URL");
-        }
-      } catch (uploadErr) {
-        console.warn("[doApproveForDirectory] Image upload error:", uploadErr, "— keeping CDN URL");
-      }
-    }
 
     // Resolve follower count: enrichment may have fresher data than search
     const followerCount =
@@ -1503,21 +1451,11 @@ const BrandDiscover = () => {
       creator.engagementRate ||
       null;
 
-    console.log("[doApproveForDirectory] INSERT payload:", {
-      handle,
-      name: creator.name,
-      directoryId,
-      avatar_url: persistedAvatarUrl,
-      ic_avatar_url: bestAvatar,
-      follower_count: followerCount,
-      engagement_rate: engagementRate,
-    });
-
     const { error } = await approveForDirectory({
       handle,
       display_name: creator.name,
       platform: creator.platforms?.[0] ?? "instagram",
-      avatar_url: persistedAvatarUrl || bestAvatar,
+      avatar_url: avatarUrl,
       follower_count: followerCount,
       engagement_rate: engagementRate,
       bio: bioText || null,
@@ -1525,7 +1463,7 @@ const BrandDiscover = () => {
       status: "veteran",
       platforms: socialPlatforms.length > 0 ? socialPlatforms : creator.platforms,
       category: creator.category ?? null,
-      ic_avatar_url: persistedAvatarUrl || bestAvatar,
+      ic_avatar_url: avatarUrl,
       enrichment_data: raw || null,
       added_by: effectiveUserId ?? null,
       directory_id: directoryId || null,
