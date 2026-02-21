@@ -1,11 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Send, X, Sparkles, Plus, Loader2 } from "lucide-react";
+import { MessageSquare, Send, X, Sparkles, Plus, Loader2, ListPlus, Check } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
 import { getChatResponse } from "@/lib/chat-responses";
+import { useLists } from "@/contexts/ListContext";
+import CreateListModal from "@/components/CreateListModal";
+import { detectBranch } from "@/lib/featured-creators";
+import { toast } from "sonner";
 
 interface ChatMessage {
   id: string;
@@ -40,13 +50,41 @@ function formatFollowers(n: number): string {
   return String(n);
 }
 
+const MILITARY_KEYWORDS = [
+  "military", "veteran", "army", "navy", "air force", "marines",
+  "coast guard", "national guard", "space force", "usmc", "usaf",
+  "active duty", "reserve", "service member", "milspouse", "milso",
+  "combat", "deployment", "infantry", "special forces", "ranger",
+  "seal", "green beret", "airborne", "paratrooper",
+];
+
+function detectMilitaryKeywords(creator: CreatorCard): { branch: string | null; keywords: string[] } {
+  const text = [
+    creator.bio ?? "",
+    creator.name ?? "",
+    creator.specialties?.join(" ") ?? "",
+    creator.hashtags?.join(" ") ?? "",
+    creator.category ?? "",
+  ].join(" ").toLowerCase();
+
+  const branch = creator.branch || detectBranch(text);
+  const keywords: string[] = [];
+  for (const kw of MILITARY_KEYWORDS) {
+    if (text.includes(kw)) keywords.push(kw);
+  }
+  return { branch, keywords: [...new Set(keywords)].slice(0, 5) };
+}
+
 export default function FloatingAdminChat() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: makeId(), role: "assistant", text: "👋 Hi! I'm your MilCrunch AI assistant. How can I help today?" },
+    { id: makeId(), role: "assistant", text: "Hi! I'm your MilCrunch AI assistant. How can I help today?" },
   ]);
+  const [createListModalOpen, setCreateListModalOpen] = useState(false);
+  const [pendingCreator, setPendingCreator] = useState<CreatorCard | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +110,37 @@ export default function FloatingAdminChat() {
     window.addEventListener("open-ai-chat", handler);
     return () => window.removeEventListener("open-ai-chat", handler);
   }, []);
+
+  const creatorToListPayload = (c: CreatorCard) => ({
+    id: c.id,
+    name: c.name,
+    username: c.username,
+    avatar: c.avatar,
+    followers: c.followers,
+    engagementRate: c.engagementRate,
+    platforms: c.platforms,
+    bio: c.bio,
+    location: c.location,
+  });
+
+  const handleAddToList = (listId: string, listName: string, creator: CreatorCard) => {
+    addCreatorToList(listId, creatorToListPayload(creator));
+    toast.success(`Added ${creator.name} to ${listName}`);
+  };
+
+  const handleOpenCreateListForCreator = (creator: CreatorCard) => {
+    setPendingCreator(creator);
+    setCreateListModalOpen(true);
+  };
+
+  const handleCreateListAndAdd = (name: string) => {
+    const newId = createList(name);
+    if (pendingCreator) {
+      addCreatorToList(newId, creatorToListPayload(pendingCreator));
+      toast.success(`Created "${name}" and added ${pendingCreator.name}`);
+      setPendingCreator(null);
+    }
+  };
 
   const addResponse = async (input: string) => {
     const userMsg: ChatMessage = { id: makeId(), role: "user", text: input };
@@ -251,50 +320,91 @@ export default function FloatingAdminChat() {
                   {/* Creator result cards */}
                   {m.creators && m.creators.length > 0 && (
                     <div className="space-y-2 mt-3">
-                      {m.creators.map((c, i) => (
-                        <div
-                          key={c.id || i}
-                          className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors"
-                        >
-                          <img
-                            src={c.avatar}
-                            alt={c.name}
-                            className="h-11 w-11 rounded-full object-cover shrink-0 ring-2 ring-white dark:ring-gray-800"
-                            onError={(e) => {
-                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=6C5CE7&color=fff&size=128`;
-                            }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">
-                              {c.name}
-                            </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              {c.username && <span className="truncate">@{c.username}</span>}
-                              {c.branch && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-[10px] uppercase tracking-wide shrink-0">
-                                  {c.branch}
-                                </span>
+                      {m.creators.map((c, i) => {
+                        const { branch, keywords } = detectMilitaryKeywords(c);
+                        const alreadyAdded = isCreatorInList(c.id);
+
+                        return (
+                          <div
+                            key={c.id || i}
+                            className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors"
+                          >
+                            <img
+                              src={c.avatar}
+                              alt={c.name}
+                              className="h-11 w-11 rounded-full object-cover shrink-0 ring-2 ring-white dark:ring-gray-800"
+                              onError={(e) => {
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=6C5CE7&color=fff&size=128`;
+                              }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">
+                                {c.name}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                {c.username && <span className="truncate">@{c.username}</span>}
+                                {branch && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-[10px] uppercase tracking-wide shrink-0">
+                                    {branch}
+                                  </span>
+                                )}
+                              </div>
+                              {c.followers > 0 && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  {formatFollowers(c.followers)} followers
+                                </p>
+                              )}
+                              {/* Matched military keywords */}
+                              {keywords.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {keywords.map((kw) => (
+                                    <span
+                                      key={kw}
+                                      className="inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                    >
+                                      {kw}
+                                    </span>
+                                  ))}
+                                </div>
                               )}
                             </div>
-                            {c.followers > 0 && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {formatFollowers(c.followers)} followers
-                              </p>
+
+                            {/* Add to List dropdown */}
+                            {alreadyAdded ? (
+                              <span className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                <Check className="h-3 w-3" />
+                                Added
+                              </span>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors">
+                                    <ListPlus className="h-3 w-3" />
+                                    Add to List
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="z-[60]">
+                                  {lists.map((list) => (
+                                    <DropdownMenuItem
+                                      key={list.id}
+                                      onClick={() => handleAddToList(list.id, list.name, c)}
+                                    >
+                                      {list.name}
+                                      <span className="ml-auto text-xs text-muted-foreground">
+                                        {list.creators.length}
+                                      </span>
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(c)}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Create New List
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/brand/discover?q=${encodeURIComponent(c.username || c.name)}`);
-                              setOpen(false);
-                            }}
-                            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors"
-                          >
-                            <Plus className="h-3 w-3" />
-                            Add to List
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
@@ -337,6 +447,13 @@ export default function FloatingAdminChat() {
           </div>
         </div>
       )}
+
+      {/* Create List Modal */}
+      <CreateListModal
+        open={createListModalOpen}
+        onOpenChange={setCreateListModalOpen}
+        onCreate={handleCreateListAndAdd}
+      />
     </>
   );
 }
