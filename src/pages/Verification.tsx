@@ -2385,20 +2385,20 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 mx-6 space-y-8">
+    <div className="w-full py-6 mx-10 space-y-8">
       {/* ── 1. HERO ── */}
-      <div className="flex items-start gap-6">
-        <div className="rink-0 relative group">
+      <div className="flex items-start gap-6 overflow-visible">
+        <div className="shrink-0 relative group">
           {avatarUrl && !imgError ? (
             <img
               src={avatarUrl}
               alt={record.person_name}
               crossOrigin="anonymous"
-              className="h-24 w-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+              className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
               onError={() => setImgError(true)}
             />
           ) : (
-            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl border-2 border-gray-200 dark:border-gray-700">
+            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg border-2 border-gray-200 dark:border-gray-700">
               {initials}
             </div>
           )}
@@ -2429,7 +2429,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{record.person_name}</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{record.person_name}</h2>
             <StatusBadge status={record.status ?? "pending"} />
           </div>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -2567,7 +2567,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </div>
 
         {/* Confidence Ring */}
-        <div className="shrink-0 hidden md:block">
+        <div className="shrink-0 min-w-[100px] hidden md:block overflow-visible">
           <ConfidenceGauge score={record.verification_score ?? 0} />
         </div>
       </div>
