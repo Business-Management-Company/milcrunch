@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
-import { getChatResponse } from "@/lib/chat-responses";
+
 import { useLists } from "@/contexts/ListContext";
 import CreateListModal from "@/components/CreateListModal";
 import { detectBranch } from "@/lib/featured-creators";
@@ -83,6 +83,7 @@ export default function FloatingAdminChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: makeId(), role: "assistant", text: "Hi! I'm your MilCrunch AI assistant. How can I help today?" },
   ]);
+  const [loading, setLoading] = useState(false);
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
   const [pendingCreator, setPendingCreator] = useState<CreatorCard | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -143,68 +144,83 @@ export default function FloatingAdminChat() {
   };
 
   const addResponse = async (input: string) => {
-    const userMsg: ChatMessage = { id: makeId(), role: "user", text: input };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((m) => [...m, { id: makeId(), role: "user" as const, text: input }]);
+    setLoading(true);
 
-    const lower = input.toLowerCase();
-    const isCreatorSearch = lower.match(
-      /find|show|give|list|search|looking for|need|want|creators?|influencers?|speakers?|keynote|podcasters?|authors?|ambassadors?|veterans?|military|army|navy|marines|air force|coast guard/
-    );
+    try {
+      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey ?? "",
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `You are MilCrunch AI, an assistant for a military influencer and event management platform.
+You help users find military creators, manage events, build campaigns, and analyze ROI.
+The platform has: 2,400+ verified military creators, 825+ podcasts, event management tools, and sponsor ROI tracking.
+When asked to find creators, respond with a JSON object like: {"action":"search","query":"[search terms]","branch":"[branch if specified]","count":[number requested]}
+When answering general questions, respond naturally and concisely.`,
+          messages: [{ role: "user", content: input }],
+        }),
+      });
 
-    if (isCreatorSearch) {
-      const loadingId = makeId();
+      const data = await response.json();
+      const text = data.content?.[0]?.text ?? "";
+
+      // Check if Claude wants to search for creators
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.action === "search") {
+          const searchLabel = `Searching for ${parsed.count ?? 10} ${parsed.branch ?? "military"} creators...`;
+          const loadingId = makeId();
+          setMessages((m) => [...m, { id: loadingId, role: "assistant" as const, text: searchLabel, loading: true }]);
+          const { creators } = await searchCreators(parsed.query, { page: 1 });
+          setMessages((m) => m.filter((msg) => msg.id !== loadingId));
+
+          if (creators.length > 0) {
+            setMessages((m) => [
+              ...m,
+              {
+                id: makeId(),
+                role: "assistant" as const,
+                text: `Found ${creators.length} creators matching your request. Showing top ${Math.min(creators.length, parsed.count ?? 10)}:`,
+                creators: creators.slice(0, parsed.count ?? 10),
+                cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(parsed.query)}` },
+              },
+            ]);
+          } else {
+            setMessages((m) => [
+              ...m,
+              {
+                id: makeId(),
+                role: "assistant" as const,
+                text: "I couldn't find results for that search. Try different keywords or open Creator Discovery for advanced filters.",
+                cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
+              },
+            ]);
+          }
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // Not JSON — treat as regular text response
+      }
+
+      // Regular text response
+      setMessages((m) => [...m, { id: makeId(), role: "assistant" as const, text }]);
+    } catch (e) {
+      console.error("[FloatingChat] Error:", e);
       setMessages((m) => [
         ...m,
-        { id: loadingId, role: "assistant" as const, text: "Searching our military creator network...", loading: true },
+        { id: makeId(), role: "assistant" as const, text: "I'm having trouble connecting right now. Please try again." },
       ]);
-
-      try {
-        const { creators } = await searchCreators(input, { page: 1 });
-        setMessages((m) => m.filter((msg) => msg.id !== loadingId));
-
-        if (creators.length > 0) {
-          setMessages((m) => [
-            ...m,
-            {
-              id: makeId(),
-              role: "assistant" as const,
-              text: `Found ${creators.length} creators matching your search. Showing top ${Math.min(creators.length, 10)}:`,
-              creators: creators.slice(0, 10),
-              cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(input)}` },
-            },
-          ]);
-        } else {
-          setMessages((m) => [
-            ...m,
-            {
-              id: makeId(),
-              role: "assistant" as const,
-              text: "I couldn't find results for that search. Try different keywords or open Creator Discovery for advanced filters.",
-              cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
-            },
-          ]);
-        }
-      } catch (err) {
-        console.error("[FloatingChat] Search error:", err);
-        setMessages((m) => m.filter((msg) => msg.id !== loadingId));
-        setMessages((m) => [
-          ...m,
-          {
-            id: makeId(),
-            role: "assistant" as const,
-            text: "Something went wrong searching creators. Try again or use Creator Discovery directly.",
-            cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
-          },
-        ]);
-      }
-      return;
     }
 
-    // Fall back to canned responses for non-creator queries
-    setTimeout(() => {
-      const response = getChatResponse(input);
-      setMessages((m) => [...m, { id: makeId(), role: "assistant" as const, ...response }]);
-    }, 500);
+    setLoading(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
