@@ -629,7 +629,33 @@ ${params.aiAnalysis.slice(0, 2000)}`;
     });
     if (!res.ok) throw new Error(`Anthropic ${res.status}`);
     const data = await res.json();
-    return (data.content?.[0]?.text ?? "").trim();
+    const raw = (data.content?.[0]?.text ?? "").trim();
+
+    const DOSSIER_HEADERS = [
+      "Executive Summary",
+      "Key Facts",
+      "Career Highlights",
+      "Organizations & Affiliations",
+      "Organizations and Affiliations",
+      "Quotes",
+      "Notable Achievements",
+      "Post-Service Career",
+    ];
+
+    const formatted = raw
+      .split("\n")
+      .map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return line;
+        if (trimmed.startsWith("#")) return line;
+        if (DOSSIER_HEADERS.some((h) => trimmed.toLowerCase() === h.toLowerCase())) {
+          return `\n## ${trimmed}\n`;
+        }
+        return line;
+      })
+      .join("\n");
+
+    return formatted;
   } catch (e) {
     console.error("[Verification] Dossier generation error:", e);
     return "";
