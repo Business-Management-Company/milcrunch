@@ -163,31 +163,41 @@ export async function scrapeFirecrawl(url: string): Promise<{ markdown?: string 
 export function computeVerificationScore(
   pdlScore: number,
   evidenceSources: EvidenceSource[],
-  contentSignals: { hasUnitOrMOS: boolean; hasDates: boolean; hasAwards: boolean }
+  contentSignals: { hasUnitOrMOS: boolean; hasDates: boolean; hasAwards: boolean },
+  extra?: { claimedBranch?: string; linkedinUrl?: string }
 ): number {
-  const baseline = 50;
+  let score = 0;
 
-  // Web corroboration: +5 per military-related source, max +25
-  const corroborating = evidenceSources.filter((s) => s.category === "Military Service" && !s.isRedFlag);
-  const webScore = Math.min(25, corroborating.length * 5);
+  // Branch identified (+20)
+  const claimedBranch = extra?.claimedBranch;
+  if (claimedBranch && claimedBranch !== "Unknown") score += 20;
 
-  // Content signals: +5 each, max +15
-  let contentScore = 0;
-  if (contentSignals.hasUnitOrMOS) contentScore += 5;
-  if (contentSignals.hasDates) contentScore += 5;
-  if (contentSignals.hasAwards) contentScore += 5;
+  // Background clean (+20)
+  const redFlags = evidenceSources.filter((s) => s.isRedFlag);
+  if (!redFlags || redFlags.length === 0) score += 20;
 
-  // Red flag deductions — only for actual negative evidence
-  let deductions = 0;
-  for (const s of evidenceSources.filter((s) => s.isRedFlag)) {
-    const text = `${s.title} ${s.snippet}`.toLowerCase();
-    if (/stolen valor/.test(text)) deductions += 40;
-    else if (/criminal|fraud|convicted|indicted|scam/.test(text)) deductions += 30;
-    else if (/fake|fabricat|impost/.test(text)) deductions += 20;
-    else deductions += 10;
-  }
+  // Evidence sources (+20 if 10+, +10 if 5+)
+  const sourceCount = evidenceSources.length;
+  if (sourceCount >= 10) score += 20;
+  else if (sourceCount >= 5) score += 10;
 
-  return Math.min(100, Math.max(0, baseline + pdlScore + webScore + contentScore - deductions));
+  // PDL match (+15)
+  const pdlMatch = pdlScore > 0;
+  if (pdlMatch) score += 15;
+
+  // LinkedIn confirmed (+10)
+  const linkedinConfirmed = !!(extra?.linkedinUrl) || evidenceSources.some((s) => s.url?.includes("linkedin.com"));
+  if (linkedinConfirmed) score += 10;
+
+  // Social profile found (+10)
+  const socialFound = evidenceSources.some((s) => s.category === "Social Media");
+  if (socialFound) score += 10;
+
+  // Location confirmed (+5)
+  const locationConfirmed = contentSignals.hasDates || contentSignals.hasUnitOrMOS;
+  if (locationConfirmed) score += 5;
+
+  return Math.min(100, Math.max(0, score));
 }
 
 export function recommendStatus(score: number, hasCriminalFlags: boolean): "verified" | "pending" | "flagged" | "denied" {
@@ -498,7 +508,7 @@ export async function runVerificationPipeline(
   onPhase({ phase: 4, name: "AI Analysis", status: "done", data: aiAnalysis });
 
   const hasCriminalFlags = evidenceSources.some((s) => s.isRedFlag);
-  const verificationScore = computeVerificationScore(pdlScore, evidenceSources, contentSignals);
+  const verificationScore = computeVerificationScore(pdlScore, evidenceSources, contentSignals, { claimedBranch: input.claimedBranch, linkedinUrl: input.linkedinUrl });
   const status = recommendStatus(verificationScore, hasCriminalFlags);
 
   return {
