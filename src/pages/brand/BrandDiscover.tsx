@@ -376,6 +376,38 @@ function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/** Batch-fetch permanent avatar URLs from directory_members for a set of handles.
+ *  Returns a Map<lowercase_handle, permanentUrl> — only includes rows where the
+ *  avatar is a non-expired Supabase Storage URL (skips scontent/cdninstagram). */
+async function getDirectoryAvatarBatch(
+  handles: string[]
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (handles.length === 0) return out;
+  try {
+    const lower = handles.map((h) => h.toLowerCase());
+    const { data } = await supabase
+      .from("directory_members")
+      .select("creator_handle, ic_avatar_url, avatar_url")
+      .in("creator_handle", lower);
+    if (!data) return out;
+    for (const row of data) {
+      const url = row.ic_avatar_url || row.avatar_url;
+      if (
+        url &&
+        url.includes("supabase.co/storage") &&
+        !url.includes("scontent") &&
+        !url.includes("cdninstagram")
+      ) {
+        out.set(row.creator_handle.toLowerCase(), url);
+      }
+    }
+  } catch (err) {
+    console.warn("[DirectoryAvatarCache] Batch lookup failed:", err);
+  }
+  return out;
+}
+
 async function getCachedEnrichment(username: string): Promise<EnrichedProfileResponse | null> {
   try {
     const { data, error } = await supabase
@@ -1192,7 +1224,8 @@ const BrandDiscover = () => {
     : (usernameNotFound?.fallbackResults ?? []);
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
-  // Capture current platform so enrichment uses the correct one for each search
+  // IMPORTANT: checks directory_members for permanent avatar URLs FIRST to avoid
+  // burning IC API credits on creators whose avatars are already in Supabase Storage.
   const safePlatform = Array.isArray(platform) ? platform : [];
   const enrichPlatform = safePlatform.length > 0 ? safePlatform[0].toLowerCase() : "instagram";
   useEffect(() => {
@@ -1206,6 +1239,15 @@ const BrandDiscover = () => {
     const BATCH_SIZE = 10;
 
     const run = async () => {
+      // ── Pre-flight: batch-check directory_members for permanent avatars ──
+      const allHandles = creatorsToEnrich
+        .map((c) => c.username!)
+        .filter(Boolean);
+      const dirAvatars = await getDirectoryAvatarBatch(allHandles);
+      if (dirAvatars.size > 0) {
+        console.log(`[Enrich] Skipping ${dirAvatars.size} creators — permanent avatars in directory_members`);
+      }
+
       for (let i = 0; i < creatorsToEnrich.length; i += BATCH_SIZE) {
         if (controller.signal.aborted) break;
 
@@ -1216,7 +1258,18 @@ const BrandDiscover = () => {
         const results = await Promise.allSettled(
           batch.map(async (creator) => {
             try {
-              // Check Supabase cache first
+              // ── 1. Check directory_members for a permanent Supabase Storage avatar ──
+              const permAvatar = dirAvatars.get(creator.username!.toLowerCase());
+              if (permAvatar && !controller.signal.aborted) {
+                enrichedSetRef.current.add(creator.id);
+                setEnrichCache((prev) => ({
+                  ...prev,
+                  [creator.id]: { avatar: permAvatar },
+                }));
+                return; // skip enrichment entirely — no credits burned
+              }
+
+              // ── 2. Check Supabase enrichment cache (7-day TTL) ──
               const cached = await getCachedEnrichment(creator.username!);
               if (cached && !controller.signal.aborted) {
                 enrichedSetRef.current.add(creator.id);
@@ -1226,7 +1279,7 @@ const BrandDiscover = () => {
                 return;
               }
 
-              // Cache miss — call the API with the correct platform
+              // ── 3. Cache miss — call the IC API (costs credits) ──
               const data = await enrichCreatorProfile(creator.username!, controller.signal, enrichPlatform);
               if (data && !controller.signal.aborted) {
                 enrichedSetRef.current.add(creator.id);
