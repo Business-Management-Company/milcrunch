@@ -177,12 +177,22 @@ For all other questions, respond naturally and concisely.`,
           setMessages((m) => m.filter((msg) => msg.id !== loadingId));
 
           if (creators.length > 0) {
+            const greetings: Record<string, string> = {
+              marines: "Semper Fi!",
+              army: "Hooah!",
+              navy: "Anchors Aweigh!",
+              "air force": "Aim High!",
+              "coast guard": "Semper Paratus!",
+            };
+            const branchKey = Object.keys(greetings).find(b => input.toLowerCase().includes(b));
+            const greeting = branchKey ? greetings[branchKey] : "Great news!";
+            const friendlyText = `${greeting} I found ${Math.min(creators.length, parsed.count ?? 10)} creators that might be a great fit. Are you looking for anything specific, like a certain niche, follower size, or content style?`;
             setMessages((m) => [
               ...m,
               {
                 id: makeId(),
                 role: "assistant" as const,
-                text: `Found ${creators.length} creators matching your request. Showing top ${Math.min(creators.length, parsed.count ?? 10)}:`,
+                text: friendlyText,
                 creators: creators.slice(0, parsed.count ?? 10),
                 cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(parsed.query)}` },
               },
