@@ -2352,10 +2352,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     }
   };
 
-  // Avatar from PDL data
-  const avatarUrl = (record.profile_photo_url as string | undefined)
-    || ((pdlData as Record<string, unknown> | null)?.profile_pic_url as string | undefined);
-  const initials = record.person_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials = record.person_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??';
 
   useEffect(() => {
     if (record.profile_photo_url) return; // already has a photo
@@ -2389,18 +2386,17 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       {/* ── 1. HERO ── */}
       <div className="flex items-start justify-between w-full pr-6 overflow-visible">
         <div className="shrink-0 relative group">
-          <img
-            src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(record.person_name)}&background=6366f1&color=fff&size=128`}
-            alt={record.person_name}
-            crossOrigin="anonymous"
-            className="w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 border-gray-200 dark:border-gray-700"
-            onError={(e) => {
-              const target = e.currentTarget;
-              if (!target.src.includes("ui-avatars")) {
-                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(record.person_name)}&background=6366f1&color=fff&size=128`;
-              }
-            }}
-          />
+          {record.profile_photo_url ? (
+            <img
+              src={record.profile_photo_url}
+              alt={initials}
+              className="w-16 h-16 rounded-full object-cover flex-shrink-0 border border-gray-200"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center text-white text-base font-bold flex-shrink-0">
+              {initials}
+            </div>
+          )}
           <label className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
               const file = e.target.files?.[0];
