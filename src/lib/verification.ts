@@ -567,33 +567,37 @@ STYLE
 - Active voice. No jargon.
 - Do NOT invent facts. If a detail is not in the provided sources, omit it or mark as "Not publicly available."
 
-OUTPUT FORMAT (use exact markdown headings and bullets):
+Format your response using this EXACT markdown structure - use ## for every section header:
 
-# [HEADLINE — one line]
+# [HEADLINE - one compelling sentence]
 
 ## Executive Summary
-2–3 sentences maximum.
+[2-3 sentence paragraph]
 
 ## Key Facts
-- **Branch:**
-- **Rank:**
-- **Service:**
-- **Status:**
-- **Hometown:**
-- **Known for:**
-- **Current roles:**
-- **Notable recognition:**
+| Field | Value |
+|-------|-------|
+| Branch | [value] |
+| Rank | [value] |
+| Service | [value] |
+| Status | [value] |
+| Hometown | [value] |
+| Known for | [value] |
+| Current roles | [value] |
+| Notable recognition | [value] |
 
 ## Career Highlights
-3–6 bullets, quantifiable where supported by sources.
+- [bullet point]
+- [bullet point]
+- [bullet point]
 
 ## Organizations & Affiliations
-Bullets. Only include if expliciated in sources.
+- [org name and role]
+- [org name and role]
 
 ## Quotes
-Only include if a direct quote is present in sources. Otherwise omit this section entirely.
+> [direct quote if available]
 
----
 *Note: This summary is based on publicly available sources. Unit assignments and deployment details are not publicly available.*
 
 RULES
@@ -601,6 +605,7 @@ RULES
 - Correct grammar, capitalization, and date formatting (e.g., 1997–2018).
 - Do not include speculative items unless clearly stated in the provided sources.
 - If claims appear uncertain, write conservatively using "reported" or "publicly noted."
+- Do NOT invent facts. If a detail is not in the provided sources, omit it or mark as "Not publicly available."
 - Return ONLY the formatted summary. No commentary before or after.
 
 INPUT DATA:
