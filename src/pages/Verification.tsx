@@ -1635,8 +1635,8 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
 
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-bold text-[#000741] dark:text-white flex items-center gap-2 w-full cursor-pointer" onClick={() => setOpen(!open)}>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between py-4">
+        <CardTitle className="text-lg font-bold text-[#000741] dark:text-white flex items-center gap-2 cursor-pointer m-0" onClick={() => setOpen(!open)}>
           {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Mic className="h-5 w-5" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
