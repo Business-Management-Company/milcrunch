@@ -1517,6 +1517,7 @@ const READINESS_ITEMS: { key: string; label: string; auto: boolean }[] = [
 ];
 
 function SpeakerReadinessAssessment({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
+  const [open, setOpen] = useState(true);
   const rawChecks = (record.manual_checks ?? {}) as Record<string, unknown>;
   const [localChecks, setLocalChecks] = useState<Record<string, boolean>>(() => {
     const out: Record<string, boolean> = {};
@@ -1562,7 +1563,8 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="text-base flex items-center gap-2 cursor-pointer w-full" onClick={() => setOpen(!open)}>
+          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
           <Mic className="h-4 w-4" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           {checkedCount >= 5 ? (
@@ -1574,7 +1576,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      {open && <CardContent className="space-y-3">
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium">Clearance: {checkedCount}/{total}</span>
@@ -1614,7 +1616,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
             <Save className="h-3.5 w-3.5 mr-1.5" /> Save Notes
           </Button>
         </div>
-      </CardContent>
+      </CardContent>}
     </Card>
   );
 }
