@@ -185,16 +185,16 @@ const BRANCH_STYLES: Record<string, string> = {
   "Space Force": "bg-indigo-600/10 text-indigo-700",
 };
 
-/* Branch → animated gradient mesh for card banners (when no banner_image_url) */
+/* Branch → animated gradient mesh for card banners */
 const BRANCH_GRADIENT: Record<string, string> = {
   default: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B73FF 100%)",
   veteran: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B73FF 100%)",
-  Marines: "linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #e8294b 100%)",
-  Army: "linear-gradient(135deg, #56ab2f 0%, #a8e063 50%, #2d6a4f 100%)",
-  Navy: "linear-gradient(135deg, #2193b0 0%, #6dd5ed 50%, #1a6fa8 100%)",
-  "Air Force": "linear-gradient(135deg, #89f7fe 0%, #66a6ff 50%, #0066cc 100%)",
-  "Coast Guard": "linear-gradient(135deg, #f7971e 0%, #ffd200 50%, #ff6b35 100%)",
-  "National Guard": "linear-gradient(135deg, #B8860B 0%, #DAA520 50%, #6B6B2A 100%)",
+  Marines: "linear-gradient(135deg, #940000 0%, #6B0000 50%, #940000 100%)",
+  Army: "linear-gradient(135deg, #4B5320 0%, #3a4118 50%, #4B5320 100%)",
+  Navy: "linear-gradient(135deg, #000083 0%, #050058 50%, #000083 100%)",
+  "Air Force": "linear-gradient(135deg, #003594 0%, #002070 50%, #003594 100%)",
+  "Coast Guard": "linear-gradient(135deg, #005F9E 0%, #CC2529 50%, #005F9E 100%)",
+  "National Guard": "linear-gradient(135deg, #4B5320 0%, #DAA520 50%, #4B5320 100%)",
 };
 
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
@@ -246,8 +246,6 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
   const branchGradient = BRANCH_GRADIENT[c.branch ?? ""] ?? BRANCH_GRADIENT.default;
-  const [bannerError, setBannerError] = useState(false);
-  const bannerImg = !bannerError && c.banner_image_url ? c.banner_image_url : null;
 
   const icUrl = safeImageUrl(c.ic_avatar_url);
   const avUrl = safeImageUrl(c.avatar_url);
@@ -276,26 +274,12 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         transition: `opacity 0.5s ease-out ${index * 70}ms, transform 0.5s ease-out ${index * 70}ms, box-shadow 0.3s ease`,
       }}
     >
-      {/* Banner — real image or animated branch gradient mesh */}
+      {/* Banner — animated branch gradient mesh */}
       <div className="h-20 w-full relative overflow-hidden">
-        {bannerImg ? (
-          <>
-            <img
-              src={bannerImg}
-              alt=""
-              className="w-full h-full object-cover"
-              style={{ objectPosition: "center top" }}
-              loading="lazy"
-              onError={() => setBannerError(true)}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-          </>
-        ) : (
-          <div
-            className="absolute inset-0 animate-mesh-shift"
-            style={{ backgroundImage: branchGradient, opacity: 0.75 }}
-          />
-        )}
+        <div
+          className="absolute inset-0 animate-mesh-shift"
+          style={{ backgroundImage: branchGradient, opacity: 0.75 }}
+        />
       </div>
 
       {/* Avatar overlapping banner */}
