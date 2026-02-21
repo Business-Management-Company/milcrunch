@@ -1,95 +1,83 @@
 import { supabase } from "@/integrations/supabase/client";
 
-/** Upload a creator's profile image to Supabase storage via the serverless proxy.
- *  Returns the permanent Supabase public URL, or null if upload fails. */
-export async function uploadCreatorImage(
-  imageUrl: string,
-  handle: string
-): Promise<string | null> {
-  if (!imageUrl || !handle) return null;
-  try {
-    const resp = await fetch("/api/upload-creator-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, handle }),
-    });
-    if (!resp.ok) {
-      console.warn("[directories] Image upload failed:", resp.status);
-      return null;
-    }
-    const data = await resp.json();
-    return data.url || null;
-  } catch (err) {
-    console.warn("[directories] Image upload error:", err);
-    return null;
-  }
+/** Convert a Blob to a base64 string (without the data: prefix). */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      // Strip "data:image/jpeg;base64," prefix
+      resolve(result.split(",")[1] || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 /**
- * Save a creator's avatar to permanent Supabase Storage and update the DB.
- * Call this whenever a fresh IC API image URL is available.
- * - Uploads image to creator-avatars/{handle}.jpg via serverless proxy
- * - Updates directory_members.ic_avatar_url with the permanent URL
- * Returns the permanent URL or null on failure.
+ * Fetch an image in the browser, validate it, and upload to Supabase Storage
+ * via the serverless proxy. Browsers can load Instagram CDN images fine —
+ * only server-side fetches get blocked.
+ *
+ * Returns the permanent Supabase public URL, or null if anything fails.
  */
 export async function saveCreatorAvatar(
   handle: string,
   imageUrl: string
 ): Promise<string | null> {
   if (!handle || !imageUrl) return null;
-  // Skip if already a permanent Supabase Storage URL
   if (imageUrl.includes("supabase.co/storage")) return imageUrl;
+
   try {
+    // Step 1: Fetch the image IN THE BROWSER (no CORS issue for CDN images)
+    const imgResp = await fetch(imageUrl);
+    if (!imgResp.ok) {
+      console.warn("[saveAvatar]", handle, "browser fetch failed:", imgResp.status);
+      return null;
+    }
+
+    const blob = await imgResp.blob();
+
+    // Step 2: Validate — must be a real image, not an HTML error page
+    if (!blob.type.startsWith("image/")) {
+      console.warn("[saveAvatar]", handle, "not an image:", blob.type);
+      return null;
+    }
+    if (blob.size < 5000) {
+      console.warn("[saveAvatar]", handle, "too small:", blob.size, "bytes");
+      return null;
+    }
+
+    // Step 3: Convert to base64 and send to upload endpoint
+    const base64 = await blobToBase64(blob);
+
     const resp = await fetch("/api/upload-creator-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, handle, updateDb: false }),
+      body: JSON.stringify({
+        handle,
+        imageBase64: base64,
+        mimeType: blob.type,
+        updateDb: true,
+      }),
     });
+
     if (!resp.ok) {
-      console.warn("[saveCreatorAvatar] Upload failed for", handle, resp.status);
+      console.warn("[saveAvatar]", handle, "upload endpoint failed:", resp.status);
       return null;
     }
+
     const data = await resp.json();
-    const url: string | null = data.url || null;
-    if (!url) return null;
-
-    // Verify the file actually exists in storage before trusting the URL
-    try {
-      const head = await fetch(url, { method: "HEAD" });
-      if (!head.ok) {
-        console.warn("[saveCreatorAvatar] HEAD check failed for", handle, head.status, "— discarding URL");
-        return null;
-      }
-    } catch {
-      console.warn("[saveCreatorAvatar] HEAD check error for", handle, "— discarding URL");
-      return null;
-    }
-
-    // URL verified — now persist to DB
-    await supabase
-      .from("directory_members")
-      .update({ ic_avatar_url: url, avatar_url: url })
-      .eq("creator_handle", handle.replace(/[^a-zA-Z0-9_.-]/g, "").toLowerCase())
-      .then(({ error }) => {
-        if (error) {
-          // Retry with original handle casing
-          supabase
-            .from("directory_members")
-            .update({ ic_avatar_url: url, avatar_url: url })
-            .eq("creator_handle", handle)
-            .then(({ error: e2 }) => {
-              if (e2) console.warn("[saveCreatorAvatar] DB update failed for", handle, e2.message);
-            });
-        }
-      });
-
-    console.log("[saveCreatorAvatar] Verified + saved for", handle, url);
-    return url;
+    console.log("[saveAvatar]", handle, "✓", data.url);
+    return data.url || null;
   } catch (err) {
-    console.warn("[saveCreatorAvatar] Error for", handle, err);
+    console.warn("[saveAvatar]", handle, "error:", err);
     return null;
   }
 }
+
+/** Upload a creator image (alias used by other callers). */
+export const uploadCreatorImage = saveCreatorAvatar;
 
 export interface Directory {
   id: string;

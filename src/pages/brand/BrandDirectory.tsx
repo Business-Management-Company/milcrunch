@@ -394,8 +394,6 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    // A URL is permanent only if it's hosted in our Supabase Storage.
-    // Everything else (expired Instagram CDN, fbcdn, random URLs, null) needs refresh.
     const isPermanent = (url: string | null | undefined) =>
       !!url && url.includes("supabase.co");
 
@@ -410,38 +408,101 @@ const BrandDirectory = () => {
 
     setRefreshingPhotos(true);
     setRefreshProgress({ current: 0, total: needsPhoto.length });
+
+    // ── Step 0: Delete ALL corrupted files from storage first ──
+    // Wipe the bucket so we start clean — only real images will be re-uploaded.
+    let purged = 0;
+    try {
+      const { data: files } = await supabase.storage
+        .from("creator-avatars")
+        .list("", { limit: 1000 });
+      if (files && files.length > 0) {
+        // Collect all paths (flat files + subfolders)
+        const pathsToDelete: string[] = [];
+        for (const f of files) {
+          if (f.name.includes(".")) {
+            // Flat file: handle.jpg
+            pathsToDelete.push(f.name);
+          } else {
+            // Subfolder: list contents and delete each
+            const { data: sub } = await supabase.storage
+              .from("creator-avatars")
+              .list(f.name, { limit: 20 });
+            if (sub) {
+              for (const sf of sub) {
+                pathsToDelete.push(`${f.name}/${sf.name}`);
+              }
+            }
+          }
+        }
+        if (pathsToDelete.length > 0) {
+          const { error: rmErr } = await supabase.storage
+            .from("creator-avatars")
+            .remove(pathsToDelete);
+          if (rmErr) {
+            console.warn("[RefreshPhotos] Bulk delete error:", rmErr.message);
+          } else {
+            purged = pathsToDelete.length;
+            console.log("[RefreshPhotos] Purged", purged, "files from storage");
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[RefreshPhotos] Storage purge failed:", err);
+    }
+
+    // Null out all supabase URLs in DB since files are gone
+    if (purged > 0) {
+      for (const m of members) {
+        if (isPermanent(m.ic_avatar_url) || isPermanent(m.avatar_url)) {
+          await supabase
+            .from("directory_members")
+            .update({ ic_avatar_url: null, avatar_url: null })
+            .eq("id", m.id);
+        }
+      }
+      // Update local state
+      setMembers((prev) =>
+        prev.map((mem) =>
+          isPermanent(mem.ic_avatar_url) || isPermanent(mem.avatar_url)
+            ? { ...mem, ic_avatar_url: null, avatar_url: null }
+            : mem
+        )
+      );
+    }
+
+    // Rebuild needsPhoto after purge (now includes everyone who had supabase URLs)
+    const allNeedPhoto = members.filter(() => true); // everyone without a permanent URL needs one
     let updated = 0;
     let failed = 0;
+    const total = allNeedPhoto.length;
+    setRefreshProgress({ current: 0, total });
 
-    // Process one creator at a time — each API call gets its own
-    // Vercel 10-second window so we never hit the function timeout.
-    for (let i = 0; i < needsPhoto.length; i++) {
-      const m = needsPhoto[i];
-      setRefreshProgress({ current: i + 1, total: needsPhoto.length });
+    // ── Step 1-3: For each creator, fetch image in browser → validate → upload ──
+    for (let i = 0; i < total; i++) {
+      const m = allNeedPhoto[i];
+      setRefreshProgress({ current: i + 1, total });
 
       try {
-        // Step 1: Get a fresh avatar URL via Discovery API (0.01 credits)
+        // Get fresh avatar URL from Discovery API (0.01 credits)
         const freshUrl = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
         if (!freshUrl) {
-          console.warn("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "— no avatar in Discovery response");
+          console.warn("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "— no avatar from Discovery");
           failed++;
-          // 500ms pause before next call even on skip
           await new Promise((r) => setTimeout(r, 500));
           continue;
         }
 
-        // Step 2: Download image + upload to Supabase Storage via serverless proxy
-        // (separate Vercel invocation — fresh 10s timeout)
+        // saveCreatorAvatar now fetches in the BROWSER, validates, sends base64
         const permanentUrl = await saveCreatorAvatar(m.creator_handle, freshUrl);
         if (!permanentUrl) {
-          console.warn("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "— upload proxy failed");
+          console.warn("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "— upload failed");
           failed++;
           await new Promise((r) => setTimeout(r, 500));
           continue;
         }
 
-        // Step 3: Update local state so the avatar shows immediately
-        console.log("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "✓", permanentUrl.substring(permanentUrl.lastIndexOf("/") + 1));
+        console.log("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "✓");
         updated++;
         setMembers((prev) =>
           prev.map((mem) =>
@@ -449,55 +510,24 @@ const BrandDirectory = () => {
           )
         );
       } catch (err) {
-        console.warn("[RefreshPhotos]", i + 1, "/", needsPhoto.length, m.creator_handle, "— error:", err);
+        console.warn("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "— error:", err);
         failed++;
       }
 
-      // 500ms delay between creators to avoid rate-limiting
-      if (i < needsPhoto.length - 1) {
+      if (i < total - 1) {
         await new Promise((r) => setTimeout(r, 500));
       }
-    }
-
-    // ── Cleanup: delete corrupted files from storage + null DB URLs ──
-    let cleaned = 0;
-    try {
-      const cleanupResp = await fetch("/api/cleanup-avatars", { method: "POST" });
-      if (cleanupResp.ok) {
-        const result = await cleanupResp.json();
-        cleaned = result.deleted || 0;
-        if (cleaned > 0) {
-          console.log("[RefreshPhotos] Cleanup removed", cleaned, "corrupted files");
-          // Null out local state for cleaned members
-          const cleanedHandles = (result.details || [])
-            .filter((d: { deleted?: boolean }) => d.deleted)
-            .map((d: { handle: string }) => d.handle?.toLowerCase());
-          if (cleanedHandles.length > 0) {
-            setMembers((prev) =>
-              prev.map((mem) =>
-                cleanedHandles.includes(mem.creator_handle?.toLowerCase())
-                  ? { ...mem, ic_avatar_url: null, avatar_url: null }
-                  : mem
-              )
-            );
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("[RefreshPhotos] Cleanup call failed:", err);
     }
 
     setRefreshingPhotos(false);
     setRefreshProgress(null);
     const parts = [`${updated} updated`];
     if (failed > 0) parts.push(`${failed} failed`);
-    if (cleaned > 0) parts.push(`${cleaned} corrupted removed`);
-    if (updated > 0 || cleaned > 0) {
+    if (purged > 0) parts.push(`${purged} old files purged`);
+    if (updated > 0) {
       toast.success(`Photos: ${parts.join(", ")}`);
-    } else if (failed > 0) {
-      toast.error(`Could not refresh photos (${failed} failed). Check console for details.`);
     } else {
-      toast.info("No photos to update");
+      toast.error(`Could not refresh photos (${failed} failed). Check console.`);
     }
   };
 
