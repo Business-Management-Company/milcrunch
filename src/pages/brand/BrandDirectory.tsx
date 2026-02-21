@@ -117,9 +117,16 @@ function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" 
           alt={m.creator_name ?? ""}
           className="w-full h-full object-cover"
           onError={() => {
-            if (imgSrc === icUrl && avUrl) {
+            // If a Supabase Storage URL fails, the file doesn't exist —
+            // skip the entire fallback chain and show initials.
+            // Trying other supabase.co URLs would just show the favicon.
+            if (imgSrc?.includes("supabase.co")) {
+              setImgSrc(null);
+              return;
+            }
+            if (imgSrc === icUrl && avUrl && !avUrl.includes("supabase.co")) {
               setImgSrc(avUrl);
-            } else if (imgSrc !== enrichUrl && enrichUrl) {
+            } else if (imgSrc !== enrichUrl && enrichUrl && !enrichUrl.includes("supabase.co")) {
               setImgSrc(enrichUrl);
             } else {
               setImgSrc(null);
@@ -463,10 +470,56 @@ const BrandDirectory = () => {
       }
     }
 
+    // ── Cleanup: null out stale Supabase URLs that point to missing files ──
+    // After refresh, some members may still have supabase.co URLs from earlier
+    // uploads that no longer exist in storage (shows favicon instead of photo).
+    const staleMembers = members.filter((m) => {
+      const url = m.ic_avatar_url || m.avatar_url;
+      return url && url.includes("supabase.co") && !needsPhoto.some((n) => n.id === m.id && updated > 0);
+    });
+    let cleaned = 0;
+    for (const m of staleMembers) {
+      const url = m.ic_avatar_url || m.avatar_url;
+      if (!url) continue;
+      try {
+        const check = await fetch(url, { method: "HEAD" });
+        if (!check.ok) {
+          // File doesn't exist — null out both URL columns
+          console.log("[RefreshPhotos] Cleaning stale URL for", m.creator_handle, "(", check.status, ")");
+          await supabase
+            .from("directory_members")
+            .update({ ic_avatar_url: null, avatar_url: null })
+            .eq("id", m.id);
+          cleaned++;
+          setMembers((prev) =>
+            prev.map((mem) =>
+              mem.id === m.id ? { ...mem, ic_avatar_url: null, avatar_url: null } : mem
+            )
+          );
+        }
+      } catch {
+        // Network error on HEAD — null it out to be safe
+        await supabase
+          .from("directory_members")
+          .update({ ic_avatar_url: null, avatar_url: null })
+          .eq("id", m.id);
+        cleaned++;
+        setMembers((prev) =>
+          prev.map((mem) =>
+            mem.id === m.id ? { ...mem, ic_avatar_url: null, avatar_url: null } : mem
+          )
+        );
+      }
+    }
+    if (cleaned > 0) console.log("[RefreshPhotos] Cleaned", cleaned, "stale storage URLs");
+
     setRefreshingPhotos(false);
     setRefreshProgress(null);
-    if (updated > 0) {
-      toast.success(`Photos updated for ${updated} of ${needsPhoto.length} creators${failed > 0 ? ` (${failed} failed)` : ""}`);
+    const parts = [`${updated} updated`];
+    if (failed > 0) parts.push(`${failed} failed`);
+    if (cleaned > 0) parts.push(`${cleaned} stale URLs cleaned`);
+    if (updated > 0 || cleaned > 0) {
+      toast.success(`Photos: ${parts.join(", ")}`);
     } else {
       toast.error(`Could not refresh photos (${failed} failed). Check console for details.`);
     }
