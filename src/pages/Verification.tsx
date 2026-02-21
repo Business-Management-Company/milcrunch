@@ -483,6 +483,27 @@ export default function Verification() {
         }
         })();
 
+        // Auto-run YouTube media search silently
+        void (async () => { try {
+          const mediaSearchName = addForm.fullName.trim();
+          const ytQuery = `"${mediaSearchName}" veteran interview OR podcast OR speaker`;
+          const ytResults = await searchSerp(ytQuery);
+          const videos = ytResults
+            .filter((r: any) => r.link?.includes('youtube.com') || r.link?.includes('youtu.be'))
+            .slice(0, 6)
+            .map((r: any) => ({
+              title: r.title ?? "",
+              url: r.link ?? "",
+              thumbnail: r.thumbnail ?? "",
+              snippet: r.snippet ?? "",
+            }));
+          if (videos.length > 0) {
+            await supabase.from('verifications')
+              .update({ manual_checks: { youtube_results: videos } })
+              .eq('id', inserted.id);
+          }
+        } catch (e) { console.error("Media auto-run failed:", e); } })();
+
         setList((prev) => [
           {
             ...inserted,
