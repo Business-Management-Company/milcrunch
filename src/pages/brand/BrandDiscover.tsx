@@ -839,13 +839,15 @@ const BrandDiscover = () => {
     didAutoLoad.current = true;
 
     // URL params from AI Chat → Discovery handoff take priority
-    const urlQ = urlSearchParams.get("q");
+    const params = new URLSearchParams(window.location.search);
+    const urlQ = params.get("q") || params.get("query") || params.get("search");
     if (urlQ?.trim()) {
-      setSearchQuery(urlQ.trim());
-      const urlPlatform = urlSearchParams.get("platform");
+      const query = urlQ.trim();
+      setSearchQuery(query);
+      const urlPlatform = params.get("platform");
       if (urlPlatform) setPlatform([urlPlatform]);
-      const minF = urlSearchParams.get("min_followers");
-      const maxF = urlSearchParams.get("max_followers");
+      const minF = params.get("min_followers");
+      const maxF = params.get("max_followers");
       if (minF || maxF) {
         const minVal = minF ? Number(minF) : null;
         const maxVal = maxF ? Number(maxF) : null;
@@ -856,20 +858,20 @@ const BrandDiscover = () => {
         );
         if (match) setFollowersRange(match.value);
       }
-      const minE = urlSearchParams.get("min_engagement");
+      const minE = params.get("min_engagement");
       if (minE) {
         const engVal = Number(minE);
         const match = ENGAGEMENT_OPTIONS.find((o) => o.min === engVal);
         if (match) setEngagementMin(match.value);
       }
-      const urlBranch = urlSearchParams.get("branch");
+      const urlBranch = params.get("branch");
       if (urlBranch) {
         const branches = urlBranch.split(",").filter((b) =>
           (BRANCHES as readonly string[]).includes(b)
         ) as Branch[];
         if (branches.length > 0) setSelectedBranches(new Set(branches));
       }
-      const urlCategory = urlSearchParams.get("category");
+      const urlCategory = params.get("category");
       if (urlCategory) {
         const match = CREATOR_TYPES.find((ct) => ct.value === urlCategory);
         if (match) setCreatorType(match.value);
