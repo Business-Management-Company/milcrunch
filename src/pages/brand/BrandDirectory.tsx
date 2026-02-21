@@ -390,7 +390,7 @@ const BrandDirectory = () => {
       const resp = await fetch("/api/refresh-avatars", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ directory_id: selectedDir.id }),
+        body: JSON.stringify({ directory_id: selectedDir.id, force: true }),
       });
       const result = await resp.json();
       if (resp.ok) {
