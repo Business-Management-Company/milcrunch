@@ -63,7 +63,7 @@ import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
-import { saveCreatorAvatar } from "@/lib/directories";
+// saveCreatorAvatar no longer used — avatars loaded live from Discovery API
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
@@ -91,36 +91,29 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
-/** Small avatar component with cascading fallback for directory cards/rows. */
-function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" }) {
-  const icUrl = safeImageUrl(m.ic_avatar_url);
-  const avUrl = safeImageUrl(m.avatar_url);
-  const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(m.enrichment_data));
-  const initialSrc = icUrl ?? avUrl ?? enrichUrl;
-  const [imgSrc, setImgSrc] = useState<string | null>(initialSrc);
-  const prevInitial = useRef(initialSrc);
-  useEffect(() => {
-    if (initialSrc !== prevInitial.current) {
-      prevInitial.current = initialSrc;
-      setImgSrc(initialSrc);
-    }
-  }, [initialSrc]);
+/** Small avatar component — shows fresh Discovery URL, falls back to initials. */
+function DirAvatar({ m, freshUrl, size = "lg" }: { m: DirectoryMember; freshUrl?: string | null; size?: "sm" | "lg" }) {
+  const src = freshUrl || null;
+  const [failed, setFailed] = useState(false);
+  // Reset failed state when src changes (e.g. fresh URL arrives)
+  const prevSrc = useRef(src);
+  if (src !== prevSrc.current) {
+    prevSrc.current = src;
+    if (failed) setFailed(false);
+  }
   const isLg = size === "lg";
+  const showImg = src && !failed;
   return (
     <div className={cn(
       "rounded-full overflow-hidden relative",
       isLg ? "w-[72px] h-[72px] md:w-[88px] md:h-[88px] mb-3 border-[3px] border-white dark:border-gray-700 ring-1 ring-gray-200 dark:ring-gray-600 shadow-sm" : "w-10 h-10 shrink-0 border border-gray-200 dark:border-gray-700",
     )}>
-      {imgSrc ? (
+      {showImg ? (
         <img
-          src={imgSrc}
+          src={src}
           alt={m.creator_name ?? ""}
           className="w-full h-full object-cover"
-          onError={() => {
-            // Any failed image load → show initials immediately.
-            // Never try fallback URLs — they risk showing the app favicon.
-            setImgSrc(null);
-          }}
+          onError={() => setFailed(true)}
         />
       ) : (
         <div className={cn(
@@ -184,7 +177,8 @@ const BrandDirectory = () => {
   const [promoteListId, setPromoteListId] = useState("");
   const [promoting, setPromoting] = useState(false);
 
-  // Refresh photos state
+  // Fresh avatar URLs from IC Discovery API (local state only — not persisted)
+  const [freshAvatars, setFreshAvatars] = useState<Record<string, string>>({});
   const [refreshingPhotos, setRefreshingPhotos] = useState(false);
   const [refreshProgress, setRefreshProgress] = useState<{ current: number; total: number } | null>(null);
 
@@ -236,16 +230,42 @@ const BrandDirectory = () => {
     setMembersLoading(false);
   }, []);
 
+  // Auto-fetch fresh avatar URLs when members load.
+  // Runs in background — initials show until each URL resolves.
+  const fetchFreshAvatars = useCallback(async (memberList: DirectoryMember[]) => {
+    for (const m of memberList) {
+      try {
+        const url = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
+        if (url) {
+          setFreshAvatars((prev) => ({ ...prev, [m.creator_handle]: url }));
+        }
+      } catch {
+        // skip — initials will show
+      }
+      // Small delay to avoid hammering the API
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }, []);
+
   const openDirectory = (dir: Directory) => {
     setSelectedDir(dir);
     setSearchQuery("");
     setBranchFilter("all");
+    setFreshAvatars({});
     loadMembers(dir.id);
   };
+
+  // Kick off avatar fetching once members are loaded
+  useEffect(() => {
+    if (members.length > 0 && !membersLoading) {
+      fetchFreshAvatars(members);
+    }
+  }, [members, membersLoading, fetchFreshAvatars]);
 
   const goBack = () => {
     setSelectedDir(null);
     setMembers([]);
+    setFreshAvatars({});
     loadDirectories();
   };
 
@@ -394,126 +414,32 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    const isPermanent = (url: string | null | undefined) =>
-      !!url && url.includes("supabase.co");
-
-    const needsPhoto = members.filter((m) =>
-      !isPermanent(m.ic_avatar_url) && !isPermanent(m.avatar_url)
-    );
-
-    if (needsPhoto.length === 0) {
-      toast.info("All creators already have photos");
-      return;
-    }
+    if (members.length === 0) return;
 
     setRefreshingPhotos(true);
-    setRefreshProgress({ current: 0, total: needsPhoto.length });
-
-    // ── Step 0: Delete ALL corrupted files from storage first ──
-    // Wipe the bucket so we start clean — only real images will be re-uploaded.
-    let purged = 0;
-    try {
-      const { data: files } = await supabase.storage
-        .from("creator-avatars")
-        .list("", { limit: 1000 });
-      if (files && files.length > 0) {
-        // Collect all paths (flat files + subfolders)
-        const pathsToDelete: string[] = [];
-        for (const f of files) {
-          if (f.name.includes(".")) {
-            // Flat file: handle.jpg
-            pathsToDelete.push(f.name);
-          } else {
-            // Subfolder: list contents and delete each
-            const { data: sub } = await supabase.storage
-              .from("creator-avatars")
-              .list(f.name, { limit: 20 });
-            if (sub) {
-              for (const sf of sub) {
-                pathsToDelete.push(`${f.name}/${sf.name}`);
-              }
-            }
-          }
-        }
-        if (pathsToDelete.length > 0) {
-          const { error: rmErr } = await supabase.storage
-            .from("creator-avatars")
-            .remove(pathsToDelete);
-          if (rmErr) {
-            console.warn("[RefreshPhotos] Bulk delete error:", rmErr.message);
-          } else {
-            purged = pathsToDelete.length;
-            console.log("[RefreshPhotos] Purged", purged, "files from storage");
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("[RefreshPhotos] Storage purge failed:", err);
-    }
-
-    // Null out all supabase URLs in DB since files are gone
-    if (purged > 0) {
-      for (const m of members) {
-        if (isPermanent(m.ic_avatar_url) || isPermanent(m.avatar_url)) {
-          await supabase
-            .from("directory_members")
-            .update({ ic_avatar_url: null, avatar_url: null })
-            .eq("id", m.id);
-        }
-      }
-      // Update local state
-      setMembers((prev) =>
-        prev.map((mem) =>
-          isPermanent(mem.ic_avatar_url) || isPermanent(mem.avatar_url)
-            ? { ...mem, ic_avatar_url: null, avatar_url: null }
-            : mem
-        )
-      );
-    }
-
-    // Rebuild needsPhoto after purge (now includes everyone who had supabase URLs)
-    const allNeedPhoto = members.filter(() => true); // everyone without a permanent URL needs one
+    setFreshAvatars({});
     let updated = 0;
     let failed = 0;
-    const total = allNeedPhoto.length;
+    const total = members.length;
     setRefreshProgress({ current: 0, total });
 
-    // ── Step 1-3: For each creator, fetch image in browser → validate → upload ──
     for (let i = 0; i < total; i++) {
-      const m = allNeedPhoto[i];
+      const m = members[i];
       setRefreshProgress({ current: i + 1, total });
 
       try {
-        // Get fresh avatar URL from Discovery API (0.01 credits)
-        const freshUrl = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
-        if (!freshUrl) {
-          console.warn("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "— no avatar from Discovery");
+        const url = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
+        if (url) {
+          setFreshAvatars((prev) => ({ ...prev, [m.creator_handle]: url }));
+          updated++;
+        } else {
           failed++;
-          await new Promise((r) => setTimeout(r, 500));
-          continue;
         }
-
-        // saveCreatorAvatar now fetches in the BROWSER, validates, sends base64
-        const permanentUrl = await saveCreatorAvatar(m.creator_handle, freshUrl);
-        if (!permanentUrl) {
-          console.warn("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "— upload failed");
-          failed++;
-          await new Promise((r) => setTimeout(r, 500));
-          continue;
-        }
-
-        console.log("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "✓");
-        updated++;
-        setMembers((prev) =>
-          prev.map((mem) =>
-            mem.id === m.id ? { ...mem, avatar_url: permanentUrl, ic_avatar_url: permanentUrl } : mem
-          )
-        );
-      } catch (err) {
-        console.warn("[RefreshPhotos]", i + 1, "/", total, m.creator_handle, "— error:", err);
+      } catch {
         failed++;
       }
 
+      // 500ms delay between API calls
       if (i < total - 1) {
         await new Promise((r) => setTimeout(r, 500));
       }
@@ -521,14 +447,7 @@ const BrandDirectory = () => {
 
     setRefreshingPhotos(false);
     setRefreshProgress(null);
-    const parts = [`${updated} updated`];
-    if (failed > 0) parts.push(`${failed} failed`);
-    if (purged > 0) parts.push(`${purged} old files purged`);
-    if (updated > 0) {
-      toast.success(`Photos: ${parts.join(", ")}`);
-    } else {
-      toast.error(`Could not refresh photos (${failed} failed). Check console.`);
-    }
+    toast.success(`Photos: ${updated} loaded${failed > 0 ? `, ${failed} not found` : ""}`);
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
@@ -846,7 +765,7 @@ const BrandDirectory = () => {
                 const platforms = m.platforms ?? [];
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
-                    <DirAvatar m={m} size="lg" />
+                    <DirAvatar m={m} freshUrl={freshAvatars[m.creator_handle]} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#6C5CE7] mb-2 truncate max-w-full">@{m.creator_handle}</p>
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
@@ -917,7 +836,7 @@ const BrandDirectory = () => {
                     <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
-                          <DirAvatar m={m} size="sm" />
+                          <DirAvatar m={m} freshUrl={freshAvatars[m.creator_handle]} size="sm" />
                           <div className="min-w-0">
                             <p className="font-semibold text-[#000741] dark:text-white truncate">{m.creator_name}</p>
                             <p className="text-xs text-[#6C5CE7] truncate">@{m.creator_handle}</p>
