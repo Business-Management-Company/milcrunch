@@ -271,7 +271,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
 
       {/* Conversation area */}
       {(messages.length > 0 || loading) && (
-        <div ref={scrollRef} className="max-h-[400px] overflow-y-auto space-y-3 mb-4 pr-1">
+        <div ref={scrollRef} className="max-h-[520px] overflow-y-auto space-y-4 mb-4 pr-1">
           {messages.map((m, i) =>
             m.role === "user" ? (
               <div key={i} className="flex justify-end">
@@ -281,7 +281,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
               </div>
             ) : (
               <div key={i} className="flex flex-col items-start gap-2">
-                <div className="max-w-[90%] rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+                <div className="max-w-[90%] rounded-xl px-5 py-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
                   <MarkdownResponse content={m.content} />
                 </div>
                 {/* Smart CTAs */}

@@ -39,9 +39,12 @@ export function MarkdownResponse({ content }: { content: string }) {
 
   return (
     <div className="prose prose-sm max-w-none dark:prose-invert
-      prose-h2:text-xs prose-h2:font-bold prose-h2:uppercase prose-h2:tracking-widest prose-h2:text-[#6C5CE7] prose-h2:mt-5 prose-h2:mb-2
+      prose-h1:text-base prose-h1:font-semibold prose-h1:text-foreground prose-h1:mt-0 prose-h1:mb-3
+      prose-h2:text-xs prose-h2:font-bold prose-h2:uppercase prose-h2:tracking-widest prose-h2:text-[#6C5CE7] prose-h2:mt-6 prose-h2:mb-2
+      prose-h3:text-sm prose-h3:font-semibold prose-h3:text-foreground prose-h3:mt-5 prose-h3:mb-1.5
       prose-strong:text-[#000741] dark:prose-strong:text-white
-      prose-li:my-0.5 prose-p:my-1 prose-table:text-sm">
+      prose-p:my-2 prose-li:my-1 prose-ul:my-2 prose-ol:my-2 prose-table:text-sm
+      first:prose-p:mt-0 first:prose-h1:mt-0 first:prose-h2:mt-0">
       <ReactMarkdown>{processed}</ReactMarkdown>
     </div>
   );
