@@ -63,7 +63,7 @@ import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
-// saveCreatorAvatar no longer used — avatars loaded live from Discovery API
+import { saveCreatorAvatar } from "@/lib/directories";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
@@ -424,17 +424,32 @@ const BrandDirectory = () => {
 
     for (const m of members) {
       try {
-        const url = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
-        console.log("[RefreshPhotos]", m.creator_handle, "→ URL:", url?.substring(0, 150) ?? "NULL");
-        if (url) {
-          // Save fresh URL to DB
+        // Skip creators that already have a permanent Supabase Storage URL
+        const current = m.ic_avatar_url || m.avatar_url || "";
+        if (current.includes("supabase.co/storage")) {
+          updated++;
+          continue;
+        }
+
+        // Get fresh CDN URL from Discovery API
+        const cdnUrl = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
+        console.log("[RefreshPhotos]", m.creator_handle, "→ CDN:", cdnUrl?.substring(0, 150) ?? "NULL");
+        if (cdnUrl) {
+          // Upload to Supabase Storage for a permanent URL (browser can fetch IG CDN images)
+          let finalUrl = cdnUrl;
+          try {
+            const permUrl = await saveCreatorAvatar(m.creator_handle, cdnUrl);
+            if (permUrl) finalUrl = permUrl;
+          } catch (err) {
+            console.warn("[RefreshPhotos]", m.creator_handle, "upload failed, using CDN URL:", err);
+          }
+
           await supabase
             .from("directory_members")
-            .update({ ic_avatar_url: url, avatar_url: url })
+            .update({ ic_avatar_url: finalUrl, avatar_url: finalUrl })
             .eq("id", m.id);
-          // Update React state immediately so img renders it
           setMembers((prev) => prev.map((row) =>
-            row.id === m.id ? { ...row, ic_avatar_url: url, avatar_url: url } : row
+            row.id === m.id ? { ...row, ic_avatar_url: finalUrl, avatar_url: finalUrl } : row
           ));
           updated++;
         } else {

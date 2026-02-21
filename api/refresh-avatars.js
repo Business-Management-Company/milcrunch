@@ -48,13 +48,31 @@ async function getAvatarUrlFromDiscovery(handle, platform, apiKey) {
   );
 }
 
+/** Try to upload a CDN image to Supabase Storage via the upload endpoint.
+ *  Returns permanent URL on success, null on failure. */
+async function tryUploadToStorage(handle, cdnUrl, baseUrl) {
+  try {
+    const resp = await fetch(`${baseUrl}/api/upload-creator-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ handle, imageUrl: cdnUrl, updateDb: false }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.url || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * GET or POST /api/refresh-avatars
  *
- * Calls IC Discovery API for each creator, saves the fresh CDN URL
- * string directly to ic_avatar_url. No image downloading or storage.
+ * - Skips creators that already have permanent Supabase Storage URLs.
+ * - For others: gets fresh CDN URL from Discovery API, tries to upload
+ *   to Supabase Storage for a permanent URL, falls back to saving the CDN URL.
  *
- * - Daily cron (GET): refreshes ALL approved members.
+ * - Daily cron (GET): refreshes all approved members missing permanent avatars.
  * - Manual (POST { directory_id }): refreshes one directory.
  */
 export default async function handler(req, res) {
@@ -76,25 +94,45 @@ export default async function handler(req, res) {
   const sb = createClient(supabaseUrl, supabaseKey);
   const body = req.method === "GET" ? {} : (typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {});
 
-  let query = sb.from("directory_members").select("id, creator_handle, platform").eq("approved", true);
+  let query = sb.from("directory_members").select("id, creator_handle, platform, ic_avatar_url, avatar_url").eq("approved", true);
   if (body.directory_id) query = query.eq("directory_id", body.directory_id);
 
   const { data: members, error: fetchErr } = await query;
   if (fetchErr) return res.status(500).json({ error: fetchErr.message });
   if (!members || members.length === 0) {
-    return res.json({ total: 0, updated: 0, failed: 0 });
+    return res.json({ total: 0, updated: 0, failed: 0, skipped: 0 });
   }
+
+  // Determine the base URL for calling the upload endpoint
+  const baseUrl = req.headers["x-forwarded-host"]
+    ? `https://${req.headers["x-forwarded-host"]}`
+    : req.headers["host"]
+      ? `https://${req.headers["host"]}`
+      : "https://milcrunch.com";
 
   let updated = 0;
   let failed = 0;
+  let skipped = 0;
 
   for (const m of members) {
+    // Skip creators that already have permanent Supabase Storage URLs
+    const currentUrl = m.ic_avatar_url || m.avatar_url || "";
+    if (currentUrl.includes("supabase.co/storage")) {
+      skipped++;
+      continue;
+    }
+
     try {
-      const url = await getAvatarUrlFromDiscovery(m.creator_handle, m.platform, apiKey);
-      if (url) {
+      const cdnUrl = await getAvatarUrlFromDiscovery(m.creator_handle, m.platform, apiKey);
+      if (cdnUrl) {
+        // Try uploading to Storage for a permanent URL
+        let finalUrl = cdnUrl;
+        const permUrl = await tryUploadToStorage(m.creator_handle, cdnUrl, baseUrl);
+        if (permUrl) finalUrl = permUrl;
+
         const { error: upErr } = await sb
           .from("directory_members")
-          .update({ ic_avatar_url: url, avatar_url: url })
+          .update({ ic_avatar_url: finalUrl, avatar_url: finalUrl })
           .eq("id", m.id);
         if (!upErr) updated++;
         else failed++;
@@ -107,6 +145,6 @@ export default async function handler(req, res) {
     await new Promise((r) => setTimeout(r, 300));
   }
 
-  console.log("[refresh-avatars] updated:", updated, "failed:", failed, "of", members.length);
-  return res.json({ total: members.length, updated, failed });
+  console.log("[refresh-avatars] updated:", updated, "skipped:", skipped, "failed:", failed, "of", members.length);
+  return res.json({ total: members.length, updated, failed, skipped });
 }

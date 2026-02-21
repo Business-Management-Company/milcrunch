@@ -1458,8 +1458,20 @@ const BrandDiscover = () => {
 
     const igData = raw?.instagram as Record<string, unknown> | undefined;
 
-    // Just save the raw avatar URL — CDN URLs expire after ~24h but a daily cron refreshes them
-    const avatarUrl = creator.avatar || null;
+    // Try to upload avatar to Supabase Storage for a permanent URL.
+    // Browser can fetch IG CDN images fine (unlike server-side).
+    let avatarUrl = creator.avatar || null;
+    if (avatarUrl) {
+      try {
+        const permanentUrl = await saveCreatorAvatar(handle, avatarUrl);
+        if (permanentUrl) {
+          console.log("[doApproveForDirectory] Permanent avatar:", permanentUrl);
+          avatarUrl = permanentUrl;
+        }
+      } catch (err) {
+        console.warn("[doApproveForDirectory] Avatar upload failed, using CDN URL:", err);
+      }
+    }
 
     const bioText = (igData?.biography as string) ?? creator.bio ?? "";
     const branch = detectBranch(bioText);
