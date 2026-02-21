@@ -62,7 +62,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
-import { type CreatorCard } from "@/lib/influencers-club";
+import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
 // saveCreatorAvatar no longer used — avatars loaded live from Discovery API
 
 const BRANCH_STYLES: Record<string, string> = {
@@ -416,26 +416,38 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    if (!selectedDir) return;
+    if (members.length === 0) return;
     setRefreshingPhotos(true);
-    try {
-      const resp = await fetch("/api/refresh-avatars", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ directory_id: selectedDir.id, force: true }),
-      });
-      const result = await resp.json();
-      if (resp.ok) {
-        toast.success(`Refreshed ${result.updated} of ${result.total} avatars`);
-        // Reload members to show updated URLs
-        loadMembers(selectedDir.id);
-      } else {
-        toast.error(result.error || "Refresh failed");
+    let updated = 0;
+    let failed = 0;
+    const total = members.length;
+
+    for (const m of members) {
+      try {
+        const url = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
+        if (url) {
+          // Save fresh URL to DB
+          await supabase
+            .from("directory_members")
+            .update({ ic_avatar_url: url, avatar_url: url })
+            .eq("id", m.id);
+          // Update React state immediately so img renders it
+          setMembers((prev) => prev.map((row) =>
+            row.id === m.id ? { ...row, ic_avatar_url: url, avatar_url: url } : row
+          ));
+          updated++;
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
       }
-    } catch (err) {
-      toast.error("Refresh failed");
+      // 500ms delay between API calls
+      await new Promise((r) => setTimeout(r, 500));
     }
+
     setRefreshingPhotos(false);
+    toast.success(`Refreshed ${updated} of ${total} avatars${failed > 0 ? ` (${failed} not found)` : ""}`);
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
