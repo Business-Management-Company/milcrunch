@@ -1631,11 +1631,9 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-bold text-[#000741] dark:text-white flex items-center justify-between w-full cursor-pointer" onClick={() => setOpen(!open)}>
-          <div className="flex items-center gap-2 mx-auto">
-            {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-            <Mic className="h-5 w-5" /> Speaker Readiness Assessment
-          </div>
+        <CardTitle className="text-lg font-bold text-[#000741] dark:text-white flex items-center gap-2 w-full cursor-pointer" onClick={() => setOpen(!open)}>
+          {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+          <Mic className="h-5 w-5" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           {checkedCount >= 5 ? (
             <Badge className="ml-auto bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
@@ -2047,30 +2045,28 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         </Card>
       )}
 
-      {/* Awards & Decorations */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+      {/* Post-Service Career */}
+      <Card className="rounded-xl border-l-4 border-[#6C5CE7] border border-gray-200 dark:border-gray-800">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Medal className="h-4 w-4 text-amber-500" /> Awards & Decorations
+            <Star className="h-4 w-4 text-[#6C5CE7]" /> Post-Service Career
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {awards.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {awards.map((a, i) => (
-                <Tooltip key={i}>
-                  <TooltipTrigger asChild>
-                    <Badge className="bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-default dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
-                      <Trophy className="h-3 w-3 mr-1 text-amber-500" />
-                      {a.name}
-                    </Badge>
-                  </TooltipTrigger>
-                  {a.context && <TooltipContent side="bottom"><p className="max-w-xs">{a.context}</p></TooltipContent>}
-                </Tooltip>
+          {postService.length > 0 ? (
+            <ul className="space-y-2">
+              {postService.map((ps, i) => (
+                <li key={i} className="flex items-start gap-3 py-1">
+                  <ChevronRight className="h-4 w-4 text-[#6C5CE7] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">{ps.role}{ps.org ? ` — ${ps.org}` : ""}</p>
+                    {ps.dates && <p className="text-xs text-muted-foreground">{ps.dates}</p>}
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="text-gray-400 italic text-sm">No awards or decorations identified</p>
+            <p className="text-gray-400 italic text-sm">No post-service career identified</p>
           )}
         </CardContent>
       </Card>
@@ -2133,28 +2129,30 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         </Card>
       )}
 
-      {/* Post-Service Career */}
-      <Card className="rounded-xl border-l-4 border-[#6C5CE7] border border-gray-200 dark:border-gray-800">
+      {/* Awards & Decorations */}
+      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Star className="h-4 w-4 text-[#6C5CE7]" /> Post-Service Career
+            <Medal className="h-4 w-4 text-amber-500" /> Awards & Decorations
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {postService.length > 0 ? (
-            <ul className="space-y-2">
-              {postService.map((ps, i) => (
-                <li key={i} className="flex items-start gap-3 py-1">
-                  <ChevronRight className="h-4 w-4 text-[#6C5CE7] shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">{ps.role}{ps.org ? ` — ${ps.org}` : ""}</p>
-                    {ps.dates && <p className="text-xs text-muted-foreground">{ps.dates}</p>}
-                  </div>
-                </li>
+          {awards.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {awards.map((a, i) => (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <Badge className="bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-default dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
+                      <Trophy className="h-3 w-3 mr-1 text-amber-500" />
+                      {a.name}
+                    </Badge>
+                  </TooltipTrigger>
+                  {a.context && <TooltipContent side="bottom"><p className="max-w-xs">{a.context}</p></TooltipContent>}
+                </Tooltip>
               ))}
-            </ul>
+            </div>
           ) : (
-            <p className="text-gray-400 italic text-sm">No post-service career identified</p>
+            <p className="text-gray-400 italic text-sm">No awards or decorations identified</p>
           )}
         </CardContent>
       </Card>
