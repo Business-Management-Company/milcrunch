@@ -2431,6 +2431,11 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 {record.claimed_branch}
               </Badge>
             )}
+            {record.claimed_status && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800 capitalize">
+                {record.claimed_status.replace(/_/g, " ")}
+              </span>
+            )}
             {locationStr && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{locationStr}</span>
             )}
