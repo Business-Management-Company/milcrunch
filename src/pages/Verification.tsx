@@ -1122,16 +1122,46 @@ function MediaTab({ record }: { record: VerificationRecord }) {
   const [lastSearchedAt, setLastSearchedAt] = useState<string | null>(null);
   const VISIBLE_COUNT = 6;
 
-  // Load saved results on mount
+  // Load saved results on mount — check youtube_media first, then youtube_results (auto-run fallback)
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
       const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
+
+      // Primary: results from MediaTab's own YouTube API search
       const saved = checks.youtube_media as { videos?: YouTubeVideoResult[]; searched_at?: string } | undefined;
       if (saved?.videos?.length) {
         setVideos(saved.videos);
         setLastSearchedAt(saved.searched_at ?? null);
         setHasSearched(true);
+        return;
+      }
+
+      // Fallback: auto-run results stored at verification time (SerpAPI shape)
+      const autoResults = checks.youtube_results as Array<{ title?: string; url?: string; thumbnail?: string; snippet?: string; videoId?: string; channelTitle?: string; description?: string }> | undefined;
+      if (autoResults?.length) {
+        const converted: YouTubeVideoResult[] = autoResults
+          .map((r) => {
+            let videoId = r.videoId ?? "";
+            if (!videoId && r.url) {
+              const urlMatch = r.url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+              if (urlMatch) videoId = urlMatch[1];
+            }
+            if (!videoId) return null;
+            return {
+              videoId,
+              title: r.title ?? "Untitled",
+              channelTitle: r.channelTitle ?? "",
+              description: r.description ?? r.snippet ?? "",
+              thumbnail: r.thumbnail || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+              publishedAt: "",
+            };
+          })
+          .filter((v): v is YouTubeVideoResult => v !== null);
+        if (converted.length > 0) {
+          setVideos(converted);
+          setHasSearched(true);
+        }
       }
     })();
   }, [record.id]);
