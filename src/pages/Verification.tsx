@@ -2406,7 +2406,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Career Track</h3>
+          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Military / Civilian Career</h3>
         </button>
         {careerOpen && <CareerTrackTab record={record} />}
       </section>
