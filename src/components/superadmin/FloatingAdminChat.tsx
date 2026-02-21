@@ -148,22 +148,17 @@ export default function FloatingAdminChat() {
     setLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/anthropic", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey ?? "",
-          "anthropic-version": "2023-06-01",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           system: `You are MilCrunch AI, an assistant for a military influencer and event management platform.
 You help users find military creators, manage events, build campaigns, and analyze ROI.
-The platform has: 2,400+ verified military creators, 825+ podcasts, event management tools, and sponsor ROI tracking.
-When asked to find creators, respond with a JSON object like: {"action":"search","query":"[search terms]","branch":"[branch if specified]","count":[number requested]}
-When answering general questions, respond naturally and concisely.`,
+When asked to find creators/influencers/speakers, respond ONLY with valid JSON like:
+{"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
+For all other questions, respond naturally and concisely.`,
           messages: [{ role: "user", content: input }],
         }),
       });
