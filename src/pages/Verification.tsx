@@ -2129,6 +2129,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [careerOpen, setCareerOpen] = useState(true);
   const [socialOpen, setSocialOpen] = useState(true);
+  const [mediaOpen, setMediaOpen] = useState(false);
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
   const [additionalSearching, setAdditionalSearching] = useState(false);
@@ -2468,7 +2469,21 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         {socialOpen && <SocialVerificationSection record={record} />}
       </section>
 
-      {/* ── 6. BACKGROUND — expandable ── */}
+      {/* ── 6. MEDIA — collapsible ── */}
+      <section>
+        <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group">
+          {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+          <Video className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Media & Appearances</h3>
+        </button>
+        {mediaOpen && (
+          <div className="mt-4 pl-7">
+            <MediaTab record={record} />
+          </div>
+        )}
+      </section>
+
+      {/* ── 7. BACKGROUND — expandable ── */}
       <section>
         <button
           onClick={() => setBackgroundOpen(!backgroundOpen)}
