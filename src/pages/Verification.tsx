@@ -2128,7 +2128,6 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [careerOpen, setCareerOpen] = useState(true);
-  const [socialOpen, setSocialOpen] = useState(true);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
@@ -2459,17 +2458,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         {careerOpen && <CareerTrackTab record={record} />}
       </section>
 
-      {/* ── 5. SOCIAL STATS — inline ── */}
-      <section>
-        <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
-          {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Globe className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-lg font-bold text-[#000741] dark:text-white">Social Verification</h3>
-        </button>
-        {socialOpen && <SocialVerificationSection record={record} />}
-      </section>
-
-      {/* ── 6. MEDIA — collapsible ── */}
+      {/* ── 5. MEDIA — collapsible ── */}
       <section>
         <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group">
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
