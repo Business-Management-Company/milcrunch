@@ -764,9 +764,9 @@ export async function approveForDirectory(data: {
     }
   }
 
-  // Never save Instagram CDN URLs — they expire and return 410
+  // Never save Instagram/Facebook CDN URLs — they expire within 24h and return 410
   const isSafeUrl = (u: string | null) =>
-    !!u && !u.includes("scontent") && !u.includes("cdninstagram") && !u.includes("ui-avatars.com");
+    !!u && !u.includes("scontent") && !u.includes("cdninstagram") && !u.includes("fbcdn") && !u.includes("ui-avatars.com");
 
   const safeAvatar = isSafeUrl(permanentAvatarUrl) ? permanentAvatarUrl : null;
 

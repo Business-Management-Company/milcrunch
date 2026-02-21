@@ -678,6 +678,65 @@ export async function searchLookalike(
   return { creators, total: creators.length, rawResponse };
 }
 
+/**
+ * Lightweight Discovery-API lookup to get a fresh avatar URL for a single handle.
+ * Uses the username filter so it returns exactly one result.
+ * Costs ~0.01 credits — much cheaper than enrichment (0.03+).
+ */
+export async function fetchDiscoveryAvatar(
+  handle: string,
+  platform: string = "instagram"
+): Promise<string | null> {
+  const apiKey = getApiKey();
+  if (!apiKey || !handle) return null;
+
+  const cleanHandle = handle.replace(/^@/, "").trim();
+  const platKey = platform.toLowerCase() === "all" ? "instagram" : platform.toLowerCase();
+
+  const body = {
+    platform: platKey,
+    filters: { username: cleanHandle },
+    paging: { limit: 1, page: 1 },
+  };
+
+  try {
+    const res = await fetch(DISCOVERY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      console.warn("[fetchDiscoveryAvatar]", cleanHandle, "API returned", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const accounts = (data as { accounts?: ApiAccount[] }).accounts;
+    if (!Array.isArray(accounts) || accounts.length === 0) return null;
+
+    const p = accounts[0].profile;
+    const url =
+      (p?.picture as string) ??
+      (p?.profile_picture_hd as string) ??
+      (p?.profile_picture as string) ??
+      (p?.profile_pic_url as string) ??
+      (p?.avatar as string) ??
+      null;
+
+    if (url && typeof url === "string" && url.trim() && !url.includes("ui-avatars.com")) {
+      return url.replace(/^http:\/\//i, "https://");
+    }
+    return null;
+  } catch (err) {
+    console.warn("[fetchDiscoveryAvatar]", cleanHandle, "error:", err);
+    return null;
+  }
+}
+
 /** Log credit usage to Supabase (fire-and-forget, non-blocking) */
 export function logCreditUsage(
   userId: string,
