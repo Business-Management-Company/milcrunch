@@ -177,16 +177,23 @@ For all other questions, respond naturally and concisely.`,
           setMessages((m) => m.filter((msg) => msg.id !== loadingId));
 
           if (creators.length > 0) {
-            const greetings: Record<string, string> = {
-              marines: "Semper Fi!",
-              army: "Hooah!",
-              navy: "Anchors Aweigh!",
-              "air force": "Aim High!",
-              "coast guard": "Semper Paratus!",
-            };
-            const branchKey = Object.keys(greetings).find(b => input.toLowerCase().includes(b));
-            const greeting = branchKey ? greetings[branchKey] : "Great news!";
-            const friendlyText = `${greeting} I found ${Math.min(creators.length, parsed.count ?? 10)} creators that might be a great fit. Are you looking for anything specific, like a certain niche, follower size, or content style?`;
+            const contextMsg = `The user asked: "${input}". You found ${creators.length} military creators.
+Write a short, natural, conversational response (2 sentences max) acknowledging what you found
+and asking a relevant follow-up question to refine the search.
+Use authentic military culture naturally — not forced catchphrases.
+Vary your tone. Don't start every response the same way.`;
+
+            const responseRes = await fetch("/api/anthropic", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 200,
+                messages: [{ role: "user", content: contextMsg }],
+              }),
+            });
+            const responseData = await responseRes.json();
+            const friendlyText = responseData.content?.[0]?.text ?? `Found ${Math.min(creators.length, 10)} creators matching your request.`;
             setMessages((m) => [
               ...m,
               {
