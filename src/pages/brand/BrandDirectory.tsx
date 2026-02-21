@@ -188,6 +188,8 @@ const BrandDirectory = () => {
   const [promoting, setPromoting] = useState(false);
 
   const [refreshingPhotos, setRefreshingPhotos] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Edit modal state (avg_views, avg_likes)
   const [editMember, setEditMember] = useState<DirectoryMember | null>(null);
@@ -249,12 +251,14 @@ const BrandDirectory = () => {
     setSelectedDir(dir);
     setSearchQuery("");
     setBranchFilter("all");
+    setSelectedIds(new Set());
     loadMembers(dir.id);
   };
 
   const goBack = () => {
     setSelectedDir(null);
     setMembers([]);
+    setSelectedIds(new Set());
     loadDirectories();
   };
 
@@ -311,9 +315,18 @@ const BrandDirectory = () => {
     if (error) {
       toast.error(`Failed to remove: ${error}`);
     } else {
-      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, approved: false } : m)));
-      toast.success(`${name} removed from public directory`);
+      setMembers((prev) => prev.filter((m) => m.id !== id));
+      setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      toast.success(`${name} removed from directory`);
     }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   };
 
   // ─── Promote from list ─────────────────────────────────────
@@ -457,6 +470,29 @@ const BrandDirectory = () => {
     }
     return list;
   }, [members, searchQuery, branchFilter, sortField]);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((m) => m.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} creator${selectedIds.size > 1 ? "s" : ""} from this directory? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    let deleted = 0;
+    for (const id of selectedIds) {
+      const { error } = await removeMember(id);
+      if (!error) deleted++;
+    }
+    setMembers((prev) => prev.filter((m) => !selectedIds.has(m.id)));
+    setSelectedIds(new Set());
+    setBulkDeleting(false);
+    toast.success(`Deleted ${deleted} creator${deleted !== 1 ? "s" : ""} from directory`);
+  };
 
   // ─── RENDER: Directory list ────────────────────────────────
 
@@ -788,12 +824,37 @@ const BrandDirectory = () => {
           </>
         )}
 
+        {/* Bulk selection bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+            <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+              {selectedIds.size} selected
+            </span>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="rounded-lg"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+              Delete Selected
+            </Button>
+            <Button size="sm" variant="ghost" className="rounded-lg text-purple-700 dark:text-purple-300" onClick={() => setSelectedIds(new Set())}>
+              Clear Selection
+            </Button>
+          </div>
+        )}
+
         {/* Table View */}
         {!membersLoading && viewMode === "table" && (
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
+                  <th className="p-3 w-10" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 accent-pd-blue" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} />
+                  </th>
                   <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Creator</th>
                   <th className="text-left p-3 font-medium text-gray-500 dark:text-gray-400">Branch</th>
                   <th className="text-right p-3 font-medium text-gray-500 dark:text-gray-400">Followers</th>
@@ -808,7 +869,10 @@ const BrandDirectory = () => {
                   const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                   const isToggling = togglingIds.has(m.id);
                   return (
-                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
+                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60", selectedIds.has(m.id) && "bg-purple-50 dark:bg-purple-950/20")} onClick={() => openCreatorDrawer(m)}>
+                      <td className="p-3 w-10" onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 accent-pd-blue" checked={selectedIds.has(m.id)} onChange={() => toggleSelect(m.id)} />
+                      </td>
                       <td className="p-3">
                         <div className="flex items-center gap-3">
                           <DirAvatar m={m} size="sm" />
