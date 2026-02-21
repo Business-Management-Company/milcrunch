@@ -2124,6 +2124,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [editNotes, setEditNotes] = useState(record.notes ?? "");
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(true);
+  const [careerOpen, setCareerOpen] = useState(true);
+  const [socialOpen, setSocialOpen] = useState(true);
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
   const [additionalSearching, setAdditionalSearching] = useState(false);
@@ -2342,13 +2345,17 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </Card>
       )}
 
-      {/* ── 2. AI SUMMARY ── */}
+      {/* ── 2. SPEAKER READINESS ── */}
+      <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
+
+      {/* ── 3. AI SUMMARY ── */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
+        <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
+          {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-lg font-bold text-[#000741] dark:text-white">Intelligence Summary</h3>
-        </div>
-        <IntelligenceSummary record={record} />
+        </button>
+        {summaryOpen && <IntelligenceSummary record={record} />}
       </section>
 
       {/* ── 3. EVIDENCE SOURCES — accordion ── */}
@@ -2396,20 +2403,22 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* ── 4. CAREER TRACK — inline ── */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
+        <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
+          {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-lg font-bold text-[#000741] dark:text-white">Career Track</h3>
-        </div>
-        <CareerTrackTab record={record} />
+        </button>
+        {careerOpen && <CareerTrackTab record={record} />}
       </section>
 
       {/* ── 5. SOCIAL STATS — inline ── */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
+        <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
+          {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Globe className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-lg font-bold text-[#000741] dark:text-white">Social Verification</h3>
-        </div>
-        <SocialVerificationSection record={record} />
+        </button>
+        {socialOpen && <SocialVerificationSection record={record} />}
       </section>
 
       {/* ── 6. BACKGROUND — expandable ── */}
@@ -2435,8 +2444,6 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         )}
       </section>
 
-      {/* Speaker Readiness */}
-      <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
     </div>
   );
 }
