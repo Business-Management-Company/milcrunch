@@ -168,8 +168,8 @@ export default function FloatingAdminChat() {
             {
               id: makeId(),
               role: "assistant" as const,
-              text: `Found ${creators.length} creators matching "${input}":`,
-              creators: creators.slice(0, 6),
+              text: `Found ${creators.length} creators matching your search. Showing top ${Math.min(creators.length, 10)}:`,
+              creators: creators.slice(0, 10),
               cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(input)}` },
             },
           ]);
@@ -319,7 +319,7 @@ export default function FloatingAdminChat() {
 
                   {/* Creator result cards */}
                   {m.creators && m.creators.length > 0 && (
-                    <div className="space-y-2 mt-3">
+                    <div className="space-y-2 mt-3 max-h-96 overflow-y-auto pr-1">
                       {m.creators.map((c, i) => {
                         const { branch, keywords } = detectMilitaryKeywords(c);
                         const alreadyAdded = isCreatorInList(c.id);
