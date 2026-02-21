@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Send, X, Sparkles } from "lucide-react";
+import { MessageSquare, Send, X, Sparkles, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
-
+import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
 import { getChatResponse } from "@/lib/chat-responses";
 
 interface ChatMessage {
@@ -13,7 +13,7 @@ interface ChatMessage {
   text: string;
   cta?: { label: string; link: string };
   followUp?: string;
-  creators?: any[];
+  creators?: CreatorCard[];
   loading?: boolean;
 }
 
@@ -29,25 +29,15 @@ function getQuickPrompts(pathname: string): string[] {
   return ["🔍 Find creators", "🎙️ Browse podcasts", "📅 View events", "📊 Analytics"];
 }
 
-async function searchCreatorsIC(query: string): Promise<any[]> {
-  try {
-    const res = await fetch('/api/ic-discovery', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        platform: 'instagram',
-        filters: { ai_search: query },
-        paging: { limit: 6, page: 1 }
-      })
-    });
-    const data = await res.json();
-    return data.results ?? data.influencers ?? [];
-  } catch { return []; }
-}
-
 let idCounter = 0;
 function makeId() {
   return `msg-${++idCounter}-${Date.now()}`;
+}
+
+function formatFollowers(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
 }
 
 export default function FloatingAdminChat() {
@@ -74,7 +64,6 @@ export default function FloatingAdminChat() {
       const msg = detail?.message;
       if (msg) {
         setOpen(true);
-        // Small delay so panel renders before adding the message
         setTimeout(() => addResponse(msg), 150);
       } else {
         setOpen(true);
@@ -89,22 +78,55 @@ export default function FloatingAdminChat() {
     setMessages((prev) => [...prev, userMsg]);
 
     const lower = input.toLowerCase();
-    const isCreatorSearch = lower.match(/find|show|give|list|search|looking for|need|want|creators?|influencers?|speakers?|veterans?|military|army|navy|marines|air force|coast guard/);
+    const isCreatorSearch = lower.match(
+      /find|show|give|list|search|looking for|need|want|creators?|influencers?|speakers?|keynote|podcasters?|authors?|ambassadors?|veterans?|military|army|navy|marines|air force|coast guard/
+    );
 
     if (isCreatorSearch) {
       const loadingId = makeId();
-      setMessages(m => [...m, { id: loadingId, role: 'assistant' as const, text: 'Searching our military creator network...', loading: true }]);
-      const results = await searchCreatorsIC(input);
-      setMessages(m => m.filter(msg => msg.id !== loadingId));
-      if (results.length > 0) {
-        setMessages(m => [...m, {
-          id: makeId(),
-          role: 'assistant' as const,
-          text: `Found ${results.length} creators matching your search:`,
-          creators: results.slice(0, 6)
-        }]);
-      } else {
-        setMessages(m => [...m, { id: makeId(), role: 'assistant' as const, text: "I couldn't find results for that search. Try adjusting your criteria or open Creator Discovery for advanced filters.", cta: { label: 'Open Discovery →', link: '/brand/discover' } }]);
+      setMessages((m) => [
+        ...m,
+        { id: loadingId, role: "assistant" as const, text: "Searching our military creator network...", loading: true },
+      ]);
+
+      try {
+        const { creators } = await searchCreators(input, { page: 1 });
+        setMessages((m) => m.filter((msg) => msg.id !== loadingId));
+
+        if (creators.length > 0) {
+          setMessages((m) => [
+            ...m,
+            {
+              id: makeId(),
+              role: "assistant" as const,
+              text: `Found ${creators.length} creators matching "${input}":`,
+              creators: creators.slice(0, 6),
+              cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(input)}` },
+            },
+          ]);
+        } else {
+          setMessages((m) => [
+            ...m,
+            {
+              id: makeId(),
+              role: "assistant" as const,
+              text: "I couldn't find results for that search. Try different keywords or open Creator Discovery for advanced filters.",
+              cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error("[FloatingChat] Search error:", err);
+        setMessages((m) => m.filter((msg) => msg.id !== loadingId));
+        setMessages((m) => [
+          ...m,
+          {
+            id: makeId(),
+            role: "assistant" as const,
+            text: "Something went wrong searching creators. Try again or use Creator Discovery directly.",
+            cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
+          },
+        ]);
       }
       return;
     }
@@ -112,7 +134,7 @@ export default function FloatingAdminChat() {
     // Fall back to canned responses for non-creator queries
     setTimeout(() => {
       const response = getChatResponse(input);
-      setMessages(m => [...m, { id: makeId(), role: 'assistant' as const, ...response }]);
+      setMessages((m) => [...m, { id: makeId(), role: "assistant" as const, ...response }]);
     }, 500);
   };
 
@@ -208,43 +230,82 @@ export default function FloatingAdminChat() {
                 <div
                   key={m.id}
                   className={cn(
-                    "rounded-2xl px-4 py-2 text-sm max-w-[80%]",
+                    "rounded-2xl px-4 py-2 text-sm",
                     m.role === "user"
-                      ? "bg-[#6C5CE7] text-white rounded-br-sm ml-auto"
-                      : "bg-white text-gray-800 rounded-bl-sm mr-auto shadow-sm dark:bg-gray-800 dark:text-gray-100"
+                      ? "bg-[#6C5CE7] text-white rounded-br-sm ml-auto max-w-[80%]"
+                      : "bg-white text-gray-800 rounded-bl-sm mr-auto shadow-sm dark:bg-gray-800 dark:text-gray-100 max-w-[95%]"
                   )}
                 >
-                  {m.role === "assistant" ? (
+                  {/* Loading spinner */}
+                  {m.loading ? (
+                    <div className="flex items-center gap-2 py-1">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" />
+                      <span className="text-sm text-muted-foreground">{m.text}</span>
+                    </div>
+                  ) : m.role === "assistant" ? (
                     <MarkdownRenderer content={m.text} />
                   ) : (
                     <p className="whitespace-pre-wrap break-words">{m.text}</p>
                   )}
+
+                  {/* Creator result cards */}
                   {m.creators && m.creators.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      {m.creators.map((c: any, i: number) => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                    <div className="space-y-2 mt-3">
+                      {m.creators.map((c, i) => (
+                        <div
+                          key={c.id || i}
+                          className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors"
+                        >
                           <img
-                            src={c.picture ?? c.avatar ?? `https://unavatar.io/instagram/${c.username}`}
-                            alt={c.fullname ?? c.username}
-                            className="h-10 w-10 rounded-full object-cover shrink-0"
-                            onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.fullname ?? c.username ?? 'C')}&background=6C5CE7&color=fff`; }}
+                            src={c.avatar}
+                            alt={c.name}
+                            className="h-11 w-11 rounded-full object-cover shrink-0 ring-2 ring-white dark:ring-gray-800"
+                            onError={(e) => {
+                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=6C5CE7&color=fff&size=128`;
+                            }}
                           />
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold truncate">{c.fullname ?? c.username}</p>
-                            <p className="text-xs text-muted-foreground truncate">@{c.username}</p>
-                            <p className="text-xs text-muted-foreground">{c.followers ? (c.followers >= 1000 ? `${(c.followers/1000).toFixed(1)}K` : c.followers) : ''}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">
+                              {c.name}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {c.username && <span className="truncate">@{c.username}</span>}
+                              {c.branch && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-[10px] uppercase tracking-wide shrink-0">
+                                  {c.branch}
+                                </span>
+                              )}
+                            </div>
+                            {c.followers > 0 && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {formatFollowers(c.followers)} followers
+                              </p>
+                            )}
                           </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/brand/discover?q=${encodeURIComponent(c.username || c.name)}`);
+                              setOpen(false);
+                            }}
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Add to List
+                          </button>
                         </div>
                       ))}
                     </div>
                   )}
+
+                  {/* CTA button — "See more in Discovery" at bottom of results */}
                   {m.cta && (
                     <button
                       onClick={() => {
                         navigate(m.cta!.link);
                         setOpen(false);
                       }}
-                      className="block mt-2 bg-[#6C5CE7] text-white text-xs px-4 py-2 rounded-full hover:bg-[#5A4BD5] transition-colors"
+                      className="block mt-3 bg-[#6C5CE7] text-white text-xs px-4 py-2 rounded-full hover:bg-[#5A4BD5] transition-colors"
                     >
                       {m.cta.label}
                     </button>
