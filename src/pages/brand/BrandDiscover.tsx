@@ -958,7 +958,10 @@ const BrandDiscover = () => {
   useEffect(() => {
     if (pendingAutoSearch.current) {
       pendingAutoSearch.current = false;
-      runSearch();
+      const timer = setTimeout(() => {
+        runSearch();
+      }, 600);
+      return () => clearTimeout(timer);
     }
   }, [searchQuery, runSearch]);
 
