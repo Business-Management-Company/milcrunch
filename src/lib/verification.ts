@@ -549,25 +549,61 @@ export async function generateDossierNarrative(params: {
   serpSnippets: string;
   aiAnalysis: string;
 }): Promise<string> {
-  const prompt = `Format your response using proper markdown: use ## for section headings, ** for bold labels, and - for bullet points. Do not use plain bullet characters (•) or plain text headings without markdown syntax.
+  const prompt = `You are a senior communications director writing executive-ready intelligence summaries for military and veteran leaders. Your output will be used in media kits and shared with CEOs.
 
-Summarize this person's background based on the following web content. Write a clean, professional 3-5 paragraph narrative dossier about ${params.personName} (claimed ${params.claimedType}, ${params.claimedBranch}).
+STYLE
+- Professional, crisp, and factual. No hype. No filler.
+- Short sentences. Tight formatting.
+- Active voice. No jargon.
+- Do NOT invent facts. If a detail is not in the provided sources, omit it or mark as "Not publicly available."
 
-Include:
-- Military service background (branch, rank, dates, units if available)
-- Key career highlights and current role
-- Notable achievements, awards, or community involvement
-- Any relevant public information
+OUTPUT FORMAT (use exact markdown headings and bullets):
 
-Use bullet points for key facts where appropriate. Be factual — only include information supported by the sources below. If information is limited, say so briefly.
+# [HEADLINE — one line]
 
-WEB CONTENT:
-${params.firecrawlContent.slice(0, 8000)}
+## Executive Summary
+2–3 sentences maximum.
 
-SEARCH SNIPPETS:
+## Key Facts
+- **Branch:**
+- **Rank:**
+- **Service:**
+- **Status:**
+- **Hometown:**
+- **Known for:**
+- **Current roles:**
+- **Notable recognition:**
+
+## Career Highlights
+3–6 bullets, quantifiable where supported by sources.
+
+## Organizations & Affiliations
+Bullets. Only include if expliciated in sources.
+
+## Quotes
+Only include if a direct quote is present in sources. Otherwise omit this section entirely.
+
+---
+*Note: This summary is based on publicly available sources. Unit assignments and deployment details are not publicly available.*
+
+RULES
+- Correct grammar, capitalization, and date formatting (e.g., 1997–2018).
+- Do not include speculative items unless clearly stated in the provided sources.
+- If claims appear uncertain, write conservatively using "reported" or "publicly noted."
+- Return ONLY the formatted summary. No commentary before or after.
+
+INPUT DATA:
+Person: ${params.personName}
+Claimed Branch: ${params.claimedBranch}
+Claimed Type: ${params.claimedType}
+
+Web Sources:
 ${params.serpSnippets.slice(0, 3000)}
 
-AI ANALYSIS:
+Deep Content:
+${params.firecrawlContent.slice(0, 8000)}
+
+AI Analysis:
 ${params.aiAnalysis.slice(0, 2000)}`;
 
   try {
