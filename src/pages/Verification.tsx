@@ -448,6 +448,40 @@ export default function Verification() {
         .single();
       if (!error && inserted) {
         setNewRecordId(inserted.id);
+
+        // Auto-run background review silently
+        try {
+          const locCtx = [addForm.city, addForm.state].filter(Boolean).join(", ");
+          const bgQueries = [
+            `"${addForm.fullName.trim()}" controversy`,
+            `"${addForm.fullName.trim()}" fraud OR scandal`,
+            `"${addForm.fullName.trim()}" stolen valor`,
+          ];
+          const bgResults: { title: string; url: string; snippet: string }[] = [];
+          const bgSeen = new Set<string>();
+          for (const q of bgQueries) {
+            const serpRes = await searchSerp(q);
+            for (const r of serpRes) {
+              const url = r.link ?? "";
+              if (bgSeen.has(url)) continue;
+              bgSeen.add(url);
+              bgResults.push({ title: r.title ?? "", url, snippet: r.snippet ?? "" });
+            }
+          }
+          const { filtered: bgFiltered, summary: bgSummary } = await filterCriminalResults({
+            personName: addForm.fullName.trim(),
+            claimedBranch: addForm.claimedBranch || "Unknown",
+            locationContext: locCtx,
+            results: bgResults,
+          });
+          const now = new Date().toISOString();
+          await supabase.from("verifications").update({
+            manual_checks: { background_review: { results: bgFiltered, summary: bgSummary, reviewed_at: now } },
+          }).eq("id", inserted.id);
+        } catch (e) {
+          console.error("Background auto-run failed:", e);
+        }
+
         setList((prev) => [
           {
             ...inserted,
