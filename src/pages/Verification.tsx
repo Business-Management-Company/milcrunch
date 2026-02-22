@@ -725,7 +725,8 @@ export default function Verification() {
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-[#000741] dark:text-white mb-1">Verifying {addForm.fullName}</p>
-              <p className="text-sm text-muted-foreground">Running AI-powered multi-source verification...</p>
+              <p className="text-sm text-muted-foreground">Running AI-powered multi-source verification... This may take 1–2 minutes.</p>
+              <p className="text-xs text-gray-400 mt-1">Please keep this window open while we search across multiple data sources.</p>
             </div>
             <div className="w-full space-y-3">
               {[1, 2, 3, 4].map((n) => {
