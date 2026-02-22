@@ -824,14 +824,6 @@ For all other questions, respond naturally and concisely.`;
                 >
                   Invite to Event
                 </button>
-                <a
-                  href={`/creators/${selectedCreator.username || selectedCreator.name?.toLowerCase().replace(/\s+/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  View Full Profile ↗
-                </a>
               </div>
             </div>
           );
