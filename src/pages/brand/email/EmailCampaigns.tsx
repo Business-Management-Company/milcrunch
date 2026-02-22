@@ -11,13 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus, ArrowLeft, ArrowRight, Loader2, Trash2, Mail, Send, Settings, Users,
   Palette, Eye, Calendar as CalendarIcon, BarChart3, CheckCircle2,
-  FolderOpen, ClipboardList, Search,
+  FolderOpen, ClipboardList, Search, Copy, MoreHorizontal, MousePointerClick,
+  ChevronRight,
 } from "lucide-react";
 import {
   getEmailCampaigns, upsertEmailCampaign, deleteEmailCampaign,
@@ -701,24 +702,86 @@ const EmailCampaigns = () => {
 
       {/* Stats Dialog */}
       <Dialog open={!!statsDialog} onOpenChange={() => setStatsDialog(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Campaign Stats</DialogTitle></DialogHeader>
-          {statsDialog && (
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: "Sent", value: statsDialog.stats?.sent || 0 },
-                { label: "Delivered", value: statsDialog.stats?.delivered || 0 },
-                { label: "Opened", value: statsDialog.stats?.opened || 0 },
-                { label: "Clicked", value: statsDialog.stats?.clicked || 0 },
-                { label: "Unsubscribed", value: statsDialog.stats?.unsubscribed || 0 },
-              ].map(s => (
-                <div key={s.label} className="p-3 rounded-lg bg-muted/50 text-center">
-                  <p className="text-2xl font-bold text-foreground">{s.value.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>{statsDialog?.name || "Campaign Stats"}</DialogTitle></DialogHeader>
+          {statsDialog && (() => {
+            const st = statsDialog.stats || { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0 };
+            const openRate = st.sent > 0 ? Math.round((st.opened / st.sent) * 100) : 0;
+            const circumference = 2 * Math.PI * 54;
+            const dashOffset = circumference - (circumference * openRate) / 100;
+
+            return (
+              <div className="space-y-6">
+                {/* Circular Open Rate Ring */}
+                <div className="flex flex-col items-center py-2">
+                  <div className="relative w-36 h-36">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+                      <circle cx="60" cy="60" r="54" fill="none" strokeWidth="8" strokeLinecap="round"
+                        stroke="url(#openRateGradient)"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={dashOffset}
+                        className="transition-all duration-1000"
+                      />
+                      <defs>
+                        <linearGradient id="openRateGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#22c55e" />
+                          <stop offset="100%" stopColor="#16a34a" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-bold text-foreground">{openRate}%</span>
+                      <span className="text-xs text-muted-foreground">Open Rate</span>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Funnel Flow */}
+                <div className="flex items-center justify-between gap-1">
+                  {[
+                    { label: "Sent", value: st.sent, color: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300", icon: Send },
+                    { label: "Delivered", value: st.delivered, color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300", icon: Mail },
+                    { label: "Opened", value: st.opened, color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300", icon: Eye },
+                    { label: "Clicked", value: st.clicked, color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300", icon: MousePointerClick },
+                  ].map((item, i) => (
+                    <div key={item.label} className="flex items-center gap-1">
+                      <div className={cn("flex flex-col items-center px-3 py-2.5 rounded-lg min-w-[70px]", item.color)}>
+                        <item.icon className="h-4 w-4 mb-1" />
+                        <span className="text-lg font-bold">{item.value.toLocaleString()}</span>
+                        <span className="text-[10px] font-medium opacity-80">{item.label}</span>
+                      </div>
+                      {i < 3 && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Unsubscribed (only if > 0) */}
+                {st.unsubscribed > 0 && (
+                  <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                    <Users className="h-4 w-4" />
+                    <span className="text-sm font-medium">{st.unsubscribed} unsubscribed</span>
+                  </div>
+                )}
+
+                {/* Bounce rate placeholder */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-lg font-bold text-foreground">{st.sent > 0 ? Math.round((st.delivered / st.sent) * 100) : 0}%</p>
+                    <p className="text-xs text-muted-foreground">Delivery Rate</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-lg font-bold text-foreground">{st.sent > 0 ? ((st.clicked / st.sent) * 100).toFixed(1) : 0}%</p>
+                    <p className="text-xs text-muted-foreground">Click Rate</p>
+                  </div>
+                </div>
+
+                <Button variant="outline" className="w-full" onClick={() => setStatsDialog(null)}>
+                  View Full Report <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -735,26 +798,26 @@ const EmailCampaigns = () => {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total Campaigns", value: campaigns.length, icon: Mail },
-          { label: "Emails Sent", value: totalSent.toLocaleString(), icon: Send },
-          { label: "Avg Open Rate", value: `${avgOpen}%`, icon: Eye },
-          { label: "Avg Click Rate", value: `${avgClick}%`, icon: BarChart3 },
+          { label: "Total Campaigns", value: campaigns.length, icon: Mail, bg: "bg-purple-50 dark:bg-purple-900/20", iconBg: "bg-purple-100 dark:bg-purple-800", iconColor: "text-purple-600 dark:text-purple-300", valueColor: "text-purple-700 dark:text-purple-200" },
+          { label: "Emails Sent", value: totalSent.toLocaleString(), icon: Send, bg: "bg-blue-50 dark:bg-blue-900/20", iconBg: "bg-blue-100 dark:bg-blue-800", iconColor: "text-blue-600 dark:text-blue-300", valueColor: "text-blue-700 dark:text-blue-200" },
+          { label: "Avg Open Rate", value: `${avgOpen}%`, icon: Eye, bg: "bg-green-50 dark:bg-green-900/20", iconBg: "bg-green-100 dark:bg-green-800", iconColor: "text-green-600 dark:text-green-300", valueColor: "text-green-700 dark:text-green-200" },
+          { label: "Avg Click Rate", value: `${avgClick}%`, icon: MousePointerClick, bg: "bg-indigo-50 dark:bg-indigo-900/20", iconBg: "bg-indigo-100 dark:bg-indigo-800", iconColor: "text-indigo-600 dark:text-indigo-300", valueColor: "text-indigo-700 dark:text-indigo-200" },
         ].map(stat => (
-          <Card key={stat.label} className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-pd-blue/10">
-                <stat.icon className="h-5 w-5 text-pd-blue" />
+          <Card key={stat.label} className={cn("p-5 border-none shadow-sm", stat.bg)}>
+            <div className="flex items-center gap-4">
+              <div className={cn("p-3 rounded-xl", stat.iconBg)}>
+                <stat.icon className={cn("h-6 w-6", stat.iconColor)} />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className={cn("text-3xl font-bold", stat.valueColor)}>{stat.value}</p>
+                <p className="text-sm text-muted-foreground font-medium mt-0.5">{stat.label}</p>
               </div>
             </div>
           </Card>
         ))}
       </div>
 
-      {/* Campaigns Table */}
+      {/* Campaign Cards */}
       {loading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -769,60 +832,95 @@ const EmailCampaigns = () => {
           </Button>
         </div>
       ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Recipients</TableHead>
-                <TableHead className="text-right">Sent</TableHead>
-                <TableHead className="text-right">Opens</TableHead>
-                <TableHead className="text-right">Clicks</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaigns.map(c => {
-                const sc = STATUS_COLORS[c.status] || STATUS_COLORS.draft;
-                const listName = lists.find(l => c.list_ids?.includes(l.id))?.name;
-                return (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{c.name}</p>
-                        {c.subject && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{c.subject}</p>}
+        <div className="space-y-3">
+          {campaigns.map(c => {
+            const sc = STATUS_COLORS[c.status] || STATUS_COLORS.draft;
+            const statusBarColor = c.status === "sent" ? "bg-green-500" : c.status === "scheduled" ? "bg-yellow-500" : c.status === "sending" ? "bg-amber-500" : "bg-gray-400";
+            const openRate = c.stats?.sent > 0 ? ((c.stats.opened / c.stats.sent) * 100).toFixed(1) : "0";
+            const clickRate = c.stats?.sent > 0 ? ((c.stats.clicked / c.stats.sent) * 100).toFixed(1) : "0";
+            const displayDate = c.sent_at ? new Date(c.sent_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+            return (
+              <Card key={c.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                <div className="flex">
+                  {/* Status indicator bar */}
+                  <div className={cn("w-1.5 shrink-0 rounded-l-lg", statusBarColor)} />
+
+                  <div className="flex-1 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      {/* Left: Campaign info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-foreground truncate">{c.name}</h3>
+                          <Badge className={cn("text-xs capitalize shrink-0", sc.bg, sc.text)}>{c.status}</Badge>
+                        </div>
+                        {c.subject && <p className="text-sm text-muted-foreground truncate mb-2">{c.subject}</p>}
+
+                        {/* Mini stat pills + date */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            {c.sent_at ? `Sent ${displayDate}` : `Created ${displayDate}`}
+                          </span>
+                          {c.status === "sent" && c.stats && (
+                            <>
+                              <span className="text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Users className="h-3 w-3" /> {(c.stats.sent || 0).toLocaleString()} sent
+                              </span>
+                              <span className="text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Eye className="h-3 w-3" /> {openRate}% opened
+                              </span>
+                              <span className="text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <MousePointerClick className="h-3 w-3" /> {clickRate}% clicked
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell><Badge className={`${sc.bg} ${sc.text}`}>{c.status}</Badge></TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">{listName || "—"}</TableCell>
-                    <TableCell className="text-right font-medium">{(c.stats?.sent || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">{c.stats?.opened || 0}</TableCell>
-                    <TableCell className="text-right">{c.stats?.clicked || 0}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{c.sent_at ? new Date(c.sent_at).toLocaleDateString() : new Date(c.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {c.status === "draft" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openBuilder(c)} title="Edit">
-                            <Settings className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+
+                      {/* Right: Action buttons */}
+                      <div className="flex items-center gap-1 shrink-0">
                         {c.status === "sent" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setStatsDialog(c)} title="Stats">
-                            <BarChart3 className="h-3.5 w-3.5" />
+                          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setStatsDialog(c)}>
+                            <BarChart3 className="h-3.5 w-3.5 mr-1" /> View Stats
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteId(c.id)} title="Delete">
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
+                        {c.status === "draft" && (
+                          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => openBuilder(c)}>
+                            <Settings className="h-3.5 w-3.5 mr-1" /> Edit
+                          </Button>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              openBuilder({
+                                ...c,
+                                id: undefined as any,
+                                name: `${c.name} (Copy)`,
+                                status: "draft" as const,
+                                sent_at: null,
+                                stats: { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0 },
+                              });
+                            }}>
+                              <Copy className="h-4 w-4 mr-2" /> Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setDeleteId(c.id)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
     </>
