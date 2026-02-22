@@ -2647,12 +2647,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         <button onClick={() => setSpeakerReadinessOpen(!speakerReadinessOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {speakerReadinessOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Mic className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness</h3>
+          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
         </button>
         {speakerReadinessOpen && (
-          <div className="mt-2 pl-7">
-            <CompactSpeakerReadiness record={record} onRefresh={onRefresh} />
-          </div>
+          <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
         )}
       </section>
 
