@@ -405,19 +405,19 @@ export default function SummaryDashboard() {
       {/* Quick Action Pills — flowing layout */}
       <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto">
         {[
-          { icon: Search, label: "Find Creators", color: "#6C5CE7", path: "/brand/discover" },
-          { icon: ListPlus, label: "Build a List", color: "#0EA5E9", path: "/brand/lists/new" },
-          { icon: Mic, label: "Browse Podcasts", color: "#F59E0B", path: "/brand/podcasts" },
-          { icon: BarChart3, label: "Event Analytics", color: "#22C55E", path: "/brand/attribution" },
-          { icon: Presentation, label: "Find Speakers", color: "#EC4899", path: "/brand/discover", state: { speakerFilter: true } },
-          { icon: CheckCircle, label: "Verify Creator", color: "#14B8A6", path: "/brand/verification" },
-          { icon: Calendar, label: "Manage Events", color: "#0EA5E9", path: "/brand/events" },
-          { icon: Mail, label: "Email Campaigns", color: "#F43F5E", path: "/brand/campaigns" },
+          { icon: Search, label: "Find Creators", color: "#6C5CE7", prompt: "I want to find creators. What branch of service, follower range, or niche are you looking for? (e.g. Army veterans, 10K+ followers, fitness niche)" },
+          { icon: ListPlus, label: "Build a List", color: "#0EA5E9", prompt: "Let's build a list! First, what would you like to name it?" },
+          { icon: Mic, label: "Browse Podcasts", color: "#F59E0B", prompt: "Looking for military podcasts? I can filter by topic, branch, or episode count. What are you looking for?" },
+          { icon: BarChart3, label: "Event Analytics", color: "#22C55E", prompt: "Which event would you like analytics for?" },
+          { icon: Presentation, label: "Find Speakers", color: "#EC4899", prompt: "Let's find speakers for your event. What type of event, and do you have a preferred branch, topic, or follower minimum?" },
+          { icon: CheckCircle, label: "Verify Creator", color: "#14B8A6", prompt: "Who would you like to verify? Type their name or Instagram handle and I'll check if they're already in the system." },
+          { icon: Calendar, label: "Manage Events", color: "#0EA5E9", prompt: "Show me all upcoming events with their dates and locations." },
+          { icon: Mail, label: "Email Campaigns", color: "#F43F5E", prompt: "Would you like to create a new email campaign or view existing ones?" },
         ].map((pill) => (
           <button
             key={pill.label}
             type="button"
-            onClick={() => navigate(pill.path, pill.state ? { state: pill.state } : undefined)}
+            onClick={() => window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: pill.prompt } }))}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-sm font-medium text-[#000741] dark:text-gray-200 hover:border-current hover:shadow-sm transition-all"
             style={{ "--tw-border-opacity": 1 } as React.CSSProperties}
             onMouseEnter={(e) => {
