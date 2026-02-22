@@ -1497,7 +1497,13 @@ No markdown formatting, just the JSON array.`;
                 >
                   <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
                     {v.thumbnail ? (
-                      <img src={v.thumbnail} alt={v.title} className="w-full h-full object-cover" />
+                      <img
+                        src={v.thumbnail}
+                        alt={v.title}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <Video className="h-8 w-8 text-gray-400" />
