@@ -1032,7 +1032,24 @@ export default function Verification() {
                         {expandedId === row.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </TableCell>
                       <TableCell className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
+                          {row.profile_photo_url ? (
+                            <img
+                              src={row.profile_photo_url}
+                              alt={row.person_name}
+                              referrerPolicy="no-referrer"
+                              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-semibold text-purple-600">
+                                {row.person_name?.charAt(0) || '?'}
+                              </span>
+                            </div>
+                          )}
                           <NameStatusIcon score={row.verification_score ?? 0} />
                           <InlineNameEdit id={row.id} name={row.person_name} onSave={fetchVerifications} />
                         </div>
