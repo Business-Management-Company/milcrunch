@@ -2009,8 +2009,8 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
   };
 
   return (
-    <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
-      <button onClick={onToggle} className="flex items-center gap-2 w-full text-left group mb-3">
+    <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
+      <button onClick={onToggle} className="flex items-center gap-2 w-full text-left group">
         {isOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
         <Mic className="h-5 w-5 text-[#6C5CE7]" />
         <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
@@ -2669,7 +2669,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   return (
     <div className="w-full py-6 pl-3 pr-8 max-w-full overflow-hidden">
       {/* ── 1. HERO ── */}
-      <div className="flex items-start gap-4 w-full max-w-full overflow-hidden">
+      <div className="flex items-start gap-4 w-full max-w-full overflow-hidden mb-6">
         {/* LEFT column */}
         <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-start gap-4">
@@ -2884,8 +2884,8 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <SpeakerReadinessInline record={record} onRefresh={onRefresh} isOpen={speakerReadinessOpen} onToggle={() => setSpeakerReadinessOpen(!speakerReadinessOpen)} />
 
       {/* ── 3. AI SUMMARY ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
-        <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
+        <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group">
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
@@ -2895,7 +2895,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 3. EVIDENCE SOURCES — accordion ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button
           onClick={() => setEvidenceOpen(!evidenceOpen)}
           className="flex items-center gap-2 w-full text-left group"
@@ -2939,8 +2939,8 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 4. CAREER TRACK — inline ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
-        <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
+        <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group">
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
@@ -2957,7 +2957,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 5. SOCIAL ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group">
           {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Globe className="h-5 w-5 text-[#6C5CE7]" />
@@ -2968,7 +2968,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 6. MEDIA — collapsible ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group">
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#6C5CE7]" />
@@ -2989,7 +2989,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 7. BACKGROUND — expandable ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button
           onClick={() => setBackgroundOpen(!backgroundOpen)}
           className="flex items-center gap-2 w-full text-left group"
