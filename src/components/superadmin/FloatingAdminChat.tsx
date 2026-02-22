@@ -27,6 +27,7 @@ interface ChatMessage {
   creators?: CreatorCard[];
   loading?: boolean;
   chips?: string[];
+  hidden?: boolean;
 }
 
 const DEFAULT_CHIPS = [
@@ -109,7 +110,7 @@ export default function FloatingAdminChat() {
       const msg = detail?.message;
       if (msg) {
         setOpen(true);
-        setTimeout(() => addResponse(msg), 150);
+        setTimeout(() => addResponse(msg, { hidden: true }), 150);
       } else {
         setOpen(true);
       }
@@ -208,12 +209,12 @@ export default function FloatingAdminChat() {
     ]);
   };
 
-  const addResponse = async (input: string) => {
-    // FIX 1: Show loading immediately — synchronously before any await
+  const addResponse = async (input: string, opts?: { hidden?: boolean }) => {
+    const userMsgId = makeId();
     const loadingMsgId = makeId();
     setMessages((m) => [
       ...m,
-      { id: makeId(), role: "user" as const, text: input },
+      { id: userMsgId, role: "user" as const, text: input, hidden: opts?.hidden },
       { id: loadingMsgId, role: "assistant" as const, text: "", loading: true },
     ]);
     setLoading(true);
@@ -273,6 +274,25 @@ When the user provides enough context to search for creators/influencers/speaker
 {"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
 For all other questions, respond naturally and concisely.`;
 
+      // Build conversation history so follow-up chips have context
+      const historyForApi: { role: string; content: string }[] = [];
+      // Use a snapshot that includes everything except the loading msg we just added
+      const snapshot = await new Promise<ChatMessage[]>((resolve) =>
+        setMessages((m) => { resolve(m); return m; })
+      );
+      for (const msg of snapshot) {
+        if (msg.loading) continue; // skip loading placeholder
+        if (msg.id === loadingMsgId) continue;
+        const content = msg.role === "assistant"
+          ? (msg.creators && msg.creators.length > 0
+              ? `${msg.text}\n[Returned ${msg.creators.length} creator cards]`
+              : msg.text)
+          : msg.text;
+        if (content) historyForApi.push({ role: msg.role, content });
+      }
+      // Keep last 10 turns to stay within token limits
+      const trimmedHistory = historyForApi.slice(-10);
+
       const response = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -280,7 +300,7 @@ For all other questions, respond naturally and concisely.`;
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
           system: systemPrompt,
-          messages: [{ role: "user", content: input }],
+          messages: trimmedHistory,
         }),
       });
 
@@ -463,7 +483,7 @@ For all other questions, respond naturally and concisely.`;
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-              {messages.map((m) => (
+              {messages.filter((m) => !m.hidden).map((m) => (
                 <div
                   key={m.id}
                   className={cn(
