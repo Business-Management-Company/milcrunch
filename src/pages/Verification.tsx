@@ -477,9 +477,9 @@ export default function Verification() {
           source: addForm.source || "manual",
           source_username: addForm.sourceUsername || null,
           manual_checks: {
-            ...(result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {}),
-            ...(result.mediaAppearances?.length ? { youtube_media: { videos: result.mediaAppearances, searched_at: new Date().toISOString() } } : {}),
-            ...(result.careerData ? { career_track: { result: result.careerData, generated_at: new Date().toISOString() } } : {}),
+            youtube_results: result.youtubeResults ?? [],
+            youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
+            career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
           },
           last_verified_at: new Date().toISOString(),
         })
@@ -548,9 +548,9 @@ export default function Verification() {
             source: addForm.source || "manual",
             source_username: addForm.sourceUsername || null,
             manual_checks: {
-              ...(result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {}),
-              ...(result.mediaAppearances?.length ? { youtube_media: { videos: result.mediaAppearances, searched_at: new Date().toISOString() } } : {}),
-              ...(result.careerData ? { career_track: { result: result.careerData, generated_at: new Date().toISOString() } } : {}),
+              youtube_results: result.youtubeResults ?? [],
+              youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
+              career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
             },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -3012,11 +3012,13 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
           <StatusDot status={(() => {
-            const career = (record as any).career_data;
+            const mc = record.manual_checks as Record<string, unknown> | null;
+            const career = (mc as any)?.career_track?.result;
             const pdl = record.pdl_data as any;
             if (career) return 'green';
             if (pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) return 'green';
             if (pdl) return 'yellow';
+            if (!pdl) return 'red';
             return 'red';
           })()} />
         </button>
@@ -3041,9 +3043,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <Video className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
           <StatusDot status={(() => {
-            const appearances = (record as any).media_appearances as unknown[] | undefined;
-            if (Array.isArray(appearances) && appearances.length > 0) return 'green';
             const mc = record.manual_checks as Record<string, unknown> | null;
+            const videos = (mc as any)?.youtube_media?.videos as unknown[] | undefined;
+            if (Array.isArray(videos) && videos.length > 0) return 'green';
             if ((mc as any)?.media_error) return 'red';
             return 'yellow';
           })()} />

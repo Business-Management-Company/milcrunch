@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ShieldCheck, ShieldAlert, Clock, AlertTriangle, XCircle, Globe, Briefcase, FileText, Search, Video, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { MarkdownResponse } from "@/components/MarkdownResponse";
 
 interface ReportRecord {
   id: string;
@@ -261,9 +262,7 @@ export default function PublicVerificationReport() {
               <FileText className="h-4 w-4 text-[#6C5CE7]" />
               Intelligence Summary
             </h2>
-            <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed whitespace-pre-line">
-              {record.ai_analysis}
-            </div>
+            <MarkdownResponse content={record.ai_analysis!} />
           </div>
         )}
 
