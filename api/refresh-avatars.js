@@ -39,6 +39,12 @@ async function getAvatarUrlFromDiscovery(handle, platform, apiKey) {
   const accounts = data.accounts;
   if (!Array.isArray(accounts) || accounts.length === 0) return null;
   const acc = accounts[0];
+  const returnedUsername = (acc?.profile?.username || acc?.username || '').toLowerCase().trim();
+  const expectedUsername = handle.toLowerCase().trim();
+  if (returnedUsername && returnedUsername !== expectedUsername) {
+    console.log(`[Avatar] Handle mismatch: expected ${expectedUsername}, got ${returnedUsername}`);
+    return null;
+  }
   return (
     extractAvatar(acc.profile) ||
     extractAvatar(acc.platformData) ||
@@ -55,7 +61,7 @@ async function tryUploadToStorage(handle, cdnUrl, baseUrl) {
     const resp = await fetch(`${baseUrl}/api/upload-creator-image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ handle, imageUrl: cdnUrl, updateDb: false }),
+      body: JSON.stringify({ handle, imageUrl: cdnUrl, updateDb: false, serverFetch: true }),
     });
     if (!resp.ok) return null;
     const data = await resp.json();

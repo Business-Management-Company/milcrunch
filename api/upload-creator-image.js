@@ -23,11 +23,16 @@ export default async function handler(req, res) {
     }
   }
 
-  const { handle: h, creatorHandle, imageBase64, imageUrl, mimeType, updateDb } = body || {};
+  const { handle: h, creatorHandle, imageBase64, imageUrl, mimeType, updateDb, serverFetch } = body || {};
   const handle = h || creatorHandle;
 
   if (!handle || (!imageBase64 && !imageUrl)) {
     return res.status(400).json({ error: "handle and (imageBase64 or imageUrl) required" });
+  }
+
+  // When serverFetch is true, always fetch imageUrl server-side (skip any browser/CORS path)
+  if (serverFetch && imageUrl) {
+    console.log("[upload] serverFetch mode for", handle);
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
