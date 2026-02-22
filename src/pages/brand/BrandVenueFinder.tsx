@@ -345,6 +345,8 @@ export default function BrandVenueFinder() {
       }
 
       const data = await resp.json();
+      console.log("[VenueFinder] Raw response:", JSON.stringify(data).substring(0, 500));
+      console.log("[VenueFinder] Venues array:", data.results, "| total:", data.total);
       const venues: Venue[] = data.results || [];
 
       // Filter out permanently closed
