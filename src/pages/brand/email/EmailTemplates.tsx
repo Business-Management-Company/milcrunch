@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ArrowLeft, Loader2, Trash2, Copy, LayoutTemplate, Eye, ChevronDown, ChevronRight, Code, GripVertical, X, Image, Type, MousePointer, Minus, Heading, Footprints, Columns2, AlignLeft } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Loader2, Trash2, Copy, LayoutTemplate, Eye, ChevronDown, ChevronRight, Code, GripVertical, X, Image, Type, MousePointer, Minus, Heading, Footprints, Columns2, AlignLeft } from "lucide-react";
 import TemplateIcon from "@/components/brand/email/TemplateIcon";
 import { getEmailTemplates, upsertEmailTemplate, deleteEmailTemplate } from "@/lib/email-db";
 import { BUILT_IN_TEMPLATES } from "@/lib/email-templates-html";
@@ -460,6 +460,8 @@ const EmailTemplates = () => {
   }
 
   // ── Grid View ──────────────────────────────────────────────────
+  const templatesRef = useRef<HTMLDivElement>(null);
+
   return (
     <>
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
@@ -475,75 +477,134 @@ const EmailTemplates = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">Email Templates</h1>
-          <p className="text-gray-500 dark:text-gray-400">Start with a pre-built template or create your own.</p>
-        </div>
-        <Button onClick={() => { setEditName("Untitled Template"); setEditHtml(""); setEditCategory("custom"); setBlocks([]); setHtmlCollapsed(true); }}>
-          <Plus className="h-4 w-4 mr-2" /> New Template
-        </Button>
-      </div>
-
-      {/* Pre-built Templates */}
-      <h2 className="text-lg font-semibold text-foreground mb-4">Pre-built Templates</h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        {BUILT_IN_TEMPLATES.map(tpl => (
-          <Card key={tpl.category} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleUseBuiltIn(tpl)}>
-            <div
-              className="h-32 flex items-center justify-center relative"
-              style={{
-                background: tpl.thumbnail_image
-                  ? `url('${tpl.thumbnail_image}') center/cover no-repeat, linear-gradient(135deg, ${tpl.thumbnail_color}, ${tpl.thumbnail_color}dd)`
-                  : `linear-gradient(135deg, ${tpl.thumbnail_color}, ${tpl.thumbnail_color}dd)`,
-              }}
+      {/* FIX 4 — Purple gradient banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#6C5CE7] via-[#7C6CF7] to-[#9B51E0] mb-10 px-8 py-10">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-30" />
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold text-white mb-2">Design beautiful emails for your military community</h1>
+          <p className="text-white/70 text-sm mb-6 max-w-lg">Start with a professionally designed template or build your own from scratch using our drag-and-drop editor.</p>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="bg-white/20 text-white border-white/30 hover:bg-white/30 backdrop-blur-sm"
+              onClick={() => templatesRef.current?.scrollIntoView({ behavior: "smooth" })}
             >
-              {tpl.thumbnail_image && <div className="absolute inset-0 bg-black/30" />}
-              <TemplateIcon category={tpl.category} className="h-12 w-12 relative z-10" />
-            </div>
-            <div className="p-4">
-              <h3 className="font-semibold text-foreground">{tpl.name}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{tpl.description}</p>
-              <Badge variant="secondary" className="mt-2">{tpl.category}</Badge>
-            </div>
-          </Card>
-        ))}
+              Browse Templates
+            </Button>
+            <Button
+              className="bg-white text-[#6C5CE7] hover:bg-white/90"
+              onClick={() => { setEditName("Untitled Template"); setEditHtml(""); setEditCategory("custom"); setBlocks([]); setHtmlCollapsed(true); }}
+            >
+              Start from Scratch <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Saved Templates */}
+      {/* FIX 1 + FIX 2 — Pre-built Templates */}
+      <div ref={templatesRef}>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Pre-built Templates</h2>
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 mb-10">
+          {BUILT_IN_TEMPLATES.map(tpl => (
+            <div
+              key={tpl.category}
+              className="rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer border border-gray-100 dark:border-gray-800 hover:scale-[1.02] group bg-white dark:bg-gray-900"
+              onClick={() => handleUseBuiltIn(tpl)}
+            >
+              {/* Image header */}
+              <div className="relative h-40 overflow-hidden rounded-t-xl">
+                <img
+                  src={tpl.thumbnail_image}
+                  alt={tpl.name}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-black/20" />
+              </div>
+              {/* Bottom section */}
+              <div className="p-4">
+                <h3 className="font-bold text-foreground text-base mb-1">{tpl.name}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{tpl.description}</p>
+                <div className="flex items-center justify-between mt-3">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs"
+                    style={{ backgroundColor: `${tpl.thumbnail_color}15`, color: tpl.thumbnail_color, borderColor: `${tpl.thumbnail_color}30` }}
+                  >
+                    {tpl.category}
+                  </Badge>
+                  <span className="text-xs font-medium text-[#6C5CE7] group-hover:underline">
+                    Use Template →
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* FIX 3 — Your Templates */}
       <h2 className="text-lg font-semibold text-foreground mb-4">Your Templates</h2>
       {loading ? (
         <div className="flex items-center justify-center h-32">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : templates.length === 0 ? (
-        <div className="border-2 border-dashed rounded-lg p-8 text-center text-muted-foreground">
-          <p>No saved templates yet. Click a pre-built template above to customize it, or create a blank one.</p>
-        </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {templates.map(tpl => (
-            <Card key={tpl.id} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow group" onClick={() => handleEditTemplate(tpl)}>
-              <div className="h-24 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color || "#6C5CE7"}, ${tpl.thumbnail_color || "#6C5CE7"}dd)` }}>
-                <LayoutTemplate className="h-10 w-10 text-white/80" />
+            <div
+              key={tpl.id}
+              className="rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer border border-gray-100 dark:border-gray-800 hover:scale-[1.02] group bg-white dark:bg-gray-900"
+              onClick={() => handleEditTemplate(tpl)}
+            >
+              <div className="relative h-40 overflow-hidden" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color || "#6C5CE7"}, ${tpl.thumbnail_color || "#6C5CE7"}cc)` }}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <LayoutTemplate className="h-14 w-14 text-white/30" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                <h3 className="absolute bottom-3 left-4 right-4 text-white font-bold text-lg drop-shadow-md">
+                  {tpl.name}
+                </h3>
+                {/* Hover actions */}
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/40 transition-colors"
+                    onClick={e => { e.stopPropagation(); handleDuplicate(tpl); }}
+                    title="Duplicate"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    className="p-1.5 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-red-500/80 transition-colors"
+                    onClick={e => { e.stopPropagation(); setDeleteId(tpl.id); }}
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
               <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-foreground">{tpl.name}</h3>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); handleDuplicate(tpl); }} title="Duplicate">
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); setDeleteId(tpl.id); }} title="Delete">
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </div>
+                <div className="flex items-center justify-between">
+                  {tpl.category && (
+                    <Badge variant="secondary" className="text-xs">{tpl.category}</Badge>
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(tpl.created_at).toLocaleDateString()}
+                  </span>
                 </div>
-                {tpl.category && <Badge variant="secondary" className="mt-2">{tpl.category}</Badge>}
-                <p className="text-xs text-muted-foreground mt-2">Created {new Date(tpl.created_at).toLocaleDateString()}</p>
               </div>
-            </Card>
+            </div>
           ))}
+          {/* Create blank template card */}
+          <div
+            className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#6C5CE7] hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[240px] group"
+            onClick={() => { setEditName("Untitled Template"); setEditHtml(""); setEditCategory("custom"); setBlocks([]); setHtmlCollapsed(true); }}
+          >
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-[#6C5CE7]/10 flex items-center justify-center mb-3 transition-colors">
+              <Plus className="h-6 w-6 text-gray-400 group-hover:text-[#6C5CE7] transition-colors" />
+            </div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-[#6C5CE7] transition-colors">Create blank template</p>
+          </div>
         </div>
       )}
     </>
