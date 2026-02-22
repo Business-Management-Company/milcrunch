@@ -2384,7 +2384,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   return (
     <div className="w-full py-6 mx-10 space-y-8 overflow-visible">
       {/* ── 1. HERO ── */}
-      <div className="flex items-start w-full box-border">
+      <div className="flex items-start w-full box-border pr-16">
         <div className="flex-1 min-w-0">
         <div className="flex items-start gap-4">
         <div className="shrink-0 relative group mr-4">
