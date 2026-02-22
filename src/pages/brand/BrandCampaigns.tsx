@@ -91,6 +91,7 @@ interface EventOption {
   city: string | null;
   state: string | null;
   venue: string | null;
+  hasCampaign?: boolean;
 }
 
 /** Safely format a date value that may be ISO string, date-only, null, or malformed. */
@@ -1257,9 +1258,20 @@ export default function BrandCampaigns() {
 
   // Generation state
   const [generating, setGenerating] = useState(false);
+  const [genStep, setGenStep] = useState(0);
   const [campaign, setCampaign] = useState<CampaignData | null>(null);
   const [activePhase, setActivePhase] = useState(0);
   const [error, setError] = useState("");
+
+  // Animate generation steps
+  const GEN_STEPS = ["Analyzing your audience", "Selecting optimal creators", "Crafting messaging strategy", "Setting campaign parameters", "Finalizing your campaign"];
+  useEffect(() => {
+    if (!generating) { setGenStep(0); return; }
+    const interval = setInterval(() => {
+      setGenStep((prev) => (prev < GEN_STEPS.length ? prev + 1 : prev));
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [generating]);
 
   // Scheduling state
   const [schedulingPosts, setSchedulingPosts] = useState<Set<number>>(new Set());
@@ -2096,14 +2108,47 @@ Make the captions authentic and engaging for a military community audience. Refe
           {/* RIGHT — Campaign Output */}
           <div className="lg:col-span-3 min-h-[400px]">
             {generating && (
-              <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-12">
-                <Loader2 className="h-10 w-10 animate-spin text-[#6C5CE7] mb-4" />
-                <p className="text-gray-600 dark:text-gray-300 font-medium">Generating your campaign...</p>
-                <p className="text-sm text-gray-400 mt-1">
-                  {isLargeCampaign
-                    ? "Large campaigns may take 15-30 seconds."
-                    : "This may take a few seconds."}
-                </p>
+              <div className="fixed inset-0 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-6 max-w-sm text-center p-8">
+                  {/* Pulsing icon */}
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-2xl bg-purple-600 flex items-center justify-center animate-pulse">
+                      <span className="text-2xl text-white">✦</span>
+                    </div>
+                    <div className="absolute inset-0 rounded-2xl bg-purple-400 animate-ping opacity-20" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Building Your Campaign</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">AI is crafting your campaign strategy...</p>
+                  </div>
+
+                  {/* Animated step list */}
+                  <div className="w-full space-y-3 text-left">
+                    {GEN_STEPS.map((step, i) => (
+                      <div key={step} className="flex items-center gap-3 text-sm">
+                        {genStep > i ? (
+                          <span className="text-green-500 font-bold">✓</span>
+                        ) : genStep === i ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600">○</span>
+                        )}
+                        <span className={genStep >= i ? "text-gray-800 dark:text-gray-200" : "text-gray-300 dark:text-gray-600"}>{step}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
+                    <div
+                      className="bg-purple-600 h-1.5 rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min((genStep / GEN_STEPS.length) * 100, 100)}%` }}
+                    />
+                  </div>
+
+                  <p className="text-xs text-gray-400">This usually takes 15–30 seconds</p>
+                </div>
               </div>
             )}
 
