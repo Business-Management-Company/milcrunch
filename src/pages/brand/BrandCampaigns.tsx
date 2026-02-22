@@ -1319,14 +1319,25 @@ export default function BrandCampaigns() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSponsors]);
 
-  // Load events (expanded fields)
+  // Load events (expanded fields) + check which have saved campaigns
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("events")
         .select("id, title, start_date, end_date, description, city, state, venue")
         .order("start_date", { ascending: false });
-      setEvents((data ?? []) as EventOption[]);
+      const eventList = (data ?? []) as EventOption[];
+      if (eventList.length > 0) {
+        const { data: campaignRows } = await supabase
+          .from("event_campaigns")
+          .select("event_id")
+          .in("event_id", eventList.map((e) => e.id));
+        const campaignEventIds = new Set((campaignRows ?? []).map((r: { event_id: string }) => r.event_id));
+        for (const ev of eventList) {
+          ev.hasCampaign = campaignEventIds.has(ev.id);
+        }
+      }
+      setEvents(eventList);
     })();
   }, []);
 
@@ -1635,8 +1646,9 @@ Make the captions authentic and engaging for a military community audience. Refe
       setSavedCampaignId(insertedCampaign?.id ?? null);
       setLoadedFromSaved(false);
 
-      // Flash "Saved" indicator
+      // Mark event as having a campaign so badge shows immediately
       if (insertedCampaign?.id) {
+        setEvents((prev) => prev.map((e) => e.id === selectedEventId ? { ...e, hasCampaign: true } : e));
         setSaveFlash(true);
         setTimeout(() => setSaveFlash(false), 2500);
       }
@@ -1875,13 +1887,22 @@ Make the captions authentic and engaging for a military community audience. Refe
                   {events.map((ev) => {
                     const dateStr = formatDate(ev.start_date);
                     return (
-                      <SelectItem key={ev.id} value={ev.id}>
-                        {ev.title}
-                        {dateStr && (
-                          <span className="text-gray-400 ml-2">
-                            ({dateStr})
+                      <SelectItem
+                        key={ev.id}
+                        value={ev.id}
+                        className={ev.hasCampaign ? "border-l-2 border-green-500 bg-green-50/50 dark:bg-green-950/20" : ""}
+                      >
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <span>
+                            {ev.title}
+                            {dateStr && <span className="text-gray-400 text-xs ml-1">({dateStr})</span>}
                           </span>
-                        )}
+                          {ev.hasCampaign && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium shrink-0">
+                              ● Campaign
+                            </span>
+                          )}
+                        </div>
                       </SelectItem>
                     );
                   })}
