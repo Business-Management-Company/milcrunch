@@ -1192,13 +1192,14 @@ interface YouTubeVideoResult {
   relevanceScore?: number;
 }
 
-function MediaTab({ record }: { record: VerificationRecord }) {
+function MediaTab({ record, autoSearch = false }: { record: VerificationRecord; autoSearch?: boolean }) {
   const [videos, setVideos] = useState<YouTubeVideoResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [filtering, setFiltering] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [lastSearchedAt, setLastSearchedAt] = useState<string | null>(null);
+  const [dbLoaded, setDbLoaded] = useState(false);
   const VISIBLE_COUNT = 6;
 
   // Load saved results on mount — check youtube_media first, then youtube_results (auto-run fallback)
@@ -1213,6 +1214,7 @@ function MediaTab({ record }: { record: VerificationRecord }) {
         setVideos(saved.videos);
         setLastSearchedAt(saved.searched_at ?? null);
         setHasSearched(true);
+        setDbLoaded(true);
         return;
       }
 
@@ -1242,6 +1244,7 @@ function MediaTab({ record }: { record: VerificationRecord }) {
           setHasSearched(true);
         }
       }
+      setDbLoaded(true);
     })();
   }, [record.id]);
 
@@ -1373,6 +1376,13 @@ No markdown formatting, just the JSON array.`;
       setSearching(false);
     }
   };
+
+  // Auto-search when section is opened and no cached results exist
+  useEffect(() => {
+    if (autoSearch && dbLoaded && !hasSearched && !searching) {
+      handleSearch();
+    }
+  }, [autoSearch, dbLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const visibleVideos = showAll ? videos : videos.slice(0, VISIBLE_COUNT);
   const hiddenCount = videos.length - VISIBLE_COUNT;
@@ -2934,7 +2944,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </button>
         {mediaOpen && (
           <div className="mt-4 pl-7">
-            <MediaTab record={record} />
+            <MediaTab record={record} autoSearch />
           </div>
         )}
       </section>
@@ -2948,7 +2958,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <ShieldAlert className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Background Review</h3>
-          <StatusDot status={redFlags.length === 0 && record.pdl_data ? 'green' : 'red'} />
+          <StatusDot status={redFlags.length > 0 ? 'red' : record.pdl_data ? 'green' : 'yellow'} />
         </button>
         {backgroundOpen && (
           <div className="mt-4 pl-7">
