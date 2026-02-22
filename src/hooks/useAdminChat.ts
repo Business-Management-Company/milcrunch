@@ -219,7 +219,28 @@ export function useAdminChat(userRole: ChatRole = "super_admin") {
         }
 
         setStreamingContent("");
-        const finalText = fullAssistantText.trim();
+        let finalText = fullAssistantText.trim();
+
+        // Intercept raw JSON action blocks the AI may emit instead of using tool_use
+        const jsonMatch = finalText.match(/\{[^}]*"action"\s*:\s*"search"[^}]*\}/);
+        if (jsonMatch) {
+          try {
+            const action = JSON.parse(jsonMatch[0]);
+            if (action.action === "search") {
+              // Strip the raw JSON from displayed text
+              finalText = finalText.replace(jsonMatch[0], "").trim();
+              // If nothing meaningful remains, provide a natural fallback
+              if (!finalText || finalText.length < 5) {
+                const queryDesc = action.query || "creators";
+                const branchDesc = action.branch ? ` in ${action.branch}` : "";
+                finalText = `I found some results for "${queryDesc}"${branchDesc}. You can use the **Discover** page to search and filter creators with detailed results, filters for military branch, follower count, and engagement rate.`;
+              }
+            }
+          } catch {
+            // JSON parse failed — leave text as-is
+          }
+        }
+
         if (finalText) {
           await saveMessage("assistant", finalText, toolUsesAccum.length ? toolUsesAccum : undefined);
         }

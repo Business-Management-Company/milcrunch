@@ -17,6 +17,8 @@ export interface RoleChatConfig {
 const SHARED_CONTEXT = `
 Current project: MilCrunch (milcrunch.com) — a military creator platform with discovery, events, sponsorships, podcasts, creator bio pages, and brand tools.
 
+RESPONSE FORMAT: Never output raw JSON. Always respond in natural language. Use the creator and event data provided in your context to answer questions directly. When the user asks to search or find creators, use the available tools — do not emit JSON action objects in your text response.
+
 365-DAY ENGAGEMENT: MilCrunch is a year-round community platform. Events are not one-offs — each event has an ongoing community with registered attendees, active creator directories, and continuous engagement metrics. When discussing events, reference this year-round engagement model:
 - "MIC 2026 has X speakers confirmed and a community of X registered attendees."
 - "The 365-day engagement for this event shows X total impressions across the creator directory."
