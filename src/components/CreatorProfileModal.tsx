@@ -31,6 +31,9 @@ import {
   ShieldCheck,
   ChevronDown,
   Trash2,
+  CalendarPlus,
+  FolderPlus,
+  X,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import {
@@ -193,6 +196,22 @@ export default function CreatorProfileModal({
   const { addCreatorToList, lists, createList, isCreatorInList } = useLists();
   const { user } = useAuth();
 
+  // Dropdown states for action buttons
+  const [listDropdownOpen, setListDropdownOpen] = useState(false);
+  const [dirDropdownOpen, setDirDropdownOpen] = useState(false);
+  const [eventDropdownOpen, setEventDropdownOpen] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const [showNewListInput, setShowNewListInput] = useState(false);
+  const [newDirName, setNewDirName] = useState("");
+  const [showNewDirInput, setShowNewDirInput] = useState(false);
+  const [eventsList, setEventsList] = useState<{ id: string; title: string; start_date: string }[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [invitingEvent, setInvitingEvent] = useState(false);
+
+  const listDropdownRef = useRef<HTMLDivElement>(null);
+  const dirDropdownRef = useRef<HTMLDivElement>(null);
+  const eventDropdownRef = useRef<HTMLDivElement>(null);
+
   const username = creator?.username ?? (creator?.name?.replace(/\s+/g, "_").toLowerCase());
 
   // Load directories for "Add to Directory" dropdown
@@ -206,6 +225,70 @@ export default function CreatorProfileModal({
       if (data) setDirectoriesList(data as { id: string; name: string }[]);
     })();
   }, [user]);
+
+  // Fetch upcoming events when event dropdown opens
+  useEffect(() => {
+    if (!eventDropdownOpen || !user) return;
+    setEventsLoading(true);
+    (async () => {
+      const { data } = await supabase
+        .from("events")
+        .select("id, title, start_date")
+        .gte("start_date", new Date().toISOString())
+        .order("start_date")
+        .limit(10);
+      if (data) setEventsList(data as { id: string; title: string; start_date: string }[]);
+      setEventsLoading(false);
+    })();
+  }, [eventDropdownOpen, user]);
+
+  // Close dropdowns on outside click or Escape
+  useEffect(() => {
+    if (!listDropdownOpen && !dirDropdownOpen && !eventDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (listDropdownOpen && listDropdownRef.current && !listDropdownRef.current.contains(e.target as Node)) {
+        setListDropdownOpen(false);
+        setShowNewListInput(false);
+        setNewListName("");
+      }
+      if (dirDropdownOpen && dirDropdownRef.current && !dirDropdownRef.current.contains(e.target as Node)) {
+        setDirDropdownOpen(false);
+        setShowNewDirInput(false);
+        setNewDirName("");
+      }
+      if (eventDropdownOpen && eventDropdownRef.current && !eventDropdownRef.current.contains(e.target as Node)) {
+        setEventDropdownOpen(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setListDropdownOpen(false);
+        setDirDropdownOpen(false);
+        setEventDropdownOpen(false);
+        setShowNewListInput(false);
+        setShowNewDirInput(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [listDropdownOpen, dirDropdownOpen, eventDropdownOpen]);
+
+  // Reset dropdowns when modal closes
+  useEffect(() => {
+    if (!open) {
+      setListDropdownOpen(false);
+      setDirDropdownOpen(false);
+      setEventDropdownOpen(false);
+      setShowNewListInput(false);
+      setShowNewDirInput(false);
+      setNewListName("");
+      setNewDirName("");
+    }
+  }, [open]);
 
   const controllerRef = useRef<AbortController | null>(null);
   const generationRef = useRef(0);
@@ -388,6 +471,64 @@ export default function CreatorProfileModal({
     } else {
       const dirName = directoriesList.find((d) => d.id === directoryId)?.name ?? "directory";
       toast.success(`${creator?.name} added to ${dirName}`);
+    }
+    setDirDropdownOpen(false);
+  };
+
+  const handleInlineCreateList = () => {
+    if (!listCreator || !newListName.trim()) return;
+    const newId = createList(newListName.trim());
+    addCreatorToList(newId, listCreator);
+    onAddToList?.(listCreator);
+    toast.success(`Added ${listCreator.name} to ${newListName.trim()}`);
+    setNewListName("");
+    setShowNewListInput(false);
+    setListDropdownOpen(false);
+  };
+
+  const handleInlineCreateDir = async () => {
+    if (!newDirName.trim() || !user) return;
+    const { data, error: err } = await supabase
+      .from("directories")
+      .insert({ name: newDirName.trim(), user_id: user.id } as Record<string, unknown>)
+      .select("id, name")
+      .single();
+    if (err || !data) {
+      toast.error("Failed to create directory");
+      return;
+    }
+    setDirectoriesList((prev) => [...prev, data as { id: string; name: string }]);
+    await handleStandaloneApprove((data as { id: string; name: string }).id);
+    setNewDirName("");
+    setShowNewDirInput(false);
+  };
+
+  const handleInviteToEvent = async (eventId: string, eventTitle: string) => {
+    if (!creator) return;
+    setInvitingEvent(true);
+    try {
+      // Get current speaker count for sort order
+      const { count } = await supabase
+        .from("event_speakers")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", eventId);
+      const { error: err } = await supabase.from("event_speakers").insert({
+        event_id: eventId,
+        creator_name: creator.name,
+        avatar_url: extractAvatarFromEnrichment(enriched) ?? creator.avatar ?? null,
+        bio: creator.bio || null,
+        role: "presenter",
+        sort_order: (count ?? 0),
+        confirmed: false,
+        added_by: user?.id ?? null,
+      } as Record<string, unknown>);
+      if (err) throw err;
+      toast.success(`Invited ${creator.name} to ${eventTitle}`);
+      setEventDropdownOpen(false);
+    } catch {
+      toast.error("Failed to invite to event");
+    } finally {
+      setInvitingEvent(false);
     }
   };
 
@@ -833,59 +974,183 @@ export default function CreatorProfileModal({
               </div>
             )}
             <div className="space-y-2">
-              {addedToList ? (
-                <Button className="w-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-lg" disabled>
-                  Added ✓
-                </Button>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg"
-                      disabled={!listCreator}
-                    >
-                      <ListPlus className="mr-2 h-4 w-4" />
-                      Add creator to a list
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    {lists.map((list) => (
-                      <DropdownMenuItem
-                        key={list.id}
-                        onClick={() => handleAddToList(list.id, list.name)}
-                      >
-                        {list.name}
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuItem onClick={handleOpenCreateListModal}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create New List
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              {/* ── Add to List ── */}
+              <div className="relative" ref={listDropdownRef}>
+                {addedToList ? (
+                  <Button className="w-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-lg" disabled>
+                    Added ✓
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg"
+                    disabled={!listCreator}
+                    onClick={() => { setListDropdownOpen(!listDropdownOpen); setDirDropdownOpen(false); setEventDropdownOpen(false); }}
+                  >
+                    <ListPlus className="mr-2 h-4 w-4" />
+                    + Add to List
+                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                )}
+                {listDropdownOpen && (
+                  <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                    {lists.length === 0 ? (
+                      <div className="py-3 px-3 text-xs text-gray-400 text-center">No lists yet</div>
+                    ) : (
+                      lists.map((list) => (
+                        <button
+                          key={list.id}
+                          type="button"
+                          onClick={() => { handleAddToList(list.id, list.name); setListDropdownOpen(false); }}
+                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
+                            <ListPlus className="h-3.5 w-3.5 text-[#6C5CE7]" />
+                          </div>
+                          <span className="truncate flex-1">{list.name}</span>
+                        </button>
+                      ))
+                    )}
+                    <div className="border-t border-gray-100 dark:border-gray-700">
+                      {showNewListInput ? (
+                        <div className="flex items-center gap-1.5 p-2">
+                          <input
+                            type="text"
+                            value={newListName}
+                            onChange={(e) => setNewListName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleInlineCreateList()}
+                            placeholder="List name..."
+                            autoFocus
+                            className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]/40"
+                          />
+                          <button type="button" onClick={handleInlineCreateList} className="p-1.5 rounded-lg bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]">
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewListInput(true)}
+                          className="w-full flex items-center gap-2 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-[#6C5CE7] font-medium text-left transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create New List
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Add to Directory ── */}
+              {!hideDirectoryActions && (
+                <div className="relative" ref={dirDropdownRef}>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
+                    disabled={approvingDir}
+                    onClick={() => { setDirDropdownOpen(!dirDropdownOpen); setListDropdownOpen(false); setEventDropdownOpen(false); }}
+                  >
+                    {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
+                    Add to Directory
+                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                  {dirDropdownOpen && (
+                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                      {directoriesList.length === 0 ? (
+                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No directories yet</div>
+                      ) : (
+                        directoriesList.map((dir) => (
+                          <button
+                            key={dir.id}
+                            type="button"
+                            onClick={() => handleStandaloneApprove(dir.id)}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                              <FolderPlus className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <span className="truncate flex-1">{dir.name}</span>
+                          </button>
+                        ))
+                      )}
+                      <div className="border-t border-gray-100 dark:border-gray-700">
+                        {showNewDirInput ? (
+                          <div className="flex items-center gap-1.5 p-2">
+                            <input
+                              type="text"
+                              value={newDirName}
+                              onChange={(e) => setNewDirName(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleInlineCreateDir()}
+                              placeholder="Directory name..."
+                              autoFocus
+                              className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]/40"
+                            />
+                            <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]">
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewDirInput(true)}
+                            className="w-full flex items-center gap-2 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-[#6C5CE7] font-medium text-left transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Create New Directory
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
-              {!hideDirectoryActions && directoriesList.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
-                      disabled={approvingDir}
-                    >
-                      {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                      Add to Directory
-                      <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    {directoriesList.map((dir) => (
-                      <DropdownMenuItem key={dir.id} onClick={() => handleStandaloneApprove(dir.id)}>
-                        {dir.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+
+              {/* ── Invite to Event ── */}
+              {!hideDirectoryActions && (
+                <div className="relative" ref={eventDropdownRef}>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    disabled={invitingEvent}
+                    onClick={() => { setEventDropdownOpen(!eventDropdownOpen); setListDropdownOpen(false); setDirDropdownOpen(false); }}
+                  >
+                    {invitingEvent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarPlus className="mr-2 h-4 w-4" />}
+                    Invite to Event
+                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                  {eventDropdownOpen && (
+                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                      {eventsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        </div>
+                      ) : eventsList.length === 0 ? (
+                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No upcoming events</div>
+                      ) : (
+                        eventsList.map((evt) => (
+                          <button
+                            key={evt.id}
+                            type="button"
+                            onClick={() => handleInviteToEvent(evt.id, evt.title)}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                              <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate font-medium">{evt.title}</p>
+                              <p className="text-[10px] text-gray-400">
+                                {new Date(evt.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
+
               {onRemoveFromDirectory && (
                 <Button
                   variant="outline"
@@ -904,15 +1169,6 @@ export default function CreatorProfileModal({
                 >
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   Verify Military Status
-                </Button>
-              )}
-              {!hideDirectoryActions && (
-                <Button
-                  variant="outline"
-                  className="w-full bg-white dark:bg-transparent text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 rounded-lg"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Exclude from results
                 </Button>
               )}
             </div>
