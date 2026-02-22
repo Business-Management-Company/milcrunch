@@ -89,6 +89,7 @@ export default function FloatingAdminChat() {
   const [pendingCreator, setPendingCreator] = useState<CreatorCard | null>(null);
   const [expandedMsgIds, setExpandedMsgIds] = useState<Set<string>>(new Set());
   const [justAddedIds, setJustAddedIds] = useState<Set<string>>(new Set());
+  const [selectedCreator, setSelectedCreator] = useState<CreatorCard | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -471,10 +472,7 @@ For all other questions, respond naturally and concisely.`;
                               <div
                                 key={c.id || i}
                                 className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors cursor-pointer"
-                                onClick={() => {
-                                  const handle = c.username || c.name?.toLowerCase().replace(/\s+/g, "");
-                                  if (handle) { navigate(`/creators/${handle}`); setOpen(false); }
-                                }}
+                                onClick={() => setSelectedCreator(c)}
                               >
                                 <img
                                   src={c.avatar}
@@ -640,6 +638,138 @@ For all other questions, respond naturally and concisely.`;
         onOpenChange={setCreateListModalOpen}
         onCreate={handleCreateListAndAdd}
       />
+
+      {/* Dark overlay behind profile drawer */}
+      {selectedCreator && (
+        <div className="fixed inset-0 bg-black/30 z-[60]" onClick={() => setSelectedCreator(null)} />
+      )}
+
+      {/* Slide-out profile drawer */}
+      <div className={cn(
+        "fixed inset-y-0 right-0 w-96 bg-white dark:bg-gray-900 shadow-2xl z-[70] transform transition-transform duration-300",
+        selectedCreator ? "translate-x-0" : "translate-x-full"
+      )}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <span className="font-semibold text-sm text-gray-500">Creator Profile</span>
+          <button
+            onClick={() => setSelectedCreator(null)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Profile content */}
+        {selectedCreator && (() => {
+          const { branch, keywords } = detectMilitaryKeywords(selectedCreator);
+          return (
+            <div className="overflow-y-auto h-full pb-32">
+              {/* Avatar + name + handle */}
+              <div className="p-6 text-center border-b border-gray-100 dark:border-gray-800">
+                <img
+                  src={selectedCreator.avatar}
+                  alt={selectedCreator.name}
+                  referrerPolicy="no-referrer"
+                  className="w-20 h-20 rounded-full mx-auto mb-3 object-cover ring-2 ring-white dark:ring-gray-800 shadow-md"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCreator.name)}&background=6C5CE7&color=fff&size=128`;
+                  }}
+                />
+                <h2 className="font-bold text-lg text-gray-900 dark:text-gray-100">{selectedCreator.name}</h2>
+                {selectedCreator.username && (
+                  <p className="text-gray-500 text-sm">@{selectedCreator.username}</p>
+                )}
+                <div className="flex items-center justify-center gap-2 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {selectedCreator.followers > 0 && (
+                    <span>{formatFollowers(selectedCreator.followers)} followers</span>
+                  )}
+                  {selectedCreator.followers > 0 && selectedCreator.engagementRate > 0 && (
+                    <span className="text-gray-300">·</span>
+                  )}
+                  {selectedCreator.engagementRate > 0 && (
+                    <span>{selectedCreator.engagementRate}% engagement</span>
+                  )}
+                </div>
+                {branch && (
+                  <span className="inline-flex items-center mt-2 px-2.5 py-1 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-xs uppercase tracking-wide">
+                    {branch}
+                  </span>
+                )}
+              </div>
+
+              {/* Bio */}
+              {selectedCreator.bio && (
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{selectedCreator.bio}</p>
+                </div>
+              )}
+
+              {/* Military keywords */}
+              {keywords.length > 0 && (
+                <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Military Keywords</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {keywords.map((kw) => (
+                      <span key={kw} className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Platforms */}
+              {selectedCreator.platforms && selectedCreator.platforms.length > 0 && (
+                <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Platforms</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCreator.platforms.map((p) => (
+                      <span key={p} className="inline-flex items-center px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="p-6 flex flex-col gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Re-use existing list picker via the dropdown on the card
+                    handleOpenCreateListForCreator(selectedCreator);
+                  }}
+                  className="w-full py-2.5 px-4 bg-[#6C5CE7] text-white rounded-lg text-sm font-medium hover:bg-[#5A4BD5] transition-colors"
+                >
+                  + Add to List
+                </button>
+                <button
+                  onClick={() => toast.info("Add to Directory coming soon")}
+                  className="w-full py-2.5 px-4 border border-[#6C5CE7] text-[#6C5CE7] rounded-lg text-sm font-medium hover:bg-[#6C5CE7]/5 transition-colors"
+                >
+                  Add to Directory
+                </button>
+                <button
+                  onClick={() => toast.info("Invite to Event coming soon")}
+                  className="w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Invite to Event
+                </button>
+                <a
+                  href={`/creators/${selectedCreator.username || selectedCreator.name?.toLowerCase().replace(/\s+/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  View Full Profile ↗
+                </a>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
     </>
   );
 }
