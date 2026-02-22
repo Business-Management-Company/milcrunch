@@ -2820,18 +2820,16 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         {careerOpen && <CareerTrackTab record={record} />}
       </section>
 
-      {/* ── 5. SOCIAL — only shown if source is discovery ── */}
-      {(record.source === 'discovery' || record.source_username) && (
-        <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
-          <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group">
-            {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-            <Globe className="h-5 w-5 text-[#6C5CE7]" />
-            <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
-            <StatusDot status={record.source_username || record.linkedin_url ? 'green' : 'red'} />
-          </button>
-          {socialOpen && <div className="mt-3"><SocialVerificationSection record={record} /></div>}
-        </section>
-      )}
+      {/* ── 5. SOCIAL ── */}
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
+        <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group">
+          {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+          <Globe className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
+          <StatusDot status={record.source_username || record.linkedin_url ? 'green' : 'red'} />
+        </button>
+        {socialOpen && <div className="mt-3"><SocialVerificationSection record={record} /></div>}
+      </section>
 
       {/* ── 6. MEDIA — collapsible ── */}
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
