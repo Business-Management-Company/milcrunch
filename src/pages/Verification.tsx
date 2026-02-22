@@ -154,7 +154,7 @@ function ConfidenceGauge({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (score / 100) * circumference;
   return (
-    <div className="relative w-36 h-36">
+    <div className="relative w-24 h-24">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
         <circle
@@ -171,7 +171,7 @@ function ConfidenceGauge({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-3xl font-bold text-[#000741] dark:text-white">{score}%</span>
+        <span className="text-2xl font-bold text-[#000741] dark:text-white">{score}%</span>
       </div>
     </div>
   );
@@ -330,6 +330,7 @@ export default function Verification() {
     zip: "",
     source: "manual" as string,
     sourceUsername: "" as string,
+    profilePhotoUrl: "",
   });
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [phases, setPhases] = useState<PipelinePhase[]>([]);
@@ -445,9 +446,7 @@ export default function Verification() {
           source_username: addForm.instagramHandle.trim() || null,
           profile_photo_url: addForm.instagramHandle.trim()
             ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
-            : (result.pdlData as any)?.profile_pic_url
-              || (result.pdlData as any)?.photo_url
-              || null,
+            : addForm.profilePhotoUrl || result.linkedinUrl || null,
           website_url: addForm.websiteUrl.trim() || null,
           notes: addForm.notes.trim() || null,
           verification_score: result.verificationScore,
@@ -859,6 +858,7 @@ export default function Verification() {
                                   ...f,
                                   fullName: m.creator_name ?? m.creator_handle,
                                   instagramHandle: (m.creator_handle ?? '').replace('@', ''),
+                                  profilePhotoUrl: m.ic_avatar_url || '',
                                 }));
                                 setCreatorSearch("");
                                 setShowCreatorDropdown(false);
@@ -2830,7 +2830,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </div>
         </div>
         {/* RIGHT column — Confidence Ring */}
-        <div className="w-44 flex-shrink-0 flex flex-col items-center">
+        <div className="w-32 flex-shrink-0 flex flex-col items-center">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -2973,7 +2973,23 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <ShieldAlert className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Background Review</h3>
-          <StatusDot status={redFlags.length > 0 ? 'red' : record.pdl_data ? 'green' : 'yellow'} />
+          {(() => {
+            const bgStatus = (record.manual_checks as any)?.background_dot_override ||
+              (redFlags.length > 0 ? 'red' : (record.ai_analysis || record.pdl_data) ? 'green' : 'yellow');
+            const handleBgDotClick = async (e: React.MouseEvent) => {
+              e.stopPropagation();
+              const next = bgStatus === 'red' ? 'yellow' : bgStatus === 'yellow' ? 'green' : 'red';
+              await supabase.from('verifications').update({
+                manual_checks: { ...((record.manual_checks as any) || {}), background_dot_override: next },
+              }).eq('id', record.id);
+              onRefresh?.();
+            };
+            return (
+              <span onClick={handleBgDotClick} className="cursor-pointer" title="Click to update status">
+                <StatusDot status={bgStatus as 'red' | 'yellow' | 'green'} />
+              </span>
+            );
+          })()}
         </button>
         {backgroundOpen && (
           <div className="mt-4 pl-7">
