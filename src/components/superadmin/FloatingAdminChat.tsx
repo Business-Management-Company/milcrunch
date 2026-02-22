@@ -81,7 +81,7 @@ export default function FloatingAdminChat() {
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: makeId(), role: "assistant", text: "Hi! I'm your MilCrunch AI assistant. How can I help today?" },
+    { id: makeId(), role: "assistant", text: "👋 Hi! I'm your MilCrunch AI assistant. How can I help today?" },
   ]);
   const [loading, setLoading] = useState(false);
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
