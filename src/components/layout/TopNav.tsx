@@ -61,7 +61,7 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavP
     <header
       className={cn(
         "fixed left-0 right-0 z-40 h-14 flex items-center justify-between px-4 gap-4",
-        "bg-white dark:bg-[#0F1117] border-b border-gray-200 dark:border-gray-800 shadow-sm"
+        "bg-white dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800"
       )}
       style={{ top: demoOffset }}
     >
