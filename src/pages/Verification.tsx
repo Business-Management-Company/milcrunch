@@ -428,7 +428,9 @@ export default function Verification() {
           source_username: addForm.instagramHandle.trim() || null,
           profile_photo_url: addForm.instagramHandle.trim()
             ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
-            : null,
+            : (result.pdlData as any)?.profile_pic_url
+              || (result.pdlData as any)?.photo_url
+              || null,
           website_url: addForm.websiteUrl.trim() || null,
           notes: addForm.notes.trim() || null,
           verification_score: result.verificationScore,
@@ -1773,13 +1775,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
           {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Mic className="h-5 w-5" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-          {checkedCount >= 5 ? (
-            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
-          ) : checkedCount < 3 ? (
-            <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
-          ) : (
-            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
-          )}
+          <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} />
         </CardTitle>
       </CardHeader>
       {open && <CardContent className="space-y-3">
@@ -1878,13 +1874,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
         <Mic className="h-5 w-5 text-[#6C5CE7]" />
         <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
         {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-        {checkedCount >= 5 ? (
-          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
-        ) : checkedCount < 3 ? (
-          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
-        ) : (
-          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
-        )}
+        <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} />
       </button>
       {isOpen && (
         <div className="pl-7">
@@ -2408,6 +2398,12 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
   );
 }
 
+function StatusDot({ status }: { status: 'red' | 'yellow' | 'green' }) {
+  return (
+    <span className={`inline-block w-2.5 h-2.5 rounded-full ml-2 flex-shrink-0 ${status === 'green' ? 'bg-green-500' : status === 'yellow' ? 'bg-amber-400' : 'bg-red-400'}`} />
+  );
+}
+
 function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
   const [reverifying, setReverifying] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -2762,6 +2758,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
+          <StatusDot status={record.ai_analysis ? 'green' : 'red'} />
         </button>
         {summaryOpen && <IntelligenceSummary record={record} />}
       </section>
@@ -2776,6 +2773,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <Search className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Evidence Sources</h3>
           <Badge variant="secondary" className="text-xs ml-1">{sources.length}</Badge>
+          <StatusDot status={sources.length >= 10 ? 'green' : sources.length > 0 ? 'yellow' : 'red'} />
         </button>
         {evidenceOpen && (
           <div className="mt-4 space-y-4 pl-7">
@@ -2815,6 +2813,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
+          <StatusDot status={record.pdl_data ? 'green' : 'red'} />
         </button>
         {careerOpen && <CareerTrackTab record={record} />}
       </section>
@@ -2826,6 +2825,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
             <Globe className="h-5 w-5 text-[#6C5CE7]" />
             <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
+            <StatusDot status={record.source_username || record.linkedin_url ? 'green' : 'red'} />
           </button>
           {socialOpen && <div className="mt-3"><SocialVerificationSection record={record} /></div>}
         </section>
@@ -2837,6 +2837,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
+          <StatusDot status={(() => { const mc = record.manual_checks as Record<string, unknown> | null; return mc?.youtube_media || mc?.youtube_results ? 'green' : 'red'; })()} />
         </button>
         {mediaOpen && (
           <div className="mt-4 pl-7">
@@ -2854,6 +2855,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <ShieldAlert className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Background Review</h3>
+          <StatusDot status={redFlags.length === 0 && record.pdl_data ? 'green' : 'red'} />
         </button>
         {backgroundOpen && (
           <div className="mt-4 pl-7">
