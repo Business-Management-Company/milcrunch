@@ -189,6 +189,14 @@ const BrandDirectory = () => {
   const [creating, setCreating] = useState(false);
   const [dirViewMode, setDirViewMode] = useState<'card' | 'list'>('card');
 
+  // Directory card menu state
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [dirImageTargetId, setDirImageTargetId] = useState<string | null>(null);
+  const dirImageInputRef = useRef<HTMLInputElement>(null);
+
   // Detail-level state
   const [selectedDir, setSelectedDir] = useState<Directory | null>(null);
   const [members, setMembers] = useState<DirectoryMember[]>([]);
@@ -246,6 +254,69 @@ const BrandDirectory = () => {
   }, []);
 
   useEffect(() => { loadDirectories(); }, [loadDirectories]);
+
+  // Close directory card menu on outside click
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = () => setOpenMenuId(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [openMenuId]);
+
+  const handleDirStartRename = (dirId: string, currentName: string) => {
+    setOpenMenuId(null);
+    setRenamingId(dirId);
+    setRenameValue(currentName);
+  };
+
+  const handleDirFinishRename = async () => {
+    if (renamingId && renameValue.trim()) {
+      const { error } = await supabase.from("directories").update({ name: renameValue.trim() }).eq("id", renamingId);
+      if (error) { toast.error("Failed to rename"); }
+      else {
+        setDirectories((prev) => prev.map((d) => d.id === renamingId ? { ...d, name: renameValue.trim() } : d));
+        toast.success("Directory renamed");
+      }
+    }
+    setRenamingId(null);
+  };
+
+  const handleDirChangeImage = (dirId: string) => {
+    setOpenMenuId(null);
+    setDirImageTargetId(dirId);
+    dirImageInputRef.current?.click();
+  };
+
+  const handleDirImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !dirImageTargetId) return;
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `directories/${dirImageTargetId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("list-avatars").upload(path, file, { upsert: true });
+    if (error) { toast.error("Failed to upload image"); }
+    else {
+      const { data: urlData } = supabase.storage.from("list-avatars").getPublicUrl(path);
+      if (urlData?.publicUrl) {
+        await supabase.from("directories").update({ cover_image_url: urlData.publicUrl }).eq("id", dirImageTargetId);
+        setDirectories((prev) => prev.map((d) => d.id === dirImageTargetId ? { ...d, cover_image_url: urlData.publicUrl } : d));
+        toast.success("Directory image updated");
+      }
+    }
+    setDirImageTargetId(null);
+    e.target.value = "";
+  };
+
+  const handleDirConfirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    const dir = directories.find((d) => d.id === deleteConfirmId);
+    const { error } = await deleteDirectory(deleteConfirmId);
+    if (error) toast.error(`Failed to delete: ${error}`);
+    else {
+      setDirectories((prev) => prev.filter((d) => d.id !== deleteConfirmId));
+      toast.success(`Deleted "${dir?.name}"`);
+    }
+    setDeleteConfirmId(null);
+  };
 
   // Reset to list view when nav link clicked while already on this page
   useEffect(() => {
@@ -588,9 +659,6 @@ const BrandDirectory = () => {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">Directories</h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Manage public-facing curated collections of creators.
-              </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
@@ -644,14 +712,55 @@ const BrandDirectory = () => {
             </Card>
           )}
 
+          {/* Hidden file input for directory image upload */}
+          <input ref={dirImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleDirImageSelected} />
+
+          {/* Delete directory confirmation dialog */}
+          <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle>Delete Directory</DialogTitle></DialogHeader>
+              <p className="text-sm text-muted-foreground">Are you sure you want to delete this directory and all its members? This action cannot be undone.</p>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+                <Button variant="destructive" onClick={handleDirConfirmDelete}>Delete</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {!dirsLoading && directories.length > 0 && dirViewMode === 'card' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {directories.map((dir) => (
                 <Card
                   key={dir.id}
-                  className="bg-white dark:bg-[#1A1D27] border-border hover:shadow-lg transition-shadow cursor-pointer group"
-                  onClick={() => openDirectory(dir)}
+                  className="bg-white dark:bg-[#1A1D27] border-border hover:shadow-lg transition-shadow cursor-pointer group relative"
+                  onClick={() => renamingId !== dir.id && openDirectory(dir)}
                 >
+                  {/* "..." menu button */}
+                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === dir.id ? null : dir.id); }}
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none"
+                    >
+                      ⋯
+                    </button>
+                  </div>
+                  {/* Dropdown menu */}
+                  {openMenuId === dir.id && (
+                    <div
+                      className="absolute top-10 right-3 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2" onClick={() => handleDirStartRename(dir.id, dir.name)}>
+                        ✏️ Rename
+                      </button>
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2" onClick={() => handleDirChangeImage(dir.id)}>
+                        🖼️ Change Image
+                      </button>
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2 text-red-600 dark:text-red-400" onClick={() => { setOpenMenuId(null); setDeleteConfirmId(dir.id); }}>
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
                   {dir.cover_image_url && (
                     <div className="h-32 rounded-t-lg overflow-hidden">
                       <img src={dir.cover_image_url} alt="" className="w-full h-full object-cover" />
@@ -660,21 +769,25 @@ const BrandDirectory = () => {
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-foreground text-lg truncate group-hover:text-pd-blue transition-colors">
-                          {dir.name}
-                        </h3>
+                        {renamingId === dir.id ? (
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={handleDirFinishRename}
+                            onKeyDown={(e) => { if (e.key === "Enter") handleDirFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
+                            className="font-semibold text-foreground text-lg bg-transparent border-b-2 border-[#6C5CE7] outline-none w-full"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <h3 className="font-semibold text-foreground text-lg truncate group-hover:text-pd-blue transition-colors">
+                            {dir.name}
+                          </h3>
+                        )}
                         {dir.description && (
                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{dir.description}</p>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteDir(dir); }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                     </div>
                     <div className="flex items-center gap-3 mt-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1.5">
@@ -703,11 +816,23 @@ const BrandDirectory = () => {
               {directories.map((dir) => (
                 <div
                   key={dir.id}
-                  className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer"
-                  onClick={() => openDirectory(dir)}
+                  className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer relative group"
+                  onClick={() => renamingId !== dir.id && openDirectory(dir)}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">{dir.name}</span>
+                    {renamingId === dir.id ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={handleDirFinishRename}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleDirFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
+                        className="font-medium text-gray-900 dark:text-white text-sm bg-transparent border-b-2 border-[#6C5CE7] outline-none"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span className="font-medium text-gray-900 dark:text-white text-sm">{dir.name}</span>
+                    )}
                     <span className="text-xs text-gray-400">{dir.member_count ?? 0} creators</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -717,8 +842,30 @@ const BrandDirectory = () => {
                       </Badge>
                     )}
                     <span className="text-xs text-gray-400 hidden sm:inline">{dir.description}</span>
+                    <button
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none"
+                      onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === dir.id ? null : dir.id); }}
+                    >
+                      ⋯
+                    </button>
                     <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
                   </div>
+                  {openMenuId === dir.id && (
+                    <div
+                      className="absolute top-full right-4 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2" onClick={() => handleDirStartRename(dir.id, dir.name)}>
+                        ✏️ Rename
+                      </button>
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2" onClick={() => handleDirChangeImage(dir.id)}>
+                        🖼️ Change Image
+                      </button>
+                      <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2 text-red-600 dark:text-red-400" onClick={() => { setOpenMenuId(null); setDeleteConfirmId(dir.id); }}>
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
