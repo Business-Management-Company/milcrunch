@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -70,6 +71,16 @@ interface ScanResult {
 
 type FilterMode = "both" | "conflicts" | "collabs";
 
+interface SavedSearch {
+  id: string;
+  location: string;
+  start_date: string;
+  end_date: string | null;
+  radius: string;
+  audience_types: string[];
+  created_at: string;
+}
+
 interface ParsedLocation {
   city: string | null;
   state: string | null;
@@ -128,15 +139,14 @@ const RADIUS_OPTIONS = [
   { value: "0", label: "Nationwide" },
 ] as const;
 
-const SCAN_PHASES = [
-  "Scanning Eventbrite for local events...",
-  "Checking military installation calendars...",
-  "Searching Facebook Events in the area...",
-  "Scanning local Chamber of Commerce calendars...",
-  "Checking regional business & networking events...",
-  "Scanning military spouse & veteran community groups...",
-  "Checking MilCrunch event calendar...",
-  "Analyzing results for conflicts and collabs...",
+const SCAN_MESSAGES = [
+  "\u{1F5D3}\uFE0F Checking military observances and holidays...",
+  "\u2694\uFE0F Scanning competing events in your region...",
+  "\u{1F91D} Identifying collaboration opportunities...",
+  "\u{1F4CD} Cross-referencing venue availability...",
+  "\u{1F396}\uFE0F Checking military installation calendars...",
+  "\u{1F4CA} Analyzing audience overlap...",
+  "\u2726 Finalizing your conflict & collab report...",
 ];
 
 /* ========== region map ========== */
@@ -574,11 +584,18 @@ async function callAnthropic(system: string, userMessage: string, maxTokens = 40
 /* ========== component ========== */
 
 export default function ConflictsCollabs() {
+  const { effectiveUserId } = useAuth();
+  const userId = effectiveUserId ?? null;
+
   // Form state
   const [locationInput, setLocationInput] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [radius, setRadius] = useState("15");
   const [audienceTypes, setAudienceTypes] = useState<string[]>([]);
+
+  // Saved searches
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [autoRun, setAutoRun] = useState(false);
 
   // Location autocomplete state
   const [locationSuggestions, setLocationSuggestions] = useState<{ display: string; raw: any }[]>([]);
@@ -631,7 +648,7 @@ export default function ConflictsCollabs() {
   const [allEvents, setAllEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
-  const [scanPhase, setScanPhase] = useState("");
+  const [scanStep, setScanStep] = useState(0);
   const [results, setResults] = useState<ScanResult[]>([]);
   const [externalResults, setExternalResults] = useState<ExternalResults | null>(null);
   const [filter, setFilter] = useState<FilterMode>("both");
@@ -640,6 +657,15 @@ export default function ConflictsCollabs() {
   const [aiPitchTarget, setAiPitchTarget] = useState<AIEvent | null>(null);
   const [generatingPitch, setGeneratingPitch] = useState(false);
   const [generatedPitch, setGeneratedPitch] = useState("");
+
+  // Cycle scan messages
+  useEffect(() => {
+    if (!scanning) { setScanStep(0); return; }
+    const interval = setInterval(() => {
+      setScanStep((prev) => (prev < SCAN_MESSAGES.length - 1 ? prev + 1 : prev));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [scanning]);
 
   // Load all events on mount
   useEffect(() => {
@@ -662,6 +688,61 @@ export default function ConflictsCollabs() {
       prev.includes(aud) ? prev.filter((a) => a !== aud) : [...prev, aud],
     );
   };
+
+  // Load saved searches
+  const loadSavedSearches = useCallback(async () => {
+    if (!userId) return;
+    const { data } = await supabase
+      .from("conflict_searches")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (data) setSavedSearches(data as SavedSearch[]);
+  }, [userId]);
+
+  useEffect(() => { loadSavedSearches(); }, [loadSavedSearches]);
+
+  const deleteSearch = async (id: string) => {
+    await supabase.from("conflict_searches").delete().eq("id", id);
+    setSavedSearches((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const saveSearch = async () => {
+    if (!userId || !locationInput.trim() || !dateRange?.from) return;
+    try {
+      await supabase.from("conflict_searches").insert({
+        user_id: userId,
+        location: locationInput.trim(),
+        start_date: dateRange.from.toISOString(),
+        end_date: dateRange.to?.toISOString() ?? null,
+        radius,
+        audience_types: audienceTypes,
+      } as Record<string, unknown>);
+      loadSavedSearches();
+    } catch {
+      // table may not exist yet — silent fail
+    }
+  };
+
+  const loadSearch = (s: SavedSearch) => {
+    setLocationInput(s.location);
+    setDateRange({
+      from: new Date(s.start_date),
+      to: s.end_date ? new Date(s.end_date) : undefined,
+    });
+    setRadius(s.radius);
+    setAudienceTypes(s.audience_types ?? []);
+    setAutoRun(true);
+  };
+
+  // Auto-run scan after loading a saved search
+  useEffect(() => {
+    if (autoRun && locationInput && dateRange?.from) {
+      setAutoRun(false);
+      runScan();
+    }
+  }, [autoRun]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Run scan — now includes external scanning
   const runScan = async () => {
@@ -695,12 +776,10 @@ export default function ConflictsCollabs() {
       : format(dateRange.from, "MMM d, yyyy");
 
     // 1. Holidays & observances (instant, local computation)
-    setScanPhase("Checking holidays & military observances...");
     const holidays = findHolidayConflicts(dateRange.from, dateRange.to ?? null);
     const observances = findObservanceConflicts(dateRange.from, dateRange.to ?? null);
 
-    // 2. Internal platform events
-    setScanPhase("Scanning platform events...");
+    // 2. Internal platform events (instant, local computation)
     const scanResults: ScanResult[] = [];
     for (const candidate of allEvents) {
       const result = analyzePlannedEvent(plan, candidate);
@@ -713,24 +792,14 @@ export default function ConflictsCollabs() {
     });
     setResults(scanResults);
 
-    // 3. AI-powered multi-source scan
-    setScanPhase(SCAN_PHASES[0]);
-    let phaseIdx = 0;
-    const cycleInterval = setInterval(() => {
-      phaseIdx = (phaseIdx + 1) % SCAN_PHASES.length;
-      setScanPhase(SCAN_PHASES[phaseIdx]);
-    }, 800);
+    // 3. Run AI scan + AI enhancement in parallel
+    const nearbyBases = getNearbyBases(parsedLoc.state);
+    const baseContext = nearbyBases.length > 0
+      ? `\nNearby military installations: ${nearbyBases.slice(0, 5).map((b) => `${b.name} (${b.city})`).join(", ")}.`
+      : "";
 
-    let aiEvents: AIEvent[] = [];
-    let aiFailed = false;
-
-    try {
-      const nearbyBases = getNearbyBases(parsedLoc.state);
-      const baseContext = nearbyBases.length > 0
-        ? `\nNearby military installations: ${nearbyBases.slice(0, 5).map((b) => `${b.name} (${b.city})`).join(", ")}.`
-        : "";
-
-      const aiResp = await callAnthropic(
+    // AI scan: multi-source event discovery
+    const aiScanPromise = callAnthropic(
         `You are an event intelligence tool for military community event planners. Given a planned event's location, date range, and target audience, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) as if you searched Eventbrite, Facebook Events, military installation calendars, local and regional Chamber of Commerce event calendars, and military community groups.
 
 Return ONLY a valid JSON array of event objects. Each event:
@@ -764,19 +833,70 @@ Guidelines:
 - Target Audience: ${audienceTypes.join(", ") || "General Military"}${baseContext}
 
 Generate realistic competing events and collaboration opportunities.`,
-        4096,
-      );
-
+      4096,
+    ).then((aiResp) => {
       const cleaned = aiResp.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
       const parsed = JSON.parse(cleaned);
-      aiEvents = (Array.isArray(parsed) ? parsed : parsed.events || []).filter(
+      return (Array.isArray(parsed) ? parsed : parsed.events || []).filter(
         (e: any) => e.name && e.type && (e.type === "conflict" || e.type === "collab"),
-      );
-    } catch (e) {
+      ) as AIEvent[];
+    }).catch((e) => {
       console.warn("[C&C] AI scan failed:", e);
-      aiFailed = true;
-    } finally {
-      clearInterval(cycleInterval);
+      return null;
+    });
+
+    // AI enhance: generate suggestions for top internal results (runs in parallel with AI scan)
+    const aiEnhancePromise = scanResults.length > 0
+      ? (async () => {
+          const topResults = scanResults.slice(0, 8);
+          const planSummary = {
+            name: "Planned Event",
+            date: dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "TBD",
+            endDate: dateRange.to ? format(dateRange.to, "MMM d, yyyy") : null,
+            location: locationInput,
+            audience: audienceTypes.join(", ") || "General Military",
+            eventType: "Event",
+          };
+          const eventsForAI = topResults.map((r) => ({
+            id: r.event.id,
+            type: r.type,
+            name: r.event.title,
+            date: r.event.start_date ? format(parseISO(r.event.start_date), "MMM d, yyyy") : "TBD",
+            location: getLocation(r.event),
+            eventType: r.event.event_type || "Unknown",
+            score: r.score,
+            reasons: r.reasons,
+          }));
+          const enhanceResp = await callAnthropic(
+            `You are an event planning advisor for MilCrunch, a military community platform. Given a planned event and a list of existing events that are flagged as potential conflicts or collaboration opportunities, provide a brief 1-2 sentence actionable suggestion for each.
+
+For CONFLICTS: Suggest specific alternative date windows, differentiation strategies, or how to minimize audience cannibalization. Be specific about dates when possible.
+For COLLABS: Suggest specific partnership ideas like cross-promotion tactics, shared speakers, bundled tickets, joint sponsor packages, or co-marketing campaigns.
+
+Return ONLY a JSON array: [{"id":"event-id","suggestion":"your suggestion"}]`,
+            JSON.stringify({ plannedEvent: planSummary, events: eventsForAI }),
+            2048,
+          );
+          const cleaned2 = enhanceResp.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+          return JSON.parse(cleaned2) as { id: string; suggestion: string }[];
+        })().catch((err) => { console.warn("[C&C] AI enhancement failed:", err); return null; })
+      : Promise.resolve(null);
+
+    // Await both in parallel
+    const [aiEventsResult, aiSuggestionsResult] = await Promise.all([aiScanPromise, aiEnhancePromise]);
+
+    const aiEvents = aiEventsResult ?? [];
+    const aiFailed = aiEventsResult === null;
+
+    // Apply AI suggestions to internal results
+    if (aiSuggestionsResult) {
+      const suggMap = new Map(aiSuggestionsResult.map((s) => [s.id, s.suggestion]));
+      setResults((prev) =>
+        prev.map((r) => {
+          const aiSug = suggMap.get(r.event.id);
+          return aiSug ? { ...r, aiSuggestion: aiSug } : r;
+        }),
+      );
     }
 
     // Save external results
@@ -803,59 +923,10 @@ Generate realistic competing events and collaboration opportunities.`,
       toast.info(`Found ${parts.join(", ")}`);
     }
 
-    // AI-enhance top internal results
-    if (scanResults.length > 0) {
-      setScanPhase("Generating AI insights...");
-      try {
-        const topResults = scanResults.slice(0, 8);
-        const planSummary = {
-          name: "Planned Event",
-          date: dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "TBD",
-          endDate: dateRange.to ? format(dateRange.to, "MMM d, yyyy") : null,
-          location: locationInput,
-          audience: audienceTypes.join(", ") || "General Military",
-          eventType: "Event",
-        };
-
-        const eventsForAI = topResults.map((r) => ({
-          id: r.event.id,
-          type: r.type,
-          name: r.event.title,
-          date: r.event.start_date ? format(parseISO(r.event.start_date), "MMM d, yyyy") : "TBD",
-          location: getLocation(r.event),
-          eventType: r.event.event_type || "Unknown",
-          score: r.score,
-          reasons: r.reasons,
-        }));
-
-        const aiResp = await callAnthropic(
-          `You are an event planning advisor for MilCrunch, a military community platform. Given a planned event and a list of existing events that are flagged as potential conflicts or collaboration opportunities, provide a brief 1-2 sentence actionable suggestion for each.
-
-For CONFLICTS: Suggest specific alternative date windows, differentiation strategies, or how to minimize audience cannibalization. Be specific about dates when possible.
-For COLLABS: Suggest specific partnership ideas like cross-promotion tactics, shared speakers, bundled tickets, joint sponsor packages, or co-marketing campaigns.
-
-Return ONLY a JSON array: [{"id":"event-id","suggestion":"your suggestion"}]`,
-          JSON.stringify({ plannedEvent: planSummary, events: eventsForAI }),
-          2048,
-        );
-
-        const cleaned = aiResp.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-        const suggestions: { id: string; suggestion: string }[] = JSON.parse(cleaned);
-        const suggMap = new Map(suggestions.map((s) => [s.id, s.suggestion]));
-
-        setResults((prev) =>
-          prev.map((r) => {
-            const aiSug = suggMap.get(r.event.id);
-            return aiSug ? { ...r, aiSuggestion: aiSug } : r;
-          }),
-        );
-      } catch (err) {
-        console.warn("[C&C] AI enhancement failed:", err);
-      }
-    }
-
     setScanning(false);
-    setScanPhase("");
+
+    // Auto-save this search
+    saveSearch();
   };
 
   // Generate AI collab pitch
@@ -976,6 +1047,38 @@ Both events serve overlapping audiences. Write the email.`,
           Plan a new event and scan for scheduling conflicts, competing events, and collaboration opportunities.
         </p>
       </div>
+
+      {/* Saved Searches */}
+      {savedSearches.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Saved Searches</p>
+          <div className="flex flex-wrap gap-2">
+            {savedSearches.map((s) => {
+              const startD = new Date(s.start_date);
+              const dateLabel = s.end_date
+                ? `${format(startD, "MMM d")}–${format(new Date(s.end_date), "MMM d")}`
+                : format(startD, "MMM d, yyyy");
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => loadSearch(s)}
+                  className="flex items-center gap-1 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-full text-sm text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                >
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  {s.location} · {dateLabel}
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); deleteSearch(s.id); }}
+                    className="ml-1 text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    ×
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Planning form */}
       <Card className="p-5">
@@ -1120,16 +1223,40 @@ Both events serve overlapping audiences. Write the email.`,
         </div>
       </Card>
 
-      {/* Scanning state */}
+      {/* Scanning state — animated multi-step */}
       {scanning && (
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center space-y-3">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-600" />
-            <p className="text-sm text-muted-foreground">
-              {scanPhase || "Scanning..."}
+        <Card className="p-8">
+          <div className="flex flex-col items-center gap-6">
+            {/* Pulsing icon */}
+            <div className="relative h-20 w-20">
+              <div className="absolute inset-0 rounded-full bg-purple-200 animate-ping opacity-30" />
+              <div className="absolute inset-2 rounded-full bg-purple-100 animate-pulse" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Radar className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+
+            {/* Step counter */}
+            <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
+              Step {scanStep + 1} of {SCAN_MESSAGES.length}
             </p>
+
+            {/* Current message */}
+            <p className="text-sm font-medium text-foreground text-center min-h-[1.5rem]">
+              {SCAN_MESSAGES[scanStep]}
+            </p>
+
+            {/* Progress bar */}
+            <div className="w-full max-w-xs">
+              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-purple-600 transition-all duration-700 ease-out"
+                  style={{ width: `${Math.round(((scanStep + 1) / SCAN_MESSAGES.length) * 100)}%` }}
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ========== EXTERNAL RESULTS ========== */}
