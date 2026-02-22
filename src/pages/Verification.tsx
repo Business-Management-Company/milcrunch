@@ -1419,13 +1419,6 @@ No markdown formatting, just the JSON array.`;
     }
   };
 
-  // Auto-search when section is opened and no cached results exist
-  useEffect(() => {
-    if (autoSearch && dbLoaded && !hasSearched && !searching) {
-      handleSearch();
-    }
-  }, [autoSearch, dbLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const visibleVideos = showAll ? videos : videos.slice(0, VISIBLE_COUNT);
   const hiddenCount = videos.length - VISIBLE_COUNT;
 
@@ -1434,18 +1427,7 @@ No markdown formatting, just the JSON array.`;
       {!hasSearched ? (
         <div className="text-center py-8">
           <Video className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-base font-medium text-foreground mb-1">Search YouTube</p>
-          <p className="text-sm text-muted-foreground mb-5">
-            Find video appearances, interviews, and media coverage for {record.person_name}
-          </p>
-          <Button
-            onClick={handleSearch}
-            disabled={searching}
-            className="bg-[#6C5CE7] hover:bg-[#5B4BD1]"
-          >
-            {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-            Search Videos
-          </Button>
+          <p className="text-sm text-muted-foreground">No data found. Re-verify to refresh.</p>
         </div>
       ) : (
         <>
@@ -2176,8 +2158,6 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         setCareerResult(saved.result);
         setLastGenerated(saved.generated_at ?? null);
         setExtracted(true);
-      } else if (hasWebSources) {
-        handleExtract();
       }
     })();
   }, [record.id]);
@@ -2276,10 +2256,7 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
     return (
       <div className="text-center py-12">
         <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground mb-4">Extract career data from web sources using AI.</p>
-        <Button onClick={handleExtract} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
-          Extract Career Data
-        </Button>
+        <p className="text-sm text-muted-foreground">No career data found. Re-verify to refresh.</p>
       </div>
     );
   }
@@ -2960,7 +2937,11 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
-          <StatusDot status={record.pdl_data ? 'green' : 'red'} />
+          <StatusDot status={(() => {
+            if (!record.pdl_data) return 'red';
+            const pdl = record.pdl_data as any;
+            return (pdl.employment?.length > 0 || pdl.experience?.length > 0) ? 'green' : 'yellow';
+          })()} />
         </button>
         {careerOpen && <CareerTrackTab record={record} />}
       </section>
@@ -2982,11 +2963,18 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
-          <StatusDot status={(() => { const mc = record.manual_checks as Record<string, unknown> | null; return mc?.youtube_media || mc?.youtube_results ? 'green' : 'red'; })()} />
+          <StatusDot status={(() => {
+            const mc = record.manual_checks as Record<string, unknown> | null;
+            const media = mc?.youtube_media as { videos?: unknown[] } | undefined;
+            const results = mc?.youtube_results as unknown[] | undefined;
+            if ((media?.videos && media.videos.length > 0) || (Array.isArray(results) && results.length > 0)) return 'green';
+            if ((mc as any)?.youtube_error) return 'red';
+            return 'yellow';
+          })()} />
         </button>
         {mediaOpen && (
           <div className="mt-4 pl-7">
-            <MediaTab record={record} autoSearch />
+            <MediaTab record={record} />
           </div>
         )}
       </section>
