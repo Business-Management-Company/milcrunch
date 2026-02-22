@@ -71,6 +71,29 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     ],
   },
   {
+    key: "email",
+    label: "EMAIL",
+    items: [
+      { href: "/brand/email/contacts", label: "Contacts", icon: Users },
+      { href: "/brand/email/campaigns", label: "Campaigns", icon: Mail },
+      { href: "/brand/email/lists", label: "Lists", icon: ContactRound },
+      { href: "/brand/email/templates", label: "Templates", icon: LayoutTemplate },
+      { href: "/brand/email/forms", label: "Forms", icon: FormInput },
+      { href: "/brand/email/settings", label: "Settings", icon: Settings2 },
+    ],
+  },
+  {
+    key: "creators",
+    label: "INFLUENCERS",
+    defaultCollapsed: true,
+    items: [
+      { href: "/brand/discover", label: "Discovery", icon: Search },
+      { href: "/brand/directories", label: "Directories", icon: FolderOpen, tooltip: "Manage your verified creator database. Add, edit, and organize creators by branch, platform, and specialty." },
+      { href: "/brand/lists", label: "Lists", icon: ClipboardList, tooltip: "Build curated lists for campaigns and outreach. Group creators by event, sponsor, or project." },
+      { href: "/brand/verification", label: "Verification", icon: ShieldCheck },
+    ],
+  },
+  {
     key: "events",
     label: "EVENTS",
     items: [
@@ -94,26 +117,6 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     ],
   },
   {
-    key: "creators",
-    label: "INFLUENCERS",
-    defaultCollapsed: true,
-    items: [
-      { href: "/brand/discover", label: "Discovery", icon: Search },
-      { href: "/brand/directories", label: "Directories", icon: FolderOpen, tooltip: "Manage your verified creator database. Add, edit, and organize creators by branch, platform, and specialty." },
-      { href: "/brand/lists", label: "Lists", icon: ClipboardList, tooltip: "Build curated lists for campaigns and outreach. Group creators by event, sponsor, or project." },
-      { href: "/brand/verification", label: "Verification", icon: ShieldCheck },
-    ],
-  },
-  {
-    key: "content",
-    label: "MEDIA",
-    items: [
-      { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
-      { href: "/brand/streaming", label: "Streaming", icon: Monitor },
-      { href: "/brand/pages", label: "Pages", icon: FileText },
-    ],
-  },
-  {
     key: "social",
     label: "SOCIAL",
     items: [
@@ -124,15 +127,12 @@ const SIDEBAR_SECTIONS: NavSection[] = [
     ],
   },
   {
-    key: "email",
-    label: "EMAIL",
+    key: "content",
+    label: "MEDIA",
     items: [
-      { href: "/brand/email/contacts", label: "Contacts", icon: Users },
-      { href: "/brand/email/campaigns", label: "Campaigns", icon: Mail },
-      { href: "/brand/email/lists", label: "Lists", icon: ContactRound },
-      { href: "/brand/email/templates", label: "Templates", icon: LayoutTemplate },
-      { href: "/brand/email/forms", label: "Forms", icon: FormInput },
-      { href: "/brand/email/settings", label: "Settings", icon: Settings2 },
+      { href: "/brand/podcasts", label: "Podcasts", icon: Headphones },
+      { href: "/brand/streaming", label: "Streaming", icon: Monitor },
+      { href: "/brand/pages", label: "Pages", icon: FileText },
     ],
   },
   {
