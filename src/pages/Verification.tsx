@@ -336,6 +336,7 @@ export default function Verification() {
   const [newRecordId, setNewRecordId] = useState<string | null>(null);
   const [dirMembers, setDirMembers] = useState<{ id: string; creator_name: string; creator_handle: string; ic_avatar_url: string | null; platform: string | null }[]>([]);
   const [creatorSearch, setCreatorSearch] = useState("");
+  const [showCreatorDropdown, setShowCreatorDropdown] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [addSpeakerOpen, setAddSpeakerOpen] = useState(false);
   const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "" });
@@ -833,12 +834,16 @@ export default function Verification() {
                         setCreatorSearch(e.target.value);
                         setAddForm((f) => ({ ...f, fullName: e.target.value }));
                       }}
+                      onFocus={() => setShowCreatorDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowCreatorDropdown(false), 200)}
                       placeholder="Search creators or type a name..."
                     />
-                    {creatorSearch && dirMembers.length > 0 && (
-                      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {showCreatorDropdown && dirMembers.length > 0 && (
+                      <div className="absolute z-50 w-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto mt-1">
+                        <p className="px-3 py-2 text-xs text-muted-foreground border-b border-gray-100 dark:border-gray-700">Select a creator or type to search...</p>
                         {dirMembers
                           .filter((m) => {
+                            if (!creatorSearch) return true;
                             const q = creatorSearch.toLowerCase();
                             return (m.creator_name ?? '').toLowerCase().includes(q) || (m.creator_handle ?? '').toLowerCase().includes(q);
                           })
@@ -855,6 +860,7 @@ export default function Verification() {
                                   instagramHandle: (m.creator_handle ?? '').replace('@', ''),
                                 }));
                                 setCreatorSearch("");
+                                setShowCreatorDropdown(false);
                               }}
                             >
                               {m.ic_avatar_url ? (
@@ -871,6 +877,7 @@ export default function Verification() {
                             </button>
                           ))}
                         {dirMembers.filter((m) => {
+                          if (!creatorSearch) return true;
                           const q = creatorSearch.toLowerCase();
                           return (m.creator_name ?? '').toLowerCase().includes(q) || (m.creator_handle ?? '').toLowerCase().includes(q);
                         }).length === 0 && (
@@ -1641,7 +1648,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
       ) : (
         <>
           {(searching || aiFiltering) && (
-            <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+            <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 pl-6 pr-10">
               <CardContent className="flex items-center gap-3 py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
                 <p className="text-sm text-blue-700 dark:text-blue-300">
@@ -1676,7 +1683,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           {!aiFiltering && !searching && visibleResults.length > 0 && (
             <div className="space-y-2.5">
               {visibleResults.map((r, i) => (
-                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800">
+                <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${getConcernDot(r)}`} />
@@ -1964,7 +1971,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
       </button>
       {isOpen && (
         <div className="pl-7">
-          <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 space-y-3">
+          <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm pl-6 pr-10 py-4 space-y-3">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium">Clearance: {checkedCount}/{total}</span>
@@ -2019,7 +2026,7 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
   const hasAnySocial = !!(igHandle || linkedinUrl || websiteUrl);
 
   return (
-    <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <Globe className="h-4 w-4" /> Social Verification
@@ -2266,7 +2273,7 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
 
       {/* Military Service Summary Card */}
       {ms && ms.branch && (
-        <Card className={cn("rounded-xl border-l-4", branchColor(ms.branch))}>
+        <Card className={cn("rounded-xl border-l-4 pl-6 pr-10", branchColor(ms.branch))}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-purple-600" /> Military Service
@@ -2342,7 +2349,7 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
       )}
 
       {/* Post-Service Career */}
-      <Card className="rounded-xl border-l-4 border-[#6C5CE7] border border-gray-200 dark:border-gray-800">
+      <Card className="rounded-xl border-l-4 border-[#6C5CE7] border border-gray-200 dark:border-gray-800 pl-6 pr-10">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Star className="h-4 w-4 text-[#6C5CE7]" /> Post-Service Career
@@ -2369,7 +2376,7 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
 
       {/* Career Timeline */}
       {careerEntries.length > 0 && (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Briefcase className="h-4 w-4" /> Career Timeline
@@ -2426,7 +2433,7 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
       )}
 
       {/* Awards & Decorations */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Medal className="h-4 w-4 text-amber-500" /> Awards & Decorations
@@ -2455,7 +2462,7 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
 
       {/* Civilian Education */}
       {civEducation.length > 0 && (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <GraduationCap className="h-4 w-4" /> Education
@@ -2981,7 +2988,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 function EvidenceAccordionGroup({ category, sources }: { category: string; sources: EvidenceSource[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden pl-6 pr-10">
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -3104,7 +3111,7 @@ function IntelligenceSummary({ record }: { record: VerificationRecord }) {
 
   if (generating) {
     return (
-      <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+      <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 pl-6 pr-10">
         <CardContent className="flex items-center gap-3 py-6">
           <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
           <p className="text-sm text-blue-700 dark:text-blue-300">Generating intelligence summary for {record.person_name}...</p>
@@ -3117,7 +3124,7 @@ function IntelligenceSummary({ record }: { record: VerificationRecord }) {
     // Show AI analysis fallback or prompt to generate
     if (record.ai_analysis) {
       return (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
           <CardContent className="p-4">
             <MarkdownResponse content={record.ai_analysis} />
             <Button variant="outline" size="sm" onClick={handleGenerate} className="mt-3">
@@ -3139,7 +3146,7 @@ function IntelligenceSummary({ record }: { record: VerificationRecord }) {
   }
 
   return (
-    <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800">
+    <Card className="rounded-xl border-2 border-blue-200 dark:border-blue-800 pl-6 pr-10">
       <CardContent className="p-5">
         <MarkdownResponse content={narrative} />
         <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
