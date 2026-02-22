@@ -75,7 +75,7 @@ import Leaderboard from "./pages/creator/Leaderboard";
 import CreatorOpportunities from "./pages/creator/CreatorOpportunities";
 
 import BrandDiscover from "./pages/brand/BrandDiscover";
-import BrandLists from "./pages/brand/BrandLists";
+import BrandLists, { BrandListDetail } from "./pages/brand/BrandLists";
 import BrandDirectory from "./pages/brand/BrandDirectory";
 import BrandCampaigns from "./pages/brand/BrandCampaigns";
 import BrandEvents from "./pages/brand/BrandEvents";
@@ -210,10 +210,12 @@ const App = () => (
               <Route element={<BrandRoute><RoleAwareChatProvider><AppLayout /></RoleAwareChatProvider></BrandRoute>}>
                 <Route path="/dashboard" element={<Navigate to="/brand/dashboard" replace />} />
                 <Route path="/lists" element={<BrandLists />} />
+                <Route path="/lists/:listId" element={<BrandListDetail />} />
                 <Route path="/brand/dashboard" element={<SummaryDashboard />} />
                 <Route path="/brand/discover" element={<BrandDiscover />} />
                 <Route path="/brand/directories" element={<BrandDirectory />} />
                 <Route path="/brand/lists" element={<BrandLists />} />
+                <Route path="/brand/lists/:listId" element={<BrandListDetail />} />
                 <Route path="/brand/campaigns" element={<BrandCampaigns />} />
                 <Route path="/brand/tags" element={<BrandTags />} />
                 <Route path="/brand/events" element={<BrandEvents />} />
