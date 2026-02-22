@@ -1735,13 +1735,39 @@ Make the captions authentic and engaging for a military community audience. Refe
     setScheduleAllLoading(true);
     setScheduleFeedback(null);
 
+    const selectedEvent = events.find((e) => e.id === selectedEventId);
+    const eventDate = selectedEvent?.start_date ?? null;
+
+    // Convert day offset + human time string → ISO 8601 timestamp
+    const toISO = (day: number, timeStr: string | null): string | null => {
+      if (!eventDate) return null;
+      const base = new Date(eventDate);
+      base.setDate(base.getDate() + day);
+      if (!timeStr) { base.setHours(12, 0, 0, 0); return base.toISOString(); }
+      try {
+        const cleanTime = timeStr.replace(/\s*(ET|EST|EDT|PT|PST|PDT|CT|CST|CDT|MT|MST|MDT)\s*/gi, "").trim();
+        const match = cleanTime.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)?$/i);
+        if (!match) { base.setHours(12, 0, 0, 0); return base.toISOString(); }
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2] || "0", 10);
+        const meridiem = (match[3] || "").toUpperCase();
+        if (meridiem === "PM" && h !== 12) h += 12;
+        if (meridiem === "AM" && h === 12) h = 0;
+        base.setHours(h, m, 0, 0);
+        return base.toISOString();
+      } catch {
+        base.setHours(12, 0, 0, 0);
+        return base.toISOString();
+      }
+    };
+
     const rows = campaign.phases.flatMap((phase) =>
       phase.posts.map((post) => ({
         user_id: user?.id ?? null,
         caption: `${post.caption}\n\n${post.hashtags ?? ""}`.trim(),
         platforms: [post.platform],
         file_url: null,
-        scheduled_time: post.best_time || null,
+        scheduled_time: toISO(post.day, post.best_time),
         status: "queued",
         results: {
           phase: phase.phase,
@@ -1749,6 +1775,7 @@ Make the captions authentic and engaging for a military community audience. Refe
           date_label: post.date_label,
           content_type: post.content_type,
           suggested_visual: post.suggested_visual,
+          best_time_label: post.best_time || null,
           event_id: selectedEventId,
           campaign_id: savedCampaignId,
         },
@@ -1763,7 +1790,7 @@ Make the captions authentic and engaging for a military community audience. Refe
     } else {
       setScheduleFeedback({ type: "success", msg: `✓ ${rows.length} posts sent to Posting queue` });
     }
-  }, [campaign, selectedEventId, savedCampaignId, user?.id]);
+  }, [campaign, selectedEventId, savedCampaignId, user?.id, events]);
 
   // Update a post inline
   const updatePost = useCallback((phaseIdx: number, postIdx: number, patch: Partial<CampaignPost>) => {
