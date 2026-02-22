@@ -213,9 +213,17 @@ const BrandLists = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                    <List className="w-5 h-5 text-muted-foreground" />
-                  </div>
+                  {list.avatar_url ? (
+                    <img
+                      src={list.avatar_url}
+                      alt={list.name}
+                      className="w-12 h-12 rounded-lg object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                      <List className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  )}
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">
                       {list.name}
@@ -266,6 +274,13 @@ const BrandLists = () => {
               }
             >
               <div className="flex items-center gap-3">
+                {list.avatar_url ? (
+                  <img src={list.avatar_url} alt={list.name} className="w-7 h-7 rounded-md object-cover shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                    <List className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
+                )}
                 <span className="font-medium text-gray-900 dark:text-white text-sm">{list.name}</span>
                 <span className="text-xs text-gray-400">{list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}</span>
               </div>

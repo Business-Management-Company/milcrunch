@@ -22,6 +22,7 @@ export interface ListCreator {
 export interface List {
   id: string;
   name: string;
+  avatar_url?: string;
   creators: ListCreator[];
 }
 
@@ -96,7 +97,8 @@ export function ListProvider({ children }: { children: ReactNode }) {
   const createList = useCallback(
     (name: string): string => {
       const id = `list-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const newList: List = { id, name, creators: [] };
+      const avatar_url = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(name)}&backgroundColor=6d28d9,e5e5e5,7c3aed&shape1Color=ffffff`;
+      const newList: List = { id, name, avatar_url, creators: [] };
       setLists((prev) => {
         const next = [...prev, newList];
         try {
