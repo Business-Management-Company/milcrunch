@@ -67,6 +67,7 @@ import {
   Target,
   Star,
   Medal,
+  Info,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -333,6 +334,8 @@ export default function Verification() {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [phases, setPhases] = useState<PipelinePhase[]>([]);
   const [newRecordId, setNewRecordId] = useState<string | null>(null);
+  const [dirMembers, setDirMembers] = useState<{ id: string; creator_name: string; creator_handle: string; ic_avatar_url: string | null; platform: string | null }[]>([]);
+  const [creatorSearch, setCreatorSearch] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [addSpeakerOpen, setAddSpeakerOpen] = useState(false);
   const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "" });
@@ -355,6 +358,19 @@ export default function Verification() {
       setLoading(false);
     })();
   }, []);
+
+  // Fetch directory members when add modal opens
+  useEffect(() => {
+    if (!addOpen) return;
+    (async () => {
+      const { data } = await supabase
+        .from('directory_members')
+        .select('id, creator_name, creator_handle, ic_avatar_url, platform')
+        .order('creator_name', { ascending: true });
+      setDirMembers(data ?? []);
+      setCreatorSearch("");
+    })();
+  }, [addOpen]);
 
   // Pre-fill from discovery navigation state
   useEffect(() => {
@@ -793,16 +809,76 @@ export default function Verification() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>New Verification</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  New Verification
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs text-xs">
+                        Creators must be in a Directory or List before they can be verified. You can also verify directly from Discovery, Directory, or List pages.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
                   <Label>Full Name *</Label>
-                  <Input
-                    value={addForm.fullName}
-                    onChange={(e) => setAddForm((f) => ({ ...f, fullName: e.target.value }))}
-                    placeholder="e.g. Johnny Rocket"
-                  />
+                  <div className="relative">
+                    <Input
+                      value={creatorSearch || addForm.fullName}
+                      onChange={(e) => {
+                        setCreatorSearch(e.target.value);
+                        setAddForm((f) => ({ ...f, fullName: e.target.value }));
+                      }}
+                      placeholder="Search creators or type a name..."
+                    />
+                    {creatorSearch && dirMembers.length > 0 && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {dirMembers
+                          .filter((m) => {
+                            const q = creatorSearch.toLowerCase();
+                            return (m.creator_name ?? '').toLowerCase().includes(q) || (m.creator_handle ?? '').toLowerCase().includes(q);
+                          })
+                          .slice(0, 20)
+                          .map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-left text-sm"
+                              onClick={() => {
+                                setAddForm((f) => ({
+                                  ...f,
+                                  fullName: m.creator_name ?? m.creator_handle,
+                                  instagramHandle: (m.creator_handle ?? '').replace('@', ''),
+                                }));
+                                setCreatorSearch("");
+                              }}
+                            >
+                              {m.ic_avatar_url ? (
+                                <img src={m.ic_avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                  {(m.creator_name ?? '?').charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 dark:text-white truncate">{m.creator_name}</p>
+                                <p className="text-xs text-muted-foreground truncate">@{m.creator_handle}</p>
+                              </div>
+                            </button>
+                          ))}
+                        {dirMembers.filter((m) => {
+                          const q = creatorSearch.toLowerCase();
+                          return (m.creator_name ?? '').toLowerCase().includes(q) || (m.creator_handle ?? '').toLowerCase().includes(q);
+                        }).length === 0 && (
+                          <p className="px-3 py-2 text-xs text-muted-foreground">No matching creators in directories</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label>Branch</Label>
@@ -2730,7 +2806,24 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </div>
         {/* RIGHT column — Confidence Ring */}
         <div className="w-44 flex-shrink-0 flex flex-col items-center">
-          <ConfidenceGauge score={record.verification_score ?? 0} />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help">
+                  <ConfidenceGauge score={record.verification_score ?? 0} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-xs text-xs leading-relaxed">
+                <p className="font-semibold mb-1">Confidence score is calculated from:</p>
+                <ul className="space-y-0.5">
+                  <li>People Data Labs match (up to 40pts)</li>
+                  <li>SERP/web evidence sources (up to 30pts)</li>
+                  <li>AI analysis depth (up to 20pts)</li>
+                  <li>Social verification (up to 10pts)</li>
+                </ul>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-1 text-center">Confidence</p>
         </div>
       </div>
