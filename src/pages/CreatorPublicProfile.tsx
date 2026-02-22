@@ -30,10 +30,17 @@ import {
   Hash,
   ChevronDown,
   ChevronUp,
+  ListPlus,
+  Globe,
+  CalendarPlus,
+  Check,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLists } from "@/contexts/ListContext";
+import type { ListCreator } from "@/contexts/ListContext";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchDirectoryMemberByHandle,
@@ -42,6 +49,8 @@ import {
   extractAvatarFromEnrichment,
   extractBannerImage,
   fetchBannerFromPosts,
+  approveForDirectory,
+  detectBranch,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
@@ -243,6 +252,7 @@ function ProfileSkeleton() {
 export default function CreatorPublicProfile() {
   const { handle } = useParams<{ handle: string }>();
   const { user } = useAuth();
+  const { lists, addCreatorToList, createList } = useLists();
   const navigate = useNavigate();
 
   // Core state
@@ -267,6 +277,74 @@ export default function CreatorPublicProfile() {
   // Banner image
   const [bannerFailed, setBannerFailed] = useState(false);
   const [resolvedBanner, setResolvedBanner] = useState<string | null>(null);
+
+  // Action bar state
+  const [listPickerOpen, setListPickerOpen] = useState(false);
+  const [addingToDirectory, setAddingToDirectory] = useState(false);
+
+  /* ---- Action bar handlers ---- */
+  const creatorAsListItem = useCallback((): ListCreator | null => {
+    if (!creator) return null;
+    return {
+      id: creator.id ?? creator.handle,
+      name: creator.display_name ?? creator.handle,
+      username: creator.handle,
+      avatar: creatorAvatarUrl(creator) ?? "",
+      followers: creator.follower_count ?? 0,
+      engagementRate: creator.engagement_rate ? Number((creator.engagement_rate * 100).toFixed(2)) : 0,
+      platforms: creator.platforms ?? [creator.platform ?? "instagram"],
+      bio: creator.bio ?? "",
+    };
+  }, [creator]);
+
+  const handleAddToList = (listId: string) => {
+    const item = creatorAsListItem();
+    if (!item) return;
+    addCreatorToList(listId, item);
+    const listName = lists.find((l) => l.id === listId)?.name ?? "list";
+    toast.success(`Added to ${listName}`);
+    setListPickerOpen(false);
+  };
+
+  const handleCreateAndAdd = () => {
+    const item = creatorAsListItem();
+    if (!item) return;
+    const name = creator?.display_name ? `${creator.display_name} list` : "New List";
+    const id = createList(name);
+    addCreatorToList(id, item);
+    toast.success(`Created "${name}" and added creator`);
+    setListPickerOpen(false);
+  };
+
+  const handleAddToDirectory = async () => {
+    if (!creator) return;
+    setAddingToDirectory(true);
+    const branch = detectBranch(creator.bio ?? "");
+    const { error } = await approveForDirectory({
+      handle: creator.handle,
+      display_name: creator.display_name ?? creator.handle,
+      platform: creator.platform ?? "instagram",
+      avatar_url: creatorAvatarUrl(creator) ?? null,
+      follower_count: creator.follower_count ?? null,
+      engagement_rate: creator.engagement_rate ?? null,
+      bio: creator.bio ?? null,
+      branch,
+      status: "veteran",
+      platforms: creator.platforms ?? [creator.platform ?? "instagram"],
+      category: creator.category ?? null,
+      ic_avatar_url: creatorAvatarUrl(creator) ?? null,
+    });
+    setAddingToDirectory(false);
+    if (error) {
+      if (error.toLowerCase().includes("duplicate") || error.toLowerCase().includes("unique")) {
+        toast.info("Already in Directory");
+      } else {
+        toast.error(`Failed: ${error}`);
+      }
+    } else {
+      toast.success("Added to Directory");
+    }
+  };
 
   /* ---- Fetch creator ---- */
   useEffect(() => {
@@ -670,6 +748,76 @@ export default function CreatorPublicProfile() {
               )}
             </div>
           </div>
+
+          {/* ====== ACTION BAR ====== */}
+          {user && (
+            <div className="px-4 md:px-6 py-3 border-t border-gray-100 flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg text-[#6C5CE7] border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/10"
+                  onClick={() => setListPickerOpen(!listPickerOpen)}
+                >
+                  <ListPlus className="h-4 w-4 mr-1.5" />
+                  Add to List
+                </Button>
+                {listPickerOpen && (
+                  <div className="absolute left-0 top-full mt-1 z-50 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
+                    {lists.map((list) => (
+                      <button
+                        key={list.id}
+                        onClick={() => handleAddToList(list.id)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
+                      >
+                        {list.avatar_url ? (
+                          <img src={list.avatar_url} alt="" className="w-5 h-5 rounded shrink-0" />
+                        ) : (
+                          <ListPlus className="h-4 w-4 text-gray-400 shrink-0" />
+                        )}
+                        <span className="truncate">{list.name}</span>
+                        <span className="ml-auto text-xs text-gray-400">{list.creators.length}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={handleCreateAndAdd}
+                      className="w-full text-left px-3 py-2 text-sm text-[#6C5CE7] hover:bg-[#6C5CE7]/5 font-medium border-t border-gray-100 dark:border-gray-700"
+                    >
+                      + Create New List
+                    </button>
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
+                onClick={handleAddToDirectory}
+                disabled={addingToDirectory}
+              >
+                {addingToDirectory ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Globe className="h-4 w-4 mr-1.5" />}
+                Add to Directory
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg text-gray-600 border-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-800"
+                onClick={() => toast.info("Invite to Event coming soon")}
+              >
+                <CalendarPlus className="h-4 w-4 mr-1.5" />
+                Invite to Event
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
+                onClick={() => navigate(`/brand/verification?name=${encodeURIComponent(creator?.display_name ?? creator?.handle ?? "")}`)}
+              >
+                <ShieldCheck className="h-4 w-4 mr-1.5" />
+                Verify
+              </Button>
+            </div>
+          )}
 
           {/* ====== TABS ====== */}
           <Tabs defaultValue="overview" onValueChange={handleTabChange}>
