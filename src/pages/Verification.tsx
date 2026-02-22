@@ -2309,6 +2309,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [careerOpen, setCareerOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [speakerReadinessOpen, setSpeakerReadinessOpen] = useState(false);
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
   const [additionalSearching, setAdditionalSearching] = useState(false);
@@ -2428,7 +2429,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 px-4 space-y-8 max-w-full overflow-hidden">
+    <div className="w-full py-6 px-3 space-y-8 max-w-full overflow-hidden">
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-4 w-full max-w-full overflow-hidden">
         {/* LEFT column */}
@@ -2619,10 +2620,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
         </div>
         </div>
-        {/* RIGHT column — Confidence Ring + Speaker Readiness */}
-        <div className="w-44 flex-shrink-0 flex flex-col items-center gap-3">
+        {/* RIGHT column — Confidence Ring */}
+        <div className="w-44 flex-shrink-0 flex flex-col items-center">
           <ConfidenceGauge score={record.verification_score ?? 0} />
-          <CompactSpeakerReadiness record={record} onRefresh={onRefresh} />
         </div>
       </div>
 
@@ -2641,6 +2641,20 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           </CardContent>
         </Card>
       )}
+
+      {/* ── 2. SPEAKER READINESS — collapsible ── */}
+      <section className="pl-4 ml-6 max-w-full overflow-hidden">
+        <button onClick={() => setSpeakerReadinessOpen(!speakerReadinessOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
+          {speakerReadinessOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+          <Mic className="h-5 w-5 text-[#6C5CE7]" />
+          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness</h3>
+        </button>
+        {speakerReadinessOpen && (
+          <div className="mt-2 pl-7">
+            <CompactSpeakerReadiness record={record} onRefresh={onRefresh} />
+          </div>
+        )}
+      </section>
 
       {/* ── 3. AI SUMMARY ── */}
       <section className="pl-4 ml-6 max-w-full overflow-hidden">
