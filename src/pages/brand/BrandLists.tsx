@@ -16,6 +16,7 @@ import BulkActionBar from "@/components/BulkActionBar";
 import type { CreatorCard } from "@/lib/influencers-club";
 import type { ListCreator } from "@/contexts/ListContext";
 import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
+import { PlatformIcons } from "@/components/PlatformIcons";
 import { toast } from "sonner";
 
 function formatFollowers(count: number): string {
@@ -700,13 +701,13 @@ export const BrandListDetail = () => {
                     </p>
                   )}
                 </div>
-                {creator.platforms?.[0] && (
-                  <span
-                    className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                    title={PLATFORM_LABELS[creator.platforms[0]] ?? creator.platforms[0]}
-                  >
-                    {PLATFORM_LABELS[creator.platforms[0]] ?? creator.platforms[0]}
-                  </span>
+                {creator.platforms && creator.platforms.length > 0 && (
+                  <PlatformIcons
+                    platforms={creator.platforms}
+                    username={creator.username}
+                    max={5}
+                    className="shrink-0"
+                  />
                 )}
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2 mb-3">

@@ -80,6 +80,7 @@ import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
+import { PlatformIcons } from "@/components/PlatformIcons";
 
 interface PreviewMember {
   directory_id: string;
@@ -1124,7 +1125,7 @@ const BrandDirectory = () => {
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
                       <div><span className="font-bold text-[#000741] dark:text-white">{typeof m.engagement_rate === "number" ? `${m.engagement_rate.toFixed(1)}%` : "—"}</span><span className="text-muted-foreground ml-1">eng.</span></div>
                     </div>
-                    {platforms.length > 0 && <div className="flex items-center gap-2 text-gray-400 mb-4">{platforms.map((p) => <span key={p}>{PLATFORM_ICON[p] ?? null}</span>)}</div>}
+                    {platforms.length > 0 && <div className="mb-4"><PlatformIcons platforms={platforms} username={m.creator_handle} max={5} /></div>}
                     <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center flex-wrap" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] text-muted-foreground font-medium">Public</span>

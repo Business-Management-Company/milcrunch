@@ -43,6 +43,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import { PlatformIcons } from "@/components/PlatformIcons";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
 
@@ -2404,9 +2405,11 @@ const BrandDiscover = () => {
                                 {pending && socialSet.size <= 1 ? (
                                   <EnrichShimmer />
                                 ) : socialSet.size > 0 ? (
-                                  ALL_SOCIAL_PLATFORMS.filter((p) => socialSet.has(p)).map((p) => (
-                                    <PlatformIcon key={p} platform={p} username={creator.username} />
-                                  ))
+                                  <PlatformIcons
+                                    platforms={ALL_SOCIAL_PLATFORMS.filter((p) => socialSet.has(p))}
+                                    username={creator.username}
+                                    max={5}
+                                  />
                                 ) : (
                                   <span className="text-gray-300 dark:text-gray-600">—</span>
                                 )}
@@ -2598,9 +2601,7 @@ const BrandDiscover = () => {
                         </div>
                         {(socialPlatforms.length > 0 || creator.hasEmail) && (
                           <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                            {socialPlatforms.slice(0, 6).map((platform) => (
-                              <PlatformIcon key={platform} platform={platform} username={creator.username} />
-                            ))}
+                            <PlatformIcons platforms={socialPlatforms} username={creator.username} max={5} />
                             {contactEmails[creator.id] ? (
                               <a
                                 href={`mailto:${contactEmails[creator.id]}`}
