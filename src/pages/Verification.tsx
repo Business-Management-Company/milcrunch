@@ -292,6 +292,15 @@ function SourceIcon({ category }: { category: string }) {
   return <FileText className="h-4 w-4 text-gray-400" />;
 }
 
+function detectStatus(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.includes('spouse') || lower.includes('milspouse') || lower.includes('mil spouse')) return 'Military Spouse';
+  if (lower.includes('active duty') || lower.includes('activeduty')) return 'Active Duty';
+  if (lower.includes('gold star')) return 'Gold Star Family';
+  if (lower.includes('reservist') || lower.includes('guard')) return 'Reservist / Guard';
+  return 'Veteran';
+}
+
 interface PrefillData {
   fullName: string;
   claimedBranch: string;
@@ -345,6 +354,14 @@ export default function Verification() {
   const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
+
+  const detectStatus = (name: string): string => {
+    const lower = name.toLowerCase();
+    if (lower.includes('military spouse') || lower.includes('milspouse') || lower.includes('mil spouse') || lower.includes('spouse')) {
+      return 'military_spouse';
+    }
+    return 'veteran';
+  };
 
   const fetchVerifications = async () => {
     const { data, error } = await supabase
@@ -859,6 +876,7 @@ export default function Verification() {
                                   fullName: m.creator_name ?? m.creator_handle,
                                   instagramHandle: (m.creator_handle ?? '').replace('@', ''),
                                   profilePhotoUrl: m.ic_avatar_url || '',
+                                  claimedStatus: detectStatus(m.creator_name ?? ''),
                                 }));
                                 setCreatorSearch("");
                                 setShowCreatorDropdown(false);
