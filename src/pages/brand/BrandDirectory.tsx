@@ -662,11 +662,11 @@ const BrandDirectory = () => {
           )}
 
           {!dirsLoading && directories.length > 0 && dirViewMode === 'card' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 pr-4">
               {directories.map((dir) => (
                 <Card
                   key={dir.id}
-                  className="bg-white dark:bg-[#1A1D27] border-border hover:shadow-lg transition-shadow cursor-pointer group"
+                  className="bg-white dark:bg-[#1A1D27] border-border rounded-lg shadow-sm hover:shadow-lg transition-shadow cursor-pointer group"
                   onClick={() => openDirectory(dir)}
                 >
                   {dir.cover_image_url && (
@@ -674,10 +674,10 @@ const BrandDirectory = () => {
                       <img src={dir.cover_image_url} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
-                  <div className="p-5">
+                  <div className="p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-foreground text-lg truncate group-hover:text-pd-blue transition-colors">
+                        <h3 className="text-base font-semibold text-foreground truncate group-hover:text-pd-blue transition-colors">
                           {dir.name}
                         </h3>
                         {dir.description && (
@@ -693,11 +693,10 @@ const BrandDirectory = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="flex items-center gap-3 mt-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-4">
                       <div className="flex items-center gap-1.5">
-                        <Users className="h-4 w-4" />
-                        <span className="font-medium text-foreground">{dir.member_count ?? 0}</span>
-                        <span>creators</span>
+                        <Users className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500">{dir.member_count ?? 0} creators</span>
                       </div>
                       {dir.is_public ? (
                         <Badge variant="outline" className="text-[10px] border-purple-300 text-purple-700 dark:text-purple-400">
@@ -716,16 +715,16 @@ const BrandDirectory = () => {
           )}
 
           {!dirsLoading && directories.length > 0 && dirViewMode === 'list' && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden pr-4">
               {directories.map((dir) => (
                 <div
                   key={dir.id}
-                  className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer"
+                  className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors"
                   onClick={() => openDirectory(dir)}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">{dir.name}</span>
-                    <span className="text-xs text-gray-400">{dir.member_count ?? 0} creators</span>
+                    <span className="text-base font-semibold text-gray-900 dark:text-white">{dir.name}</span>
+                    <span className="text-sm text-gray-500">{dir.member_count ?? 0} creators</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {dir.is_public && (
