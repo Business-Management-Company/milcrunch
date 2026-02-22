@@ -31,6 +31,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
+  ArrowUpDown,
   MessageSquare,
   Hash,
   Save,
@@ -79,6 +80,26 @@ const PLATFORM_COLORS: Record<string, string> = {
   linkedin: "bg-blue-700",
   facebook: "bg-blue-600",
 };
+
+const PLATFORM_GRADIENTS: Record<string, string> = {
+  instagram: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400",
+  tiktok: "bg-black",
+  x: "bg-[#1A2744]",
+  youtube: "bg-red-600",
+  linkedin: "bg-blue-700",
+  facebook: "bg-blue-600",
+};
+
+const QUEUE_FILTER_OPTIONS = [
+  { id: "all", label: "All" },
+  { id: "instagram", label: "Instagram" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "x", label: "X" },
+  { id: "youtube", label: "YouTube" },
+] as const;
+
+type QueueFilter = typeof QUEUE_FILTER_OPTIONS[number]["id"];
+type QueueSort = "scheduled" | "created";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -242,6 +263,10 @@ export default function BrandPosting() {
   // Queue bulk selection
   const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
 
+  // Queue filter & sort
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
+  const [queueSort, setQueueSort] = useState<QueueSort>("scheduled");
+
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -363,10 +388,30 @@ export default function BrandPosting() {
   /* ---------------------------------------------------------------- */
   /* Queue data                                                        */
   /* ---------------------------------------------------------------- */
-  const queuePosts = useMemo(
+  const queuePostsAll = useMemo(
     () => recentPosts.filter((p) => p.status === "queued" || p.status === "draft"),
     [recentPosts],
   );
+
+  const queuePosts = useMemo(() => {
+    let posts = queuePostsAll;
+    // Platform filter
+    if (queueFilter !== "all") {
+      posts = posts.filter((p) => (p.platforms ?? []).includes(queueFilter));
+    }
+    // Sort
+    if (queueSort === "scheduled") {
+      posts = [...posts].sort((a, b) => {
+        if (!a.scheduled_time && !b.scheduled_time) return 0;
+        if (!a.scheduled_time) return 1;
+        if (!b.scheduled_time) return -1;
+        return new Date(a.scheduled_time).getTime() - new Date(b.scheduled_time).getTime();
+      });
+    } else {
+      posts = [...posts].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    return posts;
+  }, [queuePostsAll, queueFilter, queueSort]);
 
   const queueGrouped = useMemo(() => {
     const groups = new Map<string, { name: string; posts: RecentPost[] }>();
@@ -722,10 +767,11 @@ export default function BrandPosting() {
     }
   };
 
-  // Bulk approve
-  const handleBulkApprove = async () => {
+  // Bulk approve (selected or all)
+  const handleBulkApprove = async (approveAll = false) => {
     if (guardAction("social_post")) return;
-    const postsToApprove = queuePosts.filter((p) => selectedPostIds.has(p.id));
+    const postsToApprove = approveAll ? queuePosts : queuePostsAll.filter((p) => selectedPostIds.has(p.id));
+    if (postsToApprove.length === 0) return;
     let count = 0;
     for (const post of postsToApprove) {
       try {
@@ -940,24 +986,30 @@ export default function BrandPosting() {
   );
 
   /* ---------------------------------------------------------------- */
-  /* Queue Post Card                                                   */
+  /* Queue Post Card (visual horizontal layout)                        */
   /* ---------------------------------------------------------------- */
   const QueueCard = ({ post }: { post: RecentPost }) => {
     const isEditing = editingPostId === post.id;
     const isSelected = selectedPostIds.has(post.id);
     const platforms = (post.platforms as string[] | null) ?? [];
+    const primaryPlatform = platforms[0] || "instagram";
+    const PrimaryIcon = getPlatformIcon(primaryPlatform);
+    const isApproved = post.status === "scheduled";
 
     return (
       <div
         className={cn(
-          "bg-white dark:bg-[#1A1D27] rounded-xl border p-4 transition-all",
+          "bg-white dark:bg-[#1A1D27] rounded-xl border shadow-md hover:shadow-lg transition-all overflow-hidden mb-2",
+          isApproved && "border-l-[3px] border-l-green-500",
           isSelected
             ? "border-[#6C5CE7] ring-1 ring-[#6C5CE7]/20"
-            : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700",
+            : isApproved
+              ? "border-gray-200 dark:border-gray-800"
+              : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700",
         )}
       >
         {isEditing ? (
-          <div className="space-y-3">
+          <div className="p-4 space-y-3">
             <textarea
               value={editCaption}
               onChange={(e) => setEditCaption(e.target.value)}
@@ -992,66 +1044,91 @@ export default function BrandPosting() {
             </div>
           </div>
         ) : (
-          <div className="flex items-start gap-3">
+          <div className="flex items-stretch">
             {/* Checkbox */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedPostIds((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(post.id)) next.delete(post.id);
-                  else next.add(post.id);
-                  return next;
-                });
-              }}
-              className={cn(
-                "mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
-                isSelected
-                  ? "bg-[#6C5CE7] border-[#6C5CE7]"
-                  : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]",
-              )}
-            >
-              {isSelected && <Check className="h-3 w-3 text-white" />}
-            </button>
+            <div className="flex items-center pl-3 pr-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPostIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(post.id)) next.delete(post.id);
+                    else next.add(post.id);
+                    return next;
+                  });
+                }}
+                className={cn(
+                  "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                  isSelected
+                    ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                    : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]",
+                )}
+              >
+                {isSelected && <Check className="h-3 w-3 text-white" />}
+              </button>
+            </div>
 
-            {/* Platform icon */}
-            <div className="shrink-0">
-              {platforms.length > 0 ? (
-                <div className="flex -space-x-1">
-                  {platforms.slice(0, 2).map((pid) => {
-                    const Icon = getPlatformIcon(pid);
-                    return (
-                      <div
-                        key={pid}
-                        className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-[#1A1D27] flex items-center justify-center"
-                      >
-                        {Icon && <Icon className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />}
-                      </div>
-                    );
-                  })}
-                </div>
+            {/* Media Thumbnail */}
+            <div className="shrink-0 p-2.5">
+              {post.file_url ? (
+                <img
+                  src={post.file_url}
+                  alt=""
+                  className="w-[120px] h-[90px] rounded-lg object-cover"
+                />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                  <MessageSquare className="h-3.5 w-3.5 text-gray-400" />
+                <div
+                  className={cn(
+                    "w-[120px] h-[90px] rounded-lg flex items-center justify-center",
+                    PLATFORM_GRADIENTS[primaryPlatform] || "bg-gray-200 dark:bg-gray-800",
+                  )}
+                >
+                  {PrimaryIcon ? (
+                    <PrimaryIcon className="h-8 w-8 text-white/80" />
+                  ) : (
+                    <ImagePlus className="h-8 w-8 text-white/50" />
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">
-                {post.caption ? (post.caption.length > 100 ? post.caption.slice(0, 100) + "..." : post.caption) : "No caption"}
-              </p>
-              <div className="flex items-center gap-2 mt-1.5">
+            {/* Content area */}
+            <div className="flex-1 min-w-0 py-3 pr-2">
+              {/* Row 1: Platform + date */}
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-1.5">
+                  {platforms.map((pid) => {
+                    const Icon = getPlatformIcon(pid);
+                    return Icon ? (
+                      <div key={pid} className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                        <Icon className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                      </div>
+                    ) : null;
+                  })}
+                  <span className="text-xs text-gray-400 capitalize">
+                    {platforms.map((p) => PLATFORMS.find((pp) => pp.id === p)?.name ?? p).join(", ")}
+                  </span>
+                </div>
                 {post.scheduled_time && (
-                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                  <span className="text-[10px] text-gray-400 ml-auto flex items-center gap-1 shrink-0">
                     <Clock className="h-3 w-3" />
                     {new Date(post.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {" "}
+                    {new Date(post.scheduled_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                   </span>
                 )}
+              </div>
+
+              {/* Row 2: Caption */}
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">
+                {post.caption || "No caption"}
+              </p>
+
+              {/* Row 3: Status + campaign */}
+              <div className="flex items-center gap-2 mt-1.5">
                 <span
                   className={cn(
-                    "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                    "text-[10px] font-semibold px-2 py-0.5 rounded-full",
                     post.status === "queued" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
                     post.status === "draft" && "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
                     post.status === "scheduled" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -1059,15 +1136,20 @@ export default function BrandPosting() {
                 >
                   {post.status || "draft"}
                 </span>
+                {post.source === "campaign" && post.campaign_name && (
+                  <span className="text-[10px] text-purple-600 dark:text-purple-400 truncate">
+                    {post.campaign_name}{post.event_title ? ` · ${post.event_title}` : ""}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-1 shrink-0">
+            {/* Action buttons (vertical) */}
+            <div className="flex flex-col items-center justify-center gap-0.5 px-2 border-l border-gray-100 dark:border-gray-800">
               <button
                 type="button"
                 onClick={() => handleApproveSchedule(post)}
-                className="p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 transition-colors"
+                className="p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 transition-colors"
                 title="Approve"
               >
                 <Check className="h-4 w-4" />
@@ -1075,7 +1157,7 @@ export default function BrandPosting() {
               <button
                 type="button"
                 onClick={() => handleStartEdit(post)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 title="Edit"
               >
                 <Pencil className="h-4 w-4" />
@@ -1083,8 +1165,8 @@ export default function BrandPosting() {
               <button
                 type="button"
                 onClick={() => handleRemoveFromQueue(post)}
-                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                title="Remove"
+                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                title="Delete"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -1159,9 +1241,63 @@ export default function BrandPosting() {
         {/* ============================================================ */}
         {activeTab === "queue" && (
           <div>
-            {/* Bulk actions bar */}
+            {/* Toolbar: Filters, Sort, Bulk Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+              {/* Filter pills */}
+              <div className="flex items-center gap-1.5 flex-wrap flex-1">
+                {QUEUE_FILTER_OPTIONS.map((opt) => {
+                  const isActive = queueFilter === opt.id;
+                  const Icon = opt.id !== "all" ? getPlatformIcon(opt.id) : null;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setQueueFilter(opt.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
+                        isActive
+                          ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                          : "bg-white dark:bg-[#1A1D27] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
+                      )}
+                    >
+                      {Icon && <Icon className={cn("h-3 w-3", isActive ? "text-white" : "text-gray-500")} />}
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sort dropdown */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27]">
+                  <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />
+                  <select
+                    value={queueSort}
+                    onChange={(e) => setQueueSort(e.target.value as QueueSort)}
+                    className="text-xs font-medium text-gray-600 dark:text-gray-400 bg-transparent border-none outline-none cursor-pointer"
+                  >
+                    <option value="scheduled">Scheduled Date</option>
+                    <option value="created">Date Created</option>
+                  </select>
+                </div>
+
+                {/* Approve All button */}
+                {queuePosts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleBulkApprove(true)}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-semibold hover:bg-[#5B4BD1] transition-colors"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Approve All
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Select All + Approve Selected bar */}
             {queuePosts.length > 0 && (
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -1171,18 +1307,18 @@ export default function BrandPosting() {
                       setSelectedPostIds(new Set(queuePosts.map((p) => p.id)));
                     }
                   }}
-                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                  className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   <div
                     className={cn(
-                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                      "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
                       selectedPostIds.size === queuePosts.length && queuePosts.length > 0
                         ? "bg-[#6C5CE7] border-[#6C5CE7]"
                         : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]",
                     )}
                   >
                     {selectedPostIds.size === queuePosts.length && queuePosts.length > 0 && (
-                      <Check className="h-3 w-3 text-white" />
+                      <Check className="h-2.5 w-2.5 text-white" />
                     )}
                   </div>
                   Select All
@@ -1190,10 +1326,10 @@ export default function BrandPosting() {
                 {selectedPostIds.size > 0 && (
                   <button
                     type="button"
-                    onClick={handleBulkApprove}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6C5CE7] text-white text-sm font-medium hover:bg-[#5B4BD1] transition-colors"
+                    onClick={() => handleBulkApprove()}
+                    className="flex items-center gap-1 px-3 py-1 rounded-md bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors"
                   >
-                    <Check className="h-4 w-4" />
+                    <Check className="h-3 w-3" />
                     Approve Selected ({selectedPostIds.size})
                   </button>
                 )}
