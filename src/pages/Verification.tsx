@@ -2428,9 +2428,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 mx-10 space-y-8 overflow-visible">
+    <div className="w-full py-6 mx-8 space-y-8 overflow-visible">
       {/* ── 1. HERO ── */}
-      <div className="flex items-start gap-6 w-full pr-16">
+      <div className="flex items-start gap-6 w-full pr-10">
         {/* LEFT column */}
         <div className="flex-1 min-w-0">
         <div className="flex items-start gap-4">
@@ -2620,7 +2620,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </div>
         </div>
         {/* RIGHT column — Confidence Ring + Speaker Readiness */}
-        <div className="w-56 flex-shrink-0 flex flex-col items-center gap-3 pr-4">
+        <div className="w-56 flex-shrink-0 flex flex-col items-center gap-3 pr-3">
           <ConfidenceGauge score={record.verification_score ?? 0} />
           <CompactSpeakerReadiness record={record} onRefresh={onRefresh} />
         </div>
