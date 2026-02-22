@@ -28,16 +28,36 @@ interface ChatMessage {
   loading?: boolean;
 }
 
-function getQuickPrompts(pathname: string): string[] {
-  if (pathname.startsWith("/brand/discover") || pathname.startsWith("/admin/discover"))
-    return ["🎤 Find keynote speakers", "🎙️ Find podcasters", "📚 Find authors", "👥 Find brand ambassadors"];
-  if (pathname.startsWith("/brand/events") || pathname.startsWith("/admin/events"))
-    return ["📊 View 365 Insights", "🎤 Book a speaker", "💰 Sponsor report"];
-  if (pathname.startsWith("/brand/podcasts") || pathname.startsWith("/admin/podcasts"))
-    return ["🔍 Search podcasts", "📈 Top military podcasts", "🎙️ Submit a podcast"];
-  if (pathname.startsWith("/brand/dashboard") || pathname.startsWith("/admin/dashboard") || pathname === "/brand" || pathname === "/admin")
-    return ["📊 Show my analytics", "🔍 Find creators", "📅 Upcoming events"];
-  return ["🔍 Find creators", "🎙️ Browse podcasts", "📅 View events", "📊 Analytics"];
+const DEFAULT_CHIPS = [
+  "🔍 Find creators with 50K+ followers",
+  "🏛️ Find me a venue",
+  "📅 Upcoming events",
+  "🎖️ Army veteran speakers",
+  "💍 MilSpouse influencers",
+  "📊 Top engaged creators",
+];
+
+const CHAT_HISTORY_KEY = "milcrunch_chat_history";
+
+function getChips(): string[] {
+  try {
+    const recentSearches: string[] = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
+    return recentSearches.length >= 3
+      ? recentSearches.slice(0, 6).map((q) => q.substring(0, 40))
+      : DEFAULT_CHIPS;
+  } catch {
+    return DEFAULT_CHIPS;
+  }
+}
+
+function saveToChatHistory(userMessage: string) {
+  try {
+    const history: string[] = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
+    const updated = [userMessage, ...history.filter((h) => h !== userMessage)].slice(0, 10);
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(updated));
+  } catch {
+    // localStorage unavailable
+  }
 }
 
 let idCounter = 0;
@@ -146,6 +166,7 @@ export default function FloatingAdminChat() {
 
   const addResponse = async (input: string) => {
     setMessages((m) => [...m, { id: makeId(), role: "user" as const, text: input }]);
+    saveToChatHistory(input);
     setLoading(true);
 
     try {
@@ -183,13 +204,15 @@ ${eventsBlock}
 
 Creators in the platform: ${creatorsBlock}
 
-Answer questions about these events and creators directly from this data. Do not say you lack access to the database.
+Answer questions about these events and creators directly from this data. Do not say you lack access to the database. Never output raw JSON. Always respond in natural language.
 
 When showing events, always format each event as:
 **[Event Name](event_url or #)** - Date | Location
 Include the event photo if available. Always end event listings with a direct link. Format responses with clear sections and emojis for scannability.
 
-When asked to find creators/influencers/speakers via external search, respond ONLY with valid JSON like:
+Before searching for creators or venues, always ask 1-2 clarifying questions to refine results. For example: if asked for influencers, ask about preferred branch, follower range, content type, or location. If asked for a venue, ask about city, capacity, and event type. Only search after getting enough context. Keep clarifying questions short and friendly.
+
+When the user provides enough context to search for creators/influencers/speakers, respond ONLY with valid JSON like:
 {"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
 For all other questions, respond naturally and concisely.`;
 
@@ -297,7 +320,7 @@ For all other questions, respond naturally and concisely.`;
   };
 
   const isOnChatPage = location.pathname === "/admin/chat";
-  const quickPrompts = getQuickPrompts(location.pathname);
+  const quickPrompts = getChips();
 
   return (
     <>
