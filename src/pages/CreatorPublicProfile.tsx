@@ -569,6 +569,28 @@ export default function CreatorPublicProfile() {
     stats.push({ label: "Posts", value: formatFollowerCount(creator.media_count), icon: <LayoutGrid className="h-4 w-4 text-gray-500" /> });
   }
 
+  // Sponsor Fit Score
+  const sponsorFitScore = (() => {
+    let score = 50;
+    const er = creator.engagement_rate ?? 0;
+    if (er >= 5) score += 30;
+    else if (er >= 3) score += 20;
+    else if (er >= 1) score += 10;
+    const fc = creator.follower_count ?? 0;
+    if (fc >= 100_000) score += 20;
+    else if (fc >= 50_000) score += 15;
+    else if (fc >= 10_000) score += 10;
+    else if (fc >= 1_000) score += 5;
+    return Math.min(score, 99);
+  })();
+  const sponsorFitTier = sponsorFitScore >= 80
+    ? { label: "Platinum Fit", bg: "bg-yellow-100 text-yellow-800" }
+    : sponsorFitScore >= 60
+    ? { label: "Strong Fit", bg: "bg-green-100 text-green-800" }
+    : sponsorFitScore >= 40
+    ? { label: "Good Fit", bg: "bg-blue-100 text-blue-800" }
+    : { label: "Emerging", bg: "bg-gray-100 text-gray-600" };
+
   // Upcoming vs past events
   const now = new Date().toISOString();
   const upcomingEvents = events.filter((e) => !e.start_date || e.start_date >= now);
@@ -746,6 +768,20 @@ export default function CreatorPublicProfile() {
                   ))}
                 </div>
               )}
+
+              {/* ====== SPONSOR FIT SCORE ====== */}
+              <div className="mt-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold cursor-default ${sponsorFitTier.bg}`}>
+                      ⚡ {sponsorFitTier.label} · {sponsorFitScore}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs max-w-[220px]">Sponsor Fit Score is calculated from engagement rate, follower count, and niche alignment.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
           </div>
 
