@@ -1029,11 +1029,18 @@ export default function Verification() {
                       </TableCell>
                       <TableCell>{row.claimed_branch ?? "—"}</TableCell>
                       <TableCell>
-                        {row.claimed_status ? (
-                          <span className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
-                            {row.claimed_status.replace(/_/g, " ")}
-                          </span>
-                        ) : (
+                        {row.claimed_status ? (() => {
+                          const isSpouse = row.claimed_status?.toLowerCase().includes('spouse') ||
+                            row.person_name?.toLowerCase().includes('spouse') ||
+                            (row.ai_analysis as string)?.toLowerCase().includes('milspouse');
+                          return isSpouse ? (
+                            <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800">Military Spouse</span>
+                          ) : (
+                            <span className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
+                              {row.claimed_status.replace(/_/g, " ")}
+                            </span>
+                          );
+                        })() : (
                           <span className="text-gray-400">—</span>
                         )}
                       </TableCell>
@@ -2538,7 +2545,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         last_verified_at: new Date().toISOString(),
       }).eq("id", record.id);
       toast.success("Re-verification complete");
-      onRefresh?.();
+      await onRefresh?.();
     } catch {
       toast.error("Re-verification failed");
     } finally {
@@ -2685,11 +2692,18 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 {record.claimed_branch}
               </Badge>
             )}
-            {record.claimed_status && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800 capitalize">
-                {record.claimed_status.replace(/_/g, " ")}
-              </span>
-            )}
+            {record.claimed_status && (() => {
+              const isSpouse = record.claimed_status?.toLowerCase().includes('spouse') ||
+                record.person_name?.toLowerCase().includes('spouse') ||
+                (record.ai_analysis as string)?.toLowerCase().includes('milspouse');
+              return isSpouse ? (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800">Military Spouse</span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800 capitalize">
+                  {record.claimed_status.replace(/_/g, " ")}
+                </span>
+              );
+            })()}
             {locationStr && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{locationStr}</span>
             )}
