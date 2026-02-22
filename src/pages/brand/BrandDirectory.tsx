@@ -80,7 +80,6 @@ import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
-import { saveCreatorAvatar } from "@/lib/directories";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
@@ -490,54 +489,38 @@ const BrandDirectory = () => {
   // ─── Refresh photos for creators missing avatars ──────────
 
   const handleRefreshPhotos = async () => {
-    if (members.length === 0) return;
     setRefreshingPhotos(true);
     let updated = 0;
     let failed = 0;
-    const total = members.length;
 
-    for (const m of members) {
+    for (const member of members) {
+      const currentUrl = member.ic_avatar_url || '';
+      if (currentUrl.includes('supabase.co/storage')) continue;
+
       try {
-        // Skip creators that already have a permanent Supabase Storage URL
-        const current = m.ic_avatar_url || m.avatar_url || "";
-        if (current.includes("supabase.co/storage")) {
-          updated++;
-          continue;
-        }
+        const cleanHandle = (member.creator_handle || '').replace('@', '').toLowerCase().trim();
+        if (!cleanHandle) continue;
 
-        // Get fresh CDN URL from Discovery API
-        const cdnUrl = await fetchDiscoveryAvatar(m.creator_handle, m.platform || "instagram");
-        console.log("[RefreshPhotos]", m.creator_handle, "→ CDN:", cdnUrl?.substring(0, 150) ?? "NULL");
-        if (cdnUrl) {
-          // Upload to Supabase Storage for a permanent URL (browser can fetch IG CDN images)
-          let finalUrl = cdnUrl;
-          try {
-            const permUrl = await saveCreatorAvatar(m.creator_handle, cdnUrl);
-            if (permUrl) finalUrl = permUrl;
-          } catch (err) {
-            console.warn("[RefreshPhotos]", m.creator_handle, "upload failed, using CDN URL:", err);
-          }
-
-          await supabase
-            .from("directory_members")
-            .update({ ic_avatar_url: finalUrl, avatar_url: finalUrl })
-            .eq("id", m.id);
-          setMembers((prev) => prev.map((row) =>
-            row.id === m.id ? { ...row, ic_avatar_url: finalUrl, avatar_url: finalUrl } : row
-          ));
-          updated++;
+        const url = await fetchDiscoveryAvatar(cleanHandle);
+        if (url && !url.includes('saxoneldridge')) {
+          const { error } = await supabase
+            .from('directory_members')
+            .update({ ic_avatar_url: url })
+            .eq('id', member.id);
+          if (!error) updated++;
+          else failed++;
         } else {
           failed++;
         }
       } catch {
         failed++;
       }
-      // 500ms delay between API calls
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 400));
     }
 
     setRefreshingPhotos(false);
-    toast.success(`Refreshed ${updated} of ${total} avatars${failed > 0 ? ` (${failed} not found)` : ""}`);
+    toast.success(`Photos updated: ${updated} updated, ${failed} failed`);
+    if (selectedDir) loadMembers(selectedDir.id);
   };
 
   // ─── Filtering & sorting ───────────────────────────────────
