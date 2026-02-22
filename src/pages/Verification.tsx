@@ -153,7 +153,7 @@ function ConfidenceGauge({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (score / 100) * circumference;
   return (
-    <div className="relative w-32 h-32">
+    <div className="relative w-24 h-24">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
         <circle
@@ -170,7 +170,7 @@ function ConfidenceGauge({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl font-bold text-[#000741] dark:text-white">{score}%</span>
+        <span className="text-lg font-bold text-[#000741] dark:text-white">{score}%</span>
       </div>
     </div>
   );
@@ -1686,31 +1686,31 @@ function CompactSpeakerReadiness({ record, onRefresh }: { record: VerificationRe
 
   return (
     <div className="w-full">
-      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-        <Mic className="h-3.5 w-3.5" /> Speaker Readiness
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+        <Mic className="h-3 w-3" /> Speaker Readiness
         {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
       </p>
-      <div className="mb-2">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Clearance: {checkedCount}/{total}</span>
+      <div className="mb-1">
+        <div className="flex items-center justify-between mb-0.5">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{checkedCount}/{total}</span>
           <span className="text-xs text-muted-foreground">{progressPct}%</span>
         </div>
-        <Progress value={progressPct} className="h-1.5" />
+        <Progress value={progressPct} className="h-1" />
       </div>
-      <div className="space-y-0">
+      <div className="flex flex-col gap-0.5">
         {READINESS_ITEMS.map((item) => {
           const isAuto = item.auto;
           const checked = isAuto ? autoChecks[item.key] : localChecks[item.key];
           return (
-            <label key={item.key} className={cn("flex items-center gap-2 py-0.5", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
+            <label key={item.key} className={cn("flex items-center gap-1.5 py-0", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
               <input
                 type="checkbox"
                 checked={!!checked}
                 onChange={isAuto ? undefined : () => handleToggle(item.key)}
                 disabled={isAuto}
-                className="h-3 w-3 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+                className="h-2.5 w-2.5 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
               />
-              <span className={cn("text-xs flex-1 leading-tight", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
+              <span className={cn("text-xs flex-1 leading-none", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
                 {item.label}
               </span>
             </label>
@@ -2428,11 +2428,11 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 mx-8 space-y-8 overflow-visible">
+    <div className="w-full py-6 px-4 space-y-8 max-w-full overflow-hidden">
       {/* ── 1. HERO ── */}
-      <div className="flex items-start gap-6 w-full pr-10">
+      <div className="flex items-start gap-4 w-full max-w-full overflow-hidden">
         {/* LEFT column */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-start gap-4">
         <div className="shrink-0 relative group mr-4">
           {record.profile_photo_url ? (
@@ -2620,7 +2620,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </div>
         </div>
         {/* RIGHT column — Confidence Ring + Speaker Readiness */}
-        <div className="w-56 flex-shrink-0 flex flex-col items-center gap-3 pr-3">
+        <div className="w-44 flex-shrink-0 flex flex-col items-center gap-3">
           <ConfidenceGauge score={record.verification_score ?? 0} />
           <CompactSpeakerReadiness record={record} onRefresh={onRefresh} />
         </div>
@@ -2628,7 +2628,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* Red flags alert */}
       {redFlags.length > 0 && (
-        <Card className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
+        <Card className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20 max-w-full overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2 text-red-700 dark:text-red-400 font-semibold text-sm">
               <AlertCircle className="h-4 w-4" /> Red Flags ({redFlags.length})
@@ -2643,7 +2643,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       )}
 
       {/* ── 3. AI SUMMARY ── */}
-      <section className="pl-4 ml-6">
+      <section className="pl-4 ml-6 max-w-full overflow-hidden">
         <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#6C5CE7]" />
@@ -2653,7 +2653,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 3. EVIDENCE SOURCES — accordion ── */}
-      <section className="pl-4 ml-6">
+      <section className="pl-4 ml-6 max-w-full overflow-hidden">
         <button
           onClick={() => setEvidenceOpen(!evidenceOpen)}
           className="flex items-center gap-2 w-full text-left group"
@@ -2696,7 +2696,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 4. CAREER TRACK — inline ── */}
-      <section className="pl-4 ml-6">
+      <section className="pl-4 ml-6 max-w-full overflow-hidden">
         <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
@@ -2707,7 +2707,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* ── 5. SOCIAL — only shown if source is discovery ── */}
       {(record.source === 'discovery' || record.source_username) && (
-        <section className="pl-4 ml-6">
+        <section className="pl-4 ml-6 max-w-full overflow-hidden">
           <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group">
             {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
             <Globe className="h-5 w-5 text-[#6C5CE7]" />
@@ -2718,7 +2718,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       )}
 
       {/* ── 6. MEDIA — collapsible ── */}
-      <section className="pl-4 ml-6">
+      <section className="pl-4 ml-6 max-w-full overflow-hidden">
         <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group">
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#6C5CE7]" />
@@ -2732,7 +2732,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 7. BACKGROUND — expandable ── */}
-      <section className="pl-4 ml-6">
+      <section className="pl-4 ml-6 max-w-full overflow-hidden">
         <button
           onClick={() => setBackgroundOpen(!backgroundOpen)}
           className="flex items-center gap-2 w-full text-left group"
