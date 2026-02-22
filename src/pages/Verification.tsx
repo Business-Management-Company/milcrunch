@@ -153,7 +153,7 @@ function ConfidenceGauge({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (score / 100) * circumference;
   return (
-    <div className="relative w-28 h-28">
+    <div className="relative w-36 h-36">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
         <circle
@@ -170,7 +170,7 @@ function ConfidenceGauge({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl font-bold text-[#000741] dark:text-white">{score}%</span>
+        <span className="text-3xl font-bold text-[#000741] dark:text-white">{score}%</span>
       </div>
     </div>
   );
@@ -1773,11 +1773,11 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
           <Mic className="h-5 w-5" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           {checkedCount >= 5 ? (
-            <Badge className="ml-auto bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
+            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
           ) : checkedCount < 3 ? (
-            <Badge className="ml-auto bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
+            <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
           ) : (
-            <Badge className="ml-auto bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
+            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
           )}
         </CardTitle>
       </CardHeader>
@@ -1878,11 +1878,11 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
         <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
         {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
         {checkedCount >= 5 ? (
-          <Badge className="ml-auto bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
+          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
         ) : checkedCount < 3 ? (
-          <Badge className="ml-auto bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
         ) : (
-          <Badge className="ml-auto bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
+          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
         )}
       </button>
       {isOpen && (
@@ -2535,7 +2535,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 pl-3 pr-2 space-y-8 max-w-full overflow-hidden">
+    <div className="w-full py-6 pl-3 pr-8 space-y-8 max-w-full overflow-hidden">
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-4 w-full max-w-full overflow-hidden">
         {/* LEFT column */}
