@@ -559,13 +559,9 @@ export default function Verification() {
           ...prev,
         ]);
         setAddForm({ fullName: "", claimedBranch: "", claimedStatus: "veteran", linkedinUrl: "", instagramHandle: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
-        setTimeout(() => {
-          setAddOpen(false);
-          setNewRecordId(null);
-          if (inserted?.id) {
-            setExpandedId(inserted.id);
-          }
-        }, 1500);
+        setAddOpen(false);
+        setNewRecordId(null);
+        setExpandedId(inserted.id);
       }
     } finally {
       setPipelineRunning(false);
@@ -723,18 +719,30 @@ export default function Verification() {
               {(addForm.instagramHandle.trim()
                 ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
                 : addForm.profilePhotoUrl) ? (
-                <img
-                  src={addForm.instagramHandle.trim()
-                    ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
-                    : addForm.profilePhotoUrl}
-                  alt={addForm.fullName}
-                  referrerPolicy="no-referrer"
-                  className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full object-cover"
-                />
+                <>
+                  <img
+                    src={addForm.instagramHandle.trim()
+                      ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
+                      : addForm.profilePhotoUrl}
+                    alt={addForm.fullName}
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                  <div className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full bg-purple-100 items-center justify-center" style={{ display: 'none' }}>
+                    <span className="text-2xl font-bold text-purple-600">
+                      {addForm.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                    </span>
+                  </div>
+                </>
               ) : (
                 <div className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full bg-purple-100 flex items-center justify-center">
                   <span className="text-2xl font-bold text-purple-600">
-                    {addForm.fullName?.charAt(0) || '?'}
+                    {addForm.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
                   </span>
                 </div>
               )}
