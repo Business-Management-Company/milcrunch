@@ -374,6 +374,56 @@ Return ONLY the JSON object, no markdown formatting.`;
   }
 }
 
+// --- YouTube Media Search ---
+export interface YouTubeResult {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  description: string;
+  thumbnail: string;
+  publishedAt: string;
+}
+
+export async function searchYouTube(personName: string, branch?: string): Promise<YouTubeResult[]> {
+  const queries = [
+    `"${personName}"`,
+    `"${personName}" ${branch ?? "military"}`.trim(),
+    `"${personName}" veteran`,
+  ];
+  const allVideos: YouTubeResult[] = [];
+  const seenIds = new Set<string>();
+
+  for (const q of queries) {
+    try {
+      const params = new URLSearchParams({
+        part: "snippet",
+        type: "video",
+        q,
+        maxResults: "5",
+      });
+      const resp = await fetch(`/api/youtube?${params.toString()}`);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      for (const item of data.items ?? []) {
+        const id = item.id?.videoId;
+        if (!id || seenIds.has(id)) continue;
+        seenIds.add(id);
+        allVideos.push({
+          videoId: id,
+          title: item.snippet?.title ?? "Untitled",
+          channelTitle: item.snippet?.channelTitle ?? "",
+          description: item.snippet?.description ?? "",
+          thumbnail: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url ?? "",
+          publishedAt: item.snippet?.publishedAt ?? "",
+        });
+      }
+    } catch {
+      // continue with next query
+    }
+  }
+  return allVideos;
+}
+
 // --- Pipeline ---
 export interface VerificationInput {
   fullName: string;
@@ -410,6 +460,7 @@ export async function runVerificationPipeline(
   skills: string[];
   experience: { title?: string; organization?: string }[];
   education: { school?: string; degree?: string }[];
+  youtubeResults: YouTubeResult[];
 }> {
   console.log("[Verify] API Keys present:", {
     serp: !!import.meta.env.VITE_SERP_API_KEY,
@@ -483,6 +534,13 @@ export async function runVerificationPipeline(
   }
   onPhase({ phase: 2, name: "Web Search", status: "done", data: evidenceSources });
 
+  // YouTube media search — runs in parallel with Phase 3
+  let youtubeResults: YouTubeResult[] = [];
+  const youtubePromise = searchYouTube(input.fullName, input.claimedBranch).then(
+    (results) => { youtubeResults = results; },
+    (err) => { console.warn("[Verify] YouTube search failed:", err); }
+  );
+
   // Phase 3: Deep Extraction (FireCrawl) — non-blocking; failures must not kill the pipeline
   onPhase({ phase: 3, name: "Deep Extraction", status: "running" });
   try {
@@ -517,6 +575,9 @@ export async function runVerificationPipeline(
     console.warn("[Verify] Phase 3 failed, continuing:", err);
     firecrawlData = [];
   }
+  // Wait for YouTube search to complete alongside Phase 3
+  await youtubePromise;
+
   // ALWAYS continue to Phase 4 regardless of Phase 3 outcome. Pass whatever data we have: PDL + SerpAPI at minimum, FireCrawl if available.
   onPhase({ phase: 3, name: "Deep Extraction", status: "done", data: firecrawlData });
 
@@ -552,6 +613,7 @@ export async function runVerificationPipeline(
     skills: pdlSkills,
     experience: pdlExperience,
     education: pdlEducation,
+    youtubeResults,
   };
 }
 

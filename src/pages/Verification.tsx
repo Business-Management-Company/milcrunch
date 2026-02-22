@@ -471,7 +471,7 @@ export default function Verification() {
           zip: addForm.zip.trim() || null,
           source: addForm.source || "manual",
           source_username: addForm.sourceUsername || null,
-          manual_checks: {},
+          manual_checks: result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {},
           last_verified_at: new Date().toISOString(),
         })
         .select("id")
@@ -559,7 +559,7 @@ export default function Verification() {
             zip: addForm.zip.trim() || null,
             source: addForm.source || "manual",
             source_username: addForm.sourceUsername || null,
-            manual_checks: {},
+            manual_checks: result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {},
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_verified_at: new Date().toISOString(),
@@ -695,6 +695,7 @@ export default function Verification() {
         red_flags: result.redFlags,
         linkedin_url: result.linkedinUrl || row.linkedin_url || null,
         last_verified_at: new Date().toISOString(),
+        ...(result.youtubeResults?.length ? { manual_checks: { youtube_results: result.youtubeResults } } : {}),
       }).eq("id", row.id);
       toast.success(`Re-verification complete for ${row.person_name}`);
       await fetchVerifications();
@@ -2547,6 +2548,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         red_flags: result.redFlags,
         linkedin_url: result.linkedinUrl || record.linkedin_url || null,
         last_verified_at: new Date().toISOString(),
+        ...(result.youtubeResults?.length ? { manual_checks: { youtube_results: result.youtubeResults } } : {}),
       }).eq("id", record.id);
       toast.success("Re-verification complete");
       await onRefresh?.();
