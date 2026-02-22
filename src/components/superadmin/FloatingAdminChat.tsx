@@ -90,6 +90,8 @@ export default function FloatingAdminChat() {
   const [expandedMsgIds, setExpandedMsgIds] = useState<Set<string>>(new Set());
   const [justAddedIds, setJustAddedIds] = useState<Set<string>>(new Set());
   const [selectedCreator, setSelectedCreator] = useState<CreatorCard | null>(null);
+  const [listCreatedMsgIds, setListCreatedMsgIds] = useState<Set<string>>(new Set());
+  const [creatingListMsgId, setCreatingListMsgId] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -163,6 +165,47 @@ export default function FloatingAdminChat() {
       }, 2000);
       setPendingCreator(null);
     }
+  };
+
+  const LIST_PHRASES = /\b(build\s+(me\s+)?a\s+list|create\s+a\s+list|make\s+(me\s+)?a\s+list|save\s+(as|to)\s+a?\s*list)\b/i;
+
+  const generateListName = (query: string): string => {
+    // Strip list-related phrases and common filler words
+    let name = query
+      .replace(LIST_PHRASES, "")
+      .replace(/\b(find|search|show|get|with|who|have|has|that|are|the|and|for|of|me|please|can you|could you|i want|i need)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    // Title-case the remaining words
+    name = name
+      .split(" ")
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+    return name || "AI Search Results";
+  };
+
+  const handleCreateListFromResults = (msgId: string, creators: CreatorCard[], userQuery: string) => {
+    setCreatingListMsgId(msgId);
+    const listName = generateListName(userQuery);
+    const newId = createList(listName);
+    for (const c of creators) {
+      addCreatorToList(newId, creatorToListPayload(c));
+    }
+    setListCreatedMsgIds((prev) => new Set(prev).add(msgId));
+    setCreatingListMsgId(null);
+    toast.success(`List "${listName}" created with ${creators.length} creators`);
+
+    // Append a system-like message with a link to the new list
+    setMessages((m) => [
+      ...m,
+      {
+        id: makeId(),
+        role: "assistant" as const,
+        text: `✨ Created list **"${listName}"** with ${creators.length} creators.`,
+        cta: { label: `View List →`, link: `/lists/${newId}` },
+      },
+    ]);
   };
 
   const addResponse = async (input: string) => {
@@ -574,6 +617,30 @@ For all other questions, respond naturally and concisely.`;
                             Show less
                           </button>
                         )}
+
+                        {/* "Create List from Results" button */}
+                        {(() => {
+                          if (listCreatedMsgIds.has(m.id)) return null;
+                          const msgIdx = messages.indexOf(m);
+                          const userMsg = msgIdx > 0 ? messages[msgIdx - 1] : null;
+                          const userText = userMsg?.role === "user" ? userMsg.text : "";
+                          const wantsList = LIST_PHRASES.test(userText);
+                          if (!wantsList) return null;
+                          return (
+                            <button
+                              onClick={() => handleCreateListFromResults(m.id, m.creators!, userText)}
+                              disabled={creatingListMsgId === m.id}
+                              className="w-full mt-2 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-[#6C5CE7] to-[#8B5CF6] hover:from-[#5A4BD5] hover:to-[#7C3AED] border border-[#6C5CE7]/30 shadow-sm transition-all"
+                            >
+                              {creatingListMsgId === m.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="h-3.5 w-3.5" />
+                              )}
+                              Create List from Results
+                            </button>
+                          );
+                        })()}
                       </div>
                     );
                   })()}
