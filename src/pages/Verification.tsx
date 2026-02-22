@@ -1649,6 +1649,78 @@ const READINESS_ITEMS: { key: string; label: string; auto: boolean }[] = [
   { key: "contract_signed", label: "Contract signed", auto: false },
 ];
 
+/** Compact Speaker Readiness for the hero right column — no card wrapper, no booking notes. */
+function CompactSpeakerReadiness({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
+  const rawChecks = (record.manual_checks ?? {}) as Record<string, unknown>;
+  const [localChecks, setLocalChecks] = useState<Record<string, boolean>>(() => {
+    const out: Record<string, boolean> = {};
+    for (const item of READINESS_ITEMS) {
+      if (!item.auto) out[item.key] = !!rawChecks[item.key];
+    }
+    return out;
+  });
+  const [saving, setSaving] = useState(false);
+  const bookingNotes = (rawChecks.booking_notes as string) ?? "";
+
+  const autoChecks: Record<string, boolean> = {
+    military_verified: (record.verification_score ?? 0) >= 70,
+    no_criminal: !((record.red_flags as RedFlag[] | null)?.length),
+  };
+
+  const checkedCount = READINESS_ITEMS.filter((item) =>
+    item.auto ? autoChecks[item.key] : localChecks[item.key]
+  ).length;
+  const total = READINESS_ITEMS.length;
+  const progressPct = Math.round((checkedCount / total) * 100);
+
+  const handleToggle = async (key: string) => {
+    const updated = { ...localChecks, [key]: !localChecks[key] };
+    setLocalChecks(updated);
+    setSaving(true);
+    await supabase.from("verifications").update({
+      manual_checks: { ...updated, booking_notes: bookingNotes },
+    }).eq("id", record.id);
+    setSaving(false);
+    onRefresh?.();
+  };
+
+  return (
+    <div className="w-full">
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <Mic className="h-3.5 w-3.5" /> Speaker Readiness
+        {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+      </p>
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Clearance: {checkedCount}/{total}</span>
+          <span className="text-xs text-muted-foreground">{progressPct}%</span>
+        </div>
+        <Progress value={progressPct} className="h-1.5" />
+      </div>
+      <div className="space-y-0">
+        {READINESS_ITEMS.map((item) => {
+          const isAuto = item.auto;
+          const checked = isAuto ? autoChecks[item.key] : localChecks[item.key];
+          return (
+            <label key={item.key} className={cn("flex items-center gap-2 py-0.5", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
+              <input
+                type="checkbox"
+                checked={!!checked}
+                onChange={isAuto ? undefined : () => handleToggle(item.key)}
+                disabled={isAuto}
+                className="h-3 w-3 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+              />
+              <span className={cn("text-xs flex-1 leading-tight", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
+                {item.label}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SpeakerReadinessAssessment({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
   const [open, setOpen] = useState(false);
   const rawChecks = (record.manual_checks ?? {}) as Record<string, unknown>;
@@ -2384,7 +2456,8 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   return (
     <div className="w-full py-6 mx-10 space-y-8 overflow-visible">
       {/* ── 1. HERO ── */}
-      <div className="flex items-start w-full box-border pr-16">
+      <div className="flex items-start gap-6 w-full pr-16">
+        {/* LEFT column */}
         <div className="flex-1 min-w-0">
         <div className="flex items-start gap-4">
         <div className="shrink-0 relative group mr-4">
@@ -2572,9 +2645,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
         </div>
         </div>
-        {/* Confidence Ring */}
-        <div className="flex-shrink-0 pl-4 pr-4">
+        {/* RIGHT column — Confidence Ring + Speaker Readiness */}
+        <div className="w-56 flex-shrink-0 flex flex-col items-center gap-3 pr-4">
           <ConfidenceGauge score={record.verification_score ?? 0} />
+          <CompactSpeakerReadiness record={record} onRefresh={onRefresh} />
         </div>
       </div>
 
@@ -2593,9 +2667,6 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           </CardContent>
         </Card>
       )}
-
-      {/* ── 2. SPEAKER READINESS ── */}
-      <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
 
       {/* ── 3. AI SUMMARY ── */}
       <section className="pl-4 ml-6">
