@@ -31,12 +31,12 @@ interface ChatMessage {
 }
 
 const DEFAULT_CHIPS = [
+  "🎖️ Find Army veteran creators",
+  "💼 Find Military Spouse businesses",
   "🔍 Find creators with 50K+ followers",
-  "🏛️ Find me a venue",
-  "📅 Upcoming events",
-  "🎖️ Army veteran speakers",
-  "💍 MilSpouse influencers",
-  "📊 Top engaged creators",
+  "📋 Build a list of Marine veterans",
+  "🎪 Plan an event for military families",
+  "🤝 Find veteran entrepreneurs",
 ];
 
 const CREATORS_PREVIEW_COUNT = 5;
@@ -548,19 +548,36 @@ For all other questions, respond naturally and concisely.`;
                   <span className="text-xs text-muted-foreground ml-2">Assistant</span>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    setMessages([{ id: makeId(), role: "assistant", text: "👋 Hi! I'm your MilCrunch AI assistant. How can I help today?" }]);
+                    if (inputRef.current) inputRef.current.value = "";
+                    setExpandedMsgIds(new Set());
+                    setListCreatedMsgIds(new Set());
+                    setSelectedCreator(null);
+                  }}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#6C5CE7] px-2 py-1 rounded hover:bg-[#6C5CE7]/5 transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  New Chat
+                </button>
+                <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Quick prompt pills — only shown on empty/greeting state */}
             {showChips && (
-              <div className="px-3 pt-3 pb-1 flex flex-wrap gap-1.5">
+              <div className="px-3 pt-3 pb-1 grid grid-cols-2 gap-1.5">
                 {DEFAULT_CHIPS.map((prompt) => (
                   <button
                     key={prompt}
                     onClick={() => handleChipClick(prompt)}
-                    className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/20 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors"
+                    className="text-xs px-3 py-2 rounded-xl border border-[#6C5CE7]/20 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors text-left"
                   >
                     {prompt}
                   </button>
