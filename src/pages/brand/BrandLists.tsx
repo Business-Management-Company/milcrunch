@@ -90,10 +90,10 @@ const BrandLists = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
-              Saved Lists
+              Lists
             </h1>
             <p className="text-gray-500 dark:text-gray-400">
-              Manage saved creator lists for events and campaigns. Create lists from
+              Manage creator lists for events and campaigns. Create lists from
               Discover, then invite or target them for specific opportunities.
             </p>
           </div>
@@ -145,10 +145,30 @@ const BrandLists = () => {
                     <h3 className="text-lg font-semibold text-foreground">
                       {list.name}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {list.creators.length} creator
-                      {list.creators.length !== 1 ? "s" : ""}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {list.creators.length > 0 && (
+                        <div className="flex -space-x-2">
+                          {list.creators.slice(0, 4).map((member, i) => (
+                            member.avatar ? (
+                              <img
+                                key={member.id || i}
+                                src={member.avatar}
+                                referrerPolicy="no-referrer"
+                                className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 object-cover"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div key={member.id || i} className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                                <span className="text-xs text-purple-600 dark:text-purple-300 font-semibold">{member.name?.charAt(0)}</span>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      )}
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -189,6 +209,25 @@ const BrandLists = () => {
                   </div>
                 )}
                 <span className="font-medium text-gray-900 dark:text-white text-sm">{list.name}</span>
+                {list.creators.length > 0 && (
+                  <div className="flex -space-x-1.5">
+                    {list.creators.slice(0, 4).map((member, i) => (
+                      member.avatar ? (
+                        <img
+                          key={member.id || i}
+                          src={member.avatar}
+                          referrerPolicy="no-referrer"
+                          className="w-5 h-5 rounded-full border border-white dark:border-gray-900 object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div key={member.id || i} className="w-5 h-5 rounded-full border border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                          <span className="text-[8px] text-purple-600 dark:text-purple-300 font-semibold">{member.name?.charAt(0)}</span>
+                        </div>
+                      )
+                    ))}
+                  </div>
+                )}
                 <span className="text-xs text-gray-400">{list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}</span>
               </div>
               <div className="flex items-center gap-2">
