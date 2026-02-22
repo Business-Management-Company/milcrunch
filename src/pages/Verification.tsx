@@ -294,11 +294,11 @@ function SourceIcon({ category }: { category: string }) {
 
 function detectStatus(name: string): string {
   const lower = name.toLowerCase();
-  if (lower.includes('spouse') || lower.includes('milspouse') || lower.includes('mil spouse')) return 'Military Spouse';
-  if (lower.includes('active duty') || lower.includes('activeduty')) return 'Active Duty';
-  if (lower.includes('gold star')) return 'Gold Star Family';
-  if (lower.includes('reservist') || lower.includes('guard')) return 'Reservist / Guard';
-  return 'Veteran';
+  if (lower.includes('spouse') || lower.includes('milspouse') || lower.includes('mil spouse') || lower.includes('military spouse')) return 'military_spouse';
+  if (lower.includes('active duty') || lower.includes('activeduty')) return 'active_duty';
+  if (lower.includes('gold star')) return 'gold_star';
+  if (lower.includes('reservist') || lower.includes('guard')) return 'reservist';
+  return 'veteran';
 }
 
 interface PrefillData {
@@ -354,14 +354,6 @@ export default function Verification() {
   const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
-
-  const detectStatus = (name: string): string => {
-    const lower = name.toLowerCase();
-    if (lower.includes('military spouse') || lower.includes('milspouse') || lower.includes('mil spouse') || lower.includes('spouse')) {
-      return 'military_spouse';
-    }
-    return 'veteran';
-  };
 
   const fetchVerifications = async () => {
     const { data, error } = await supabase
