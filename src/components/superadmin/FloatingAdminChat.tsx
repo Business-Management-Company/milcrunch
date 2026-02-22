@@ -93,6 +93,7 @@ export default function FloatingAdminChat() {
   const [selectedCreator, setSelectedCreator] = useState<CreatorCard | null>(null);
   const [listCreatedMsgIds, setListCreatedMsgIds] = useState<Set<string>>(new Set());
   const [creatingListMsgId, setCreatingListMsgId] = useState<string | null>(null);
+  const [awaitingListName, setAwaitingListName] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -209,7 +210,91 @@ export default function FloatingAdminChat() {
     ]);
   };
 
+  const CREATE_LIST_NAMED = /(?:create|make|build)\s+(?:me\s+)?a\s+list\s+(?:called|named|with\s+the\s+name)\s+["'""\u201C\u201D]?(.+?)["'""\u201C\u201D]?\s*$/i;
+
+  const createListByName = (listName: string): string => {
+    const newId = createList(listName);
+    toast.success(`List "${listName}" created!`);
+    return newId;
+  };
+
+  const handleChipClick = (chip: string) => {
+    // FIX 1: "Custom Name" chip — focus input instead of sending
+    if (/custom\s*name/i.test(chip)) {
+      setAwaitingListName(true);
+      if (inputRef.current) {
+        inputRef.current.value = "";
+        inputRef.current.placeholder = "Type your list name and press Enter...";
+        inputRef.current.focus();
+      }
+      return;
+    }
+
+    // FIX 4: Named list chips in list-building context — create immediately
+    const recentTexts = messages.slice(-6).map((m) => m.text.toLowerCase()).join(" ");
+    const isListContext = LIST_PHRASES.test(recentTexts) || /what.*name|name.*list|list.*call/i.test(recentTexts);
+    // Only treat as instant-create if the chip looks like a list name (not an action like "Add creators" or "No thanks")
+    const isActionChip = /^(yes|no|add|leave|show|filter|all|see more)/i.test(chip);
+    if (isListContext && !isActionChip) {
+      const newId = createListByName(chip);
+      setMessages((m) => [
+        ...m,
+        { id: makeId(), role: "user" as const, text: chip, hidden: true },
+        {
+          id: makeId(),
+          role: "assistant" as const,
+          text: `✅ **"${chip}"** list created! Want me to auto-populate it with matching creators?`,
+          chips: ["Yes, add creators", "No thanks"],
+          cta: { label: "View List →", link: `/lists/${newId}` },
+        },
+      ]);
+      return;
+    }
+
+    // Default: send as regular message
+    addResponse(chip);
+  };
+
   const addResponse = async (input: string, opts?: { hidden?: boolean }) => {
+    // FIX 1: If awaiting list name, create list immediately
+    if (awaitingListName) {
+      setAwaitingListName(false);
+      if (inputRef.current) inputRef.current.placeholder = "Ask me anything about creators, events, or campaigns...";
+      const listName = input.trim();
+      const newId = createListByName(listName);
+      setMessages((m) => [
+        ...m,
+        { id: makeId(), role: "user" as const, text: listName },
+        {
+          id: makeId(),
+          role: "assistant" as const,
+          text: `✅ List **"${listName}"** created! Want me to add creators to it? If so, what criteria — branch, follower count, or niche?`,
+          chips: ["Add creators now", "Leave it empty"],
+          cta: { label: "View List →", link: `/lists/${newId}` },
+        },
+      ]);
+      return;
+    }
+
+    // FIX 2: Direct "create a list called [NAME]" — create immediately
+    const namedMatch = input.match(CREATE_LIST_NAMED);
+    if (namedMatch) {
+      const listName = namedMatch[1].trim();
+      const newId = createListByName(listName);
+      setMessages((m) => [
+        ...m,
+        { id: makeId(), role: "user" as const, text: input },
+        {
+          id: makeId(),
+          role: "assistant" as const,
+          text: `✅ List **"${listName}"** created! Want me to add creators to it? If so, what criteria — branch, follower count, or niche?`,
+          chips: ["Add creators now", "Leave it empty"],
+          cta: { label: "View List →", link: `/lists/${newId}` },
+        },
+      ]);
+      return;
+    }
+
     const userMsgId = makeId();
     const loadingMsgId = makeId();
     setMessages((m) => [
@@ -256,11 +341,13 @@ Creators in the platform: ${creatorsBlock}
 
 Answer questions about these events and creators directly from this data. Do not say you lack access to the database. Never output raw JSON. Always respond in natural language.
 
+Be action-oriented. When the user's intent is clear, act immediately and confirm afterward. Only ask ONE clarifying question maximum, and only when the intent is genuinely ambiguous. Never ask multiple clarifying questions in the same response. If asked to create something, create it first then offer to refine.
+
 When showing events, always format each event as:
 **[Event Name](event_url or #)** - Date | Location
 Include the event photo if available. Always end event listings with a direct link. Format responses with clear sections and emojis for scannability.
 
-Ask MAXIMUM ONE clarifying question before showing results. Never ask more than one question in a single response. If the user has already answered one question, proceed immediately to showing results from the database — do not ask another question. Format creator results as:
+Never ask more than one question in a single response. If the user has already answered one question, proceed immediately to showing results — do not ask another question. Format creator results as:
 
 **[Name]** (@handle) — [branch] | [followers] followers | [engagement]% engagement
 
@@ -472,7 +559,7 @@ For all other questions, respond naturally and concisely.`;
                 {DEFAULT_CHIPS.map((prompt) => (
                   <button
                     key={prompt}
-                    onClick={() => addResponse(prompt)}
+                    onClick={() => handleChipClick(prompt)}
                     className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/20 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors"
                   >
                     {prompt}
@@ -686,7 +773,7 @@ For all other questions, respond naturally and concisely.`;
                       {m.chips.map((chip) => (
                         <button
                           key={chip}
-                          onClick={() => addResponse(chip)}
+                          onClick={() => handleChipClick(chip)}
                           className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/30 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/15 transition-colors"
                         >
                           {chip}
