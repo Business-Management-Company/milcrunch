@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -119,16 +119,8 @@ const AUDIENCE_TYPES = [
   "General Military",
 ] as const;
 
-const EVENT_TYPES = [
-  "Conference",
-  "Meetup",
-  "Workshop",
-  "Gala",
-  "Festival",
-  "Other",
-] as const;
-
 const RADIUS_OPTIONS = [
+  { value: "15", label: "15 miles" },
   { value: "25", label: "25 miles" },
   { value: "50", label: "50 miles" },
   { value: "100", label: "100 miles" },
@@ -585,10 +577,55 @@ export default function ConflictsCollabs() {
   // Form state
   const [locationInput, setLocationInput] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [radius, setRadius] = useState("50");
+  const [radius, setRadius] = useState("15");
   const [audienceTypes, setAudienceTypes] = useState<string[]>([]);
-  const [eventType, setEventType] = useState("");
-  const [eventName, setEventName] = useState("");
+
+  // Location autocomplete state
+  const [locationSuggestions, setLocationSuggestions] = useState<{ display: string; raw: any }[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locationWrapperRef = useRef<HTMLDivElement>(null);
+
+  const fetchLocationSuggestions = useCallback((value: string) => {
+    if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current);
+    if (!value.trim()) {
+      setLocationSuggestions([]);
+      setShowLocationDropdown(false);
+      return;
+    }
+    locationDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=us&q=${encodeURIComponent(value)}`
+        );
+        const data = await res.json();
+        const suggestions = data
+          .map((item: any) => {
+            const city = item.address?.city || item.address?.town || item.address?.village || item.address?.hamlet || item.address?.county;
+            const state = item.address?.state;
+            if (!city && !state) return null;
+            return { display: [city, state].filter(Boolean).join(", "), raw: item };
+          })
+          .filter(Boolean)
+          .filter((item: any, index: number, self: any[]) => self.findIndex((s) => s.display === item.display) === index);
+        setLocationSuggestions(suggestions);
+        setShowLocationDropdown(suggestions.length > 0);
+      } catch {
+        setLocationSuggestions([]);
+        setShowLocationDropdown(false);
+      }
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (locationWrapperRef.current && !locationWrapperRef.current.contains(e.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Data
   const [allEvents, setAllEvents] = useState<EventRow[]>([]);
@@ -649,7 +686,7 @@ export default function ConflictsCollabs() {
       endDate: dateRange.to ?? null,
       radiusMiles: Number(radius),
       audienceTypes,
-      eventType: eventType || "General",
+      eventType: "General",
     };
 
     const locationStr = [parsedLoc.city, parsedLoc.state].filter(Boolean).join(", ") || locationInput;
@@ -721,12 +758,10 @@ Guidelines:
 - Chamber of Commerce events should be COLLAB when they serve overlapping audiences (veteran business owners, military spouse entrepreneurs, local business community) — include reason "Chamber partnership could drive local business sponsor leads"
 - Chamber of Commerce events should be CONFLICT only when they directly compete for the same date, location, and audience`,
         `Planned event details:
-- Name: "${eventName || "Untitled Event"}"
 - Date: ${dateRangeStr}
 - Location: ${locationStr}
 - Search Radius: ${radius} miles
-- Target Audience: ${audienceTypes.join(", ") || "General Military"}
-- Event Type: ${eventType || "General"}${baseContext}
+- Target Audience: ${audienceTypes.join(", ") || "General Military"}${baseContext}
 
 Generate realistic competing events and collaboration opportunities.`,
         4096,
@@ -774,12 +809,12 @@ Generate realistic competing events and collaboration opportunities.`,
       try {
         const topResults = scanResults.slice(0, 8);
         const planSummary = {
-          name: eventName || "Planned Event",
+          name: "Planned Event",
           date: dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "TBD",
           endDate: dateRange.to ? format(dateRange.to, "MMM d, yyyy") : null,
           location: locationInput,
           audience: audienceTypes.join(", ") || "General Military",
-          eventType: eventType || "Event",
+          eventType: "Event",
         };
 
         const eventsForAI = topResults.map((r) => ({
@@ -832,14 +867,14 @@ Return ONLY a JSON array: [{"id":"event-id","suggestion":"your suggestion"}]`,
     const planDate = dateRange?.from ? format(dateRange.from, "MMM d, yyyy") : "TBD";
     const planEndDate = dateRange?.to ? ` - ${format(dateRange.to, "MMM d, yyyy")}` : "";
     const targetDate = target.start_date ? format(parseISO(target.start_date), "MMM d, yyyy") : "TBD";
-    const planName = eventName || "our upcoming event";
+    const planName = "our upcoming event";
 
     try {
       const pitch = await callAnthropic(
         `You are writing a collaboration outreach email for a military community event organizer on MilCrunch. Write a professional, warm, and specific collaboration pitch email. Include a subject line. Keep it concise but compelling. Suggest 3-4 specific collaboration ideas relevant to these events.`,
         `Write a collab pitch email from:
 - Event: "${planName}" on ${planDate}${planEndDate} in ${locationInput || "TBD"}
-- Type: ${eventType || "Event"}, Audience: ${audienceTypes.join(", ") || "Military community"}
+- Audience: ${audienceTypes.join(", ") || "Military community"}
 
 To the organizers of:
 - Event: "${target.title}" on ${targetDate} in ${getLocation(target) || "TBD"}
@@ -869,7 +904,7 @@ Both events serve overlapping military audiences. Write the email.`,
     const isChamber = ev.source.toLowerCase().includes("chamber");
     const planDate = dateRange?.from ? format(dateRange.from, "MMM d, yyyy") : "TBD";
     const planEndDate = dateRange?.to ? ` - ${format(dateRange.to, "MMM d, yyyy")}` : "";
-    const planName = eventName || "our upcoming event";
+    const planName = "our upcoming event";
 
     const chamberContext = isChamber
       ? `\n\nIMPORTANT: This is a Chamber of Commerce event. Specifically emphasize co-marketing opportunities targeting veteran-owned businesses and military spouse entrepreneurs in the ${locationInput || "local"} area. Suggest joint outreach to veteran business owners, military spouse entrepreneur networks, and local business community leaders. Frame the partnership as a way to drive local business sponsor leads for both organizations.`
@@ -880,7 +915,7 @@ Both events serve overlapping military audiences. Write the email.`,
         `You are writing a collaboration outreach email for a military community event organizer on MilCrunch. Write a professional, warm, and specific collaboration pitch email. Include a subject line. Keep it concise but compelling. Suggest 3-4 specific collaboration ideas relevant to these events.${chamberContext}`,
         `Write a collab pitch email from:
 - Event: "${planName}" on ${planDate}${planEndDate} in ${locationInput || "TBD"}
-- Type: ${eventType || "Event"}, Audience: ${audienceTypes.join(", ") || "Military community"}
+- Audience: ${audienceTypes.join(", ") || "Military community"}
 
 To the organizers of:
 - Event: "${ev.name}" on ${ev.date} in ${ev.location}
@@ -952,7 +987,7 @@ Both events serve overlapping audiences. Write the email.`,
         <div className="space-y-4">
           {/* Row 1: Location, Date, Radius */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+            <div ref={locationWrapperRef}>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                 Location (City, State or Zip)
               </label>
@@ -961,9 +996,30 @@ Both events serve overlapping audiences. Write the email.`,
                 <Input
                   placeholder="San Diego, CA"
                   value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
+                  onChange={(e) => {
+                    setLocationInput(e.target.value);
+                    fetchLocationSuggestions(e.target.value);
+                  }}
+                  onFocus={() => { if (locationSuggestions.length > 0) setShowLocationDropdown(true); }}
                   className="pl-8"
                 />
+                {showLocationDropdown && locationSuggestions.length > 0 && (
+                  <div className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg w-full mt-1">
+                    {locationSuggestions.map((s, i) => (
+                      <div
+                        key={i}
+                        className="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                        onClick={() => {
+                          setLocationInput(s.display);
+                          setShowLocationDropdown(false);
+                          setLocationSuggestions([]);
+                        }}
+                      >
+                        {s.display}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1046,37 +1102,8 @@ Both events serve overlapping audiences. Write the email.`,
             </div>
           </div>
 
-          {/* Row 3: Event Type + Event Name + Scan button */}
-          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr_auto] gap-3 items-end">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Event Type
-              </label>
-              <Select value={eventType} onValueChange={setEventType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {EVENT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Event Name <span className="text-muted-foreground/60">(optional)</span>
-              </label>
-              <Input
-                placeholder="e.g. MilCrunch Veterans Summit"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-              />
-            </div>
-
+          {/* Row 3: Scan button */}
+          <div className="flex items-end">
             <Button
               onClick={runScan}
               disabled={scanning || !locationInput.trim() || !dateRange?.from}
@@ -1549,7 +1576,7 @@ Both events serve overlapping audiences. Write the email.`,
               <div>
                 <h3 className="font-semibold text-sm">Collab Pitch Email</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {eventName || "Your Event"} → {pitchModal?.target.title ?? aiPitchTarget?.name ?? ""}
+                  {"Your Event"} → {pitchModal?.target.title ?? aiPitchTarget?.name ?? ""}
                 </p>
               </div>
               <Button size="sm" variant="ghost" onClick={() => { setPitchModal(null); setAiPitchTarget(null); }} className="h-7 w-7 p-0">
@@ -1585,7 +1612,7 @@ Both events serve overlapping audiences. Write the email.`,
                   onClick={() => {
                     const subjectMatch = generatedPitch.match(/^Subject:\s*(.+)/m);
                     const targetName = pitchModal?.target.title ?? aiPitchTarget?.name ?? "";
-                    const subject = encodeURIComponent(subjectMatch?.[1] || `Collab Opportunity — ${eventName || "Our Event"} x ${targetName}`);
+                    const subject = encodeURIComponent(subjectMatch?.[1] || `Collab Opportunity — Our Event x ${targetName}`);
                     const body = encodeURIComponent(generatedPitch.replace(/^Subject:.+\n\n?/, ""));
                     window.open(`mailto:?subject=${subject}&body=${body}`);
                   }}

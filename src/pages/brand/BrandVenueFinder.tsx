@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -206,6 +206,52 @@ export default function BrandVenueFinder() {
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
   const [location, setLocation] = useState("");
+  const [venueSuggestions, setVenueSuggestions] = useState<{ display: string; raw: any }[]>([]);
+  const [showVenueLocDropdown, setShowVenueLocDropdown] = useState(false);
+  const venueLocDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const venueLocWrapperRef = useRef<HTMLDivElement>(null);
+
+  const fetchVenueLocSuggestions = useCallback((value: string) => {
+    if (venueLocDebounceRef.current) clearTimeout(venueLocDebounceRef.current);
+    if (!value.trim()) {
+      setVenueSuggestions([]);
+      setShowVenueLocDropdown(false);
+      return;
+    }
+    venueLocDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=us&q=${encodeURIComponent(value)}`
+        );
+        const data = await res.json();
+        const suggestions = data
+          .map((item: any) => {
+            const city = item.address?.city || item.address?.town || item.address?.village || item.address?.hamlet || item.address?.county;
+            const state = item.address?.state;
+            if (!city && !state) return null;
+            return { display: [city, state].filter(Boolean).join(", "), raw: item };
+          })
+          .filter(Boolean)
+          .filter((item: any, index: number, self: any[]) => self.findIndex((s) => s.display === item.display) === index);
+        setVenueSuggestions(suggestions);
+        setShowVenueLocDropdown(suggestions.length > 0);
+      } catch {
+        setVenueSuggestions([]);
+        setShowVenueLocDropdown(false);
+      }
+    }, 300);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (venueLocWrapperRef.current && !venueLocWrapperRef.current.contains(e.target as Node)) {
+        setShowVenueLocDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("fit_score");
   const [minRating, setMinRating] = useState("0");
@@ -550,15 +596,36 @@ export default function BrandVenueFinder() {
               className="pl-9"
             />
           </div>
-          <div className="relative md:w-[35%]">
+          <div className="relative md:w-[35%]" ref={venueLocWrapperRef}>
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               placeholder="City or location"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => {
+                setLocation(e.target.value);
+                fetchVenueLocSuggestions(e.target.value);
+              }}
+              onFocus={() => { if (venueSuggestions.length > 0) setShowVenueLocDropdown(true); }}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               className="pl-9"
             />
+            {showVenueLocDropdown && venueSuggestions.length > 0 && (
+              <div className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg w-full mt-1">
+                {venueSuggestions.map((s, i) => (
+                  <div
+                    key={i}
+                    className="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      setLocation(s.display);
+                      setShowVenueLocDropdown(false);
+                      setVenueSuggestions([]);
+                    }}
+                  >
+                    {s.display}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <Button
             onClick={handleSearch}
