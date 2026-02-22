@@ -77,6 +77,7 @@ const BrandLists = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
   const [promotingAll, setPromotingAll] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   const selectedList = selectedListId
     ? lists.find((l) => l.id === selectedListId)
@@ -164,66 +165,124 @@ const BrandLists = () => {
         creator={profileCreator}
       />
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
-          Saved Lists
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Manage saved creator lists for events and campaigns. Create lists from
-          Discover, then invite or target them for specific opportunities.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
+              Saved Lists
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400">
+              Manage saved creator lists for events and campaigns. Create lists from
+              Discover, then invite or target them for specific opportunities.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('card')}
+              className={`p-1.5 rounded ${viewMode === 'card' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-600'}`}
+              title="Card view"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-600'}`}
+              title="List view"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {lists.map((list) => (
-          <Card
-            key={list.id}
-            className={cn(
-              "bg-gradient-card border-border p-5 cursor-pointer transition-colors hover:border-primary/50",
-              selectedListId === list.id && "ring-2 ring-primary"
-            )}
-            onClick={() =>
-              setSelectedListId(selectedListId === list.id ? null : list.id)
-            }
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                  <List className="w-5 h-5 text-muted-foreground" />
+      {viewMode === 'card' && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {lists.map((list) => (
+            <Card
+              key={list.id}
+              className={cn(
+                "bg-gradient-card border-border p-5 cursor-pointer transition-colors hover:border-primary/50",
+                selectedListId === list.id && "ring-2 ring-primary"
+              )}
+              onClick={() =>
+                setSelectedListId(selectedListId === list.id ? null : list.id)
+              }
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                    <List className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {list.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {list.creators.length} creator
+                      {list.creators.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {list.name}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {list.creators.length} creator
-                    {list.creators.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
+                <ChevronRight
+                  className={cn(
+                    "w-5 h-5 text-muted-foreground transition-transform",
+                    selectedListId === list.id && "rotate-90"
+                  )}
+                />
               </div>
-              <ChevronRight
-                className={cn(
-                  "w-5 h-5 text-muted-foreground transition-transform",
-                  selectedListId === list.id && "rotate-90"
-                )}
-              />
+            </Card>
+          ))}
+          <Card
+            className="bg-gradient-card border-border border-dashed p-5 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/30 flex items-center justify-center min-h-[88px]"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCreateModalOpen(true);
+            }}
+          >
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                <Plus className="w-5 h-5" />
+              </div>
+              <span className="text-lg font-semibold text-foreground">Create New List</span>
             </div>
           </Card>
-        ))}
-        <Card
-          className="bg-gradient-card border-border border-dashed p-5 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/30 flex items-center justify-center min-h-[88px]"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCreateModalOpen(true);
-          }}
-        >
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-              <Plus className="w-5 h-5" />
+        </div>
+      )}
+
+      {viewMode === 'list' && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+          {lists.map((list) => (
+            <div
+              key={list.id}
+              className={cn(
+                "flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer",
+                selectedListId === list.id && "bg-indigo-50 dark:bg-indigo-950/20"
+              )}
+              onClick={() =>
+                setSelectedListId(selectedListId === list.id ? null : list.id)
+              }
+            >
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-gray-900 dark:text-white text-sm">{list.name}</span>
+                <span className="text-xs text-gray-400">{list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ChevronRight className={cn("w-4 h-4 text-gray-300 dark:text-gray-600 transition-transform", selectedListId === list.id && "rotate-90")} />
+              </div>
             </div>
-            <span className="text-lg font-semibold text-foreground">Create New List</span>
+          ))}
+          <div
+            className="flex items-center justify-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer text-muted-foreground"
+            onClick={() => setCreateModalOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            <span className="font-medium text-sm text-foreground">Create New List</span>
           </div>
-        </Card>
-      </div>
+        </div>
+      )}
 
       {selectedList && (
         <div className="mt-8">

@@ -57,6 +57,7 @@ import {
   ShieldCheck,
   ListPlus,
   FolderPlus,
+  ChevronRight,
 } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import {
@@ -187,6 +188,7 @@ const BrandDirectory = () => {
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [creating, setCreating] = useState(false);
+  const [dirViewMode, setDirViewMode] = useState<'card' | 'list'>('card');
 
   // Detail-level state
   const [selectedDir, setSelectedDir] = useState<Directory | null>(null);
@@ -607,13 +609,35 @@ const BrandDirectory = () => {
                 Manage public-facing curated collections of creators.
               </p>
             </div>
-            <Button
-              className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create New Directory
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 border border-gray-200 dark:border-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setDirViewMode('card')}
+                  className={`p-1.5 rounded ${dirViewMode === 'card' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="Card view"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setDirViewMode('list')}
+                  className={`p-1.5 rounded ${dirViewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="List view"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/>
+                  </svg>
+                </button>
+              </div>
+              <Button
+                className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create New Directory
+              </Button>
+            </div>
           </div>
 
           {dirsLoading && (
@@ -637,7 +661,7 @@ const BrandDirectory = () => {
             </Card>
           )}
 
-          {!dirsLoading && directories.length > 0 && (
+          {!dirsLoading && directories.length > 0 && dirViewMode === 'card' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {directories.map((dir) => (
                 <Card
@@ -687,6 +711,32 @@ const BrandDirectory = () => {
                     </div>
                   </div>
                 </Card>
+              ))}
+            </div>
+          )}
+
+          {!dirsLoading && directories.length > 0 && dirViewMode === 'list' && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+              {directories.map((dir) => (
+                <div
+                  key={dir.id}
+                  className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer"
+                  onClick={() => openDirectory(dir)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium text-gray-900 dark:text-white text-sm">{dir.name}</span>
+                    <span className="text-xs text-gray-400">{dir.member_count ?? 0} creators</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {dir.is_public && (
+                      <Badge variant="outline" className="text-[10px] border-purple-300 text-purple-700 dark:text-purple-400">
+                        Public
+                      </Badge>
+                    )}
+                    <span className="text-xs text-gray-400 hidden sm:inline">{dir.description}</span>
+                    <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                  </div>
+                </div>
               ))}
             </div>
           )}
