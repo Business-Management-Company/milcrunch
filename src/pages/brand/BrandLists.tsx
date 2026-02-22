@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreateListModal from "@/components/CreateListModal";
@@ -69,14 +71,74 @@ async function promoteCreatorToDirectory(
 }
 
 const BrandLists = () => {
-  const { lists, createList } = useLists();
+  const { lists, createList, deleteList, renameList, updateListAvatar } = useLists();
   const navigate = useNavigate();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imageTargetId, setImageTargetId] = useState<string | null>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const handler = () => setMenuOpenId(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [menuOpenId]);
 
   const handleCreateList = (name: string) => {
     const id = createList(name);
     navigate(`/lists/${id}`);
+  };
+
+  const handleStartRename = (listId: string, currentName: string) => {
+    setMenuOpenId(null);
+    setRenamingId(listId);
+    setRenameValue(currentName);
+  };
+
+  const handleFinishRename = () => {
+    if (renamingId && renameValue.trim()) {
+      renameList(renamingId, renameValue.trim());
+      toast.success("List renamed");
+    }
+    setRenamingId(null);
+  };
+
+  const handleChangeImage = (listId: string) => {
+    setMenuOpenId(null);
+    setImageTargetId(listId);
+    imageInputRef.current?.click();
+  };
+
+  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !imageTargetId) return;
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${imageTargetId}/avatar.${ext}`;
+    const { error } = await supabase.storage.from("list-avatars").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Failed to upload image");
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("list-avatars").getPublicUrl(path);
+    if (urlData?.publicUrl) {
+      updateListAvatar(imageTargetId, urlData.publicUrl);
+      toast.success("List image updated");
+    }
+    setImageTargetId(null);
+    e.target.value = "";
+  };
+
+  const handleDeleteList = () => {
+    if (!deleteConfirmId) return;
+    deleteList(deleteConfirmId);
+    toast.success("List deleted");
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -120,14 +182,62 @@ const BrandLists = () => {
         </div>
       </div>
 
+      {/* Hidden file input for image upload */}
+      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Delete List</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Are you sure you want to delete this list? This action cannot be undone.</p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteList}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {viewMode === 'card' && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {lists.map((list) => (
             <Card
               key={list.id}
-              className="bg-gradient-card border-border p-5 cursor-pointer transition-colors hover:border-primary/50"
-              onClick={() => navigate(`/lists/${list.id}`)}
+              className="bg-gradient-card border-border p-5 cursor-pointer transition-colors hover:border-primary/50 relative group"
+              onClick={() => renamingId !== list.id && navigate(`/lists/${list.id}`)}
             >
+              {/* "..." menu button */}
+              <button
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none z-10"
+                onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === list.id ? null : list.id); }}
+              >
+                ⋯
+              </button>
+              {/* Dropdown menu */}
+              {menuOpenId === list.id && (
+                <div
+                  className="absolute top-9 right-2 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
+                    onClick={() => handleStartRename(list.id, list.name)}
+                  >
+                    ✏️ Rename
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
+                    onClick={() => handleChangeImage(list.id)}
+                  >
+                    🖼️ Change Image
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2 text-red-600 dark:text-red-400"
+                    onClick={() => { setMenuOpenId(null); setDeleteConfirmId(list.id); }}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {list.avatar_url ? (
@@ -142,9 +252,21 @@ const BrandLists = () => {
                     </div>
                   )}
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {list.name}
-                    </h3>
+                    {renamingId === list.id ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={handleFinishRename}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
+                        className="text-lg font-semibold text-foreground bg-transparent border-b-2 border-[#6C5CE7] outline-none w-full"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {list.name}
+                      </h3>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       {list.creators.length > 0 && (
                         <div className="flex -space-x-2">
@@ -197,8 +319,8 @@ const BrandLists = () => {
           {lists.map((list) => (
             <div
               key={list.id}
-              className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer"
-              onClick={() => navigate(`/lists/${list.id}`)}
+              className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer relative group"
+              onClick={() => renamingId !== list.id && navigate(`/lists/${list.id}`)}
             >
               <div className="flex items-center gap-3">
                 {list.avatar_url ? (
@@ -208,7 +330,19 @@ const BrandLists = () => {
                     <List className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                 )}
-                <span className="font-medium text-gray-900 dark:text-white text-sm">{list.name}</span>
+                {renamingId === list.id ? (
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={handleFinishRename}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
+                    className="font-medium text-gray-900 dark:text-white text-sm bg-transparent border-b-2 border-[#6C5CE7] outline-none"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="font-medium text-gray-900 dark:text-white text-sm">{list.name}</span>
+                )}
                 {list.creators.length > 0 && (
                   <div className="flex -space-x-1.5">
                     {list.creators.slice(0, 4).map((member, i) => (
@@ -231,8 +365,40 @@ const BrandLists = () => {
                 <span className="text-xs text-gray-400">{list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}</span>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg leading-none"
+                  onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === list.id ? null : list.id); }}
+                >
+                  ⋯
+                </button>
                 <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
               </div>
+              {/* Dropdown menu for list view */}
+              {menuOpenId === list.id && (
+                <div
+                  className="absolute top-full right-4 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
+                    onClick={() => handleStartRename(list.id, list.name)}
+                  >
+                    ✏️ Rename
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
+                    onClick={() => handleChangeImage(list.id)}
+                  >
+                    🖼️ Change Image
+                  </button>
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2 text-red-600 dark:text-red-400"
+                    onClick={() => { setMenuOpenId(null); setDeleteConfirmId(list.id); }}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              )}
             </div>
           ))}
           <div

@@ -37,6 +37,9 @@ type ListContextValue = {
   addCreatorToList: (listId: string, creator: ListCreator) => void;
   removeCreatorFromList: (listId: string, creatorId: string) => void;
   createList: (name: string) => string;
+  deleteList: (listId: string) => void;
+  renameList: (listId: string, name: string) => void;
+  updateListAvatar: (listId: string, avatarUrl: string) => void;
   isCreatorInList: (creatorId: string, listId?: string) => boolean;
 };
 
@@ -113,6 +116,30 @@ export function ListProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const deleteList = useCallback((listId: string) => {
+    setLists((prev) => {
+      const next = prev.filter((l) => l.id !== listId);
+      try { localStorage.setItem("parade-deck-lists", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const renameList = useCallback((listId: string, name: string) => {
+    setLists((prev) => {
+      const next = prev.map((l) => l.id === listId ? { ...l, name } : l);
+      try { localStorage.setItem("parade-deck-lists", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const updateListAvatar = useCallback((listId: string, avatarUrl: string) => {
+    setLists((prev) => {
+      const next = prev.map((l) => l.id === listId ? { ...l, avatar_url: avatarUrl } : l);
+      try { localStorage.setItem("parade-deck-lists", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
   const isCreatorInList = useCallback(
     (creatorId: string, listId?: string): boolean => {
       if (listId) {
@@ -130,9 +157,12 @@ export function ListProvider({ children }: { children: ReactNode }) {
       addCreatorToList,
       removeCreatorFromList,
       createList,
+      deleteList,
+      renameList,
+      updateListAvatar,
       isCreatorInList,
     }),
-    [lists, addCreatorToList, removeCreatorFromList, createList, isCreatorInList]
+    [lists, addCreatorToList, removeCreatorFromList, createList, deleteList, renameList, updateListAvatar, isCreatorInList]
   );
 
   return (
