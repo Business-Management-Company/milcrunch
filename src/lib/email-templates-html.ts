@@ -30,7 +30,7 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
     category: "event",
     description: "Purple header with event details and RSVP button",
     thumbnail_color: "#6C5CE7",
-    thumbnail_image: "https://images.unsplash.com/photo-1579192181049-30e4c148cfa0?w=400&h=160&fit=crop&crop=center",
+    thumbnail_image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
 <tr><td style="background:url('https://images.unsplash.com/photo-1579192181049-30e4c148cfa0?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#6C5CE7,#000741);padding:0;">
 <div style="background:rgba(0,7,65,0.65);padding:48px 40px;text-align:center;">
@@ -54,7 +54,7 @@ ${WRAPPER_END}`,
     category: "welcome",
     description: "Welcome message with next steps and social links",
     thumbnail_color: "#10B981",
-    thumbnail_image: "https://images.unsplash.com/photo-1598128558393-70ff21f8be44?w=400&h=160&fit=crop&crop=center",
+    thumbnail_image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
 <tr><td style="background:url('https://images.unsplash.com/photo-1598128558393-70ff21f8be44?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, #10B981;padding:0;">
 <div style="background:rgba(5,90,60,0.7);padding:40px;text-align:center;">
@@ -88,7 +88,7 @@ ${WRAPPER_END}`,
     category: "report",
     description: "Data table layout with logo header for sponsor updates",
     thumbnail_color: "#3B82F6",
-    thumbnail_image: "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=160&fit=crop&crop=center",
+    thumbnail_image: "https://images.unsplash.com/photo-1521791136064-7986c2cb4cb3?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
 <tr><td style="background:url('https://images.unsplash.com/photo-1521791136064-7986c2920216?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, #000741;padding:0;">
 <div style="background:rgba(0,7,65,0.75);padding:32px 40px;text-align:center;">
@@ -119,7 +119,7 @@ ${WRAPPER_END}`,
     category: "newsletter",
     description: "Multi-section newsletter with image placeholders",
     thumbnail_color: "#F59E0B",
-    thumbnail_image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=160&fit=crop&crop=center",
+    thumbnail_image: "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
 <tr><td style="background:url('https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#F59E0B,#D97706);padding:0;">
 <div style="background:rgba(120,80,0,0.65);padding:40px;text-align:center;">
@@ -148,7 +148,7 @@ ${WRAPPER_END}`,
     category: "reminder",
     description: "Countdown-style reminder with schedule highlights",
     thumbnail_color: "#EF4444",
-    thumbnail_image: "https://images.unsplash.com/photo-1523875194681-bedd468c58bf?w=400&h=160&fit=crop&crop=center",
+    thumbnail_image: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
 <tr><td style="background:url('https://images.unsplash.com/photo-1523875194681-bedd468c58bf?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#EF4444,#B91C1C);padding:0;">
 <div style="background:rgba(140,20,20,0.7);padding:40px;text-align:center;">
@@ -184,7 +184,7 @@ ${WRAPPER_END}`,
     category: "thankyou",
     description: "Thank you message with event highlights and CTA",
     thumbnail_color: "#8B5CF6",
-    thumbnail_image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=160&fit=crop&crop=center",
+    thumbnail_image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
 <tr><td style="background:url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#8B5CF6,#6D28D9);padding:0;">
 <div style="background:rgba(80,30,160,0.7);padding:48px 40px;text-align:center;">
