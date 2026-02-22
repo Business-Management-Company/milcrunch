@@ -474,7 +474,11 @@ export default function Verification() {
           zip: addForm.zip.trim() || null,
           source: addForm.source || "manual",
           source_username: addForm.sourceUsername || null,
-          manual_checks: result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {},
+          manual_checks: {
+            ...(result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {}),
+            ...(result.mediaAppearances?.length ? { youtube_media: { videos: result.mediaAppearances, searched_at: new Date().toISOString() } } : {}),
+            ...(result.careerData ? { career_track: { result: result.careerData, generated_at: new Date().toISOString() } } : {}),
+          },
           last_verified_at: new Date().toISOString(),
         })
         .select("id")
@@ -516,35 +520,6 @@ export default function Verification() {
         }
         })();
 
-        // Phase 5: Media & Appearances — auto-run YouTube media search
-        onPhase({ phase: 5, name: "Media & Appearances", status: "running" });
-        void (async () => { try {
-          const mediaSearchName = addForm.fullName.trim();
-          const ytQuery = `"${mediaSearchName}" veteran interview OR podcast OR speaker`;
-          const ytResults = await searchSerp(ytQuery);
-          const videos = ytResults
-            .filter((r: any) => r.link?.includes('youtube.com') || r.link?.includes('youtu.be'))
-            .slice(0, 6)
-            .map((r: any) => ({
-              title: r.title ?? "",
-              url: r.link ?? "",
-              thumbnail: r.thumbnail ?? "",
-              snippet: r.snippet ?? "",
-            }));
-          if (videos.length > 0) {
-            await supabase.from('verifications')
-              .update({ manual_checks: { youtube_results: videos } })
-              .eq('id', inserted.id);
-          }
-          onPhase({ phase: 5, name: "Media & Appearances", status: "done" });
-        } catch (e) { console.error("Media auto-run failed:", e); onPhase({ phase: 5, name: "Media & Appearances", status: "done" }); } })();
-
-        // Phase 6: Military / Civilian Career — complete (data from PDL phase)
-        onPhase({ phase: 6, name: "Military / Civilian Career", status: "done" });
-
-        // Phase 7: Social Verification — complete (stored in record)
-        onPhase({ phase: 7, name: "Social Verification", status: "done" });
-
         setList((prev) => [
           {
             ...inserted,
@@ -570,7 +545,11 @@ export default function Verification() {
             zip: addForm.zip.trim() || null,
             source: addForm.source || "manual",
             source_username: addForm.sourceUsername || null,
-            manual_checks: result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {},
+            manual_checks: {
+              ...(result.youtubeResults?.length ? { youtube_results: result.youtubeResults } : {}),
+              ...(result.mediaAppearances?.length ? { youtube_media: { videos: result.mediaAppearances, searched_at: new Date().toISOString() } } : {}),
+              ...(result.careerData ? { career_track: { result: result.careerData, generated_at: new Date().toISOString() } } : {}),
+            },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             last_verified_at: new Date().toISOString(),
@@ -764,11 +743,12 @@ export default function Verification() {
               <p className="text-xs text-gray-400 mt-1">Please keep this window open while we search across multiple data sources.</p>
             </div>
             <div className="w-full space-y-3">
-              {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+              {[1, 2, 5, 6, 7, 3, 4].map((n) => {
                 const p = phases.find((x) => x.phase === n);
-                const labels = ["People Data Labs", "Web Search", "Deep Extraction", "AI Analysis", "Media & Appearances", "Military / Civilian Career", "Social Verification"];
+                const labelMap: Record<number, string> = { 1: "People Data Labs", 2: "Web Search", 5: "Media & Appearances", 6: "Military / Civilian Career", 7: "Social Verification", 3: "Deep Extraction", 4: "AI Analysis" };
                 const isDone = p?.status === "done";
                 const isRunning = p?.status === "running";
+                const phasePrefix = (n <= 4) ? `Phase ${n}: ` : "";
                 return (
                   <div key={n} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${isRunning ? "bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800" : isDone ? "opacity-50" : "opacity-30"}`}>
                     {isDone ? (
@@ -779,7 +759,7 @@ export default function Verification() {
                       <span className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
                     )}
                     <span className={`text-sm font-medium ${isRunning ? "text-[#6C5CE7]" : ""}`}>
-                      {n <= 4 ? `Phase ${n}: ` : ""}{p?.name ?? labels[n - 1]}
+                      {phasePrefix}{p?.name ?? labelMap[n]}
                     </span>
                   </div>
                 );

@@ -238,6 +238,9 @@ export async function runVerificationAnalysis(params: {
   pdlData: unknown;
   serpResults: unknown;
   firecrawlExtractions: unknown;
+  mediaAppearances?: unknown;
+  careerData?: unknown;
+  socialProfiles?: unknown;
 }): Promise<string> {
   const systemPrompt = `You are a military service verification analyst for MilCrunch — a platform that supports and celebrates military creators and veterans. Your job is to look for SUPPORTING evidence, not to play "gotcha."
 
@@ -254,6 +257,9 @@ Evidence sources:
 1. People Data Labs professional data: ${JSON.stringify(params.pdlData, null, 2)}
 2. Web search results: ${JSON.stringify(params.serpResults, null, 2)}
 3. Scraped page content: ${JSON.stringify(params.firecrawlExtractions, null, 2)}
+4. Media & Appearances: ${JSON.stringify(params.mediaAppearances ?? [], null, 2)}
+5. Career Timeline: ${JSON.stringify(params.careerData ?? null, null, 2)}
+6. Social Profiles: ${JSON.stringify(params.socialProfiles ?? [], null, 2)}
 
 Provide:
 1. VERIFICATION CONFIDENCE: A score from 50-100% with reasoning. Start at 50% (benefit of the doubt) and only go UP with supporting evidence, or DOWN if there is concrete negative evidence.
@@ -553,12 +559,122 @@ export async function runVerificationPipeline(
   }
   onPhase({ phase: 2, name: "Web Search", status: "done", data: evidenceSources });
 
-  // YouTube media search — runs in parallel with Phase 3
+  // YouTube media search — starts in parallel, awaited before Media phase
   let youtubeResults: YouTubeResult[] = [];
   const youtubePromise = searchYouTube(input.fullName, input.claimedBranch).then(
     (results) => { youtubeResults = results; },
     (err) => { console.warn("[Verify] YouTube search failed:", err); }
   );
+
+  // Phase 5: Media & Appearances — consolidate YouTube + media-related SerpAPI results
+  onPhase({ phase: 5, name: "Media & Appearances", status: "running" });
+  await youtubePromise;
+  let mediaComplete = false;
+  const MEDIA_URL_PATTERN = /youtube\.com|youtu\.be|podcast|spotify\.com|apple\.com\/podcast|anchor\.fm|iheart|stitcher|soundcloud|vimeo|dailymotion|rumble|bitchute/i;
+  const MEDIA_TEXT_PATTERN = /podcast|interview|episode|keynote|panel|speaking|appearance|guest|featured on|spoke at|conference/i;
+  const mediaAppearances: { type: string; title: string; url: string; snippet?: string }[] = [];
+  try {
+    for (const yt of youtubeResults) {
+      mediaAppearances.push({
+        type: "youtube",
+        title: yt.title,
+        url: `https://www.youtube.com/watch?v=${yt.videoId}`,
+        snippet: yt.description,
+      });
+    }
+    for (const es of evidenceSources) {
+      const url = es.url ?? "";
+      const text = `${es.title ?? ""} ${es.snippet ?? ""}`;
+      if (MEDIA_URL_PATTERN.test(url) || MEDIA_TEXT_PATTERN.test(text)) {
+        if (mediaAppearances.some((m) => url.includes(m.url) || m.url.includes(url))) continue;
+        let type = "article";
+        if (/youtube|youtu\.be|vimeo|rumble/i.test(url)) type = "video";
+        else if (/podcast|spotify|apple.*podcast|anchor|iheart|stitcher|soundcloud/i.test(url)) type = "podcast";
+        else if (MEDIA_TEXT_PATTERN.test(text)) type = "appearance";
+        mediaAppearances.push({ type, title: es.title ?? "", url, snippet: es.snippet });
+      }
+    }
+    mediaComplete = true;
+  } catch (err) {
+    console.warn("[Verify] Phase 5 (Media) failed:", err);
+  }
+  onPhase({ phase: 5, name: "Media & Appearances", status: "done", data: { count: mediaAppearances.length, mediaComplete } });
+
+  // Phase 6: Career Extraction — AI-powered career timeline from PDL + web search data
+  onPhase({ phase: 6, name: "Career Extraction", status: "running" });
+  let careerData: EnhancedCareerResult | null = null;
+  let careerComplete = false;
+  try {
+    const serpSnippets = evidenceSources.map((s) => `${s.title}: ${s.snippet}`).join("\n");
+    const pdlSummary = pdlData ? JSON.stringify({
+      employment: pdlData.employment,
+      education: pdlData.education,
+      job_title: pdlData.job_title,
+      skills: (pdlData as any)?.skills,
+    }) : undefined;
+    careerData = await extractCareerTimeline({
+      personName: input.fullName,
+      firecrawlContent: "", // firecrawl not yet available at this stage
+      serpSnippets,
+      claimedBranch: input.claimedBranch,
+      notesField: input.notes,
+      pdlSummary,
+    });
+    careerComplete = true;
+  } catch (err) {
+    console.warn("[Verify] Phase 6 (Career) failed:", err);
+  }
+  onPhase({ phase: 6, name: "Career Extraction", status: "done", data: { careerComplete } });
+
+  // Phase 7: Social Verification — validate social handles from PDL + evidence
+  onPhase({ phase: 7, name: "Social Verification", status: "running" });
+  let socialComplete = false;
+  const socialProfiles: SocialProfile[] = [];
+  try {
+    if (pdlData?.profiles?.length) {
+      for (const p of pdlData.profiles) {
+        socialProfiles.push({
+          network: p.network ?? "unknown",
+          url: p.url ?? "",
+          verified: true,
+        });
+      }
+    }
+    const SOCIAL_PATTERNS: { network: string; pattern: RegExp }[] = [
+      { network: "instagram", pattern: /instagram\.com\/([a-zA-Z0-9_.]+)/i },
+      { network: "linkedin", pattern: /linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i },
+      { network: "twitter", pattern: /(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i },
+      { network: "youtube", pattern: /youtube\.com\/(?:@|channel\/|c\/)([a-zA-Z0-9_-]+)/i },
+      { network: "tiktok", pattern: /tiktok\.com\/@([a-zA-Z0-9_.]+)/i },
+      { network: "facebook", pattern: /facebook\.com\/([a-zA-Z0-9_.]+)/i },
+    ];
+    const seenNetworks = new Set(socialProfiles.map((p) => p.network));
+    for (const es of evidenceSources) {
+      const url = es.url ?? "";
+      for (const { network, pattern } of SOCIAL_PATTERNS) {
+        if (!seenNetworks.has(network) && pattern.test(url)) {
+          socialProfiles.push({ network, url, verified: false });
+          seenNetworks.add(network);
+        }
+      }
+    }
+    if (input.linkedinUrl && pdlLinkedinUrl) {
+      const existing = socialProfiles.find((p) => p.network === "linkedin");
+      if (existing) existing.verified = true;
+    }
+    socialComplete = true;
+  } catch (err) {
+    console.warn("[Verify] Phase 7 (Social) failed:", err);
+  }
+  const linkedinVerified = socialProfiles.some((p) => p.network === "linkedin" && p.verified);
+  const instagramFound = socialProfiles.some((p) => p.network === "instagram");
+  const socialVerification: SocialVerificationResult = {
+    profiles: socialProfiles,
+    linkedinVerified,
+    instagramFound,
+    totalPlatforms: socialProfiles.length,
+  };
+  onPhase({ phase: 7, name: "Social Verification", status: "done", data: { socialComplete, totalPlatforms: socialProfiles.length } });
 
   // Phase 3: Deep Extraction (FireCrawl) — non-blocking; failures must not kill the pipeline
   onPhase({ phase: 3, name: "Deep Extraction", status: "running" });
@@ -594,13 +710,9 @@ export async function runVerificationPipeline(
     console.warn("[Verify] Phase 3 failed, continuing:", err);
     firecrawlData = [];
   }
-  // Wait for YouTube search to complete alongside Phase 3
-  await youtubePromise;
-
-  // ALWAYS continue to Phase 4 regardless of Phase 3 outcome. Pass whatever data we have: PDL + SerpAPI at minimum, FireCrawl if available.
   onPhase({ phase: 3, name: "Deep Extraction", status: "done", data: firecrawlData });
 
-  // Phase 4: AI Analysis — ALWAYS runs regardless of Phase 3 outcome
+  // Phase 4: AI Analysis — runs after all other phases so it can incorporate everything
   onPhase({ phase: 4, name: "AI Analysis", status: "running" });
   const aiAnalysis = await runVerificationAnalysis({
     personName: input.fullName,
@@ -610,124 +722,11 @@ export async function runVerificationPipeline(
     pdlData,
     serpResults: evidenceSources,
     firecrawlExtractions: firecrawlData,
+    mediaAppearances,
+    careerData,
+    socialProfiles,
   });
   onPhase({ phase: 4, name: "AI Analysis", status: "done", data: aiAnalysis });
-
-  // Phase 5: Media & Appearances — consolidate YouTube + media-related SerpAPI results
-  onPhase({ phase: 5, name: "Media & Appearances", status: "running" });
-  let mediaComplete = false;
-  const MEDIA_URL_PATTERN = /youtube\.com|youtu\.be|podcast|spotify\.com|apple\.com\/podcast|anchor\.fm|iheart|stitcher|soundcloud|vimeo|dailymotion|rumble|bitchute/i;
-  const MEDIA_TEXT_PATTERN = /podcast|interview|episode|keynote|panel|speaking|appearance|guest|featured on|spoke at|conference/i;
-  const mediaAppearances: { type: string; title: string; url: string; snippet?: string }[] = [];
-  try {
-    // YouTube results → media appearances
-    for (const yt of youtubeResults) {
-      mediaAppearances.push({
-        type: "youtube",
-        title: yt.title,
-        url: `https://www.youtube.com/watch?v=${yt.videoId}`,
-        snippet: yt.description,
-      });
-    }
-    // Filter SerpAPI results for media/podcast/speaking URLs
-    for (const es of evidenceSources) {
-      const url = es.url ?? "";
-      const text = `${es.title ?? ""} ${es.snippet ?? ""}`;
-      if (MEDIA_URL_PATTERN.test(url) || MEDIA_TEXT_PATTERN.test(text)) {
-        // Avoid duplicating YouTube links already captured
-        if (mediaAppearances.some((m) => url.includes(m.url) || m.url.includes(url))) continue;
-        let type = "article";
-        if (/youtube|youtu\.be|vimeo|rumble/i.test(url)) type = "video";
-        else if (/podcast|spotify|apple.*podcast|anchor|iheart|stitcher|soundcloud/i.test(url)) type = "podcast";
-        else if (MEDIA_TEXT_PATTERN.test(text)) type = "appearance";
-        mediaAppearances.push({ type, title: es.title ?? "", url, snippet: es.snippet });
-      }
-    }
-    mediaComplete = true;
-  } catch (err) {
-    console.warn("[Verify] Phase 5 (Media) failed:", err);
-  }
-  onPhase({ phase: 5, name: "Media & Appearances", status: "done", data: { count: mediaAppearances.length, mediaComplete } });
-
-  // Phase 6: Career Extraction — AI-powered career timeline from all collected data
-  onPhase({ phase: 6, name: "Career Extraction", status: "running" });
-  let careerData: EnhancedCareerResult | null = null;
-  let careerComplete = false;
-  try {
-    const serpSnippets = evidenceSources.map((s) => `${s.title}: ${s.snippet}`).join("\n");
-    const firecrawlContent = firecrawlData.map((f) => f.markdown ?? "").join("\n---\n");
-    const pdlSummary = pdlData ? JSON.stringify({
-      employment: pdlData.employment,
-      education: pdlData.education,
-      job_title: pdlData.job_title,
-      skills: (pdlData as any)?.skills,
-    }) : undefined;
-    careerData = await extractCareerTimeline({
-      personName: input.fullName,
-      firecrawlContent,
-      serpSnippets,
-      claimedBranch: input.claimedBranch,
-      notesField: input.notes,
-      pdlSummary,
-    });
-    careerComplete = true;
-  } catch (err) {
-    console.warn("[Verify] Phase 6 (Career) failed:", err);
-  }
-  onPhase({ phase: 6, name: "Career Extraction", status: "done", data: { careerComplete } });
-
-  // Phase 7: Social Verification — validate social handles from PDL + evidence
-  onPhase({ phase: 7, name: "Social Verification", status: "running" });
-  let socialComplete = false;
-  const socialProfiles: SocialProfile[] = [];
-  try {
-    // Extract from PDL profiles
-    if (pdlData?.profiles?.length) {
-      for (const p of pdlData.profiles) {
-        socialProfiles.push({
-          network: p.network ?? "unknown",
-          url: p.url ?? "",
-          verified: true, // PDL confirmed
-        });
-      }
-    }
-    // Scan evidence sources for social platform URLs not already in PDL
-    const SOCIAL_PATTERNS: { network: string; pattern: RegExp }[] = [
-      { network: "instagram", pattern: /instagram\.com\/([a-zA-Z0-9_.]+)/i },
-      { network: "linkedin", pattern: /linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i },
-      { network: "twitter", pattern: /(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i },
-      { network: "youtube", pattern: /youtube\.com\/(?:@|channel\/|c\/)([a-zA-Z0-9_-]+)/i },
-      { network: "tiktok", pattern: /tiktok\.com\/@([a-zA-Z0-9_.]+)/i },
-      { network: "facebook", pattern: /facebook\.com\/([a-zA-Z0-9_.]+)/i },
-    ];
-    const seenNetworks = new Set(socialProfiles.map((p) => p.network));
-    for (const es of evidenceSources) {
-      const url = es.url ?? "";
-      for (const { network, pattern } of SOCIAL_PATTERNS) {
-        if (!seenNetworks.has(network) && pattern.test(url)) {
-          socialProfiles.push({ network, url, verified: false });
-          seenNetworks.add(network);
-        }
-      }
-    }
-    // Also check if LinkedIn URL from input was confirmed by PDL
-    if (input.linkedinUrl && pdlLinkedinUrl) {
-      const existing = socialProfiles.find((p) => p.network === "linkedin");
-      if (existing) existing.verified = true;
-    }
-    socialComplete = true;
-  } catch (err) {
-    console.warn("[Verify] Phase 7 (Social) failed:", err);
-  }
-  const linkedinVerified = socialProfiles.some((p) => p.network === "linkedin" && p.verified);
-  const instagramFound = socialProfiles.some((p) => p.network === "instagram");
-  const socialVerification: SocialVerificationResult = {
-    profiles: socialProfiles,
-    linkedinVerified,
-    instagramFound,
-    totalPlatforms: socialProfiles.length,
-  };
-  onPhase({ phase: 7, name: "Social Verification", status: "done", data: { socialComplete, totalPlatforms: socialProfiles.length } });
 
   const hasCriminalFlags = evidenceSources.some((s) => s.isRedFlag);
   const verificationScore = computeVerificationScore(pdlScore, evidenceSources, contentSignals, { claimedBranch: input.claimedBranch, linkedinUrl: input.linkedinUrl, pdlData });
