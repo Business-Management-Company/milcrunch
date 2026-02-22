@@ -38,29 +38,6 @@ const DEFAULT_CHIPS = [
   "📊 Top engaged creators",
 ];
 
-const CHAT_HISTORY_KEY = "milcrunch_chat_history";
-
-function getChips(): string[] {
-  try {
-    const recentSearches: string[] = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
-    return recentSearches.length >= 3
-      ? recentSearches.slice(0, 6).map((q) => q.substring(0, 40))
-      : DEFAULT_CHIPS;
-  } catch {
-    return DEFAULT_CHIPS;
-  }
-}
-
-function saveToChatHistory(userMessage: string) {
-  try {
-    const history: string[] = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
-    const updated = [userMessage, ...history.filter((h) => h !== userMessage)].slice(0, 10);
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(updated));
-  } catch {
-    // localStorage unavailable
-  }
-}
-
 let idCounter = 0;
 function makeId() {
   return `msg-${++idCounter}-${Date.now()}`;
@@ -167,7 +144,6 @@ export default function FloatingAdminChat() {
 
   const addResponse = async (input: string) => {
     setMessages((m) => [...m, { id: makeId(), role: "user" as const, text: input }]);
-    saveToChatHistory(input);
     setLoading(true);
 
     try {
@@ -334,7 +310,7 @@ For all other questions, respond naturally and concisely.`;
   };
 
   const isOnChatPage = location.pathname === "/admin/chat";
-  const quickPrompts = getChips();
+  const showChips = messages.length <= 1;
 
   return (
     <>
@@ -387,18 +363,20 @@ For all other questions, respond naturally and concisely.`;
               </Button>
             </div>
 
-            {/* Quick prompt pills */}
-            <div className="px-3 pt-3 pb-1 flex flex-wrap gap-1.5">
-              {quickPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  onClick={() => addResponse(prompt)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/20 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+            {/* Quick prompt pills — only shown on empty/greeting state */}
+            {showChips && (
+              <div className="px-3 pt-3 pb-1 flex flex-wrap gap-1.5">
+                {DEFAULT_CHIPS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => addResponse(prompt)}
+                    className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/20 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
