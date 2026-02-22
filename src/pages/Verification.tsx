@@ -1871,7 +1871,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
   };
 
   return (
-    <section className="pl-4 ml-6 max-w-full overflow-hidden">
+    <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
       <button onClick={onToggle} className="flex items-center gap-2 w-full text-left group mb-3">
         {isOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
         <Mic className="h-5 w-5 text-[#6C5CE7]" />
@@ -1886,45 +1886,47 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
         )}
       </button>
       {isOpen && (
-        <div className="pl-7 space-y-3">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-medium">Clearance: {checkedCount}/{total}</span>
-              <span className="text-xs text-muted-foreground">{progressPct}%</span>
+        <div className="pl-7">
+          <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium">Clearance: {checkedCount}/{total}</span>
+                <span className="text-xs text-muted-foreground">{progressPct}%</span>
+              </div>
+              <Progress value={progressPct} className="h-2" />
             </div>
-            <Progress value={progressPct} className="h-2" />
-          </div>
-          {READINESS_ITEMS.map((item) => {
-            const isAuto = item.auto;
-            const checked = isAuto ? autoChecks[item.key] : localChecks[item.key];
-            return (
-              <label key={item.key} className={cn("flex items-center gap-3 py-0.5", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
-                <input
-                  type="checkbox"
-                  checked={!!checked}
-                  onChange={isAuto ? undefined : () => handleToggle(item.key)}
-                  disabled={isAuto}
-                  className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
-                />
-                <span className={cn("text-sm flex-1", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
-                  {item.label}
-                </span>
-                {isAuto && <span className="text-xs text-muted-foreground">Auto</span>}
-              </label>
-            );
-          })}
-          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-            <Label className="text-sm font-medium">Booking Notes</Label>
-            <Textarea
-              value={bookingNotes}
-              onChange={(e) => setBookingNotes(e.target.value)}
-              placeholder="Notes about speaker availability, requirements, accommodations..."
-              rows={3}
-              className="mt-1"
-            />
-            <Button variant="outline" size="sm" onClick={handleSaveNotes} className="mt-2">
-              <Save className="h-3.5 w-3.5 mr-1.5" /> Save Notes
-            </Button>
+            {READINESS_ITEMS.map((item) => {
+              const isAuto = item.auto;
+              const checked = isAuto ? autoChecks[item.key] : localChecks[item.key];
+              return (
+                <label key={item.key} className={cn("flex items-center gap-3 py-0.5", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
+                  <input
+                    type="checkbox"
+                    checked={!!checked}
+                    onChange={isAuto ? undefined : () => handleToggle(item.key)}
+                    disabled={isAuto}
+                    className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+                  />
+                  <span className={cn("text-sm flex-1", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
+                    {item.label}
+                  </span>
+                  {isAuto && <span className="text-xs text-muted-foreground">Auto</span>}
+                </label>
+              );
+            })}
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+              <Label className="text-sm font-medium">Booking Notes</Label>
+              <Textarea
+                value={bookingNotes}
+                onChange={(e) => setBookingNotes(e.target.value)}
+                placeholder="Notes about speaker availability, requirements, accommodations..."
+                rows={3}
+                className="mt-1"
+              />
+              <Button variant="outline" size="sm" onClick={handleSaveNotes} className="mt-2">
+                <Save className="h-3.5 w-3.5 mr-1.5" /> Save Notes
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -2752,7 +2754,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <SpeakerReadinessInline record={record} onRefresh={onRefresh} isOpen={speakerReadinessOpen} onToggle={() => setSpeakerReadinessOpen(!speakerReadinessOpen)} />
 
       {/* ── 3. AI SUMMARY ── */}
-      <section className="pl-4 ml-6 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
         <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#6C5CE7]" />
@@ -2762,7 +2764,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 3. EVIDENCE SOURCES — accordion ── */}
-      <section className="pl-4 ml-6 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
         <button
           onClick={() => setEvidenceOpen(!evidenceOpen)}
           className="flex items-center gap-2 w-full text-left group"
@@ -2805,7 +2807,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 4. CAREER TRACK — inline ── */}
-      <section className="pl-4 ml-6 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
         <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
@@ -2816,7 +2818,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* ── 5. SOCIAL — only shown if source is discovery ── */}
       {(record.source === 'discovery' || record.source_username) && (
-        <section className="pl-4 ml-6 max-w-full overflow-hidden">
+        <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
           <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group">
             {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
             <Globe className="h-5 w-5 text-[#6C5CE7]" />
@@ -2827,7 +2829,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       )}
 
       {/* ── 6. MEDIA — collapsible ── */}
-      <section className="pl-4 ml-6 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
         <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group">
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#6C5CE7]" />
@@ -2841,7 +2843,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
       {/* ── 7. BACKGROUND — expandable ── */}
-      <section className="pl-4 ml-6 max-w-full overflow-hidden">
+      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden">
         <button
           onClick={() => setBackgroundOpen(!backgroundOpen)}
           className="flex items-center gap-2 w-full text-left group"
