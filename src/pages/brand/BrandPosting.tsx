@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresentationMode } from "@/hooks/usePresentationMode";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   MessageSquare,
   Hash,
   Save,
@@ -70,7 +71,19 @@ const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
   </svg>
 );
 
+const PLATFORM_COLORS: Record<string, string> = {
+  instagram: "bg-purple-500",
+  tiktok: "bg-teal-500",
+  x: "bg-blue-500",
+  youtube: "bg-red-500",
+  linkedin: "bg-blue-700",
+  facebook: "bg-blue-600",
+};
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 type PostStatus = "idle" | "posting" | "success" | "failed";
+type ActiveTab = "queue" | "compose" | "calendar";
 
 interface PlatformResult {
   status: PostStatus;
@@ -170,6 +183,14 @@ Return ONLY valid JSON array with 3 objects, each having a "text" field. No mark
 }
 
 /* ------------------------------------------------------------------ */
+/* Helper: get platform icon component                                 */
+/* ------------------------------------------------------------------ */
+function getPlatformIcon(pid: string) {
+  if (pid === "tiktok") return TikTokIcon;
+  return PLATFORMS.find((p) => p.id === pid)?.icon ?? null;
+}
+
+/* ------------------------------------------------------------------ */
 /* Main Component                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -177,6 +198,9 @@ export default function BrandPosting() {
   const { user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
   const userId = effectiveUserId ?? null;
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<ActiveTab>("queue");
 
   // Connected accounts
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccountRow[]>([]);
@@ -215,6 +239,13 @@ export default function BrandPosting() {
   const [editScheduledTime, setEditScheduledTime] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Queue bulk selection
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+
+  // Calendar state
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
   // Actions menu
   const [actionsMenuId, setActionsMenuId] = useState<string | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -243,7 +274,7 @@ export default function BrandPosting() {
       .select("id, caption, platforms, status, file_url, scheduled_time, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(50);
     const manualPosts: RecentPost[] = ((manualRows ?? []) as RecentPost[]).map((p) => ({ ...p, source: "manual" as const }));
 
     // 2. Campaign posts from event_campaigns
@@ -256,7 +287,6 @@ export default function BrandPosting() {
 
     const campaignPosts: RecentPost[] = [];
     if (campaignRows) {
-      // Fetch event titles for display
       const eventIds = [...new Set(campaignRows.map((c: any) => c.event_id).filter(Boolean))];
       let eventMap = new Map<string, string>();
       if (eventIds.length > 0) {
@@ -287,7 +317,6 @@ export default function BrandPosting() {
       }
     }
 
-    // Merge: campaign queued posts first, then manual posts
     setRecentPosts([...campaignPosts, ...manualPosts]);
     setLoadingPosts(false);
   }, [userId]);
@@ -318,9 +347,6 @@ export default function BrandPosting() {
     }
   }, [connectedAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Scheduled posts (filtered from recent)
-  const scheduledPosts = recentPosts.filter((p) => p.status === "scheduled");
-
   // Character limit
   const minCharLimit = selectedPlatforms.reduce((min, pid) => {
     const p = PLATFORMS.find((x) => x.id === pid);
@@ -333,6 +359,64 @@ export default function BrandPosting() {
   // Post type needed?
   const showPostType =
     selectedPlatforms.includes("instagram") || selectedPlatforms.includes("tiktok");
+
+  /* ---------------------------------------------------------------- */
+  /* Queue data                                                        */
+  /* ---------------------------------------------------------------- */
+  const queuePosts = useMemo(
+    () => recentPosts.filter((p) => p.status === "queued" || p.status === "draft"),
+    [recentPosts],
+  );
+
+  const queueGrouped = useMemo(() => {
+    const groups = new Map<string, { name: string; posts: RecentPost[] }>();
+    const ungrouped: RecentPost[] = [];
+    for (const post of queuePosts) {
+      if (post.campaign_id) {
+        const existing = groups.get(post.campaign_id);
+        if (existing) {
+          existing.posts.push(post);
+        } else {
+          groups.set(post.campaign_id, {
+            name: post.campaign_name || "Campaign",
+            posts: [post],
+          });
+        }
+      } else {
+        ungrouped.push(post);
+      }
+    }
+    return { campaigns: Array.from(groups.entries()), ungrouped };
+  }, [queuePosts]);
+
+  /* ---------------------------------------------------------------- */
+  /* Calendar data                                                     */
+  /* ---------------------------------------------------------------- */
+  const calendarYear = calendarDate.getFullYear();
+  const calendarMonth = calendarDate.getMonth();
+  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(calendarYear, calendarMonth, 1).getDay();
+
+  const calendarPosts = useMemo(() => {
+    return recentPosts.filter((p) => {
+      if (!p.scheduled_time) return false;
+      const d = new Date(p.scheduled_time);
+      return d.getFullYear() === calendarYear && d.getMonth() === calendarMonth;
+    });
+  }, [recentPosts, calendarYear, calendarMonth]);
+
+  const postsByDay = useMemo(() => {
+    const map = new Map<number, RecentPost[]>();
+    for (const p of calendarPosts) {
+      const day = new Date(p.scheduled_time!).getDate();
+      const existing = map.get(day);
+      if (existing) existing.push(p);
+      else map.set(day, [p]);
+    }
+    return map;
+  }, [calendarPosts]);
+
+  const selectedDayPosts = selectedDay ? (postsByDay.get(selectedDay) ?? []) : [];
 
   // File handling
   const handleFileSelect = (f: File) => {
@@ -550,7 +634,6 @@ export default function BrandPosting() {
     setEditSaving(true);
     try {
       if (post.source === "campaign" && post.campaign_id != null && post.post_index != null) {
-        // Update the specific post inside the campaign's JSON posts array
         const { data: campaign } = await supabase
           .from("event_campaigns")
           .select("posts")
@@ -564,7 +647,6 @@ export default function BrandPosting() {
           }
         }
       } else {
-        // Update social_posts row
         const updates: Record<string, unknown> = { caption: editCaption.trim() };
         if (editScheduledTime) updates.scheduled_time = new Date(editScheduledTime).toISOString();
         await supabase.from("social_posts").update(updates).eq("id", post.id);
@@ -583,7 +665,6 @@ export default function BrandPosting() {
     if (guardAction("social_post")) return;
     setActionsMenuId(null);
     if (post.source === "campaign") {
-      // Move campaign post into social_posts as scheduled
       try {
         await supabase.from("social_posts").insert({
           user_id: userId,
@@ -591,7 +672,7 @@ export default function BrandPosting() {
           platforms: post.platforms,
           status: "scheduled",
           file_url: null,
-          scheduled_time: new Date(Date.now() + 3600000).toISOString(), // default 1 hr from now
+          scheduled_time: new Date(Date.now() + 3600000).toISOString(),
           results: {},
         } as Record<string, unknown>);
         toast.success("Post approved and scheduled!");
@@ -614,7 +695,6 @@ export default function BrandPosting() {
     if (guardAction("social_post")) return;
     setActionsMenuId(null);
     if (post.source === "campaign" && post.campaign_id != null && post.post_index != null) {
-      // Remove from campaign JSON array
       try {
         const { data: campaign } = await supabase
           .from("event_campaigns")
@@ -640,6 +720,36 @@ export default function BrandPosting() {
         toast.error("Failed to update post.");
       }
     }
+  };
+
+  // Bulk approve
+  const handleBulkApprove = async () => {
+    if (guardAction("social_post")) return;
+    const postsToApprove = queuePosts.filter((p) => selectedPostIds.has(p.id));
+    let count = 0;
+    for (const post of postsToApprove) {
+      try {
+        if (post.source === "campaign") {
+          await supabase.from("social_posts").insert({
+            user_id: userId,
+            caption: post.caption,
+            platforms: post.platforms,
+            status: "scheduled",
+            file_url: null,
+            scheduled_time: new Date(Date.now() + 3600000).toISOString(),
+            results: {},
+          } as Record<string, unknown>);
+        } else {
+          await supabase.from("social_posts").update({ status: "scheduled" } as Record<string, unknown>).eq("id", post.id);
+        }
+        count++;
+      } catch {
+        // continue with others
+      }
+    }
+    toast.success(`${count} post${count !== 1 ? "s" : ""} approved and scheduled!`);
+    setSelectedPostIds(new Set());
+    loadRecentPosts();
   };
 
   // Close actions menu on outside click
@@ -676,7 +786,6 @@ export default function BrandPosting() {
 
   const InstagramPreview = () => (
     <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-2.5 px-3 py-2.5">
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] p-[2px]">
           <div className="w-full h-full rounded-full bg-white dark:bg-[#0F1117] flex items-center justify-center text-[10px] font-bold text-gray-700 dark:text-gray-300">
@@ -686,7 +795,6 @@ export default function BrandPosting() {
         <span className="text-xs font-semibold text-gray-900 dark:text-white">{previewUsername}</span>
         <MoreHorizontal className="h-4 w-4 text-gray-400 ml-auto" />
       </div>
-      {/* Image */}
       {filePreview ? (
         <img src={filePreview} alt="Preview" className="w-full aspect-square object-cover" />
       ) : file ? (
@@ -698,14 +806,12 @@ export default function BrandPosting() {
           <ImagePlus className="h-10 w-10 text-gray-300 dark:text-gray-600" />
         </div>
       )}
-      {/* Actions */}
       <div className="flex items-center gap-4 px-3 py-2.5">
         <Heart className="h-5 w-5 text-gray-900 dark:text-white" />
         <MessageCircle className="h-5 w-5 text-gray-900 dark:text-white" />
         <Share2 className="h-5 w-5 text-gray-900 dark:text-white" />
         <Bookmark className="h-5 w-5 text-gray-900 dark:text-white ml-auto" />
       </div>
-      {/* Caption */}
       <div className="px-3 pb-3">
         {previewCaption ? (
           <p className="text-xs text-gray-900 dark:text-gray-200 leading-relaxed">
@@ -747,7 +853,6 @@ export default function BrandPosting() {
           {filePreview && (
             <img src={filePreview} alt="Preview" className="w-full rounded-xl mt-3 border border-gray-200 dark:border-gray-700" />
           )}
-          {/* Actions */}
           <div className="flex items-center justify-between mt-3 text-gray-400 max-w-[240px]">
             <MessageCircle className="h-4 w-4" />
             <Repeat2 className="h-4 w-4" />
@@ -761,7 +866,6 @@ export default function BrandPosting() {
 
   const TikTokPreview = () => (
     <div className="bg-black rounded-2xl border border-gray-700 overflow-hidden max-w-[200px] mx-auto relative" style={{ height: 360 }}>
-      {/* Background */}
       {filePreview ? (
         <img src={filePreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
       ) : (
@@ -769,9 +873,7 @@ export default function BrandPosting() {
           {file ? <FileVideo className="h-10 w-10 text-gray-500" /> : <ImagePlus className="h-10 w-10 text-gray-600" />}
         </div>
       )}
-      {/* Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
-      {/* Right actions */}
       <div className="absolute right-3 bottom-24 flex flex-col items-center gap-4">
         <div className="flex flex-col items-center">
           <Heart className="h-6 w-6 text-white" />
@@ -786,7 +888,6 @@ export default function BrandPosting() {
           <span className="text-[10px] text-white mt-0.5">0</span>
         </div>
       </div>
-      {/* Bottom info */}
       <div className="absolute bottom-3 left-3 right-14">
         <p className="text-white text-xs font-semibold">@{previewUsername}</p>
         {previewCaption ? (
@@ -800,17 +901,15 @@ export default function BrandPosting() {
 
   const FacebookPreview = () => (
     <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-3">
         <div className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-sm font-bold">
           {displayInitial}
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-900 dark:text-white">{displayName}</p>
-          <p className="text-[10px] text-gray-400">Just now · 🌐</p>
+          <p className="text-[10px] text-gray-400">Just now</p>
         </div>
       </div>
-      {/* Caption */}
       <div className="px-4 pb-2">
         {previewCaption ? (
           <p className="text-sm text-gray-900 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{previewCaption}</p>
@@ -818,7 +917,6 @@ export default function BrandPosting() {
           <p className="text-sm text-gray-400 italic">Your post preview...</p>
         )}
       </div>
-      {/* Image */}
       {filePreview && (
         <img src={filePreview} alt="Preview" className="w-full" />
       )}
@@ -827,7 +925,6 @@ export default function BrandPosting() {
           <FileVideo className="h-10 w-10 text-gray-400" />
         </div>
       )}
-      {/* Actions */}
       <div className="flex items-center border-t border-gray-200 dark:border-gray-700 mt-2">
         <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800">
           <ThumbsUp className="h-4 w-4" /> Like
@@ -843,6 +940,162 @@ export default function BrandPosting() {
   );
 
   /* ---------------------------------------------------------------- */
+  /* Queue Post Card                                                   */
+  /* ---------------------------------------------------------------- */
+  const QueueCard = ({ post }: { post: RecentPost }) => {
+    const isEditing = editingPostId === post.id;
+    const isSelected = selectedPostIds.has(post.id);
+    const platforms = (post.platforms as string[] | null) ?? [];
+
+    return (
+      <div
+        className={cn(
+          "bg-white dark:bg-[#1A1D27] rounded-xl border p-4 transition-all",
+          isSelected
+            ? "border-[#6C5CE7] ring-1 ring-[#6C5CE7]/20"
+            : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700",
+        )}
+      >
+        {isEditing ? (
+          <div className="space-y-3">
+            <textarea
+              value={editCaption}
+              onChange={(e) => setEditCaption(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+            />
+            {post.source !== "campaign" && (
+              <input
+                type="datetime-local"
+                value={editScheduledTime}
+                onChange={(e) => setEditScheduledTime(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-xs focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+              />
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleSaveEdit(post)}
+                disabled={editSaving}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-medium hover:bg-[#5B4BD1] disabled:opacity-50"
+              >
+                {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <X className="h-3 w-3" /> Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3">
+            {/* Checkbox */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPostIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(post.id)) next.delete(post.id);
+                  else next.add(post.id);
+                  return next;
+                });
+              }}
+              className={cn(
+                "mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                isSelected
+                  ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                  : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]",
+              )}
+            >
+              {isSelected && <Check className="h-3 w-3 text-white" />}
+            </button>
+
+            {/* Platform icon */}
+            <div className="shrink-0">
+              {platforms.length > 0 ? (
+                <div className="flex -space-x-1">
+                  {platforms.slice(0, 2).map((pid) => {
+                    const Icon = getPlatformIcon(pid);
+                    return (
+                      <div
+                        key={pid}
+                        className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-[#1A1D27] flex items-center justify-center"
+                      >
+                        {Icon && <Icon className="h-3.5 w-3.5 text-gray-600 dark:text-gray-400" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <MessageSquare className="h-3.5 w-3.5 text-gray-400" />
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">
+                {post.caption ? (post.caption.length > 100 ? post.caption.slice(0, 100) + "..." : post.caption) : "No caption"}
+              </p>
+              <div className="flex items-center gap-2 mt-1.5">
+                {post.scheduled_time && (
+                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(post.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                    post.status === "queued" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                    post.status === "draft" && "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                    post.status === "scheduled" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                  )}
+                >
+                  {post.status || "draft"}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleApproveSchedule(post)}
+                className="p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 transition-colors"
+                title="Approve"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStartEdit(post)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveFromQueue(post)}
+                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                title="Remove"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /* ---------------------------------------------------------------- */
   /* Render                                                            */
   /* ---------------------------------------------------------------- */
 
@@ -850,913 +1103,1023 @@ export default function BrandPosting() {
     <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
-              Social Posting
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Compose and publish to all your connected platforms at once.
-            </p>
-          </div>
-          {hasResults && (
-            <button
-              type="button"
-              onClick={resetCompose}
-              className="flex items-center gap-2 text-sm text-[#6C5CE7] hover:underline font-medium"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> New Post
-            </button>
-          )}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
+            Social Posting
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage your campaign queue, compose posts, and view your content calendar.
+          </p>
         </div>
 
-        {/* Two-column layout */}
-        <div className="grid lg:grid-cols-5 gap-6">
-          {/* LEFT — Compose */}
-          <div className="lg:col-span-3 space-y-5">
-            {/* Caption */}
-            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Caption
-              </label>
-              <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="What do you want to share?"
-                rows={5}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
-              />
-              <div className="flex items-center justify-between mt-2">
-                <p
-                  className={cn(
-                    "text-xs",
-                    charOver
-                      ? "text-red-500 font-semibold"
-                      : charWarning
-                        ? "text-amber-500"
-                        : "text-gray-400"
+        {/* Tabs */}
+        <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
+          <div className="flex gap-6">
+            {([
+              { id: "queue" as const, label: "Queue", count: queuePosts.length },
+              { id: "compose" as const, label: "Compose", count: null },
+              { id: "calendar" as const, label: "Calendar", count: null },
+            ]).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "relative pb-3 text-sm font-medium transition-colors",
+                  activeTab === tab.id
+                    ? "text-[#6C5CE7]"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300",
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  {tab.label}
+                  {tab.count !== null && (
+                    <span
+                      className={cn(
+                        "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                        activeTab === tab.id
+                          ? "bg-[#6C5CE7]/10 text-[#6C5CE7]"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
+                      )}
+                    >
+                      {tab.count}
+                    </span>
                   )}
-                >
-                  {caption.length}
-                  {effectiveLimit && ` / ${effectiveLimit}`} characters
-                  {charOver && " — over limit for " + selectedPlatforms.find((p) => {
-                    const plat = PLATFORMS.find((x) => x.id === p);
-                    return plat?.charLimit && caption.length > plat.charLimit;
-                  })}
-                </p>
+                </span>
+                {activeTab === tab.id && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#6C5CE7] rounded-full" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                {/* AI Write Button */}
+        {/* ============================================================ */}
+        {/* TAB 1: Queue                                                  */}
+        {/* ============================================================ */}
+        {activeTab === "queue" && (
+          <div>
+            {/* Bulk actions bar */}
+            {queuePosts.length > 0 && (
+              <div className="flex items-center gap-3 mb-4">
                 <button
                   type="button"
                   onClick={() => {
-                    if (showAiPrompt) {
-                      setShowAiPrompt(false);
+                    if (selectedPostIds.size === queuePosts.length) {
+                      setSelectedPostIds(new Set());
                     } else {
-                      setAiCaptions([]);
-                      setShowAiPrompt(true);
+                      setSelectedPostIds(new Set(queuePosts.map((p) => p.id)));
                     }
                   }}
-                  disabled={aiLoading}
-                  className="flex items-center gap-1.5 text-xs font-medium text-[#6C5CE7] hover:text-[#5B4BD1] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
                 >
-                  {aiLoading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  )}
-                  Write with AI
-                </button>
-              </div>
-
-              {/* AI Prompt Popover */}
-              {showAiPrompt && (
-                <div className="mt-3 p-3 rounded-xl bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10 border border-[#6C5CE7]/20">
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                    What's this post about? <span className="text-gray-400">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={aiContext}
-                    onChange={(e) => setAiContext(e.target.value)}
-                    placeholder="e.g. Behind the scenes at our military appreciation event..."
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 transition-all"
-                    onKeyDown={(e) => e.key === "Enter" && handleGenerateCaptions()}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleGenerateCaptions}
-                    disabled={aiLoading || selectedPlatforms.length === 0}
-                    className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6C5CE7] text-white text-xs font-semibold hover:bg-[#5B4BD1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {aiLoading ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-3.5 w-3.5" /> Generate 3 Options
-                      </>
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                      selectedPostIds.size === queuePosts.length && queuePosts.length > 0
+                        ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]",
                     )}
-                  </button>
-                  {selectedPlatforms.length === 0 && (
-                    <p className="text-[10px] text-amber-500 mt-1.5">Select platforms first so AI can optimize for them.</p>
-                  )}
-                </div>
-              )}
-
-              {/* AI Caption Options */}
-              {aiCaptions.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Pick a caption:</p>
-                  {aiCaptions.map((opt, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        setCaption(opt.text);
-                        setAiCaptions([]);
-                      }}
-                      className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40 hover:bg-[#6C5CE7]/5 dark:hover:bg-[#6C5CE7]/10 transition-all group"
-                    >
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed line-clamp-4">
-                        {opt.text}
-                      </p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="text-[10px] text-gray-400">{opt.charCount} chars</span>
-                        <div className="flex gap-1.5">
-                          {Object.entries(opt.platformFit).map(([pid, fit]) => {
-                            const plat = PLATFORMS.find((p) => p.id === pid);
-                            return (
-                              <span
-                                key={pid}
-                                className={cn(
-                                  "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
-                                  fit === "good" && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
-                                  fit === "warning" && "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
-                                  fit === "over" && "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
-                                )}
-                              >
-                                {plat?.name ?? pid}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Media upload */}
-            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Media <span className="text-gray-400 font-normal">— Optional</span>
-              </label>
-              {file ? (
-                <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {filePreview ? (
-                    <img
-                      src={filePreview}
-                      alt="Preview"
-                      className="w-full max-h-64 object-contain bg-gray-50 dark:bg-[#0F1117]"
-                    />
-                  ) : (
-                    <div className="flex items-center gap-3 px-4 py-6 bg-gray-50 dark:bg-[#0F1117]">
-                      <FileVideo className="h-8 w-8 text-[#6C5CE7]" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {file.name}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {(file.size / (1024 * 1024)).toFixed(1)} MB
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  >
+                    {selectedPostIds.size === queuePosts.length && queuePosts.length > 0 && (
+                      <Check className="h-3 w-3 text-white" />
+                    )}
+                  </div>
+                  Select All
+                </button>
+                {selectedPostIds.size > 0 && (
                   <button
                     type="button"
-                    onClick={clearFile}
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                    onClick={handleBulkApprove}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6C5CE7] text-white text-sm font-medium hover:bg-[#5B4BD1] transition-colors"
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  ref={dropRef}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl px-6 py-10 text-center cursor-pointer hover:border-[#6C5CE7]/40 transition-colors"
-                >
-                  <ImagePlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">
-                    Drag & drop or{" "}
-                    <span className="text-[#6C5CE7] font-medium">click to upload</span>
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Image (PNG, JPG, WebP) or Video (MP4)
-                  </p>
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,video/mp4"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFileSelect(f);
-                }}
-              />
-            </div>
-
-            {/* Platform selector — checkbox style */}
-            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Publish To
-                </label>
-                {availablePlatforms.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedPlatforms(
-                        selectedPlatforms.length === availablePlatforms.length
-                          ? []
-                          : availablePlatforms.map((p) => p.id)
-                      )
-                    }
-                    className="text-xs font-medium text-[#6C5CE7] hover:underline"
-                  >
-                    {selectedPlatforms.length === availablePlatforms.length
-                      ? "Deselect All"
-                      : "Select All"}
+                    <Check className="h-4 w-4" />
+                    Approve Selected ({selectedPostIds.size})
                   </button>
                 )}
               </div>
-              {loadingAccounts ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading connected accounts...
-                </div>
-              ) : availablePlatforms.length === 0 ? (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    No connected accounts found. Connect your socials from the{" "}
-                    <a href="/brand/integrations" className="underline font-medium">
-                      Settings
-                    </a>{" "}
-                    page first.
+            )}
+
+            {loadingPosts ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            ) : queuePosts.length === 0 ? (
+              <div className="text-center py-16">
+                <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  No posts in queue.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("compose")}
+                  className="mt-3 text-sm text-[#6C5CE7] font-medium hover:underline"
+                >
+                  Generate a campaign to get started →
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Campaign groups */}
+                {queueGrouped.campaigns.map(([campaignId, group]) => (
+                  <div key={campaignId}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7]" />
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {group.name}
+                      </h3>
+                      <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                        {group.posts.length} post{group.posts.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {group.posts.map((post) => (
+                        <QueueCard key={post.id} post={post} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Ungrouped posts */}
+                {queueGrouped.ungrouped.length > 0 && (
+                  <div>
+                    {queueGrouped.campaigns.length > 0 && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Individual Posts
+                        </h3>
+                        <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                          {queueGrouped.ungrouped.length}
+                        </span>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {queueGrouped.ungrouped.map((post) => (
+                        <QueueCard key={post.id} post={post} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 2: Compose                                                */}
+        {/* ============================================================ */}
+        {activeTab === "compose" && (
+          <div className="grid lg:grid-cols-5 gap-6">
+            {/* LEFT — Compose */}
+            <div className="lg:col-span-3 space-y-5">
+              {/* Caption */}
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Caption
+                </label>
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="What do you want to share?"
+                  rows={5}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <p
+                    className={cn(
+                      "text-xs",
+                      charOver
+                        ? "text-red-500 font-semibold"
+                        : charWarning
+                          ? "text-amber-500"
+                          : "text-gray-400"
+                    )}
+                  >
+                    {caption.length}
+                    {effectiveLimit && ` / ${effectiveLimit}`} characters
+                    {charOver && " — over limit for " + selectedPlatforms.find((p) => {
+                      const plat = PLATFORMS.find((x) => x.id === p);
+                      return plat?.charLimit && caption.length > plat.charLimit;
+                    })}
                   </p>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (showAiPrompt) {
+                        setShowAiPrompt(false);
+                      } else {
+                        setAiCaptions([]);
+                        setShowAiPrompt(true);
+                      }
+                    }}
+                    disabled={aiLoading}
+                    className="flex items-center gap-1.5 text-xs font-medium text-[#6C5CE7] hover:text-[#5B4BD1] transition-colors disabled:opacity-50"
+                  >
+                    {aiLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Write with AI
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {availablePlatforms.map((p) => {
-                    const selected = selectedPlatforms.includes(p.id);
-                    const Icon = p.id === "tiktok" ? TikTokIcon : p.icon;
-                    const account = connectedAccounts.find(
-                      (a) => a.platform === p.id
-                    );
-                    return (
-                      <label
-                        key={p.id}
+
+                {/* AI Prompt Popover */}
+                {showAiPrompt && (
+                  <div className="mt-3 p-3 rounded-xl bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10 border border-[#6C5CE7]/20">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                      What's this post about? <span className="text-gray-400">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={aiContext}
+                      onChange={(e) => setAiContext(e.target.value)}
+                      placeholder="e.g. Behind the scenes at our military appreciation event..."
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 transition-all"
+                      onKeyDown={(e) => e.key === "Enter" && handleGenerateCaptions()}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGenerateCaptions}
+                      disabled={aiLoading || selectedPlatforms.length === 0}
+                      className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6C5CE7] text-white text-xs font-semibold hover:bg-[#5B4BD1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {aiLoading ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3.5 w-3.5" /> Generate 3 Options
+                        </>
+                      )}
+                    </button>
+                    {selectedPlatforms.length === 0 && (
+                      <p className="text-[10px] text-amber-500 mt-1.5">Select platforms first so AI can optimize for them.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* AI Caption Options */}
+                {aiCaptions.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Pick a caption:</p>
+                    {aiCaptions.map((opt, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          setCaption(opt.text);
+                          setAiCaptions([]);
+                        }}
+                        className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40 hover:bg-[#6C5CE7]/5 dark:hover:bg-[#6C5CE7]/10 transition-all group"
+                      >
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed line-clamp-4">
+                          {opt.text}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="text-[10px] text-gray-400">{opt.charCount} chars</span>
+                          <div className="flex gap-1.5">
+                            {Object.entries(opt.platformFit).map(([pid, fit]) => {
+                              const plat = PLATFORMS.find((p) => p.id === pid);
+                              return (
+                                <span
+                                  key={pid}
+                                  className={cn(
+                                    "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                                    fit === "good" && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
+                                    fit === "warning" && "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
+                                    fit === "over" && "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+                                  )}
+                                >
+                                  {plat?.name ?? pid}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Media upload */}
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Media <span className="text-gray-400 font-normal">— Optional</span>
+                </label>
+                {file ? (
+                  <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                    {filePreview ? (
+                      <img
+                        src={filePreview}
+                        alt="Preview"
+                        className="w-full max-h-64 object-contain bg-gray-50 dark:bg-[#0F1117]"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3 px-4 py-6 bg-gray-50 dark:bg-[#0F1117]">
+                        <FileVideo className="h-8 w-8 text-[#6C5CE7]" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {(file.size / (1024 * 1024)).toFixed(1)} MB
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={clearFile}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    ref={dropRef}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl px-6 py-10 text-center cursor-pointer hover:border-[#6C5CE7]/40 transition-colors"
+                  >
+                    <ImagePlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">
+                      Drag & drop or{" "}
+                      <span className="text-[#6C5CE7] font-medium">click to upload</span>
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Image (PNG, JPG, WebP) or Video (MP4)
+                    </p>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/mp4"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileSelect(f);
+                  }}
+                />
+              </div>
+
+              {/* Platform selector */}
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Publish To
+                  </label>
+                  {availablePlatforms.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedPlatforms(
+                          selectedPlatforms.length === availablePlatforms.length
+                            ? []
+                            : availablePlatforms.map((p) => p.id)
+                        )
+                      }
+                      className="text-xs font-medium text-[#6C5CE7] hover:underline"
+                    >
+                      {selectedPlatforms.length === availablePlatforms.length
+                        ? "Deselect All"
+                        : "Select All"}
+                    </button>
+                  )}
+                </div>
+                {loadingAccounts ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading connected accounts...
+                  </div>
+                ) : availablePlatforms.length === 0 ? (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      No connected accounts found. Connect your socials from the{" "}
+                      <a href="/brand/integrations" className="underline font-medium">
+                        Settings
+                      </a>{" "}
+                      page first.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {availablePlatforms.map((p) => {
+                      const selected = selectedPlatforms.includes(p.id);
+                      const Icon = p.id === "tiktok" ? TikTokIcon : p.icon;
+                      const account = connectedAccounts.find(
+                        (a) => a.platform === p.id
+                      );
+                      return (
+                        <label
+                          key={p.id}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all",
+                            selected
+                              ? "border-[#6C5CE7] bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10"
+                              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                              selected
+                                ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]"
+                            )}
+                            onClick={(e) => { e.preventDefault(); togglePlatform(p.id); }}
+                          >
+                            {selected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                            {Icon && <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</p>
+                            {account?.platform_username && (
+                              <p className="text-[10px] text-gray-400 truncate">@{account.platform_username}</p>
+                            )}
+                          </div>
+                          {selected && (
+                            <span className="text-[10px] font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2 py-0.5 rounded-full shrink-0">
+                              Active
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                    {selectedPlatforms.length > 0 && (
+                      <p className="text-xs text-gray-400 pt-1">
+                        Posting simultaneously to {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? "s" : ""}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Post Type selector */}
+                {showPostType && (
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      Post Type
+                    </label>
+                    <div className="inline-flex rounded-lg bg-gray-100 dark:bg-[#0F1117] p-0.5">
+                      {(["feed", "story", "reel"] as PostType[]).map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setPostType(type)}
+                          className={cn(
+                            "px-4 py-1.5 rounded-md text-xs font-medium transition-all capitalize",
+                            postType === type
+                              ? "bg-white dark:bg-[#1A1D27] text-[#6C5CE7] shadow-sm"
+                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                          )}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* More Options */}
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreOptions(!showMoreOptions)}
+                  className="flex items-center justify-between w-full px-5 py-3.5"
+                >
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-gray-400" />
+                    More Options
+                  </span>
+                  {showMoreOptions ? (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+                {showMoreOptions && (
+                  <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-800">
+                    <div className="pt-4">
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
+                        <Hash className="h-3.5 w-3.5" />
+                        First Comment
+                      </label>
+                      <textarea
+                        value={firstComment}
+                        onChange={(e) => setFirstComment(e.target.value)}
+                        placeholder="Great for hashtags on Instagram & TikTok"
+                        rows={3}
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        This will be posted as the first comment on Instagram & TikTok.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Send actions */}
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1" ref={sendMenuRef}>
+                  <div className="flex">
+                    <button
+                      type="button"
+                      onClick={handlePost}
+                      disabled={!canPost}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-l-xl text-sm font-semibold transition-all",
+                        canPost
+                          ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                      )}
+                    >
+                      {posting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Posting...
+                        </>
+                      ) : sendMode === "draft" ? (
+                        <>
+                          <Save className="h-4 w-4" /> Save Draft
+                        </>
+                      ) : sendMode === "schedule" ? (
+                        <>
+                          <Clock className="h-4 w-4" /> Schedule Post
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" /> Post Now
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowSendMenu(!showSendMenu)}
+                      className={cn(
+                        "flex items-center justify-center px-3 py-3 rounded-r-xl border-l text-sm transition-all",
+                        canPost || sendMode === "draft"
+                          ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white border-[#5B4BD1]"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-gray-200 dark:border-gray-700"
+                      )}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {showSendMenu && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-20">
+                      <button
+                        type="button"
+                        onClick={() => { setSendMode("now"); setShowSendMenu(false); }}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all",
-                          selected
-                            ? "border-[#6C5CE7] bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10"
-                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors",
+                          sendMode === "now" && "text-[#6C5CE7] font-medium"
                         )}
                       >
-                        <div
-                          className={cn(
-                            "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
-                            selected
-                              ? "bg-[#6C5CE7] border-[#6C5CE7]"
-                              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]"
-                          )}
-                          onClick={(e) => { e.preventDefault(); togglePlatform(p.id); }}
-                        >
-                          {selected && <Check className="h-3 w-3 text-white" />}
+                        <Send className="h-4 w-4" />
+                        <div>
+                          <p className="font-medium">Post Immediately</p>
+                          <p className="text-[10px] text-gray-400">Publish to selected platforms now</p>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                          {Icon && <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</p>
-                          {account?.platform_username && (
-                            <p className="text-[10px] text-gray-400 truncate">@{account.platform_username}</p>
-                          )}
-                        </div>
-                        {selected && (
-                          <span className="text-[10px] font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2 py-0.5 rounded-full shrink-0">
-                            Active
-                          </span>
+                        {sendMode === "now" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setSendMode("schedule"); setShowSendMenu(false); }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
+                          sendMode === "schedule" && "text-[#6C5CE7] font-medium"
                         )}
-                      </label>
-                    );
-                  })}
-                  {selectedPlatforms.length > 0 && (
-                    <p className="text-xs text-gray-400 pt-1">
-                      Posting simultaneously to {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? "s" : ""}
-                    </p>
+                      >
+                        <Calendar className="h-4 w-4" />
+                        <div>
+                          <p className="font-medium">Schedule for...</p>
+                          <p className="text-[10px] text-gray-400">Pick a date & time to publish</p>
+                        </div>
+                        {sendMode === "schedule" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setSendMode("draft"); setShowSendMenu(false); }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
+                          sendMode === "draft" && "text-[#6C5CE7] font-medium"
+                        )}
+                      >
+                        <Save className="h-4 w-4" />
+                        <div>
+                          <p className="font-medium">Save as Draft</p>
+                          <p className="text-[10px] text-gray-400">Save without posting</p>
+                        </div>
+                        {sendMode === "draft" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                      </button>
+                    </div>
                   )}
+                </div>
+              </div>
+
+              {/* Schedule picker */}
+              {sendMode === "schedule" && (
+                <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Schedule for
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+                  />
                 </div>
               )}
 
-              {/* Post Type selector (Instagram / TikTok) */}
-              {showPostType && (
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Post Type
-                  </label>
-                  <div className="inline-flex rounded-lg bg-gray-100 dark:bg-[#0F1117] p-0.5">
-                    {(["feed", "story", "reel"] as PostType[]).map((type) => (
+              {hasResults && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={resetCompose}
+                    className="flex items-center gap-2 text-sm text-[#6C5CE7] hover:underline font-medium"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> New Post
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT — Preview + Status */}
+            <div className="lg:col-span-2 space-y-5">
+              {/* Per-platform preview */}
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Preview
+                </h3>
+
+                <div className="flex rounded-lg bg-gray-100 dark:bg-[#0F1117] p-0.5 mb-4">
+                  {(["instagram", "tiktok", "facebook", "x"] as PreviewTab[]).map((tab) => {
+                    const plat = PLATFORMS.find((p) => p.id === tab);
+                    const Icon = tab === "tiktok" ? TikTokIcon : plat?.icon;
+                    return (
                       <button
-                        key={type}
+                        key={tab}
                         type="button"
-                        onClick={() => setPostType(type)}
+                        onClick={() => setPreviewTab(tab)}
                         className={cn(
-                          "px-4 py-1.5 rounded-md text-xs font-medium transition-all capitalize",
-                          postType === type
+                          "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all",
+                          previewTab === tab
                             ? "bg-white dark:bg-[#1A1D27] text-[#6C5CE7] shadow-sm"
                             : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
                         )}
                       >
-                        {type}
+                        {Icon && <Icon className="h-3.5 w-3.5" />}
+                        {plat?.name ?? tab}
                       </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* More Options (collapsible) */}
-            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800">
-              <button
-                type="button"
-                onClick={() => setShowMoreOptions(!showMoreOptions)}
-                className="flex items-center justify-between w-full px-5 py-3.5"
-              >
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-gray-400" />
-                  More Options
-                </span>
-                {showMoreOptions ? (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                )}
-              </button>
-              {showMoreOptions && (
-                <div className="px-5 pb-5 pt-0 border-t border-gray-100 dark:border-gray-800">
-                  <div className="pt-4">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
-                      <Hash className="h-3.5 w-3.5" />
-                      First Comment
-                    </label>
-                    <textarea
-                      value={firstComment}
-                      onChange={(e) => setFirstComment(e.target.value)}
-                      placeholder="Great for hashtags on Instagram & TikTok"
-                      rows={3}
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
-                    />
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      This will be posted as the first comment on Instagram & TikTok.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Send actions */}
-            <div className="flex items-center gap-3">
-              {/* Send button with dropdown */}
-              <div className="relative flex-1" ref={sendMenuRef}>
-                <div className="flex">
-                  <button
-                    type="button"
-                    onClick={handlePost}
-                    disabled={!canPost}
-                    className={cn(
-                      "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-l-xl text-sm font-semibold transition-all",
-                      canPost
-                        ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                    )}
-                  >
-                    {posting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" /> Posting...
-                      </>
-                    ) : sendMode === "draft" ? (
-                      <>
-                        <Save className="h-4 w-4" /> Save Draft
-                      </>
-                    ) : sendMode === "schedule" ? (
-                      <>
-                        <Clock className="h-4 w-4" /> Schedule Post
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4" /> Post Now
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSendMenu(!showSendMenu)}
-                    className={cn(
-                      "flex items-center justify-center px-3 py-3 rounded-r-xl border-l text-sm transition-all",
-                      canPost || sendMode === "draft"
-                        ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white border-[#5B4BD1]"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-gray-200 dark:border-gray-700"
-                    )}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Dropdown menu */}
-                {showSendMenu && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-20">
-                    <button
-                      type="button"
-                      onClick={() => { setSendMode("now"); setShowSendMenu(false); }}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors",
-                        sendMode === "now" && "text-[#6C5CE7] font-medium"
-                      )}
-                    >
-                      <Send className="h-4 w-4" />
-                      <div>
-                        <p className="font-medium">Post Immediately</p>
-                        <p className="text-[10px] text-gray-400">Publish to selected platforms now</p>
-                      </div>
-                      {sendMode === "now" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setSendMode("schedule"); setShowSendMenu(false); }}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
-                        sendMode === "schedule" && "text-[#6C5CE7] font-medium"
-                      )}
-                    >
-                      <Calendar className="h-4 w-4" />
-                      <div>
-                        <p className="font-medium">Schedule for...</p>
-                        <p className="text-[10px] text-gray-400">Pick a date & time to publish</p>
-                      </div>
-                      {sendMode === "schedule" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setSendMode("draft"); setShowSendMenu(false); }}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
-                        sendMode === "draft" && "text-[#6C5CE7] font-medium"
-                      )}
-                    >
-                      <Save className="h-4 w-4" />
-                      <div>
-                        <p className="font-medium">Save as Draft</p>
-                        <p className="text-[10px] text-gray-400">Save without posting</p>
-                      </div>
-                      {sendMode === "draft" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Schedule picker (inline) */}
-            {sendMode === "schedule" && (
-              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Schedule for
-                </label>
-                <input
-                  type="datetime-local"
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
-                />
-              </div>
-            )}
-
-            {/* Scheduled Queue */}
-            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-[#6C5CE7]" />
-                  Scheduled Posts
-                </h3>
-                {scheduledPosts.length > 0 && (
-                  <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-0.5 rounded-full">
-                    {scheduledPosts.length} queued
-                  </span>
-                )}
-              </div>
-              {loadingPosts ? (
-                <div className="flex items-center justify-center py-6 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              ) : scheduledPosts.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm px-5">
-                  <Calendar className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                  <p>No scheduled posts yet.</p>
-                  <p className="text-xs mt-1">Use "Schedule for..." above or schedule from the Campaign Builder.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {scheduledPosts.map((post) => {
-                    const platforms = (post.platforms as string[] | null) ?? [];
-                    const schedTime = post.scheduled_time
-                      ? new Date(post.scheduled_time)
-                      : null;
-                    return (
-                      <div
-                        key={post.id}
-                        className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-[#0F1117]/50 transition-colors"
-                      >
-                        {/* Platform icons */}
-                        <div className="flex -space-x-1.5 shrink-0">
-                          {platforms.slice(0, 3).map((pid) => {
-                            const plat = PLATFORMS.find((pp) => pp.id === pid);
-                            const Icon = pid === "tiktok" ? TikTokIcon : plat?.icon;
-                            return (
-                              <div
-                                key={pid}
-                                className="w-7 h-7 rounded-full bg-white dark:bg-[#1A1D27] border-2 border-white dark:border-[#1A1D27] shadow-sm flex items-center justify-center"
-                              >
-                                <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                  {Icon && <Icon className="h-3 w-3 text-gray-600 dark:text-gray-400" />}
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {platforms.length > 3 && (
-                            <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-[#1A1D27] flex items-center justify-center">
-                              <span className="text-[9px] font-bold text-gray-500">+{platforms.length - 3}</span>
-                            </div>
-                          )}
-                        </div>
-                        {/* Caption preview */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                            {post.caption || "No caption"}
-                          </p>
-                          <p className="text-[10px] text-gray-400 capitalize">
-                            {platforms.join(", ")}
-                          </p>
-                        </div>
-                        {/* Scheduled time */}
-                        {schedTime && (
-                          <div className="text-right shrink-0">
-                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                              {schedTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            </p>
-                            <p className="text-[10px] text-gray-400">
-                              {schedTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-                            </p>
-                          </div>
-                        )}
-                      </div>
                     );
                   })}
                 </div>
+
+                {previewTab === "instagram" && <InstagramPreview />}
+                {previewTab === "x" && <XPreview />}
+                {previewTab === "tiktok" && <TikTokPreview />}
+                {previewTab === "facebook" && <FacebookPreview />}
+              </div>
+
+              {/* Platform status */}
+              {(selectedPlatforms.length > 0 || hasResults) && (
+                <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Platform Status
+                  </h3>
+                  <div className="space-y-2.5">
+                    {(hasResults
+                      ? Object.keys(platformResults)
+                      : selectedPlatforms
+                    ).map((pid) => {
+                      const plat = PLATFORMS.find((p) => p.id === pid);
+                      const result = platformResults[pid];
+                      const status: PostStatus = result?.status ?? "idle";
+                      const Icon = plat?.id === "tiktok" ? TikTokIcon : plat?.icon;
+
+                      return (
+                        <div
+                          key={pid}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-[#0F1117] border border-gray-100 dark:border-gray-800"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                            {Icon && <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1">
+                            {plat?.name ?? pid}
+                          </span>
+                          {status === "idle" && (
+                            <span className="text-xs text-gray-400">Ready</span>
+                          )}
+                          {status === "posting" && (
+                            <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" />
+                          )}
+                          {status === "success" && (
+                            <div className="flex items-center gap-1.5">
+                              <Check className="h-4 w-4 text-green-500" />
+                              <span className="text-xs text-green-600 font-medium">
+                                Posted
+                              </span>
+                            </div>
+                          )}
+                          {status === "failed" && (
+                            <div className="flex items-center gap-1.5">
+                              <AlertCircle className="h-4 w-4 text-red-500" />
+                              <span className="text-xs text-red-600 font-medium">
+                                Failed
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {Object.entries(platformResults).some(
+                    ([, r]) => r.status === "failed" && r.error
+                  ) && (
+                    <div className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2.5">
+                      {Object.entries(platformResults)
+                        .filter(([, r]) => r.status === "failed" && r.error)
+                        .map(([pid, r]) => (
+                          <p key={pid} className="text-xs text-red-600 dark:text-red-400">
+                            <span className="font-medium capitalize">{pid}:</span>{" "}
+                            {r.error}
+                          </p>
+                        ))}
+                    </div>
+                  )}
+                </div>
               )}
+
+              {/* Quick tips */}
+              <div className="bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10 rounded-xl border border-[#6C5CE7]/20 p-4">
+                <h4 className="text-xs font-semibold text-[#6C5CE7] uppercase tracking-wider mb-2">
+                  Tips
+                </h4>
+                <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+                  <li>X (Twitter) has a 280-character limit</li>
+                  <li>Instagram requires an image or video</li>
+                  <li>Videos work best on TikTok and YouTube</li>
+                  <li>Use "First Comment" for hashtags on Instagram</li>
+                  <li>Schedule posts for peak engagement times</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 3: Calendar                                               */}
+        {/* ============================================================ */}
+        {activeTab === "calendar" && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Calendar Grid */}
+            <div className="lg:col-span-2">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                {/* Month navigation */}
+                <div className="flex items-center justify-between mb-5">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <h3 className="text-base font-semibold text-gray-800 dark:text-white">
+                    {calendarDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1))}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Weekday headers */}
+                <div className="grid grid-cols-7 mb-2">
+                  {WEEKDAYS.map((d) => (
+                    <div key={d} className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-2">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day cells */}
+                <div className="grid grid-cols-7 gap-1">
+                  {/* Empty cells for offset */}
+                  {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                    <div key={`empty-${i}`} className="aspect-square" />
+                  ))}
+                  {/* Day cells */}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const day = i + 1;
+                    const dayPosts = postsByDay.get(day) ?? [];
+                    const isToday =
+                      day === new Date().getDate() &&
+                      calendarMonth === new Date().getMonth() &&
+                      calendarYear === new Date().getFullYear();
+                    const isSelected = selectedDay === day;
+
+                    // Collect unique platform colors for this day
+                    const platformDots = new Set<string>();
+                    for (const p of dayPosts) {
+                      for (const plat of (p.platforms ?? [])) {
+                        platformDots.add(plat);
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => setSelectedDay(isSelected ? null : day)}
+                        className={cn(
+                          "aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all text-sm",
+                          isSelected
+                            ? "bg-[#6C5CE7] text-white"
+                            : isToday
+                              ? "bg-[#6C5CE7]/10 text-[#6C5CE7] font-semibold"
+                              : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300",
+                          dayPosts.length > 0 && !isSelected && "font-medium",
+                        )}
+                      >
+                        <span>{day}</span>
+                        {dayPosts.length > 0 && (
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            {Array.from(platformDots).slice(0, 4).map((plat) => (
+                              <div
+                                key={plat}
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  isSelected ? "bg-white/70" : (PLATFORM_COLORS[plat] || "bg-gray-400"),
+                                )}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        {dayPosts.length > 0 && (
+                          <span
+                            className={cn(
+                              "absolute top-0.5 right-0.5 text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center",
+                              isSelected
+                                ? "bg-white/20 text-white"
+                                : "bg-[#6C5CE7]/10 text-[#6C5CE7]",
+                            )}
+                          >
+                            {dayPosts.length}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {/* Recent posts */}
-            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Recent Posts
-                </h3>
-              </div>
-              {loadingPosts ? (
-                <div className="flex items-center justify-center py-8 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                </div>
-              ) : recentPosts.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm">
-                  No posts yet. Compose your first post above.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-[#0F1117] text-left">
-                        <th className="px-5 py-2.5 text-xs font-medium text-gray-500 uppercase">
-                          Date
-                        </th>
-                        <th className="px-5 py-2.5 text-xs font-medium text-gray-500 uppercase">
-                          Caption
-                        </th>
-                        <th className="px-5 py-2.5 text-xs font-medium text-gray-500 uppercase">
-                          Platforms
-                        </th>
-                        <th className="px-5 py-2.5 text-xs font-medium text-gray-500 uppercase">
-                          Status
-                        </th>
-                        <th className="px-5 py-2.5 text-xs font-medium text-gray-500 uppercase w-24">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentPosts.map((post) => {
-                        const isEditing = editingPostId === post.id;
-                        return (
-                        <tr
-                          key={post.id}
-                          className={cn(
-                            "border-t border-gray-100 dark:border-gray-800",
-                            post.source === "campaign" && "bg-purple-50/30 dark:bg-purple-900/5"
-                          )}
-                        >
-                          <td className="px-5 py-3 text-gray-500 whitespace-nowrap align-top">
-                            {new Date(post.created_at).toLocaleDateString()}
-                            {post.source === "campaign" && (
-                              <div className="mt-1">
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                                  Campaign
-                                </span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-5 py-3 text-gray-700 dark:text-gray-300 max-w-[250px] align-top">
-                            {isEditing ? (
-                              <div className="space-y-2">
-                                <textarea
-                                  value={editCaption}
-                                  onChange={(e) => setEditCaption(e.target.value)}
-                                  rows={3}
-                                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
-                                />
-                                {post.source !== "campaign" && (
+            {/* Side panel — selected day's posts */}
+            <div className="lg:col-span-1">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 sticky top-4">
+                {selectedDay ? (
+                  <>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                      {new Date(calendarYear, calendarMonth, selectedDay).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </h3>
+                    {selectedDayPosts.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Calendar className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                        <p className="text-sm text-gray-400">No posts scheduled for this day.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedDayPosts.map((post) => {
+                          const platforms = (post.platforms as string[] | null) ?? [];
+                          const isEditing = editingPostId === post.id;
+                          return (
+                            <div
+                              key={post.id}
+                              className="bg-gray-50 dark:bg-[#0F1117] rounded-lg p-3 border border-gray-100 dark:border-gray-800"
+                            >
+                              {isEditing ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={editCaption}
+                                    onChange={(e) => setEditCaption(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                                  />
                                   <input
                                     type="datetime-local"
                                     value={editScheduledTime}
                                     onChange={(e) => setEditScheduledTime(e.target.value)}
-                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-xs focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-xs focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
                                   />
-                                )}
-                                <div className="flex gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveEdit(post)}
-                                    disabled={editSaving}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-medium hover:bg-[#5B4BD1] disabled:opacity-50"
-                                  >
-                                    {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                                    Save
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={handleCancelEdit}
-                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                                  >
-                                    <X className="h-3 w-3" /> Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="truncate">{post.caption || "—"}</p>
-                                {post.source === "campaign" && post.campaign_name && (
-                                  <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5 truncate">
-                                    {post.campaign_name}{post.event_title ? ` · ${post.event_title}` : ""}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-5 py-3 align-top">
-                            <div className="flex gap-1.5 flex-wrap">
-                              {(post.platforms as string[] | null)?.map((p) => (
-                                <span
-                                  key={p}
-                                  className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 capitalize"
-                                >
-                                  {p}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-5 py-3 align-top">
-                            <span
-                              className={cn(
-                                "text-xs font-medium px-2.5 py-1 rounded-full",
-                                post.status === "posted" &&
-                                  "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                                post.status === "scheduled" &&
-                                  "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                                post.status === "queued" &&
-                                  "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                                post.status === "failed" &&
-                                  "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-                                (post.status === "draft" || !post.status) &&
-                                  "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                              )}
-                            >
-                              {post.status || "draft"}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3 align-top">
-                            {!isEditing && (
-                              <div className="relative flex items-center gap-1" ref={actionsMenuId === post.id ? actionsMenuRef : undefined}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleStartEdit(post)}
-                                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                                  title="Edit"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setActionsMenuId(actionsMenuId === post.id ? null : post.id)}
-                                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                                  title="More actions"
-                                >
-                                  <MoreHorizontal className="h-3.5 w-3.5" />
-                                </button>
-                                {actionsMenuId === post.id && (
-                                  <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-30 w-48">
-                                    {(post.status === "queued" || post.status === "draft") && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleApproveSchedule(post)}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors text-green-600 dark:text-green-400"
-                                      >
-                                        <Check className="h-3.5 w-3.5" />
-                                        Approve & Schedule
-                                      </button>
-                                    )}
+                                  <div className="flex gap-2">
                                     <button
                                       type="button"
-                                      onClick={() => handleStartEdit(post)}
-                                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors text-gray-700 dark:text-gray-300"
+                                      onClick={() => handleSaveEdit(post)}
+                                      disabled={editSaving}
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-medium hover:bg-[#5B4BD1] disabled:opacity-50"
                                     >
-                                      <Pencil className="h-3.5 w-3.5" />
-                                      Edit Post
+                                      {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                      Save
                                     </button>
-                                    {post.status !== "posted" && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveFromQueue(post)}
-                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors text-red-600 dark:text-red-400 border-t border-gray-100 dark:border-gray-800"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                        {post.source === "campaign" ? "Remove from Queue" : "Move to Drafts"}
-                                      </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleCancelEdit}
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400"
+                                    >
+                                      <X className="h-3 w-3" /> Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    {platforms.map((pid) => {
+                                      const Icon = getPlatformIcon(pid);
+                                      return (
+                                        <div
+                                          key={pid}
+                                          className="w-6 h-6 rounded-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 flex items-center justify-center"
+                                        >
+                                          {Icon && <Icon className="h-3 w-3 text-gray-600 dark:text-gray-400" />}
+                                        </div>
+                                      );
+                                    })}
+                                    {post.scheduled_time && (
+                                      <span className="text-[10px] text-gray-400 ml-auto">
+                                        {new Date(post.scheduled_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                                      </span>
                                     )}
                                   </div>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT — Preview + Status */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Per-platform preview */}
-            <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Preview
-              </h3>
-
-              {/* Platform tabs */}
-              <div className="flex rounded-lg bg-gray-100 dark:bg-[#0F1117] p-0.5 mb-4">
-                {(["instagram", "tiktok", "facebook", "x"] as PreviewTab[]).map((tab) => {
-                  const plat = PLATFORMS.find((p) => p.id === tab);
-                  const Icon = tab === "tiktok" ? TikTokIcon : plat?.icon;
-                  return (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setPreviewTab(tab)}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all",
-                        previewTab === tab
-                          ? "bg-white dark:bg-[#1A1D27] text-[#6C5CE7] shadow-sm"
-                          : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
-                      )}
-                    >
-                      {Icon && <Icon className="h-3.5 w-3.5" />}
-                      {plat?.name ?? tab}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Preview content */}
-              {previewTab === "instagram" && <InstagramPreview />}
-              {previewTab === "x" && <XPreview />}
-              {previewTab === "tiktok" && <TikTokPreview />}
-              {previewTab === "facebook" && <FacebookPreview />}
-            </div>
-
-            {/* Platform status */}
-            {(selectedPlatforms.length > 0 || hasResults) && (
-              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Platform Status
-                </h3>
-                <div className="space-y-2.5">
-                  {(hasResults
-                    ? Object.keys(platformResults)
-                    : selectedPlatforms
-                  ).map((pid) => {
-                    const plat = PLATFORMS.find((p) => p.id === pid);
-                    const result = platformResults[pid];
-                    const status: PostStatus = result?.status ?? "idle";
-                    const Icon = plat?.id === "tiktok" ? TikTokIcon : plat?.icon;
-
-                    return (
-                      <div
-                        key={pid}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-[#0F1117] border border-gray-100 dark:border-gray-800"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                          {Icon && <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
-                        </div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1">
-                          {plat?.name ?? pid}
-                        </span>
-                        {status === "idle" && (
-                          <span className="text-xs text-gray-400">Ready</span>
-                        )}
-                        {status === "posting" && (
-                          <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" />
-                        )}
-                        {status === "success" && (
-                          <div className="flex items-center gap-1.5">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span className="text-xs text-green-600 font-medium">
-                              Posted
-                            </span>
-                          </div>
-                        )}
-                        {status === "failed" && (
-                          <div className="flex items-center gap-1.5">
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                            <span className="text-xs text-red-600 font-medium">
-                              Failed
-                            </span>
-                          </div>
-                        )}
+                                  <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-3 mb-2">
+                                    {post.caption || "No caption"}
+                                  </p>
+                                  <div className="flex items-center gap-1">
+                                    <span
+                                      className={cn(
+                                        "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                                        post.status === "scheduled" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                                        post.status === "posted" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                                        post.status === "queued" && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                                        (post.status === "draft" || !post.status) && "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                                      )}
+                                    >
+                                      {post.status || "draft"}
+                                    </span>
+                                    <div className="ml-auto flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleStartEdit(post)}
+                                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                                        title="Edit"
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Error details */}
-                {Object.entries(platformResults).some(
-                  ([, r]) => r.status === "failed" && r.error
-                ) && (
-                  <div className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2.5">
-                    {Object.entries(platformResults)
-                      .filter(([, r]) => r.status === "failed" && r.error)
-                      .map(([pid, r]) => (
-                        <p key={pid} className="text-xs text-red-600 dark:text-red-400">
-                          <span className="font-medium capitalize">{pid}:</span>{" "}
-                          {r.error}
-                        </p>
-                      ))}
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Click a day to see scheduled posts
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Colored dots indicate platforms with scheduled content.
+                    </p>
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Quick tips */}
-            <div className="bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10 rounded-xl border border-[#6C5CE7]/20 p-4">
-              <h4 className="text-xs font-semibold text-[#6C5CE7] uppercase tracking-wider mb-2">
-                Tips
-              </h4>
-              <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
-                <li>X (Twitter) has a 280-character limit</li>
-                <li>Instagram requires an image or video</li>
-                <li>Videos work best on TikTok and YouTube</li>
-                <li>Use "First Comment" for hashtags on Instagram</li>
-                <li>Schedule posts for peak engagement times</li>
-              </ul>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
