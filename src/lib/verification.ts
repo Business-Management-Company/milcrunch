@@ -404,6 +404,12 @@ export async function runVerificationPipeline(
   redFlags: RedFlag[];
   firecrawlData: { url: string; markdown?: string }[];
   aiAnalysis: string;
+  linkedinUrl: string | null;
+  jobTitle: string | null;
+  currentEmployer: string | null;
+  skills: string[];
+  experience: { title?: string; organization?: string }[];
+  education: { school?: string; degree?: string }[];
 }> {
   console.log("[Verify] API Keys present:", {
     serp: !!import.meta.env.VITE_SERP_API_KEY,
@@ -432,6 +438,13 @@ export async function runVerificationPipeline(
   } catch (e) {
     console.warn("[Verify] Phase 1 failed:", e);
   }
+  // Extract useful fields from PDL response
+  const pdlLinkedinUrl = pdlData?.profiles?.find((p: any) => p.network === 'linkedin')?.url || null;
+  const pdlJobTitle = pdlData?.job_title || pdlData?.employment?.[0]?.title || null;
+  const pdlCurrentEmployer = pdlData?.employment?.[0]?.organization || null;
+  const pdlSkills = (pdlData as any)?.skills?.map((s: any) => s.name || s) || [];
+  const pdlExperience = pdlData?.employment || [];
+  const pdlEducation = pdlData?.education || [];
   onPhase({ phase: 1, name: "People Data Labs", status: "done", data: pdlData });
 
   // Phase 2: SerpAPI — always mark complete even if no results
@@ -533,6 +546,12 @@ export async function runVerificationPipeline(
     redFlags,
     firecrawlData,
     aiAnalysis,
+    linkedinUrl: pdlLinkedinUrl,
+    jobTitle: pdlJobTitle,
+    currentEmployer: pdlCurrentEmployer,
+    skills: pdlSkills,
+    experience: pdlExperience,
+    education: pdlEducation,
   };
 }
 

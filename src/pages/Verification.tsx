@@ -424,7 +424,7 @@ export default function Verification() {
           person_name: addForm.fullName.trim(),
           claimed_branch: finalBranch,
           claimed_status: addForm.claimedStatus,
-          linkedin_url: addForm.linkedinUrl.trim() || null,
+          linkedin_url: addForm.linkedinUrl.trim() || result.linkedinUrl || null,
           source_username: addForm.instagramHandle.trim() || null,
           profile_photo_url: addForm.instagramHandle.trim()
             ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
@@ -515,7 +515,7 @@ export default function Verification() {
             claimed_branch: finalBranch,
             claimed_type: null,
             claimed_status: addForm.claimedStatus,
-            linkedin_url: addForm.linkedinUrl.trim() || null,
+            linkedin_url: addForm.linkedinUrl.trim() || result.linkedinUrl || null,
             website_url: addForm.websiteUrl.trim() || null,
             verification_score: result.verificationScore,
             status: result.status,
@@ -666,6 +666,7 @@ export default function Verification() {
         ai_analysis: result.aiAnalysis,
         evidence_sources: result.evidenceSources,
         red_flags: result.redFlags,
+        linkedin_url: result.linkedinUrl || row.linkedin_url || null,
         last_verified_at: new Date().toISOString(),
       }).eq("id", row.id);
       toast.success(`Re-verification complete for ${row.person_name}`);
@@ -2450,6 +2451,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         ai_analysis: result.aiAnalysis,
         evidence_sources: result.evidenceSources,
         red_flags: result.redFlags,
+        linkedin_url: result.linkedinUrl || record.linkedin_url || null,
         last_verified_at: new Date().toISOString(),
       }).eq("id", record.id);
       toast.success("Re-verification complete");
