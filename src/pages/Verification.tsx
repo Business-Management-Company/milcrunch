@@ -733,15 +733,30 @@ export default function Verification() {
       {pipelineRunning && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-10 w-full max-w-md mx-4 flex flex-col items-center gap-6">
-            <div className="relative w-20 h-20">
-              <svg className="w-full h-full animate-spin" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
-                <circle cx="50" cy="50" r="45" fill="none" stroke="#6C5CE7" strokeWidth="8"
-                  strokeDasharray="100 183" strokeLinecap="round" />
+            <div className="relative w-20 h-20 mx-auto">
+              <svg className="absolute inset-0 w-full h-full animate-spin" viewBox="0 0 80 80" style={{ animationDuration: '2.5s' }}>
+                <circle cx="40" cy="40" r="36" fill="none" stroke="#e5e7eb" strokeWidth="4" />
+                <circle cx="40" cy="40" r="36" fill="none" stroke="#7c3aed" strokeWidth="4"
+                  strokeDasharray="60 165" strokeLinecap="round" />
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ShieldCheck className="h-8 w-8 text-[#6C5CE7]" />
-              </div>
+              {(addForm.instagramHandle.trim()
+                ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
+                : addForm.profilePhotoUrl) ? (
+                <img
+                  src={addForm.instagramHandle.trim()
+                    ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
+                    : addForm.profilePhotoUrl}
+                  alt={addForm.fullName}
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full bg-purple-100 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-purple-600">
+                    {addForm.fullName?.charAt(0) || '?'}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-[#000741] dark:text-white mb-1">Verifying {addForm.fullName}</p>
