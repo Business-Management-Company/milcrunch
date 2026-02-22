@@ -2318,96 +2318,92 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         </button>
       </div>
 
-      {/* Military Service Summary Card */}
-      {ms && ms.branch && (
-        <Card className={cn("rounded-xl border-l-4 pl-6 pr-10", branchColor(ms.branch))}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-purple-600" /> Military Service
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Rank + MOS line */}
-            <div className="flex items-start gap-6">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</p>
-                <p className="font-semibold text-sm mt-0.5">{ms.rank || notIdentified}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">MOS / Rate / AFSC</p>
-                <p className="font-semibold text-sm mt-0.5">{ms.mos || notIdentified}</p>
-              </div>
-            </div>
-            {/* Branch + Dates */}
-            <div className="flex items-start gap-6">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</p>
-                <p className="text-sm mt-0.5">{ms.branch || notIdentified}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Service Dates</p>
-                <p className="text-sm mt-0.5">{ms.service_dates || notIdentified}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Transition Year</p>
-                <p className="text-sm mt-0.5">{ms.transition_year || notIdentified}</p>
-              </div>
-            </div>
-            {/* Units */}
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Unit(s)</p>
-              {ms.units.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {ms.units.map((u, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs font-normal">{u}</Badge>
-                  ))}
-                </div>
-              ) : notIdentified}
-            </div>
-            {/* Deployments */}
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Deployments</p>
-              {ms.deployments.length > 0 ? (
-                <div className="mt-1 space-y-1">
-                  {ms.deployments.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <Target className="h-3 w-3 text-red-500 shrink-0" />
-                      <span>{d}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : notIdentified}
-            </div>
-            {/* Military Education */}
-            {milEducation.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Military Education</p>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {milEducation.map((e, i) => (
-                    <Badge key={i} variant="outline" className="text-xs font-normal">
-                      {e.school}{e.degree ? ` — ${e.degree}` : ""}{e.dates ? ` (${e.dates})` : ""}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Combined Career Card */}
+      <Card className="rounded-xl bg-white dark:bg-gray-950 shadow-sm border border-gray-200 dark:border-gray-800 p-6 space-y-0">
 
-      {/* Post-Service Career */}
-      <Card className="rounded-xl border-l-4 border-[#6C5CE7] border border-gray-200 dark:border-gray-800 pl-6 pr-10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Star className="h-4 w-4 text-[#6C5CE7]" /> Post-Service Career
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        {/* ── Military Service ── */}
+        {ms && ms.branch && (
+          <>
+            <div className="border-l-4 border-purple-500 pl-4">
+              <h4 className="text-base font-semibold flex items-center gap-2 mb-3">
+                <ShieldCheck className="h-4 w-4 text-purple-600" /> Military Service
+              </h4>
+              <div className="space-y-3">
+                <div className="flex items-start gap-6">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</p>
+                    <p className="font-semibold text-sm mt-0.5">{ms.rank || notIdentified}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">MOS / Rate / AFSC</p>
+                    <p className="font-semibold text-sm mt-0.5">{ms.mos || notIdentified}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-6">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</p>
+                    <p className="text-sm mt-0.5">{ms.branch || notIdentified}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Service Dates</p>
+                    <p className="text-sm mt-0.5">{ms.service_dates || notIdentified}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Transition Year</p>
+                    <p className="text-sm mt-0.5">{ms.transition_year || notIdentified}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Unit(s)</p>
+                  {ms.units.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {ms.units.map((u, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs font-normal">{u}</Badge>
+                      ))}
+                    </div>
+                  ) : notIdentified}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Deployments</p>
+                  {ms.deployments.length > 0 ? (
+                    <div className="mt-1 space-y-1">
+                      {ms.deployments.map((d, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          <Target className="h-3 w-3 text-red-500 shrink-0" />
+                          <span>{d}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : notIdentified}
+                </div>
+                {milEducation.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Military Education</p>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {milEducation.map((e, i) => (
+                        <Badge key={i} variant="outline" className="text-xs font-normal">
+                          {e.school}{e.degree ? ` — ${e.degree}` : ""}{e.dates ? ` (${e.dates})` : ""}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <hr className="my-4 border-gray-100" />
+          </>
+        )}
+
+        {/* ── Post-Service Career ── */}
+        <div className="border-l-4 border-blue-500 pl-4">
+          <h4 className="text-base font-semibold flex items-center gap-2 mb-3">
+            <Star className="h-4 w-4 text-blue-500" /> Post-Service Career
+          </h4>
           {postService.length > 0 ? (
             <ul className="space-y-2">
               {postService.map((ps, i) => (
                 <li key={i} className="flex items-start gap-3 py-1">
-                  <ChevronRight className="h-4 w-4 text-[#6C5CE7] shrink-0 mt-0.5" />
+                  <ChevronRight className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-sm">{ps.role}{ps.org ? ` — ${ps.org}` : ""}</p>
                     {ps.dates && <p className="text-xs text-muted-foreground">{ps.dates}</p>}
@@ -2418,66 +2414,65 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
           ) : (
             <p className="text-gray-400 italic text-sm">No post-service career identified</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Career Timeline */}
-      {careerEntries.length > 0 && (
-        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Briefcase className="h-4 w-4" /> Career Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              {careerEntries.map((entry, i) => (
-                <li
-                  key={i}
-                  className={cn(
-                    "pl-4 py-3 border-l-4 rounded-r-lg",
-                    entry.is_military
-                      ? cn("bg-purple-50/50 dark:bg-purple-950/20", branchColor(entry.org))
-                      : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm">{entry.org}</p>
-                    {entry.is_military && <ShieldCheck className="h-3.5 w-3.5 text-purple-600 shrink-0" />}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {entry.rank && <span className="font-medium">{entry.rank} — </span>}
-                    {entry.title}
-                    {entry.mos && <span className="text-xs ml-1 text-gray-500">({entry.mos})</span>}
-                  </p>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    {entry.dates && <span>{entry.dates}</span>}
-                    {entry.location && (
-                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{entry.location}</span>
+        {/* ── Career Timeline ── */}
+        {careerEntries.length > 0 && (
+          <>
+            <hr className="my-4 border-gray-100" />
+            <div className="border-l-4 border-green-500 pl-4">
+              <h4 className="text-base font-semibold flex items-center gap-2 mb-3">
+                <Briefcase className="h-4 w-4 text-green-600" /> Career Timeline
+              </h4>
+              <ul className="space-y-3">
+                {careerEntries.map((entry, i) => (
+                  <li
+                    key={i}
+                    className={cn(
+                      "pl-4 py-3 border-l-4 rounded-r-lg",
+                      entry.is_military
+                        ? cn("bg-purple-50/50 dark:bg-purple-950/20", branchColor(entry.org))
+                        : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20"
                     )}
-                  </div>
-                  {entry.units && entry.units.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {entry.units.map((u, j) => (
-                        <Badge key={j} variant="outline" className="text-[10px] py-0 px-1.5 font-normal">{u}</Badge>
-                      ))}
+                  >
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{entry.org}</p>
+                      {entry.is_military && <ShieldCheck className="h-3.5 w-3.5 text-purple-600 shrink-0" />}
                     </div>
-                  )}
-                  {entry.deployments && entry.deployments.length > 0 && (
-                    <div className="mt-1.5 space-y-0.5">
-                      {entry.deployments.map((d, j) => (
-                        <span key={j} className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Target className="h-2.5 w-2.5 text-red-400" /> {d}
-                        </span>
-                      ))}
+                    <p className="text-sm text-muted-foreground">
+                      {entry.rank && <span className="font-medium">{entry.rank} — </span>}
+                      {entry.title}
+                      {entry.mos && <span className="text-xs ml-1 text-gray-500">({entry.mos})</span>}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      {entry.dates && <span>{entry.dates}</span>}
+                      {entry.location && (
+                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{entry.location}</span>
+                      )}
                     </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+                    {entry.units && entry.units.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {entry.units.map((u, j) => (
+                          <Badge key={j} variant="outline" className="text-[10px] py-0 px-1.5 font-normal">{u}</Badge>
+                        ))}
+                      </div>
+                    )}
+                    {entry.deployments && entry.deployments.length > 0 && (
+                      <div className="mt-1.5 space-y-0.5">
+                        {entry.deployments.map((d, j) => (
+                          <span key={j} className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Target className="h-2.5 w-2.5 text-red-400" /> {d}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+      </Card>
 
       {/* Awards & Decorations */}
       <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
