@@ -2506,6 +2506,8 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   };
 
   const initials = (record.person_name || '??').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const pdlPhoto = (record.pdl_data as any)?.profile_pic_url || (record.pdl_data as any)?.photo_url || null;
+  const heroPhoto = record.profile_photo_url || pdlPhoto || null;
 
   useEffect(() => {
     if (record.profile_photo_url) return; // already has a photo
@@ -2542,9 +2544,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-start gap-4">
         <div className="shrink-0 relative group mr-4">
-          {record.profile_photo_url ? (
+          {heroPhoto ? (
             <img
-              src={record.profile_photo_url}
+              src={heroPhoto}
               alt={initials}
               className="w-14 h-14 rounded-full object-cover flex-shrink-0"
               referrerPolicy="no-referrer"
@@ -2556,7 +2558,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           ) : null}
           <div
             className="w-14 h-14 rounded-full bg-indigo-600 flex items-center justify-center text-white text-base font-bold flex-shrink-0"
-            style={record.profile_photo_url ? { display: 'none' } : {}}
+            style={heroPhoto ? { display: 'none' } : {}}
           >
             {initials}
           </div>
