@@ -68,6 +68,8 @@ import {
   Star,
   Medal,
   Info,
+  Share2,
+  Copy,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -2532,6 +2534,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [reverifying, setReverifying] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [editNotes, setEditNotes] = useState(record.notes ?? "");
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareLink, setShareLink] = useState("");
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -2595,6 +2601,38 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     toast.success("Notes saved");
     setNotesOpen(false);
     onRefresh?.();
+  };
+
+  const handleShareReport = async () => {
+    setShareLoading(true);
+    try {
+      // Check if a token already exists
+      const { data: existing } = await supabase
+        .from("verifications")
+        .select("public_token")
+        .eq("id", record.id)
+        .single();
+      let token = (existing as any)?.public_token;
+      if (!token) {
+        token = crypto.randomUUID();
+        const { error } = await supabase
+          .from("verifications")
+          .update({ public_token: token } as any)
+          .eq("id", record.id);
+        if (error) { toast.error("Failed to generate share link"); setShareLoading(false); return; }
+      }
+      setShareLink(`https://milcrunch.com/report/${token}`);
+      setShareModalOpen(true);
+    } catch {
+      toast.error("Failed to generate share link");
+    }
+    setShareLoading(false);
+  };
+
+  const handleCopyShareLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
   };
 
   const locationStr = [record.city, record.state, record.zip].filter(Boolean).join(", ");
@@ -2819,6 +2857,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             <Button variant="outline" size="sm" onClick={() => setNotesOpen(!notesOpen)}>
               <FileText className="h-3.5 w-3.5 mr-1.5" /> {notesOpen ? "Close Notes" : "Add Notes"}
             </Button>
+            <Button variant="outline" size="sm" onClick={handleShareReport} disabled={shareLoading}>
+              {shareLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5 mr-1.5" />}
+              Share Report
+            </Button>
           </div>
           {notesOpen && (
             <div className="mt-3 space-y-2 max-w-md">
@@ -2831,6 +2873,29 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               </div>
             </div>
           )}
+
+          {/* Share Report Modal */}
+          <Dialog open={shareModalOpen} onOpenChange={setShareModalOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Share2 className="h-5 w-5 text-[#6C5CE7]" />
+                  Share Verification Report
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Anyone with this link can view this creator's verification report.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input value={shareLink} readOnly className="text-sm font-mono" />
+                  <Button size="sm" onClick={handleCopyShareLink} className={shareCopied ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#6C5CE7] hover:bg-[#5B4BD1]"}>
+                    {shareCopied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy Link</>}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         </div>

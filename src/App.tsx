@@ -158,6 +158,7 @@ import KbCategoryPage from "./pages/kb/KbCategory";
 import KbArticlePage from "./pages/kb/KbArticle";
 import KbAdmin from "./pages/kb/KbAdmin";
 import SharedReport from "./pages/SharedReport";
+import PublicVerificationReport from "./pages/PublicVerificationReport";
 
 const queryClient = new QueryClient();
 
@@ -350,6 +351,8 @@ const App = () => (
               <Route path="/p/:slug" element={<DynamicPage />} />
               {/* Public shared report page */}
               <Route path="/shared/:reportId" element={<SharedReport />} />
+              {/* Public verification report (shareable link) */}
+              <Route path="/report/:token" element={<PublicVerificationReport />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
