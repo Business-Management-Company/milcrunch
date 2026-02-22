@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ import {
   Trash2,
   RefreshCw,
   Save,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1222,6 +1224,7 @@ function ConnectedSocialsBanner({
 /* ------------------------------------------------------------------ */
 
 export default function BrandCampaigns() {
+  const navigate = useNavigate();
   const { user, effectiveUserId } = useAuth();
   const { guardAction } = useDemoMode();
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
@@ -1731,26 +1734,36 @@ Make the captions authentic and engaging for a military community audience. Refe
     if (!campaign) return;
     setScheduleAllLoading(true);
     setScheduleFeedback(null);
-    let success = 0;
-    let fail = 0;
-    let globalIdx = 0;
-    for (const phase of campaign.phases) {
-      for (const post of phase.posts) {
-        try {
-          await schedulePost(post, globalIdx);
-          success++;
-        } catch {
-          fail++;
-        }
-        globalIdx++;
-      }
-    }
+
+    const rows = campaign.phases.flatMap((phase) =>
+      phase.posts.map((post) => ({
+        user_id: user?.id ?? null,
+        caption: `${post.caption}\n\n${post.hashtags ?? ""}`.trim(),
+        platforms: [post.platform],
+        file_url: null,
+        scheduled_time: post.best_time || null,
+        status: "queued",
+        results: {
+          phase: phase.phase,
+          day: post.day,
+          date_label: post.date_label,
+          content_type: post.content_type,
+          suggested_visual: post.suggested_visual,
+          event_id: selectedEventId,
+          campaign_id: savedCampaignId,
+        },
+      } as Record<string, unknown>))
+    );
+
+    const { error: insertError } = await supabase.from("social_posts").insert(rows);
     setScheduleAllLoading(false);
-    setScheduleFeedback({
-      type: fail === 0 ? "success" : "error",
-      msg: fail === 0 ? `All ${success} posts scheduled!` : `${success} scheduled, ${fail} failed.`,
-    });
-  }, [campaign, schedulePost]);
+
+    if (insertError) {
+      setScheduleFeedback({ type: "error", msg: `Failed to queue posts: ${insertError.message}` });
+    } else {
+      setScheduleFeedback({ type: "success", msg: `✓ ${rows.length} posts sent to Posting queue` });
+    }
+  }, [campaign, selectedEventId, savedCampaignId, user?.id]);
 
   // Update a post inline
   const updatePost = useCallback((phaseIdx: number, postIdx: number, patch: Partial<CampaignPost>) => {
@@ -2249,9 +2262,9 @@ Make the captions authentic and engaging for a military community audience. Refe
                         {scheduleAllLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-1" />
                         ) : (
-                          <CalendarClock className="h-4 w-4 mr-1" />
+                          <Send className="h-4 w-4 mr-1" />
                         )}
-                        Schedule All
+                        Send to Posting Queue →
                       </Button>
                     </div>
                   </div>
@@ -2265,11 +2278,19 @@ Make the captions authentic and engaging for a military community audience. Refe
                       )}
                     >
                       {scheduleFeedback.type === "success" ? (
-                        <CheckCircle2 className="h-4 w-4" />
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
                       ) : (
-                        <AlertCircle className="h-4 w-4" />
+                        <AlertCircle className="h-4 w-4 shrink-0" />
                       )}
                       {scheduleFeedback.msg}
+                      {scheduleFeedback.type === "success" && (
+                        <button
+                          onClick={() => navigate("/brand/posting")}
+                          className="ml-auto text-xs font-semibold text-[#6C5CE7] hover:underline whitespace-nowrap"
+                        >
+                          View in Posting →
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
