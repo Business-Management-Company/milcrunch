@@ -81,6 +81,17 @@ import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
 
+interface PreviewMember {
+  directory_id: string;
+  creator_name: string | null;
+  ic_avatar_url: string | null;
+  avatar_url: string | null;
+}
+
+interface DirectoryWithPreview extends Directory {
+  previewMembers?: PreviewMember[];
+}
+
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
   Navy: "bg-blue-900/10 text-blue-900",
@@ -181,7 +192,7 @@ const BrandDirectory = () => {
   const { lists, addCreatorToList } = useLists();
 
   // Directory-level state
-  const [directories, setDirectories] = useState<Directory[]>([]);
+  const [directories, setDirectories] = useState<DirectoryWithPreview[]>([]);
   const [dirsLoading, setDirsLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -249,7 +260,22 @@ const BrandDirectory = () => {
   const loadDirectories = useCallback(async () => {
     setDirsLoading(true);
     const data = await fetchDirectoriesWithCounts();
-    setDirectories(data);
+    if (data.length > 0) {
+      const { data: previewRows } = await supabase
+        .from("directory_members")
+        .select("directory_id, creator_name, ic_avatar_url, avatar_url")
+        .in("directory_id", data.map((d) => d.id))
+        .order("sort_order", { ascending: true });
+      const previewMap = new Map<string, PreviewMember[]>();
+      for (const row of (previewRows ?? []) as PreviewMember[]) {
+        const arr = previewMap.get(row.directory_id) ?? [];
+        if (arr.length < 4) arr.push(row);
+        previewMap.set(row.directory_id, arr);
+      }
+      setDirectories(data.map((d) => ({ ...d, previewMembers: previewMap.get(d.id) ?? [] })));
+    } else {
+      setDirectories(data);
+    }
     setDirsLoading(false);
   }, []);
 
@@ -789,18 +815,33 @@ const BrandDirectory = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 mt-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-4 w-4" />
-                        <span className="font-medium text-foreground">{dir.member_count ?? 0}</span>
-                        <span>creators</span>
-                      </div>
+                    <div className="flex items-center gap-2 mt-4">
+                      {dir.previewMembers && dir.previewMembers.length > 0 && (
+                        <div className="flex -space-x-2">
+                          {dir.previewMembers.slice(0, 4).map((member, i) => (
+                            member.ic_avatar_url || member.avatar_url ? (
+                              <img
+                                key={i}
+                                src={member.ic_avatar_url || member.avatar_url!}
+                                referrerPolicy="no-referrer"
+                                className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 object-cover"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div key={i} className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                                <span className="text-xs text-purple-600 dark:text-purple-300 font-semibold">{member.creator_name?.charAt(0)}</span>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      )}
+                      <span className="text-sm text-gray-500 dark:text-gray-400">{dir.member_count ?? 0} creator{(dir.member_count ?? 0) !== 1 ? "s" : ""}</span>
                       {dir.is_public ? (
-                        <Badge variant="outline" className="text-[10px] border-purple-300 text-purple-700 dark:text-purple-400">
+                        <Badge variant="outline" className="text-[10px] border-purple-300 text-purple-700 dark:text-purple-400 ml-auto">
                           <Eye className="h-3 w-3 mr-1" /> Public
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] border-gray-300 text-gray-500">
+                        <Badge variant="outline" className="text-[10px] border-gray-300 text-gray-500 ml-auto">
                           <EyeOff className="h-3 w-3 mr-1" /> Private
                         </Badge>
                       )}
@@ -833,7 +874,26 @@ const BrandDirectory = () => {
                     ) : (
                       <span className="font-medium text-gray-900 dark:text-white text-sm">{dir.name}</span>
                     )}
-                    <span className="text-xs text-gray-400">{dir.member_count ?? 0} creators</span>
+                    {dir.previewMembers && dir.previewMembers.length > 0 && (
+                      <div className="flex -space-x-1.5">
+                        {dir.previewMembers.slice(0, 4).map((member, i) => (
+                          member.ic_avatar_url || member.avatar_url ? (
+                            <img
+                              key={i}
+                              src={member.ic_avatar_url || member.avatar_url!}
+                              referrerPolicy="no-referrer"
+                              className="w-5 h-5 rounded-full border border-white dark:border-gray-900 object-cover"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div key={i} className="w-5 h-5 rounded-full border border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                              <span className="text-[8px] text-purple-600 dark:text-purple-300 font-semibold">{member.creator_name?.charAt(0)}</span>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    )}
+                    <span className="text-xs text-gray-400">{dir.member_count ?? 0} creator{(dir.member_count ?? 0) !== 1 ? "s" : ""}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {dir.is_public && (
