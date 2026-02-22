@@ -1007,7 +1007,6 @@ export default function Verification() {
                     rows={2}
                   />
                 </div>
-                {newRecordId && <p className="text-sm text-purple-600">Verification saved. Redirecting...</p>}
                 <Button
                   onClick={handleStartVerification}
                   disabled={pipelineRunning || !addForm.fullName.trim()}
