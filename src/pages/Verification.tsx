@@ -2324,7 +2324,7 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         {/* ── Military Service ── */}
         {ms && ms.branch && (
           <>
-            <div className="border-l-4 border-purple-500 pl-4">
+            <div className="border-l-4 border-purple-500 pl-4 pt-2 pb-4">
               <h4 className="text-base font-semibold flex items-center gap-2 mb-3">
                 <ShieldCheck className="h-4 w-4 text-purple-600" /> Military Service
               </h4>
@@ -2390,12 +2390,16 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
                 )}
               </div>
             </div>
-            <hr className="my-4 border-gray-100" />
+            <div className="my-6 flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+              <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Post-Service Career</span>
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+            </div>
           </>
         )}
 
         {/* ── Post-Service Career ── */}
-        <div className="border-l-4 border-blue-500 pl-4">
+        <div className="border-l-4 border-blue-500 pl-4 pt-2 pb-4">
           <h4 className="text-base font-semibold flex items-center gap-2 mb-3">
             <Star className="h-4 w-4 text-blue-500" /> Post-Service Career
           </h4>
@@ -2419,8 +2423,12 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         {/* ── Career Timeline ── */}
         {careerEntries.length > 0 && (
           <>
-            <hr className="my-4 border-gray-100" />
-            <div className="border-l-4 border-green-500 pl-4">
+            <div className="my-6 flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+              <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Career Timeline</span>
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+            </div>
+            <div className="border-l-4 border-green-500 pl-4 pt-2 pb-4">
               <h4 className="text-base font-semibold flex items-center gap-2 mb-3">
                 <Briefcase className="h-4 w-4 text-green-600" /> Career Timeline
               </h4>
@@ -2472,34 +2480,6 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
             </div>
           </>
         )}
-      </Card>
-
-      {/* Awards & Decorations */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Medal className="h-4 w-4 text-amber-500" /> Awards & Decorations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {awards.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {awards.map((a, i) => (
-                <Tooltip key={i}>
-                  <TooltipTrigger asChild>
-                    <Badge className="bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-default dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">
-                      <Trophy className="h-3 w-3 mr-1 text-amber-500" />
-                      {a.name}
-                    </Badge>
-                  </TooltipTrigger>
-                  {a.context && <TooltipContent side="bottom"><p className="max-w-xs">{a.context}</p></TooltipContent>}
-                </Tooltip>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 italic text-sm">No awards or decorations identified</p>
-          )}
-        </CardContent>
       </Card>
 
       {/* Civilian Education */}
