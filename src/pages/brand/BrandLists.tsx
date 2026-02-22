@@ -199,12 +199,12 @@ const BrandLists = () => {
       </div>
 
       {viewMode === 'card' && (
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 pr-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {lists.map((list) => (
             <Card
               key={list.id}
               className={cn(
-                "bg-gradient-card border-border p-4 rounded-lg shadow-sm cursor-pointer transition-colors hover:border-primary/50",
+                "bg-gradient-card border-border p-5 cursor-pointer transition-colors hover:border-primary/50",
                 selectedListId === list.id && "ring-2 ring-primary"
               )}
               onClick={() =>
@@ -217,7 +217,7 @@ const BrandLists = () => {
                     <List className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-foreground">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {list.name}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -236,7 +236,7 @@ const BrandLists = () => {
             </Card>
           ))}
           <Card
-            className="bg-gradient-card border-border border-dashed p-4 rounded-lg shadow-sm cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/30 flex items-center justify-center min-h-[88px]"
+            className="bg-gradient-card border-border border-dashed p-5 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/30 flex items-center justify-center min-h-[88px]"
             onClick={(e) => {
               e.stopPropagation();
               setCreateModalOpen(true);
@@ -246,19 +246,19 @@ const BrandLists = () => {
               <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                 <Plus className="w-5 h-5" />
               </div>
-              <span className="text-base font-semibold text-foreground">Create New List</span>
+              <span className="text-lg font-semibold text-foreground">Create New List</span>
             </div>
           </Card>
         </div>
       )}
 
       {viewMode === 'list' && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden pr-4">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
           {lists.map((list) => (
             <div
               key={list.id}
               className={cn(
-                "flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors",
+                "flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer",
                 selectedListId === list.id && "bg-indigo-50 dark:bg-indigo-950/20"
               )}
               onClick={() =>
@@ -266,8 +266,8 @@ const BrandLists = () => {
               }
             >
               <div className="flex items-center gap-3">
-                <span className="text-base font-semibold text-gray-900 dark:text-white">{list.name}</span>
-                <span className="text-sm text-gray-500">{list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}</span>
+                <span className="font-medium text-gray-900 dark:text-white text-sm">{list.name}</span>
+                <span className="text-xs text-gray-400">{list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}</span>
               </div>
               <div className="flex items-center gap-2">
                 <ChevronRight className={cn("w-4 h-4 text-gray-300 dark:text-gray-600 transition-transform", selectedListId === list.id && "rotate-90")} />
@@ -275,11 +275,11 @@ const BrandLists = () => {
             </div>
           ))}
           <div
-            className="flex items-center justify-center px-4 py-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer transition-colors text-muted-foreground"
+            className="flex items-center justify-center px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer text-muted-foreground"
             onClick={() => setCreateModalOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
-            <span className="text-base font-semibold text-foreground">Create New List</span>
+            <span className="font-medium text-sm text-foreground">Create New List</span>
           </div>
         </div>
       )}
