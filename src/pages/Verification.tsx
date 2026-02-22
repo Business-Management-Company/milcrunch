@@ -2731,6 +2731,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         {/* RIGHT column — Confidence Ring */}
         <div className="w-44 flex-shrink-0 flex flex-col items-center">
           <ConfidenceGauge score={record.verification_score ?? 0} />
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-1 text-center">Confidence</p>
         </div>
       </div>
 
