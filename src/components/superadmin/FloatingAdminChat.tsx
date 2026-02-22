@@ -26,6 +26,7 @@ interface ChatMessage {
   followUp?: string;
   creators?: CreatorCard[];
   loading?: boolean;
+  chips?: string[];
 }
 
 const DEFAULT_CHIPS = [
@@ -210,7 +211,15 @@ When showing events, always format each event as:
 **[Event Name](event_url or #)** - Date | Location
 Include the event photo if available. Always end event listings with a direct link. Format responses with clear sections and emojis for scannability.
 
-Before searching for creators or venues, always ask 1-2 clarifying questions to refine results. For example: if asked for influencers, ask about preferred branch, follower range, content type, or location. If asked for a venue, ask about city, capacity, and event type. Only search after getting enough context. Keep clarifying questions short and friendly.
+Ask MAXIMUM ONE clarifying question before showing results. Never ask more than one question in a single response. If the user has already answered one question, proceed immediately to showing results from the database — do not ask another question. Format creator results as:
+
+**[Name]** (@handle) — [branch] | [followers] followers | [engagement]% engagement
+
+Show at least 5 results when displaying creators. Lead with: "Here are [X] creators matching your criteria:" then list them. After results, offer one follow-up like "Want me to filter by follower count or content type?"
+
+When you ask a clarifying question, always end your message with a line like:
+CHIPS: Option A | Option B | Option C
+These will be shown as quick-reply buttons. Keep each option under 30 characters. Always provide 2-4 chip options.
 
 When the user provides enough context to search for creators/influencers/speakers, respond ONLY with valid JSON like:
 {"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
@@ -287,8 +296,13 @@ For all other questions, respond naturally and concisely.`;
         // Not JSON — treat as regular text response
       }
 
-      // Regular text response
-      setMessages((m) => [...m, { id: makeId(), role: "assistant" as const, text }]);
+      // Regular text response — extract CHIPS: line if present
+      const chipsMatch = text.match(/\nCHIPS:\s*(.+)$/m);
+      const displayText = chipsMatch ? text.replace(chipsMatch[0], "").trim() : text;
+      const chips = chipsMatch
+        ? chipsMatch[1].split("|").map((s: string) => s.trim()).filter(Boolean)
+        : undefined;
+      setMessages((m) => [...m, { id: makeId(), role: "assistant" as const, text: displayText, chips }]);
     } catch (e) {
       console.error("[FloatingChat] Error:", e);
       setMessages((m) => [
@@ -519,6 +533,20 @@ For all other questions, respond naturally and concisely.`;
                   )}
                   {m.followUp && (
                     <p className="text-xs text-gray-400 mt-2">{m.followUp}</p>
+                  )}
+                  {/* Quick-reply chips from AI questions */}
+                  {m.chips && m.chips.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {m.chips.map((chip) => (
+                        <button
+                          key={chip}
+                          onClick={() => addResponse(chip)}
+                          className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/30 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/15 transition-colors"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
