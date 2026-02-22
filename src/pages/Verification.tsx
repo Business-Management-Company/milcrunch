@@ -2022,7 +2022,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
         <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} />
       </button>
       {isOpen && (
-        <div className="pl-7">
+        <div className="ml-6 mt-4 mb-2">
           <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm pl-6 pr-10 py-4 space-y-3">
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -2958,7 +2958,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
           <StatusDot status={record.ai_analysis ? 'green' : 'red'} />
         </button>
-        {summaryOpen && <IntelligenceSummary record={record} />}
+        {summaryOpen && <div className="ml-6 mt-4 mb-2"><IntelligenceSummary record={record} /></div>}
       </section>
 
       {/* ── 3. EVIDENCE SOURCES — accordion ── */}
@@ -2974,7 +2974,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <StatusDot status={sources.length >= 10 ? 'green' : sources.length > 0 ? 'yellow' : 'red'} />
         </button>
         {evidenceOpen && (
-          <div className="mt-4 space-y-4 pl-7">
+          <div className="ml-6 mt-4 mb-2 space-y-4">
             <div className="flex items-center justify-end">
               <Dialog open={additionalSearchOpen} onOpenChange={setAdditionalSearchOpen}>
                 <Button variant="outline" size="sm" onClick={() => setAdditionalSearchOpen(true)}>
@@ -3022,7 +3022,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             return 'red';
           })()} />
         </button>
-        {careerOpen && <CareerTrackTab record={record} />}
+        {careerOpen && <div className="ml-6 mt-4 mb-2"><CareerTrackTab record={record} /></div>}
       </section>
 
       {/* ── 5. SOCIAL ── */}
@@ -3033,7 +3033,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
           <StatusDot status={record.source_username || record.linkedin_url ? 'green' : 'red'} />
         </button>
-        {socialOpen && <div className="mt-3"><SocialVerificationSection record={record} /></div>}
+        {socialOpen && <div className="ml-6 mt-4 mb-2"><SocialVerificationSection record={record} /></div>}
       </section>
 
       {/* ── 6. MEDIA — collapsible ── */}
@@ -3051,7 +3051,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           })()} />
         </button>
         {mediaOpen && (
-          <div className="mt-4 pl-7">
+          <div className="ml-6 mt-4 mb-2">
             <MediaTab record={record} />
           </div>
         )}
@@ -3085,7 +3085,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           })()}
         </button>
         {backgroundOpen && (
-          <div className="mt-4 pl-7">
+          <div className="ml-6 mt-4 mb-2">
             <BackgroundReviewTab
               personName={record.person_name}
               recordId={record.id}
