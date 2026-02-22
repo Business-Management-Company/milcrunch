@@ -1731,12 +1731,14 @@ Make the captions authentic and engaging for a military community audience. Refe
 
   // Schedule all posts
   const scheduleAll = useCallback(async () => {
-    if (!campaign) return;
+    console.log("1. Send to Posting Queue clicked");
+    if (!campaign) { console.log("1a. No campaign — aborting"); return; }
     setScheduleAllLoading(true);
     setScheduleFeedback(null);
 
     const selectedEvent = events.find((e) => e.id === selectedEventId);
     const eventDate = selectedEvent?.start_date ?? null;
+    console.log("2. Event context:", { selectedEventId, eventDate, eventTitle: selectedEvent?.title, phaseCount: campaign.phases.length, totalPosts: campaign.phases.reduce((n, p) => n + p.posts.length, 0) });
 
     // Convert day offset + human time string → ISO 8601 timestamp
     const toISO = (day: number, timeStr: string | null): string | null => {
@@ -1747,7 +1749,7 @@ Make the captions authentic and engaging for a military community audience. Refe
       try {
         const cleanTime = timeStr.replace(/\s*(ET|EST|EDT|PT|PST|PDT|CT|CST|CDT|MT|MST|MDT)\s*/gi, "").trim();
         const match = cleanTime.match(/^(\d{1,2}):?(\d{2})?\s*(AM|PM)?$/i);
-        if (!match) { base.setHours(12, 0, 0, 0); return base.toISOString(); }
+        if (!match) { console.log("toISO: no match for", timeStr, "→ defaulting to noon"); base.setHours(12, 0, 0, 0); return base.toISOString(); }
         let h = parseInt(match[1], 10);
         const m = parseInt(match[2] || "0", 10);
         const meridiem = (match[3] || "").toUpperCase();
@@ -1762,32 +1764,40 @@ Make the captions authentic and engaging for a military community audience. Refe
     };
 
     const rows = campaign.phases.flatMap((phase) =>
-      phase.posts.map((post) => ({
-        user_id: user?.id ?? null,
-        caption: `${post.caption}\n\n${post.hashtags ?? ""}`.trim(),
-        platforms: [post.platform],
-        file_url: null,
-        scheduled_time: toISO(post.day, post.best_time),
-        status: "queued",
-        results: {
-          phase: phase.phase,
-          day: post.day,
-          date_label: post.date_label,
-          content_type: post.content_type,
-          suggested_visual: post.suggested_visual,
-          best_time_label: post.best_time || null,
-          event_id: selectedEventId,
-          campaign_id: savedCampaignId,
-        },
-      } as Record<string, unknown>))
+      phase.posts.map((post) => {
+        const scheduledTime = toISO(post.day, post.best_time);
+        console.log("3. Post row:", { day: post.day, best_time: post.best_time, scheduledTime, platform: post.platform, captionPreview: (post.caption || "").slice(0, 60) });
+        return {
+          user_id: user?.id ?? null,
+          caption: `${post.caption}\n\n${post.hashtags ?? ""}`.trim(),
+          platforms: [post.platform],
+          file_url: null,
+          scheduled_time: scheduledTime,
+          status: "queued",
+          results: {
+            phase: phase.phase,
+            day: post.day,
+            date_label: post.date_label,
+            content_type: post.content_type,
+            suggested_visual: post.suggested_visual,
+            best_time_label: post.best_time || null,
+            event_id: selectedEventId,
+            campaign_id: savedCampaignId,
+          },
+        } as Record<string, unknown>;
+      })
     );
 
-    const { error: insertError } = await supabase.from("social_posts").insert(rows);
+    console.log("4. Full insert payload:", JSON.stringify(rows, null, 2));
+    const { data: insertData, error: insertError } = await supabase.from("social_posts").insert(rows).select();
+    console.log("5. Supabase result — data:", insertData, "error:", insertError);
     setScheduleAllLoading(false);
 
     if (insertError) {
+      console.error("6. INSERT FAILED:", insertError.message, insertError.details, insertError.hint);
       setScheduleFeedback({ type: "error", msg: `Failed to queue posts: ${insertError.message}` });
     } else {
+      console.log("6. INSERT OK —", rows.length, "rows inserted");
       setScheduleFeedback({ type: "success", msg: `✓ ${rows.length} posts sent to Posting queue` });
     }
   }, [campaign, selectedEventId, savedCampaignId, user?.id, events]);
