@@ -94,6 +94,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -1119,6 +1122,25 @@ export default function Verification() {
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExportProfile(row); }}>
                               <Download className="h-4 w-4 mr-2" /> Export Profile
                             </DropdownMenuItem>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
+                                <ChevronDown className="h-4 w-4 mr-2" /> Change Status
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "verified" }).eq("id", row.id); toast.success("Status changed to verified"); fetchVerifications(); }}>
+                                  <ShieldCheck className="h-4 w-4 mr-2 text-purple-600" /> Verified
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "pending" }).eq("id", row.id); toast.success("Status changed to pending"); fetchVerifications(); }}>
+                                  <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "flagged" }).eq("id", row.id); toast.success("Status changed to flagged"); fetchVerifications(); }}>
+                                  <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "denied" }).eq("id", row.id); toast.success("Status changed to denied"); fetchVerifications(); }}>
+                                  <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReverify(row); }}>
                               <RefreshCw className="h-4 w-4 mr-2" /> Re-verify
@@ -2645,7 +2667,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 pl-3 pr-8 space-y-8 max-w-full overflow-hidden">
+    <div className="w-full py-6 pl-3 pr-8 max-w-full overflow-hidden">
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-4 w-full max-w-full overflow-hidden">
         {/* LEFT column */}
@@ -2799,31 +2821,6 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           })()}
           {/* Quick action buttons */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
-            <Button variant="outline" size="sm" onClick={handleQuickReverify} disabled={reverifying}>
-              {reverifying ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
-              Re-verify
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <ChevronDown className="h-3.5 w-3.5 mr-1.5" /> Change Status
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleStatusChange("verified")}>
-                  <ShieldCheck className="h-4 w-4 mr-2 text-purple-600" /> Verified
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange("pending")}>
-                  <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange("flagged")}>
-                  <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange("denied")}>
-                  <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <Button variant="outline" size="sm" onClick={() => setNotesOpen(!notesOpen)}>
               <FileText className="h-3.5 w-3.5 mr-1.5" /> {notesOpen ? "Close Notes" : "Add Notes"}
             </Button>
@@ -2948,9 +2945,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
           <StatusDot status={(() => {
-            if (!record.pdl_data) return 'red';
+            const career = (record as any).career_data;
             const pdl = record.pdl_data as any;
-            return (pdl.employment?.length > 0 || pdl.experience?.length > 0) ? 'green' : 'yellow';
+            if (career) return 'green';
+            if (pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) return 'green';
+            if (pdl) return 'yellow';
+            return 'red';
           })()} />
         </button>
         {careerOpen && <CareerTrackTab record={record} />}
@@ -2974,11 +2974,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <Video className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
           <StatusDot status={(() => {
+            const appearances = (record as any).media_appearances as unknown[] | undefined;
+            if (Array.isArray(appearances) && appearances.length > 0) return 'green';
             const mc = record.manual_checks as Record<string, unknown> | null;
-            const media = mc?.youtube_media as { videos?: unknown[] } | undefined;
-            const results = mc?.youtube_results as unknown[] | undefined;
-            if ((media?.videos && media.videos.length > 0) || (Array.isArray(results) && results.length > 0)) return 'green';
-            if ((mc as any)?.youtube_error) return 'red';
+            if ((mc as any)?.media_error) return 'red';
             return 'yellow';
           })()} />
         </button>
