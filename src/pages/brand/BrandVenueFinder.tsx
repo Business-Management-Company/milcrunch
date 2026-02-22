@@ -73,6 +73,7 @@ const VENUE_STYLES: { label: string; keywords: string }[] = [
   { label: "Theater", keywords: "theater performing arts auditorium" },
   { label: "Rooftop", keywords: "rooftop event venue" },
   { label: "Restaurant", keywords: "restaurant private dining event" },
+  { label: "Military Installation", keywords: "military installation conference facility on-base event space" },
 ];
 
 const MIN_RATING_OPTIONS = [
@@ -121,6 +122,9 @@ const PRICE_LABELS: Record<number, string> = {
   3: "$$$",
   4: "$$$$",
 };
+
+const isMilitaryVenue = (name: string) =>
+  /military|fort |camp |naval|air force base|afb|mcb |nsa |jb |joint base|arsenal|barracks|garrison/i.test(name);
 
 // ─── Fit Score ──────────────────────────────────────────────
 
@@ -925,6 +929,11 @@ function VenueCard({
         <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">
           {venue.name}
         </h3>
+        {isMilitaryVenue(venue.name) && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-semibold border border-green-200">
+            🎖️ Military Installation
+          </span>
+        )}
 
         <div className="flex items-start gap-1.5 text-sm text-gray-500">
           <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
