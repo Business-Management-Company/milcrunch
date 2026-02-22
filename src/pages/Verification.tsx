@@ -1826,6 +1826,112 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
   );
 }
 
+/** Inline Speaker Readiness for the collapsible sections list — no card wrapper, outer row controls open/close. */
+function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { record: VerificationRecord; onRefresh?: () => void; isOpen: boolean; onToggle: () => void }) {
+  const rawChecks = (record.manual_checks ?? {}) as Record<string, unknown>;
+  const [localChecks, setLocalChecks] = useState<Record<string, boolean>>(() => {
+    const out: Record<string, boolean> = {};
+    for (const item of READINESS_ITEMS) {
+      if (!item.auto) out[item.key] = !!rawChecks[item.key];
+    }
+    return out;
+  });
+  const [bookingNotes, setBookingNotes] = useState((rawChecks.booking_notes as string) ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const autoChecks: Record<string, boolean> = {
+    military_verified: (record.verification_score ?? 0) >= 70,
+    no_criminal: !((record.red_flags as RedFlag[] | null)?.length),
+  };
+
+  const checkedCount = READINESS_ITEMS.filter((item) =>
+    item.auto ? autoChecks[item.key] : localChecks[item.key]
+  ).length;
+  const total = READINESS_ITEMS.length;
+  const progressPct = Math.round((checkedCount / total) * 100);
+
+  const handleToggle = async (key: string) => {
+    const updated = { ...localChecks, [key]: !localChecks[key] };
+    setLocalChecks(updated);
+    setSaving(true);
+    await supabase.from("verifications").update({
+      manual_checks: { ...updated, booking_notes: bookingNotes },
+    }).eq("id", record.id);
+    setSaving(false);
+    onRefresh?.();
+  };
+
+  const handleSaveNotes = async () => {
+    setSaving(true);
+    await supabase.from("verifications").update({
+      manual_checks: { ...localChecks, booking_notes: bookingNotes },
+    }).eq("id", record.id);
+    setSaving(false);
+    toast.success("Booking notes saved");
+  };
+
+  return (
+    <section className="pl-4 ml-6 max-w-full overflow-hidden">
+      <button onClick={onToggle} className="flex items-center gap-2 w-full text-left group mb-3">
+        {isOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+        <Mic className="h-5 w-5 text-[#6C5CE7]" />
+        <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
+        {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+        {checkedCount >= 5 ? (
+          <Badge className="ml-auto bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">CLEARED FOR BOOKING</Badge>
+        ) : checkedCount < 3 ? (
+          <Badge className="ml-auto bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 text-xs">NOT READY</Badge>
+        ) : (
+          <Badge className="ml-auto bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs">REVIEW IN PROGRESS</Badge>
+        )}
+      </button>
+      {isOpen && (
+        <div className="pl-7 space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-medium">Clearance: {checkedCount}/{total}</span>
+              <span className="text-xs text-muted-foreground">{progressPct}%</span>
+            </div>
+            <Progress value={progressPct} className="h-2" />
+          </div>
+          {READINESS_ITEMS.map((item) => {
+            const isAuto = item.auto;
+            const checked = isAuto ? autoChecks[item.key] : localChecks[item.key];
+            return (
+              <label key={item.key} className={cn("flex items-center gap-3 py-2", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
+                <input
+                  type="checkbox"
+                  checked={!!checked}
+                  onChange={isAuto ? undefined : () => handleToggle(item.key)}
+                  disabled={isAuto}
+                  className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+                />
+                <span className={cn("text-sm flex-1", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
+                  {item.label}
+                </span>
+                {isAuto && <span className="text-xs text-muted-foreground">Auto</span>}
+              </label>
+            );
+          })}
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <Label className="text-sm font-medium">Booking Notes</Label>
+            <Textarea
+              value={bookingNotes}
+              onChange={(e) => setBookingNotes(e.target.value)}
+              placeholder="Notes about speaker availability, requirements, accommodations..."
+              rows={3}
+              className="mt-1"
+            />
+            <Button variant="outline" size="sm" onClick={handleSaveNotes} className="mt-2">
+              <Save className="h-3.5 w-3.5 mr-1.5" /> Save Notes
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SocialVerificationSection({ record }: { record: VerificationRecord }) {
   const igHandle = (record as any).instagram_handle || record.source_username || null;
   const linkedinUrl = record.linkedin_url || null;
@@ -2643,16 +2749,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       )}
 
       {/* ── 2. SPEAKER READINESS — collapsible ── */}
-      <section className="pl-4 ml-6 max-w-full overflow-hidden">
-        <button onClick={() => setSpeakerReadinessOpen(!speakerReadinessOpen)} className="flex items-center gap-2 w-full text-left group mb-3">
-          {speakerReadinessOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Mic className="h-5 w-5 text-[#6C5CE7]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
-        </button>
-        {speakerReadinessOpen && (
-          <SpeakerReadinessAssessment record={record} onRefresh={onRefresh} />
-        )}
-      </section>
+      <SpeakerReadinessInline record={record} onRefresh={onRefresh} isOpen={speakerReadinessOpen} onToggle={() => setSpeakerReadinessOpen(!speakerReadinessOpen)} />
 
       {/* ── 3. AI SUMMARY ── */}
       <section className="pl-4 ml-6 max-w-full overflow-hidden">
