@@ -470,7 +470,11 @@ For all other questions, respond naturally and concisely.`;
                             return (
                               <div
                                 key={c.id || i}
-                                className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors"
+                                className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  const handle = c.username || c.name?.toLowerCase().replace(/\s+/g, "");
+                                  if (handle) { navigate(`/creators/${handle}`); setOpen(false); }
+                                }}
                               >
                                 <img
                                   src={c.avatar}
@@ -513,7 +517,7 @@ For all other questions, respond naturally and concisely.`;
 
                                 {/* Add to List dropdown */}
                                 {alreadyAdded || justAdded ? (
-                                  <span className={cn(
+                                  <span onClick={(e) => e.stopPropagation()} className={cn(
                                     "shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors",
                                     justAdded
                                       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
@@ -525,7 +529,7 @@ For all other questions, respond naturally and concisely.`;
                                 ) : (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <button className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors">
+                                      <button onClick={(e) => e.stopPropagation()} className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors">
                                         <ListPlus className="h-3 w-3" />
                                         Add to List
                                       </button>
