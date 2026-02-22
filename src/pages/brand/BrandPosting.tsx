@@ -38,6 +38,7 @@ import {
   Share2,
   Bookmark,
   MoreHorizontal,
+  Pencil,
   Repeat2,
   ThumbsUp,
 } from "lucide-react";
@@ -85,6 +86,11 @@ interface RecentPost {
   file_url: string | null;
   scheduled_time: string | null;
   created_at: string;
+  source?: "manual" | "campaign";
+  campaign_name?: string;
+  event_title?: string;
+  campaign_id?: string;
+  post_index?: number;
 }
 
 type PostType = "feed" | "story" | "reel";
@@ -203,6 +209,16 @@ export default function BrandPosting() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
 
+  // Inline edit state
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editCaption, setEditCaption] = useState("");
+  const [editScheduledTime, setEditScheduledTime] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Actions menu
+  const [actionsMenuId, setActionsMenuId] = useState<string | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const sendMenuRef = useRef<HTMLDivElement>(null);
@@ -216,17 +232,63 @@ export default function BrandPosting() {
       .finally(() => setLoadingAccounts(false));
   }, [userId]);
 
-  // Load recent posts
+  // Load recent posts (manual + campaign)
   const loadRecentPosts = useCallback(async () => {
     if (!userId) return;
     setLoadingPosts(true);
-    const { data } = await supabase
+
+    // 1. Manual posts from social_posts
+    const { data: manualRows } = await supabase
       .from("social_posts")
       .select("id, caption, platforms, status, file_url, scheduled_time, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20);
-    setRecentPosts((data as RecentPost[] | null) ?? []);
+    const manualPosts: RecentPost[] = ((manualRows ?? []) as RecentPost[]).map((p) => ({ ...p, source: "manual" as const }));
+
+    // 2. Campaign posts from event_campaigns
+    const { data: campaignRows } = await supabase
+      .from("event_campaigns")
+      .select("id, campaign_name, title, posts, event_id, created_at, status")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    const campaignPosts: RecentPost[] = [];
+    if (campaignRows) {
+      // Fetch event titles for display
+      const eventIds = [...new Set(campaignRows.map((c: any) => c.event_id).filter(Boolean))];
+      let eventMap = new Map<string, string>();
+      if (eventIds.length > 0) {
+        const { data: evts } = await supabase.from("events").select("id, title").in("id", eventIds);
+        for (const ev of evts ?? []) eventMap.set((ev as any).id, (ev as any).title);
+      }
+
+      for (const campaign of campaignRows as any[]) {
+        const posts = (campaign.posts ?? []) as any[];
+        const cName = campaign.campaign_name || campaign.title || "Campaign";
+        const eTitle = eventMap.get(campaign.event_id) || "";
+        posts.forEach((post: any, idx: number) => {
+          campaignPosts.push({
+            id: `campaign-${campaign.id}-${idx}`,
+            caption: post.caption || null,
+            platforms: post.platform ? [post.platform] : null,
+            status: "queued",
+            file_url: null,
+            scheduled_time: null,
+            created_at: campaign.created_at,
+            source: "campaign",
+            campaign_name: cName,
+            event_title: eTitle,
+            campaign_id: campaign.id,
+            post_index: idx,
+          });
+        });
+      }
+    }
+
+    // Merge: campaign queued posts first, then manual posts
+    setRecentPosts([...campaignPosts, ...manualPosts]);
     setLoadingPosts(false);
   }, [userId]);
 
@@ -468,6 +530,128 @@ export default function BrandPosting() {
     setAiContext("");
     setShowAiPrompt(false);
   };
+
+  // Inline edit handlers
+  const handleStartEdit = (post: RecentPost) => {
+    setEditingPostId(post.id);
+    setEditCaption(post.caption || "");
+    setEditScheduledTime(post.scheduled_time ? new Date(post.scheduled_time).toISOString().slice(0, 16) : "");
+    setActionsMenuId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPostId(null);
+    setEditCaption("");
+    setEditScheduledTime("");
+  };
+
+  const handleSaveEdit = async (post: RecentPost) => {
+    if (guardAction("social_post")) return;
+    setEditSaving(true);
+    try {
+      if (post.source === "campaign" && post.campaign_id != null && post.post_index != null) {
+        // Update the specific post inside the campaign's JSON posts array
+        const { data: campaign } = await supabase
+          .from("event_campaigns")
+          .select("posts")
+          .eq("id", post.campaign_id)
+          .single();
+        if (campaign) {
+          const posts = [...((campaign as any).posts ?? [])];
+          if (posts[post.post_index]) {
+            posts[post.post_index] = { ...posts[post.post_index], caption: editCaption.trim() };
+            await supabase.from("event_campaigns").update({ posts } as Record<string, unknown>).eq("id", post.campaign_id);
+          }
+        }
+      } else {
+        // Update social_posts row
+        const updates: Record<string, unknown> = { caption: editCaption.trim() };
+        if (editScheduledTime) updates.scheduled_time = new Date(editScheduledTime).toISOString();
+        await supabase.from("social_posts").update(updates).eq("id", post.id);
+      }
+      toast.success("Post updated!");
+      setEditingPostId(null);
+      loadRecentPosts();
+    } catch {
+      toast.error("Failed to update post.");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleApproveSchedule = async (post: RecentPost) => {
+    if (guardAction("social_post")) return;
+    setActionsMenuId(null);
+    if (post.source === "campaign") {
+      // Move campaign post into social_posts as scheduled
+      try {
+        await supabase.from("social_posts").insert({
+          user_id: userId,
+          caption: post.caption,
+          platforms: post.platforms,
+          status: "scheduled",
+          file_url: null,
+          scheduled_time: new Date(Date.now() + 3600000).toISOString(), // default 1 hr from now
+          results: {},
+        } as Record<string, unknown>);
+        toast.success("Post approved and scheduled!");
+        loadRecentPosts();
+      } catch {
+        toast.error("Failed to schedule post.");
+      }
+    } else {
+      try {
+        await supabase.from("social_posts").update({ status: "scheduled" } as Record<string, unknown>).eq("id", post.id);
+        toast.success("Post scheduled!");
+        loadRecentPosts();
+      } catch {
+        toast.error("Failed to schedule post.");
+      }
+    }
+  };
+
+  const handleRemoveFromQueue = async (post: RecentPost) => {
+    if (guardAction("social_post")) return;
+    setActionsMenuId(null);
+    if (post.source === "campaign" && post.campaign_id != null && post.post_index != null) {
+      // Remove from campaign JSON array
+      try {
+        const { data: campaign } = await supabase
+          .from("event_campaigns")
+          .select("posts")
+          .eq("id", post.campaign_id)
+          .single();
+        if (campaign) {
+          const posts = [...((campaign as any).posts ?? [])];
+          posts.splice(post.post_index, 1);
+          await supabase.from("event_campaigns").update({ posts } as Record<string, unknown>).eq("id", post.campaign_id);
+        }
+        toast.success("Post removed from queue.");
+        loadRecentPosts();
+      } catch {
+        toast.error("Failed to remove post.");
+      }
+    } else {
+      try {
+        await supabase.from("social_posts").update({ status: "draft" } as Record<string, unknown>).eq("id", post.id);
+        toast.success("Post moved to drafts.");
+        loadRecentPosts();
+      } catch {
+        toast.error("Failed to update post.");
+      }
+    }
+  };
+
+  // Close actions menu on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
+        setActionsMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const canPost =
     sendMode === "draft"
@@ -1279,21 +1463,80 @@ export default function BrandPosting() {
                         <th className="px-5 py-2.5 text-xs font-medium text-gray-500 uppercase">
                           Status
                         </th>
+                        <th className="px-5 py-2.5 text-xs font-medium text-gray-500 uppercase w-24">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {recentPosts.map((post) => (
+                      {recentPosts.map((post) => {
+                        const isEditing = editingPostId === post.id;
+                        return (
                         <tr
                           key={post.id}
-                          className="border-t border-gray-100 dark:border-gray-800"
+                          className={cn(
+                            "border-t border-gray-100 dark:border-gray-800",
+                            post.source === "campaign" && "bg-purple-50/30 dark:bg-purple-900/5"
+                          )}
                         >
-                          <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                          <td className="px-5 py-3 text-gray-500 whitespace-nowrap align-top">
                             {new Date(post.created_at).toLocaleDateString()}
+                            {post.source === "campaign" && (
+                              <div className="mt-1">
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                                  Campaign
+                                </span>
+                              </div>
+                            )}
                           </td>
-                          <td className="px-5 py-3 text-gray-700 dark:text-gray-300 max-w-[200px] truncate">
-                            {post.caption || "—"}
+                          <td className="px-5 py-3 text-gray-700 dark:text-gray-300 max-w-[250px] align-top">
+                            {isEditing ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={editCaption}
+                                  onChange={(e) => setEditCaption(e.target.value)}
+                                  rows={3}
+                                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                                />
+                                {post.source !== "campaign" && (
+                                  <input
+                                    type="datetime-local"
+                                    value={editScheduledTime}
+                                    onChange={(e) => setEditScheduledTime(e.target.value)}
+                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-xs focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                                  />
+                                )}
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveEdit(post)}
+                                    disabled={editSaving}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-medium hover:bg-[#5B4BD1] disabled:opacity-50"
+                                  >
+                                    {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                  >
+                                    <X className="h-3 w-3" /> Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="truncate">{post.caption || "—"}</p>
+                                {post.source === "campaign" && post.campaign_name && (
+                                  <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5 truncate">
+                                    {post.campaign_name}{post.event_title ? ` · ${post.event_title}` : ""}
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-5 py-3 align-top">
                             <div className="flex gap-1.5 flex-wrap">
                               {(post.platforms as string[] | null)?.map((p) => (
                                 <span
@@ -1305,7 +1548,7 @@ export default function BrandPosting() {
                               ))}
                             </div>
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-5 py-3 align-top">
                             <span
                               className={cn(
                                 "text-xs font-medium px-2.5 py-1 rounded-full",
@@ -1313,17 +1556,74 @@ export default function BrandPosting() {
                                   "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
                                 post.status === "scheduled" &&
                                   "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                                post.status === "queued" &&
+                                  "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
                                 post.status === "failed" &&
                                   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-                                post.status === "draft" &&
+                                (post.status === "draft" || !post.status) &&
                                   "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                               )}
                             >
                               {post.status || "draft"}
                             </span>
                           </td>
+                          <td className="px-5 py-3 align-top">
+                            {!isEditing && (
+                              <div className="relative flex items-center gap-1" ref={actionsMenuId === post.id ? actionsMenuRef : undefined}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(post)}
+                                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                  title="Edit"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setActionsMenuId(actionsMenuId === post.id ? null : post.id)}
+                                  className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                                  title="More actions"
+                                >
+                                  <MoreHorizontal className="h-3.5 w-3.5" />
+                                </button>
+                                {actionsMenuId === post.id && (
+                                  <div className="absolute right-0 top-full mt-1 bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-30 w-48">
+                                    {(post.status === "queued" || post.status === "draft") && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleApproveSchedule(post)}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors text-green-600 dark:text-green-400"
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                        Approve & Schedule
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEdit(post)}
+                                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors text-gray-700 dark:text-gray-300"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      Edit Post
+                                    </button>
+                                    {post.status !== "posted" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveFromQueue(post)}
+                                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors text-red-600 dark:text-red-400 border-t border-gray-100 dark:border-gray-800"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        {post.source === "campaign" ? "Remove from Queue" : "Move to Drafts"}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
