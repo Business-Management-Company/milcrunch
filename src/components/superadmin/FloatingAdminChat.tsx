@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
 
@@ -148,17 +149,46 @@ export default function FloatingAdminChat() {
     setLoading(true);
 
     try {
+      // Fetch upcoming events and creators for context
+      const [{ data: events }, { data: creators }] = await Promise.all([
+        supabase
+          .from("events")
+          .select("title, start_date, end_date, location, description, event_type")
+          .gte("start_date", new Date().toISOString())
+          .order("start_date", { ascending: true })
+          .limit(20),
+        supabase
+          .from("directory_members")
+          .select("creator_name, creator_handle, platform, branch")
+          .limit(50),
+      ]);
+
+      const eventsBlock = events?.length
+        ? events.map(e => `- ${e.title} | ${e.start_date ? new Date(e.start_date).toLocaleDateString() : "TBD"} | ${e.location || "Location TBD"}`).join("\n")
+        : "No upcoming events found.";
+
+      const creatorsBlock = creators?.length
+        ? creators.map(c => `${c.creator_name} (@${c.creator_handle}, ${c.branch || "branch unknown"})`).join(", ")
+        : "No creators found.";
+
+      const systemPrompt = `You are the MilCrunch AI assistant for a military creator and event management platform. You have access to the following upcoming events in the platform database:
+
+${eventsBlock}
+
+Creators in the platform: ${creatorsBlock}
+
+Answer questions about these events and creators directly from this data. Do not say you lack access to the database.
+When asked to find creators/influencers/speakers via external search, respond ONLY with valid JSON like:
+{"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
+For all other questions, respond naturally and concisely.`;
+
       const response = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
-          system: `You are MilCrunch AI, an assistant for a military influencer and event management platform.
-You help users find military creators, manage events, build campaigns, and analyze ROI.
-When asked to find creators/influencers/speakers, respond ONLY with valid JSON like:
-{"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
-For all other questions, respond naturally and concisely.`,
+          system: systemPrompt,
           messages: [{ role: "user", content: input }],
         }),
       });
