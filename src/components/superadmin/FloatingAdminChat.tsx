@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Send, X, Sparkles, Plus, Loader2, ListPlus, Check } from "lucide-react";
+import { MessageSquare, Send, X, Sparkles, Plus, Loader2, ListPlus, Check, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +37,8 @@ const DEFAULT_CHIPS = [
   "💍 MilSpouse influencers",
   "📊 Top engaged creators",
 ];
+
+const CREATORS_PREVIEW_COUNT = 5;
 
 let idCounter = 0;
 function makeId() {
@@ -85,6 +87,8 @@ export default function FloatingAdminChat() {
   const [loading, setLoading] = useState(false);
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
   const [pendingCreator, setPendingCreator] = useState<CreatorCard | null>(null);
+  const [expandedMsgIds, setExpandedMsgIds] = useState<Set<string>>(new Set());
+  const [justAddedIds, setJustAddedIds] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -126,6 +130,15 @@ export default function FloatingAdminChat() {
   const handleAddToList = (listId: string, listName: string, creator: CreatorCard) => {
     addCreatorToList(listId, creatorToListPayload(creator));
     toast.success(`Added ${creator.name} to ${listName}`);
+    // Show temporary "Added" state on this card
+    setJustAddedIds((prev) => new Set(prev).add(creator.id));
+    setTimeout(() => {
+      setJustAddedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(creator.id);
+        return next;
+      });
+    }, 2000);
   };
 
   const handleOpenCreateListForCreator = (creator: CreatorCard) => {
@@ -138,12 +151,27 @@ export default function FloatingAdminChat() {
     if (pendingCreator) {
       addCreatorToList(newId, creatorToListPayload(pendingCreator));
       toast.success(`Created "${name}" and added ${pendingCreator.name}`);
+      // Show temporary "Added" state
+      setJustAddedIds((prev) => new Set(prev).add(pendingCreator!.id));
+      setTimeout(() => {
+        setJustAddedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(pendingCreator!.id);
+          return next;
+        });
+      }, 2000);
       setPendingCreator(null);
     }
   };
 
   const addResponse = async (input: string) => {
-    setMessages((m) => [...m, { id: makeId(), role: "user" as const, text: input }]);
+    // FIX 1: Show loading immediately — synchronously before any await
+    const loadingMsgId = makeId();
+    setMessages((m) => [
+      ...m,
+      { id: makeId(), role: "user" as const, text: input },
+      { id: loadingMsgId, role: "assistant" as const, text: "", loading: true },
+    ]);
     setLoading(true);
 
     try {
@@ -219,17 +247,19 @@ For all other questions, respond naturally and concisely.`;
       try {
         const parsed = JSON.parse(text);
         if (parsed.action === "search") {
-          const searchLabel = `Searching for ${parsed.count ?? 10} ${parsed.branch ?? "military"} creators...`;
-          const loadingId = makeId();
-          setMessages((m) => [...m, { id: loadingId, role: "assistant" as const, text: searchLabel, loading: true }]);
-          const { creators } = await searchCreators(parsed.query, { page: 1 });
-          setMessages((m) => m.filter((msg) => msg.id !== loadingId));
+          // Update loading message text
+          setMessages((m) => m.map((msg) =>
+            msg.id === loadingMsgId
+              ? { ...msg, text: `Searching for ${parsed.count ?? 10} ${parsed.branch ?? "military"} creators...` }
+              : msg
+          ));
+          const { creators: searchResults } = await searchCreators(parsed.query, { page: 1 });
 
-          const displayCount = Math.min(creators.length, parsed.count ?? 10);
+          const displayCount = Math.min(searchResults.length, parsed.count ?? 10);
 
-          if (creators.length > 0) {
+          if (searchResults.length > 0) {
             const actualCount = displayCount;
-            const creatorSummary = creators.slice(0, displayCount).map(r => r.full_name || r.name || r.username).join(', ');
+            const creatorSummary = searchResults.slice(0, displayCount).map(r => r.full_name || r.name || r.username).join(', ');
 
             const contextMsg = `The user asked: "${input}". The search returned exactly ${actualCount} creators: ${creatorSummary}. Write a natural 1-2 sentence response acknowledging this exact number. Do not invent or assume a different count. Ask a relevant follow-up question to refine the search. Use authentic military culture naturally — not forced catchphrases. Vary your tone.`;
 
@@ -244,26 +274,29 @@ For all other questions, respond naturally and concisely.`;
             });
             const responseData = await responseRes.json();
             const friendlyText = responseData.content?.[0]?.text ?? `Found ${actualCount} creators matching your request.`;
-            setMessages((m) => [
-              ...m,
-              {
-                id: makeId(),
-                role: "assistant" as const,
-                text: friendlyText,
-                creators: creators.slice(0, displayCount),
-                cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(parsed.query)}` },
-              },
-            ]);
+            // Replace loading message with real response
+            setMessages((m) => m.map((msg) =>
+              msg.id === loadingMsgId
+                ? {
+                    ...msg,
+                    text: friendlyText,
+                    loading: false,
+                    creators: searchResults.slice(0, displayCount),
+                    cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(parsed.query)}` },
+                  }
+                : msg
+            ));
           } else {
-            setMessages((m) => [
-              ...m,
-              {
-                id: makeId(),
-                role: "assistant" as const,
-                text: "I couldn't find results for that search. Try different keywords or open Creator Discovery for advanced filters.",
-                cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
-              },
-            ]);
+            setMessages((m) => m.map((msg) =>
+              msg.id === loadingMsgId
+                ? {
+                    ...msg,
+                    text: "I couldn't find results for that search. Try different keywords or open Creator Discovery for advanced filters.",
+                    loading: false,
+                    cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
+                  }
+                : msg
+            ));
           }
           setLoading(false);
           return;
@@ -278,13 +311,19 @@ For all other questions, respond naturally and concisely.`;
       const chips = chipsMatch
         ? chipsMatch[1].split("|").map((s: string) => s.trim()).filter(Boolean)
         : undefined;
-      setMessages((m) => [...m, { id: makeId(), role: "assistant" as const, text: displayText, chips }]);
+      // Replace loading message with real response
+      setMessages((m) => m.map((msg) =>
+        msg.id === loadingMsgId
+          ? { ...msg, text: displayText, loading: false, chips }
+          : msg
+      ));
     } catch (e) {
       console.error("[FloatingChat] Error:", e);
-      setMessages((m) => [
-        ...m,
-        { id: makeId(), role: "assistant" as const, text: "I'm having trouble connecting right now. Please try again." },
-      ]);
+      setMessages((m) => m.map((msg) =>
+        msg.id === loadingMsgId
+          ? { ...msg, text: "I'm having trouble connecting right now. Please try again.", loading: false }
+          : msg
+      ));
     }
 
     setLoading(false);
@@ -392,13 +431,13 @@ For all other questions, respond naturally and concisely.`;
                 >
                   {/* Loading animation */}
                   {m.loading ? (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm w-fit">
+                    <div className="flex items-center gap-2 py-1">
                       <div className="flex gap-1">
                         <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
                         <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
                         <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
                       </div>
-                      <span className="text-sm text-gray-500 italic">MilCrunch AI is thinking...</span>
+                      <span className="text-sm text-gray-500 italic">{m.text || "MilCrunch AI is thinking..."}</span>
                     </div>
                   ) : m.role === "assistant" ? (
                     <MarkdownRenderer content={m.text} />
@@ -407,104 +446,144 @@ For all other questions, respond naturally and concisely.`;
                   )}
 
                   {/* Creator result cards */}
-                  {m.creators && m.creators.length > 0 && (
-                    <div className="space-y-2 mt-3 max-h-96 overflow-y-auto pr-1">
-                      {m.creators.map((c, i) => {
-                        const { branch, keywords } = detectMilitaryKeywords(c);
-                        const alreadyAdded = isCreatorInList(c.id);
+                  {m.creators && m.creators.length > 0 && (() => {
+                    const isExpanded = expandedMsgIds.has(m.id);
+                    const hasMore = m.creators.length > CREATORS_PREVIEW_COUNT;
+                    const visibleCreators = isExpanded ? m.creators : m.creators.slice(0, CREATORS_PREVIEW_COUNT);
+                    const hiddenCount = m.creators.length - CREATORS_PREVIEW_COUNT;
 
-                        return (
-                          <div
-                            key={c.id || i}
-                            className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors"
-                          >
-                            <img
-                              src={c.avatar}
-                              alt={c.name}
-                              className="h-11 w-11 rounded-full object-cover shrink-0 ring-2 ring-white dark:ring-gray-800"
-                              onError={(e) => {
-                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=6C5CE7&color=fff&size=128`;
-                              }}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">
-                                {c.name}
-                              </p>
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                {c.username && <span className="truncate">@{c.username}</span>}
-                                {branch && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-[10px] uppercase tracking-wide shrink-0">
-                                    {branch}
+                    return (
+                      <div className="mt-3">
+                        {/* "X creators found" badge */}
+                        <div className="mb-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            🎖️ {m.creators.length} creators found
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {visibleCreators.map((c, i) => {
+                            const { branch, keywords } = detectMilitaryKeywords(c);
+                            const alreadyAdded = isCreatorInList(c.id);
+                            const justAdded = justAddedIds.has(c.id);
+
+                            return (
+                              <div
+                                key={c.id || i}
+                                className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors"
+                              >
+                                <img
+                                  src={c.avatar}
+                                  alt={c.name}
+                                  className="h-11 w-11 rounded-full object-cover shrink-0 ring-2 ring-white dark:ring-gray-800"
+                                  onError={(e) => {
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=6C5CE7&color=fff&size=128`;
+                                  }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold truncate text-gray-900 dark:text-gray-100">
+                                    {c.name}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    {c.username && <span className="truncate">@{c.username}</span>}
+                                    {branch && (
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-[10px] uppercase tracking-wide shrink-0">
+                                        {branch}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {c.followers > 0 && (
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                      {formatFollowers(c.followers)} followers
+                                    </p>
+                                  )}
+                                  {keywords.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {keywords.map((kw) => (
+                                        <span
+                                          key={kw}
+                                          className="inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                        >
+                                          {kw}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Add to List dropdown */}
+                                {alreadyAdded || justAdded ? (
+                                  <span className={cn(
+                                    "shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors",
+                                    justAdded
+                                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                      : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                                  )}>
+                                    <Check className="h-3 w-3" />
+                                    {justAdded ? "Added" : "Added"}
                                   </span>
+                                ) : (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors">
+                                        <ListPlus className="h-3 w-3" />
+                                        Add to List
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="z-[60]">
+                                      {lists.map((list) => (
+                                        <DropdownMenuItem
+                                          key={list.id}
+                                          onClick={() => handleAddToList(list.id, list.name, c)}
+                                        >
+                                          {list.name}
+                                          <span className="ml-auto text-xs text-muted-foreground">
+                                            {list.creators.length}
+                                          </span>
+                                        </DropdownMenuItem>
+                                      ))}
+                                      <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(c)}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Create New List
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 )}
                               </div>
-                              {c.followers > 0 && (
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                  {formatFollowers(c.followers)} followers
-                                </p>
-                              )}
-                              {/* Matched military keywords */}
-                              {keywords.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {keywords.map((kw) => (
-                                    <span
-                                      key={kw}
-                                      className="inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                    >
-                                      {kw}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                            );
+                          })}
+                        </div>
 
-                            {/* Add to List dropdown */}
-                            {alreadyAdded ? (
-                              <span className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-                                <Check className="h-3 w-3" />
-                                Added
-                              </span>
-                            ) : (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors">
-                                    <ListPlus className="h-3 w-3" />
-                                    Add to List
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="z-[60]">
-                                  {lists.map((list) => (
-                                    <DropdownMenuItem
-                                      key={list.id}
-                                      onClick={() => handleAddToList(list.id, list.name, c)}
-                                    >
-                                      {list.name}
-                                      <span className="ml-auto text-xs text-muted-foreground">
-                                        {list.creators.length}
-                                      </span>
-                                    </DropdownMenuItem>
-                                  ))}
-                                  <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(c)}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Create New List
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        {/* "Show X more" toggle */}
+                        {hasMore && !isExpanded && (
+                          <button
+                            onClick={() => setExpandedMsgIds((prev) => new Set(prev).add(m.id))}
+                            className="w-full mt-2 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/5 hover:bg-[#6C5CE7]/10 border border-[#6C5CE7]/20 transition-colors"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                            Show {hiddenCount} more
+                          </button>
+                        )}
+                        {hasMore && isExpanded && (
+                          <button
+                            onClick={() => setExpandedMsgIds((prev) => { const next = new Set(prev); next.delete(m.id); return next; })}
+                            className="w-full mt-2 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                          >
+                            Show less
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
-                  {/* CTA button — "See more in Discovery" at bottom of results */}
+                  {/* CTA button — "See more in Discovery" full-width at bottom */}
                   {m.cta && (
                     <button
                       onClick={() => {
                         navigate(m.cta!.link);
                         setOpen(false);
                       }}
-                      className="block mt-3 bg-[#6C5CE7] text-white text-xs px-4 py-2 rounded-full hover:bg-[#5A4BD5] transition-colors"
+                      className="w-full mt-3 bg-[#6C5CE7] text-white text-xs px-4 py-2.5 rounded-full hover:bg-[#5A4BD5] transition-colors text-center font-medium"
                     >
                       {m.cta.label}
                     </button>
@@ -512,7 +591,7 @@ For all other questions, respond naturally and concisely.`;
                   {m.followUp && (
                     <p className="text-xs text-gray-400 mt-2">{m.followUp}</p>
                   )}
-                  {/* Quick-reply chips from AI questions */}
+                  {/* Quick-reply chips — always below everything including cards */}
                   {m.chips && m.chips.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {m.chips.map((chip) => (
