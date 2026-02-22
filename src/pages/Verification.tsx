@@ -1827,96 +1827,70 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
 }
 
 function SocialVerificationSection({ record }: { record: VerificationRecord }) {
-  const sources = (record.evidence_sources ?? []) as EvidenceSource[];
-  const pdlData = record.pdl_data as PDLResponse | null;
-  const isFromDiscovery = record.source === "discovery" || !!record.source_username;
+  const igHandle = (record as any).instagram_handle || record.source_username || null;
+  const linkedinUrl = record.linkedin_url || null;
+  const websiteUrl = record.website_url || null;
 
-  interface PlatformInfo {
-    name: string;
-    url?: string;
-    snippet?: string;
-    hasMilitary: boolean;
-  }
-
-  const platforms: PlatformInfo[] = [];
-  const seenPlatforms = new Set<string>();
-
-  // Extract from evidence sources
-  for (const s of sources.filter((s) => s.category === "Social Media")) {
-    const url = s.url.toLowerCase();
-    let name = "Social Media";
-    if (url.includes("instagram")) name = "Instagram";
-    else if (url.includes("twitter") || url.includes("x.com")) name = "Twitter/X";
-    else if (url.includes("facebook")) name = "Facebook";
-    else if (url.includes("tiktok")) name = "TikTok";
-    else if (url.includes("youtube")) name = "YouTube";
-    else if (url.includes("linkedin")) name = "LinkedIn";
-
-    if (!seenPlatforms.has(name)) {
-      seenPlatforms.add(name);
-      const hasMilitary = MILITARY_KEYWORDS.test(s.snippet);
-      platforms.push({ name, url: s.url, snippet: s.snippet, hasMilitary });
-    }
-  }
-
-  // Extract from PDL profiles
-  if (pdlData?.profiles) {
-    for (const p of pdlData.profiles) {
-      const name = (p.network ?? "").charAt(0).toUpperCase() + (p.network ?? "").slice(1);
-      if (!seenPlatforms.has(name) && name) {
-        seenPlatforms.add(name);
-        platforms.push({ name, url: p.url, hasMilitary: false });
-      }
-    }
-  }
-
-  if (!isFromDiscovery && platforms.length === 0) return null;
-
-  const militaryPlatformCount = platforms.filter((p) => p.hasMilitary).length;
+  const hasAnySocial = !!(igHandle || linkedinUrl || websiteUrl);
 
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <Globe className="h-4 w-4" /> Social Verification
-          {militaryPlatformCount > 0 && (
-            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 text-xs">
-              +{militaryPlatformCount * 5} pts
-            </Badge>
-          )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {platforms.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No social media profiles found in evidence or enrichment data.</p>
+      <CardContent className="space-y-1">
+        {!hasAnySocial ? (
+          <p className="text-sm text-muted-foreground">No social media profiles found.</p>
         ) : (
-          platforms.map((p, i) => (
-            <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm">{p.name}</span>
-                  {p.url && (
-                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-[#6C5CE7] hover:underline">
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                  {p.hasMilitary ? (
-                    <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs gap-1">
-                      <Check className="h-3 w-3" /> Military keywords found
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-xs">No military keywords</Badge>
-                  )}
+          <>
+            {igHandle && (
+              <div className="flex items-start justify-between p-3 rounded-lg bg-green-50 border border-green-200 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600 text-sm">✓</span>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Instagram Verified</p>
+                    <p className="text-xs text-green-600">@{igHandle} — identified via Discovery</p>
+                  </div>
                 </div>
-                {p.snippet && (
-                  <p className="text-sm text-muted-foreground mt-1" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(p.snippet) }} />
-                )}
+                <a href={`https://instagram.com/${igHandle}`} target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-indigo-600 hover:underline flex-shrink-0">
+                  View Profile →
+                </a>
               </div>
-            </div>
-          ))
-        )}
-        {record.source_username && (
-          <p className="text-xs text-muted-foreground pt-1">Source: Discovery (@{record.source_username})</p>
+            )}
+            {linkedinUrl && (
+              <div className="flex items-start justify-between p-3 rounded-lg bg-green-50 border border-green-200 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600 text-sm">✓</span>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">LinkedIn Verified</p>
+                    <p className="text-xs text-green-600">Profile confirmed via enrichment</p>
+                  </div>
+                </div>
+                <a href={linkedinUrl} target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-indigo-600 hover:underline flex-shrink-0">
+                  View Profile →
+                </a>
+              </div>
+            )}
+            {websiteUrl && (
+              <div className="flex items-start justify-between p-3 rounded-lg bg-green-50 border border-green-200 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600 text-sm">✓</span>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Website Confirmed</p>
+                    <p className="text-xs text-green-600">{websiteUrl}</p>
+                  </div>
+                </div>
+                <a href={websiteUrl} target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-indigo-600 hover:underline flex-shrink-0">
+                  Visit Site →
+                </a>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
