@@ -153,7 +153,7 @@ function ConfidenceGauge({ score }: { score: number }) {
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (score / 100) * circumference;
   return (
-    <div className="relative w-24 h-24">
+    <div className="relative w-28 h-28">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
         <circle
@@ -170,7 +170,7 @@ function ConfidenceGauge({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-lg font-bold text-[#000741] dark:text-white">{score}%</span>
+        <span className="text-2xl font-bold text-[#000741] dark:text-white">{score}%</span>
       </div>
     </div>
   );
@@ -1898,7 +1898,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
             const isAuto = item.auto;
             const checked = isAuto ? autoChecks[item.key] : localChecks[item.key];
             return (
-              <label key={item.key} className={cn("flex items-center gap-3 py-2", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
+              <label key={item.key} className={cn("flex items-center gap-3 py-0.5", isAuto ? "opacity-70 cursor-default" : "cursor-pointer group")}>
                 <input
                   type="checkbox"
                   checked={!!checked}
@@ -2535,7 +2535,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   }, [sources]);
 
   return (
-    <div className="w-full py-6 px-3 space-y-8 max-w-full overflow-hidden">
+    <div className="w-full py-6 pl-3 pr-2 space-y-8 max-w-full overflow-hidden">
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-4 w-full max-w-full overflow-hidden">
         {/* LEFT column */}
