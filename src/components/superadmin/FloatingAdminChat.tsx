@@ -853,6 +853,7 @@ For all other questions, respond naturally and concisely.`;
 
         {/* Profile content */}
         {selectedCreator && (() => {
+          console.log('Full creator object:', selectedCreator);
           const { branch, keywords } = detectMilitaryKeywords(selectedCreator);
           return (
             <div className="overflow-y-auto h-full pb-32">
@@ -871,6 +872,9 @@ For all other questions, respond naturally and concisely.`;
                 {selectedCreator.username && (
                   <p className="text-gray-500 text-sm">@{selectedCreator.username}</p>
                 )}
+                {selectedCreator.location && (
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">📍 {selectedCreator.location}</p>
+                )}
                 <div className="flex items-center justify-center gap-2 mt-2 text-sm text-gray-600 dark:text-gray-400">
                   {selectedCreator.followers > 0 && (
                     <span>{formatFollowers(selectedCreator.followers)} followers</span>
@@ -886,6 +890,9 @@ For all other questions, respond naturally and concisely.`;
                   <span className="inline-flex items-center mt-2 px-2.5 py-1 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-xs uppercase tracking-wide">
                     {branch}
                   </span>
+                )}
+                {(selectedCreator.category || selectedCreator.nicheClass) && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">{selectedCreator.category || selectedCreator.nicheClass}</p>
                 )}
               </div>
 
@@ -904,6 +911,20 @@ For all other questions, respond naturally and concisely.`;
                     {keywords.map((kw) => (
                       <span key={kw} className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                         {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Hashtags */}
+              {selectedCreator.hashtags && selectedCreator.hashtags.length > 0 && (
+                <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Top Hashtags</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedCreator.hashtags.map((tag) => (
+                      <span key={tag} className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                        #{tag}
                       </span>
                     ))}
                   </div>
