@@ -153,7 +153,7 @@ export default function FloatingAdminChat() {
       const [{ data: events }, { data: creators }] = await Promise.all([
         supabase
           .from("events")
-          .select("title, start_date, end_date, location, description, event_type")
+          .select("title, start_date, end_date, location, description, event_type, photo_url, slug, id")
           .gte("start_date", new Date().toISOString())
           .order("start_date", { ascending: true })
           .limit(20),
@@ -164,7 +164,13 @@ export default function FloatingAdminChat() {
       ]);
 
       const eventsBlock = events?.length
-        ? events.map(e => `- ${e.title} | ${e.start_date ? new Date(e.start_date).toLocaleDateString() : "TBD"} | ${e.location || "Location TBD"}`).join("\n")
+        ? events.map(e => {
+            const date = e.start_date ? new Date(e.start_date).toLocaleDateString() : "TBD";
+            const loc = e.location || "Location TBD";
+            const url = e.slug ? `/brand/events/${e.slug}` : `/brand/events`;
+            const photo = e.photo_url ? ` | Photo: ${e.photo_url}` : "";
+            return `- ${e.title} | ${date} | ${loc} | Link: ${url}${photo}`;
+          }).join("\n")
         : "No upcoming events found.";
 
       const creatorsBlock = creators?.length
@@ -178,6 +184,11 @@ ${eventsBlock}
 Creators in the platform: ${creatorsBlock}
 
 Answer questions about these events and creators directly from this data. Do not say you lack access to the database.
+
+When showing events, always format each event as:
+**[Event Name](event_url or #)** - Date | Location
+Include the event photo if available. Always end event listings with a direct link. Format responses with clear sections and emojis for scannability.
+
 When asked to find creators/influencers/speakers via external search, respond ONLY with valid JSON like:
 {"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
 For all other questions, respond naturally and concisely.`;
@@ -364,11 +375,15 @@ For all other questions, respond naturally and concisely.`;
                       : "bg-white text-gray-800 rounded-bl-sm mr-auto shadow-sm dark:bg-gray-800 dark:text-gray-100 max-w-[95%]"
                   )}
                 >
-                  {/* Loading spinner */}
+                  {/* Loading animation */}
                   {m.loading ? (
-                    <div className="flex items-center gap-2 py-1">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" />
-                      <span className="text-sm text-muted-foreground">{m.text}</span>
+                    <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm w-fit">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+                      </div>
+                      <span className="text-sm text-gray-500 italic">MilCrunch AI is thinking...</span>
                     </div>
                   ) : m.role === "assistant" ? (
                     <MarkdownRenderer content={m.text} />

@@ -15,7 +15,23 @@ export default function MarkdownRenderer({
     <div
       className={`markdown-rendered text-sm text-gray-700 dark:text-gray-300 leading-relaxed ${className}`.trim()}
     >
-      <ReactMarkdown>{content}</ReactMarkdown>
+      <ReactMarkdown
+        components={{
+          a: ({ href, children, ...props }) => (
+            <a
+              href={href}
+              target={href?.startsWith("/") ? undefined : "_blank"}
+              rel={href?.startsWith("/") ? undefined : "noopener noreferrer"}
+              className="text-[#6C5CE7] hover:text-[#5A4BD5] underline underline-offset-2 font-medium"
+              {...props}
+            >
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }
