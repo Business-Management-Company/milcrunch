@@ -61,6 +61,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing 'queries' array in request body" });
   }
 
+  console.log("[Places API] Received queries:", queries);
+  console.log("[Places API] API key present:", !!key, "length:", key?.length);
+
   try {
     // Step 1: Run all text searches in parallel (cap at 5 queries)
     const searchPromises = queries.slice(0, 5).map(async (q) => {
@@ -68,8 +71,12 @@ export default async function handler(req, res) {
         const url =
           `https://maps.googleapis.com/maps/api/place/textsearch/json` +
           `?query=${encodeURIComponent(q)}&key=${key}`;
+        console.log("[Places API] Fetching:", q);
         const resp = await fetch(url);
         const data = await resp.json();
+        if (data.status !== "OK") {
+          console.warn("[Places API] Non-OK status for query:", q, "→", data.status, data.error_message || "");
+        }
         return data.status === "OK" ? (data.results || []).slice(0, 20) : [];
       } catch {
         return [];

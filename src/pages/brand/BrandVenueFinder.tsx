@@ -262,7 +262,7 @@ export default function BrandVenueFinder() {
   const [conciergeInput, setConciergeInput] = useState("");
   const [conciergeLoading, setConciergeLoading] = useState(false);
   const [conciergeNotes, setConciergeNotes] = useState("");
-  const [autoSearchTrigger, setAutoSearchTrigger] = useState(0);
+
 
   // Results
   const [rawResults, setRawResults] = useState<Venue[]>([]);
@@ -294,8 +294,16 @@ export default function BrandVenueFinder() {
   }, [loadSavedVenues]);
 
   // ─── Build queries & search ───────────────────────────────
-  const handleSearch = async () => {
-    if (!location.trim()) {
+  const handleSearch = async (overrides?: {
+    searchTerm?: string;
+    location?: string;
+    selectedStyles?: string[];
+  }) => {
+    const loc = (overrides?.location ?? location).trim();
+    const term = (overrides?.searchTerm ?? searchTerm).trim() || "event venue";
+    const styles = overrides?.selectedStyles ?? selectedStyles;
+
+    if (!loc) {
       toast({
         title: "Location Required",
         description: "Enter a city or location to search for venues.",
@@ -307,9 +315,6 @@ export default function BrandVenueFinder() {
     setSearched(true);
     setShowSaved(false);
 
-    const loc = location.trim();
-    const term = searchTerm.trim() || "event venue";
-
     // Build 3 parallel queries for broader coverage
     const queries: string[] = [
       `${term} event space ${loc}`,
@@ -318,12 +323,14 @@ export default function BrandVenueFinder() {
     ];
 
     // If venue styles are selected, add style-specific queries
-    for (const style of selectedStyles) {
+    for (const style of styles) {
       const match = VENUE_STYLES.find((s) => s.label === style);
       if (match) {
         queries.push(`${match.keywords} ${loc}`);
       }
     }
+
+    console.log("[VenueFinder] Searching with queries:", queries);
 
     try {
       const resp = await fetch("/api/places", {
@@ -359,12 +366,6 @@ export default function BrandVenueFinder() {
       setLoading(false);
     }
   };
-
-  // Auto-search after AI concierge populates fields (runs after state is committed)
-  useEffect(() => {
-    if (autoSearchTrigger > 0) handleSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSearchTrigger]);
 
   // ─── Filter + Score + Sort (client-side) ──────────────────
   const filteredResults: ScoredVenue[] = useMemo(() => {
@@ -499,18 +500,32 @@ export default function BrandVenueFinder() {
     try {
       const result = await callConcierge(prompt);
       if (!result) throw new Error("No response from AI");
-      // Auto-populate fields
-      if (result.searchTerm) setSearchTerm(result.searchTerm);
-      if (result.location) setLocation(result.location);
+
+      // Extract values into local vars FIRST
+      const aiSearchTerm = result.searchTerm || "";
+      const aiLocation = result.location || "";
+      const aiStyles: string[] = [];
       if (result.venueStyle) {
         const match = VENUE_STYLES.find((s) => s.label === result.venueStyle);
-        if (match) setSelectedStyles([match.label]);
+        if (match) aiStyles.push(match.label);
       }
+
+      // Populate the UI fields (for display)
+      if (aiSearchTerm) setSearchTerm(aiSearchTerm);
+      if (aiLocation) setLocation(aiLocation);
+      if (aiStyles.length > 0) setSelectedStyles(aiStyles);
       if (result.minRating && result.minRating !== "0") setMinRating(result.minRating);
       if (result.notes) setConciergeNotes(result.notes);
-      // Auto-trigger search after state updates commit
-      if (result.location) {
-        setAutoSearchTrigger((n) => n + 1);
+
+      console.log("[VenueConcierge] AI parsed →", { aiSearchTerm, aiLocation, aiStyles, minRating: result.minRating });
+
+      // Call search directly with extracted values — no race condition
+      if (aiLocation) {
+        await handleSearch({
+          searchTerm: aiSearchTerm,
+          location: aiLocation,
+          selectedStyles: aiStyles,
+        });
       }
     } catch (err) {
       console.error("[VenueConcierge] Error:", err);
