@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
-import CreateListModal from "@/components/CreateListModal";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import type { CreatorCard } from "@/lib/influencers-club";
@@ -81,6 +82,10 @@ const BrandLists = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetId, setImageTargetId] = useState<string | null>(null);
+  const [newListName, setNewListName] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const createAvatarRef = useRef<HTMLInputElement>(null);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -90,8 +95,48 @@ const BrandLists = () => {
     return () => document.removeEventListener("click", handler);
   }, [menuOpenId]);
 
-  const handleCreateList = (name: string) => {
-    const id = createList(name);
+  // Reset create modal state when opened
+  useEffect(() => {
+    if (createModalOpen) {
+      setNewListName("");
+      setAvatarFile(null);
+      setAvatarPreview(null);
+    }
+  }, [createModalOpen]);
+
+  const handleCreateAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setAvatarFile(file);
+    if (file) {
+      setAvatarPreview(URL.createObjectURL(file));
+    } else {
+      setAvatarPreview(null);
+    }
+  };
+
+  const handleCreateList = async () => {
+    const trimmed = newListName.trim();
+    if (!trimmed) return;
+
+    const id = createList(trimmed);
+
+    if (avatarFile) {
+      const ext = avatarFile.name.split(".").pop() || "jpg";
+      const path = `${id}/avatar.${ext}`;
+      const { error } = await supabase.storage
+        .from("list-avatars")
+        .upload(path, avatarFile, { upsert: true });
+      if (!error) {
+        const { data: urlData } = supabase.storage
+          .from("list-avatars")
+          .getPublicUrl(path);
+        if (urlData?.publicUrl) {
+          updateListAvatar(id, urlData.publicUrl);
+        }
+      }
+    }
+
+    setCreateModalOpen(false);
     navigate(`/lists/${id}`);
   };
 
@@ -143,11 +188,63 @@ const BrandLists = () => {
 
   return (
     <>
-      <CreateListModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
-        onCreate={handleCreateList}
-      />
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Create New List</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Avatar upload */}
+            <div className="flex flex-col items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => createAvatarRef.current?.click()}
+                className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer border-2 border-dashed border-gray-300 dark:border-gray-600"
+              >
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <Camera className="w-6 h-6 text-gray-400" />
+                )}
+              </button>
+              <input
+                ref={createAvatarRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCreateAvatarSelect}
+              />
+              <span className="text-xs text-gray-400">Upload avatar</span>
+            </div>
+
+            {/* List name */}
+            <div className="space-y-2">
+              <Label htmlFor="create-list-name">List Name</Label>
+              <Input
+                id="create-list-name"
+                placeholder="e.g. Summer Campaign"
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleCreateList();
+                  }
+                }}
+                className="rounded-lg"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCreateModalOpen(false)} className="rounded-lg">
+              Cancel
+            </Button>
+            <Button onClick={handleCreateList} disabled={!newListName.trim()} className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
