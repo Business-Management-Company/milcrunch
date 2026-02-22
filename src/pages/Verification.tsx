@@ -501,7 +501,12 @@ export default function Verification() {
         })
         .select("id")
         .single();
+      if (error) {
+        console.error('INITIAL INSERT FAILED:', error);
+        toast.error("Failed to save verification: " + error.message);
+      }
       if (!error && inserted) {
+        console.log('INSERT OK — id:', inserted.id, '| career_track saved:', !!result.careerData, '| media saved:', (result.mediaAppearances ?? []).length, 'items');
         setNewRecordId(inserted.id);
 
         // Auto-run background review silently — fire and forget
@@ -530,9 +535,14 @@ export default function Verification() {
             results: bgResults,
           });
           const now = new Date().toISOString();
-          await supabase.from("verifications").update({
-            manual_checks: { background_review: { results: bgFiltered, summary: bgSummary, reviewed_at: now } },
+          // Merge background_review into existing manual_checks to avoid overwriting career/media
+          const { data: existingRow } = await supabase.from("verifications").select("manual_checks").eq("id", inserted.id).single();
+          const existingChecks = (existingRow?.manual_checks ?? {}) as Record<string, unknown>;
+          const { error: bgSaveError } = await supabase.from("verifications").update({
+            manual_checks: { ...existingChecks, background_review: { results: bgFiltered, summary: bgSummary, reviewed_at: now } },
           }).eq("id", inserted.id);
+          if (bgSaveError) console.error('BACKGROUND REVIEW SAVE FAILED:', bgSaveError);
+          else console.log('BACKGROUND REVIEW SAVED OK for', inserted.id);
         } catch (e) {
           console.error("Background auto-run failed:", e);
         }
@@ -688,7 +698,16 @@ export default function Verification() {
         },
         () => {}
       );
-      await supabase.from("verifications").update({
+      // Merge new results into existing manual_checks to preserve background_review
+      const { data: existingReverify } = await supabase.from("verifications").select("manual_checks").eq("id", row.id).single();
+      const existingChecksReverify = (existingReverify?.manual_checks ?? {}) as Record<string, unknown>;
+      const mergedChecks = {
+        ...existingChecksReverify,
+        youtube_results: result.youtubeResults ?? [],
+        youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
+        career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
+      };
+      const { error: reverifyError } = await supabase.from("verifications").update({
         verification_score: result.verificationScore,
         status: result.status,
         pdl_data: result.pdlData,
@@ -699,9 +718,15 @@ export default function Verification() {
         red_flags: result.redFlags,
         linkedin_url: result.linkedinUrl || row.linkedin_url || null,
         last_verified_at: new Date().toISOString(),
-        ...(result.youtubeResults?.length ? { manual_checks: { youtube_results: result.youtubeResults } } : {}),
+        manual_checks: mergedChecks,
       }).eq("id", row.id);
-      toast.success(`Re-verification complete for ${row.person_name}`);
+      if (reverifyError) {
+        console.error('RE-VERIFY SAVE FAILED:', reverifyError);
+        toast.error("Re-verification save failed: " + reverifyError.message);
+      } else {
+        console.log('RE-VERIFY SAVED OK —', row.person_name, '| career:', !!result.careerData, '| media:', (result.mediaAppearances ?? []).length, 'items');
+        toast.success(`Re-verification complete for ${row.person_name}`);
+      }
       await fetchVerifications();
     } catch {
       toast.error("Re-verification failed");
@@ -1042,7 +1067,7 @@ export default function Verification() {
                   <React.Fragment key={row.id}>
                     <TableRow
                       key={row.id}
-                      className={cn("cursor-pointer border-gray-200 dark:border-gray-800", expandedId === row.id && "bg-muted/50")}
+                      className={cn("cursor-pointer border-gray-200 dark:border-gray-800 focus:outline-none focus:ring-0 focus-visible:outline-none", expandedId === row.id && "bg-muted/50")}
                       onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
                     >
                       <TableCell>
@@ -1158,8 +1183,8 @@ export default function Verification() {
                       </TableCell>
                     </TableRow>
                     {expandedId === row.id && expanded && (
-                      <TableRow key={`${row.id}-exp`} className="bg-muted/30 border-gray-200 dark:border-gray-800">
-                        <TableCell colSpan={8} className="p-0">
+                      <TableRow key={`${row.id}-exp`} className="border-none hover:bg-transparent">
+                        <TableCell colSpan={8} className="p-0 border-none">
                           <ExpandedRow record={expanded} onRefresh={fetchVerifications} />
                         </TableCell>
                       </TableRow>
@@ -1330,9 +1355,11 @@ function MediaTab({ record, autoSearch = false }: { record: VerificationRecord; 
     const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
     const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
     const now = new Date().toISOString();
-    await supabase.from("verifications").update({
+    const { error: mediaSaveError } = await supabase.from("verifications").update({
       manual_checks: { ...existing, youtube_media: { videos: results, searched_at: now } },
     }).eq("id", record.id);
+    if (mediaSaveError) console.error('MEDIA SAVE FAILED:', mediaSaveError);
+    else console.log('MEDIA SAVED OK —', record.person_name, '|', results.length, 'videos');
     setLastSearchedAt(now);
   };
 
@@ -1597,9 +1624,11 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     const { data } = await supabase.from("verifications").select("manual_checks").eq("id", recordId).single();
     const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
     const now = new Date().toISOString();
-    await supabase.from("verifications").update({
+    const { error: bgSaveError } = await supabase.from("verifications").update({
       manual_checks: { ...existing, background_review: { results, summary, reviewed_at: now } },
     }).eq("id", recordId);
+    if (bgSaveError) console.error('BACKGROUND REVIEW SAVE FAILED:', bgSaveError);
+    else console.log('BACKGROUND REVIEW SAVED OK —', recordId, '|', results.length, 'results');
     setLastReviewedAt(now);
   };
 
@@ -1832,9 +1861,13 @@ function CompactSpeakerReadiness({ record, onRefresh }: { record: VerificationRe
     const updated = { ...localChecks, [key]: !localChecks[key] };
     setLocalChecks(updated);
     setSaving(true);
-    await supabase.from("verifications").update({
-      manual_checks: { ...updated, booking_notes: bookingNotes },
+    // Merge into existing manual_checks to preserve career/media/background data
+    const { data: freshRow } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+    const existing = (freshRow?.manual_checks ?? {}) as Record<string, unknown>;
+    const { error: toggleErr } = await supabase.from("verifications").update({
+      manual_checks: { ...existing, ...updated, booking_notes: bookingNotes },
     }).eq("id", record.id);
+    if (toggleErr) console.error('SPEAKER READINESS TOGGLE SAVE FAILED:', toggleErr);
     setSaving(false);
     onRefresh?.();
   };
@@ -2003,25 +2036,32 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
     const updated = { ...localChecks, [key]: !localChecks[key] };
     setLocalChecks(updated);
     setSaving(true);
-    await supabase.from("verifications").update({
-      manual_checks: { ...updated, booking_notes: bookingNotes },
+    // Merge into existing manual_checks to preserve career/media/background data
+    const { data: freshRow2 } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+    const existing2 = (freshRow2?.manual_checks ?? {}) as Record<string, unknown>;
+    const { error: toggleErr2 } = await supabase.from("verifications").update({
+      manual_checks: { ...existing2, ...updated, booking_notes: bookingNotes },
     }).eq("id", record.id);
+    if (toggleErr2) console.error('SPEAKER READINESS INLINE TOGGLE SAVE FAILED:', toggleErr2);
     setSaving(false);
     onRefresh?.();
   };
 
   const handleSaveNotes = async () => {
     setSaving(true);
-    await supabase.from("verifications").update({
-      manual_checks: { ...localChecks, booking_notes: bookingNotes },
+    const { data: freshRow2 } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+    const existing2 = (freshRow2?.manual_checks ?? {}) as Record<string, unknown>;
+    const { error: notesErr2 } = await supabase.from("verifications").update({
+      manual_checks: { ...existing2, ...localChecks, booking_notes: bookingNotes },
     }).eq("id", record.id);
+    if (notesErr2) console.error('BOOKING NOTES SAVE FAILED:', notesErr2);
     setSaving(false);
     toast.success("Booking notes saved");
   };
 
   return (
     <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-      <button onClick={onToggle} className="flex items-center gap-2 w-full text-left group">
+      <button onClick={onToggle} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
         {isOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
         <Mic className="h-5 w-5 text-[#6C5CE7]" />
         <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
@@ -2208,9 +2248,11 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
     const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
     const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
     const now = new Date().toISOString();
-    await supabase.from("verifications").update({
+    const { error: careerSaveError } = await supabase.from("verifications").update({
       manual_checks: { ...existing, career_track: { result, generated_at: now } },
     }).eq("id", record.id);
+    if (careerSaveError) console.error('CAREER SAVE FAILED:', careerSaveError);
+    else console.log('CAREER SAVED OK —', record.person_name, '| entries:', result.career?.length ?? 0);
     setLastGenerated(now);
   };
 
@@ -2688,7 +2730,17 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     return map;
   }, [sources]);
 
+  const expandedBranchColor = ({
+    'Army': 'border-l-green-600',
+    'Marines': 'border-l-red-600',
+    'Navy': 'border-l-blue-600',
+    'Air Force': 'border-l-sky-500',
+    'Coast Guard': 'border-l-orange-500',
+    'Space Force': 'border-l-indigo-600',
+  } as Record<string, string>)[record.claimed_branch ?? ''] || 'border-l-purple-500';
+
   return (
+    <div className={`border-l-4 ${expandedBranchColor} bg-white dark:bg-gray-950 rounded-r-xl shadow-sm mx-2 mb-4`}>
     <div className="w-full py-6 pl-3 pr-8 max-w-full overflow-hidden">
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-4 w-full max-w-full overflow-hidden mb-6">
@@ -2934,7 +2986,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* ── 3. AI SUMMARY ── */}
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group">
+        <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
@@ -2947,7 +2999,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button
           onClick={() => setEvidenceOpen(!evidenceOpen)}
-          className="flex items-center gap-2 w-full text-left group"
+          className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0"
         >
           {evidenceOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Search className="h-5 w-5 text-[#6C5CE7]" />
@@ -2989,7 +3041,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* ── 4. CAREER TRACK — inline ── */}
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group">
+        <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
@@ -3009,7 +3061,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* ── 5. SOCIAL ── */}
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group">
+        <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Globe className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
@@ -3020,7 +3072,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
 
       {/* ── 6. MEDIA — collapsible ── */}
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group">
+        <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#6C5CE7]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
@@ -3043,7 +3095,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button
           onClick={() => setBackgroundOpen(!backgroundOpen)}
-          className="flex items-center gap-2 w-full text-left group"
+          className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0"
         >
           {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <ShieldAlert className="h-5 w-5 text-[#6C5CE7]" />
@@ -3080,6 +3132,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       </section>
 
     </div>
+    </div>
   );
 }
 
@@ -3090,7 +3143,7 @@ function EvidenceAccordionGroup({ category, sources }: { category: string; sourc
     <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden pl-6 pr-10">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus:outline-none focus:ring-0"
       >
         <SourceIcon category={category} />
         <span className="font-medium text-sm flex-1">{category}</span>
