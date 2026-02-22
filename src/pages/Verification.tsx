@@ -1415,7 +1415,7 @@ No markdown formatting, just the JSON array.`;
       ) : (
         <>
           {(searching || filtering) && (
-            <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+            <Card className="pl-6 pr-10 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
               <CardContent className="flex items-center gap-3 py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
                 <p className="text-sm text-blue-700 dark:text-blue-300">
@@ -1441,7 +1441,7 @@ No markdown formatting, just the JSON array.`;
                   href={`https://www.youtube.com/watch?v=${v.videoId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group block rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#6C5CE7] hover:shadow-md transition-all"
+                  className="group block pl-6 pr-10 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#6C5CE7] hover:shadow-md transition-all"
                 >
                   <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
                     {v.thumbnail ? (
@@ -1862,7 +1862,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
   };
 
   return (
-    <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+    <Card className="pl-6 pr-10 rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2 flex flex-row items-center justify-between py-4">
         <CardTitle className="text-lg font-bold text-[#000741] dark:text-white flex items-center gap-2 cursor-pointer m-0" onClick={() => setOpen(!open)}>
           {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
