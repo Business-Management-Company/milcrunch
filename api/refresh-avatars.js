@@ -30,7 +30,7 @@ async function getAvatarUrlFromDiscovery(handle, platform, apiKey) {
     },
     body: JSON.stringify({
       platform: platform || "instagram",
-      filters: { username: handle },
+      filters: { username: handle.replace('@', '').toLowerCase().trim() },
       paging: { limit: 1, page: 1 },
     }),
   });
@@ -123,7 +123,10 @@ export default async function handler(req, res) {
     }
 
     try {
-      const cdnUrl = await getAvatarUrlFromDiscovery(m.creator_handle, m.platform, apiKey);
+      const cleanHandle = (m.creator_handle || '').replace('@', '').toLowerCase().trim();
+      if (!cleanHandle) { failed++; continue; }
+      const cdnUrl = await getAvatarUrlFromDiscovery(cleanHandle, m.platform, apiKey);
+      if (cdnUrl && cdnUrl.includes('saxoneldridge')) { failed++; continue; }
       if (cdnUrl) {
         // Try uploading to Storage for a permanent URL
         let finalUrl = cdnUrl;
