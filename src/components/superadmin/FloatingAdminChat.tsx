@@ -791,11 +791,44 @@ For all other questions, respond naturally and concisely.`;
                 <div className="px-6 py-3 border-b border-gray-100 dark:border-gray-800">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Platforms</p>
                   <div className="flex flex-wrap gap-2">
-                    {selectedCreator.platforms.map((p) => (
-                      <span key={p} className="inline-flex items-center px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
-                        {p}
-                      </span>
-                    ))}
+                    {selectedCreator.platforms.map((p) => {
+                      const handle = selectedCreator.username || selectedCreator.name?.toLowerCase().replace(/\s+/g, "");
+                      const urlMap: Record<string, string> = {
+                        instagram: `https://instagram.com/${handle}`,
+                        tiktok: `https://tiktok.com/@${handle}`,
+                        youtube: `https://youtube.com/@${handle}`,
+                        twitter: `https://x.com/${handle}`,
+                        linkedin: `https://linkedin.com/in/${handle}`,
+                      };
+                      const iconMap: Record<string, string> = {
+                        instagram: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png",
+                        tiktok: "https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.svg",
+                        youtube: "https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg",
+                        twitter: "https://upload.wikimedia.org/wikipedia/commons/c/ce/X_logo_2023.svg",
+                        linkedin: "https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png",
+                      };
+                      const url = urlMap[p.toLowerCase()];
+                      const icon = iconMap[p.toLowerCase()];
+                      if (url) {
+                        return (
+                          <a
+                            key={p}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            {icon && <img src={icon} alt="" className="w-4 h-4" />}
+                            {p} ↗
+                          </a>
+                        );
+                      }
+                      return (
+                        <span key={p} className="inline-flex items-center px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
+                          {p}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}
