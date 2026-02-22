@@ -16,6 +16,7 @@ import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
 import { useLists } from "@/contexts/ListContext";
 import CreateListModal from "@/components/CreateListModal";
 import { detectBranch } from "@/lib/featured-creators";
+import { fetchDirectoriesWithCounts, addToDirectory, type Directory } from "@/lib/directories";
 import { toast } from "sonner";
 
 interface ChatMessage {
@@ -144,6 +145,15 @@ export default function FloatingAdminChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastQueryRef = useRef<string>("");
 
+  // Drawer action dropdowns
+  const [drawerDropdown, setDrawerDropdown] = useState<"list" | "directory" | "event" | null>(null);
+  const [drawerDirs, setDrawerDirs] = useState<Directory[]>([]);
+  const [drawerEvents, setDrawerEvents] = useState<{ id: string; title: string; start_date: string }[]>([]);
+  const [drawerDropdownLoading, setDrawerDropdownLoading] = useState(false);
+  const [newListNameInput, setNewListNameInput] = useState("");
+  const [newDirNameInput, setNewDirNameInput] = useState("");
+  const drawerDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (open) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -166,6 +176,90 @@ export default function FloatingAdminChat() {
     window.addEventListener("open-ai-chat", handler);
     return () => window.removeEventListener("open-ai-chat", handler);
   }, []);
+
+  // Close drawer dropdown on outside click or Escape
+  useEffect(() => {
+    if (!drawerDropdown) return;
+    const handleClick = (e: MouseEvent) => {
+      if (drawerDropdownRef.current && !drawerDropdownRef.current.contains(e.target as Node)) {
+        setDrawerDropdown(null);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrawerDropdown(null);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [drawerDropdown]);
+
+  // Close drawer dropdown when selected creator changes
+  useEffect(() => { setDrawerDropdown(null); }, [selectedCreator]);
+
+  const openDrawerDropdown = async (type: "list" | "directory" | "event") => {
+    if (drawerDropdown === type) { setDrawerDropdown(null); return; }
+    setDrawerDropdown(type);
+    setDrawerDropdownLoading(true);
+    try {
+      if (type === "directory") {
+        const dirs = await fetchDirectoriesWithCounts();
+        setDrawerDirs(dirs);
+      } else if (type === "event") {
+        const { data } = await supabase
+          .from("events")
+          .select("id, title, start_date")
+          .gte("start_date", new Date().toISOString())
+          .order("start_date")
+          .limit(10);
+        setDrawerEvents(data ?? []);
+      }
+    } catch (err) {
+      console.error("[drawer dropdown]", err);
+    } finally {
+      setDrawerDropdownLoading(false);
+    }
+  };
+
+  const handleDrawerAddToDirectory = async (dir: Directory) => {
+    if (!selectedCreator) return;
+    const { error } = await addToDirectory(dir.id, {
+      handle: selectedCreator.username || selectedCreator.name.toLowerCase().replace(/\s+/g, ""),
+      display_name: selectedCreator.name,
+      platform: selectedCreator.platforms?.[0] || "instagram",
+      avatar_url: selectedCreator.avatar,
+      follower_count: selectedCreator.followers,
+      engagement_rate: selectedCreator.engagementRate,
+      bio: selectedCreator.bio,
+      branch: selectedCreator.branch || null,
+      platforms: selectedCreator.platforms,
+      category: selectedCreator.category || null,
+    });
+    if (error) {
+      toast.error(`Failed: ${error}`);
+    } else {
+      toast.success(`Added to ${dir.name}`);
+      setDrawerDropdown(null);
+    }
+  };
+
+  const handleDrawerInviteToEvent = async (event: { id: string; title: string }) => {
+    if (!selectedCreator) return;
+    const handle = selectedCreator.username || selectedCreator.name.toLowerCase().replace(/\s+/g, "");
+    const { error } = await supabase.from("event_team_members").insert({
+      event_id: event.id,
+      user_id: handle,
+      role: "staff",
+    });
+    if (error) {
+      toast.error(`Failed: ${error.message}`);
+    } else {
+      toast.success(`Invited to ${event.title}`);
+      setDrawerDropdown(null);
+    }
+  };
 
   const creatorToListPayload = (c: CreatorCard) => ({
     id: c.id,
@@ -1082,30 +1176,154 @@ For all other questions, respond naturally and concisely.`;
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="p-6 flex flex-col gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Re-use existing list picker via the dropdown on the card
-                    handleOpenCreateListForCreator(selectedCreator);
-                  }}
-                  className="w-full py-2.5 px-4 bg-[#6C5CE7] text-white rounded-lg text-sm font-medium hover:bg-[#5A4BD5] transition-colors"
-                >
-                  + Add to List
-                </button>
-                <button
-                  onClick={() => toast.info("Add to Directory coming soon")}
-                  className="w-full py-2.5 px-4 border border-[#6C5CE7] text-[#6C5CE7] rounded-lg text-sm font-medium hover:bg-[#6C5CE7]/5 transition-colors"
-                >
-                  Add to Directory
-                </button>
-                <button
-                  onClick={() => toast.info("Invite to Event coming soon")}
-                  className="w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  Invite to Event
-                </button>
+              {/* Action buttons with dropdowns */}
+              <div className="p-6 flex flex-col gap-2" ref={drawerDropdownRef}>
+                {/* + Add to List */}
+                <div className="relative">
+                  <button
+                    onClick={() => openDrawerDropdown("list")}
+                    className="w-full py-2.5 px-4 bg-[#6C5CE7] text-white rounded-lg text-sm font-medium hover:bg-[#5A4BD5] transition-colors"
+                  >
+                    + Add to List
+                  </button>
+                  {drawerDropdown === "list" && (
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto z-10">
+                      {lists.map((l) => (
+                        <button
+                          key={l.id}
+                          onClick={() => {
+                            handleAddToList(l.id, l.name, selectedCreator);
+                            setDrawerDropdown(null);
+                          }}
+                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-left transition-colors"
+                        >
+                          <img
+                            src={l.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(l.name)}&background=6C5CE7&color=fff&size=32`}
+                            alt=""
+                            className="w-6 h-6 rounded-full shrink-0"
+                          />
+                          <span className="truncate text-gray-800 dark:text-gray-200">{l.name}</span>
+                          <span className="ml-auto text-xs text-gray-400 shrink-0">{l.creators.length}</span>
+                        </button>
+                      ))}
+                      {/* Create New List inline */}
+                      <div className="border-t border-gray-100 dark:border-gray-700 py-2 px-3">
+                        {newListNameInput !== null ? (
+                          <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const name = newListNameInput.trim();
+                            if (!name) return;
+                            const newId = createList(name);
+                            handleAddToList(newId, name, selectedCreator);
+                            setNewListNameInput("");
+                            setDrawerDropdown(null);
+                          }} className="flex items-center gap-2">
+                            <Plus className="h-4 w-4 text-[#6C5CE7] shrink-0" />
+                            <input
+                              autoFocus
+                              value={newListNameInput}
+                              onChange={(e) => setNewListNameInput(e.target.value)}
+                              placeholder="New list name…"
+                              className="flex-1 text-sm bg-transparent outline-none text-gray-800 dark:text-gray-200 placeholder:text-gray-400"
+                            />
+                          </form>
+                        ) : (
+                          <button onClick={() => setNewListNameInput("")} className="flex items-center gap-2 text-sm text-[#6C5CE7] font-medium">
+                            <Plus className="h-4 w-4" /> Create New List
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add to Directory */}
+                <div className="relative">
+                  <button
+                    onClick={() => openDrawerDropdown("directory")}
+                    className="w-full py-2.5 px-4 border border-[#6C5CE7] text-[#6C5CE7] rounded-lg text-sm font-medium hover:bg-[#6C5CE7]/5 transition-colors"
+                  >
+                    Add to Directory
+                  </button>
+                  {drawerDropdown === "directory" && (
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto z-10">
+                      {drawerDropdownLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        </div>
+                      ) : drawerDirs.length === 0 ? (
+                        <p className="py-3 px-3 text-sm text-gray-400 text-center">No directories yet</p>
+                      ) : (
+                        drawerDirs.map((d) => (
+                          <button
+                            key={d.id}
+                            onClick={() => handleDrawerAddToDirectory(d)}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-left transition-colors"
+                          >
+                            <span className="truncate text-gray-800 dark:text-gray-200">{d.name}</span>
+                            <span className="ml-auto text-xs text-gray-400 shrink-0">{d.member_count ?? 0}</span>
+                          </button>
+                        ))
+                      )}
+                      {/* Create New Directory inline */}
+                      <div className="border-t border-gray-100 dark:border-gray-700 py-2 px-3">
+                        <form onSubmit={async (e) => {
+                          e.preventDefault();
+                          const name = newDirNameInput.trim();
+                          if (!name) return;
+                          const { data, error } = await supabase.from("directories").insert({ name }).select().single();
+                          if (error) { toast.error(error.message); return; }
+                          toast.success(`Directory "${name}" created`);
+                          if (data) await handleDrawerAddToDirectory({ ...data, member_count: 0 } as Directory);
+                          setNewDirNameInput("");
+                        }} className="flex items-center gap-2">
+                          <Plus className="h-4 w-4 text-[#6C5CE7] shrink-0" />
+                          <input
+                            autoFocus
+                            value={newDirNameInput}
+                            onChange={(e) => setNewDirNameInput(e.target.value)}
+                            placeholder="New directory name…"
+                            className="flex-1 text-sm bg-transparent outline-none text-gray-800 dark:text-gray-200 placeholder:text-gray-400"
+                          />
+                        </form>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Invite to Event */}
+                <div className="relative">
+                  <button
+                    onClick={() => openDrawerDropdown("event")}
+                    className="w-full py-2.5 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    Invite to Event
+                  </button>
+                  {drawerDropdown === "event" && (
+                    <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto z-10">
+                      {drawerDropdownLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        </div>
+                      ) : drawerEvents.length === 0 ? (
+                        <p className="py-3 px-3 text-sm text-gray-400 text-center">No upcoming events</p>
+                      ) : (
+                        drawerEvents.map((ev) => (
+                          <button
+                            key={ev.id}
+                            onClick={() => handleDrawerInviteToEvent(ev)}
+                            className="w-full flex items-center justify-between py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-left transition-colors"
+                          >
+                            <span className="truncate text-gray-800 dark:text-gray-200">{ev.title}</span>
+                            <span className="text-xs text-gray-400 shrink-0 ml-2">
+                              {new Date(ev.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );
