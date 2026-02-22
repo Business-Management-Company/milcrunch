@@ -35,6 +35,12 @@ export interface CreatorCard {
   isVerified?: boolean;
   /** Has email / email available for outreach */
   hasEmail?: boolean;
+  /** Analytics fields from Influencers.club API */
+  mediaCount?: number;
+  avgLikes?: number;
+  avgComments?: number;
+  avgViews?: number;
+  avgReelLikes?: number;
 }
 
 /** API profile shape (nested under each account). */
@@ -114,6 +120,11 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const platforms = [(p?.platform as string) ?? "instagram"];
   const bio = (p?.biography ?? "") as string;
   const postsPerMonth = typeof p?.posts_per_month === "number" ? p.posts_per_month : undefined;
+  const mediaCount = Number(p?.media_count ?? p?.number_of_posts ?? p?.post_count) || undefined;
+  const avgLikes = Number(p?.avg_likes ?? p?.average_likes) || undefined;
+  const avgComments = Number(p?.avg_comments ?? p?.average_comments) || undefined;
+  const avgViews = Number(p?.avg_views ?? p?.average_views ?? p?.avg_video_views) || undefined;
+  const avgReelLikes = Number(p?.avg_reel_likes ?? p?.average_reel_likes) || undefined;
   const location =
     (p?.location && String(p.location).trim()) ||
     [p?.city, p?.state, p?.country].filter(Boolean).join(", ").trim() ||
@@ -257,6 +268,11 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
     externalLinks: externalLinks.length > 0 ? externalLinks : undefined,
     isVerified: isVerified || undefined,
     hasEmail: hasEmail || undefined,
+    mediaCount,
+    avgLikes,
+    avgComments,
+    avgViews,
+    avgReelLikes,
   };
 }
 

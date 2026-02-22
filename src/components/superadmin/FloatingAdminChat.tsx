@@ -853,6 +853,28 @@ For all other questions, respond naturally and concisely.`;
                 </div>
               )}
 
+              {/* Analytics */}
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Analytics</p>
+                <div>
+                  {([
+                    ["Followers", selectedCreator.followers ? formatFollowers(selectedCreator.followers) : null],
+                    ["Engagement Rate", selectedCreator.engagementRate ? `${selectedCreator.engagementRate}%` : null],
+                    ["Number of Posts", selectedCreator.mediaCount ? selectedCreator.mediaCount.toLocaleString() : null],
+                    ["Posts per Month", selectedCreator.postsPerMonth ? selectedCreator.postsPerMonth.toFixed(1) : null],
+                    ["Average Views", selectedCreator.avgViews ? formatFollowers(selectedCreator.avgViews) : null],
+                    ["Average Reel Likes", selectedCreator.avgReelLikes ? formatFollowers(selectedCreator.avgReelLikes) : null],
+                    ["Average Likes", selectedCreator.avgLikes ? formatFollowers(selectedCreator.avgLikes) : null],
+                    ["Average Comments", selectedCreator.avgComments ? formatFollowers(selectedCreator.avgComments) : null],
+                  ] as [string, string | null][]).map(([label, value]) => (
+                    <div key={label} className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-b-0 text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">{label}</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">{value ?? "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Action buttons */}
               <div className="p-6 flex flex-col gap-2">
                 <button
