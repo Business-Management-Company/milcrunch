@@ -77,6 +77,52 @@ function detectMilitaryKeywords(creator: CreatorCard): { branch: string | null; 
   return { branch, keywords: [...new Set(keywords)].slice(0, 5) };
 }
 
+function getRelevancePills(creator: CreatorCard, searchQuery: string): string[] {
+  const pills: string[] = [];
+  const query = (searchQuery || "").toLowerCase();
+  const bio = (creator.bio || "").toLowerCase();
+  const name = (creator.name || creator.username || "").toLowerCase();
+
+  // Military detection
+  if (
+    bio.includes("veteran") || bio.includes("army") || bio.includes("marine") ||
+    bio.includes("navy") || bio.includes("air force") || bio.includes("military") ||
+    name.includes("veteran") || name.includes("military")
+  ) {
+    pills.push("🎖️ Military");
+  }
+  if (bio.includes("milspouse") || bio.includes("mil spouse") || bio.includes("military sp")) {
+    pills.push("💛 MilSpouse");
+  }
+
+  // Follower tiers
+  const followers = creator.followers || 0;
+  if (followers >= 1_000_000) pills.push("🌟 Mega");
+  else if (followers >= 100_000) pills.push("⭐ Macro");
+  else if (followers >= 10_000) pills.push("📈 Mid-Tier");
+  else pills.push("🌱 Micro");
+
+  // Content/business type from bio
+  if (bio.includes("podcast")) pills.push("🎙️ Podcaster");
+  if (bio.includes("author") || bio.includes("book")) pills.push("📚 Author");
+  if (bio.includes("speaker")) pills.push("🎤 Speaker");
+  if (bio.includes("entrepreneur") || bio.includes("founder") || bio.includes("ceo")) pills.push("💼 Entrepreneur");
+  if (bio.includes("fitness") || bio.includes("health") || bio.includes("wellness")) pills.push("💪 Fitness");
+  if (bio.includes("real estate") || bio.includes("realtor")) pills.push("🏠 Real Estate");
+  if (bio.includes("coach")) pills.push("🏆 Coach");
+  if (bio.includes("content creator") || bio.includes("ugc")) pills.push("📱 Content Creator");
+
+  // Query-word matches
+  const queryWords = query.split(" ").filter((w) => w.length > 3);
+  queryWords.forEach((word) => {
+    if ((bio + name).includes(word) && !pills.some((p) => p.toLowerCase().includes(word))) {
+      pills.push(`🔍 ${word.charAt(0).toUpperCase() + word.slice(1)}`);
+    }
+  });
+
+  return pills.slice(0, 4);
+}
+
 export default function FloatingAdminChat() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -96,6 +142,7 @@ export default function FloatingAdminChat() {
   const [awaitingListName, setAwaitingListName] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastQueryRef = useRef<string>("");
 
   useEffect(() => {
     if (open) {
@@ -303,6 +350,7 @@ export default function FloatingAdminChat() {
       { id: loadingMsgId, role: "assistant" as const, text: "", loading: true },
     ]);
     setLoading(true);
+    lastQueryRef.current = input;
 
     try {
       // Fetch upcoming events and creators for context
@@ -666,18 +714,21 @@ For all other questions, respond naturally and concisely.`;
                                       {formatFollowers(c.followers)} followers
                                     </p>
                                   )}
-                                  {keywords.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {keywords.map((kw) => (
-                                        <span
-                                          key={kw}
-                                          className="inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                        >
-                                          {kw}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const pills = getRelevancePills(c, lastQueryRef.current);
+                                    return pills.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {pills.map((pill, pi) => (
+                                          <span
+                                            key={pi}
+                                            className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-full border border-purple-100 dark:border-purple-800"
+                                          >
+                                            {pill}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : null;
+                                  })()}
                                 </div>
 
                                 {/* Add to List dropdown */}
