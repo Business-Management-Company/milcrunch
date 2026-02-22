@@ -347,6 +347,7 @@ export default function Verification() {
     profilePhotoUrl: "",
   });
   const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [modalPhotoUrl, setModalPhotoUrl] = useState<string | null>(null);
   const [phases, setPhases] = useState<(PipelinePhase | { phase: number; name: string; status: string })[]>([]);
   const [newRecordId, setNewRecordId] = useState<string | null>(null);
   const [dirMembers, setDirMembers] = useState<{ id: string; creator_name: string; creator_handle: string; ic_avatar_url: string | null; platform: string | null }[]>([]);
@@ -430,6 +431,21 @@ export default function Verification() {
 
   const handleStartVerification = async () => {
     if (!addForm.fullName.trim()) return;
+
+    // Resolve photo URL before opening the modal
+    const handle = addForm.instagramHandle.trim().replace('@', '');
+    const localMatch = handle ? dirMembers.find((m) => m.creator_handle === handle) : null;
+    let resolvedPhoto = localMatch?.ic_avatar_url || addForm.profilePhotoUrl || null;
+    if (!resolvedPhoto && handle) {
+      const { data: memberData } = await supabase
+        .from('directory_members')
+        .select('ic_avatar_url')
+        .eq('creator_handle', handle)
+        .maybeSingle();
+      resolvedPhoto = memberData?.ic_avatar_url || null;
+    }
+    setModalPhotoUrl(resolvedPhoto);
+
     setPipelineRunning(true);
     setPhases([]);
     const onPhase = (p: PipelinePhase | { phase: number; name: string; status: string }) => setPhases((prev) => [...prev.filter((x) => x.phase !== p.phase), p]);
@@ -716,27 +732,21 @@ export default function Verification() {
                 <circle cx="40" cy="40" r="36" fill="none" stroke="#7c3aed" strokeWidth="4"
                   strokeDasharray="60 165" strokeLinecap="round" />
               </svg>
-              {(() => {
-                const photoUrl =
-                  addForm.profilePhotoUrl ||
-                  (addForm.instagramHandle.trim() ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}` : null) ||
-                  null;
-                return photoUrl ? (
-                  <img
-                    src={photoUrl}
-                    alt={addForm.fullName}
-                    referrerPolicy="no-referrer"
-                    className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full object-cover"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
-                ) : (
-                  <div className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full bg-purple-100 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-purple-600">
-                      {addForm.fullName?.charAt(0) || '?'}
-                    </span>
-                  </div>
-                );
-              })()}
+              {modalPhotoUrl ? (
+                <img
+                  src={modalPhotoUrl}
+                  alt={addForm.fullName}
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              ) : (
+                <div className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full bg-purple-100 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-purple-600">
+                    {addForm.fullName?.charAt(0) || '?'}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-[#000741] dark:text-white mb-1">Verifying {addForm.fullName}</p>
