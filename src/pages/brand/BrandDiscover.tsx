@@ -2687,12 +2687,14 @@ const BrandDiscover = () => {
                   {displayCreators.map((baseCreator, _idx) => {
                     const creator = getMergedCreator(baseCreator);
                     if (_idx === 0) console.log("[BrandDiscover] First creator object:", creator);
+                    if (_idx < 3) console.log(`[MilBadge] ${creator.username}: militaryScore=${creator.militaryScore}, militaryEvidence=`, creator.militaryEvidence);
                     const nicheTags = [
                       creator.nicheClass,
                       creator.category,
                       ...(creator.specialties ?? []),
                     ].filter(Boolean) as string[];
                     const confidence = getConfidence(creator);
+                    if (_idx < 3) console.log(`[MilBadge] ${creator.username}: confidence.level=${confidence.level}, militaryPct=${confidence.militaryPct}, evidence=`, confidence.evidence);
                     const instagramUrl = creator.username
                       ? `https://instagram.com/${creator.username}`
                       : null;
