@@ -127,11 +127,10 @@ const BrandLists = () => {
     const id = createList(trimmed);
 
     if (avatarFile) {
-      const ext = avatarFile.name.split(".").pop() || "jpg";
-      const path = `${id}/avatar.${ext}`;
+      const path = `${id}/${Date.now()}-${avatarFile.name}`;
       const { error } = await supabase.storage
         .from("list-avatars")
-        .upload(path, avatarFile, { upsert: true });
+        .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
       if (!error) {
         const { data: urlData } = supabase.storage
           .from("list-avatars")
@@ -169,9 +168,8 @@ const BrandLists = () => {
   const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !imageTargetId) return;
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${imageTargetId}/avatar.${ext}`;
-    const { error } = await supabase.storage.from("list-avatars").upload(path, file, { upsert: true });
+    const path = `${imageTargetId}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("list-avatars").upload(path, file, { upsert: true, contentType: file.type });
     if (error) {
       toast.error("Failed to upload image");
       return;
