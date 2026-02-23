@@ -100,6 +100,15 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   linkedin: <span className="text-xs font-bold text-blue-700">in</span>,
 };
 
+const HEADER_PLATFORM_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
+  instagram: { icon: <Instagram className="h-5 w-5" />, color: "text-pink-500" },
+  tiktok: { icon: <TikTokIcon className="h-5 w-5" />, color: "text-slate-800" },
+  youtube: { icon: <Youtube className="h-5 w-5" />, color: "text-red-600" },
+  twitter: { icon: <Twitter className="h-5 w-5" />, color: "text-slate-600" },
+  facebook: { icon: <span className="inline-flex items-center justify-center h-5 w-5 text-sm font-bold leading-none">f</span>, color: "text-blue-600" },
+  linkedin: { icon: <span className="inline-flex items-center justify-center h-5 w-5 text-xs font-bold leading-none">in</span>, color: "text-blue-700" },
+};
+
 const PLATFORM_LABEL: Record<string, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
@@ -725,6 +734,28 @@ export default function CreatorPublicProfile() {
                   </h1>
                   <p className="text-sm text-gray-400 mt-0.5">@{creator.handle}</p>
 
+                  {/* Platform icons */}
+                  {icPlatforms.length > 0 && (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {icPlatforms.map((p) => {
+                        const entry = HEADER_PLATFORM_ICONS[p.platform];
+                        if (!entry) return null;
+                        return (
+                          <a
+                            key={p.platform}
+                            href={p.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${entry.color} hover:opacity-70 transition-opacity`}
+                            title={p.label}
+                          >
+                            {entry.icon}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* Badges row */}
                   <div className="flex items-center gap-2 flex-wrap mt-2.5">
                     {creator.branch && (
@@ -740,7 +771,7 @@ export default function CreatorPublicProfile() {
                         <TooltipContent>MilCrunch Verified</TooltipContent>
                       </Tooltip>
                     )}
-                    {verification && verification.confidence_score != null && (
+                    {verification && verification.confidence_score != null ? (
                       <>
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
                           <ShieldCheck className="h-3.5 w-3.5" />
@@ -762,7 +793,14 @@ export default function CreatorPublicProfile() {
                           <span className="text-xs font-semibold text-green-700">{verification.confidence_score}%</span>
                         </span>
                       </>
-                    )}
+                    ) : user ? (
+                      <span
+                        onClick={() => navigate(`/brand/verification?name=${encodeURIComponent(creator?.display_name ?? creator?.handle ?? "")}`)}
+                        className="text-sm text-gray-400 underline cursor-pointer hover:text-gray-500 transition-colors"
+                      >
+                        Not yet verified
+                      </span>
+                    ) : null}
                     {hasUpcomingEvents && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">
                         <Calendar className="h-3 w-3" />
@@ -838,26 +876,20 @@ export default function CreatorPublicProfile() {
                 </div>
               )}
 
-              {/* ====== STATS ROW ====== */}
-              {stats.length > 0 && (
-                <div className="mt-5 grid grid-cols-2 md:flex md:items-center gap-3 md:gap-8">
-                  {stats.map((s) => (
-                    <div key={s.label} className="flex items-center gap-2 md:text-center">
-                      {s.icon}
-                      <div>
-                        <p className="text-lg font-bold text-gray-900 leading-tight">{s.value}</p>
-                        <p className="text-xs text-gray-500">{s.label}</p>
-                      </div>
+              {/* ====== STATS ROW + SPONSOR FIT ====== */}
+              <div className="mt-5 flex items-center flex-wrap gap-3 md:gap-6">
+                {stats.map((s) => (
+                  <div key={s.label} className="flex items-center gap-2">
+                    {s.icon}
+                    <div>
+                      <p className="text-lg font-bold text-gray-900 leading-tight">{s.value}</p>
+                      <p className="text-xs text-gray-500">{s.label}</p>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* ====== SPONSOR FIT SCORE ====== */}
-              <div className="mt-4">
+                  </div>
+                ))}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold cursor-default ${sponsorFitTier.bg}`}>
+                    <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold cursor-default ${sponsorFitTier.bg}`}>
                       ⚡ {sponsorFitTier.label} · {sponsorFitScore}
                     </div>
                   </TooltipTrigger>
@@ -868,21 +900,6 @@ export default function CreatorPublicProfile() {
               </div>
             </div>
           </div>
-
-          {/* ====== ACTION BAR ====== */}
-          {user && (
-            <div className="px-4 md:px-6 py-3 border-t border-gray-100 flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:hover:bg-emerald-950/30"
-                onClick={() => navigate(`/brand/verification?name=${encodeURIComponent(creator?.display_name ?? creator?.handle ?? "")}`)}
-              >
-                <ShieldCheck className="h-4 w-4 mr-1.5" />
-                Verify
-              </Button>
-            </div>
-          )}
 
           {/* ====== TABS ====== */}
           <Tabs defaultValue="overview" onValueChange={handleTabChange}>
@@ -922,27 +939,6 @@ export default function CreatorPublicProfile() {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-2">About</h3>
                   <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{bio}</p>
-                </div>
-              )}
-
-              {/* Platforms */}
-              {icPlatforms.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Platforms</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {icPlatforms.map((p) => (
-                      <a
-                        key={p.platform}
-                        href={p.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition-colors ${p.pillClass}`}
-                      >
-                        <span className="font-medium">{p.label}</span>
-                        <span className="opacity-60">@{p.username}</span>
-                      </a>
-                    ))}
-                  </div>
                 </div>
               )}
 
