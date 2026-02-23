@@ -1260,6 +1260,7 @@ const BrandDirectory = () => {
                 const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                 const isToggling = togglingIds.has(m.id);
                 const platforms = getAllPlatforms(m);
+                if (platforms.length <= 1) console.log("[DirCard]", m.creator_handle, "platforms:", platforms, "enrichment_data:", m.enrichment_data, "platform_urls:", m.platform_urls);
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                     <DirAvatar m={m} size="lg" />

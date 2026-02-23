@@ -14,7 +14,6 @@ import {
   Twitter,
   ArrowLeft,
   Users,
-  TrendingUp,
   Eye,
   LayoutGrid,
   UserPlus,
@@ -639,9 +638,6 @@ export default function CreatorPublicProfile() {
   if (creator.follower_count && creator.follower_count > 0) {
     stats.push({ label: "Followers", value: formatFollowerCount(creator.follower_count), icon: <Users className="h-4 w-4 text-[#1e3a5f]" /> });
   }
-  if (creator.engagement_rate != null && creator.engagement_rate > 0) {
-    stats.push({ label: "Engagement", value: `${creator.engagement_rate.toFixed(1)}%`, icon: <TrendingUp className="h-4 w-4 text-green-600" /> });
-  }
   if (creator.avg_views && typeof creator.avg_views === "string") {
     stats.push({ label: "Avg Views", value: creator.avg_views, icon: <Eye className="h-4 w-4 text-blue-500" /> });
   } else if (creator.avg_views) {
@@ -650,28 +646,6 @@ export default function CreatorPublicProfile() {
   if (creator.media_count && creator.media_count > 0) {
     stats.push({ label: "Posts", value: formatFollowerCount(creator.media_count), icon: <LayoutGrid className="h-4 w-4 text-gray-500" /> });
   }
-
-  // Sponsor Fit Score
-  const sponsorFitScore = (() => {
-    let score = 50;
-    const er = creator.engagement_rate ?? 0;
-    if (er >= 5) score += 30;
-    else if (er >= 3) score += 20;
-    else if (er >= 1) score += 10;
-    const fc = creator.follower_count ?? 0;
-    if (fc >= 100_000) score += 20;
-    else if (fc >= 50_000) score += 15;
-    else if (fc >= 10_000) score += 10;
-    else if (fc >= 1_000) score += 5;
-    return Math.min(score, 99);
-  })();
-  const sponsorFitTier = sponsorFitScore >= 80
-    ? { label: "Platinum Fit", bg: "bg-yellow-100 text-yellow-800" }
-    : sponsorFitScore >= 60
-    ? { label: "Strong Fit", bg: "bg-green-100 text-green-800" }
-    : sponsorFitScore >= 40
-    ? { label: "Good Fit", bg: "bg-blue-100 text-blue-800" }
-    : { label: "Emerging", bg: "bg-gray-100 text-gray-600" };
 
   // Upcoming vs past events
   const now = new Date().toISOString();
@@ -864,7 +838,7 @@ export default function CreatorPublicProfile() {
                 </div>
               </div>
 
-              {/* ====== STATS ROW + SPONSOR FIT ====== */}
+              {/* ====== STATS ROW ====== */}
               <div className="mt-5 flex items-center flex-wrap gap-3 md:gap-6">
                 {stats.map((s) => (
                   <div key={s.label} className="flex items-center gap-2">
@@ -875,16 +849,6 @@ export default function CreatorPublicProfile() {
                     </div>
                   </div>
                 ))}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold cursor-default ${sponsorFitTier.bg}`}>
-                      ⚡ {sponsorFitTier.label} · {sponsorFitScore}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p className="text-xs max-w-[220px]">Sponsor Fit Score is calculated from engagement rate, follower count, and niche alignment.</p>
-                  </TooltipContent>
-                </Tooltip>
               </div>
             </div>
           </div>
@@ -958,7 +922,7 @@ export default function CreatorPublicProfile() {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Topics</h3>
                   <div className="flex flex-wrap gap-2">
-                    {enrichment.hashtags.map((tag) => (
+                    {[...new Set(enrichment.hashtags)].map((tag) => (
                       <span
                         key={tag}
                         className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full"
