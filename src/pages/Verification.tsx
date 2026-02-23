@@ -487,9 +487,7 @@ export default function Verification() {
           claimed_status: addForm.claimedStatus,
           linkedin_url: addForm.linkedinUrl.trim() || result.linkedinUrl || null,
           source_username: addForm.instagramHandle.trim() || null,
-          profile_photo_url: addForm.instagramHandle.trim()
-            ? `https://unavatar.io/instagram/${addForm.instagramHandle.trim()}`
-            : addForm.profilePhotoUrl || result.linkedinUrl || null,
+          profile_photo_url: resolvedPhoto || addForm.profilePhotoUrl || null,
           website_url: addForm.websiteUrl.trim() || null,
           notes: addForm.notes.trim() || null,
           verification_score: result.verificationScore,
@@ -2872,16 +2870,24 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const heroPhoto = record.profile_photo_url || pdlPhoto || null;
 
   useEffect(() => {
-    if (record.profile_photo_url) return; // already has a photo
+    // Skip if already using a reliable Supabase Storage URL
+    const currentPhoto = record.profile_photo_url || '';
+    const isReliable = currentPhoto.includes('supabase.co/storage/');
+    if (isReliable) return;
     (async () => {
-      // Try to find photo from directory_members by name or source_username
+      // Try to find photo from directory_members by handle or name
       const handle = record.source_username;
-      const query = handle
-        ? supabase.from('directory_members').select('ic_avatar_url, avatar_url').eq('creator_handle', handle).maybeSingle()
-        : supabase.from('directory_members').select('ic_avatar_url, avatar_url').ilike('name', record.person_name).maybeSingle();
-      const { data } = await query;
+      let data: { ic_avatar_url?: string | null; avatar_url?: string | null } | null = null;
+      if (handle) {
+        const result = await supabase.from('directory_members').select('ic_avatar_url, avatar_url').eq('creator_handle', handle).maybeSingle();
+        data = result.data;
+      }
+      if (!data) {
+        const result = await supabase.from('directory_members').select('ic_avatar_url, avatar_url').ilike('creator_name', record.person_name).maybeSingle();
+        data = result.data;
+      }
       const photo = data?.ic_avatar_url || data?.avatar_url || null;
-      if (photo) {
+      if (photo && photo !== currentPhoto) {
         await supabase.from('verifications').update({ profile_photo_url: photo }).eq('id', record.id);
         onRefresh?.();
       }

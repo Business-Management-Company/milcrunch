@@ -36,6 +36,7 @@ export interface VerificationRecord {
   verified_by: string | null;
   source: string | null;
   source_username: string | null;
+  profile_photo_url: string | null;
   city: string | null;
   state: string | null;
   zip: string | null;
