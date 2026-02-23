@@ -7,6 +7,7 @@ export default async function handler(req, res) {
   }
 
   const apiKey =
+    req.headers["x-api-key"] ||
     req.headers.authorization?.replace(/^Bearer\s+/i, "") ||
     process.env.VITE_INFLUENCERS_CLUB_API_KEY;
 
