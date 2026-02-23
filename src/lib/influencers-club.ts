@@ -584,17 +584,22 @@ export async function searchLocations(
 ): Promise<string[]> {
   const q = query.trim();
   if (!q) return [];
-  const apiKey = getApiKey();
-  if (!apiKey) return [];
 
+  console.log("[searchLocations] fetching", LOCATIONS_URL, { q, platform });
   const res = await fetch(LOCATIONS_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ q, platform }),
     signal,
   });
-  if (!res.ok) return [];
+  console.log("[searchLocations] status:", res.status);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error("[searchLocations] error response:", errText);
+    return [];
+  }
   const data = await res.json();
+  console.log("[searchLocations] raw data:", data);
   // API may return an array of strings or objects with a name/label field
   if (Array.isArray(data)) {
     return data.map((item) =>
