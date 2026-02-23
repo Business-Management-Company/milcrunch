@@ -337,11 +337,21 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         )}
       </div>
 
-      {/* Follower count */}
-      <p className="text-sm font-bold text-[#1A1A2E] mb-2 px-4">
-        {formatFollowerCount(c.follower_count)}
-        <span className="text-xs font-normal text-gray-400 ml-1">followers</span>
-      </p>
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-1 w-full px-4 mb-2">
+        <div className="text-center">
+          <p className="text-sm font-bold text-[#1A1A2E]">{formatFollowerCount(c.follower_count)}</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Followers</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-bold text-[#1A1A2E]">{c.avg_likes != null && Number(c.avg_likes) > 0 ? formatFollowerCount(Number(c.avg_likes)) : "—"}</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Avg Likes</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-bold text-[#1A1A2E]">{c.post_count != null && c.post_count > 0 ? formatFollowerCount(c.post_count) : "—"}</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Posts/Mo</p>
+        </div>
+      </div>
 
       {/* Platform icons */}
       {platforms.length > 0 && (
