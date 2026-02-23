@@ -2877,11 +2877,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       // Try to find photo from directory_members by name or source_username
       const handle = record.source_username;
       const query = handle
-        ? supabase.from('directory_members').select('ic_avatar_url').eq('creator_handle', handle).maybeSingle()
-        : supabase.from('directory_members').select('ic_avatar_url').ilike('name', record.person_name).maybeSingle();
+        ? supabase.from('directory_members').select('ic_avatar_url, avatar_url').eq('creator_handle', handle).maybeSingle()
+        : supabase.from('directory_members').select('ic_avatar_url, avatar_url').ilike('name', record.person_name).maybeSingle();
       const { data } = await query;
-      if (data?.ic_avatar_url) {
-        await supabase.from('verifications').update({ profile_photo_url: data.ic_avatar_url }).eq('id', record.id);
+      const photo = data?.ic_avatar_url || data?.avatar_url || null;
+      if (photo) {
+        await supabase.from('verifications').update({ profile_photo_url: photo }).eq('id', record.id);
         onRefresh?.();
       }
     })();
