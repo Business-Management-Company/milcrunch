@@ -79,7 +79,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
-import { type CreatorCard, fetchDiscoveryAvatar } from "@/lib/influencers-club";
+import { type CreatorCard } from "@/lib/influencers-club";
 import { PlatformIcons } from "@/components/PlatformIcons";
 
 interface PreviewMember {
@@ -224,7 +224,6 @@ const BrandDirectory = () => {
   const [promoteListId, setPromoteListId] = useState("");
   const [promoting, setPromoting] = useState(false);
 
-  const [refreshingPhotos, setRefreshingPhotos] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
@@ -593,41 +592,6 @@ const BrandDirectory = () => {
   };
 
   // ─── Refresh photos for creators missing avatars ──────────
-
-  const handleRefreshPhotos = async () => {
-    setRefreshingPhotos(true);
-    let updated = 0;
-    let failed = 0;
-
-    for (const member of members) {
-      const currentUrl = member.ic_avatar_url || '';
-      if (currentUrl.includes('supabase.co/storage')) continue;
-
-      try {
-        const cleanHandle = (member.creator_handle || '').replace('@', '').toLowerCase().trim();
-        if (!cleanHandle) continue;
-
-        const url = await fetchDiscoveryAvatar(cleanHandle);
-        if (url && !url.includes('saxoneldridge')) {
-          const { error } = await supabase
-            .from('directory_members')
-            .update({ ic_avatar_url: url })
-            .eq('id', member.id);
-          if (!error) updated++;
-          else failed++;
-        } else {
-          failed++;
-        }
-      } catch {
-        failed++;
-      }
-      await new Promise(r => setTimeout(r, 400));
-    }
-
-    setRefreshingPhotos(false);
-    toast.success(`Photos updated: ${updated} updated, ${failed} failed`);
-    if (selectedDir) loadMembers(selectedDir.id);
-  };
 
   // ─── Filtering & sorting ───────────────────────────────────
 
@@ -1157,10 +1121,12 @@ const BrandDirectory = () => {
             <RefreshCw className={cn("h-4 w-4 mr-1.5", membersLoading && "animate-spin")} />
             Refresh
           </Button>
-          <Button variant="outline" size="sm" className="rounded-lg text-gray-600 dark:text-gray-400" onClick={handleRefreshPhotos} disabled={refreshingPhotos || membersLoading}>
-            <RefreshCw className={cn("h-4 w-4 mr-1.5", refreshingPhotos && "animate-spin")} />
-            {refreshingPhotos ? "Refreshing..." : "Refresh Photos"}
-          </Button>
+          <a href="/brand/discover" target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline" className="rounded-lg border-[#1e3a5f] text-[#1e3a5f] hover:bg-blue-50 dark:hover:bg-blue-950/30">
+              <Search className="h-4 w-4 mr-1.5" />
+              Discover Creators
+            </Button>
+          </a>
           {/* View toggle */}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ml-auto">
             <button type="button" onClick={() => handleViewChange("table")} className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-pd-blue text-white" : "bg-background text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800")} title="Table view">
@@ -1170,15 +1136,6 @@ const BrandDirectory = () => {
               <LayoutGrid className="h-4 w-4" />
             </button>
           </div>
-          <a href="/brand/discover" target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="outline" className="rounded-lg border-[#1e3a5f] text-[#1e3a5f] hover:bg-blue-50 dark:hover:bg-blue-950/30">
-              <Search className="h-4 w-4 mr-1.5" />
-              Discover Creators
-            </Button>
-          </a>
-          <Button size="sm" className="rounded-lg bg-pd-blue hover:bg-pd-darkblue text-white" onClick={() => navigate("/brand/discover")}>
-            Add from Discovery
-          </Button>
           {lists.length > 0 && (
             <Button size="sm" variant="outline" className="rounded-lg" onClick={() => setPromoteOpen(true)}>
               <Upload className="h-4 w-4 mr-1.5" />
