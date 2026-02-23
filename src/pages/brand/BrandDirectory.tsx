@@ -552,7 +552,7 @@ const BrandDirectory = () => {
       .from("featured_creators")
       .upsert(payload, { onConflict: "handle", ignoreDuplicates: true });
     if (error) {
-      console.error("[copyToDirectory] error:", error.message, error.details, error.hint, error.code);
+      console.error("upsert error:", error);
       return "failed";
     }
     return "added";

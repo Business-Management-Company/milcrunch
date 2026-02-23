@@ -145,9 +145,12 @@ export default function FeaturedCreators() {
       is_active: form.is_active,
       is_verified: form.is_verified,
     };
-    const { error } = await supabase.from("featured_creators").insert(payload);
+    const { error } = await supabase
+      .from("featured_creators")
+      .upsert(payload, { onConflict: "handle", ignoreDuplicates: true });
     setSaving(false);
     if (error) {
+      console.error("upsert error:", error);
       toast.error(error.message);
       return;
     }
