@@ -64,17 +64,15 @@ const BrandLists = () => {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetId, setImageTargetId] = useState<string | null>(null);
+  const [imageUrlValue, setImageUrlValue] = useState("");
   const [newListName, setNewListName] = useState("");
   // Inline title/description editing for list detail
   const [editingListTitle, setEditingListTitle] = useState<string | false>(false);
   const [listTitleValue, setListTitleValue] = useState("");
   const [editingListDesc, setEditingListDesc] = useState(false);
   const [listDescValue, setListDescValue] = useState("");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const createAvatarRef = useRef<HTMLInputElement>(null);
+  const [createAvatarUrl, setCreateAvatarUrl] = useState("");
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -88,20 +86,9 @@ const BrandLists = () => {
   useEffect(() => {
     if (createModalOpen) {
       setNewListName("");
-      setAvatarFile(null);
-      setAvatarPreview(null);
+      setCreateAvatarUrl("");
     }
   }, [createModalOpen]);
-
-  const handleCreateAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setAvatarFile(file);
-    if (file) {
-      setAvatarPreview(URL.createObjectURL(file));
-    } else {
-      setAvatarPreview(null);
-    }
-  };
 
   const handleCreateList = async () => {
     const trimmed = newListName.trim();
@@ -109,19 +96,10 @@ const BrandLists = () => {
 
     const id = createList(trimmed);
 
-    if (avatarFile) {
-      const path = `${id}/${Date.now()}-${avatarFile.name}`;
-      const { error } = await supabase.storage
-        .from("list-avatars")
-        .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type });
-      if (!error) {
-        const { data: urlData } = supabase.storage
-          .from("list-avatars")
-          .getPublicUrl(path);
-        if (urlData?.publicUrl) {
-          updateListAvatar(id, urlData.publicUrl);
-        }
-      }
+    const avatarUrl = createAvatarUrl.trim();
+    if (avatarUrl) {
+      updateListAvatar(id, avatarUrl);
+      await supabase.from("influencer_lists").update({ image_url: avatarUrl }).eq("id", id);
     }
 
     setCreateModalOpen(false);
@@ -144,26 +122,20 @@ const BrandLists = () => {
 
   const handleChangeImage = (listId: string) => {
     setMenuOpenId(null);
+    const list = lists.find((l) => l.id === listId);
+    setImageUrlValue(list?.avatar_url ?? "");
     setImageTargetId(listId);
-    imageInputRef.current?.click();
   };
 
-  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !imageTargetId) return;
-    const path = `${imageTargetId}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from("list-avatars").upload(path, file, { upsert: true, contentType: file.type });
-    if (error) {
-      toast.error("Failed to upload image");
-      return;
-    }
-    const { data: urlData } = supabase.storage.from("list-avatars").getPublicUrl(path);
-    if (urlData?.publicUrl) {
-      updateListAvatar(imageTargetId, urlData.publicUrl);
-      toast.success("List image updated");
-    }
+  const handleSaveImageUrl = async () => {
+    if (!imageTargetId) return;
+    const url = imageUrlValue.trim();
+    if (!url) { toast.error("Please enter an image URL"); return; }
+    updateListAvatar(imageTargetId, url);
+    await supabase.from("influencer_lists").update({ image_url: url }).eq("id", imageTargetId);
+    toast.success("List image updated");
     setImageTargetId(null);
-    e.target.value = "";
+    setImageUrlValue("");
   };
 
   const handleDeleteList = () => {
@@ -181,27 +153,25 @@ const BrandLists = () => {
             <DialogTitle>Create New List</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {/* Avatar upload */}
-            <div className="flex flex-col items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => createAvatarRef.current?.click()}
-                className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer border-2 border-dashed border-gray-300 dark:border-gray-600"
-              >
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <Camera className="w-6 h-6 text-gray-400" />
-                )}
-              </button>
-              <input
-                ref={createAvatarRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleCreateAvatarSelect}
-              />
-              <span className="text-xs text-gray-400">Upload avatar</span>
+            {/* Avatar URL */}
+            <div className="space-y-2">
+              <Label htmlFor="create-avatar-url">Image URL (optional)</Label>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
+                  {createAvatarUrl.trim() ? (
+                    <img src={createAvatarUrl.trim()} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  ) : (
+                    <Camera className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
+                <Input
+                  id="create-avatar-url"
+                  placeholder="https://example.com/image.jpg"
+                  value={createAvatarUrl}
+                  onChange={(e) => setCreateAvatarUrl(e.target.value)}
+                  className="rounded-lg"
+                />
+              </div>
             </div>
 
             {/* List name */}
@@ -266,8 +236,32 @@ const BrandLists = () => {
         </div>
       </div>
 
-      {/* Hidden file input for image upload */}
-      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
+      {/* Image URL dialog */}
+      <Dialog open={!!imageTargetId} onOpenChange={(open) => { if (!open) { setImageTargetId(null); setImageUrlValue(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Change List Image</DialogTitle></DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="image-url-input">Image URL</Label>
+            <Input
+              id="image-url-input"
+              placeholder="https://example.com/image.jpg"
+              value={imageUrlValue}
+              onChange={(e) => setImageUrlValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveImageUrl(); } }}
+              className="rounded-lg"
+            />
+            {imageUrlValue.trim() && (
+              <div className="mt-2 flex justify-center">
+                <img src={imageUrlValue.trim()} alt="Preview" className="w-16 h-16 rounded-lg object-cover border border-gray-200" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setImageTargetId(null); setImageUrlValue(""); }} className="rounded-lg">Cancel</Button>
+            <Button onClick={handleSaveImageUrl} disabled={!imageUrlValue.trim()} className="rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282]">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
