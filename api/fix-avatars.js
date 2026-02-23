@@ -150,12 +150,16 @@ export default async function handler(req, res) {
         try {
           const head = await fetch(checkUrl, { method: "HEAD" });
           const size = parseInt(head.headers.get("content-length") || "0", 10);
+          const ct = (head.headers.get("content-type") || "").toLowerCase();
           if (!head.ok) {
             broken.push(m.creator_handle);
             details.push({ handle: m.creator_handle, reason: `HTTP ${head.status}` });
           } else if (size < MIN_AVATAR_BYTES) {
             broken.push(m.creator_handle);
             details.push({ handle: m.creator_handle, reason: `${size} bytes (placeholder)` });
+          } else if (ct && !ct.startsWith("image/")) {
+            broken.push(m.creator_handle);
+            details.push({ handle: m.creator_handle, reason: `bad content-type: ${ct}` });
           }
         } catch (e) {
           broken.push(m.creator_handle);

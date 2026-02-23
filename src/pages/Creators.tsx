@@ -50,7 +50,7 @@ const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard", "Space Force"];
 const PLATFORMS = ["instagram", "tiktok", "youtube", "twitter"];
 const PAGE_SIZE = 50;
-const CACHE_KEY = "milcrunch_directory_v1";
+const CACHE_KEY = "milcrunch_directory_v2";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 type SortKey = "followers" | "engagement" | "recent" | "name";
@@ -201,7 +201,10 @@ function CreatorCard({
   inView: boolean;
   index: number;
 }) {
-  const avatarUrl = getCreatorAvatar(c) ?? safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
+  const primaryUrl = getCreatorAvatar(c);
+  const fallbackUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
+  const [avatarUrl, setAvatarUrl] = useState(primaryUrl ?? fallbackUrl);
+  const [triedFallback, setTriedFallback] = useState(false);
   const platforms = getAllPlatforms(c);
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
   const isVerified = !!c.featured_homepage;
@@ -247,7 +250,17 @@ function CreatorCard({
               alt={c.display_name}
               className="w-full h-full object-cover"
               loading="lazy"
-              onError={(e) => { console.log('[IMG ERROR] failed to load:', e.currentTarget.src); e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden'); }}
+              onError={(e) => {
+                console.log('[IMG ERROR]', c.handle, e.currentTarget.src.substring(0, 80));
+                // Try fallback URL before showing initials
+                if (!triedFallback && fallbackUrl && fallbackUrl !== avatarUrl) {
+                  setTriedFallback(true);
+                  setAvatarUrl(fallbackUrl);
+                  return;
+                }
+                e.currentTarget.style.display = 'none';
+                (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden');
+              }}
             />
           ) : null}
           <div className={`w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-base ${avatarUrl ? 'hidden' : ''}`}>
