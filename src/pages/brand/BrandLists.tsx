@@ -4,22 +4,27 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil } from "lucide-react";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import type { CreatorCard } from "@/lib/influencers-club";
 import type { ListCreator } from "@/contexts/ListContext";
 import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
+import { fetchDirectoriesWithCounts, type Directory } from "@/lib/directories";
 import { PlatformIcons } from "@/components/PlatformIcons";
 import { toast } from "sonner";
-import { type DestinationCreator } from "@/components/AddToDestinationModal";
-const AddToDestinationModal = React.lazy(() => import("@/components/AddToDestinationModal"));
 
 function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -527,7 +532,7 @@ export const BrandListDetail = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
   const [promotingAll, setPromotingAll] = useState(false);
-  const [destModalOpen, setDestModalOpen] = useState(false);
+  const [directories, setDirectories] = useState<Directory[]>([]);
   const [editingListTitle, setEditingListTitle] = useState<string | false>(false);
   const [listTitleValue, setListTitleValue] = useState("");
   const [editingListDesc, setEditingListDesc] = useState(false);
@@ -546,6 +551,33 @@ export const BrandListDetail = () => {
       setListDescValue("");
     }
   }, [selectedList?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    fetchDirectoriesWithCounts().then(setDirectories);
+  }, []);
+
+  const handleBulkAddToDirectory = async (dirId: string) => {
+    if (creators.length === 0) return;
+    const rows = creators.map((c) => ({
+      directory_id: dirId,
+      creator_handle: (c.username ?? c.id).replace(/^@/, "").trim(),
+      creator_name: c.name,
+      avatar_url: c.avatar || null,
+      follower_count: c.followers ?? null,
+      engagement_rate: c.engagementRate ?? null,
+      platform: c.platforms?.[0] ?? "instagram",
+      branch: detectBranch(c.bio ?? "") || null,
+    }));
+    const { error } = await supabase
+      .from("directory_members")
+      .upsert(rows, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
+    const dirName = directories.find((d) => d.id === dirId)?.name ?? "directory";
+    if (error) {
+      toast.error(`Failed to add creators to ${dirName}`);
+    } else {
+      toast.success(`Added ${creators.length} creator${creators.length !== 1 ? "s" : ""} to ${dirName}`);
+    }
+  };
 
   const openProfile = (creator: ListCreator) => {
     setProfileCreator(listCreatorToCard(creator));
@@ -701,16 +733,27 @@ export const BrandListDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {creators.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30"
-                onClick={() => setDestModalOpen(true)}
-              >
-                <Globe className="h-3.5 w-3.5 mr-1.5" />
-                Add All to...
-              </Button>
+            {creators.length > 0 && directories.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30"
+                  >
+                    <FolderPlus className="h-3.5 w-3.5 mr-1.5" />
+                    Add All to Directory
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {directories.map((d) => (
+                    <DropdownMenuItem key={d.id} onClick={() => handleBulkAddToDirectory(d.id)}>
+                      {d.name}
+                      {d.member_count != null && <span className="ml-auto text-xs text-gray-400 pl-4">{d.member_count}</span>}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {creators.length > 0 && (
               <div className="flex items-center gap-2">
@@ -835,25 +878,6 @@ export const BrandListDetail = () => {
         onClearSelection={() => setSelectedIds(new Set())}
         onRemoveFromList={handleBulkRemove}
       />
-
-      <React.Suspense fallback={null}>
-        <AddToDestinationModal
-          open={destModalOpen}
-          defaultTab="directory"
-          creators={creators.map((c): DestinationCreator => ({
-            handle: c.username ?? c.id,
-            name: c.name,
-            avatar_url: c.avatar || null,
-            follower_count: c.followers ?? null,
-            engagement_rate: c.engagementRate ?? null,
-            platform: c.platforms?.[0] ?? "instagram",
-            branch: null,
-            platforms: c.platforms ?? [],
-            bio: c.bio ?? "",
-          }))}
-          onClose={() => setDestModalOpen(false)}
-        />
-      </React.Suspense>
     </>
   );
 };
