@@ -95,8 +95,8 @@ const PLATFORMS: Platform[] = [
     id: "twitch",
     name: "Twitch",
     icon: <Twitch className="w-8 h-8" />,
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
+    color: "text-blue-700",
+    bgColor: "bg-blue-50",
     rtmpUrl: "rtmp://live.twitch.tv/app/",
   },
   {
@@ -190,7 +190,7 @@ export default function Connectors() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Link2 className="w-7 h-7 text-purple-600" />
+          <Link2 className="w-7 h-7 text-blue-700" />
           Stream Connectors
         </h1>
         <p className="text-gray-500 mt-1">
@@ -279,7 +279,7 @@ export default function Connectors() {
                 ) : (
                   <Button
                     size="sm"
-                    className="bg-purple-600 hover:bg-purple-700"
+                    className="bg-blue-700 hover:bg-blue-800"
                     onClick={() => openConnect(platform)}
                   >
                     Connect
@@ -366,7 +366,7 @@ export default function Connectors() {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700"
+                className="flex-1 bg-blue-700 hover:bg-blue-800"
                 onClick={handleSave}
               >
                 {editingPlatform ? "Update" : "Save & Connect"}

@@ -285,7 +285,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                   onClick={() => toggleSection(section.key)}
                   className="flex items-center justify-between w-full px-4 pt-5 pb-1 group"
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400">
+                  <span className="text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-500">
                     {section.label}
                   </span>
                   <Chevron className="h-3 w-3 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
@@ -303,8 +303,8 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                     const linkClasses = cn(
                       "flex items-center gap-3 px-4 py-2 mx-2 rounded-lg text-sm transition-colors",
                       active
-                        ? "bg-purple-50 dark:bg-[#1F2937] text-purple-700 dark:text-white font-medium border-l-4 border-purple-600 dark:border-[#6C5CE7]"
-                        : "text-gray-600 dark:text-[#D1D5DB] font-normal hover:bg-purple-50 dark:hover:bg-[#1F2937] hover:text-purple-700 dark:hover:text-white",
+                        ? "bg-blue-50 dark:bg-[#1F2937] text-blue-800 dark:text-white font-medium border-l-4 border-blue-700 dark:border-[#1e3a5f]"
+                        : "text-gray-600 dark:text-[#D1D5DB] font-normal hover:bg-blue-50 dark:hover:bg-[#1F2937] hover:text-blue-800 dark:hover:text-white",
                       collapsed && "justify-center px-2 mx-1"
                     );
                     const linkContent = (
@@ -312,7 +312,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0",
-                            active ? "text-purple-600 dark:text-white" : "text-gray-400 dark:text-[#D1D5DB] group-hover/nav:text-purple-600 dark:group-hover/nav:text-white"
+                            active ? "text-blue-700 dark:text-white" : "text-gray-400 dark:text-[#D1D5DB] group-hover/nav:text-blue-700 dark:group-hover/nav:text-white"
                           )}
                           strokeWidth={1.75}
                         />
@@ -380,7 +380,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
       {!collapsed && (
         <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700">
           <p className="text-xs text-gray-300 dark:text-[#4B5563] text-center">
-            MilCrunch<span className="text-[#6C5CE7] font-bold">X</span> &middot; v1.0
+            MilCrunch<span className="text-[#3b82f6] font-bold">X</span> &middot; v1.0
           </p>
         </div>
       )}

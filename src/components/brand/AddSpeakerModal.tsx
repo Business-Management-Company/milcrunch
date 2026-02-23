@@ -36,7 +36,7 @@ export const SPEAKER_TYPES = [
 ];
 
 export const SPEAKER_TYPE_COLORS: Record<string, string> = {
-  keynote: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  keynote: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
   presenter: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   panelist: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400",
   mc: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",

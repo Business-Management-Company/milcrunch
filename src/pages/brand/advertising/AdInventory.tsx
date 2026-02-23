@@ -33,7 +33,7 @@ interface InventoryItem {
 
 const channelColor = (c: string) =>
   c === "Display" ? "bg-blue-900/40 text-blue-300 border-blue-700" :
-  c === "Podcast" ? "bg-purple-900/40 text-purple-300 border-purple-700" :
+  c === "Podcast" ? "bg-blue-900/40 text-blue-400 border-blue-800" :
   c === "Social" ? "bg-pink-900/40 text-pink-300 border-pink-700" :
   c === "Event" ? "bg-amber-900/40 text-amber-300 border-amber-700" :
   c === "Newsletter" ? "bg-teal-900/40 text-teal-300 border-teal-700" :
@@ -106,7 +106,7 @@ function AdInventory() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Package className="h-7 w-7 text-purple-400" />
+            <Package className="h-7 w-7 text-blue-500" />
             <h1 className="text-3xl font-bold text-pd-navy dark:text-white">Ad Inventory</h1>
           </div>
           <p className="text-gray-500 dark:text-gray-400">Manage all advertising placements and line items.</p>

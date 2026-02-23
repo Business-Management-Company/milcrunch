@@ -169,7 +169,7 @@ const VeteranPodcastAwards = () => {
               {[
                 { title: "Nomination Portal", icon: Mic, gradient: "from-blue-500 to-cyan-500", description: "Submit & track nominations" },
                 { title: "Judge Scoring Interface", icon: Award, gradient: "from-amber-500 to-orange-500", description: "Score & evaluate entries" },
-                { title: "Ceremony Page", icon: Sparkles, gradient: "from-purple-500 to-pink-500", description: "Celebrate the winners" }
+                { title: "Ceremony Page", icon: Sparkles, gradient: "from-blue-600 to-pink-500", description: "Celebrate the winners" }
               ].map((item, index) => (
                 <Card key={index} className="relative overflow-hidden bg-gradient-to-br from-secondary via-secondary to-muted border-border aspect-video flex items-center justify-center group hover:border-primary/50 transition-all duration-500 hover:shadow-elevated hover:-translate-y-2">
                   {/* Animated gradient background */}

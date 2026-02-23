@@ -22,7 +22,7 @@ type UpcomingEvent = {
 };
 
 const EVENT_TYPE_BADGE: Record<string, { label: string; className: string }> = {
-  live: { label: "Live", className: "bg-purple-100 text-purple-700" },
+  live: { label: "Live", className: "bg-blue-100 text-blue-800" },
   virtual: { label: "Virtual", className: "bg-blue-100 text-blue-700" },
   hybrid: { label: "Hybrid", className: "bg-amber-100 text-amber-700" },
 };
@@ -44,16 +44,16 @@ function ShopDropdown() {
         <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-2 min-w-[200px] relative z-20">
           <Link
             to="/shop"
-            className="flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors text-gray-700 hover:text-gray-900"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-gray-700 hover:text-gray-900"
           >
-            <ShoppingBag className="h-4 w-4 text-[#6C5CE7]" />
+            <ShoppingBag className="h-4 w-4 text-[#1e3a5f]" />
             <span className="text-sm font-medium">Merch Store</span>
           </Link>
           <Link
             to="/swag"
-            className="flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors text-gray-700 hover:text-gray-900"
+            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors text-gray-700 hover:text-gray-900"
           >
-            <Package className="h-4 w-4 text-[#6C5CE7]" />
+            <Package className="h-4 w-4 text-[#1e3a5f]" />
             <span className="text-sm font-medium">SWAG Packages</span>
           </Link>
         </div>
@@ -114,7 +114,7 @@ function EventsDropdown({ events }: { events: UpcomingEvent[] }) {
           <div className="border-t border-gray-100 mt-2 pt-2">
             <Link
               to="/events"
-              className="flex items-center justify-between text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors px-2 py-1 rounded-lg hover:bg-purple-50"
+              className="flex items-center justify-between text-sm font-medium text-blue-700 hover:text-blue-800 transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
             >
               View All Events
               <ChevronRight className="h-4 w-4" />
@@ -177,7 +177,7 @@ export default function PublicNav() {
         <Link to="/" className="shrink-0">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className="text-white">MilCrunch</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
+            <span className="text-[#3b82f6] font-extrabold">X</span>
           </span>
         </Link>
 
@@ -242,7 +242,7 @@ export default function PublicNav() {
             Sign In
           </Link>
           <Link to="/plans">
-            <Button size="sm" className="rounded-full bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white px-5 py-2 font-semibold">
+            <Button size="sm" className="rounded-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-5 py-2 font-semibold">
               Sign Up
             </Button>
           </Link>
@@ -310,7 +310,7 @@ export default function PublicNav() {
               Sign In
             </Link>
             <Link to="/plans" onClick={() => setMobileOpen(false)}>
-              <Button size="sm" className="w-full rounded-full bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white font-semibold">
+              <Button size="sm" className="w-full rounded-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white font-semibold">
                 Sign Up
               </Button>
             </Link>

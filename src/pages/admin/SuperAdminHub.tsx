@@ -16,7 +16,7 @@ import {
 const ALLOWED_EMAIL = "andrew@recurrentx.com";
 
 const stats = [
-  { label: "Total Events", value: "12", icon: Calendar, color: "from-purple-500 to-indigo-600" },
+  { label: "Total Events", value: "12", icon: Calendar, color: "from-blue-600 to-indigo-600" },
   { label: "Total Creators", value: "847", icon: UserCheck, color: "from-blue-500 to-cyan-600" },
   { label: "Total Users", value: "1,204", icon: Users, color: "from-emerald-500 to-teal-600" },
   { label: "Platform Revenue", value: "$0", icon: DollarSign, color: "from-amber-500 to-orange-600" },
@@ -48,7 +48,7 @@ export default function SuperAdminHub() {
       <header className="px-8 pt-10 pb-6">
         <div className="flex items-center gap-3">
           <span className="text-2xl font-bold tracking-tight">
-            MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
+            MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
           </span>
           <span className="text-gray-500 text-lg">/</span>
           <h1 className="text-2xl font-bold">Super Admin</h1>
@@ -86,18 +86,18 @@ export default function SuperAdminHub() {
               <div className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 backdrop-blur-sm p-6 transition-all duration-200 cursor-pointer">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="rounded-xl bg-[#6C5CE7]/20 p-3">
-                      <Icon className="h-6 w-6 text-[#6C5CE7]" strokeWidth={1.75} />
+                    <div className="rounded-xl bg-[#1e3a5f]/20 p-3">
+                      <Icon className="h-6 w-6 text-[#1e3a5f]" strokeWidth={1.75} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white group-hover:text-[#6C5CE7] transition-colors">
+                      <h3 className="text-lg font-semibold text-white group-hover:text-[#1e3a5f] transition-colors">
                         {label}
                       </h3>
                       <p className="text-sm text-gray-400 mt-0.5">{description}</p>
                     </div>
                   </div>
                   {external && (
-                    <ExternalLink className="h-4 w-4 text-gray-500 group-hover:text-[#6C5CE7] transition-colors mt-1" />
+                    <ExternalLink className="h-4 w-4 text-gray-500 group-hover:text-[#1e3a5f] transition-colors mt-1" />
                   )}
                 </div>
               </div>

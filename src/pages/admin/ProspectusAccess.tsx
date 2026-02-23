@@ -75,8 +75,8 @@ export default function ProspectusAccess() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-            <ShieldCheck className="h-5 w-5 text-[#6C5CE7]" />
+          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+            <ShieldCheck className="h-5 w-5 text-[#1e3a5f]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Prospectus Access Control</h1>
@@ -85,7 +85,7 @@ export default function ProspectusAccess() {
         </div>
         <Button
           onClick={() => setModalOpen(true)}
-          className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white gap-2"
+          className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2"
         >
           <Plus className="h-4 w-4" /> Add Email
         </Button>
@@ -168,7 +168,7 @@ export default function ProspectusAccess() {
               <Button
                 onClick={handleAdd}
                 disabled={adding}
-                className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white"
+                className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
               >
                 {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
               </Button>

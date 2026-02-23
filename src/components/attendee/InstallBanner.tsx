@@ -10,7 +10,7 @@ interface Props {
   themeColor?: string;
 }
 
-export default function InstallBanner({ eventTitle, themeColor = "#6C5CE7" }: Props) {
+export default function InstallBanner({ eventTitle, themeColor = "#1e3a5f" }: Props) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);

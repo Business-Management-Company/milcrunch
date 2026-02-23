@@ -226,8 +226,8 @@ function ManageVideosPanel({
                   className={cn(
                     "w-full rounded-lg px-3 py-2 text-sm border transition-colors",
                     dark
-                      ? "bg-white/5 border-white/10 placeholder:text-gray-500 focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7]"
-                      : "bg-white border-gray-300 placeholder:text-gray-400 focus:border-[#6C5CE7] focus:ring-1 focus:ring-[#6C5CE7]"
+                      ? "bg-white/5 border-white/10 placeholder:text-gray-500 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
+                      : "bg-white border-gray-300 placeholder:text-gray-400 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
                   )}
                 />
                 {val && (
@@ -245,7 +245,7 @@ function ManageVideosPanel({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white text-sm font-semibold transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282] text-white text-sm font-semibold transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {saving ? "Saving…" : "Save All"}
@@ -292,13 +292,13 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <span className="text-2xl font-bold text-white tracking-tight">
-            MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
+            MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
           </span>
         </div>
 
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
-          <div className="w-14 h-14 rounded-full bg-[#6C5CE7]/20 flex items-center justify-center mx-auto mb-5">
-            <Lock className="h-6 w-6 text-[#6C5CE7]" />
+          <div className="w-14 h-14 rounded-full bg-[#1e3a5f]/20 flex items-center justify-center mx-auto mb-5">
+            <Lock className="h-6 w-6 text-[#1e3a5f]" />
           </div>
           <h1 className="text-xl font-bold text-white mb-2">
             Investor & Partner Preview
@@ -326,7 +326,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
               className={cn(
                 "w-full px-4 py-3 rounded-xl bg-white/[0.06] border text-white text-sm",
                 "placeholder:text-gray-500",
-                "focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/50 transition-all",
+                "focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/50 transition-all",
                 error
                   ? "border-red-500/60"
                   : "border-white/10"
@@ -343,7 +343,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             type="button"
             onClick={submit}
             disabled={checking}
-            className="w-full mt-4 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full mt-4 px-6 py-3 rounded-xl bg-[#1e3a5f] hover:bg-[#2d5282] text-white font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {checking ? <><Loader2 className="h-4 w-4 animate-spin" /> Checking...</> : "Request Access"}
           </button>
@@ -351,7 +351,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 
         <p className="text-gray-600 text-xs mt-6">
           Contact{" "}
-          <a href="mailto:andrew@recurrentx.com" className="text-[#6C5CE7] hover:underline">
+          <a href="mailto:andrew@recurrentx.com" className="text-[#1e3a5f] hover:underline">
             andrew@recurrentx.com
           </a>{" "}
           to request access.
@@ -391,7 +391,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
           )}
         >
           Where the military and veteran community comes to be{" "}
-          <span className="text-[#6C5CE7]">seen, heard, and understood.</span>
+          <span className="text-[#1e3a5f]">seen, heard, and understood.</span>
         </h2>
         <p
           className={cn(
@@ -657,8 +657,8 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
           )}
         >
           <div className="text-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[#6C5CE7]/15 flex items-center justify-center mx-auto mb-4">
-              <Smartphone className="h-6 w-6 text-[#6C5CE7]" />
+            <div className="w-12 h-12 rounded-xl bg-[#1e3a5f]/15 flex items-center justify-center mx-auto mb-4">
+              <Smartphone className="h-6 w-6 text-[#1e3a5f]" />
             </div>
             <h3
               className={cn(
@@ -695,9 +695,9 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                 {/* Screen content */}
                 <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
                   {/* Status bar spacer */}
-                  <div className="h-[28px] bg-[#6C5CE7]" />
+                  <div className="h-[28px] bg-[#1e3a5f]" />
                   {/* Purple header */}
-                  <div className="bg-[#6C5CE7] px-4 py-3 text-center">
+                  <div className="bg-[#1e3a5f] px-4 py-3 text-center">
                     <p className="text-white text-[10px] font-bold leading-tight">Military Influencer</p>
                     <p className="text-white text-[10px] font-bold leading-tight">Conference 2026</p>
                   </div>
@@ -722,7 +722,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                               key={`qr-${ri}-${ci}`}
                               className={cn(
                                 "rounded-[1px]",
-                                v ? (ri === 6 ? "bg-[#6C5CE7]" : "bg-[#111827]") : "bg-white"
+                                v ? (ri === 6 ? "bg-[#1e3a5f]" : "bg-[#111827]") : "bg-white"
                               )}
                             />
                           ))
@@ -737,7 +737,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                   </div>
                   {/* Bottom nav */}
                   <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
-                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-[#1e3a5f]/30" />
                     <div className="w-5 h-5 rounded bg-white/10" />
                     <div className="w-5 h-5 rounded bg-white/10" />
                     <div className="w-5 h-5 rounded bg-white/10" />
@@ -768,14 +768,14 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                 {/* Screen content */}
                 <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
                   {/* Status bar spacer */}
-                  <div className="h-[28px] bg-[#6C5CE7]" />
+                  <div className="h-[28px] bg-[#1e3a5f]" />
                   {/* Purple header */}
-                  <div className="bg-[#6C5CE7] px-4 py-3">
+                  <div className="bg-[#1e3a5f] px-4 py-3">
                     <p className="text-white text-xs font-bold text-center">Schedule</p>
                   </div>
                   {/* Day pills */}
                   <div className="bg-[#111827] px-4 py-2.5 flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-[#6C5CE7] text-white text-[10px] font-semibold">
+                    <span className="px-3 py-1 rounded-full bg-[#1e3a5f] text-white text-[10px] font-semibold">
                       Day 1 &middot; Sep 23
                     </span>
                     <span className="px-3 py-1 rounded-full bg-white/10 text-gray-400 text-[10px] font-medium">
@@ -788,7 +788,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                   {/* Session cards */}
                   <div className="flex-1 bg-[#111827] px-3 py-2 space-y-2.5 overflow-hidden">
                     {/* Card 1 */}
-                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#6C5CE7] flex justify-between items-start">
+                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#1e3a5f] flex justify-between items-start">
                       <div>
                         <p className="text-gray-500 text-[9px] font-medium">9:00 AM</p>
                         <p className="text-white text-[11px] font-semibold mt-0.5">Opening Keynote</p>
@@ -818,7 +818,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                   {/* Bottom nav */}
                   <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
                     <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-[#1e3a5f]/30" />
                     <div className="w-5 h-5 rounded bg-white/10" />
                     <div className="w-5 h-5 rounded bg-white/10" />
                   </div>
@@ -848,9 +848,9 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                 {/* Screen content */}
                 <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
                   {/* Status bar spacer */}
-                  <div className="h-[28px] bg-[#6C5CE7]" />
+                  <div className="h-[28px] bg-[#1e3a5f]" />
                   {/* Purple header */}
-                  <div className="bg-[#6C5CE7] px-4 py-3">
+                  <div className="bg-[#1e3a5f] px-4 py-3">
                     <p className="text-white text-xs font-bold text-center">Community</p>
                   </div>
                   {/* Feed */}
@@ -858,8 +858,8 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                     {/* Post 1 */}
                     <div className="bg-[#1a1f2e] rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-7 h-7 rounded-full bg-[#6C5CE7]/30 flex items-center justify-center">
-                          <span className="text-[9px] font-bold text-[#6C5CE7]">JM</span>
+                        <div className="w-7 h-7 rounded-full bg-[#1e3a5f]/30 flex items-center justify-center">
+                          <span className="text-[9px] font-bold text-[#1e3a5f]">JM</span>
                         </div>
                         <div>
                           <p className="text-white text-[10px] font-semibold">Jake Morrison</p>
@@ -897,7 +897,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                     <div className="bg-[#1a1f2e] rounded-lg p-3">
                       <p className="text-white text-[10px] font-semibold mb-2">Connect</p>
                       <div className="flex items-center gap-1.5 mb-2">
-                        <div className="w-6 h-6 rounded-full bg-[#6C5CE7]/40 border-2 border-[#1a1f2e]" />
+                        <div className="w-6 h-6 rounded-full bg-[#1e3a5f]/40 border-2 border-[#1a1f2e]" />
                         <div className="w-6 h-6 rounded-full bg-[#3B82F6]/40 border-2 border-[#1a1f2e] -ml-2.5" />
                         <div className="w-6 h-6 rounded-full bg-[#10B981]/40 border-2 border-[#1a1f2e] -ml-2.5" />
                         <span className="text-gray-500 text-[9px] ml-1">47 attendees near you</span>
@@ -911,7 +911,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                   <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
                     <div className="w-5 h-5 rounded bg-white/10" />
                     <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-[#6C5CE7]/30" />
+                    <div className="w-5 h-5 rounded bg-[#1e3a5f]/30" />
                     <div className="w-5 h-5 rounded bg-white/10" />
                   </div>
                 </div>
@@ -1028,7 +1028,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-[#6C5CE7]/10">
+              <tr className="bg-[#1e3a5f]/10">
                 <td
                   colSpan={2}
                   className={cn(
@@ -1038,7 +1038,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
                 >
                   Total you&rsquo;re replacing
                 </td>
-                <td className="px-5 py-3 text-right text-[#6C5CE7] font-bold font-mono text-base">
+                <td className="px-5 py-3 text-right text-[#1e3a5f] font-bold font-mono text-base">
                   ${saasTotal.toLocaleString()}/mo
                 </td>
               </tr>
@@ -1061,7 +1061,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
             )}
           >
             MilCrunch consolidates{" "}
-            <span className="text-[#6C5CE7] font-bold">${saasTotal.toLocaleString()}+/mo</span>{" "}
+            <span className="text-[#1e3a5f] font-bold">${saasTotal.toLocaleString()}+/mo</span>{" "}
             in fragmented tools into one military-focused platform — saving organizations
             thousands every month.
           </p>
@@ -1098,8 +1098,8 @@ function PdxTab({ dark }: { dark: boolean }) {
           className={cn(
             "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
             dark
-              ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
-              : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+              ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
+              : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
           )}
         >
           <BookOpen className="h-3.5 w-3.5" />
@@ -1108,8 +1108,8 @@ function PdxTab({ dark }: { dark: boolean }) {
       </div>
       {/* Hero */}
       <section className="text-center max-w-3xl mx-auto pt-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#6C5CE7]/15 flex items-center justify-center mx-auto mb-5">
-          <Radio className="h-7 w-7 text-[#6C5CE7]" />
+        <div className="w-14 h-14 rounded-2xl bg-[#1e3a5f]/15 flex items-center justify-center mx-auto mb-5">
+          <Radio className="h-7 w-7 text-[#1e3a5f]" />
         </div>
         <h2
           className={cn(
@@ -1118,7 +1118,7 @@ function PdxTab({ dark }: { dark: boolean }) {
           )}
         >
           The MilCrunch{" "}
-          <span className="text-[#6C5CE7]">Experience</span>
+          <span className="text-[#1e3a5f]">Experience</span>
         </h2>
         <p
           className={cn(
@@ -1139,7 +1139,7 @@ function PdxTab({ dark }: { dark: boolean }) {
           <div
             className={cn(
               "absolute left-[23px] top-4 bottom-4 w-px transition-colors duration-300",
-              dark ? "bg-[#6C5CE7]/30" : "bg-[#6C5CE7]/20"
+              dark ? "bg-[#1e3a5f]/30" : "bg-[#1e3a5f]/20"
             )}
           />
           <div className="space-y-6">
@@ -1152,11 +1152,11 @@ function PdxTab({ dark }: { dark: boolean }) {
                     className={cn(
                       "w-[46px] h-[46px] rounded-xl flex items-center justify-center flex-shrink-0 z-10 transition-colors duration-300",
                       dark
-                        ? "bg-[#6C5CE7]/15 border border-[#6C5CE7]/30"
-                        : "bg-[#6C5CE7]/10 border border-[#6C5CE7]/20"
+                        ? "bg-[#1e3a5f]/15 border border-[#1e3a5f]/30"
+                        : "bg-[#1e3a5f]/10 border border-[#1e3a5f]/20"
                     )}
                   >
-                    <Icon className="h-5 w-5 text-[#6C5CE7]" />
+                    <Icon className="h-5 w-5 text-[#1e3a5f]" />
                   </div>
                   {/* Content */}
                   <div
@@ -1168,7 +1168,7 @@ function PdxTab({ dark }: { dark: boolean }) {
                     )}
                   >
                     <div className="flex items-center gap-3 mb-1.5">
-                      <span className="text-[10px] font-bold text-[#6C5CE7] uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-[#1e3a5f] uppercase tracking-widest">
                         Phase {i + 1}
                       </span>
                     </div>
@@ -1388,15 +1388,15 @@ function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean 
   return (
     <section className="mt-16">
       {/* Section heading */}
-      <p className="text-xs font-semibold tracking-[0.15em] uppercase text-[#6C5CE7] mb-5">
+      <p className="text-xs font-semibold tracking-[0.15em] uppercase text-[#1e3a5f] mb-5">
         Solution Brief
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Card 1 — Summary of Service */}
         <div className={cardClass}>
-          <div className="w-10 h-10 rounded-lg bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
-            <data.summaryIcon className="h-5 w-5 text-[#6C5CE7]" />
+          <div className="w-10 h-10 rounded-lg bg-[#1e3a5f]/15 flex items-center justify-center mb-4">
+            <data.summaryIcon className="h-5 w-5 text-[#1e3a5f]" />
           </div>
           <h4
             className={cn(
@@ -1418,8 +1418,8 @@ function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean 
 
         {/* Card 2 — Major Components */}
         <div className={cardClass}>
-          <div className="w-10 h-10 rounded-lg bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
-            <data.componentsIcon className="h-5 w-5 text-[#6C5CE7]" />
+          <div className="w-10 h-10 rounded-lg bg-[#1e3a5f]/15 flex items-center justify-center mb-4">
+            <data.componentsIcon className="h-5 w-5 text-[#1e3a5f]" />
           </div>
           <h4
             className={cn(
@@ -1432,7 +1432,7 @@ function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean 
           <ul className="space-y-2">
             {data.components.map((item) => (
               <li key={item} className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-[#6C5CE7] mt-0.5 flex-shrink-0" />
+                <Check className="h-4 w-4 text-[#1e3a5f] mt-0.5 flex-shrink-0" />
                 <span
                   className={cn(
                     "text-sm leading-snug transition-colors duration-300",
@@ -1448,8 +1448,8 @@ function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean 
 
         {/* Card 3 — Problem Solved */}
         <div className={cardClass}>
-          <div className="w-10 h-10 rounded-lg bg-[#6C5CE7]/15 flex items-center justify-center mb-4">
-            <data.problemIcon className="h-5 w-5 text-[#6C5CE7]" />
+          <div className="w-10 h-10 rounded-lg bg-[#1e3a5f]/15 flex items-center justify-center mb-4">
+            <data.problemIcon className="h-5 w-5 text-[#1e3a5f]" />
           </div>
           <h4
             className={cn(
@@ -1512,8 +1512,8 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
             className={cn(
               "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
               dark
-                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
-                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
+                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
             )}
           >
             <BookOpen className="h-3.5 w-3.5" />
@@ -1570,7 +1570,7 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
           )}
         >
           Built for Organizers.{" "}
-          <span className="text-[#6C5CE7]">Loved by Attendees.</span>
+          <span className="text-[#1e3a5f]">Loved by Attendees.</span>
         </h3>
         <p
           className={cn(
@@ -1611,7 +1611,7 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors duration-300",
                         i === 3
-                          ? "bg-[#6C5CE7] text-white"
+                          ? "bg-[#1e3a5f] text-white"
                           : dark
                             ? "bg-white/[0.06] text-gray-400"
                             : "bg-white text-[#6B7280]"
@@ -1687,7 +1687,7 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
                       <div
                         className={cn(
                           "w-8 h-[18px] rounded-full relative transition-colors",
-                          toggle.on ? "bg-[#6C5CE7]" : dark ? "bg-gray-600" : "bg-gray-300"
+                          toggle.on ? "bg-[#1e3a5f]" : dark ? "bg-gray-600" : "bg-gray-300"
                         )}
                       >
                         <div
@@ -1726,8 +1726,8 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80px] h-[20px] bg-black rounded-b-xl z-10" />
                   {/* Screen */}
                   <div className="w-full h-full flex flex-col bg-white">
-                    <div className="h-[24px] bg-[#6C5CE7]" />
-                    <div className="bg-[#6C5CE7] px-3 py-2 text-center">
+                    <div className="h-[24px] bg-[#1e3a5f]" />
+                    <div className="bg-[#1e3a5f] px-3 py-2 text-center">
                       <p className="text-white text-[9px] font-bold">MIC 2026</p>
                       <p className="text-white/70 text-[7px]">Sep 23–25, Washington DC</p>
                     </div>
@@ -1752,7 +1752,7 @@ function EventsAttendeeTab({ dark }: { dark: boolean }) {
                     </div>
                     {/* Bottom nav */}
                     <div className="h-[36px] bg-[#F9FAFB] border-t border-gray-200 flex items-center justify-around px-2">
-                      <span className="text-[6px] text-[#6C5CE7] font-medium">Home</span>
+                      <span className="text-[6px] text-[#1e3a5f] font-medium">Home</span>
                       <span className="text-[6px] text-gray-400 font-medium">Schedule</span>
                       <span className="text-[6px] text-gray-400 font-medium">Map</span>
                       <span className="text-[6px] text-gray-400 font-medium">Profile</span>
@@ -1817,8 +1817,8 @@ function CreatorNetworkTab({ dark }: { dark: boolean }) {
             className={cn(
               "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
               dark
-                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
-                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
+                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
             )}
           >
             <BookOpen className="h-3.5 w-3.5" />
@@ -1829,8 +1829,8 @@ function CreatorNetworkTab({ dark }: { dark: boolean }) {
 
       {/* Video placeholder */}
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
-          <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
+        <div className="w-20 h-20 rounded-full bg-[#1e3a5f]/15 flex items-center justify-center mb-6">
+          <Play className="h-8 w-8 text-[#1e3a5f] ml-1" />
         </div>
         <h3
           className={cn(
@@ -1848,7 +1848,7 @@ function CreatorNetworkTab({ dark }: { dark: boolean }) {
         >
           Explore our verified military creator marketplace — discovery, vetting, and campaign management in one place.
         </p>
-        <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
+        <p className="text-[#1e3a5f] text-sm font-medium mt-4">Demo video coming soon</p>
       </div>
 
       {/* Description paragraph */}
@@ -1911,20 +1911,20 @@ const INSIGHTS_CHART_DATA = [
 
 const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: string; color: string }[]> = {
   Jan: [
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
     { name: "Jen Rivera", initials: "JR", color: "#10B981" },
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
   ],
   Feb: [
     { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
     { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
     { name: "Jen Rivera", initials: "JR", color: "#10B981" },
   ],
   Mar: [
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
     { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
   ],
   Apr: [
     { name: "Jen Rivera", initials: "JR", color: "#10B981" },
@@ -1932,7 +1932,7 @@ const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: strin
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
   ],
   May: [
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
     { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
     { name: "Jen Rivera", initials: "JR", color: "#10B981" },
     { name: "Chris Vega", initials: "CV", color: "#EF4444" },
@@ -1940,7 +1940,7 @@ const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: strin
   Jun: [
     { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
   ],
   Jul: [
     { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
@@ -1949,7 +1949,7 @@ const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: strin
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
   ],
   Aug: [
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
     { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
     { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
     { name: "Chris Vega", initials: "CV", color: "#EF4444" },
@@ -1957,7 +1957,7 @@ const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: strin
   ],
   Sep: [
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
     { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
     { name: "Jen Rivera", initials: "JR", color: "#10B981" },
     { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
@@ -1965,7 +1965,7 @@ const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: strin
   Oct: [
     { name: "Chris Vega", initials: "CV", color: "#EF4444" },
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
   ],
   Nov: [
     { name: "Jen Rivera", initials: "JR", color: "#10B981" },
@@ -1973,14 +1973,14 @@ const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: strin
     { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
   ],
   Dec: [
-    { name: "Marcus Cole", initials: "MC", color: "#6C5CE7" },
+    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
     { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
     { name: "Chris Vega", initials: "CV", color: "#EF4444" },
   ],
 };
 
 const TOP_CREATORS = [
-  { name: "Marcus Cole", handle: "@marcus.vet", role: "Fitness & Veteran Lifestyle", impressions: "1.2M", engagement: "5.1%", initials: "MC", color: "#6C5CE7" },
+  { name: "Marcus Cole", handle: "@marcus.vet", role: "Fitness & Veteran Lifestyle", impressions: "1.2M", engagement: "5.1%", initials: "MC", color: "#1e3a5f" },
   { name: "Jen Rivera", handle: "@jenrivera_mil", role: "Military Spouse Advocate", impressions: "892K", engagement: "4.3%", initials: "JR", color: "#10B981" },
   { name: "Devon Brooks", handle: "@devonbrooks", role: "Transition & Career Coach", impressions: "764K", engagement: "6.2%", initials: "DB", color: "#3B82F6" },
   { name: "Taylor Kim", handle: "@taylork_usmc", role: "USMC Content Creator", impressions: "631K", engagement: "5.8%", initials: "TK", color: "#F59E0B" },
@@ -1997,7 +1997,7 @@ function InsightsCustomTooltip({ active, payload, label }: any) {
     <div className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 shadow-xl min-w-[200px]">
       <div className="flex items-center justify-between mb-2">
         <span className="text-white text-sm font-bold">{month} 2025</span>
-        <span className="text-[#6C5CE7] text-sm font-bold">{value.toLocaleString()}</span>
+        <span className="text-[#1e3a5f] text-sm font-bold">{value.toLocaleString()}</span>
       </div>
       <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-2">Top Creators</p>
       <div className="space-y-1.5">
@@ -2032,8 +2032,8 @@ function InsightsTab({ dark }: { dark: boolean }) {
             className={cn(
               "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
               dark
-                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
-                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
+                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
             )}
           >
             <BookOpen className="h-3.5 w-3.5" />
@@ -2044,8 +2044,8 @@ function InsightsTab({ dark }: { dark: boolean }) {
 
       {/* Hero */}
       <section className="text-center max-w-3xl mx-auto pt-4 mb-12">
-        <div className="w-14 h-14 rounded-2xl bg-[#6C5CE7]/15 flex items-center justify-center mx-auto mb-5">
-          <TrendingUp className="h-7 w-7 text-[#6C5CE7]" />
+        <div className="w-14 h-14 rounded-2xl bg-[#1e3a5f]/15 flex items-center justify-center mx-auto mb-5">
+          <TrendingUp className="h-7 w-7 text-[#1e3a5f]" />
         </div>
         <h2
           className={cn(
@@ -2054,7 +2054,7 @@ function InsightsTab({ dark }: { dark: boolean }) {
           )}
         >
           365{" "}
-          <span className="text-[#6C5CE7]">Insights</span>
+          <span className="text-[#1e3a5f]">Insights</span>
         </h2>
         <p
           className={cn(
@@ -2100,7 +2100,7 @@ function InsightsTab({ dark }: { dark: boolean }) {
               <span
                 className={cn(
                   "px-3 py-1 rounded-full text-xs font-medium",
-                  dark ? "bg-[#6C5CE7]/15 text-[#6C5CE7]" : "bg-[#6C5CE7]/10 text-[#6C5CE7]"
+                  dark ? "bg-[#1e3a5f]/15 text-[#1e3a5f]" : "bg-[#1e3a5f]/10 text-[#1e3a5f]"
                 )}
               >
                 2025
@@ -2116,8 +2116,8 @@ function InsightsTab({ dark }: { dark: boolean }) {
               >
                 <defs>
                   <linearGradient id="insightsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6C5CE7" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6C5CE7" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#1e3a5f" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#1e3a5f" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -2138,15 +2138,15 @@ function InsightsTab({ dark }: { dark: boolean }) {
                   tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
                   width={45}
                 />
-                <RechartsTooltip content={<InsightsCustomTooltip />} cursor={{ stroke: "#6C5CE7", strokeWidth: 1, strokeDasharray: "4 4" }} />
+                <RechartsTooltip content={<InsightsCustomTooltip />} cursor={{ stroke: "#1e3a5f", strokeWidth: 1, strokeDasharray: "4 4" }} />
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#6C5CE7"
+                  stroke="#1e3a5f"
                   strokeWidth={2.5}
                   fill="url(#insightsGrad)"
-                  dot={{ fill: "#6C5CE7", stroke: dark ? "#111827" : "#fff", strokeWidth: 2, r: 4 }}
-                  activeDot={{ fill: "#6C5CE7", stroke: "#fff", strokeWidth: 2, r: 6 }}
+                  dot={{ fill: "#1e3a5f", stroke: dark ? "#111827" : "#fff", strokeWidth: 2, r: 4 }}
+                  activeDot={{ fill: "#1e3a5f", stroke: "#fff", strokeWidth: 2, r: 6 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -2242,8 +2242,8 @@ function InsightsTab({ dark }: { dark: boolean }) {
           className={cn(
             "rounded-2xl p-6 md:p-8 border transition-colors duration-300",
             dark
-              ? "bg-[#6C5CE7]/[0.08] border-[#6C5CE7]/20"
-              : "bg-[#6C5CE7]/[0.04] border-[#6C5CE7]/15"
+              ? "bg-[#1e3a5f]/[0.08] border-[#1e3a5f]/20"
+              : "bg-[#1e3a5f]/[0.04] border-[#1e3a5f]/15"
           )}
         >
           <h3
@@ -2299,8 +2299,8 @@ function PlaceholderTab({
             className={cn(
               "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
               dark
-                ? "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/20"
-                : "text-[#6C5CE7] bg-[#6C5CE7]/10 hover:bg-[#6C5CE7]/15"
+                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
+                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
             )}
           >
             <BookOpen className="h-3.5 w-3.5" />
@@ -2310,8 +2310,8 @@ function PlaceholderTab({
       )}
       {/* Video placeholder */}
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#6C5CE7]/15 flex items-center justify-center mb-6">
-          <Play className="h-8 w-8 text-[#6C5CE7] ml-1" />
+        <div className="w-20 h-20 rounded-full bg-[#1e3a5f]/15 flex items-center justify-center mb-6">
+          <Play className="h-8 w-8 text-[#1e3a5f] ml-1" />
         </div>
         <h3
           className={cn(
@@ -2329,7 +2329,7 @@ function PlaceholderTab({
         >
           {description}
         </p>
-        <p className="text-[#6C5CE7] text-sm font-medium mt-4">Demo video coming soon</p>
+        <p className="text-[#1e3a5f] text-sm font-medium mt-4">Demo video coming soon</p>
       </div>
 
       {/* Solution Brief */}
@@ -2434,7 +2434,7 @@ export default function Prospectus() {
                 darkMode ? "text-white" : "text-[#111827]"
               )}
             >
-              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
+              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
             </span>
             <span
               className={cn(
@@ -2487,7 +2487,7 @@ export default function Prospectus() {
             {/* Explore Demo */}
             <a
               href="/login?demo=true"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#7C3AED] hover:bg-[#6D28D9] text-white transition-all duration-300"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e3a5f] hover:bg-[#6D28D9] text-white transition-all duration-300"
             >
               🎯 Explore Demo
             </a>
@@ -2549,10 +2549,10 @@ export default function Prospectus() {
                     "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300",
                     isFinancials
                       ? activeTab === tab
-                        ? "bg-[#6C5CE7] text-white shadow-lg shadow-[#6C5CE7]/30"
-                        : "bg-[#6C5CE7]/90 text-white hover:bg-[#6C5CE7] shadow-md shadow-[#6C5CE7]/20"
+                        ? "bg-[#1e3a5f] text-white shadow-lg shadow-[#1e3a5f]/30"
+                        : "bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-md shadow-[#1e3a5f]/20"
                       : activeTab === tab
-                        ? "bg-[#6C5CE7] text-white"
+                        ? "bg-[#1e3a5f] text-white"
                         : darkMode
                           ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
                           : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"

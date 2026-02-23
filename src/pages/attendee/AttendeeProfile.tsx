@@ -102,7 +102,7 @@ function EventInfoSection({
         <div className="px-5 pb-5 space-y-4 border-t border-gray-100 dark:border-gray-800 pt-4">
           {/* Dates */}
           <div className="flex items-start gap-3">
-            <Calendar className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+            <Calendar className="h-5 w-5 text-[#1e3a5f] shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">Dates & Times</p>
               <p className="text-sm text-gray-500">
@@ -121,7 +121,7 @@ function EventInfoSection({
           {/* Venue */}
           {event.venue && (
             <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+              <MapPin className="h-5 w-5 text-[#1e3a5f] shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{event.venue}</p>
                 <p className="text-sm text-gray-500">
@@ -132,7 +132,7 @@ function EventInfoSection({
                     href={googleMapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-[#6C5CE7] font-medium mt-1 hover:underline"
+                    className="inline-flex items-center gap-1 text-xs text-[#1e3a5f] font-medium mt-1 hover:underline"
                   >
                     <ExternalLink className="h-3 w-3" />
                     Open in Google Maps
@@ -153,8 +153,8 @@ function EventInfoSection({
 
           {/* WiFi */}
           <div className="flex items-center gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
-            <div className="w-10 h-10 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
-              <Wifi className="h-5 w-5 text-[#6C5CE7]" />
+            <div className="w-10 h-10 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center shrink-0">
+              <Wifi className="h-5 w-5 text-[#1e3a5f]" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">WiFi Access</p>
@@ -180,7 +180,7 @@ function EventInfoSection({
                     <Phone className="h-4 w-4 text-gray-400" />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{c.label}</span>
                   </div>
-                  <span className="text-sm text-[#6C5CE7] font-medium group-hover:underline">{c.number}</span>
+                  <span className="text-sm text-[#1e3a5f] font-medium group-hover:underline">{c.number}</span>
                 </a>
               ))}
             </div>
@@ -381,7 +381,7 @@ export default function AttendeeProfile({ eventId, event }: Props) {
     <div className="space-y-4 px-4 py-4">
       {/* Profile Card */}
       <Card className="p-5 bg-white dark:bg-[#1A1D27] rounded-xl text-center">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-3">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-500 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-3">
           {initials}
         </div>
         <h2 className="font-bold text-lg">{displayName}</h2>
@@ -394,7 +394,7 @@ export default function AttendeeProfile({ eventId, event }: Props) {
       {/* QR Code Card */}
       <Card className="p-5 bg-white dark:bg-[#1A1D27] rounded-xl text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <QrCode className="h-5 w-5 text-[#6C5CE7]" />
+          <QrCode className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="font-semibold text-sm">Your Connection QR Code</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
@@ -405,7 +405,7 @@ export default function AttendeeProfile({ eventId, event }: Props) {
             value={qrData}
             size={180}
             level="M"
-            fgColor="#6C5CE7"
+            fgColor="#1e3a5f"
             bgColor="#FFFFFF"
           />
         </div>
@@ -417,14 +417,14 @@ export default function AttendeeProfile({ eventId, event }: Props) {
       {/* Network Section */}
       <Card className="p-5 bg-white dark:bg-[#1A1D27] rounded-xl">
         <div className="flex items-center gap-2 mb-4">
-          <UserCheck className="h-5 w-5 text-[#6C5CE7]" />
+          <UserCheck className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="font-semibold text-sm">Network</h3>
         </div>
 
         {/* Scan to Connect */}
         <Button
           onClick={() => { setScannerOpen(true); setScannedUser(null); }}
-          className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2 mb-4"
+          className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2 mb-4"
         >
           <ScanLine className="h-4 w-4" /> Scan QR to Connect
         </Button>
@@ -435,13 +435,13 @@ export default function AttendeeProfile({ eventId, event }: Props) {
             <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Pending Requests</p>
             <div className="space-y-2">
               {pendingIncoming.map((req) => (
-                <div key={req.id} className="flex items-center justify-between p-3 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-900/30">
+                <div key={req.id} className="flex items-center justify-between p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
                   <div>
                     <p className="text-sm font-medium">{req.requester_name || "Someone"}</p>
                     <p className="text-xs text-muted-foreground">wants to connect</p>
                   </div>
                   <div className="flex gap-1.5">
-                    <Button size="sm" className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white h-8 px-3 text-xs" onClick={() => respondToRequest(req.id, true)}>
+                    <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white h-8 px-3 text-xs" onClick={() => respondToRequest(req.id, true)}>
                       <UserCheck className="h-3.5 w-3.5 mr-1" /> Accept
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 px-3 text-xs" onClick={() => respondToRequest(req.id, false)}>
@@ -463,7 +463,7 @@ export default function AttendeeProfile({ eventId, event }: Props) {
                 const otherName = conn.requester_id === user?.id ? conn.recipient_name : conn.requester_name;
                 return (
                   <div key={conn.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-xs font-bold">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-500 flex items-center justify-center text-white text-xs font-bold">
                       {(otherName || "?")[0].toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -488,7 +488,7 @@ export default function AttendeeProfile({ eventId, event }: Props) {
       {/* Privacy Settings */}
       <Card className="p-4 bg-white dark:bg-[#1A1D27] rounded-xl space-y-3">
         <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4 text-[#6C5CE7]" />
+          <Shield className="h-4 w-4 text-[#1e3a5f]" />
           <h3 className="font-semibold text-sm">Contact Sharing</h3>
         </div>
         <p className="text-xs text-muted-foreground">Choose what connections can see</p>
@@ -530,7 +530,7 @@ export default function AttendeeProfile({ eventId, event }: Props) {
             {scannedUser ? (
               /* Scanned user card */
               <div className="p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-500 flex items-center justify-center text-white text-xl font-bold mx-auto mb-3">
                   {scannedUser.name[0].toUpperCase()}
                 </div>
                 <h4 className="font-bold text-lg mb-1">{scannedUser.name}</h4>
@@ -538,7 +538,7 @@ export default function AttendeeProfile({ eventId, event }: Props) {
                 <Button
                   onClick={sendConnectionRequest}
                   disabled={sendingRequest}
-                  className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2"
+                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2"
                 >
                   {sendingRequest ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -567,8 +567,8 @@ export default function AttendeeProfile({ eventId, event }: Props) {
                 <canvas ref={canvasRef} className="hidden" />
                 {/* Scan overlay */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-48 h-48 border-2 border-[#6C5CE7] rounded-2xl">
-                    <div className="w-full h-full border-2 border-[#6C5CE7]/30 rounded-2xl" />
+                  <div className="w-48 h-48 border-2 border-[#1e3a5f] rounded-2xl">
+                    <div className="w-full h-full border-2 border-[#1e3a5f]/30 rounded-2xl" />
                   </div>
                 </div>
                 <p className="text-center text-sm text-gray-500 py-3">

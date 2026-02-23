@@ -655,7 +655,7 @@ For all other questions, respond naturally and concisely.`;
               "hover:shadow-xl hover:-translate-y-0.5",
               open
                 ? "bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500"
-                : "bg-gradient-to-r from-[#5B4BD1] to-[#6C5CE7] hover:from-[#5040C0] hover:to-[#6050D8]"
+                : "bg-gradient-to-r from-[#2d5282] to-[#1e3a5f] hover:from-[#1a2f4a] hover:to-[#2d5282]"
             )}
             onClick={() => setOpen((o) => !o)}
             aria-label={open ? "Close AI chat" : "Open AI chat"}
@@ -682,9 +682,9 @@ For all other questions, respond naturally and concisely.`;
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-hidden />
           <div className="relative w-full max-w-xl bg-background border-l shadow-xl flex flex-col animate-in slide-in-from-right duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-[#6C5CE7]/10 via-[#6C5CE7]/5 to-transparent">
+            <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-[#1e3a5f]/10 via-[#1e3a5f]/5 to-transparent">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-[#6C5CE7]" />
+                <Sparkles className="h-5 w-5 text-[#1e3a5f]" />
                 <div>
                   <span className="font-bold text-base">MilCrunch AI</span>
                   <span className="text-xs text-muted-foreground ml-2">Assistant</span>
@@ -699,7 +699,7 @@ For all other questions, respond naturally and concisely.`;
                     setListCreatedMsgIds(new Set());
                     setSelectedCreator(null);
                   }}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#6C5CE7] px-2 py-1 rounded hover:bg-[#6C5CE7]/5 transition-colors"
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#1e3a5f] px-2 py-1 rounded hover:bg-[#1e3a5f]/5 transition-colors"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -719,7 +719,7 @@ For all other questions, respond naturally and concisely.`;
                   <button
                     key={prompt}
                     onClick={() => handleChipClick(prompt)}
-                    className="text-xs px-3 py-2 rounded-xl border border-[#6C5CE7]/20 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors text-left"
+                    className="text-xs px-3 py-2 rounded-xl border border-[#1e3a5f]/20 bg-[#1e3a5f]/5 text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors text-left"
                   >
                     {prompt}
                   </button>
@@ -735,7 +735,7 @@ For all other questions, respond naturally and concisely.`;
                   className={cn(
                     "rounded-2xl px-4 py-2 text-sm",
                     m.role === "user"
-                      ? "bg-[#6C5CE7] text-white rounded-br-sm ml-auto max-w-[80%]"
+                      ? "bg-[#1e3a5f] text-white rounded-br-sm ml-auto max-w-[80%]"
                       : "bg-white text-gray-800 rounded-bl-sm mr-auto shadow-sm dark:bg-gray-800 dark:text-gray-100 max-w-[95%]"
                   )}
                 >
@@ -743,9 +743,9 @@ For all other questions, respond naturally and concisely.`;
                   {m.loading ? (
                     <div className="flex items-center gap-2 py-1">
                       <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
-                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
-                        <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0ms'}} />
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '150ms'}} />
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '300ms'}} />
                       </div>
                       <span className="text-sm text-gray-500 italic">{m.text || "MilCrunch AI is thinking..."}</span>
                     </div>
@@ -780,7 +780,7 @@ For all other questions, respond naturally and concisely.`;
                             return (
                               <div
                                 key={c.id || i}
-                                className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#6C5CE7]/40 transition-colors cursor-pointer"
+                                className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:border-[#1e3a5f]/40 transition-colors cursor-pointer"
                                 onClick={() => setSelectedCreator(c)}
                               >
                                 <img
@@ -798,7 +798,7 @@ For all other questions, respond naturally and concisely.`;
                                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                     {c.username && <span className="truncate">@{c.username}</span>}
                                     {branch && (
-                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-[10px] uppercase tracking-wide shrink-0">
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#1e3a5f]/10 text-[#1e3a5f] font-medium text-[10px] uppercase tracking-wide shrink-0">
                                         {branch}
                                       </span>
                                     )}
@@ -815,7 +815,7 @@ For all other questions, respond naturally and concisely.`;
                                         {pills.map((pill, pi) => (
                                           <span
                                             key={pi}
-                                            className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-full border border-purple-100 dark:border-purple-800"
+                                            className="text-xs px-2 py-0.5 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-800"
                                           >
                                             {pill}
                                           </span>
@@ -839,7 +839,7 @@ For all other questions, respond naturally and concisely.`;
                                 ) : (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <button onClick={(e) => e.stopPropagation()} className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#6C5CE7] text-white hover:bg-[#5A4BD5] transition-colors">
+                                      <button onClick={(e) => e.stopPropagation()} className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#1e3a5f] text-white hover:bg-[#2d5282] transition-colors">
                                         <ListPlus className="h-3 w-3" />
                                         Add to List
                                       </button>
@@ -872,7 +872,7 @@ For all other questions, respond naturally and concisely.`;
                         {hasMore && !isExpanded && (
                           <button
                             onClick={() => setExpandedMsgIds((prev) => new Set(prev).add(m.id))}
-                            className="w-full mt-2 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/5 hover:bg-[#6C5CE7]/10 border border-[#6C5CE7]/20 transition-colors"
+                            className="w-full mt-2 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-medium text-[#1e3a5f] bg-[#1e3a5f]/5 hover:bg-[#1e3a5f]/10 border border-[#1e3a5f]/20 transition-colors"
                           >
                             <ChevronDown className="h-3.5 w-3.5" />
                             Show {hiddenCount} more
@@ -899,7 +899,7 @@ For all other questions, respond naturally and concisely.`;
                             <button
                               onClick={() => handleCreateListFromResults(m.id, m.creators!, userText)}
                               disabled={creatingListMsgId === m.id}
-                              className="w-full mt-2 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-[#6C5CE7] to-[#8B5CF6] hover:from-[#5A4BD5] hover:to-[#7C3AED] border border-[#6C5CE7]/30 shadow-sm transition-all"
+                              className="w-full mt-2 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-[#1e3a5f] to-[#2d5282] hover:from-[#2d5282] hover:to-[#1e3a5f] border border-[#1e3a5f]/30 shadow-sm transition-all"
                             >
                               {creatingListMsgId === m.id ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -921,7 +921,7 @@ For all other questions, respond naturally and concisely.`;
                         navigate(m.cta!.link);
                         setOpen(false);
                       }}
-                      className="w-full mt-3 bg-[#6C5CE7] text-white text-xs px-4 py-2.5 rounded-full hover:bg-[#5A4BD5] transition-colors text-center font-medium"
+                      className="w-full mt-3 bg-[#1e3a5f] text-white text-xs px-4 py-2.5 rounded-full hover:bg-[#2d5282] transition-colors text-center font-medium"
                     >
                       {m.cta.label}
                     </button>
@@ -936,7 +936,7 @@ For all other questions, respond naturally and concisely.`;
                         <button
                           key={chip}
                           onClick={() => handleChipClick(chip)}
-                          className="text-xs px-3 py-1.5 rounded-full border border-[#6C5CE7]/30 bg-[#6C5CE7]/5 text-[#6C5CE7] hover:bg-[#6C5CE7]/15 transition-colors"
+                          className="text-xs px-3 py-1.5 rounded-full border border-[#1e3a5f]/30 bg-[#1e3a5f]/5 text-[#1e3a5f] hover:bg-[#1e3a5f]/15 transition-colors"
                         >
                           {chip}
                         </button>
@@ -953,12 +953,12 @@ For all other questions, respond naturally and concisely.`;
               <div className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
-                  className="flex-1 min-h-[80px] max-h-[160px] rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/40 focus:border-[#6C5CE7] focus:shadow-[0_0_0_3px_rgba(108,92,231,0.12)] transition-all"
+                  className="flex-1 min-h-[80px] max-h-[160px] rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-background px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/40 focus:border-[#1e3a5f] focus:shadow-[0_0_0_3px_rgba(30,58,95,0.12)] transition-all"
                   placeholder="Ask me anything about creators, events, or campaigns..."
                   rows={2}
                   onKeyDown={handleKeyDown}
                 />
-                <Button type="submit" size="icon" className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+                <Button type="submit" size="icon" className="bg-[#1e3a5f] hover:bg-[#2d5282]">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
@@ -1032,7 +1032,7 @@ For all other questions, respond naturally and concisely.`;
                   )}
                 </div>
                 {branch && (
-                  <span className="inline-flex items-center mt-2 px-2.5 py-1 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] font-medium text-xs uppercase tracking-wide">
+                  <span className="inline-flex items-center mt-2 px-2.5 py-1 rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f] font-medium text-xs uppercase tracking-wide">
                     {branch}
                   </span>
                 )}
@@ -1182,7 +1182,7 @@ For all other questions, respond naturally and concisely.`;
                 <div className="relative">
                   <button
                     onClick={() => openDrawerDropdown("list")}
-                    className="w-full py-2.5 px-4 bg-[#6C5CE7] text-white rounded-lg text-sm font-medium hover:bg-[#5A4BD5] transition-colors"
+                    className="w-full py-2.5 px-4 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#2d5282] transition-colors"
                   >
                     + Add to List
                   </button>
@@ -1195,7 +1195,7 @@ For all other questions, respond naturally and concisely.`;
                             handleAddToList(l.id, l.name, selectedCreator);
                             setDrawerDropdown(null);
                           }}
-                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-left transition-colors"
+                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-left transition-colors"
                         >
                           <img
                             src={l.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(l.name)}&background=6C5CE7&color=fff&size=32`}
@@ -1218,7 +1218,7 @@ For all other questions, respond naturally and concisely.`;
                             setNewListNameInput("");
                             setDrawerDropdown(null);
                           }} className="flex items-center gap-2">
-                            <Plus className="h-4 w-4 text-[#6C5CE7] shrink-0" />
+                            <Plus className="h-4 w-4 text-[#1e3a5f] shrink-0" />
                             <input
                               autoFocus
                               value={newListNameInput}
@@ -1228,7 +1228,7 @@ For all other questions, respond naturally and concisely.`;
                             />
                           </form>
                         ) : (
-                          <button onClick={() => setNewListNameInput("")} className="flex items-center gap-2 text-sm text-[#6C5CE7] font-medium">
+                          <button onClick={() => setNewListNameInput("")} className="flex items-center gap-2 text-sm text-[#1e3a5f] font-medium">
                             <Plus className="h-4 w-4" /> Create New List
                           </button>
                         )}
@@ -1241,7 +1241,7 @@ For all other questions, respond naturally and concisely.`;
                 <div className="relative">
                   <button
                     onClick={() => openDrawerDropdown("directory")}
-                    className="w-full py-2.5 px-4 border border-[#6C5CE7] text-[#6C5CE7] rounded-lg text-sm font-medium hover:bg-[#6C5CE7]/5 transition-colors"
+                    className="w-full py-2.5 px-4 border border-[#1e3a5f] text-[#1e3a5f] rounded-lg text-sm font-medium hover:bg-[#1e3a5f]/5 transition-colors"
                   >
                     Add to Directory
                   </button>
@@ -1258,7 +1258,7 @@ For all other questions, respond naturally and concisely.`;
                           <button
                             key={d.id}
                             onClick={() => handleDrawerAddToDirectory(d)}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-left transition-colors"
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-left transition-colors"
                           >
                             <span className="truncate text-gray-800 dark:text-gray-200">{d.name}</span>
                             <span className="ml-auto text-xs text-gray-400 shrink-0">{d.member_count ?? 0}</span>
@@ -1277,7 +1277,7 @@ For all other questions, respond naturally and concisely.`;
                           if (data) await handleDrawerAddToDirectory({ ...data, member_count: 0 } as Directory);
                           setNewDirNameInput("");
                         }} className="flex items-center gap-2">
-                          <Plus className="h-4 w-4 text-[#6C5CE7] shrink-0" />
+                          <Plus className="h-4 w-4 text-[#1e3a5f] shrink-0" />
                           <input
                             autoFocus
                             value={newDirNameInput}
@@ -1312,7 +1312,7 @@ For all other questions, respond naturally and concisely.`;
                           <button
                             key={ev.id}
                             onClick={() => handleDrawerInviteToEvent(ev)}
-                            className="w-full flex items-center justify-between py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-left transition-colors"
+                            className="w-full flex items-center justify-between py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-left transition-colors"
                           >
                             <span className="truncate text-gray-800 dark:text-gray-200">{ev.title}</span>
                             <span className="text-xs text-gray-400 shrink-0 ml-2">

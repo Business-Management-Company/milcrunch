@@ -43,12 +43,12 @@ export default function DriverCard({
           <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500">
             {driver.pickup_type === "pickup" ? (
               <>
-                <Car className="w-3.5 h-3.5 text-purple-500" />
+                <Car className="w-3.5 h-3.5 text-blue-600" />
                 <span>Will pick up</span>
               </>
             ) : (
               <>
-                <MapPin className="w-3.5 h-3.5 text-purple-500" />
+                <MapPin className="w-3.5 h-3.5 text-blue-600" />
                 <span>Meet at: {driver.meetup_location || "TBD"}</span>
               </>
             )}
@@ -90,18 +90,18 @@ export default function DriverCard({
 
       {/* Contact info — only shown to matched riders */}
       {isMatched && (
-        <div className="rounded-md bg-purple-50 border border-purple-100 p-3 mb-3">
-          <p className="text-xs font-medium text-purple-700 mb-1.5">Driver contact info:</p>
+        <div className="rounded-md bg-blue-50 border border-blue-100 p-3 mb-3">
+          <p className="text-xs font-medium text-blue-800 mb-1.5">Driver contact info:</p>
           <div className="flex flex-col gap-1 text-sm">
             {driver.share_phone && driver.phone && (
               <span className="flex items-center gap-1.5 text-gray-700">
-                <Phone className="w-3.5 h-3.5 text-purple-500" />
+                <Phone className="w-3.5 h-3.5 text-blue-600" />
                 {driver.phone}
               </span>
             )}
             {driver.share_email && driver.email && (
               <span className="flex items-center gap-1.5 text-gray-700">
-                <Mail className="w-3.5 h-3.5 text-purple-500" />
+                <Mail className="w-3.5 h-3.5 text-blue-600" />
                 {driver.email}
               </span>
             )}
@@ -124,7 +124,7 @@ export default function DriverCard({
       ) : (
         <Button
           size="sm"
-          className="bg-purple-500 hover:bg-purple-600 text-white"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
           onClick={() => onRequestRide(driver.id)}
           disabled={requesting}
         >

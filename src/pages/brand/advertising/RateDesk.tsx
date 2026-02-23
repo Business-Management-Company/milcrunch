@@ -41,7 +41,7 @@ const DEMO_INVENTORY: InventoryItem[] = [
 const SCENARIO_MULTIPLIERS: Record<Scenario, number> = { base: 1, growth: 1.5, premium: 2.2 };
 
 const healthColor = (h: string) =>
-  h === "Premium" ? "bg-purple-900/40 text-purple-300 border-purple-700" :
+  h === "Premium" ? "bg-blue-900/40 text-blue-400 border-blue-800" :
   h === "Healthy" ? "bg-emerald-900/40 text-emerald-300 border-emerald-700" :
   "bg-amber-900/40 text-amber-300 border-amber-700";
 
@@ -110,7 +110,7 @@ function RateDesk() {
     <>
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <Calculator className="h-7 w-7 text-purple-400" />
+          <Calculator className="h-7 w-7 text-blue-500" />
           <h1 className="text-3xl font-bold text-pd-navy dark:text-white">Rate Desk</h1>
         </div>
         <p className="text-gray-500 dark:text-gray-400">
@@ -160,7 +160,7 @@ function RateDesk() {
         {[
           { label: "Sellable Impressions", value: `${(totalImpressions / 1_000_000).toFixed(1)}M`, icon: Eye, color: "text-blue-400", bg: "bg-blue-900/30" },
           { label: "Potential Gross Spend", value: `$${Math.round(totalRevenue * mult).toLocaleString()}`, icon: DollarSign, color: "text-emerald-400", bg: "bg-emerald-900/30" },
-          { label: "Platform Revenue", value: `$${Math.round(totalRevenue * mult * 0.3).toLocaleString()}`, icon: TrendingUp, color: "text-purple-400", bg: "bg-purple-900/30" },
+          { label: "Platform Revenue", value: `$${Math.round(totalRevenue * mult * 0.3).toLocaleString()}`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-900/30" },
           { label: "Avg CPM", value: `$${avgCpm}`, icon: BarChart3, color: "text-amber-400", bg: "bg-amber-900/30" },
         ].map(stat => {
           const Icon = stat.icon;
@@ -221,7 +221,7 @@ function RateDesk() {
                             variant="ghost"
                             onClick={() => addToProposal(item)}
                             disabled={!!(proposal ?? []).find(p => p.id === item.id)}
-                            className="text-purple-400 hover:text-purple-300"
+                            className="text-blue-500 hover:text-blue-400"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>

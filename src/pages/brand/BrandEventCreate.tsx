@@ -133,7 +133,7 @@ const STREAM_PLATFORMS = [
   { id: "youtube", name: "YouTube Live", icon: Youtube, color: "text-red-600" },
   { id: "facebook", name: "Facebook Live", icon: Facebook, color: "text-blue-600" },
   { id: "twitter", name: "Twitter/X", icon: Twitter, color: "text-gray-900 dark:text-gray-100" },
-  { id: "twitch", name: "Twitch", icon: Twitch, color: "text-purple-600" },
+  { id: "twitch", name: "Twitch", icon: Twitch, color: "text-blue-700" },
   { id: "linkedin", name: "LinkedIn Live", icon: Linkedin, color: "text-blue-700" },
   { id: "tiktok", name: "TikTok Live", icon: Wifi, color: "text-gray-900 dark:text-gray-100" },
 ];
@@ -733,8 +733,8 @@ const BrandEventCreate = () => {
                   <div
                     className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
-                      isActive && "bg-purple-500 border-purple-500 text-white",
-                      isCompleted && "bg-purple-500 border-purple-500 text-white",
+                      isActive && "bg-blue-600 border-blue-600 text-white",
+                      isCompleted && "bg-blue-600 border-blue-600 text-white",
                       !isActive && !isCompleted && "bg-transparent border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500"
                     )}
                   >
@@ -743,8 +743,8 @@ const BrandEventCreate = () => {
                   <span
                     className={cn(
                       "text-xs font-medium whitespace-nowrap",
-                      isActive && "text-purple-600 dark:text-purple-400",
-                      isCompleted && "text-purple-600 dark:text-purple-400",
+                      isActive && "text-blue-700 dark:text-blue-500",
+                      isCompleted && "text-blue-700 dark:text-blue-500",
                       !isActive && !isCompleted && "text-gray-400 dark:text-gray-500"
                     )}
                   >
@@ -755,7 +755,7 @@ const BrandEventCreate = () => {
                   <div
                     className={cn(
                       "flex-1 h-0.5 mx-1 mt-[-18px] min-w-[8px]",
-                      i < step ? "bg-purple-500" : "bg-gray-200 dark:bg-gray-700"
+                      i < step ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-700"
                     )}
                   />
                 )}
@@ -837,7 +837,7 @@ const BrandEventCreate = () => {
                   <Button
                     type="button"
                     onClick={() => setShowAIBanner(true)}
-                    className="bg-purple-500 hover:bg-purple-600 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Generate with AI
@@ -1357,7 +1357,7 @@ const BrandEventCreate = () => {
                             className={cn(
                               "flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-colors",
                               selected
-                                ? "border-purple-300 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20"
+                                ? "border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20"
                                 : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                             )}
                           >
@@ -1365,7 +1365,7 @@ const BrandEventCreate = () => {
                               <PlatIcon className="h-5 w-5" />
                             </div>
                             <span className="text-sm font-medium flex-1">{p.name}</span>
-                            {selected && <Check className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
+                            {selected && <Check className="h-4 w-4 text-blue-700 dark:text-blue-500" />}
                           </div>
                         );
                       })}
@@ -1400,20 +1400,20 @@ const BrandEventCreate = () => {
                         className={cn(
                           "p-4 rounded-xl border-2 cursor-pointer transition-all",
                           streamSource === "platform"
-                            ? "border-purple-400 bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27]"
+                            ? "border-blue-500 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27]"
                             : "border-gray-200 dark:border-gray-700"
                         )}
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <Video className="h-5 w-5 text-purple-600" />
+                          <Video className="h-5 w-5 text-blue-700" />
                           <span className="font-semibold text-sm">Our Platform</span>
-                          <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs">Recommended</Badge>
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400 text-xs">Recommended</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">
                           Just point your cameras and click Go Live. Our AI handles framing, lower thirds, and multi-platform delivery.
                         </p>
                         {streamSource === "platform" && (
-                          <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-800">
+                          <div className="mt-3 pt-3 border-t border-blue-100 dark:border-blue-800">
                             <Label className="text-xs mb-1.5 block">Resolution</Label>
                             <Select value={streamResolution} onValueChange={setStreamResolution}>
                               <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
@@ -1467,7 +1467,7 @@ const BrandEventCreate = () => {
                   {/* AI Post-Production Features */}
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      <Sparkles className="h-4 w-4 text-blue-600" />
                       <Label className="text-sm font-semibold">AI Production Features</Label>
                     </div>
                     {streamSource === "external" && (
@@ -1486,12 +1486,12 @@ const BrandEventCreate = () => {
                             className={cn(
                               "flex items-center gap-3 p-3 rounded-xl border transition-all",
                               enabled
-                                ? "bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border-purple-100 dark:border-purple-800 border-l-4 border-l-purple-500"
+                                ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27] border-blue-100 dark:border-blue-800 border-l-4 border-l-blue-600"
                                 : "border-gray-200 dark:border-gray-700",
                               disabled && "opacity-50 cursor-not-allowed"
                             )}
                           >
-                            <FIcon className={cn("h-5 w-5 shrink-0", enabled ? "text-purple-600" : "text-gray-400")} />
+                            <FIcon className={cn("h-5 w-5 shrink-0", enabled ? "text-blue-700" : "text-gray-400")} />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium">{f.title}</p>
                               <p className="text-xs text-muted-foreground">{f.desc}</p>
@@ -1655,7 +1655,7 @@ const BrandEventCreate = () => {
 
             <div className="grid gap-4 md:grid-cols-4">
               <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 text-center">
-                <p className="text-3xl font-bold text-purple-600">{tickets.filter((t) => t.name.trim()).length}</p>
+                <p className="text-3xl font-bold text-blue-700">{tickets.filter((t) => t.name.trim()).length}</p>
                 <p className="text-sm text-muted-foreground">Ticket Types</p>
               </Card>
               <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 text-center">
@@ -1686,7 +1686,7 @@ const BrandEventCreate = () => {
                   {tickets.filter((t) => t.name.trim()).map((t) => (
                     <div key={t.key} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        <Ticket className="h-4 w-4 text-purple-500" />
+                        <Ticket className="h-4 w-4 text-blue-600" />
                         <span className="font-medium">{t.name}</span>
                         <Badge variant="outline" className="text-xs capitalize">{t.event_format.replace("_", " ")}</Badge>
                         {t.qr_enabled && <Badge className="bg-green-100 text-green-700 text-xs">QR</Badge>}

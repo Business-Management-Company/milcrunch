@@ -699,11 +699,11 @@ Keep it concise — this should fit on one printed page. Use bullet points where
         li { margin-bottom: 2px; }
         p { margin: 4px 0; }
         strong { font-weight: 600; }
-        .header { text-align: center; border-bottom: 2px solid #6C5CE7; padding-bottom: 10px; margin-bottom: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 20px; }
         .header h1 { font-size: 18px; margin: 0; }
         .header p { font-size: 12px; color: #555; margin: 2px 0 0; }
         .brand { text-align: center; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
-        .brand span { color: #6C5CE7; }
+        .brand span { color: #1e3a5f; }
       </style></head><body>
       <div class="brand">MilCrunch<span>X</span></div>
       <div class="header"><h1>${eventTitle}</h1><p>Go-To-Market Strategy — ${dateRange}</p><p>Generated ${format(new Date(), "dd MMM yyyy HHmm")}</p></div>
@@ -767,7 +767,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
             </Select>
 
             {isSuperAdmin && conflicts && (
-              <Button size="sm" variant="outline" className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/5"
+              <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
                 onClick={() => saveDemoState("demo_conflicts", conflicts)}>
                 <Save className="h-4 w-4 mr-1.5" /> Save as Demo
               </Button>
@@ -873,17 +873,17 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                   return (
                     <div
                       key={i}
-                      className="flex items-start gap-3 p-3 rounded-lg border border-purple-200 bg-purple-50/60 dark:border-purple-800/50 dark:bg-purple-950/20"
+                      className="flex items-start gap-3 p-3 rounded-lg border border-blue-300 bg-blue-50/60 dark:border-blue-800/50 dark:bg-blue-950/20"
                     >
-                      <Info className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+                      <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-purple-900 dark:text-purple-200">{obs.name}</span>
-                          <span className="text-xs text-purple-600 dark:text-purple-400">
+                          <span className="text-sm font-medium text-blue-900 dark:text-blue-300">{obs.name}</span>
+                          <span className="text-xs text-blue-700 dark:text-blue-500">
                             {format(obs.date, "MMM d, yyyy")}
                           </span>
                         </div>
-                        <p className="text-xs text-purple-700/80 dark:text-purple-300/70 mt-1">
+                        <p className="text-xs text-blue-800/80 dark:text-blue-400/70 mt-1">
                           {isSameDay
                             ? `Falls during your event. Consider theming sessions or marketing around ${obs.name} to boost engagement and attendance.`
                             : obs.direction === "before"
@@ -900,7 +900,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                           }
                         </p>
                       </div>
-                      <Badge className="text-[10px] shrink-0 bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0">
+                      <Badge className="text-[10px] shrink-0 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-400 border-0">
                         {isLeverage ? "Leverage" : "Caution"}
                       </Badge>
                     </div>
@@ -1044,7 +1044,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
             <div className="flex-1 overflow-y-auto p-4">
               {generatingPitch ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-600 mr-2" />
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-700 mr-2" />
                   <span className="text-sm text-muted-foreground">Generating pitch with AI...</span>
                 </div>
               ) : (
@@ -1087,7 +1087,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
       <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-500" /> AI GTM Strategy
+            <Sparkles className="h-5 w-5 text-blue-600" /> AI GTM Strategy
           </h3>
           <div className="flex gap-2">
             {gtmPlan && (
@@ -1102,7 +1102,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                   {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
                 </Button>
                 {isSuperAdmin && (
-                  <Button size="sm" variant="outline" className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/5"
+                  <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
                     onClick={() => saveDemoState("demo_gtm", gtmPlan)}>
                     <Save className="h-4 w-4 mr-1.5" /> Save as Demo
                   </Button>
@@ -1147,7 +1147,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                   {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
                 </Button>
                 {isSuperAdmin && (
-                  <Button size="sm" variant="outline" className="border-[#7C3AED] text-[#7C3AED] hover:bg-[#7C3AED]/5"
+                  <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
                     onClick={() => saveDemoState("demo_summary", summary)}>
                     <Save className="h-4 w-4 mr-1.5" /> Save as Demo
                   </Button>

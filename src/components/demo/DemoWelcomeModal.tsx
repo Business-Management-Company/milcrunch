@@ -56,7 +56,7 @@ export default function DemoWelcomeModal({
             Explore on my own
           </Button>
           <Button
-            className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white"
+            className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
             onClick={() => {
               setOpen(false);
               onStartTour();

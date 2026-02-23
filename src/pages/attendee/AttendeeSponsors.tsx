@@ -28,7 +28,7 @@ interface Sponsor {
 const TIER_ORDER = ["presenting", "diamond", "platinum", "gold", "silver", "bronze", "partner"];
 
 const TIER_STYLES: Record<string, { bg: string; text: string; label: string; logoSize: string }> = {
-  presenting: { bg: "bg-purple-50 border-purple-200", text: "text-purple-700", label: "Presenting Sponsor", logoSize: "h-24" },
+  presenting: { bg: "bg-blue-50 border-blue-300", text: "text-blue-800", label: "Presenting Sponsor", logoSize: "h-24" },
   diamond: { bg: "bg-sky-50 border-sky-200", text: "text-sky-700", label: "Diamond Sponsor", logoSize: "h-20" },
   platinum: { bg: "bg-gray-50 border-gray-300", text: "text-gray-700", label: "Platinum Sponsor", logoSize: "h-16" },
   gold: { bg: "bg-amber-50 border-amber-200", text: "text-amber-700", label: "Gold Sponsor", logoSize: "h-14" },
@@ -96,7 +96,7 @@ const AttendeeSponsorsContent = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -199,13 +199,13 @@ const AttendeeSponsorsContent = () => {
 
                   {selectedSponsor.booth_location && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 text-[#6C5CE7]" />
+                      <MapPin className="h-4 w-4 text-[#1e3a5f]" />
                       Booth: {selectedSponsor.booth_location}
                     </div>
                   )}
 
                   {selectedSponsor.website_url && (
-                    <Button asChild className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white">
+                    <Button asChild className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
                       <a href={selectedSponsor.website_url} target="_blank" rel="noopener noreferrer">
                         Visit Website
                         <ExternalLink className="h-4 w-4 ml-2" />
@@ -219,7 +219,7 @@ const AttendeeSponsorsContent = () => {
                         setSelectedSponsor(null);
                         setLeadRetrievalSponsor(selectedSponsor);
                       }}
-                      className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2"
+                      className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2"
                     >
                       <ScanLine className="h-4 w-4" />
                       Lead Retrieval

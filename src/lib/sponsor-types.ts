@@ -60,7 +60,7 @@ export interface SponsorDeck {
 }
 
 export const SPONSOR_TIERS = [
-  { name: "Presenting", price: "$50,000", color: "bg-purple-600", textColor: "text-white" },
+  { name: "Presenting", price: "$50,000", color: "bg-blue-700", textColor: "text-white" },
   { name: "Diamond", price: "$25,000", color: "bg-blue-600", textColor: "text-white" },
   { name: "Platinum", price: "$15,000", color: "bg-gray-700", textColor: "text-white" },
   { name: "Gold", price: "$10,000", color: "bg-yellow-500", textColor: "text-black" },

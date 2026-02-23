@@ -93,7 +93,7 @@ const MOCK_DESTINATIONS: StreamDestination[] = [
   { id: "youtube", name: "YouTube Live", icon: <Youtube className="w-4 h-4" />, color: "text-red-600", connected: true },
   { id: "facebook", name: "Facebook Live", icon: <Facebook className="w-4 h-4" />, color: "text-blue-600", connected: true },
   { id: "twitter", name: "Twitter/X", icon: <Twitter className="w-4 h-4" />, color: "text-gray-900", connected: true },
-  { id: "twitch", name: "Twitch", icon: <Twitch className="w-4 h-4" />, color: "text-purple-600", connected: false },
+  { id: "twitch", name: "Twitch", icon: <Twitch className="w-4 h-4" />, color: "text-blue-700", connected: false },
   { id: "tiktok", name: "TikTok Live", icon: <Wifi className="w-4 h-4" />, color: "text-gray-900", connected: false },
 ];
 
@@ -426,9 +426,9 @@ export default function Streaming() {
             </Card>
 
             {/* AI Production Status */}
-            <Card className="p-4 border-purple-200 dark:border-purple-800 bg-gradient-to-b from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27]">
+            <Card className="p-4 border-blue-300 dark:border-blue-800 bg-gradient-to-b from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27]">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                 AI Production
               </h3>
               <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
@@ -448,7 +448,7 @@ export default function Streaming() {
                   <Button
                     variant="link"
                     size="sm"
-                    className="p-0 h-auto text-xs text-purple-600"
+                    className="p-0 h-auto text-xs text-blue-700"
                     onClick={() => navigate(`/brand/events/${liveStream.eventId}`)}
                   >
                     View Event <ExternalLink className="w-3 h-3 ml-1" />
@@ -494,7 +494,7 @@ export default function Streaming() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Monitor className="w-7 h-7 text-purple-600" />
+            <Monitor className="w-7 h-7 text-blue-700" />
             Streaming
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -502,7 +502,7 @@ export default function Streaming() {
           </p>
         </div>
         <Button
-          className="bg-purple-600 hover:bg-purple-700"
+          className="bg-blue-700 hover:bg-blue-800"
           onClick={() => {
             resetSetup();
             setShowSetup(true);
@@ -553,7 +553,7 @@ export default function Streaming() {
             Start streaming to go live on connected platforms.
           </p>
           <Button
-            className="mt-4 bg-purple-600 hover:bg-purple-700"
+            className="mt-4 bg-blue-700 hover:bg-blue-800"
             onClick={() => {
               resetSetup();
               setShowSetup(true);
@@ -568,7 +568,7 @@ export default function Streaming() {
       {/* Upcoming Streams (from events) */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-purple-600" />
+          <Calendar className="w-5 h-5 text-blue-700" />
           Upcoming Events with Streaming
         </h2>
         {loadingEvents ? (
@@ -584,7 +584,7 @@ export default function Streaming() {
             {upcomingEvents.slice(0, 6).map((ev) => (
               <Card
                 key={ev.id}
-                className="p-4 cursor-pointer hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+                className="p-4 cursor-pointer hover:border-blue-400 dark:hover:border-blue-700 transition-colors"
                 onClick={() => navigate(`/brand/events/${ev.id}`)}
               >
                 <div className="flex items-start justify-between">
@@ -674,9 +674,9 @@ export default function Streaming() {
       </div>
 
       {/* AI Pitch Banner */}
-      <Card className="p-6 bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border-purple-200 dark:border-purple-800">
+      <Card className="p-6 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27] border-blue-300 dark:border-blue-800">
         <div className="flex items-center gap-3 mb-2">
-          <Sparkles className="w-5 h-5 text-purple-500" />
+          <Sparkles className="w-5 h-5 text-blue-600" />
           <h3 className="font-semibold text-gray-900 dark:text-white">AI-Powered Production</h3>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -709,7 +709,7 @@ export default function Streaming() {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
                     s === step
-                      ? "bg-purple-600 text-white"
+                      ? "bg-blue-700 text-white"
                       : s < step
                       ? "bg-green-500 text-white"
                       : "bg-gray-200 text-gray-500"
@@ -764,7 +764,7 @@ export default function Streaming() {
               </div>
               <div className="flex justify-end">
                 <Button
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-blue-700 hover:bg-blue-800"
                   disabled={!title.trim()}
                   onClick={() => setStep(2)}
                 >
@@ -790,7 +790,7 @@ export default function Streaming() {
                       onClick={() => toggleDest(dest.id)}
                       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                         selected
-                          ? "border-purple-300 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20"
+                          ? "border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20"
                           : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                     >
@@ -798,7 +798,7 @@ export default function Streaming() {
                       <span className={dest.color}>{dest.icon}</span>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{dest.name}</span>
                       {selected && (
-                        <Check className="w-4 h-4 text-purple-600 ml-auto" />
+                        <Check className="w-4 h-4 text-blue-700 ml-auto" />
                       )}
                     </div>
                   );
@@ -814,7 +814,7 @@ export default function Streaming() {
                   Back
                 </Button>
                 <Button
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-blue-700 hover:bg-blue-800"
                   disabled={selectedDests.length === 0}
                   onClick={() => setStep(3)}
                 >
@@ -834,7 +834,7 @@ export default function Streaming() {
                   onClick={() => setSourceType("external")}
                   className={`p-3 rounded-lg border cursor-pointer text-center transition-colors ${
                     sourceType === "external"
-                      ? "border-purple-300 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20"
+                      ? "border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20"
                       : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >
@@ -846,7 +846,7 @@ export default function Streaming() {
                   onClick={() => setSourceType("browser")}
                   className={`p-3 rounded-lg border cursor-pointer text-center transition-colors ${
                     sourceType === "browser"
-                      ? "border-purple-300 bg-purple-50 dark:border-purple-600 dark:bg-purple-900/20"
+                      ? "border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20"
                       : "border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                   }`}
                 >

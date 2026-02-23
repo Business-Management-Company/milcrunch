@@ -85,7 +85,7 @@ export default function AttendeeApp() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#0F1117]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -103,7 +103,7 @@ export default function AttendeeApp() {
               <p className="text-xs text-muted-foreground truncate">{event.venue} — {event.city}, {event.state}</p>
             )}
           </div>
-          <span className="text-xs font-bold text-[#6C5CE7] shrink-0 ml-2">MilCrunch<span className="font-extrabold">X</span></span>
+          <span className="text-xs font-bold text-[#1e3a5f] shrink-0 ml-2">MilCrunch<span className="font-extrabold">X</span></span>
         </div>
       </header>
 
@@ -136,7 +136,7 @@ export default function AttendeeApp() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors relative ${
-                  isActive ? "text-[#6C5CE7]" : "text-gray-400 dark:text-gray-500"
+                  isActive ? "text-[#1e3a5f]" : "text-gray-400 dark:text-gray-500"
                 }`}
               >
                 <div className="relative">
@@ -148,7 +148,7 @@ export default function AttendeeApp() {
                   )}
                 </div>
                 {tab.label}
-                {isActive && <div className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-[#6C5CE7] rounded-b" />}
+                {isActive && <div className="absolute top-0 left-1/4 right-1/4 h-0.5 bg-[#1e3a5f] rounded-b" />}
               </button>
             );
           })}

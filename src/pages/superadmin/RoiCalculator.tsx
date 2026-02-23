@@ -84,7 +84,7 @@ export default function RoiCalculator() {
                 min={s.min}
                 max={s.max}
                 step={s.step}
-                className="[&_[role=slider]]:bg-[#7C3AED] [&_[role=slider]]:border-[#7C3AED] [&_.range]:bg-[#7C3AED]"
+                className="[&_[role=slider]]:bg-[#1e3a5f] [&_[role=slider]]:border-[#1e3a5f] [&_.range]:bg-[#1e3a5f]"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1.5">
                 <span>{s.prefix ?? ""}{s.min.toLocaleString()}</span>
@@ -140,14 +140,14 @@ export default function RoiCalculator() {
           <Button
             onClick={analyze}
             disabled={aiLoading}
-            className="w-full bg-[#7C3AED] hover:bg-[#6D28D9] text-white h-12 text-sm font-semibold"
+            className="w-full bg-[#1e3a5f] hover:bg-[#6D28D9] text-white h-12 text-sm font-semibold"
           >
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
             Analyze with AI
           </Button>
 
           {aiInsight && (
-            <div className="bg-[#7C3AED]/10 border border-[#7C3AED]/30 rounded-xl p-5">
+            <div className="bg-[#1e3a5f]/10 border border-[#1e3a5f]/30 rounded-xl p-5">
               <p className="text-sm text-gray-700 leading-relaxed">{aiInsight}</p>
             </div>
           )}

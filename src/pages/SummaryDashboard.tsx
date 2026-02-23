@@ -259,9 +259,9 @@ export default function SummaryDashboard() {
       {/* Centered heading */}
       <div className="text-center pt-4">
         <div className="inline-flex items-center gap-2.5 mb-2">
-          <Sparkles className="h-7 w-7 text-[#6C5CE7]" />
+          <Sparkles className="h-7 w-7 text-[#1e3a5f]" />
           <h1 className="text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
-            {getGreeting()}, <span className="text-[#6C5CE7]">{firstName}</span>
+            {getGreeting()}, <span className="text-[#1e3a5f]">{firstName}</span>
           </h1>
         </div>
         <p className="text-sm text-muted-foreground">{formatDateTime()}</p>
@@ -272,8 +272,8 @@ export default function SummaryDashboard() {
         <div className={cn(
           "rounded-2xl border-2 bg-white dark:bg-[#1A1D27] transition-all",
           prompt.trim() || followUp
-            ? "border-[#6C5CE7] shadow-[0_0_20px_rgba(108,92,231,0.15)]"
-            : "border-[#6C5CE7]/25 hover:border-[#6C5CE7]/40 shadow-sm hover:shadow-md",
+            ? "border-[#1e3a5f] shadow-[0_0_20px_rgba(30,58,95,0.15)]"
+            : "border-[#1e3a5f]/25 hover:border-[#1e3a5f]/40 shadow-sm hover:shadow-md",
         )}>
           <textarea
             placeholder="Describe what you need — find creators, plan an event, build a list..."
@@ -292,12 +292,12 @@ export default function SummaryDashboard() {
           <div className="flex items-center justify-between px-6 pb-4">
             <div className="flex items-center gap-2">
               {routing ? (
-                <span className="flex items-center gap-1.5 text-xs text-[#6C5CE7] font-medium">
+                <span className="flex items-center gap-1.5 text-xs text-[#1e3a5f] font-medium">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Understanding your request...
                 </span>
               ) : (
-                <Sparkles className="h-5 w-5 text-[#6C5CE7]/40" />
+                <Sparkles className="h-5 w-5 text-[#1e3a5f]/40" />
               )}
             </div>
             <button
@@ -307,7 +307,7 @@ export default function SummaryDashboard() {
               className={cn(
                 "px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2",
                 prompt.trim() && !routing
-                  ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1] shadow-md"
+                  ? "bg-[#1e3a5f] text-white hover:bg-[#2d5282] shadow-md"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed",
               )}
             >
@@ -318,10 +318,10 @@ export default function SummaryDashboard() {
 
           {/* Inline follow-up question */}
           {followUp && (
-            <div className="px-6 pb-4 border-t border-[#6C5CE7]/10">
+            <div className="px-6 pb-4 border-t border-[#1e3a5f]/10">
               <div className="flex items-center gap-2 pt-3 pb-2">
-                <MessageCircle className="h-4 w-4 text-[#6C5CE7] shrink-0" />
-                <p className="text-sm font-medium text-[#6C5CE7]">{followUp.question}</p>
+                <MessageCircle className="h-4 w-4 text-[#1e3a5f] shrink-0" />
+                <p className="text-sm font-medium text-[#1e3a5f]">{followUp.question}</p>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -335,7 +335,7 @@ export default function SummaryDashboard() {
                     }
                   }}
                   placeholder="Type your answer..."
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
                   autoFocus
                   disabled={routing}
                 />
@@ -346,7 +346,7 @@ export default function SummaryDashboard() {
                   className={cn(
                     "px-4 py-2 rounded-lg text-sm font-semibold transition-all",
                     followUpAnswer.trim() && !routing
-                      ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]"
+                      ? "bg-[#1e3a5f] text-white hover:bg-[#2d5282]"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed",
                   )}
                 >
@@ -368,11 +368,11 @@ export default function SummaryDashboard() {
       {/* AI Response Panel */}
       {(aiLoading || aiResponse) && (
         <div ref={aiPanelRef} className="max-w-3xl mx-auto -mt-4">
-          <div className="rounded-2xl border border-[#6C5CE7]/20 bg-white dark:bg-[#1A1D27] shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-[#6C5CE7]/10 to-transparent border-b border-[#6C5CE7]/10">
+          <div className="rounded-2xl border border-[#1e3a5f]/20 bg-white dark:bg-[#1A1D27] shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-[#1e3a5f]/10 to-transparent border-b border-[#1e3a5f]/10">
               <div className="flex items-center gap-2">
-                <span className="p-1 rounded-lg bg-[#6C5CE7]/15">
-                  <Sparkles className="h-4 w-4 text-[#6C5CE7]" />
+                <span className="p-1 rounded-lg bg-[#1e3a5f]/15">
+                  <Sparkles className="h-4 w-4 text-[#1e3a5f]" />
                 </span>
                 <span className="text-sm font-semibold text-[#000741] dark:text-white">
                   MilCrunch AI
@@ -391,7 +391,7 @@ export default function SummaryDashboard() {
             <div className="px-5 py-4">
               {aiLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" />
+                  <Loader2 className="h-4 w-4 animate-spin text-[#1e3a5f]" />
                   Thinking...
                 </div>
               ) : (
@@ -405,7 +405,7 @@ export default function SummaryDashboard() {
       {/* Quick Action Pills — flowing layout */}
       <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto">
         {[
-          { icon: Search, label: "Find Creators", color: "#6C5CE7", prompt: "I want to find creators. What branch of service, follower range, or niche are you looking for? (e.g. Army veterans, 10K+ followers, fitness niche)" },
+          { icon: Search, label: "Find Creators", color: "#1e3a5f", prompt: "I want to find creators. What branch of service, follower range, or niche are you looking for? (e.g. Army veterans, 10K+ followers, fitness niche)" },
           { icon: ListPlus, label: "Build a List", color: "#0EA5E9", prompt: "Let's build a list! First, what would you like to name it?" },
           { icon: Mic, label: "Browse Podcasts", color: "#F59E0B", prompt: "Looking for military podcasts? I can filter by topic, branch, or episode count. What are you looking for?" },
           { icon: BarChart3, label: "Event Analytics", color: "#22C55E", prompt: "Which event would you like analytics for?" },
@@ -439,10 +439,10 @@ export default function SummaryDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Recent Activity */}
         <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-          <div className="px-6 py-3 bg-gradient-to-r from-[#6C5CE7]/10 to-[#6C5CE7]/5 border-b border-[#6C5CE7]/10">
+          <div className="px-6 py-3 bg-gradient-to-r from-[#1e3a5f]/10 to-[#1e3a5f]/5 border-b border-[#1e3a5f]/10">
             <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-[#6C5CE7]/15">
-                <Clock className="h-4 w-4 text-[#6C5CE7]" />
+              <span className="p-1.5 rounded-lg bg-[#1e3a5f]/15">
+                <Clock className="h-4 w-4 text-[#1e3a5f]" />
               </span>
               Recent Activity
             </h2>
@@ -451,7 +451,7 @@ export default function SummaryDashboard() {
             <ul className="space-y-3">
               {activity.map((item, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7] mt-2 shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f] mt-2 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm text-[#000741] dark:text-white truncate">
                       {item.label}

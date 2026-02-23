@@ -54,7 +54,7 @@ const POST_TYPES = [
 ];
 
 const POST_TYPE_STYLES: Record<string, { label: string; color: string; emoji: string }> = {
-  announcement: { label: "Announcement", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", emoji: "📢" },
+  announcement: { label: "Announcement", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500", emoji: "📢" },
   introduction: { label: "Introduction", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", emoji: "👋" },
   question: { label: "Question", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400", emoji: "❓" },
   photo: { label: "Photo", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", emoji: "📸" },
@@ -88,7 +88,7 @@ function Avatar({ name, url, size = "h-10 w-10" }: { name: string | null; url: s
   if (url) return <img src={url} alt={name || ""} className={`${size} rounded-full object-cover`} />;
   const initials = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className={`${size} rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-xs font-bold`}>
+    <div className={`${size} rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-500 flex items-center justify-center text-white text-xs font-bold`}>
       {initials}
     </div>
   );
@@ -350,8 +350,8 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
   return (
     <div className="space-y-4 px-4 py-4">
       {/* 365 Banner */}
-      <div className="rounded-xl bg-gradient-to-r from-[#6C5CE7]/10 to-purple-100/50 dark:from-[#6C5CE7]/20 dark:to-purple-900/20 border border-[#6C5CE7]/20 px-4 py-3">
-        <p className="text-xs font-medium text-[#6C5CE7]">
+      <div className="rounded-xl bg-gradient-to-r from-[#1e3a5f]/10 to-blue-100/50 dark:from-[#1e3a5f]/20 dark:to-blue-900/20 border border-[#1e3a5f]/20 px-4 py-3">
+        <p className="text-xs font-medium text-[#1e3a5f]">
           ♻️ 365 Community — This space stays active year-round. Connect before, during, and after the event.
         </p>
       </div>
@@ -364,7 +364,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
             onClick={() => setFilterType(t.key)}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
               filterType === t.key
-                ? "bg-[#6C5CE7] text-white"
+                ? "bg-[#1e3a5f] text-white"
                 : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
             }`}
           >
@@ -377,7 +377,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
       {!showComposer && (
         <button
           onClick={() => setShowComposer(true)}
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-3 text-left text-sm text-muted-foreground hover:border-[#6C5CE7]/40 transition-colors"
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-3 text-left text-sm text-muted-foreground hover:border-[#1e3a5f]/40 transition-colors"
         >
           What's on your mind?
         </button>
@@ -385,7 +385,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
 
       {/* Composer */}
       {showComposer && (
-        <Card className="p-4 bg-white dark:bg-[#1A1D27] border-[#6C5CE7]/30">
+        <Card className="p-4 bg-white dark:bg-[#1A1D27] border-[#1e3a5f]/30">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold">Create Post</span>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setShowComposer(false); clearImage(); }}>
@@ -430,7 +430,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
           ) : (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-[#6C5CE7] mb-2 transition-colors"
+              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-[#1e3a5f] mb-2 transition-colors"
             >
               <ImageIcon className="h-4 w-4" />
               Add image
@@ -446,7 +446,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
 
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{newContent.length}/500</span>
-            <Button size="sm" onClick={createPost} disabled={posting || !newContent.trim()} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+            <Button size="sm" onClick={createPost} disabled={posting || !newContent.trim()} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
               {posting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
               Post
             </Button>
@@ -521,7 +521,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
                     </button>
                     <button
                       onClick={() => toggleExpand(post.id)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-[#6C5CE7] transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-[#1e3a5f] transition-colors"
                     >
                       <MessageCircle className="h-4 w-4" />
                       {post.replies_count > 0 ? `${post.replies_count}` : "Reply"}
@@ -555,7 +555,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
                         value={replyContent[post.id] || ""}
                         onChange={(e) => setReplyContent((prev) => ({ ...prev, [post.id]: e.target.value }))}
                         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); createReply(post.id); } }}
-                        className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]"
+                        className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]"
                       />
                       <Button size="sm" variant="ghost" onClick={() => createReply(post.id)} disabled={!replyContent[post.id]?.trim()}>
                         <Send className="h-3.5 w-3.5" />
@@ -573,7 +573,7 @@ export default function AttendeeCommunity({ eventId, event }: Props) {
       {!showComposer && (
         <button
           onClick={() => setShowComposer(true)}
-          className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-[#6C5CE7] text-white shadow-lg flex items-center justify-center hover:bg-[#5A4BD5] transition-colors z-30"
+          className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-[#1e3a5f] text-white shadow-lg flex items-center justify-center hover:bg-[#2d5282] transition-colors z-30"
         >
           <Plus className="h-6 w-6" />
         </button>

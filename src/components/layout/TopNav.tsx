@@ -30,7 +30,7 @@ interface TopNavProps {
 }
 
 const ALERT_ICONS: Record<string, React.ReactNode> = {
-  spike: <TrendingUp className="h-3.5 w-3.5 text-purple-500" />,
+  spike: <TrendingUp className="h-3.5 w-3.5 text-blue-600" />,
   influencer: <Star className="h-3.5 w-3.5 text-amber-500" />,
   milestone: <Target className="h-3.5 w-3.5 text-green-500" />,
 };
@@ -67,7 +67,7 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavP
     >
       <div className="flex items-center gap-3 min-w-0">
         <Link to="/brand/dashboard" className="flex items-center shrink-0" aria-label="MilCrunch home">
-          <span className="font-bold text-lg text-foreground tracking-tight hidden sm:inline">MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span></span>
+          <span className="font-bold text-lg text-foreground tracking-tight hidden sm:inline">MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
         </Link>
       </div>
 
@@ -103,14 +103,14 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavP
             <div className="flex items-center justify-between px-3 py-2">
               <span className="text-sm font-semibold">Notifications</span>
               {unreadCount > 0 && (
-                <button onClick={markAllRead} className="text-xs text-[#6C5CE7] hover:underline">Mark all read</button>
+                <button onClick={markAllRead} className="text-xs text-[#1e3a5f] hover:underline">Mark all read</button>
               )}
             </div>
             <DropdownMenuSeparator />
             {alerts.map((a) => (
               <DropdownMenuItem
                 key={a.id}
-                className={cn("flex items-start gap-2 px-3 py-2.5 cursor-pointer", !a.is_read && "bg-purple-50/50 dark:bg-purple-900/10")}
+                className={cn("flex items-start gap-2 px-3 py-2.5 cursor-pointer", !a.is_read && "bg-blue-50/50 dark:bg-blue-900/10")}
                 onClick={() => {
                   setAlerts((prev) => prev.map((x) => x.id === a.id ? { ...x, is_read: true } : x));
                   navigate("/social-monitoring");
@@ -118,11 +118,11 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavP
               >
                 <span className="mt-0.5 shrink-0">{ALERT_ICONS[a.type] || ALERT_ICONS.spike}</span>
                 <span className={cn("text-xs", a.is_read ? "text-muted-foreground" : "text-foreground font-medium")}>{a.message}</span>
-                {!a.is_read && <span className="ml-auto w-2 h-2 rounded-full bg-[#6C5CE7] shrink-0 mt-1" />}
+                {!a.is_read && <span className="ml-auto w-2 h-2 rounded-full bg-[#1e3a5f] shrink-0 mt-1" />}
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-center justify-center text-xs text-[#6C5CE7] cursor-pointer" onClick={() => navigate("/social-monitoring")}>
+            <DropdownMenuItem className="text-center justify-center text-xs text-[#1e3a5f] cursor-pointer" onClick={() => navigate("/social-monitoring")}>
               View all in Social Monitoring
             </DropdownMenuItem>
           </DropdownMenuContent>

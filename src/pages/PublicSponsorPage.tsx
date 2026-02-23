@@ -9,7 +9,7 @@ import type { SponsorPage } from "@/lib/sponsor-types";
 import { cn } from "@/lib/utils";
 
 const tierStyles: Record<string, string> = {
-  Presenting: "bg-purple-600 text-white",
+  Presenting: "bg-blue-700 text-white",
   Diamond: "bg-blue-600 text-white",
   Platinum: "bg-gray-700 text-white",
   Gold: "bg-yellow-500 text-black",
@@ -31,7 +31,7 @@ export default function PublicSponsorPage() {
   }, [slug]);
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" /></div>;
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" /></div>;
   }
 
   if (!page || !page.published) {
@@ -40,7 +40,7 @@ export default function PublicSponsorPage() {
         <Card className="p-12 text-center max-w-md">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Sponsor Not Found</h2>
           <p className="text-gray-500 text-sm mb-4">This sponsor page doesn't exist or hasn't been published yet.</p>
-          <Link to="/" className="text-[#6C5CE7] hover:underline text-sm">Back to MilCrunch</Link>
+          <Link to="/" className="text-[#1e3a5f] hover:underline text-sm">Back to MilCrunch</Link>
         </Card>
       </div>
     );
@@ -56,7 +56,7 @@ export default function PublicSponsorPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Banner */}
-      <div className="relative h-48 sm:h-64 bg-gradient-to-br from-[#6C5CE7] via-[#5B4BD1] to-[#1A1A2E]">
+      <div className="relative h-48 sm:h-64 bg-gradient-to-br from-[#1e3a5f] via-[#2d5282] to-[#1A1A2E]">
         {page.banner_url && (
           <img src={page.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
         )}
@@ -76,7 +76,7 @@ export default function PublicSponsorPage() {
             <img src={page.logo_url} alt={page.name} className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg bg-white object-contain" />
           ) : (
             <div className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg bg-white flex items-center justify-center">
-              <span className="text-3xl font-bold text-[#6C5CE7]">{page.name.charAt(0)}</span>
+              <span className="text-3xl font-bold text-[#1e3a5f]">{page.name.charAt(0)}</span>
             </div>
           )}
           <div className="pb-1">
@@ -97,7 +97,7 @@ export default function PublicSponsorPage() {
         {/* Actions */}
         <div className="flex flex-wrap gap-3 mb-6">
           {page.website_url && (
-            <Button asChild className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+            <Button asChild className="bg-[#1e3a5f] hover:bg-[#2d5282]">
               <a href={page.website_url} target="_blank" rel="noreferrer">
                 <ExternalLink className="h-4 w-4 mr-2" /> Visit Website
               </a>
@@ -139,8 +139,8 @@ export default function PublicSponsorPage() {
 
         {/* Footer */}
         <div className="text-center pt-8">
-          <Link to="/" className="text-sm text-gray-400 hover:text-[#6C5CE7]">
-            Powered by MilCrunch<span className="text-[#6C5CE7] font-bold">X</span>
+          <Link to="/" className="text-sm text-gray-400 hover:text-[#1e3a5f]">
+            Powered by MilCrunch<span className="text-[#3b82f6] font-bold">X</span>
           </Link>
         </div>
       </div>

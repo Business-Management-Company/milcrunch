@@ -71,7 +71,7 @@ const INSIGHTS_CHART_DATA = [
 ];
 
 const INSIGHTS_STATS = [
-  { value: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
+  { value: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#1e3a5f]" },
   { value: "2,400", label: "Community Members", icon: Users, color: "text-blue-600" },
   { value: "1,467", label: "Active Creators", icon: Mic, color: "text-green-600" },
   { value: "+34%", label: "YoY Growth", icon: TrendingUp, color: "text-teal-600" },
@@ -95,14 +95,14 @@ const DEMO_CHART_DATA = [
 ];
 
 const DEMO_INSIGHTS_STATS = [
-  { value: "1.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]" },
+  { value: "1.4M", label: "Total Impressions", icon: Eye, color: "text-[#1e3a5f]" },
   { value: "450", label: "Community Members", icon: Users, color: "text-blue-600" },
   { value: "87", label: "Active Creators", icon: Mic, color: "text-green-600" },
   { value: "+127%", label: "YoY Growth", icon: TrendingUp, color: "text-teal-600" },
 ];
 
 const DEMO_STAT_CARDS = [
-  { label: "Total Events", value: "3", icon: CalendarDays, iconBg: "bg-purple-100 dark:bg-purple-900/30", iconColor: "text-purple-600 dark:text-purple-400" },
+  { label: "Total Events", value: "3", icon: CalendarDays, iconBg: "bg-blue-100 dark:bg-blue-900/30", iconColor: "text-blue-700 dark:text-blue-500" },
   { label: "Total Registrations", value: "15", icon: Users, iconBg: "bg-blue-100 dark:bg-blue-900/30", iconColor: "text-blue-600 dark:text-blue-400" },
   { label: "Active Sponsors", value: "5", icon: Handshake, iconBg: "bg-green-100 dark:bg-green-900/30", iconColor: "text-green-600 dark:text-green-400" },
   { label: "Email Campaigns", value: "3", icon: Mail, iconBg: "bg-amber-100 dark:bg-amber-900/30", iconColor: "text-amber-600 dark:text-amber-400" },
@@ -194,8 +194,8 @@ const BrandDashboard = () => {
           <>
             <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                  <CreditCard className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <CreditCard className="h-5 w-5 text-blue-700 dark:text-blue-500" />
                 </div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Credits Available</p>
               </div>
@@ -233,8 +233,8 @@ const BrandDashboard = () => {
             </Card>
             <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl">
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                  <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Users className="h-5 w-5 text-blue-700 dark:text-blue-500" />
                 </div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Creators in Lists</p>
               </div>
@@ -248,8 +248,8 @@ const BrandDashboard = () => {
       <div className="mb-8">
         <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-6">
           {/* Chat input — prominent, full width */}
-          <form onSubmit={handleSubmit} className="flex items-center gap-3 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-[#111827] focus-within:border-[#6C5CE7] focus-within:ring-2 focus-within:ring-[#6C5CE7]/20 transition-all">
-            <Sparkles className="h-5 w-5 text-[#6C5CE7] shrink-0" />
+          <form onSubmit={handleSubmit} className="flex items-center gap-3 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 bg-gray-50 dark:bg-[#111827] focus-within:border-[#1e3a5f] focus-within:ring-2 focus-within:ring-[#1e3a5f]/20 transition-all">
+            <Sparkles className="h-5 w-5 text-[#1e3a5f] shrink-0" />
             <input
               type="text"
               value={chatInput}
@@ -260,7 +260,7 @@ const BrandDashboard = () => {
             <button
               type="submit"
               disabled={!chatInput.trim()}
-              className="p-2 rounded-full bg-[#6C5CE7] text-white hover:bg-[#5A4BD1] disabled:opacity-40 transition-colors"
+              className="p-2 rounded-full bg-[#1e3a5f] text-white hover:bg-[#2d5282] disabled:opacity-40 transition-colors"
             >
               <Send className="h-4 w-4" />
             </button>
@@ -274,7 +274,7 @@ const BrandDashboard = () => {
                   <div
                     className={
                       msg.role === "user"
-                        ? "bg-[#6C5CE7] text-white rounded-2xl px-4 py-2 max-w-[70%] text-sm"
+                        ? "bg-[#1e3a5f] text-white rounded-2xl px-4 py-2 max-w-[70%] text-sm"
                         : "bg-gray-50 dark:bg-[#111827] text-gray-800 dark:text-gray-200 rounded-2xl px-4 py-2 max-w-[70%] text-sm"
                     }
                   >
@@ -286,7 +286,7 @@ const BrandDashboard = () => {
                     {msg.cta && (
                       <Link
                         to={msg.cta.to}
-                        className="block mt-2 bg-[#6C5CE7] text-white text-xs px-4 py-2 rounded-full hover:bg-[#5A4BD1] w-fit transition-colors"
+                        className="block mt-2 bg-[#1e3a5f] text-white text-xs px-4 py-2 rounded-full hover:bg-[#2d5282] w-fit transition-colors"
                       >
                         {msg.cta.label}
                       </Link>
@@ -319,7 +319,7 @@ const BrandDashboard = () => {
                   key={action.label}
                   type="button"
                   onClick={() => sendMessage(action.label)}
-                  className="flex items-center justify-center gap-2 py-3 px-3 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-[#6C5CE7] hover:text-white hover:border-[#6C5CE7] transition-colors"
+                  className="flex items-center justify-center gap-2 py-3 px-3 bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-[#1e3a5f] hover:text-white hover:border-[#1e3a5f] transition-colors"
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{action.label}</span>
@@ -358,8 +358,8 @@ const BrandDashboard = () => {
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="dashPurple" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#1e3a5f" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#1e3a5f" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
@@ -375,7 +375,7 @@ const BrandDashboard = () => {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#6C5CE7"
+                  stroke="#1e3a5f"
                   strokeWidth={2.5}
                   fill="url(#dashPurple)"
                   dot={false}
@@ -384,7 +384,7 @@ const BrandDashboard = () => {
             </ResponsiveContainer>
           </div>
           <div className="mt-4">
-            <Link to="/brand/events" className="text-[#6C5CE7] text-sm font-medium hover:underline">
+            <Link to="/brand/events" className="text-[#1e3a5f] text-sm font-medium hover:underline">
               View Full Dashboard →
             </Link>
           </div>

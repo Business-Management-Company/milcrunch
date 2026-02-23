@@ -205,7 +205,7 @@ export default function AIBannerModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-500" />
+            <Sparkles className="h-5 w-5 text-blue-600" />
             AI Banner Generator
           </DialogTitle>
         </DialogHeader>
@@ -223,7 +223,7 @@ export default function AIBannerModal({
                   className={cn(
                     "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
                     style === s
-                      ? "bg-purple-500 text-white"
+                      ? "bg-blue-600 text-white"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                   )}
                 >
@@ -245,7 +245,7 @@ export default function AIBannerModal({
                   className={cn(
                     "px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
                     mood === m
-                      ? "bg-purple-500 text-white"
+                      ? "bg-blue-600 text-white"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                   )}
                 >
@@ -275,7 +275,7 @@ export default function AIBannerModal({
             <Button
               onClick={handleGenerate}
               disabled={generating}
-              className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               {generating ? (
                 <>
@@ -315,7 +315,7 @@ export default function AIBannerModal({
                       <Button
                         onClick={() => handleSelect(i)}
                         disabled={selecting !== null}
-                        className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         size="sm"
                       >
                         {selecting === i ? (
@@ -341,8 +341,8 @@ export default function AIBannerModal({
           {generating && (
             <div className="flex flex-col items-center py-8">
               <div className="relative">
-                <Loader2 className="h-12 w-12 animate-spin text-purple-500" />
-                <ImageIcon className="h-5 w-5 text-purple-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                <ImageIcon className="h-5 w-5 text-blue-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
               <p className="text-sm text-muted-foreground mt-4">
                 Generating 3 options...

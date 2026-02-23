@@ -107,7 +107,7 @@ function AdAnalytics() {
 
   const STATS = [
     { label: "Total Ad Spend", value: `$${totalSpend.toLocaleString()}`, icon: DollarSign, color: "text-blue-400", bg: "bg-blue-900/30" },
-    { label: "Avg CPM", value: `$${avgCpm}`, icon: TrendingUp, color: "text-purple-400", bg: "bg-purple-900/30" },
+    { label: "Avg CPM", value: `$${avgCpm}`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-900/30" },
     { label: "Total Impressions", value: `${(totalImpressions / 1_000_000).toFixed(1)}M`, icon: Eye, color: "text-amber-400", bg: "bg-amber-900/30" },
     { label: "Creator Payouts (70%)", value: `$${creatorPayouts.toLocaleString()}`, icon: Users, color: "text-emerald-400", bg: "bg-emerald-900/30" },
   ];
@@ -118,7 +118,7 @@ function AdAnalytics() {
     <>
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <BarChart3 className="h-7 w-7 text-purple-400" />
+          <BarChart3 className="h-7 w-7 text-blue-500" />
           <h1 className="text-3xl font-bold text-pd-navy dark:text-white">Ad Analytics</h1>
         </div>
         <p className="text-gray-500 dark:text-gray-400">Track advertising performance, spend, and revenue share.</p>

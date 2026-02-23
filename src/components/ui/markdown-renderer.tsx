@@ -22,7 +22,7 @@ export default function MarkdownRenderer({
               href={href}
               target={href?.startsWith("/") ? undefined : "_blank"}
               rel={href?.startsWith("/") ? undefined : "noopener noreferrer"}
-              className="text-[#6C5CE7] hover:text-[#5A4BD5] underline underline-offset-2 font-medium"
+              className="text-[#1e3a5f] hover:text-[#2d5282] underline underline-offset-2 font-medium"
               {...props}
             >
               {children}

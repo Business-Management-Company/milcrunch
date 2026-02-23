@@ -51,7 +51,7 @@ function StatusDot({ status }: { status: "red" | "yellow" | "green" }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-    verified: { label: "Verified", className: "bg-purple-100 text-purple-800", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+    verified: { label: "Verified", className: "bg-blue-100 text-blue-800", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
     pending: { label: "Pending", className: "bg-amber-100 text-amber-800", icon: <Clock className="h-3.5 w-3.5" /> },
     flagged: { label: "Flagged", className: "bg-red-100 text-red-800", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
     denied: { label: "Denied", className: "bg-red-200 text-red-900", icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -91,7 +91,7 @@ export default function PublicVerificationReport() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -160,7 +160,7 @@ export default function PublicVerificationReport() {
       {/* Header bar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-[#6C5CE7]" />
+          <ShieldCheck className="h-5 w-5 text-[#1e3a5f]" />
           <span className="font-bold text-sm text-gray-900">MilCrunch</span>
           <span className="text-xs text-gray-400 ml-1">Verification Report</span>
         </div>
@@ -173,7 +173,7 @@ export default function PublicVerificationReport() {
             {/* Left: photo + info */}
             <div className="flex-1 flex items-start gap-4">
               {/* Avatar */}
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-xl shrink-0">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-xl shrink-0">
                 {heroPhoto ? (
                   <img src={heroPhoto} alt={record.person_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 ) : (
@@ -206,7 +206,7 @@ export default function PublicVerificationReport() {
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 text-gray-600 hover:border-[#6C5CE7] hover:text-[#6C5CE7] transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 text-gray-600 hover:border-[#1e3a5f] hover:text-[#1e3a5f] transition-colors"
                       >
                         <ExternalLink className="h-3 w-3" />
                         {link.name}
@@ -236,12 +236,12 @@ export default function PublicVerificationReport() {
           <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Verification Status</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {[
-              { label: "Intelligence Summary", icon: <FileText className="h-4 w-4 text-[#6C5CE7]" />, dot: aiDot },
-              { label: "Evidence Sources", icon: <Search className="h-4 w-4 text-[#6C5CE7]" />, dot: evidenceDot, extra: `${sources.length} sources` },
-              { label: "Career Track", icon: <Briefcase className="h-4 w-4 text-[#6C5CE7]" />, dot: careerDot },
-              { label: "Social Verification", icon: <Globe className="h-4 w-4 text-[#6C5CE7]" />, dot: socialDot },
-              { label: "Media & Appearances", icon: <Video className="h-4 w-4 text-[#6C5CE7]" />, dot: mediaDot },
-              { label: "Background Review", icon: <ShieldAlert className="h-4 w-4 text-[#6C5CE7]" />, dot: bgDot },
+              { label: "Intelligence Summary", icon: <FileText className="h-4 w-4 text-[#1e3a5f]" />, dot: aiDot },
+              { label: "Evidence Sources", icon: <Search className="h-4 w-4 text-[#1e3a5f]" />, dot: evidenceDot, extra: `${sources.length} sources` },
+              { label: "Career Track", icon: <Briefcase className="h-4 w-4 text-[#1e3a5f]" />, dot: careerDot },
+              { label: "Social Verification", icon: <Globe className="h-4 w-4 text-[#1e3a5f]" />, dot: socialDot },
+              { label: "Media & Appearances", icon: <Video className="h-4 w-4 text-[#1e3a5f]" />, dot: mediaDot },
+              { label: "Background Review", icon: <ShieldAlert className="h-4 w-4 text-[#1e3a5f]" />, dot: bgDot },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50">
                 {item.icon}
@@ -259,7 +259,7 @@ export default function PublicVerificationReport() {
         {record.ai_analysis && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-4">
             <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-[#6C5CE7]" />
+              <FileText className="h-4 w-4 text-[#1e3a5f]" />
               Intelligence Summary
             </h2>
             <MarkdownResponse content={record.ai_analysis!} />
@@ -270,7 +270,7 @@ export default function PublicVerificationReport() {
         {sources.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-4">
             <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <Search className="h-4 w-4 text-[#6C5CE7]" />
+              <Search className="h-4 w-4 text-[#1e3a5f]" />
               Evidence Sources ({sources.length})
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -286,7 +286,7 @@ export default function PublicVerificationReport() {
         {/* Footer */}
         <div className="text-center mt-8 pb-8">
           <p className="text-xs text-gray-400">
-            Powered by <a href="https://milcrunch.com" className="text-[#6C5CE7] font-medium hover:underline">MilCrunch</a> Military Verification
+            Powered by <a href="https://milcrunch.com" className="text-[#1e3a5f] font-medium hover:underline">MilCrunch</a> Military Verification
           </p>
         </div>
       </main>

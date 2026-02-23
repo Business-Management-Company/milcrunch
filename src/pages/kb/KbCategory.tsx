@@ -19,7 +19,7 @@ const KbCategory = () => {
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-1 text-xl font-bold">
               <span className="text-gray-900">MilCrunch</span>
-              <span className="text-[#6C5CE7] font-extrabold">X</span>
+              <span className="text-[#3b82f6] font-extrabold">X</span>
             </Link>
             <Link
               to="/kb"
@@ -39,7 +39,7 @@ const KbCategory = () => {
           </p>
           <Link
             to="/kb"
-            className="inline-flex items-center gap-2 text-[#6C5CE7] hover:underline font-medium text-sm"
+            className="inline-flex items-center gap-2 text-[#1e3a5f] hover:underline font-medium text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Knowledge Base
@@ -56,7 +56,7 @@ const KbCategory = () => {
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-1 text-xl font-bold">
             <span className="text-gray-900">MilCrunch</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
+            <span className="text-[#3b82f6] font-extrabold">X</span>
           </Link>
           <Link
             to="/kb"
@@ -71,7 +71,7 @@ const KbCategory = () => {
       <div className="border-b border-gray-100 bg-gray-50">
         <div className="max-w-5xl mx-auto px-4 py-3">
           <nav className="flex items-center gap-2 text-sm text-gray-500">
-            <Link to="/kb" className="hover:text-[#6C5CE7] transition-colors">
+            <Link to="/kb" className="hover:text-[#1e3a5f] transition-colors">
               Knowledge Base
             </Link>
             <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
@@ -103,7 +103,7 @@ const KbCategory = () => {
             </p>
             <Link
               to="/kb"
-              className="inline-flex items-center gap-2 text-[#6C5CE7] hover:underline font-medium text-sm mt-4"
+              className="inline-flex items-center gap-2 text-[#1e3a5f] hover:underline font-medium text-sm mt-4"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Knowledge Base
@@ -122,7 +122,7 @@ const KbCategory = () => {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 group-hover:text-[#6C5CE7] transition-colors text-lg">
+                    <h3 className="font-semibold text-gray-900 group-hover:text-[#1e3a5f] transition-colors text-lg">
                       {article.title}
                     </h3>
                     <p className="text-gray-500 text-sm mt-2 line-clamp-2">
@@ -136,7 +136,7 @@ const KbCategory = () => {
                       <span>{article.date}</span>
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-[#6C5CE7] transition-colors mt-1 flex-shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-[#1e3a5f] transition-colors mt-1 flex-shrink-0" />
                 </div>
               </Link>
             ))}
@@ -151,7 +151,7 @@ const KbCategory = () => {
             Can't find what you need?{" "}
             <a
               href="mailto:support@recurrentx.com"
-              className="text-[#6C5CE7] hover:underline font-medium"
+              className="text-[#1e3a5f] hover:underline font-medium"
             >
               Contact support
             </a>

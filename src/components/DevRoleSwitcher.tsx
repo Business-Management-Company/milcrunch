@@ -18,7 +18,7 @@ const roleConfig: { value: SimulatedRole; label: string; icon: React.ElementType
   { value: "brand_admin", label: "Brand Admin", icon: Briefcase, color: "bg-yellow-500" },
   { value: "event_planner", label: "Event Planner", icon: Star, color: "bg-green-500" },
   { value: "sponsor", label: "Sponsor", icon: Award, color: "bg-blue-500" },
-  { value: "judge", label: "Judge", icon: UserCheck, color: "bg-purple-500" },
+  { value: "judge", label: "Judge", icon: UserCheck, color: "bg-blue-600" },
   { value: "attendee", label: "Attendee", icon: User, color: "bg-gray-500" },
 ];
 

@@ -234,8 +234,8 @@ const CheckInMode = ({ eventId, eventTitle, registrations, tickets, onClose, onR
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 bg-gray-800 rounded-full px-4 py-2">
-            <Users className="h-4 w-4 text-purple-400" />
-            <span className="text-lg font-bold text-purple-400">{checkedInCount}</span>
+            <Users className="h-4 w-4 text-blue-500" />
+            <span className="text-lg font-bold text-blue-500">{checkedInCount}</span>
             <span className="text-gray-400">/</span>
             <span className="text-gray-300">{registrations.length}</span>
             <span className="text-xs text-gray-500 ml-1">Checked In</span>
@@ -279,7 +279,7 @@ const CheckInMode = ({ eventId, eventTitle, registrations, tickets, onClose, onR
                 <canvas ref={canvasRef} className="hidden" />
                 {/* Scanning overlay */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-48 border-2 border-purple-500 rounded-lg" />
+                  <div className="w-48 h-48 border-2 border-blue-600 rounded-lg" />
                 </div>
               </>
             ) : (
@@ -296,7 +296,7 @@ const CheckInMode = ({ eventId, eventTitle, registrations, tickets, onClose, onR
                 Stop Camera
               </Button>
             ) : (
-              <Button onClick={startCamera} className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Button onClick={startCamera} className="bg-blue-700 hover:bg-blue-800 text-white">
                 <Camera className="h-4 w-4 mr-2" /> Start Camera Scan
               </Button>
             )}

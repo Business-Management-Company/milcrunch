@@ -37,24 +37,24 @@
 
     --radius: 0.75rem;
 
-    --parade-blue: 247 74% 63%;
-    --parade-blue-light: 247 74% 73%;
+    --parade-blue: 213 52% 24%;
+    --parade-blue-light: 213 52% 40%;
     --space-deep: 234 100% 13%;
     --space-mid: 211 92% 24%;
-    --cosmic-purple: 280 70% 60%;
+    --cosmic-purple: 217 60% 35%;
     --star-glow: 43 87% 53%;
 
     --gradient-hero: linear-gradient(135deg, #F8F9FB 0%, #fff 100%);
     --gradient-dark: linear-gradient(135deg, #F8F9FB 0%, #fff 100%);
-    --gradient-primary: linear-gradient(135deg, #6C5CE7 0%, #5B4BD1 100%);
+    --gradient-primary: linear-gradient(135deg, #1e3a5f 0%, #2d5282 100%);
     --gradient-accent: linear-gradient(135deg, #F0A71F 0%, #e09a1a 100%);
     --gradient-card: linear-gradient(180deg, #fff 0%, #fff 100%);
-    --gradient-cosmos: linear-gradient(180deg, #6C5CE7 0%, #5B4BD1 50%, #000741 100%);
+    --gradient-cosmos: linear-gradient(180deg, #1e3a5f 0%, #2d5282 50%, #000741 100%);
 
-    --shadow-glow: 0 0 60px rgba(108, 92, 231, 0.2);
+    --shadow-glow: 0 0 60px rgba(30, 58, 95, 0.2);
     --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.08);
     --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.12);
-    --shadow-parade: 0 0 80px rgba(108, 92, 231, 0.25);
+    --shadow-parade: 0 0 80px rgba(30, 58, 95, 0.25);
 
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -86,10 +86,10 @@
     --gradient-dark: linear-gradient(135deg, #0F1117 0%, #1A1D27 100%);
     --gradient-card: linear-gradient(180deg, #1A1D27 0%, #1A1D27 100%);
 
-    --shadow-glow: 0 0 60px rgba(108, 92, 231, 0.2);
+    --shadow-glow: 0 0 60px rgba(30, 58, 95, 0.2);
     --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.4);
     --shadow-elevated: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-    --shadow-parade: 0 0 80px rgba(108, 92, 231, 0.25);
+    --shadow-parade: 0 0 80px rgba(30, 58, 95, 0.25);
   }
 }
 
@@ -216,7 +216,7 @@
 }
 
 .markdown-rendered a {
-  @apply text-[#6C5CE7] underline hover:text-[#5B4BD1];
+  @apply text-[#1e3a5f] underline hover:text-[#2d5282];
 }
 
 .markdown-rendered blockquote {

@@ -130,7 +130,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 cursor-pointer text-sm rounded-lg mx-2",
                       i === selectedIndex
-                        ? "bg-[#6C5CE7]/15 dark:bg-[#6C5CE7]/15 text-[#6C5CE7]"
+                        ? "bg-[#1e3a5f]/15 dark:bg-[#1e3a5f]/15 text-[#1e3a5f]"
                         : "text-foreground hover:bg-muted/80 dark:hover:bg-gray-800"
                     )}
                     onMouseEnter={() => setSelectedIndex(i)}

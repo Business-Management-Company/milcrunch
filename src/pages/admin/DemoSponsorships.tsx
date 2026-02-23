@@ -213,8 +213,8 @@ const tierColors: Record<string, string> = {
   gold: "bg-gradient-to-r from-yellow-400 to-amber-500 text-amber-900",
   silver: "bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800",
   bronze: "bg-gradient-to-r from-orange-400 to-orange-600 text-orange-900",
-  startup: "bg-gradient-to-r from-purple-400 to-purple-500 text-purple-900",
-  takeover: "bg-gradient-to-r from-purple-500 to-indigo-600 text-white"
+  startup: "bg-gradient-to-r from-blue-500 to-blue-600 text-blue-900",
+  takeover: "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
 };
 
 const DemoSponsorships = () => {

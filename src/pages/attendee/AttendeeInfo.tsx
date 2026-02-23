@@ -146,7 +146,7 @@ function AttendeeInfoContent() {
           {/* Venue */}
           {event.venue && (
             <div className="flex items-start gap-3 mb-4">
-              <MapPin className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+              <MapPin className="h-5 w-5 text-[#1e3a5f] shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-gray-900">{event.venue}</p>
                 <p className="text-sm text-gray-500">
@@ -157,7 +157,7 @@ function AttendeeInfoContent() {
                     href={googleMapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-[#6C5CE7] font-medium mt-1 hover:underline"
+                    className="inline-flex items-center gap-1 text-xs text-[#1e3a5f] font-medium mt-1 hover:underline"
                   >
                     <ExternalLink className="h-3 w-3" />
                     Open in Maps
@@ -169,7 +169,7 @@ function AttendeeInfoContent() {
 
           {/* Dates */}
           <div className="flex items-start gap-3 mb-4">
-            <Calendar className="h-5 w-5 text-[#6C5CE7] shrink-0 mt-0.5" />
+            <Calendar className="h-5 w-5 text-[#1e3a5f] shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-gray-900">Dates & Times</p>
               <p className="text-sm text-gray-500">
@@ -198,8 +198,8 @@ function AttendeeInfoContent() {
         {/* WiFi Card */}
         <Card className="p-4 bg-white rounded-xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
-              <Wifi className="h-5 w-5 text-[#6C5CE7]" />
+            <div className="w-10 h-10 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center shrink-0">
+              <Wifi className="h-5 w-5 text-[#1e3a5f]" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-900">WiFi Access</p>
@@ -251,7 +251,7 @@ function AttendeeInfoContent() {
                   <Phone className="h-4 w-4 text-gray-400" />
                   <span className="text-sm font-medium text-gray-700">{c.label}</span>
                 </div>
-                <span className="text-sm text-[#6C5CE7] font-medium group-hover:underline">
+                <span className="text-sm text-[#1e3a5f] font-medium group-hover:underline">
                   {c.number}
                 </span>
               </a>

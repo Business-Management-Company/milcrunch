@@ -940,7 +940,7 @@ export default function CreatorProfileModal({
                   }}
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-3xl">
+                <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-3xl">
                   {displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
               )}
@@ -948,7 +948,7 @@ export default function CreatorProfileModal({
             <p className="text-lg font-bold text-center text-gray-900 dark:text-white">
               {displayName}
               {isVerified && (
-                <span className="ml-1.5 inline-flex items-center rounded-full bg-[#6C5CE7]/20 px-1.5 py-0.5 text-xs font-medium text-[#6C5CE7]">
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-[#1e3a5f]/20 px-1.5 py-0.5 text-xs font-medium text-[#1e3a5f]">
                   Verified
                 </span>
               )}
@@ -958,7 +958,7 @@ export default function CreatorProfileModal({
                 href={platformLink ?? `https://instagram.com/${displayUsername}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-center text-[#6C5CE7] hover:underline mb-2 block"
+                className="text-sm text-center text-[#1e3a5f] hover:underline mb-2 block"
               >
                 @{displayUsername}
               </a>
@@ -982,7 +982,7 @@ export default function CreatorProfileModal({
                   </Button>
                 ) : (
                   <Button
-                    className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg"
+                    className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg"
                     disabled={!listCreator}
                     onClick={() => { setListDropdownOpen(!listDropdownOpen); setDirDropdownOpen(false); setEventDropdownOpen(false); }}
                   >
@@ -1001,10 +1001,10 @@ export default function CreatorProfileModal({
                           key={list.id}
                           type="button"
                           onClick={() => { handleAddToList(list.id, list.name); setListDropdownOpen(false); }}
-                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
                         >
-                          <div className="w-7 h-7 rounded-lg bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
-                            <ListPlus className="h-3.5 w-3.5 text-[#6C5CE7]" />
+                          <div className="w-7 h-7 rounded-lg bg-[#1e3a5f]/10 flex items-center justify-center shrink-0">
+                            <ListPlus className="h-3.5 w-3.5 text-[#1e3a5f]" />
                           </div>
                           <span className="truncate flex-1">{list.name}</span>
                         </button>
@@ -1020,9 +1020,9 @@ export default function CreatorProfileModal({
                             onKeyDown={(e) => e.key === "Enter" && handleInlineCreateList()}
                             placeholder="List name..."
                             autoFocus
-                            className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]/40"
+                            className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
                           />
-                          <button type="button" onClick={handleInlineCreateList} className="p-1.5 rounded-lg bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]">
+                          <button type="button" onClick={handleInlineCreateList} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
                             <Plus className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -1030,7 +1030,7 @@ export default function CreatorProfileModal({
                         <button
                           type="button"
                           onClick={() => setShowNewListInput(true)}
-                          className="w-full flex items-center gap-2 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-[#6C5CE7] font-medium text-left transition-colors"
+                          className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
                         >
                           <Plus className="h-4 w-4" />
                           Create New List
@@ -1046,7 +1046,7 @@ export default function CreatorProfileModal({
                 <div className="relative" ref={dirDropdownRef}>
                   <Button
                     variant="outline"
-                    className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
+                    className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
                     disabled={approvingDir}
                     onClick={() => { setDirDropdownOpen(!dirDropdownOpen); setListDropdownOpen(false); setEventDropdownOpen(false); }}
                   >
@@ -1064,10 +1064,10 @@ export default function CreatorProfileModal({
                             key={dir.id}
                             type="button"
                             onClick={() => handleStandaloneApprove(dir.id)}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
                           >
-                            <div className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
-                              <FolderPlus className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                              <FolderPlus className="h-3.5 w-3.5 text-blue-700 dark:text-blue-500" />
                             </div>
                             <span className="truncate flex-1">{dir.name}</span>
                           </button>
@@ -1083,9 +1083,9 @@ export default function CreatorProfileModal({
                               onKeyDown={(e) => e.key === "Enter" && handleInlineCreateDir()}
                               placeholder="Directory name..."
                               autoFocus
-                              className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#6C5CE7]/40"
+                              className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
                             />
-                            <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]">
+                            <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                           </div>
@@ -1093,7 +1093,7 @@ export default function CreatorProfileModal({
                           <button
                             type="button"
                             onClick={() => setShowNewDirInput(true)}
-                            className="w-full flex items-center gap-2 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-[#6C5CE7] font-medium text-left transition-colors"
+                            className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
                           >
                             <Plus className="h-4 w-4" />
                             Create New Directory
@@ -1132,7 +1132,7 @@ export default function CreatorProfileModal({
                             key={evt.id}
                             type="button"
                             onClick={() => handleInviteToEvent(evt.id, evt.title)}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
                           >
                             <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
                               <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
@@ -1164,7 +1164,7 @@ export default function CreatorProfileModal({
               {!hideDirectoryActions && (
                 <Button
                   variant="outline"
-                  className="w-full bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 rounded-lg"
+                  className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
                   onClick={handleVerifyMilitary}
                 >
                   <ShieldCheck className="mr-2 h-4 w-4" />
@@ -1218,7 +1218,7 @@ export default function CreatorProfileModal({
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-[#6C5CE7] text-white"
+                            ? "bg-[#1e3a5f] text-white"
                             : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
                         )}
                       >
@@ -1336,7 +1336,7 @@ export default function CreatorProfileModal({
                           href={href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-[#6C5CE7] hover:text-white transition-colors"
+                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-[#1e3a5f] hover:text-white transition-colors"
                           title={PLATFORM_LABELS[p] ?? p}
                         >
                           {(p === "instagram" && <Instagram className="h-5 w-5" />) ||
@@ -1361,7 +1361,7 @@ export default function CreatorProfileModal({
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 px-3 py-1 text-sm text-[#6C5CE7] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate max-w-[220px]"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 px-3 py-1 text-sm text-[#1e3a5f] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate max-w-[220px]"
                           title={url}
                         >
                           <Link className="h-3 w-3 shrink-0" />
@@ -1382,19 +1382,19 @@ export default function CreatorProfileModal({
                     <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 gap-2 h-auto">
                       <TabsTrigger
                         value="analytics"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white data-[state=active]:border-[#6C5CE7] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#1e3a5f] data-[state=active]:text-white data-[state=active]:border-[#1e3a5f] text-gray-600 dark:text-gray-400 py-2.5"
                       >
                         <BarChart3 className="h-4 w-4" /> Analytics
                       </TabsTrigger>
                       <TabsTrigger
                         value="posts"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white data-[state=active]:border-[#6C5CE7] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#1e3a5f] data-[state=active]:text-white data-[state=active]:border-[#1e3a5f] text-gray-600 dark:text-gray-400 py-2.5"
                       >
                         <Image className="h-4 w-4" /> Posts
                       </TabsTrigger>
                       <TabsTrigger
                         value="similar"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#6C5CE7] data-[state=active]:text-white data-[state=active]:border-[#6C5CE7] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#1e3a5f] data-[state=active]:text-white data-[state=active]:border-[#1e3a5f] text-gray-600 dark:text-gray-400 py-2.5"
                       >
                         <Users className="h-4 w-4" /> Similar Accounts
                       </TabsTrigger>
@@ -1440,7 +1440,7 @@ export default function CreatorProfileModal({
                                 <XAxis dataKey="post" tick={{ fontSize: 9 }} />
                                 <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v}%`} />
                                 <Tooltip formatter={(value: number) => [`${value.toFixed(2)}%`, "ER"]} />
-                                <Bar dataKey="er" fill="#6C5CE7" radius={[3, 3, 0, 0]} />
+                                <Bar dataKey="er" fill="#1e3a5f" radius={[3, 3, 0, 0]} />
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
@@ -1474,8 +1474,8 @@ export default function CreatorProfileModal({
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
                           <p className="text-sm text-gray-700 dark:text-gray-300">
                             @{displayUsername || "handle"} generated between{" "}
-                            <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMin)}</span> and{" "}
-                            <span className="font-bold text-[#6C5CE7]">${formatNum(incomeMax)}</span> in income in the last 90 days.
+                            <span className="font-bold text-[#1e3a5f]">${formatNum(incomeMin)}</span> and{" "}
+                            <span className="font-bold text-[#1e3a5f]">${formatNum(incomeMax)}</span> in income in the last 90 days.
                           </p>
                         </div>
                       ) : showEnrichmentLoading ? (
@@ -1497,7 +1497,7 @@ export default function CreatorProfileModal({
                                 <span
                                   key={tag}
                                   className={cn(
-                                    "inline-block rounded-lg bg-[#6C5CE7]/10 px-3 py-1.5 font-medium text-[#6C5CE7] transition-colors hover:bg-[#6C5CE7]/20",
+                                    "inline-block rounded-lg bg-[#1e3a5f]/10 px-3 py-1.5 font-medium text-[#1e3a5f] transition-colors hover:bg-[#1e3a5f]/20",
                                     sizes[i] ?? "text-xs"
                                   )}
                                   style={{ opacity: opacities[i] ?? 0.55 }}

@@ -131,12 +131,12 @@ export default function RidesharePanel({ eventId }: Props) {
   if (!user) {
     return (
       <Card className="p-6 text-center border-gray-200">
-        <LogIn className="w-8 h-8 text-purple-400 mx-auto mb-3" />
+        <LogIn className="w-8 h-8 text-blue-500 mx-auto mb-3" />
         <p className="font-medium text-gray-900 mb-1">Sign in to participate</p>
         <p className="text-sm text-gray-500 mb-4">
           You need an account to offer or request rides.
         </p>
-        <Button asChild variant="outline" className="border-purple-300 text-purple-700">
+        <Button asChild variant="outline" className="border-blue-400 text-blue-800">
           <Link to="/login">Sign In</Link>
         </Button>
       </Card>

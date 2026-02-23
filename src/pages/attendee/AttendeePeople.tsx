@@ -67,7 +67,7 @@ const BRANCH_COLORS: Record<string, string> = {
 function Avatar({ name, url }: { name: string; url: string | null }) {
   if (url) return <img src={url} alt={name} className="h-12 w-12 rounded-full object-cover" />;
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  const colors = ["from-purple-500 to-blue-500", "from-blue-500 to-teal-500", "from-green-500 to-emerald-500", "from-amber-500 to-orange-500", "from-red-500 to-pink-500"];
+  const colors = ["from-blue-600 to-blue-500", "from-blue-500 to-teal-500", "from-green-500 to-emerald-500", "from-amber-500 to-orange-500", "from-red-500 to-pink-500"];
   const idx = name.charCodeAt(0) % colors.length;
   return (
     <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${colors[idx]} flex items-center justify-center text-white text-sm font-bold`}>
@@ -137,7 +137,7 @@ export default function AttendeePeople({ eventId }: Props) {
     }
     if (status === "pending_received") {
       return (
-        <Button size="sm" className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-xs h-7" onClick={() => acceptConnection(attendee.id)}>
+        <Button size="sm" className="bg-[#1e3a5f] hover:bg-[#2d5282] text-xs h-7" onClick={() => acceptConnection(attendee.id)}>
           Accept
         </Button>
       );
@@ -187,10 +187,10 @@ export default function AttendeePeople({ eventId }: Props) {
           </div>
 
           {/* QR Networking Banner */}
-          <div className="rounded-xl bg-gradient-to-r from-[#6C5CE7]/10 to-purple-100/50 dark:from-[#6C5CE7]/20 dark:to-purple-900/20 border border-[#6C5CE7]/20 p-3 flex items-center gap-3">
-            <QrCode className="h-8 w-8 text-[#6C5CE7] shrink-0" />
+          <div className="rounded-xl bg-gradient-to-r from-[#1e3a5f]/10 to-blue-100/50 dark:from-[#1e3a5f]/20 dark:to-blue-900/20 border border-[#1e3a5f]/20 p-3 flex items-center gap-3">
+            <QrCode className="h-8 w-8 text-[#1e3a5f] shrink-0" />
             <div>
-              <p className="text-xs font-semibold text-[#6C5CE7]">Scan to Connect</p>
+              <p className="text-xs font-semibold text-[#1e3a5f]">Scan to Connect</p>
               <p className="text-xs text-muted-foreground">Share your QR code from the Profile tab to instantly connect with nearby attendees</p>
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function AttendeePeople({ eventId }: Props) {
             />
             <Button
               onClick={() => connectModal && sendConnection(connectModal)}
-              className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5]"
+              className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]"
             >
               <UserPlus className="h-4 w-4 mr-2" /> Send Connection Request
             </Button>

@@ -263,8 +263,8 @@ const EventRegister = () => {
                 <div
                   className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
-                    i < step ? "bg-purple-500 text-white" :
-                    i === step ? "bg-purple-100 text-purple-700 border-2 border-purple-500" :
+                    i < step ? "bg-blue-600 text-white" :
+                    i === step ? "bg-blue-100 text-blue-800 border-2 border-blue-600" :
                     "bg-gray-100 text-gray-400"
                   )}
                 >
@@ -277,7 +277,7 @@ const EventRegister = () => {
                   {label}
                 </span>
                 {i < STEPS.length - 1 && (
-                  <div className={cn("w-8 sm:w-16 h-px ml-2", i < step ? "bg-purple-500" : "bg-gray-200")} />
+                  <div className={cn("w-8 sm:w-16 h-px ml-2", i < step ? "bg-blue-600" : "bg-gray-200")} />
                 )}
               </div>
             ))}
@@ -307,7 +307,7 @@ const EventRegister = () => {
                     onClick={() => !soldOut && setSelectedTicket(t.id)}
                     className={cn(
                       "p-5 cursor-pointer transition-all border-2",
-                      isSelected ? "border-purple-500 bg-purple-50/50 shadow-md" :
+                      isSelected ? "border-blue-600 bg-blue-50/50 shadow-md" :
                       "border-gray-200 hover:border-gray-300",
                       soldOut && "opacity-50 cursor-not-allowed"
                     )}
@@ -317,7 +317,7 @@ const EventRegister = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold text-gray-900 text-lg">{t.name}</h3>
                           {isSelected && (
-                            <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                            <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
                               <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
@@ -363,7 +363,7 @@ const EventRegister = () => {
               <p className="text-gray-500">
                 Registering for: <span className="font-medium text-gray-700">{selectedTicketData?.name}</span>
                 {selectedTicketData && (
-                  <span className="text-purple-600 ml-1">
+                  <span className="text-blue-700 ml-1">
                     ({selectedTicketData.price === 0 ? "Free" : `$${selectedTicketData.price}`})
                   </span>
                 )}
@@ -517,7 +517,7 @@ const EventRegister = () => {
           <div className="space-y-6">
             {/* Success banner */}
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-purple-500 mx-auto mb-4 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-blue-600 mx-auto mb-4 flex items-center justify-center">
                 <Check className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-1">You're Registered!</h2>
@@ -557,7 +557,7 @@ const EventRegister = () => {
               <h3 className="font-semibold text-gray-900 mb-3">Event Details</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-3">
-                  <Calendar className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                  <Calendar className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-gray-900">
                       {event.start_date && format(new Date(event.start_date), "EEEE, MMMM d, yyyy")}
@@ -571,7 +571,7 @@ const EventRegister = () => {
                 </div>
                 {event.venue && (
                   <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                    <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                     <div>
                       <p className="text-gray-900">{event.venue}</p>
                       <p className="text-gray-500">{[event.city, event.state].filter(Boolean).join(", ")}</p>
@@ -579,7 +579,7 @@ const EventRegister = () => {
                   </div>
                 )}
                 <div className="flex items-start gap-3">
-                  <Ticket className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                  <Ticket className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-gray-900">{selectedTicketData?.name}</p>
                     <p className="text-gray-500">{form.first_name} {form.last_name}</p>
@@ -591,10 +591,10 @@ const EventRegister = () => {
             {/* Ride Share CTA */}
             {(event as Record<string, unknown>).rideshare_enabled && (
             <>
-            <Card className="p-5 border-purple-200 bg-purple-50/50">
+            <Card className="p-5 border-blue-300 bg-blue-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                  <Car className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <Car className="w-5 h-5 text-blue-700" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="font-medium text-gray-900">Need a ride? Offering one?</p>
@@ -602,7 +602,7 @@ const EventRegister = () => {
                 </div>
                 <Button
                   variant="outline"
-                  className="border-purple-300 text-purple-700 hover:bg-purple-100 shrink-0"
+                  className="border-blue-400 text-blue-800 hover:bg-blue-100 shrink-0"
                   onClick={() => setShowRideshare(true)}
                 >
                   Set Up
@@ -632,7 +632,7 @@ const EventRegister = () => {
               </Button>
               <Button
                 asChild
-                className="flex-1 bg-purple-500 hover:bg-purple-600 text-white"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Link to={`/events/${eventId}`}>Back to Event Page</Link>
               </Button>
@@ -653,7 +653,7 @@ const EventRegister = () => {
             <Button
               onClick={handleNext}
               disabled={submitting}
-              className="bg-purple-500 hover:bg-purple-600 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {submitting ? (
                 <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...</>

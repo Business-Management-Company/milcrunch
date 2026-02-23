@@ -58,7 +58,7 @@ const EventSelector = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -71,7 +71,7 @@ const EventSelector = () => {
           <div className="flex items-center justify-between mb-1">
             <h1 className="text-xl font-bold text-white">Events</h1>
             <span className="text-xs font-bold text-white tracking-tight">
-              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
+              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
             </span>
           </div>
           <p className="text-sm text-gray-400">Select an event to get started</p>
@@ -89,7 +89,7 @@ const EventSelector = () => {
             events.map((evt) => {
               const dateStr = formatDate(evt.start_date);
               const location = getLocation(evt);
-              const accent = evt.theme_color || "#6C5CE7";
+              const accent = evt.theme_color || "#1e3a5f";
 
               return (
                 <button

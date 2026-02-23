@@ -83,7 +83,7 @@ interface Props {
 
 /* ---------- constants ---------- */
 const METRIC_CONFIG: Record<string, { label: string; color: string; icon: typeof Eye }> = {
-  sponsor_impressions: { label: "Sponsor Impressions", color: "#6C5CE7", icon: Eye },
+  sponsor_impressions: { label: "Sponsor Impressions", color: "#1e3a5f", icon: Eye },
   community_growth: { label: "Community Growth", color: "#0984E3", icon: Users },
   creator_engagement: { label: "Creator Engagement", color: "#00B894", icon: Mic },
   content_performance: { label: "Content Performance", color: "#FDCB6E", icon: FileText },
@@ -92,10 +92,10 @@ const METRIC_CONFIG: Record<string, { label: string; color: string; icon: typeof
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const PIE_COLORS = ["#6C5CE7", "#0984E3", "#00B894", "#FDCB6E", "#D63031", "#A29BFE"];
+const PIE_COLORS = ["#1e3a5f", "#0984E3", "#00B894", "#FDCB6E", "#D63031", "#A29BFE"];
 
 const SPONSOR_COLORS = [
-  "#6C5CE7", "#00B894", "#FDCB6E", "#E17055", "#0984E3",
+  "#1e3a5f", "#00B894", "#FDCB6E", "#E17055", "#0984E3",
   "#E84393", "#00CEC9", "#FAB1A0", "#74B9FF", "#A29BFE",
   "#FD79A8", "#55EFC4", "#FF7675", "#636E72",
 ];
@@ -108,7 +108,7 @@ const TIER_STYLES: Record<string, { label: string; bg: string; text: string }> =
   gold: { label: "Gold", bg: "bg-amber-100", text: "text-amber-700" },
   silver: { label: "Silver", bg: "bg-gray-100", text: "text-gray-400" },
   bronze: { label: "Bronze", bg: "bg-orange-100", text: "text-orange-700" },
-  community: { label: "Community", bg: "bg-purple-100", text: "text-purple-700" },
+  community: { label: "Community", bg: "bg-blue-100", text: "text-blue-800" },
 };
 
 /* ---------- helpers ---------- */
@@ -763,7 +763,7 @@ export default function EventInsightsTab({ eventId, directoryId }: Props) {
       {/* ===== 1. KPI CARDS ROW ===== */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: "Total Impressions", value: formatNumber(totals.impressions), icon: Eye, color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-900/30" },
+          { label: "Total Impressions", value: formatNumber(totals.impressions), icon: Eye, color: "text-blue-700", bg: "bg-blue-100 dark:bg-blue-900/30" },
           { label: "Community Members", value: formatNumber(totals.community), icon: Users, color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
           { label: "Active Creators", value: formatNumber(totals.creators), icon: Mic, color: "text-green-600", bg: "bg-green-100 dark:bg-green-900/30" },
           { label: "Sponsor ROI", value: `${totals.roi}x`, icon: DollarSign, color: "text-red-600", bg: "bg-red-100 dark:bg-red-900/30" },

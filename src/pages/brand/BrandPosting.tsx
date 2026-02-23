@@ -73,7 +73,7 @@ const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
 );
 
 const PLATFORM_COLORS: Record<string, string> = {
-  instagram: "bg-purple-500",
+  instagram: "bg-blue-600",
   tiktok: "bg-teal-500",
   x: "bg-blue-500",
   youtube: "bg-red-500",
@@ -82,7 +82,7 @@ const PLATFORM_COLORS: Record<string, string> = {
 };
 
 const PLATFORM_GRADIENTS: Record<string, string> = {
-  instagram: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400",
+  instagram: "bg-gradient-to-br from-blue-600 via-pink-500 to-orange-400",
   tiktok: "bg-black",
   x: "bg-[#1A2744]",
   youtube: "bg-red-600",
@@ -876,7 +876,7 @@ export default function BrandPosting() {
   const XPreview = () => (
     <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto p-4">
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white text-sm font-bold shrink-0">
+        <div className="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-sm font-bold shrink-0">
           {displayInitial}
         </div>
         <div className="flex-1 min-w-0">
@@ -1002,7 +1002,7 @@ export default function BrandPosting() {
           "bg-white dark:bg-[#1A1D27] rounded-xl border shadow-md hover:shadow-lg transition-all overflow-hidden mb-2",
           isApproved && "border-l-[3px] border-l-green-500",
           isSelected
-            ? "border-[#6C5CE7] ring-1 ring-[#6C5CE7]/20"
+            ? "border-[#1e3a5f] ring-1 ring-[#1e3a5f]/20"
             : isApproved
               ? "border-gray-200 dark:border-gray-800"
               : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700",
@@ -1014,14 +1014,14 @@ export default function BrandPosting() {
               value={editCaption}
               onChange={(e) => setEditCaption(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
             />
             {post.source !== "campaign" && (
               <input
                 type="datetime-local"
                 value={editScheduledTime}
                 onChange={(e) => setEditScheduledTime(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-xs focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-xs focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
               />
             )}
             <div className="flex gap-2">
@@ -1029,7 +1029,7 @@ export default function BrandPosting() {
                 type="button"
                 onClick={() => handleSaveEdit(post)}
                 disabled={editSaving}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-medium hover:bg-[#5B4BD1] disabled:opacity-50"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-white text-xs font-medium hover:bg-[#2d5282] disabled:opacity-50"
               >
                 {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                 Save
@@ -1060,7 +1060,7 @@ export default function BrandPosting() {
                 className={cn(
                   "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
                   isSelected
-                    ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                    ? "bg-[#1e3a5f] border-[#1e3a5f]"
                     : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]",
                 )}
               >
@@ -1137,7 +1137,7 @@ export default function BrandPosting() {
                   {post.status || "draft"}
                 </span>
                 {post.source === "campaign" && post.campaign_name && (
-                  <span className="text-[10px] text-purple-600 dark:text-purple-400 truncate">
+                  <span className="text-[10px] text-blue-700 dark:text-blue-500 truncate">
                     {post.campaign_name}{post.event_title ? ` · ${post.event_title}` : ""}
                   </span>
                 )}
@@ -1209,7 +1209,7 @@ export default function BrandPosting() {
                 className={cn(
                   "relative pb-3 text-sm font-medium transition-colors",
                   activeTab === tab.id
-                    ? "text-[#6C5CE7]"
+                    ? "text-[#1e3a5f]"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300",
                 )}
               >
@@ -1220,7 +1220,7 @@ export default function BrandPosting() {
                       className={cn(
                         "text-[10px] font-semibold px-2 py-0.5 rounded-full",
                         activeTab === tab.id
-                          ? "bg-[#6C5CE7]/10 text-[#6C5CE7]"
+                          ? "bg-[#1e3a5f]/10 text-[#1e3a5f]"
                           : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
                       )}
                     >
@@ -1229,7 +1229,7 @@ export default function BrandPosting() {
                   )}
                 </span>
                 {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#6C5CE7] rounded-full" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1e3a5f] rounded-full" />
                 )}
               </button>
             ))}
@@ -1256,7 +1256,7 @@ export default function BrandPosting() {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
                         isActive
-                          ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                          ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
                           : "bg-white dark:bg-[#1A1D27] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
                       )}
                     >
@@ -1286,7 +1286,7 @@ export default function BrandPosting() {
                   <button
                     type="button"
                     onClick={() => handleBulkApprove(true)}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-semibold hover:bg-[#5B4BD1] transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-[#1e3a5f] text-white text-xs font-semibold hover:bg-[#2d5282] transition-colors"
                   >
                     <Check className="h-3.5 w-3.5" />
                     Approve All
@@ -1313,7 +1313,7 @@ export default function BrandPosting() {
                     className={cn(
                       "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
                       selectedPostIds.size === queuePosts.length && queuePosts.length > 0
-                        ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                        ? "bg-[#1e3a5f] border-[#1e3a5f]"
                         : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]",
                     )}
                   >
@@ -1349,7 +1349,7 @@ export default function BrandPosting() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("compose")}
-                  className="mt-3 text-sm text-[#6C5CE7] font-medium hover:underline"
+                  className="mt-3 text-sm text-[#1e3a5f] font-medium hover:underline"
                 >
                   Generate a campaign to get started →
                 </button>
@@ -1360,7 +1360,7 @@ export default function BrandPosting() {
                 {queueGrouped.campaigns.map(([campaignId, group]) => (
                   <div key={campaignId}>
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7]" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f]" />
                       <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         {group.name}
                       </h3>
@@ -1419,7 +1419,7 @@ export default function BrandPosting() {
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="What do you want to share?"
                   rows={5}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
                 />
                 <div className="flex items-center justify-between mt-2">
                   <p
@@ -1451,7 +1451,7 @@ export default function BrandPosting() {
                       }
                     }}
                     disabled={aiLoading}
-                    className="flex items-center gap-1.5 text-xs font-medium text-[#6C5CE7] hover:text-[#5B4BD1] transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 text-xs font-medium text-[#1e3a5f] hover:text-[#2d5282] transition-colors disabled:opacity-50"
                   >
                     {aiLoading ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1464,7 +1464,7 @@ export default function BrandPosting() {
 
                 {/* AI Prompt Popover */}
                 {showAiPrompt && (
-                  <div className="mt-3 p-3 rounded-xl bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10 border border-[#6C5CE7]/20">
+                  <div className="mt-3 p-3 rounded-xl bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10 border border-[#1e3a5f]/20">
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                       What's this post about? <span className="text-gray-400">(optional)</span>
                     </label>
@@ -1473,14 +1473,14 @@ export default function BrandPosting() {
                       value={aiContext}
                       onChange={(e) => setAiContext(e.target.value)}
                       placeholder="e.g. Behind the scenes at our military appreciation event..."
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 transition-all"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 transition-all"
                       onKeyDown={(e) => e.key === "Enter" && handleGenerateCaptions()}
                     />
                     <button
                       type="button"
                       onClick={handleGenerateCaptions}
                       disabled={aiLoading || selectedPlatforms.length === 0}
-                      className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6C5CE7] text-white text-xs font-semibold hover:bg-[#5B4BD1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1e3a5f] text-white text-xs font-semibold hover:bg-[#2d5282] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {aiLoading ? (
                         <>
@@ -1510,7 +1510,7 @@ export default function BrandPosting() {
                           setCaption(opt.text);
                           setAiCaptions([]);
                         }}
-                        className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40 hover:bg-[#6C5CE7]/5 dark:hover:bg-[#6C5CE7]/10 transition-all group"
+                        className="w-full text-left p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-[#1e3a5f]/40 hover:bg-[#1e3a5f]/5 dark:hover:bg-[#1e3a5f]/10 transition-all group"
                       >
                         <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed line-clamp-4">
                           {opt.text}
@@ -1557,7 +1557,7 @@ export default function BrandPosting() {
                       />
                     ) : (
                       <div className="flex items-center gap-3 px-4 py-6 bg-gray-50 dark:bg-[#0F1117]">
-                        <FileVideo className="h-8 w-8 text-[#6C5CE7]" />
+                        <FileVideo className="h-8 w-8 text-[#1e3a5f]" />
                         <div>
                           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             {file.name}
@@ -1582,12 +1582,12 @@ export default function BrandPosting() {
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl px-6 py-10 text-center cursor-pointer hover:border-[#6C5CE7]/40 transition-colors"
+                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl px-6 py-10 text-center cursor-pointer hover:border-[#1e3a5f]/40 transition-colors"
                   >
                     <ImagePlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">
                       Drag & drop or{" "}
-                      <span className="text-[#6C5CE7] font-medium">click to upload</span>
+                      <span className="text-[#1e3a5f] font-medium">click to upload</span>
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       Image (PNG, JPG, WebP) or Video (MP4)
@@ -1622,7 +1622,7 @@ export default function BrandPosting() {
                             : availablePlatforms.map((p) => p.id)
                         )
                       }
-                      className="text-xs font-medium text-[#6C5CE7] hover:underline"
+                      className="text-xs font-medium text-[#1e3a5f] hover:underline"
                     >
                       {selectedPlatforms.length === availablePlatforms.length
                         ? "Deselect All"
@@ -1658,7 +1658,7 @@ export default function BrandPosting() {
                           className={cn(
                             "flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all",
                             selected
-                              ? "border-[#6C5CE7] bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10"
+                              ? "border-[#1e3a5f] bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10"
                               : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                           )}
                         >
@@ -1666,7 +1666,7 @@ export default function BrandPosting() {
                             className={cn(
                               "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
                               selected
-                                ? "bg-[#6C5CE7] border-[#6C5CE7]"
+                                ? "bg-[#1e3a5f] border-[#1e3a5f]"
                                 : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]"
                             )}
                             onClick={(e) => { e.preventDefault(); togglePlatform(p.id); }}
@@ -1683,7 +1683,7 @@ export default function BrandPosting() {
                             )}
                           </div>
                           {selected && (
-                            <span className="text-[10px] font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2 py-0.5 rounded-full shrink-0">
+                            <span className="text-[10px] font-medium text-[#1e3a5f] bg-[#1e3a5f]/10 px-2 py-0.5 rounded-full shrink-0">
                               Active
                             </span>
                           )}
@@ -1713,7 +1713,7 @@ export default function BrandPosting() {
                           className={cn(
                             "px-4 py-1.5 rounded-md text-xs font-medium transition-all capitalize",
                             postType === type
-                              ? "bg-white dark:bg-[#1A1D27] text-[#6C5CE7] shadow-sm"
+                              ? "bg-white dark:bg-[#1A1D27] text-[#1e3a5f] shadow-sm"
                               : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
                           )}
                         >
@@ -1754,7 +1754,7 @@ export default function BrandPosting() {
                         onChange={(e) => setFirstComment(e.target.value)}
                         placeholder="Great for hashtags on Instagram & TikTok"
                         rows={3}
-                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
                       />
                       <p className="text-[10px] text-gray-400 mt-1">
                         This will be posted as the first comment on Instagram & TikTok.
@@ -1775,7 +1775,7 @@ export default function BrandPosting() {
                       className={cn(
                         "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-l-xl text-sm font-semibold transition-all",
                         canPost
-                          ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+                          ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
                           : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
                       )}
                     >
@@ -1803,7 +1803,7 @@ export default function BrandPosting() {
                       className={cn(
                         "flex items-center justify-center px-3 py-3 rounded-r-xl border-l text-sm transition-all",
                         canPost || sendMode === "draft"
-                          ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white border-[#5B4BD1]"
+                          ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white border-[#2d5282]"
                           : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-gray-200 dark:border-gray-700"
                       )}
                     >
@@ -1818,7 +1818,7 @@ export default function BrandPosting() {
                         onClick={() => { setSendMode("now"); setShowSendMenu(false); }}
                         className={cn(
                           "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors",
-                          sendMode === "now" && "text-[#6C5CE7] font-medium"
+                          sendMode === "now" && "text-[#1e3a5f] font-medium"
                         )}
                       >
                         <Send className="h-4 w-4" />
@@ -1826,14 +1826,14 @@ export default function BrandPosting() {
                           <p className="font-medium">Post Immediately</p>
                           <p className="text-[10px] text-gray-400">Publish to selected platforms now</p>
                         </div>
-                        {sendMode === "now" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                        {sendMode === "now" && <Check className="h-4 w-4 ml-auto text-[#1e3a5f]" />}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setSendMode("schedule"); setShowSendMenu(false); }}
                         className={cn(
                           "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
-                          sendMode === "schedule" && "text-[#6C5CE7] font-medium"
+                          sendMode === "schedule" && "text-[#1e3a5f] font-medium"
                         )}
                       >
                         <Calendar className="h-4 w-4" />
@@ -1841,14 +1841,14 @@ export default function BrandPosting() {
                           <p className="font-medium">Schedule for...</p>
                           <p className="text-[10px] text-gray-400">Pick a date & time to publish</p>
                         </div>
-                        {sendMode === "schedule" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                        {sendMode === "schedule" && <Check className="h-4 w-4 ml-auto text-[#1e3a5f]" />}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setSendMode("draft"); setShowSendMenu(false); }}
                         className={cn(
                           "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
-                          sendMode === "draft" && "text-[#6C5CE7] font-medium"
+                          sendMode === "draft" && "text-[#1e3a5f] font-medium"
                         )}
                       >
                         <Save className="h-4 w-4" />
@@ -1856,7 +1856,7 @@ export default function BrandPosting() {
                           <p className="font-medium">Save as Draft</p>
                           <p className="text-[10px] text-gray-400">Save without posting</p>
                         </div>
-                        {sendMode === "draft" && <Check className="h-4 w-4 ml-auto text-[#6C5CE7]" />}
+                        {sendMode === "draft" && <Check className="h-4 w-4 ml-auto text-[#1e3a5f]" />}
                       </button>
                     </div>
                   )}
@@ -1874,7 +1874,7 @@ export default function BrandPosting() {
                     value={scheduledTime}
                     onChange={(e) => setScheduledTime(e.target.value)}
                     min={new Date().toISOString().slice(0, 16)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
                   />
                 </div>
               )}
@@ -1884,7 +1884,7 @@ export default function BrandPosting() {
                   <button
                     type="button"
                     onClick={resetCompose}
-                    className="flex items-center gap-2 text-sm text-[#6C5CE7] hover:underline font-medium"
+                    className="flex items-center gap-2 text-sm text-[#1e3a5f] hover:underline font-medium"
                   >
                     <RefreshCw className="h-3.5 w-3.5" /> New Post
                   </button>
@@ -1912,7 +1912,7 @@ export default function BrandPosting() {
                         className={cn(
                           "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all",
                           previewTab === tab
-                            ? "bg-white dark:bg-[#1A1D27] text-[#6C5CE7] shadow-sm"
+                            ? "bg-white dark:bg-[#1A1D27] text-[#1e3a5f] shadow-sm"
                             : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
                         )}
                       >
@@ -1960,7 +1960,7 @@ export default function BrandPosting() {
                             <span className="text-xs text-gray-400">Ready</span>
                           )}
                           {status === "posting" && (
-                            <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7]" />
+                            <Loader2 className="h-4 w-4 animate-spin text-[#1e3a5f]" />
                           )}
                           {status === "success" && (
                             <div className="flex items-center gap-1.5">
@@ -2001,8 +2001,8 @@ export default function BrandPosting() {
               )}
 
               {/* Quick tips */}
-              <div className="bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10 rounded-xl border border-[#6C5CE7]/20 p-4">
-                <h4 className="text-xs font-semibold text-[#6C5CE7] uppercase tracking-wider mb-2">
+              <div className="bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10 rounded-xl border border-[#1e3a5f]/20 p-4">
+                <h4 className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wider mb-2">
                   Tips
                 </h4>
                 <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
@@ -2087,9 +2087,9 @@ export default function BrandPosting() {
                         className={cn(
                           "aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all text-sm",
                           isSelected
-                            ? "bg-[#6C5CE7] text-white"
+                            ? "bg-[#1e3a5f] text-white"
                             : isToday
-                              ? "bg-[#6C5CE7]/10 text-[#6C5CE7] font-semibold"
+                              ? "bg-[#1e3a5f]/10 text-[#1e3a5f] font-semibold"
                               : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300",
                           dayPosts.length > 0 && !isSelected && "font-medium",
                         )}
@@ -2114,7 +2114,7 @@ export default function BrandPosting() {
                               "absolute top-0.5 right-0.5 text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center",
                               isSelected
                                 ? "bg-white/20 text-white"
-                                : "bg-[#6C5CE7]/10 text-[#6C5CE7]",
+                                : "bg-[#1e3a5f]/10 text-[#1e3a5f]",
                             )}
                           >
                             {dayPosts.length}
@@ -2160,20 +2160,20 @@ export default function BrandPosting() {
                                     value={editCaption}
                                     onChange={(e) => setEditCaption(e.target.value)}
                                     rows={3}
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
                                   />
                                   <input
                                     type="datetime-local"
                                     value={editScheduledTime}
                                     onChange={(e) => setEditScheduledTime(e.target.value)}
-                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-xs focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-xs focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
                                   />
                                   <div className="flex gap-2">
                                     <button
                                       type="button"
                                       onClick={() => handleSaveEdit(post)}
                                       disabled={editSaving}
-                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6C5CE7] text-white text-xs font-medium hover:bg-[#5B4BD1] disabled:opacity-50"
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-white text-xs font-medium hover:bg-[#2d5282] disabled:opacity-50"
                                     >
                                       {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                                       Save

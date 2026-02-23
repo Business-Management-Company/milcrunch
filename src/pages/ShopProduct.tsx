@@ -68,7 +68,7 @@ export default function ShopProduct() {
       <div className="min-h-screen bg-[#0D0D1A] text-white">
         <PublicNav />
         <div className="flex items-center justify-center pt-14 min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
         </div>
       </div>
     );
@@ -81,7 +81,7 @@ export default function ShopProduct() {
         <div className="flex flex-col items-center justify-center pt-14 min-h-[60vh]">
           <ShoppingBag className="h-16 w-16 text-gray-600 mb-4" />
           <h2 className="text-xl font-semibold text-gray-300 mb-2">Product not found</h2>
-          <Link to="/shop" className="text-[#6C5CE7] hover:underline">Back to shop</Link>
+          <Link to="/shop" className="text-[#1e3a5f] hover:underline">Back to shop</Link>
         </div>
       </div>
     );
@@ -104,7 +104,7 @@ export default function ShopProduct() {
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
             {/* Image Gallery */}
             <div>
-              <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-purple-900/30 to-gray-900 mb-3">
+              <div className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-blue-900/30 to-gray-900 mb-3">
                 {images.length > 0 ? (
                   <img
                     src={images[mainImage] || images[0]}
@@ -113,7 +113,7 @@ export default function ShopProduct() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <ShoppingBag className="h-24 w-24 text-purple-700/50" />
+                    <ShoppingBag className="h-24 w-24 text-blue-800/50" />
                   </div>
                 )}
               </div>
@@ -124,7 +124,7 @@ export default function ShopProduct() {
                       key={i}
                       onClick={() => setMainImage(i)}
                       className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                        mainImage === i ? "border-[#6C5CE7]" : "border-transparent opacity-60 hover:opacity-100"
+                        mainImage === i ? "border-[#1e3a5f]" : "border-transparent opacity-60 hover:opacity-100"
                       }`}
                     >
                       <img src={img} alt="" className="w-full h-full object-cover" />
@@ -143,7 +143,7 @@ export default function ShopProduct() {
               <h1 className="text-3xl font-bold mb-4">{product.title}</h1>
 
               <div className="flex items-baseline gap-3 mb-6">
-                <span className="text-3xl font-bold text-[#6C5CE7]">${displayPrice.toFixed(2)}</span>
+                <span className="text-3xl font-bold text-[#1e3a5f]">${displayPrice.toFixed(2)}</span>
                 {product.compare_at_price && (
                   <span className="text-lg text-gray-500 line-through">${product.compare_at_price.toFixed(2)}</span>
                 )}
@@ -174,7 +174,7 @@ export default function ShopProduct() {
               <Button
                 onClick={handleAddToCart}
                 size="lg"
-                className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white rounded-xl py-6 text-base font-semibold"
+                className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-xl py-6 text-base font-semibold"
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Add to Cart

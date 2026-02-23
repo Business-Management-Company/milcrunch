@@ -244,7 +244,7 @@ const AttendeeRegister = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -255,7 +255,7 @@ const AttendeeRegister = () => {
         <Card className="p-8 text-center max-w-sm">
           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2">Event Not Found</h2>
-          <Button asChild className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white">
+          <Button asChild className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
             <Link to="/events">Browse Events</Link>
           </Button>
         </Card>
@@ -281,7 +281,7 @@ const AttendeeRegister = () => {
             <p className="text-xs text-gray-400">Registration</p>
           </div>
           <span className="text-xs font-bold text-white tracking-tight shrink-0">
-            MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
+            MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
           </span>
         </header>
 
@@ -295,9 +295,9 @@ const AttendeeRegister = () => {
                     className={cn(
                       "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
                       i < step
-                        ? "bg-[#6C5CE7] text-white"
+                        ? "bg-[#1e3a5f] text-white"
                         : i === step
-                        ? "bg-purple-100 text-[#6C5CE7] border-2 border-[#6C5CE7]"
+                        ? "bg-blue-100 text-[#1e3a5f] border-2 border-[#1e3a5f]"
                         : "bg-gray-100 text-gray-400"
                     )}
                   >
@@ -315,7 +315,7 @@ const AttendeeRegister = () => {
                     <div
                       className={cn(
                         "w-6 sm:w-12 h-px ml-1",
-                        i < step ? "bg-[#6C5CE7]" : "bg-gray-200"
+                        i < step ? "bg-[#1e3a5f]" : "bg-gray-200"
                       )}
                     />
                   )}
@@ -478,7 +478,7 @@ const AttendeeRegister = () => {
           {step === 2 && registrationId && (
             <div className="space-y-5">
               <div className="text-center pt-2">
-                <div className="w-16 h-16 rounded-full bg-[#6C5CE7] mx-auto mb-3 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-[#1e3a5f] mx-auto mb-3 flex items-center justify-center">
                   <Shield className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">
@@ -493,7 +493,7 @@ const AttendeeRegister = () => {
                     value={registrationId}
                     size={160}
                     level="M"
-                    fgColor="#6C5CE7"
+                    fgColor="#1e3a5f"
                   />
                 </div>
                 <p className="text-xs text-gray-400 mt-2">
@@ -503,7 +503,7 @@ const AttendeeRegister = () => {
 
               <Button
                 asChild
-                className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white h-12 text-base"
+                className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white h-12 text-base"
               >
                 <Link to={`/attend/${eventSlug}`}>Enter Event</Link>
               </Button>
@@ -529,7 +529,7 @@ const AttendeeRegister = () => {
                 size="sm"
                 onClick={step === 0 ? handleAccountNext : handleDetailsSubmit}
                 disabled={submitting}
-                className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
+                className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
               >
                 {submitting ? (
                   <>

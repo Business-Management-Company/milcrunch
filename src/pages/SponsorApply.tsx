@@ -70,7 +70,7 @@ export default function SponsorApply() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -81,7 +81,7 @@ export default function SponsorApply() {
         <Card className="p-12 text-center max-w-md">
           <h2 className="text-xl font-bold text-gray-900 mb-2">Form Not Found</h2>
           <p className="text-gray-500 text-sm">This sponsor application form doesn't exist or has been removed.</p>
-          <Link to="/" className="mt-4 inline-block text-[#6C5CE7] hover:underline text-sm">Go to homepage</Link>
+          <Link to="/" className="mt-4 inline-block text-[#1e3a5f] hover:underline text-sm">Go to homepage</Link>
         </Card>
       </div>
     );
@@ -105,7 +105,7 @@ export default function SponsorApply() {
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Thank You!</h2>
           <p className="text-gray-600">Your sponsor application has been submitted successfully. We'll be in touch within 48 hours.</p>
-          <Link to="/" className="mt-6 inline-block text-[#6C5CE7] hover:underline text-sm">Back to MilCrunch</Link>
+          <Link to="/" className="mt-6 inline-block text-[#1e3a5f] hover:underline text-sm">Back to MilCrunch</Link>
         </Card>
       </div>
     );
@@ -118,14 +118,14 @@ export default function SponsorApply() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
             <span className="font-bold text-2xl tracking-tight text-gray-900">
-              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span>
+              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
             </span>
           </Link>
         </div>
 
         <Card className="bg-white shadow-sm border-gray-200">
           {/* Header */}
-          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-[#6C5CE7]/5 to-transparent rounded-t-lg">
+          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-[#1e3a5f]/5 to-transparent rounded-t-lg">
             <h1 className="text-2xl font-bold text-gray-900">{form.title}</h1>
             {form.description && <p className="text-gray-500 text-sm mt-1">{form.description}</p>}
           </div>
@@ -144,14 +144,14 @@ export default function SponsorApply() {
               </div>
             ))}
 
-            <Button type="submit" disabled={submitting} className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white py-3 text-base">
+            <Button type="submit" disabled={submitting} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white py-3 text-base">
               {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting...</> : "Submit Application"}
             </Button>
           </form>
 
           <div className="p-4 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-400">
-              Powered by <span className="font-semibold">MilCrunch<span className="text-[#6C5CE7]">X</span></span>
+              Powered by <span className="font-semibold">MilCrunch<span className="text-[#1e3a5f]">X</span></span>
             </p>
           </div>
         </Card>
@@ -196,7 +196,7 @@ function RenderField({ field, value, onChange, onToggleCheckbox, error }: {
           <div className="space-y-2 mt-1">
             {(field.options || []).map((o) => (
               <label key={o} className="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name={field.id} checked={value === o} onChange={() => onChange(o)} className="accent-[#6C5CE7]" />
+                <input type="radio" name={field.id} checked={value === o} onChange={() => onChange(o)} className="accent-[#1e3a5f]" />
                 <span className="text-sm text-gray-700">{o}</span>
               </label>
             ))}
@@ -211,7 +211,7 @@ function RenderField({ field, value, onChange, onToggleCheckbox, error }: {
           <div className="space-y-2 mt-1">
             {(field.options || []).map((o) => (
               <label key={o} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={(value || []).includes(o)} onChange={() => onToggleCheckbox(o)} className="accent-[#6C5CE7] rounded" />
+                <input type="checkbox" checked={(value || []).includes(o)} onChange={() => onToggleCheckbox(o)} className="accent-[#1e3a5f] rounded" />
                 <span className="text-sm text-gray-700">{o}</span>
               </label>
             ))}
@@ -232,7 +232,7 @@ function RenderField({ field, value, onChange, onToggleCheckbox, error }: {
                 className={cn(
                   "rounded-lg p-3 text-center transition-all border-2",
                   value === t.name
-                    ? `${t.color} ${t.textColor} border-transparent ring-2 ring-[#6C5CE7] ring-offset-2`
+                    ? `${t.color} ${t.textColor} border-transparent ring-2 ring-[#1e3a5f] ring-offset-2`
                     : "bg-white border-gray-200 hover:border-gray-300 text-gray-700"
                 )}
               >

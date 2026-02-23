@@ -29,7 +29,7 @@ interface Props {
 const TYPE_CONFIG: Record<string, { icon: typeof Bell; color: string; bg: string }> = {
   schedule: { icon: Calendar, color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/30" },
   connection: { icon: UserCheck, color: "text-green-600", bg: "bg-green-100 dark:bg-green-900/30" },
-  community: { icon: MessageCircle, color: "text-purple-600", bg: "bg-purple-100 dark:bg-purple-900/30" },
+  community: { icon: MessageCircle, color: "text-blue-700", bg: "bg-blue-100 dark:bg-blue-900/30" },
   announcement: { icon: Megaphone, color: "text-red-600", bg: "bg-red-100 dark:bg-red-900/30" },
   reminder: { icon: Clock, color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
 };
@@ -167,7 +167,7 @@ export default function AttendeeNotifications({ eventId, onClearBadge }: Props) 
           )}
         </div>
         {unreadCount > 0 && (
-          <Button variant="ghost" size="sm" className="text-xs text-[#6C5CE7]" onClick={markAllRead}>
+          <Button variant="ghost" size="sm" className="text-xs text-[#1e3a5f]" onClick={markAllRead}>
             Mark all read
           </Button>
         )}
@@ -176,8 +176,8 @@ export default function AttendeeNotifications({ eventId, onClearBadge }: Props) 
       {/* Push Notification Toggle */}
       <Card className="p-3 bg-white dark:bg-[#1A1D27] rounded-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
-            <Bell className="h-4 w-4 text-[#6C5CE7]" />
+          <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-2">
+            <Bell className="h-4 w-4 text-[#1e3a5f]" />
           </div>
           <div>
             <Label className="text-sm font-medium">Push Notifications</Label>
@@ -199,7 +199,7 @@ export default function AttendeeNotifications({ eventId, onClearBadge }: Props) 
               className={`p-3 rounded-xl transition-colors cursor-pointer ${
                 notif.is_read
                   ? "bg-white dark:bg-[#1A1D27] border-gray-100 dark:border-gray-800"
-                  : "bg-purple-50/50 dark:bg-purple-900/10 border-[#6C5CE7]/20"
+                  : "bg-blue-50/50 dark:bg-blue-900/10 border-[#1e3a5f]/20"
               }`}
               onClick={() => markRead(notif.id)}
             >
@@ -213,7 +213,7 @@ export default function AttendeeNotifications({ eventId, onClearBadge }: Props) 
                       {notif.title}
                     </span>
                     {!notif.is_read && (
-                      <span className="w-2 h-2 rounded-full bg-[#6C5CE7] shrink-0" />
+                      <span className="w-2 h-2 rounded-full bg-[#1e3a5f] shrink-0" />
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.body}</p>

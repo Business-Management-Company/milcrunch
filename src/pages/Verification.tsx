@@ -184,7 +184,7 @@ function ConfidenceGauge({ score }: { score: number }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-    verified: { label: "Verified", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+    verified: { label: "Verified", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
     pending: { label: "Pending", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300", icon: <Clock className="h-3.5 w-3.5" /> },
     flagged: { label: "Flagged", className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
     denied: { label: "Denied", className: "bg-red-200 text-red-900 dark:bg-red-950 dark:text-red-200", icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -200,7 +200,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function StatusIcon({ status }: { status: string }) {
   const map: Record<string, { icon: React.ReactNode; tip: string }> = {
-    verified: { icon: <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />, tip: "Verified — Military service confirmed" },
+    verified: { icon: <ShieldCheck className="h-4 w-4 text-blue-700 shrink-0" />, tip: "Verified — Military service confirmed" },
     flagged: { icon: <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />, tip: "Needs Review — Conflicting information found" },
     denied: { icon: <XCircle className="h-4 w-4 text-red-500 shrink-0" />, tip: "Unverified — Could not confirm military service" },
     pending: { icon: <Clock className="h-4 w-4 text-amber-500 shrink-0" />, tip: "Pending — Verification in progress, awaiting additional sources" },
@@ -220,7 +220,7 @@ function StatusIcon({ status }: { status: string }) {
 
 function NameStatusIcon({ score }: { score: number }) {
   const icon = score >= 70
-    ? <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />
+    ? <ShieldCheck className="h-4 w-4 text-blue-700 shrink-0" />
     : score >= 40
       ? <Clock className="h-4 w-4 text-amber-500 shrink-0" />
       : <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
@@ -268,7 +268,7 @@ function InlineNameEdit({ id, name, onSave }: { id: string; name: string; onSave
           disabled={saving}
         />
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-purple-600" />}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-blue-700" />}
         </Button>
       </div>
     );
@@ -289,7 +289,7 @@ function InlineNameEdit({ id, name, onSave }: { id: string; name: string; onSave
 }
 
 function SourceIcon({ category }: { category: string }) {
-  if (category === "Military Service") return <ShieldCheck className="h-4 w-4 text-[#6C5CE7]" />;
+  if (category === "Military Service") return <ShieldCheck className="h-4 w-4 text-[#1e3a5f]" />;
   if (category === "Criminal Record") return <AlertCircle className="h-4 w-4 text-red-500" />;
   if (category === "Social Media") return <Globe className="h-4 w-4 text-gray-500" />;
   if (category === "News") return <FileText className="h-4 w-4 text-gray-500" />;
@@ -754,7 +754,7 @@ export default function Verification() {
             <div className="relative w-20 h-20 mx-auto">
               <svg className="absolute inset-0 w-full h-full animate-spin" viewBox="0 0 80 80" style={{ animationDuration: '2.5s' }}>
                 <circle cx="40" cy="40" r="36" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-                <circle cx="40" cy="40" r="36" fill="none" stroke="#7c3aed" strokeWidth="4"
+                <circle cx="40" cy="40" r="36" fill="none" stroke="#1e3a5f" strokeWidth="4"
                   strokeDasharray="60 165" strokeLinecap="round" />
               </svg>
               {modalPhotoUrl ? (
@@ -766,8 +766,8 @@ export default function Verification() {
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (
-                <div className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full bg-purple-100 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-purple-600">
+                <div className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-blue-700">
                     {addForm.fullName?.charAt(0) || '?'}
                   </span>
                 </div>
@@ -786,15 +786,15 @@ export default function Verification() {
                 const isRunning = p?.status === "running";
                 const phasePrefix = (n <= 4) ? `Phase ${n}: ` : "";
                 return (
-                  <div key={n} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${isRunning ? "bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800" : isDone ? "opacity-50" : "opacity-30"}`}>
+                  <div key={n} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${isRunning ? "bg-blue-50 dark:bg-blue-950/30 border border-blue-300 dark:border-blue-800" : isDone ? "opacity-50" : "opacity-30"}`}>
                     {isDone ? (
-                      <Check className="h-4 w-4 text-purple-600 shrink-0" />
+                      <Check className="h-4 w-4 text-blue-700 shrink-0" />
                     ) : isRunning ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-[#6C5CE7] shrink-0" />
+                      <Loader2 className="h-4 w-4 animate-spin text-[#1e3a5f] shrink-0" />
                     ) : (
                       <span className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
                     )}
-                    <span className={`text-sm font-medium ${isRunning ? "text-[#6C5CE7]" : ""}`}>
+                    <span className={`text-sm font-medium ${isRunning ? "text-[#1e3a5f]" : ""}`}>
                       {phasePrefix}{p?.name ?? labelMap[n]}
                     </span>
                   </div>
@@ -824,7 +824,7 @@ export default function Verification() {
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-muted-foreground">Verified</p>
-            <p className="text-2xl font-bold text-purple-600">{stats.verified}</p>
+            <p className="text-2xl font-bold text-blue-700">{stats.verified}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -855,7 +855,7 @@ export default function Verification() {
           </div>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+              <Button className="bg-[#1e3a5f] hover:bg-[#2d5282]">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Verification
               </Button>
@@ -920,7 +920,7 @@ export default function Verification() {
                               {m.ic_avatar_url ? (
                                 <img src={m.ic_avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
                               ) : (
-                                <div className="w-7 h-7 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                <div className="w-7 h-7 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                                   {(m.creator_name ?? '?').charAt(0).toUpperCase()}
                                 </div>
                               )}
@@ -1036,7 +1036,7 @@ export default function Verification() {
                 <Button
                   onClick={handleStartVerification}
                   disabled={pipelineRunning || !addForm.fullName.trim()}
-                  className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]"
+                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]"
                 >
                   {pipelineRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Start Verification
@@ -1047,7 +1047,7 @@ export default function Verification() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" /></div>
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" /></div>
           ) : (
             <Table>
               <TableHeader>
@@ -1086,8 +1086,8 @@ export default function Verification() {
                               }}
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-semibold text-purple-600">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-semibold text-blue-700">
                                 {row.person_name?.charAt(0) || '?'}
                               </span>
                             </div>
@@ -1158,7 +1158,7 @@ export default function Verification() {
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent>
                                 <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "verified" }).eq("id", row.id); toast.success("Status changed to verified"); fetchVerifications(); }}>
-                                  <ShieldCheck className="h-4 w-4 mr-2 text-purple-600" /> Verified
+                                  <ShieldCheck className="h-4 w-4 mr-2 text-blue-700" /> Verified
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "pending" }).eq("id", row.id); toast.success("Status changed to pending"); fetchVerifications(); }}>
                                   <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
@@ -1230,7 +1230,7 @@ export default function Verification() {
               <Label>Bio</Label>
               <Textarea value={speakerForm.bio} onChange={(e) => setSpeakerForm((f) => ({ ...f, bio: e.target.value }))} rows={3} />
             </div>
-            <Button onClick={handleSaveSpeaker} className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+            <Button onClick={handleSaveSpeaker} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
               <UserPlus className="h-4 w-4 mr-2" /> Save Speaker
             </Button>
           </div>
@@ -1260,7 +1260,7 @@ export default function Verification() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleSendInvite} disabled={!selectedEventId} className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+            <Button onClick={handleSendInvite} disabled={!selectedEventId} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
               <Mail className="h-4 w-4 mr-2" /> Send Invitation
             </Button>
           </div>
@@ -1497,7 +1497,7 @@ No markdown formatting, just the JSON array.`;
           {(searching || filtering) && (
             <Card className="pl-6 pr-10 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
               <CardContent className="flex items-center gap-3 py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
+                <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   {searching ? `Searching YouTube for "${record.person_name}"...` : "AI is filtering results for relevance..."}
                 </p>
@@ -1521,7 +1521,7 @@ No markdown formatting, just the JSON array.`;
                   href={`https://www.youtube.com/watch?v=${v.videoId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group block pl-6 pr-10 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#6C5CE7] hover:shadow-md transition-all"
+                  className="group block pl-6 pr-10 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#1e3a5f] hover:shadow-md transition-all"
                 >
                   <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
                     {v.thumbnail ? (
@@ -1542,7 +1542,7 @@ No markdown formatting, just the JSON array.`;
                     </div>
                   </div>
                   <div className="p-3">
-                    <p className="text-sm font-medium line-clamp-2 group-hover:text-[#6C5CE7]">{v.title}</p>
+                    <p className="text-sm font-medium line-clamp-2 group-hover:text-[#1e3a5f]">{v.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">{v.channelTitle}</p>
                     {v.publishedAt && (
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -1558,7 +1558,7 @@ No markdown formatting, just the JSON array.`;
           {!searching && !filtering && !showAll && hiddenCount > 0 && (
             <button
               onClick={() => setShowAll(true)}
-              className="text-sm text-[#6C5CE7] hover:underline flex items-center gap-1.5"
+              className="text-sm text-[#1e3a5f] hover:underline flex items-center gap-1.5"
             >
               <ChevronDown className="h-4 w-4" />
               See {hiddenCount} more video{hiddenCount !== 1 ? "s" : ""}
@@ -1695,7 +1695,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     const isStolenValor = /stolen valor|fraud/i.test(r.title + " " + r.snippet + " " + r.reasoning);
     if (r.concern_level === "high" || isStolenValor) return "bg-red-500";
     if (r.concern_level === "medium") return "bg-amber-400";
-    return "bg-purple-400";
+    return "bg-blue-500";
   };
 
   // Determine overall summary status — only flag "red" if AI confirms a high-relevance, high-concern result about this person
@@ -1727,7 +1727,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           <Button
             onClick={handleRunBackgroundReview}
             disabled={searching}
-            className="bg-[#6C5CE7] hover:bg-[#5B4BD1]"
+            className="bg-[#1e3a5f] hover:bg-[#2d5282]"
           >
             {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
             Run Background Review
@@ -1738,7 +1738,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           {(searching || aiFiltering) && (
             <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 pl-6 pr-10">
               <CardContent className="flex items-center gap-3 py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
+                <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   {searching ? "Searching public records..." : `AI is analyzing results for relevance to ${personName}...`}
                 </p>
@@ -1749,9 +1749,9 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           {!aiFiltering && !searching && hasSearched && (() => {
             const status = getSummaryStatus();
             if (status === "clear") return (
-              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                <CheckCircle2 className="h-5 w-5 text-purple-600 shrink-0" />
-                <p className="text-sm font-medium text-purple-700 dark:text-purple-300">No public concerns found for {personName}. Background review complete.</p>
+              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-800">
+                <CheckCircle2 className="h-5 w-5 text-blue-700 shrink-0" />
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-400">No public concerns found for {personName}. Background review complete.</p>
               </div>
             );
             if (status === "yellow") return (
@@ -1776,7 +1776,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
                     <div className="flex items-start gap-3">
                       <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${getConcernDot(r)}`} />
                       <div className="flex-1 min-w-0">
-                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground hover:text-[#6C5CE7] hover:underline flex items-center gap-1 text-sm">
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground hover:text-[#1e3a5f] hover:underline flex items-center gap-1 text-sm">
                           {r.title} <ExternalLink className="h-3 w-3 text-muted-foreground" />
                         </a>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.snippet}</p>
@@ -1790,7 +1790,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
               {!showAll && hiddenCount > 0 && (
                 <button
                   onClick={() => setShowAll(true)}
-                  className="text-sm text-[#6C5CE7] hover:underline flex items-center gap-1.5 pt-1"
+                  className="text-sm text-[#1e3a5f] hover:underline flex items-center gap-1.5 pt-1"
                 >
                   <ChevronDown className="h-4 w-4" />
                   Show {hiddenCount} more result{hiddenCount !== 1 ? "s" : ""}
@@ -1896,7 +1896,7 @@ function CompactSpeakerReadiness({ record, onRefresh }: { record: VerificationRe
                 checked={!!checked}
                 onChange={isAuto ? undefined : () => handleToggle(item.key)}
                 disabled={isAuto}
-                className="h-2.5 w-2.5 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+                className="h-2.5 w-2.5 rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
               />
               <span className={cn("text-xs flex-1 leading-none", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
                 {item.label}
@@ -1981,7 +1981,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
                 checked={!!checked}
                 onChange={isAuto ? undefined : () => handleToggle(item.key)}
                 disabled={isAuto}
-                className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+                className="h-4 w-4 rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
               />
               <span className={cn("text-sm flex-1", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
                 {item.label}
@@ -2063,7 +2063,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
     <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
       <button onClick={onToggle} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
         {isOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-        <Mic className="h-5 w-5 text-[#6C5CE7]" />
+        <Mic className="h-5 w-5 text-[#1e3a5f]" />
         <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
         {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
         <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} />
@@ -2088,7 +2088,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
                     checked={!!checked}
                     onChange={isAuto ? undefined : () => handleToggle(item.key)}
                     disabled={isAuto}
-                    className="h-4 w-4 rounded border-gray-300 text-[#6C5CE7] focus:ring-[#6C5CE7]"
+                    className="h-4 w-4 rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]"
                   />
                   <span className={cn("text-sm flex-1", !isAuto && "group-hover:text-[#000741] dark:group-hover:text-white transition-colors")}>
                     {item.label}
@@ -2192,7 +2192,7 @@ function RawSourceCard({ url, markdown }: { url: string; markdown: string }) {
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#6C5CE7] hover:underline flex items-center gap-1">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#1e3a5f] hover:underline flex items-center gap-1">
             {new URL(url).hostname}{new URL(url).pathname.slice(0, 60)} <ExternalLink className="h-3 w-3" />
           </a>
         </CardTitle>
@@ -2205,7 +2205,7 @@ function RawSourceCard({ url, markdown }: { url: string; markdown: string }) {
         {hasMore && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs text-[#6C5CE7] hover:underline mt-2 flex items-center gap-1"
+            className="text-xs text-[#1e3a5f] hover:underline mt-2 flex items-center gap-1"
           >
             {expanded ? <><ChevronDown className="h-3 w-3" /> Show less</> : <><ChevronRight className="h-3 w-3" /> Show more ({lines.length - 4} more lines)</>}
           </button>
@@ -2324,13 +2324,13 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
     if (b.includes("air force")) return "border-blue-500";
     if (b.includes("coast guard")) return "border-orange-500";
     if (b.includes("space")) return "border-gray-700";
-    return "border-purple-500";
+    return "border-blue-600";
   };
 
   if (extracting) {
     return (
       <div className="flex items-center gap-3 py-12 justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
         <p className="text-sm text-muted-foreground">Extracting comprehensive career data from all sources...</p>
       </div>
     );
@@ -2366,9 +2366,9 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         {/* ── Military Service ── */}
         {ms && ms.branch && (
           <>
-            <div className="border-l-4 border-purple-500 pl-4 pt-2 pb-4">
+            <div className="border-l-4 border-blue-600 pl-4 pt-2 pb-4">
               <h4 className="text-base font-semibold flex items-center gap-2 mb-3">
-                <ShieldCheck className="h-4 w-4 text-purple-600" /> Military Service
+                <ShieldCheck className="h-4 w-4 text-blue-700" /> Military Service
               </h4>
               <div className="space-y-3">
                 <div className="flex items-start gap-6">
@@ -2481,13 +2481,13 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
                     className={cn(
                       "pl-4 py-3 border-l-4 rounded-r-lg",
                       entry.is_military
-                        ? cn("bg-purple-50/50 dark:bg-purple-950/20", branchColor(entry.org))
+                        ? cn("bg-blue-50/50 dark:bg-blue-950/20", branchColor(entry.org))
                         : "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20"
                     )}
                   >
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm">{entry.org}</p>
-                      {entry.is_military && <ShieldCheck className="h-3.5 w-3.5 text-purple-600 shrink-0" />}
+                      {entry.is_military && <ShieldCheck className="h-3.5 w-3.5 text-blue-700 shrink-0" />}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {entry.rank && <span className="font-medium">{entry.rank} — </span>}
@@ -2737,7 +2737,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
     'Air Force': 'border-l-sky-500',
     'Coast Guard': 'border-l-orange-500',
     'Space Force': 'border-l-indigo-600',
-  } as Record<string, string>)[record.claimed_branch ?? ''] || 'border-l-purple-500';
+  } as Record<string, string>)[record.claimed_branch ?? ''] || 'border-l-blue-600';
 
   return (
     <div className={`border-l-4 ${expandedBranchColor} bg-white dark:bg-gray-950 rounded-r-xl shadow-sm mx-2 mb-4`}>
@@ -2907,7 +2907,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             <div className="mt-3 space-y-2 max-w-md">
               <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} placeholder="Add notes..." />
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleSaveNotes} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+                <Button size="sm" onClick={handleSaveNotes} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
                   <Save className="h-3.5 w-3.5 mr-1.5" /> Save
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setNotesOpen(false)}>Cancel</Button>
@@ -2920,7 +2920,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <Share2 className="h-5 w-5 text-[#6C5CE7]" />
+                  <Share2 className="h-5 w-5 text-[#1e3a5f]" />
                   Share Verification Report
                 </DialogTitle>
               </DialogHeader>
@@ -2930,7 +2930,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                 </p>
                 <div className="flex items-center gap-2">
                   <Input value={shareLink} readOnly className="text-sm font-mono" />
-                  <Button size="sm" onClick={handleCopyShareLink} className={shareCopied ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#6C5CE7] hover:bg-[#5B4BD1]"}>
+                  <Button size="sm" onClick={handleCopyShareLink} className={shareCopied ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#1e3a5f] hover:bg-[#2d5282]"}>
                     {shareCopied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy Link</>}
                   </Button>
                 </div>
@@ -2988,7 +2988,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <FileText className="h-5 w-5 text-[#6C5CE7]" />
+          <FileText className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
           <StatusDot status={record.ai_analysis ? 'green' : 'red'} />
         </button>
@@ -3002,7 +3002,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0"
         >
           {evidenceOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Search className="h-5 w-5 text-[#6C5CE7]" />
+          <Search className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Evidence Sources</h3>
           <Badge variant="secondary" className="text-xs ml-1">{sources.length}</Badge>
           <StatusDot status={sources.length >= 10 ? 'green' : sources.length > 0 ? 'yellow' : 'red'} />
@@ -3020,7 +3020,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
                   <Input placeholder="e.g. John Smith military veteran" value={additionalQuery} onChange={(e) => setAdditionalQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRunAdditionalSearch()} />
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setAdditionalSearchOpen(false)}>Cancel</Button>
-                    <Button onClick={handleRunAdditionalSearch} disabled={additionalSearching || !additionalQuery.trim()} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+                    <Button onClick={handleRunAdditionalSearch} disabled={additionalSearching || !additionalQuery.trim()} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
                       {additionalSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       Search
                     </Button>
@@ -3043,7 +3043,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Briefcase className="h-5 w-5 text-[#6C5CE7]" />
+          <Briefcase className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
           <StatusDot status={(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
@@ -3063,7 +3063,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Globe className="h-5 w-5 text-[#6C5CE7]" />
+          <Globe className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
           <StatusDot status={record.source_username || record.linkedin_url ? 'green' : 'red'} />
         </button>
@@ -3074,7 +3074,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
         <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Video className="h-5 w-5 text-[#6C5CE7]" />
+          <Video className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
           <StatusDot status={(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
@@ -3098,7 +3098,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0"
         >
           {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <ShieldAlert className="h-5 w-5 text-[#6C5CE7]" />
+          <ShieldAlert className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Background Review</h3>
           {(() => {
             const bgStatus = (record.manual_checks as any)?.background_dot_override ||
@@ -3155,7 +3155,7 @@ function EvidenceAccordionGroup({ category, sources }: { category: string; sourc
         <div className="border-t border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
           {sources.map((s, i) => (
             <div key={i} className={cn("px-4 py-3", s.isRedFlag && "bg-red-50/50 dark:bg-red-950/10")}>
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-[#6C5CE7] hover:underline flex items-center gap-1">
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="font-medium text-sm text-[#1e3a5f] hover:underline flex items-center gap-1">
                 {s.title} <ExternalLink className="h-3 w-3" />
               </a>
               <p className="text-sm text-muted-foreground mt-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: highlightMilitaryText(s.snippet) }} />
@@ -3265,7 +3265,7 @@ function IntelligenceSummary({ record }: { record: VerificationRecord }) {
     return (
       <Card className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 pl-6 pr-10">
         <CardContent className="flex items-center gap-3 py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-[#6C5CE7]" />
+          <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f]" />
           <p className="text-sm text-blue-700 dark:text-blue-300">Generating intelligence summary for {record.person_name}...</p>
         </CardContent>
       </Card>
@@ -3291,7 +3291,7 @@ function IntelligenceSummary({ record }: { record: VerificationRecord }) {
         <CardContent className="py-6 text-center">
           <FileText className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground mb-3">Generate an AI intelligence brief from all collected sources.</p>
-          <Button onClick={handleGenerate} className="bg-[#6C5CE7] hover:bg-[#5B4BD1]">Generate Summary</Button>
+          <Button onClick={handleGenerate} className="bg-[#1e3a5f] hover:bg-[#2d5282]">Generate Summary</Button>
         </CardContent>
       </Card>
     );

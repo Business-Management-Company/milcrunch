@@ -170,7 +170,7 @@ Click "Add Block" to create a new segment. Each block requires the following fie
 Each segment type is color-coded on the timeline for quick visual scanning:
 
 - Interviews appear in blue
-- Panels appear in purple
+- Panels appear in navy blue
 - Performances appear in green
 - Sponsor spots appear in gold
 - Transitions appear in gray

@@ -109,7 +109,7 @@ export default function SponsorPageEditor() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" /></div>;
+    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" /></div>;
   }
 
   return (
@@ -126,7 +126,7 @@ export default function SponsorPageEditor() {
               <Eye className="h-3.5 w-3.5 mr-1" /> Preview
             </Button>
           )}
-          <Button onClick={handleSave} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+          <Button onClick={handleSave} disabled={saving} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
             <Save className="h-4 w-4 mr-2" /> {saving ? "Saving..." : "Save Page"}
           </Button>
         </div>

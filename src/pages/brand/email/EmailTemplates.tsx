@@ -60,11 +60,11 @@ function defaultBlock(type: BlockType): EmailBlock {
     case "text":
       return { id, type, content: "Enter your text content here. You can use <b>bold</b> and <em>italic</em> formatting.", props: { color: "#333333", fontSize: "16px" } };
     case "button":
-      return { id, type, content: "Click Here", props: { href: "https://milcrunch.com", bgColor: "#6C5CE7", color: "#ffffff", borderRadius: "6px" } };
+      return { id, type, content: "Click Here", props: { href: "https://milcrunch.com", bgColor: "#1e3a5f", color: "#ffffff", borderRadius: "6px" } };
     case "divider":
       return { id, type, content: "", props: { color: "#e5e7eb", height: "1px" } };
     case "header":
-      return { id, type, content: "Your Email Header", props: { bgColor: "#6C5CE7", color: "#ffffff", fontSize: "24px" } };
+      return { id, type, content: "Your Email Header", props: { bgColor: "#1e3a5f", color: "#ffffff", fontSize: "24px" } };
     case "footer":
       return { id, type, content: "© 2026 MilCrunch. All rights reserved.\n{{unsubscribe_url}}", props: { color: "#999999", fontSize: "12px" } };
     case "two-column":
@@ -275,7 +275,7 @@ const EmailTemplates = () => {
       name: editName.trim(),
       category: editCategory || "custom",
       html_content: editHtml,
-      thumbnail_color: BUILT_IN_TEMPLATES.find(b => b.category === editCategory)?.thumbnail_color || "#6C5CE7",
+      thumbnail_color: BUILT_IN_TEMPLATES.find(b => b.category === editCategory)?.thumbnail_color || "#1e3a5f",
     });
     if (result) {
       if (editing) {
@@ -379,7 +379,7 @@ const EmailTemplates = () => {
                 <button
                   key={bp.type}
                   onClick={() => addBlock(bp.type)}
-                  className="w-full flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-left hover:border-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-left hover:border-[#1e3a5f] hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                 >
                   <span className="text-base">{bp.emoji}</span>
                   <span className="font-medium text-foreground">{bp.label}</span>
@@ -478,7 +478,7 @@ const EmailTemplates = () => {
       </AlertDialog>
 
       {/* FIX 4 — Purple gradient banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#6C5CE7] via-[#7C6CF7] to-[#9B51E0] mb-10 px-8 py-10">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1e3a5f] via-[#2d5282] to-[#3b82f6] mb-10 px-8 py-10">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-30" />
         <div className="relative z-10">
           <h1 className="text-3xl font-bold text-white mb-2">Design beautiful emails for your military community</h1>
@@ -492,7 +492,7 @@ const EmailTemplates = () => {
               Browse Templates
             </Button>
             <Button
-              className="bg-white text-[#6C5CE7] hover:bg-white/90"
+              className="bg-white text-[#1e3a5f] hover:bg-white/90"
               onClick={() => { setEditName("Untitled Template"); setEditHtml(""); setEditCategory("custom"); setBlocks([]); setHtmlCollapsed(true); }}
             >
               Start from Scratch <ArrowRight className="h-4 w-4 ml-1" />
@@ -533,7 +533,7 @@ const EmailTemplates = () => {
                   >
                     {tpl.category}
                   </Badge>
-                  <span className="text-xs font-medium text-[#6C5CE7] group-hover:underline">
+                  <span className="text-xs font-medium text-[#1e3a5f] group-hover:underline">
                     Use Template →
                   </span>
                 </div>
@@ -557,7 +557,7 @@ const EmailTemplates = () => {
               className="rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer border border-gray-100 dark:border-gray-800 hover:scale-[1.02] group bg-white dark:bg-gray-900"
               onClick={() => handleEditTemplate(tpl)}
             >
-              <div className="relative h-40 overflow-hidden" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color || "#6C5CE7"}, ${tpl.thumbnail_color || "#6C5CE7"}cc)` }}>
+              <div className="relative h-40 overflow-hidden" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color || "#1e3a5f"}, ${tpl.thumbnail_color || "#1e3a5f"}cc)` }}>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <LayoutTemplate className="h-14 w-14 text-white/30" />
                 </div>
@@ -597,13 +597,13 @@ const EmailTemplates = () => {
           ))}
           {/* Create blank template card */}
           <div
-            className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#6C5CE7] hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[240px] group"
+            className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#1e3a5f] hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[240px] group"
             onClick={() => { setEditName("Untitled Template"); setEditHtml(""); setEditCategory("custom"); setBlocks([]); setHtmlCollapsed(true); }}
           >
-            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-[#6C5CE7]/10 flex items-center justify-center mb-3 transition-colors">
-              <Plus className="h-6 w-6 text-gray-400 group-hover:text-[#6C5CE7] transition-colors" />
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-[#1e3a5f]/10 flex items-center justify-center mb-3 transition-colors">
+              <Plus className="h-6 w-6 text-gray-400 group-hover:text-[#1e3a5f] transition-colors" />
             </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-[#6C5CE7] transition-colors">Create blank template</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-[#1e3a5f] transition-colors">Create blank template</p>
           </div>
         </div>
       )}

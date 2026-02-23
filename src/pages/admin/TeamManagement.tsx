@@ -84,7 +84,7 @@ const ROLES = [
     id: "admin", 
     label: "Admin", 
     icon: Shield, 
-    color: "text-purple-500",
+    color: "text-blue-600",
     description: "Manage event, team, finances",
     defaultPermissions: ["edit_event", "manage_team", "manage_finances", "manage_attendees", "manage_marketing", "manage_sponsors", "view_analytics"]
   },
@@ -124,7 +124,7 @@ const ROLES = [
     id: "finance_manager", 
     label: "Finance Manager", 
     icon: DollarSign, 
-    color: "text-purple-500",
+    color: "text-blue-600",
     description: "Payments, payouts, refunds",
     defaultPermissions: ["manage_finances", "view_analytics"]
   },

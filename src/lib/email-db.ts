@@ -50,7 +50,7 @@
  *   name text NOT NULL,
  *   category text,
  *   html_content text,
- *   thumbnail_color text DEFAULT '#6C5CE7',
+ *   thumbnail_color text DEFAULT '#1e3a5f',
  *   is_default boolean DEFAULT false,
  *   created_at timestamptz DEFAULT now()
  * );

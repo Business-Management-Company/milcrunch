@@ -60,7 +60,7 @@ export default function PlansPage() {
       <main className="pt-14">
         <section className="px-4 md:px-8 py-20 md:py-28">
           <div className="max-w-5xl mx-auto text-center">
-            <p className="text-sm font-bold tracking-widest text-[#6C5CE7] uppercase mb-3">
+            <p className="text-sm font-bold tracking-widest text-[#1e3a5f] uppercase mb-3">
               Choose Your Path
             </p>
             <h1 className="text-3xl md:text-4xl font-bold text-[#1A1A2E] mb-4">
@@ -78,7 +78,7 @@ export default function PlansPage() {
                   className="relative bg-white rounded-xl shadow-md p-8 flex flex-col text-left border border-gray-200"
                 >
 
-                  <div className="w-12 h-12 rounded-xl bg-[#6C5CE7]/10 text-[#6C5CE7] flex items-center justify-center mb-5">
+                  <div className="w-12 h-12 rounded-xl bg-[#1e3a5f]/10 text-[#1e3a5f] flex items-center justify-center mb-5">
                     {plan.icon}
                   </div>
 
@@ -92,7 +92,7 @@ export default function PlansPage() {
                   <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-[#1A1A2E]">
-                        <Check className="h-4 w-4 text-[#6C5CE7] mt-0.5 shrink-0" />
+                        <Check className="h-4 w-4 text-[#1e3a5f] mt-0.5 shrink-0" />
                         {f}
                       </li>
                     ))}
@@ -102,8 +102,8 @@ export default function PlansPage() {
                     <Button
                       className={`w-full rounded-lg font-semibold ${
                         plan.popular
-                          ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
-                          : "bg-white hover:bg-[#6C5CE7]/5 text-[#6C5CE7] border-2 border-[#6C5CE7]"
+                          ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
+                          : "bg-white hover:bg-[#1e3a5f]/5 text-[#1e3a5f] border-2 border-[#1e3a5f]"
                       }`}
                     >
                       {plan.cta} &rarr;
@@ -117,7 +117,7 @@ export default function PlansPage() {
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="text-[#6C5CE7] font-semibold hover:underline"
+                className="text-[#1e3a5f] font-semibold hover:underline"
               >
                 Sign In
               </Link>

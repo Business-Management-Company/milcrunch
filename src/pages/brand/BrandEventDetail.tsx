@@ -157,7 +157,7 @@ const STATUS_STYLES: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   published: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   active: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  completed: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  completed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
 };
 const EVENT_TYPES = [
   { value: "live", label: "In-Person" },
@@ -215,14 +215,14 @@ function SendNotificationCard({ eventId }: { eventId: string }) {
   return (
     <Card className="p-4 mb-4">
       {!open ? (
-        <Button onClick={() => setOpen(true)} className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2">
+        <Button onClick={() => setOpen(true)} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2">
           <Megaphone className="h-4 w-4" /> Send Notification to Attendees
         </Button>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Megaphone className="h-4 w-4 text-[#6C5CE7]" /> Send Notification
+              <Megaphone className="h-4 w-4 text-[#1e3a5f]" /> Send Notification
             </h3>
             <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
           </div>
@@ -232,7 +232,7 @@ function SendNotificationCard({ eventId }: { eventId: string }) {
                 key={t}
                 onClick={() => setType(t)}
                 className={`text-xs px-3 py-1 rounded-full font-medium capitalize transition-colors ${
-                  type === t ? "bg-[#6C5CE7] text-white" : "bg-gray-100 text-gray-600"
+                  type === t ? "bg-[#1e3a5f] text-white" : "bg-gray-100 text-gray-600"
                 }`}
               >
                 {t}
@@ -241,7 +241,7 @@ function SendNotificationCard({ eventId }: { eventId: string }) {
           </div>
           <Input placeholder="Notification title" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Textarea placeholder="Message body (optional)" value={body} onChange={(e) => setBody(e.target.value)} rows={2} />
-          <Button onClick={handleSend} disabled={sending} className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2">
+          <Button onClick={handleSend} disabled={sending} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2">
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Send to All Attendees
           </Button>
@@ -760,7 +760,7 @@ const BrandEventDetail = () => {
               <TabsTrigger value="agenda"><Clock className="h-4 w-4 mr-1.5" />Agenda</TabsTrigger>
               <TabsTrigger value="speakers"><Mic className="h-4 w-4 mr-1.5" />Speakers</TabsTrigger>
               <TabsTrigger value="sponsors"><Handshake className="h-4 w-4 mr-1.5" />Sponsors</TabsTrigger>
-              <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-1.5" />Tickets{eventTickets.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{eventTickets.length}</Badge>}</TabsTrigger>
+              <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-1.5" />Tickets{eventTickets.length > 0 && <Badge className="ml-1.5 bg-blue-100 text-blue-800 text-xs">{eventTickets.length}</Badge>}</TabsTrigger>
               <TabsTrigger value="public-page"><Globe className="h-4 w-4 mr-1.5" />Public Page</TabsTrigger>
               <TabsTrigger value="media"><Film className="h-4 w-4 mr-1.5" />Media</TabsTrigger>
               <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-1.5" />Settings</TabsTrigger>
@@ -773,7 +773,7 @@ const BrandEventDetail = () => {
             </div>
             {/* Row 2 — Manage */}
             <div className="flex flex-wrap justify-center gap-1">
-              <TabsTrigger value="registrations"><Users className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-purple-100 text-purple-700 text-xs">{registrations.length}</Badge>}</TabsTrigger>
+              <TabsTrigger value="registrations"><Users className="h-4 w-4 mr-1.5" />Registrations{registrations.length > 0 && <Badge className="ml-1.5 bg-blue-100 text-blue-800 text-xs">{registrations.length}</Badge>}</TabsTrigger>
               <TabsTrigger value="attendee-app"><Smartphone className="h-4 w-4 mr-1.5" />Attendee App</TabsTrigger>
               <TabsTrigger value="community"><MessageCircle className="h-4 w-4 mr-1.5" />Community</TabsTrigger>
               <TabsTrigger value="insights"><BarChart3 className="h-4 w-4 mr-1.5" />365 Insights</TabsTrigger>
@@ -875,7 +875,7 @@ const BrandEventDetail = () => {
                     <Button
                       type="button"
                       onClick={() => setShowAIBanner(true)}
-                      className="bg-purple-500 hover:bg-purple-600 text-white"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
                       Generate with AI
@@ -1110,7 +1110,7 @@ const BrandEventDetail = () => {
                   {/* Summary cards */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
-                      <p className="text-2xl font-bold text-purple-600">{eventTickets.length}</p>
+                      <p className="text-2xl font-bold text-blue-700">{eventTickets.length}</p>
                       <p className="text-xs text-muted-foreground">Ticket Types</p>
                     </Card>
                     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
@@ -1261,7 +1261,7 @@ const BrandEventDetail = () => {
                       <p className="text-xs text-muted-foreground">Total Registered</p>
                     </Card>
                     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
-                      <p className="text-2xl font-bold text-purple-600">{checkedInCount}</p>
+                      <p className="text-2xl font-bold text-blue-700">{checkedInCount}</p>
                       <p className="text-xs text-muted-foreground">Checked In</p>
                     </Card>
                     {eventTickets.slice(0, 2).map((t) => (
@@ -1336,7 +1336,7 @@ const BrandEventDetail = () => {
                                 </td>
                                 <td className="px-4 py-3 text-muted-foreground">{r.military_branch || "\u2014"}</td>
                                 <td className="px-4 py-3">
-                                  <Badge className={r.status === "confirmed" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}>
+                                  <Badge className={r.status === "confirmed" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}>
                                     {r.status}
                                   </Badge>
                                 </td>
@@ -1348,7 +1348,7 @@ const BrandEventDetail = () => {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => toggleCheckIn(r)}
-                                    className={r.checked_in ? "text-purple-600" : "text-gray-300 hover:text-gray-500"}
+                                    className={r.checked_in ? "text-blue-700" : "text-gray-300 hover:text-gray-500"}
                                   >
                                     {r.checked_in ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                                   </Button>
@@ -1709,8 +1709,8 @@ const BrandEventDetail = () => {
                       ) : isEnded && endedStreams[0].recording_url ? (
                         <div className="w-full h-full flex items-center justify-center">
                           <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
-                              <Play className="h-8 w-8 text-purple-400" />
+                            <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-3">
+                              <Play className="h-8 w-8 text-blue-500" />
                             </div>
                             <p className="text-white font-semibold">Recording Available</p>
                             <p className="text-gray-400 text-sm mt-1">{endedStreams[0].title || "Untitled Stream"}</p>
@@ -1751,19 +1751,19 @@ const BrandEventDetail = () => {
                     {isLive && (
                       <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
                         <div className="flex items-center gap-2 mb-3">
-                          <Sparkles className="h-4 w-4 text-purple-500" />
+                          <Sparkles className="h-4 w-4 text-blue-600" />
                           <h4 className="text-sm font-semibold">AI Production Panel</h4>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          <div className="bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 rounded-lg p-3 border-l-4 border-l-purple-500">
+                          <div className="bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27] border border-blue-100 dark:border-blue-800 rounded-lg p-3 border-l-4 border-l-blue-600">
                             <p className="text-xs text-muted-foreground">Active Speaker</p>
                             <p className="text-sm font-medium">Detecting...</p>
                           </div>
-                          <div className="bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 rounded-lg p-3 border-l-4 border-l-purple-500">
+                          <div className="bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27] border border-blue-100 dark:border-blue-800 rounded-lg p-3 border-l-4 border-l-blue-600">
                             <p className="text-xs text-muted-foreground">Auto-Frame</p>
                             <p className="text-sm font-medium text-green-600">ON</p>
                           </div>
-                          <div className="bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 rounded-lg p-3 border-l-4 border-l-purple-500">
+                          <div className="bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27] border border-blue-100 dark:border-blue-800 rounded-lg p-3 border-l-4 border-l-blue-600">
                             <p className="text-xs text-muted-foreground">Captions</p>
                             <p className="text-sm font-medium text-green-600">Active</p>
                           </div>
@@ -1800,9 +1800,9 @@ const BrandEventDetail = () => {
                   {/* AI Production Features */}
                   <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      <Sparkles className="h-4 w-4 text-blue-600" />
                       <h3 className="font-semibold">AI Production Features</h3>
-                      <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-xs ml-auto">
+                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400 text-xs ml-auto">
                         The Differentiator
                       </Badge>
                     </div>
@@ -1815,9 +1815,9 @@ const BrandEventDetail = () => {
                         return (
                           <div
                             key={f.id}
-                            className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/20 dark:to-[#1A1D27] border border-purple-100 dark:border-purple-800 border-l-4 border-l-purple-500"
+                            className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-[#1A1D27] border border-blue-100 dark:border-blue-800 border-l-4 border-l-blue-600"
                           >
-                            <FIcon className="h-5 w-5 text-purple-600 shrink-0" />
+                            <FIcon className="h-5 w-5 text-blue-700 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium">{f.title}</p>
                               <p className="text-xs text-muted-foreground">{f.desc}</p>
@@ -1863,7 +1863,7 @@ const BrandEventDetail = () => {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <Card className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
-                            <Video className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+                            <Video className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                             <p className="text-sm font-medium">Full Recording</p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {endedStreams[0]?.recording_url ? "Available" : "Processing..."}
@@ -1873,7 +1873,7 @@ const BrandEventDetail = () => {
                             </Button>
                           </Card>
                           <Card className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
-                            <Scissors className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+                            <Scissors className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                             <p className="text-sm font-medium">Highlight Reel</p>
                             <p className="text-xs text-muted-foreground mt-1">AI-generated 2-5 min highlight</p>
                             <Button size="sm" variant="outline" className="mt-3 w-full" disabled>
@@ -1881,7 +1881,7 @@ const BrandEventDetail = () => {
                             </Button>
                           </Card>
                           <Card className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
-                            <Film className="h-8 w-8 text-purple-500 mx-auto mb-2" />
+                            <Film className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                             <p className="text-sm font-medium">Social Clips</p>
                             <p className="text-xs text-muted-foreground mt-1">Vertical clips for TikTok/Reels</p>
                             <Button size="sm" variant="outline" className="mt-3 w-full" disabled>
@@ -1898,7 +1898,7 @@ const BrandEventDetail = () => {
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div className="text-center">
-                            <p className="text-2xl font-bold text-purple-600">{endedStreams.reduce((sum, s) => sum + (s.viewer_count || 0), 0)}</p>
+                            <p className="text-2xl font-bold text-blue-700">{endedStreams.reduce((sum, s) => sum + (s.viewer_count || 0), 0)}</p>
                             <p className="text-xs text-muted-foreground">Total Viewers</p>
                           </div>
                           <div className="text-center">

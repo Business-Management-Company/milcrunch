@@ -559,7 +559,7 @@ class DiscoverErrorBoundary extends React.Component<
               try { localStorage.removeItem(LAST_SEARCH_KEY); } catch { /* */ }
               this.setState({ hasError: false, error: null });
             }}
-            className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5282] transition-colors text-sm font-medium"
           >
             Clear cache & reload
           </button>
@@ -2551,7 +2551,7 @@ const BrandDiscover = () => {
                     const tagColors = [
                       "bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400",
                       "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-                      "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
+                      "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-500",
                       "bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
                       "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400",
                     ];
@@ -2611,7 +2611,7 @@ const BrandDiscover = () => {
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available"><Mail className="h-3 w-3" /></span>
                               )}
                               {isInAnyDirectory(creator.username) && (
-                                <span className="inline-flex items-center gap-0.5 rounded bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 ml-1" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
+                                <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500 ml-1" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
                               )}
                             </h3>
                             <p className="text-sm text-gray-400 dark:text-gray-500 truncate">
@@ -2659,7 +2659,7 @@ const BrandDiscover = () => {
                             ) : creator.hasEmail ? (
                               <button
                                 onClick={(e) => { e.stopPropagation(); setContactConfirmCreator(creator); }}
-                                className="inline-flex items-center gap-1 rounded-md bg-purple-50 dark:bg-purple-900/30 px-2 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-md bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                                 title="Get email (1.03 credits)"
                               >
                                 <UserSearch className="h-3 w-3" />Get Contact
@@ -2702,7 +2702,7 @@ const BrandDiscover = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="flex items-center justify-center gap-2 w-full text-center rounded-lg flex-1 text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
+                                    className="flex items-center justify-center gap-2 w-full text-center rounded-lg flex-1 text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30"
                                     disabled={approvingDir}
                                   >
                                     <ShieldCheck className="h-3.5 w-3.5" />
@@ -2712,9 +2712,9 @@ const BrandDiscover = () => {
                                 <DropdownMenuContent align="start" className="w-48">
                                   {directoriesList.map((dir) => (
                                     <DropdownMenuItem key={dir.id} onClick={() => handleStandaloneApprove(creator, dir.id)}>
-                                      {isInDirectory(creator.username, dir.id) && <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-purple-500 shrink-0" />}
+                                      {isInDirectory(creator.username, dir.id) && <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-blue-600 shrink-0" />}
                                       {dir.name}
-                                      {isInDirectory(creator.username, dir.id) && <span className="ml-auto text-[10px] text-purple-400">Added</span>}
+                                      {isInDirectory(creator.username, dir.id) && <span className="ml-auto text-[10px] text-blue-500">Added</span>}
                                     </DropdownMenuItem>
                                   ))}
                                 </DropdownMenuContent>

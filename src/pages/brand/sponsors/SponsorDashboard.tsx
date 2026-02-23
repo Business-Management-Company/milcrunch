@@ -23,7 +23,7 @@ export default function SponsorDashboard() {
   }, []);
 
   const statCards = [
-    { label: "Total Sponsors", value: stats.totalSponsors, icon: Building2, color: "text-purple-600 bg-purple-50", link: "/brand/sponsors/pages" },
+    { label: "Total Sponsors", value: stats.totalSponsors, icon: Building2, color: "text-blue-700 bg-blue-50", link: "/brand/sponsors/pages" },
     { label: "Active Forms", value: stats.activeForms, icon: FileText, color: "text-blue-600 bg-blue-50", link: "/brand/sponsors/forms" },
     { label: "Submissions", value: stats.submissions, icon: Inbox, color: "text-green-600 bg-green-50", link: "/brand/sponsors/forms" },
     { label: "Decks Uploaded", value: stats.decks, icon: Upload, color: "text-orange-600 bg-orange-50", link: "/brand/sponsors/decks" },
@@ -69,9 +69,9 @@ export default function SponsorDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Link to="/brand/sponsors/forms">
-          <Card className="p-5 hover:shadow-md transition-shadow cursor-pointer border-dashed border-2 border-purple-200 bg-purple-50/30 group">
+          <Card className="p-5 hover:shadow-md transition-shadow cursor-pointer border-dashed border-2 border-blue-300 bg-blue-50/30 group">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+              <div className="p-2 rounded-lg bg-blue-100 text-blue-700 group-hover:bg-blue-700 group-hover:text-white transition-colors">
                 <Plus className="h-5 w-5" />
               </div>
               <div>
@@ -117,7 +117,7 @@ export default function SponsorDashboard() {
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Recent Submissions</h2>
-            <Link to="/brand/sponsors/forms" className="text-sm text-[#6C5CE7] hover:underline">View all</Link>
+            <Link to="/brand/sponsors/forms" className="text-sm text-[#1e3a5f] hover:underline">View all</Link>
           </div>
         </div>
         {loading ? (

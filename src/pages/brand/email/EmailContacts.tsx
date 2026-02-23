@@ -31,7 +31,7 @@ import type { EmailContact, EmailList, ContactSource, ContactActivity } from "@/
 
 const SOURCE_COLORS: Record<string, string> = {
   manual: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
-  event: "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300",
+  event: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-400",
   creator: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
   import: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
   sponsor: "bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300",
@@ -384,7 +384,7 @@ const EmailContacts = () => {
           </Button>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white text-xl font-bold">
+              <div className="h-14 w-14 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xl font-bold">
                 {initials(detail.first_name, detail.last_name, detail.email)}
               </div>
               <div>
@@ -517,7 +517,7 @@ const EmailContacts = () => {
                     <div className="mt-0.5">
                       {a.type === "email_sent" && <Send className="h-3.5 w-3.5 text-blue-500" />}
                       {a.type === "email_opened" && <Eye className="h-3.5 w-3.5 text-green-500" />}
-                      {a.type === "email_clicked" && <MousePointer className="h-3.5 w-3.5 text-purple-500" />}
+                      {a.type === "email_clicked" && <MousePointer className="h-3.5 w-3.5 text-blue-600" />}
                       {a.type === "unsubscribed" && <UserX className="h-3.5 w-3.5 text-red-500" />}
                       {a.type === "subscribed" && <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
                       {a.type === "imported" && <Download className="h-3.5 w-3.5 text-amber-500" />}
@@ -679,11 +679,11 @@ const EmailContacts = () => {
               <Label>Duplicate Handling</Label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="radio" checked={duplicateMode === "skip"} onChange={() => setDuplicateMode("skip")} className="accent-[#6C5CE7]" />
+                  <input type="radio" checked={duplicateMode === "skip"} onChange={() => setDuplicateMode("skip")} className="accent-[#1e3a5f]" />
                   Skip duplicates
                 </label>
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="radio" checked={duplicateMode === "update"} onChange={() => setDuplicateMode("update")} className="accent-[#6C5CE7]" />
+                  <input type="radio" checked={duplicateMode === "update"} onChange={() => setDuplicateMode("update")} className="accent-[#1e3a5f]" />
                   Update existing
                 </label>
               </div>
@@ -834,7 +834,7 @@ const EmailContacts = () => {
                 return (
                   <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/brand/email/contacts/${c.id}`)}>
                     <TableCell>
-                      <div className="h-8 w-8 rounded-full bg-[#6C5CE7]/20 text-[#6C5CE7] flex items-center justify-center text-xs font-bold">
+                      <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold">
                         {initials(c.first_name, c.last_name, c.email)}
                       </div>
                     </TableCell>

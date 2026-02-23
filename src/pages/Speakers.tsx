@@ -121,7 +121,7 @@ function MiniGauge({ score }: { score: number }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-    verified: { label: "Verified", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+    verified: { label: "Verified", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
     pending: { label: "Pending", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300", icon: <Clock className="h-3.5 w-3.5" /> },
     flagged: { label: "Flagged", className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300", icon: <AlertTriangle className="h-3.5 w-3.5" /> },
     denied: { label: "Denied", className: "bg-red-200 text-red-900 dark:bg-red-950 dark:text-red-200", icon: <XCircle className="h-3.5 w-3.5" /> },
@@ -380,7 +380,7 @@ export default function Speakers() {
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-muted-foreground">Verified</p>
-            <p className="text-2xl font-bold text-purple-600">
+            <p className="text-2xl font-bold text-blue-700">
               {speakers.filter((s) => s.verification_status === "verified").length}
             </p>
           </CardContent>
@@ -407,7 +407,7 @@ export default function Speakers() {
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
           </div>
         ) : (
           <Table>
@@ -445,13 +445,13 @@ export default function Speakers() {
                         {speaker.photo_url ? (
                           <img src={speaker.photo_url} alt="" className="h-8 w-8 rounded-full object-cover" />
                         ) : (
-                          <div className="h-8 w-8 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center">
-                            <Mic className="h-4 w-4 text-[#6C5CE7]" />
+                          <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center">
+                            <Mic className="h-4 w-4 text-[#1e3a5f]" />
                           </div>
                         )}
                         <span>{speaker.name}</span>
                         {speaker.verification_status === "verified" && (
-                          <ShieldCheck className="h-4 w-4 text-purple-600 shrink-0" />
+                          <ShieldCheck className="h-4 w-4 text-blue-700 shrink-0" />
                         )}
                         {speaker.verification_status === "pending" && speaker.verification_id && (
                           <Clock className="h-4 w-4 text-amber-500 shrink-0" />
@@ -469,7 +469,7 @@ export default function Speakers() {
                     <TableCell>
                       {speaker.verification_id ? (
                         speaker.verification_status === "verified"
-                          ? <ShieldCheck className="h-4 w-4 text-purple-600" />
+                          ? <ShieldCheck className="h-4 w-4 text-blue-700" />
                           : speaker.verification_status === "flagged"
                             ? <AlertTriangle className="h-4 w-4 text-red-500" />
                             : <Clock className="h-4 w-4 text-amber-500" />
@@ -550,7 +550,7 @@ export default function Speakers() {
                         <div className="p-6">
                           {expandLoading ? (
                             <div className="flex items-center justify-center py-8">
-                              <Loader2 className="h-6 w-6 animate-spin text-[#6C5CE7]" />
+                              <Loader2 className="h-6 w-6 animate-spin text-[#1e3a5f]" />
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -597,7 +597,7 @@ export default function Speakers() {
                                       <p className="text-sm text-muted-foreground mb-3">Not yet verified</p>
                                       <Button
                                         size="sm"
-                                        className="bg-[#6C5CE7] hover:bg-[#5B4BD1]"
+                                        className="bg-[#1e3a5f] hover:bg-[#2d5282]"
                                         onClick={() => handleStartVerification(speaker)}
                                       >
                                         <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Start Verification
@@ -714,7 +714,7 @@ export default function Speakers() {
                 rows={4}
               />
             </div>
-            <Button onClick={handleSaveEdit} className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+            <Button onClick={handleSaveEdit} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
               Save Changes
             </Button>
           </div>
@@ -786,7 +786,7 @@ export default function Speakers() {
           <Button
             onClick={handleSaveInvite}
             disabled={!selectedEventId || inviteSaving}
-            className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] mt-2"
+            className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] mt-2"
           >
             {inviteSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Add to Event

@@ -262,15 +262,15 @@ const EventDetail = () => {
       {/* ===== WATCH RECORDING (if no live stream but ended streams with recordings exist) ===== */}
       {!liveStream && endedWithRecording && (
         <div className="pt-14">
-          <div className="bg-purple-600 text-white py-2 text-center font-semibold flex items-center justify-center gap-2">
+          <div className="bg-blue-700 text-white py-2 text-center font-semibold flex items-center justify-center gap-2">
             <Play className="h-4 w-4" /> Watch Recording
           </div>
           <div className="bg-black">
             <div className="max-w-4xl mx-auto">
               <div className="aspect-video bg-gray-900 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
-                    <Play className="h-10 w-10 text-purple-400" />
+                  <div className="w-20 h-20 rounded-full bg-blue-600/20 flex items-center justify-center mx-auto mb-4">
+                    <Play className="h-10 w-10 text-blue-500" />
                   </div>
                   <p className="text-white text-lg font-semibold">{endedWithRecording.title || "Event Recording"}</p>
                   <p className="text-gray-400 text-sm mt-1">Recording available</p>
@@ -311,19 +311,19 @@ const EventDetail = () => {
 
           <div className={cn("flex flex-col sm:flex-row items-center justify-center gap-4 text-base mb-8", event.cover_image_url ? "text-white/90" : "text-gray-600")}>
             <span className="flex items-center gap-2">
-              <Calendar className={cn("w-4 h-4", event.cover_image_url ? "text-purple-300" : "text-purple-500")} />
+              <Calendar className={cn("w-4 h-4", event.cover_image_url ? "text-blue-400" : "text-blue-600")} />
               {formatDateRange(event.start_date, event.end_date)}
             </span>
             {(event.venue || event.city) && (
               <span className="flex items-center gap-2">
-                <MapPin className={cn("w-4 h-4", event.cover_image_url ? "text-purple-300" : "text-purple-500")} />
+                <MapPin className={cn("w-4 h-4", event.cover_image_url ? "text-blue-400" : "text-blue-600")} />
                 {[event.venue, event.city, event.state].filter(Boolean).join(" · ")}
               </span>
             )}
           </div>
 
           {isFuture && (
-            <p className={cn("font-medium text-sm mb-6", event.cover_image_url ? "text-purple-200" : "text-purple-600")}>
+            <p className={cn("font-medium text-sm mb-6", event.cover_image_url ? "text-blue-300" : "text-blue-700")}>
               {daysUntil} days until the event
             </p>
           )}
@@ -332,7 +332,7 @@ const EventDetail = () => {
             <Button
               asChild
               size="lg"
-              className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-10"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-10"
             >
               <Link to={`/events/${event.id}/register`}>
                 Register Now
@@ -497,7 +497,7 @@ const EventDetail = () => {
       <section className="py-14 md:py-16 border-b border-gray-100">
         <div className="max-w-2xl mx-auto px-6">
           <div className="flex items-center gap-3 mb-2">
-            <Car className="w-6 h-6 text-purple-500" />
+            <Car className="w-6 h-6 text-blue-600" />
             <h2 className="text-2xl font-bold text-gray-900">Ride Share</h2>
           </div>
           <p className="text-gray-500 mb-6">
@@ -519,7 +519,7 @@ const EventDetail = () => {
           <Button
             asChild
             size="lg"
-            className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-10"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-10"
           >
             <Link to={`/events/${event.id}/register`}>
               Register Now
@@ -527,7 +527,7 @@ const EventDetail = () => {
             </Link>
           </Button>
           <p className="text-xs text-gray-400 mt-6">
-            Powered by <span className="font-semibold text-gray-500">MilCrunch</span><span className="font-bold text-purple-500">X</span>
+            Powered by <span className="font-semibold text-gray-500">MilCrunch</span><span className="font-bold text-blue-600">X</span>
           </p>
         </div>
       </section>

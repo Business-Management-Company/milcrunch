@@ -48,7 +48,7 @@ const POST_TYPE_CONFIG: Record<string, { label: string; color: string; icon: typ
   announcement: { label: "Announcement", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", icon: Megaphone },
   discussion: { label: "Discussion", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: MessagesSquare },
   question: { label: "Question", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icon: HelpCircle },
-  poll: { label: "Poll", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", icon: FileText },
+  poll: { label: "Poll", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500", icon: FileText },
 };
 
 function timeAgo(dateStr: string): string {
@@ -70,7 +70,7 @@ function Avatar({ name, url }: { name: string | null; url: string | null }) {
   }
   const initials = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pd-blue to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pd-blue to-blue-600 flex items-center justify-center text-white text-xs font-bold">
       {initials}
     </div>
   );
@@ -237,8 +237,8 @@ const EventCommunityTab = ({ eventId, eventCreatedAt, eventStartDate, registrati
   return (
     <div className="space-y-5">
       {/* 365 Banner */}
-      <div className="rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 px-4 py-3">
-        <p className="text-sm font-medium text-purple-800 dark:text-purple-300">
+      <div className="rounded-lg bg-gradient-to-r from-blue-50 to-blue-50 dark:from-blue-900/20 dark:to-blue-900/20 border border-blue-300 dark:border-blue-800 px-4 py-3">
+        <p className="text-sm font-medium text-blue-800 dark:text-blue-400">
           <RefreshCw className="inline h-4 w-4 mr-1.5 -mt-0.5" />
           365 Community — This space stays active year-round. Connect before, during, and after the event.
         </p>
@@ -264,7 +264,7 @@ const EventCommunityTab = ({ eventId, eventCreatedAt, eventStartDate, registrati
         <Card className="p-3 text-center bg-white dark:bg-[#1A1D27] border-gray-200 dark:border-gray-800">
           {daysDiff !== null && daysDiff > 0 ? (
             <>
-              <p className="text-xl font-bold text-purple-600">{daysDiff}</p>
+              <p className="text-xl font-bold text-blue-700">{daysDiff}</p>
               <p className="text-xs text-muted-foreground">Days Until Event</p>
             </>
           ) : daysDiff !== null && daysDiff <= 0 ? (

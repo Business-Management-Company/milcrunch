@@ -14,7 +14,7 @@ export default function PlaceholderPage({ title, description, icon }: Placeholde
       <Card className="max-w-md w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-8 text-center shadow-sm">
         <div className="flex justify-center mb-4">
           {icon ?? (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7]">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f]">
               <Construction className="h-8 w-8" />
             </div>
           )}

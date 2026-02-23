@@ -19,7 +19,7 @@ import {
 const DEMO_STATS = [
   { label: "Total Inventory Value", value: "$193,600", icon: DollarSign, color: "text-blue-400", bg: "bg-blue-900/30" },
   { label: "Booked Revenue", value: "$78,200", icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-900/30" },
-  { label: "Pipeline Value", value: "$52,800", icon: PieChart, color: "text-purple-400", bg: "bg-purple-900/30" },
+  { label: "Pipeline Value", value: "$52,800", icon: PieChart, color: "text-blue-500", bg: "bg-blue-900/30" },
   { label: "Avg Profit Margin", value: "64.9%", icon: BarChart3, color: "text-amber-400", bg: "bg-amber-900/30" },
 ];
 
@@ -76,7 +76,7 @@ function AdvertisingDashboard() {
     <>
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Megaphone className="h-8 w-8 text-purple-400" />
+          <Megaphone className="h-8 w-8 text-blue-500" />
           <h1 className="text-3xl font-bold text-pd-navy dark:text-white">Ad Management</h1>
         </div>
         <p className="text-gray-500 dark:text-gray-400">
@@ -96,7 +96,7 @@ function AdvertisingDashboard() {
                 </div>
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
               </div>
-              <p className={`text-2xl font-bold ${stat.label === "Booked Revenue" ? "text-emerald-500" : stat.label === "Pipeline Value" ? "text-purple-500" : "text-[#000741] dark:text-white"}`}>
+              <p className={`text-2xl font-bold ${stat.label === "Booked Revenue" ? "text-emerald-500" : stat.label === "Pipeline Value" ? "text-blue-600" : "text-[#000741] dark:text-white"}`}>
                 {stat.value}
               </p>
             </Card>
@@ -113,8 +113,8 @@ function AdvertisingDashboard() {
             <Link key={link.href} to={link.href}>
               <Card className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 p-5 rounded-xl hover:border-[#6B46C1] transition-colors group cursor-pointer">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                    <Icon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <Icon className="h-5 w-5 text-blue-700 dark:text-blue-500" />
                   </div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">{link.label}</h3>
                   <ArrowRight className="h-4 w-4 text-gray-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />

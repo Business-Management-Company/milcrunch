@@ -35,10 +35,10 @@ interface EventGroup {
 }
 
 const GRADIENTS = [
-  "from-purple-600 to-indigo-700",
-  "from-blue-600 to-purple-700",
-  "from-indigo-500 to-purple-600",
-  "from-violet-600 to-purple-800",
+  "from-blue-700 to-indigo-700",
+  "from-blue-600 to-blue-800",
+  "from-indigo-500 to-blue-700",
+  "from-violet-600 to-blue-800",
 ];
 
 export default function SwagPackages() {
@@ -159,7 +159,7 @@ export default function SwagPackages() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
             </div>
           ) : groups.length === 0 ? (
             <div className="text-center py-20">
@@ -172,7 +172,7 @@ export default function SwagPackages() {
               {groups.map((group) => (
                 <div key={group.event_id}>
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                    <Gift className="h-6 w-6 text-[#6C5CE7]" />
+                    <Gift className="h-6 w-6 text-[#1e3a5f]" />
                     {group.event_title}
                   </h2>
                   <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -185,7 +185,7 @@ export default function SwagPackages() {
                       return (
                         <div
                           key={pkg.id}
-                          className="rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#6C5CE7]/40 transition-all flex flex-col"
+                          className="rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#1e3a5f]/40 transition-all flex flex-col"
                         >
                           {/* Package image */}
                           <div className={`h-48 bg-gradient-to-br ${gradient} flex items-center justify-center relative overflow-hidden`}>
@@ -220,7 +220,7 @@ export default function SwagPackages() {
                                 <ul className="space-y-1">
                                   {pkg.items.slice(0, 3).map((item, j) => (
                                     <li key={j} className="flex items-center gap-2 text-sm text-gray-300">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-[#6C5CE7] shrink-0" />
+                                      <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f] shrink-0" />
                                       <span className="truncate">{item.name}</span>
                                       {item.sponsor_name && (
                                         <Badge variant="outline" className="text-[9px] text-blue-400 border-blue-600 shrink-0 py-0">
@@ -259,7 +259,7 @@ export default function SwagPackages() {
                                 <Button
                                   onClick={() => handleClaim(pkg)}
                                   disabled={claiming === pkg.id}
-                                  className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white"
+                                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
                                 >
                                   {claiming === pkg.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin mr-2" />

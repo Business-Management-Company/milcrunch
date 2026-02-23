@@ -32,7 +32,7 @@ export default function SponsorPages() {
 
   const tierColor = (tier: string) => {
     switch (tier?.toLowerCase()) {
-      case "presenting": return "bg-purple-100 text-purple-700";
+      case "presenting": return "bg-blue-100 text-blue-800";
       case "diamond": return "bg-blue-100 text-blue-700";
       case "platinum": return "bg-gray-200 text-gray-700";
       case "gold": return "bg-yellow-100 text-yellow-700";
@@ -49,7 +49,7 @@ export default function SponsorPages() {
           <p className="text-gray-500 text-sm mt-1">Create public landing pages for your sponsors.</p>
         </div>
         <Link to="/brand/sponsors/pages/new">
-          <Button className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+          <Button className="bg-[#1e3a5f] hover:bg-[#2d5282]">
             <Plus className="h-4 w-4 mr-2" /> New Sponsor Page
           </Button>
         </Link>
@@ -63,7 +63,7 @@ export default function SponsorPages() {
           <h3 className="font-semibold text-gray-700 mb-2">No sponsor pages yet</h3>
           <p className="text-gray-500 text-sm mb-4">Create a public page for each sponsor with their branding, description, and social links.</p>
           <Link to="/brand/sponsors/pages/new">
-            <Button className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+            <Button className="bg-[#1e3a5f] hover:bg-[#2d5282]">
               <Plus className="h-4 w-4 mr-2" /> Create First Page
             </Button>
           </Link>
@@ -88,8 +88,8 @@ export default function SponsorPages() {
                       {page.logo_url ? (
                         <img src={page.logo_url} alt="" className="h-8 w-8 rounded-lg object-cover bg-gray-100" />
                       ) : (
-                        <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                          <Building2 className="h-4 w-4 text-purple-600" />
+                        <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Building2 className="h-4 w-4 text-blue-700" />
                         </div>
                       )}
                       <span className="font-medium text-gray-900">{page.name}</span>

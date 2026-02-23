@@ -67,7 +67,7 @@ const AttendeeSpeakersContent = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -100,7 +100,7 @@ const AttendeeSpeakersContent = () => {
                     className="h-16 w-16 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-xl font-bold">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-500 flex items-center justify-center text-white text-xl font-bold">
                     {speaker.creator_name[0]}
                   </div>
                 )}
@@ -115,7 +115,7 @@ const AttendeeSpeakersContent = () => {
                     <p className="text-[11px] text-gray-500 truncate">{speaker.role}</p>
                   )}
                   {speaker.topic && (
-                    <p className="text-[11px] text-[#6C5CE7] font-medium mt-0.5 line-clamp-1">{speaker.topic}</p>
+                    <p className="text-[11px] text-[#1e3a5f] font-medium mt-0.5 line-clamp-1">{speaker.topic}</p>
                   )}
                 </div>
               </div>
@@ -138,7 +138,7 @@ const AttendeeSpeakersContent = () => {
                       className="h-20 w-20 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-2xl font-bold">
+                    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-500 flex items-center justify-center text-white text-2xl font-bold">
                       {selectedSpeaker.creator_name[0]}
                     </div>
                   )}
@@ -162,7 +162,7 @@ const AttendeeSpeakersContent = () => {
                 {selectedSpeaker.topic && (
                   <div>
                     <h4 className="text-sm font-semibold text-gray-700 mb-1">Speaking On</h4>
-                    <p className="text-sm text-[#6C5CE7]">{selectedSpeaker.topic}</p>
+                    <p className="text-sm text-[#1e3a5f]">{selectedSpeaker.topic}</p>
                   </div>
                 )}
 

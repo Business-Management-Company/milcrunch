@@ -97,7 +97,7 @@ function AdCampaigns() {
   const totalImpressions = (campaigns ?? []).reduce((s, c) => s + c.impressions, 0);
 
   const STATS = [
-    { label: "Active Campaigns", value: activeCampaigns.toString(), icon: Target, color: "text-purple-400", bg: "bg-purple-900/30" },
+    { label: "Active Campaigns", value: activeCampaigns.toString(), icon: Target, color: "text-blue-500", bg: "bg-blue-900/30" },
     { label: "Total Budget", value: `$${totalBudget.toLocaleString()}`, icon: DollarSign, color: "text-blue-400", bg: "bg-blue-900/30" },
     { label: "Total Spent", value: `$${totalSpent.toLocaleString()}`, icon: BarChart3, color: "text-emerald-400", bg: "bg-emerald-900/30" },
     { label: "Impressions", value: `${(totalImpressions / 1_000_000).toFixed(1)}M`, icon: Eye, color: "text-amber-400", bg: "bg-amber-900/30" },
@@ -108,7 +108,7 @@ function AdCampaigns() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Target className="h-7 w-7 text-purple-400" />
+            <Target className="h-7 w-7 text-blue-500" />
             <h1 className="text-3xl font-bold text-pd-navy dark:text-white">Ad Campaigns</h1>
           </div>
           <p className="text-gray-500 dark:text-gray-400">Create and manage advertising campaigns.</p>

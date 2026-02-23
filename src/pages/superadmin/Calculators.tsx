@@ -41,7 +41,7 @@ export default function Calculators() {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-px",
                   isActive
-                    ? "border-[#7C3AED] text-[#7C3AED] bg-[#7C3AED]/5"
+                    ? "border-[#1e3a5f] text-[#1e3a5f] bg-[#1e3a5f]/5"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                 )}
               >

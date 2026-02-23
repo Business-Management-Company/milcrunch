@@ -136,7 +136,7 @@ export default function ImageUpload({
           type="button"
           className={`text-xs px-2 py-1 rounded ${
             mode === "upload"
-              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500"
               : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
           onClick={() => setMode("upload")}
@@ -148,7 +148,7 @@ export default function ImageUpload({
           type="button"
           className={`text-xs px-2 py-1 rounded ${
             mode === "url"
-              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500"
               : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
           onClick={() => setMode("url")}
@@ -162,7 +162,7 @@ export default function ImageUpload({
         <div
           className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
             dragOver
-              ? "border-purple-400 bg-purple-50 dark:bg-purple-900/20"
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
               : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
           }`}
           onDragOver={(e) => {

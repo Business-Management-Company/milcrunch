@@ -172,7 +172,7 @@ export default function SponsorFormBuilder() {
             <h1 className="text-2xl font-bold text-gray-900">Sponsor Forms</h1>
             <p className="text-gray-500 text-sm mt-1">Create and manage sponsor intake forms.</p>
           </div>
-          <Button onClick={startNewForm} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+          <Button onClick={startNewForm} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
             <Plus className="h-4 w-4 mr-2" /> New Form
           </Button>
         </div>
@@ -184,7 +184,7 @@ export default function SponsorFormBuilder() {
             <Layers className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="font-semibold text-gray-700 mb-2">No forms yet</h3>
             <p className="text-gray-500 text-sm mb-4">Create your first sponsor intake form with our drag-and-drop builder.</p>
-            <Button onClick={startNewForm} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+            <Button onClick={startNewForm} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
               <Plus className="h-4 w-4 mr-2" /> Create First Form
             </Button>
           </Card>
@@ -244,7 +244,7 @@ export default function SponsorFormBuilder() {
               <Eye className="h-3.5 w-3.5 mr-1" /> Preview
             </Button>
           )}
-          <Button onClick={handleSave} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+          <Button onClick={handleSave} disabled={saving} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
             <Save className="h-4 w-4 mr-2" /> {saving ? "Saving..." : "Save Form"}
           </Button>
         </div>
@@ -283,7 +283,7 @@ export default function SponsorFormBuilder() {
                   key={field.id}
                   className={cn(
                     "border transition-all",
-                    editingId === field.id ? "border-[#6C5CE7] shadow-sm ring-1 ring-[#6C5CE7]/20" : "border-gray-200 hover:border-gray-300"
+                    editingId === field.id ? "border-[#1e3a5f] shadow-sm ring-1 ring-[#1e3a5f]/20" : "border-gray-200 hover:border-gray-300"
                   )}
                 >
                   <div className="p-4">
@@ -368,7 +368,7 @@ export default function SponsorFormBuilder() {
                 <button
                   key={type}
                   onClick={() => addField(type as FormField["type"])}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-gray-200 text-left text-xs font-medium text-gray-700 hover:border-[#6C5CE7] hover:bg-[#6C5CE7]/5 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-gray-200 text-left text-xs font-medium text-gray-700 hover:border-[#1e3a5f] hover:bg-[#1e3a5f]/5 transition-colors"
                 >
                   <Icon className="h-3.5 w-3.5 text-gray-400" />
                   {label}

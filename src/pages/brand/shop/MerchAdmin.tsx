@@ -218,7 +218,7 @@ export default function MerchAdmin() {
             <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-1">Merch Store</h1>
             <p className="text-gray-500 dark:text-gray-400">Manage products, pricing, and inventory.</p>
           </div>
-          <Button onClick={openAdd} className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white">
+          <Button onClick={openAdd} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
             <Plus className="w-4 h-4 mr-2" /> Add Product
           </Button>
         </div>
@@ -257,7 +257,7 @@ export default function MerchAdmin() {
             <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium mb-2">{search || filterCategory !== "all" ? "No products match" : "No products yet"}</p>
             <p className="text-sm text-muted-foreground mb-6">Add your first product to get started.</p>
-            <Button onClick={openAdd} className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white">
+            <Button onClick={openAdd} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
               <Plus className="w-4 h-4 mr-2" /> Add Product
             </Button>
           </Card>
@@ -266,11 +266,11 @@ export default function MerchAdmin() {
             {filtered.map((p) => (
               <Card key={p.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden hover:shadow-md transition-shadow group">
                 {/* Image */}
-                <div className="h-48 bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 flex items-center justify-center relative">
+                <div className="h-48 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-gray-800 flex items-center justify-center relative">
                   {p.images?.[0] ? (
                     <img src={p.images[0]} alt={p.title} className="w-full h-full object-cover" />
                   ) : (
-                    <ShoppingBag className="h-12 w-12 text-purple-300" />
+                    <ShoppingBag className="h-12 w-12 text-blue-400" />
                   )}
                   <div className="absolute top-2 right-2 flex items-center gap-1">
                     <div className={`w-2.5 h-2.5 rounded-full ${p.is_published ? "bg-green-500" : "bg-gray-400"}`} />
@@ -456,7 +456,7 @@ export default function MerchAdmin() {
             {/* Save */}
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white">
+              <Button onClick={handleSave} disabled={saving} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 {editing ? "Save Changes" : "Create Product"}
               </Button>

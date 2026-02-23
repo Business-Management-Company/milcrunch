@@ -83,7 +83,7 @@ const PHASES = [
 ];
 
 const BLOCK_TYPES = ["Keynote", "Panel", "Sponsor Segment", "Break", "Entertainment", "Other"];
-const BLOCK_COLORS: Record<string, string> = { Keynote: "bg-[#6C5CE7]/10 border-[#6C5CE7]/30 text-[#6C5CE7]", Panel: "bg-blue-50 border-blue-200 text-blue-700", "Sponsor Segment": "bg-emerald-50 border-emerald-200 text-emerald-700", Break: "bg-gray-50 border-gray-200 text-gray-600", Entertainment: "bg-amber-50 border-amber-200 text-amber-700", Other: "bg-gray-50 border-gray-200 text-gray-600" };
+const BLOCK_COLORS: Record<string, string> = { Keynote: "bg-[#1e3a5f]/10 border-[#1e3a5f]/30 text-[#1e3a5f]", Panel: "bg-blue-50 border-blue-200 text-blue-700", "Sponsor Segment": "bg-emerald-50 border-emerald-200 text-emerald-700", Break: "bg-gray-50 border-gray-200 text-gray-600", Entertainment: "bg-amber-50 border-amber-200 text-amber-700", Other: "bg-gray-50 border-gray-200 text-gray-600" };
 const TIERS = ["Presenting", "Gold", "Silver", "Bronze"];
 const PLATFORMS = ["Instagram", "YouTube", "TikTok", "Twitter", "Podcast", "Other"];
 const CHECKLIST_ITEMS = ["A/V Team confirmed", "Producers briefed on ROS", "Stage handler assigned", "Assistant producer assigned", "Streaming platform tested", "Sponsor overlays loaded", "Creator briefings complete", "Step-and-repeat installed", "Social listening active"];
@@ -174,7 +174,7 @@ export default function PdxWizard() {
   const exportPdf = () => {
     const w = window.open("", "_blank");
     if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><title>Experience AAR — ${d.eventName}</title><style>body{font-family:system-ui;background:#0A0F1E;color:#fff;padding:40px;max-width:800px;margin:0 auto}h1{color:#6C5CE7}h2{color:#10B981;margin-top:24px;font-size:18px}p{line-height:1.6}.stat{display:inline-block;margin-right:32px;margin-bottom:16px}.stat-num{font-size:24px;font-weight:800}.stat-label{font-size:12px;color:#9CA3AF}</style></head><body><h1>After Action Report</h1><h2>${d.eventName} — ${d.orgName}</h2><p>${d.startDate} to ${d.endDate}</p><div class="stat"><div class="stat-num">${d.aarLiveAttendance.toLocaleString()}</div><div class="stat-label">Live Attendance</div></div><div class="stat"><div class="stat-num">${d.aarVirtualViewers.toLocaleString()}</div><div class="stat-label">Virtual Viewers</div></div><div class="stat"><div class="stat-num">${d.creators.length}</div><div class="stat-label">Creators</div></div><div class="stat"><div class="stat-num">${fmt(sponsorRevenue)}</div><div class="stat-label">Sponsor Revenue</div></div><h2>Executive Summary</h2><p>${(d.aarAiSummary || "Not yet generated.").replace(/\n/g, "</p><p>")}</p><h2>Budget</h2><p>Estimated: ${fmt(estTotal)} | Actual: ${fmt(actTotal)} | Contracted: ${fmt(d.contractedPrice)}</p><h2>Key Wins</h2><p>${d.aarKeyWins || "—"}</p><h2>Recommendations</h2><p>${d.aarRecommendations || "—"}</p><p style="color:#6B7280;font-size:12px;margin-top:40px">&copy; ${new Date().getFullYear()} MilCrunch &middot; Confidential</p></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><title>Experience AAR — ${d.eventName}</title><style>body{font-family:system-ui;background:#0A0F1E;color:#fff;padding:40px;max-width:800px;margin:0 auto}h1{color:#1e3a5f}h2{color:#10B981;margin-top:24px;font-size:18px}p{line-height:1.6}.stat{display:inline-block;margin-right:32px;margin-bottom:16px}.stat-num{font-size:24px;font-weight:800}.stat-label{font-size:12px;color:#9CA3AF}</style></head><body><h1>After Action Report</h1><h2>${d.eventName} — ${d.orgName}</h2><p>${d.startDate} to ${d.endDate}</p><div class="stat"><div class="stat-num">${d.aarLiveAttendance.toLocaleString()}</div><div class="stat-label">Live Attendance</div></div><div class="stat"><div class="stat-num">${d.aarVirtualViewers.toLocaleString()}</div><div class="stat-label">Virtual Viewers</div></div><div class="stat"><div class="stat-num">${d.creators.length}</div><div class="stat-label">Creators</div></div><div class="stat"><div class="stat-num">${fmt(sponsorRevenue)}</div><div class="stat-label">Sponsor Revenue</div></div><h2>Executive Summary</h2><p>${(d.aarAiSummary || "Not yet generated.").replace(/\n/g, "</p><p>")}</p><h2>Budget</h2><p>Estimated: ${fmt(estTotal)} | Actual: ${fmt(actTotal)} | Contracted: ${fmt(d.contractedPrice)}</p><h2>Key Wins</h2><p>${d.aarKeyWins || "—"}</p><h2>Recommendations</h2><p>${d.aarRecommendations || "—"}</p><p style="color:#6B7280;font-size:12px;margin-top:40px">&copy; ${new Date().getFullYear()} MilCrunch &middot; Confidential</p></body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 300);
   };
@@ -228,7 +228,7 @@ export default function PdxWizard() {
     const exportRos = () => {
       const w = window.open("", "_blank"); if (!w) return;
       const rows = [...d.ros].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)).map(b => `<tr><td style="padding:6px 10px;border-bottom:1px solid #1F2937">${b.date}</td><td style="padding:6px 10px;border-bottom:1px solid #1F2937">${b.startTime}–${b.endTime}</td><td style="padding:6px 10px;border-bottom:1px solid #1F2937;font-weight:600">${b.title}</td><td style="padding:6px 10px;border-bottom:1px solid #1F2937">${b.type}</td><td style="padding:6px 10px;border-bottom:1px solid #1F2937">${b.speaker}</td></tr>`).join("");
-      w.document.write(`<!DOCTYPE html><html><head><title>ROS — ${d.eventName}</title><style>body{font-family:system-ui;background:#0A0F1E;color:#fff;padding:40px}table{width:100%;border-collapse:collapse}h1{color:#6C5CE7}</style></head><body><h1>Run of Show — ${d.eventName}</h1><table><tr style="border-bottom:2px solid #6C5CE7"><th style="text-align:left;padding:8px 10px">Date</th><th style="text-align:left;padding:8px 10px">Time</th><th style="text-align:left;padding:8px 10px">Title</th><th style="text-align:left;padding:8px 10px">Type</th><th style="text-align:left;padding:8px 10px">Speaker</th></tr>${rows}</table></body></html>`);
+      w.document.write(`<!DOCTYPE html><html><head><title>ROS — ${d.eventName}</title><style>body{font-family:system-ui;background:#0A0F1E;color:#fff;padding:40px}table{width:100%;border-collapse:collapse}h1{color:#1e3a5f}</style></head><body><h1>Run of Show — ${d.eventName}</h1><table><tr style="border-bottom:2px solid #1e3a5f"><th style="text-align:left;padding:8px 10px">Date</th><th style="text-align:left;padding:8px 10px">Time</th><th style="text-align:left;padding:8px 10px">Title</th><th style="text-align:left;padding:8px 10px">Type</th><th style="text-align:left;padding:8px 10px">Speaker</th></tr>${rows}</table></body></html>`);
       w.document.close(); setTimeout(() => w.print(), 300);
     };
 
@@ -239,7 +239,7 @@ export default function PdxWizard() {
           <>
             <div className="flex gap-2 flex-wrap">
               {days.map(day => (
-                <button key={day} type="button" onClick={() => setRosDay(day)} className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all", (activeDay === day) ? "bg-[#6C5CE7] text-white" : "bg-white text-[#6B7280] border border-[#E5E7EB] hover:text-[#111827]")}>
+                <button key={day} type="button" onClick={() => setRosDay(day)} className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all", (activeDay === day) ? "bg-[#1e3a5f] text-white" : "bg-white text-[#6B7280] border border-[#E5E7EB] hover:text-[#111827]")}>
                   {new Date(day + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </button>
               ))}
@@ -275,7 +275,7 @@ export default function PdxWizard() {
               })}
             </div>
             <div className="flex gap-3">
-              <Button onClick={addBlock} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"><Plus className="h-4 w-4 mr-1" />Add Time Block</Button>
+              <Button onClick={addBlock} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"><Plus className="h-4 w-4 mr-1" />Add Time Block</Button>
               <Button variant="outline" onClick={exportRos} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]"><Download className="h-4 w-4 mr-1" />Export ROS as PDF</Button>
             </div>
           </>
@@ -346,7 +346,7 @@ export default function PdxWizard() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div><p className="text-sm text-[#6B7280]">Total Sponsor Revenue</p><p className="text-2xl font-extrabold text-[#10B981]">{fmt(sponsorRevenue)}</p></div>
-          <Button onClick={addSponsor} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"><Plus className="h-4 w-4 mr-1" />Add Sponsor</Button>
+          <Button onClick={addSponsor} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"><Plus className="h-4 w-4 mr-1" />Add Sponsor</Button>
         </div>
         {d.sponsors.map((sp, i) => (
           <div key={i} className={cn(cardCls, "space-y-4")}>
@@ -390,7 +390,7 @@ export default function PdxWizard() {
             <div><p className="text-xs text-[#6B7280]">Estimated Reach</p><p className="text-xl font-extrabold text-[#111827]">{totalReach.toLocaleString()}</p></div>
             <div><p className="text-xs text-[#6B7280]">Virtual Audience (10x)</p><p className="text-xl font-extrabold text-[#10B981]">{(d.attendance * 10).toLocaleString()}</p></div>
           </div>
-          <Button onClick={addCreator} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"><Plus className="h-4 w-4 mr-1" />Add Creator</Button>
+          <Button onClick={addCreator} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"><Plus className="h-4 w-4 mr-1" />Add Creator</Button>
         </div>
         {d.creators.map((c, i) => (
           <div key={i} className={cn(cardCls, "space-y-3")}>
@@ -520,7 +520,7 @@ export default function PdxWizard() {
         <div className="grid grid-cols-3 gap-4 text-center">
           <div><p className="text-[#6B7280] text-xs">Estimated</p><p className="text-[#111827] font-bold">{fmt(estTotal)}</p></div>
           <div><p className="text-[#6B7280] text-xs">Actual</p><p className="text-[#111827] font-bold">{fmt(actTotal)}</p></div>
-          <div><p className="text-[#6B7280] text-xs">Contracted</p><p className="text-[#6C5CE7] font-bold">{fmt(d.contractedPrice)}</p></div>
+          <div><p className="text-[#6B7280] text-xs">Contracted</p><p className="text-[#1e3a5f] font-bold">{fmt(d.contractedPrice)}</p></div>
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-4">
@@ -531,14 +531,14 @@ export default function PdxWizard() {
       <div><Label className={labelCls}>Key Wins</Label><Textarea className={inputCls} rows={3} value={d.aarKeyWins} onChange={e => up({ aarKeyWins: e.target.value })} placeholder="What went well?" /></div>
       <div><Label className={labelCls}>Recommendations for Next Year</Label><Textarea className={inputCls} rows={3} value={d.aarRecommendations} onChange={e => up({ aarRecommendations: e.target.value })} placeholder="What should change?" /></div>
       <div className="flex gap-3 flex-wrap">
-        <Button onClick={generateAar} disabled={aiLoading} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">
+        <Button onClick={generateAar} disabled={aiLoading} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
           {aiLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}Generate AAR with AI
         </Button>
         <Button variant="outline" onClick={exportPdf} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]"><Download className="h-4 w-4 mr-2" />Export AAR as PDF</Button>
       </div>
       {d.aarAiSummary && (
-        <div className="bg-[#6C5CE7]/10 border border-[#6C5CE7]/30 rounded-xl p-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#6C5CE7] mb-3">AI-Generated Executive Summary</p>
+        <div className="bg-[#1e3a5f]/10 border border-[#1e3a5f]/30 rounded-xl p-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#1e3a5f] mb-3">AI-Generated Executive Summary</p>
           <div className="text-sm text-[#374151] leading-relaxed whitespace-pre-wrap">{d.aarAiSummary}</div>
         </div>
       )}
@@ -560,19 +560,19 @@ export default function PdxWizard() {
           return (
             <div key={i} className="flex items-center">
               <button type="button" onClick={() => setPhase(i)} className="flex items-center gap-2 group">
-                <div className={cn("w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all flex-shrink-0", completed ? "bg-[#6C5CE7] text-white" : active ? "border-2 border-[#6C5CE7] text-[#6C5CE7]" : "border border-[#D1D5DB] text-[#6B7280]")}>
+                <div className={cn("w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all flex-shrink-0", completed ? "bg-[#1e3a5f] text-white" : active ? "border-2 border-[#1e3a5f] text-[#1e3a5f]" : "border border-[#D1D5DB] text-[#6B7280]")}>
                   {completed ? <Check className="h-4 w-4" /> : <p.icon className="h-4 w-4" />}
                 </div>
-                <span className={cn("text-xs font-medium whitespace-nowrap transition-colors hidden md:inline", completed ? "text-[#6C5CE7]" : active ? "text-[#111827]" : "text-[#6B7280]")}>{p.label}</span>
+                <span className={cn("text-xs font-medium whitespace-nowrap transition-colors hidden md:inline", completed ? "text-[#1e3a5f]" : active ? "text-[#111827]" : "text-[#6B7280]")}>{p.label}</span>
               </button>
-              {i < PHASES.length - 1 && <div className={cn("w-6 lg:w-10 h-px mx-1 flex-shrink-0", i < phase ? "bg-[#6C5CE7]" : "bg-[#E5E7EB]")} />}
+              {i < PHASES.length - 1 && <div className={cn("w-6 lg:w-10 h-px mx-1 flex-shrink-0", i < phase ? "bg-[#1e3a5f]" : "bg-[#E5E7EB]")} />}
             </div>
           );
         })}
       </div>
 
       <div className="mb-6">
-        <Badge className="bg-[#6C5CE7] text-white border-[#6C5CE7] mb-2">Phase {phase + 1} of 7</Badge>
+        <Badge className="bg-[#1e3a5f] text-white border-[#1e3a5f] mb-2">Phase {phase + 1} of 7</Badge>
         <h2 className="text-xl font-bold text-[#111827]">{PHASES[phase].label}</h2>
       </div>
 
@@ -583,7 +583,7 @@ export default function PdxWizard() {
           <Button variant="outline" onClick={() => setPhase(Math.max(0, phase - 1))} disabled={phase === 0} className="border-[#D1D5DB] text-[#6B7280] hover:bg-gray-50 hover:text-[#111827]">
             <ChevronLeft className="h-4 w-4 mr-1" />Back
           </Button>
-          <Button variant="outline" onClick={saveAndExit} disabled={savingExit || saving} className="border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10">
+          <Button variant="outline" onClick={saveAndExit} disabled={savingExit || saving} className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/10">
             {savingExit ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <LogOut className="h-4 w-4 mr-1" />}Save &amp; Exit
           </Button>
         </div>
@@ -593,7 +593,7 @@ export default function PdxWizard() {
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}Save Experience Event
             </Button>
           ) : (
-            <Button onClick={() => setPhase(Math.min(6, phase + 1))} className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8">
+            <Button onClick={() => setPhase(Math.min(6, phase + 1))} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-8">
               Next<ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           )}

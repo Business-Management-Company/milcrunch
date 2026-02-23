@@ -559,7 +559,7 @@ export default function BrandVenueFinder() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <MapPin className="w-6 h-6 text-purple-600" />
+            <MapPin className="w-6 h-6 text-blue-700" />
             Venue Finder
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -569,7 +569,7 @@ export default function BrandVenueFinder() {
         <Button
           variant={showSaved ? "default" : "outline"}
           onClick={() => setShowSaved(!showSaved)}
-          className={showSaved ? "bg-purple-600 hover:bg-purple-700" : ""}
+          className={showSaved ? "bg-blue-700 hover:bg-blue-800" : ""}
         >
           <Bookmark className="w-4 h-4 mr-2" />
           Saved ({savedVenues.length})
@@ -577,16 +577,16 @@ export default function BrandVenueFinder() {
       </div>
 
       {/* AI Venue Concierge */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border-2 border-purple-200 dark:border-purple-800 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border-2 border-blue-300 dark:border-blue-800 p-4">
         <div className="flex gap-2 items-end">
           <div className="relative flex-1">
-            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500" />
+            <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-600" />
             <Input
               placeholder="Describe your event — e.g. 'MilSpouse conference for 300 attendees in San Diego, need breakout rooms and AV'"
               value={conciergeInput}
               onChange={(e) => setConciergeInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !conciergeLoading && handleConcierge()}
-              className="pl-9 border-purple-200 dark:border-purple-700 focus-visible:ring-purple-400"
+              className="pl-9 border-blue-300 dark:border-blue-800 focus-visible:ring-blue-500"
               disabled={conciergeLoading}
             />
           </div>
@@ -594,7 +594,7 @@ export default function BrandVenueFinder() {
             size="icon"
             onClick={handleConcierge}
             disabled={!conciergeInput.trim() || conciergeLoading}
-            className="shrink-0 bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white h-9 w-9"
+            className="shrink-0 bg-[#1e3a5f] hover:bg-[#2d5282] text-white h-9 w-9"
           >
             {conciergeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
@@ -651,7 +651,7 @@ export default function BrandVenueFinder() {
           <Button
             onClick={handleSearch}
             disabled={loading || !location.trim()}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6"
+            className="bg-blue-700 hover:bg-blue-800 text-white px-6"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -673,7 +673,7 @@ export default function BrandVenueFinder() {
                 onClick={() => toggleStyle(s.label)}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   selectedStyles.includes(s.label)
-                    ? "bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/30 dark:border-purple-600 dark:text-purple-300"
+                    ? "bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-400"
                     : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400"
                 }`}
               >
@@ -758,7 +758,7 @@ export default function BrandVenueFinder() {
         {activeFilterCount > 0 && (
           <button
             onClick={clearFilters}
-            className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
+            className="text-sm text-blue-700 hover:text-blue-800 flex items-center gap-1"
           >
             <X className="w-3 h-3" />
             Clear all filters
@@ -799,7 +799,7 @@ export default function BrandVenueFinder() {
         <>
           {loading && (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              <Loader2 className="w-8 h-8 animate-spin text-blue-700" />
               <span className="ml-3 text-gray-500">
                 Searching venues across multiple queries...
               </span>
@@ -845,8 +845,8 @@ export default function BrandVenueFinder() {
 
           {!loading && !searched && (
             <div className="text-center py-20">
-              <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-purple-500" />
+              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-blue-600" />
               </div>
               <p className="text-gray-600 dark:text-gray-400 font-medium">
                 Search for event venues
@@ -886,7 +886,7 @@ function VenueCard({
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow group">
       {/* Photo */}
-      <div className="aspect-[16/9] bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
+      <div className="aspect-[16/9] bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-gray-800 relative overflow-hidden">
         {venue.photo_url ? (
           <img
             src={venue.photo_url}
@@ -896,7 +896,7 @@ function VenueCard({
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <MapPin className="w-10 h-10 text-purple-300" />
+            <MapPin className="w-10 h-10 text-blue-400" />
           </div>
         )}
 
@@ -908,11 +908,11 @@ function VenueCard({
           title={isSaved ? "Remove from saved" : "Save venue"}
         >
           {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+            <Loader2 className="w-4 h-4 animate-spin text-blue-700" />
           ) : isSaved ? (
-            <BookmarkCheck className="w-4 h-4 text-purple-600" />
+            <BookmarkCheck className="w-4 h-4 text-blue-700" />
           ) : (
-            <Bookmark className="w-4 h-4 text-gray-500 group-hover:text-purple-600" />
+            <Bookmark className="w-4 h-4 text-gray-500 group-hover:text-blue-700" />
           )}
         </button>
 
@@ -967,7 +967,7 @@ function VenueCard({
           {venue.phone && (
             <a
               href={`tel:${venue.phone}`}
-              className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-purple-600"
+              className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-blue-700"
             >
               <Phone className="w-3 h-3" />
               {venue.phone}
@@ -978,7 +978,7 @@ function VenueCard({
               href={venue.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700"
+              className="inline-flex items-center gap-1 text-xs text-blue-700 hover:text-blue-800"
             >
               <Globe className="w-3 h-3" />
               Website
@@ -990,7 +990,7 @@ function VenueCard({
               href={venue.maps_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700"
+              className="inline-flex items-center gap-1 text-xs text-blue-700 hover:text-blue-800"
             >
               <Navigation className="w-3 h-3" />
               Maps
@@ -1015,7 +1015,7 @@ function SavedVenueCard({
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
       {/* Photo */}
-      <div className="aspect-[16/9] bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 relative overflow-hidden">
+      <div className="aspect-[16/9] bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-gray-800 relative overflow-hidden">
         {venue.photo_url ? (
           <img
             src={venue.photo_url}
@@ -1025,7 +1025,7 @@ function SavedVenueCard({
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <MapPin className="w-8 h-8 text-purple-300" />
+            <MapPin className="w-8 h-8 text-blue-400" />
           </div>
         )}
         <button
@@ -1033,7 +1033,7 @@ function SavedVenueCard({
           className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 dark:bg-gray-800/90 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shadow-sm"
           title="Remove from saved"
         >
-          <BookmarkCheck className="w-4 h-4 text-purple-600" />
+          <BookmarkCheck className="w-4 h-4 text-blue-700" />
         </button>
         {venue.venue_type && (
           <Badge className="absolute bottom-2 left-2 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-300 text-xs border-0">
@@ -1062,7 +1062,7 @@ function SavedVenueCard({
           {venue.phone && (
             <a
               href={`tel:${venue.phone}`}
-              className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1"
+              className="text-xs text-blue-700 hover:text-blue-800 flex items-center gap-1"
             >
               <Phone className="w-3 h-3" />
               Call
@@ -1073,7 +1073,7 @@ function SavedVenueCard({
               href={venue.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1"
+              className="text-xs text-blue-700 hover:text-blue-800 flex items-center gap-1"
             >
               <Globe className="w-3 h-3" />
               Website

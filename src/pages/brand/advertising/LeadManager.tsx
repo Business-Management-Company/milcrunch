@@ -40,10 +40,10 @@ const DEMO_LEADS: Lead[] = [
 const statusBadge = (s: string) =>
   s === "qualified" ? "bg-emerald-900/40 text-emerald-300 border-emerald-700" :
   s === "new" ? "bg-blue-900/40 text-blue-300 border-blue-700" :
-  "bg-purple-900/40 text-purple-300 border-purple-700";
+  "bg-blue-900/40 text-blue-400 border-blue-800";
 
 const stageBadge = (s: string) =>
-  s === "Proposal" ? "bg-purple-900/30 text-purple-300" :
+  s === "Proposal" ? "bg-blue-900/30 text-blue-400" :
   s === "Negotiation" ? "bg-amber-900/30 text-amber-300" :
   s === "Discovery" ? "bg-blue-900/30 text-blue-300" :
   "bg-gray-800 text-gray-300";
@@ -100,7 +100,7 @@ function LeadManager() {
   const STATS = [
     { label: "Total Leads", value: allLeads.length.toString(), icon: Users, color: "text-blue-400", bg: "bg-blue-900/30" },
     { label: "Qualified", value: qualified.toString(), icon: Target, color: "text-emerald-400", bg: "bg-emerald-900/30" },
-    { label: "Pipeline Value", value: `$${(pipelineValue / 1_000_000).toFixed(1)}M`, icon: DollarSign, color: "text-purple-400", bg: "bg-purple-900/30" },
+    { label: "Pipeline Value", value: `$${(pipelineValue / 1_000_000).toFixed(1)}M`, icon: DollarSign, color: "text-blue-500", bg: "bg-blue-900/30" },
     { label: "Conversion Rate", value: `${conversionRate}%`, icon: TrendingUp, color: "text-amber-400", bg: "bg-amber-900/30" },
   ];
 
@@ -109,7 +109,7 @@ function LeadManager() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <UserPlus className="h-7 w-7 text-purple-400" />
+            <UserPlus className="h-7 w-7 text-blue-500" />
             <h1 className="text-3xl font-bold text-pd-navy dark:text-white">Lead Manager</h1>
           </div>
           <p className="text-gray-500 dark:text-gray-400">Track advertiser leads and manage your sales pipeline.</p>

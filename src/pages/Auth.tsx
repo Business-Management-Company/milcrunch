@@ -117,7 +117,7 @@ const Auth = () => {
       <Card className="w-full max-w-md bg-card border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">Mil</span><span className="text-[#6C5CE7] font-extrabold">Crunch</span></span>
+            <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">Mil</span><span className="text-[#1e3a5f] font-extrabold">Crunch</span></span>
           </div>
           <CardTitle className="text-2xl font-bold">
             {isForgotPassword ? "Reset Password" : isSignUp ? "Create an Account" : "Welcome Back"}

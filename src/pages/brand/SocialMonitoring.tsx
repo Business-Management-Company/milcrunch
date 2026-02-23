@@ -309,13 +309,13 @@ export default function SocialMonitoring() {
   const dismissAlert = () => setAlertDismissed(true);
 
   const KEYWORD_TYPE_STYLES: Record<string, string> = {
-    hashtag: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    hashtag: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
     mention: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     keyword: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
     brand: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   };
 
-  const CHART_COLORS = ["#6C5CE7", "#E1306C", "#00B894", "#1DA1F2", "#FF6B6B"];
+  const CHART_COLORS = ["#1e3a5f", "#E1306C", "#00B894", "#1DA1F2", "#FF6B6B"];
 
   return (
     <div className="space-y-6">
@@ -325,7 +325,7 @@ export default function SocialMonitoring() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Social Monitoring</h1>
           <p className="text-gray-500 text-sm mt-1">Track mentions, sentiment, and reach across social platforms.</p>
         </div>
-        <Button onClick={handleScan} disabled={scanning} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+        <Button onClick={handleScan} disabled={scanning} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
           {scanning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
           {scanning ? "Scanning..." : "Scan Now"}
         </Button>
@@ -333,7 +333,7 @@ export default function SocialMonitoring() {
 
       {/* Alert Banner */}
       {!alertDismissed && unreadAlerts.length > 0 && (
-        <div className="bg-gradient-to-r from-[#6C5CE7] to-[#8B7CF7] text-white rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-[#1e3a5f] to-[#8B7CF7] text-white rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 rounded-full p-2">
               <TrendingUp className="h-5 w-5" />
@@ -353,8 +353,8 @@ export default function SocialMonitoring() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-xl border bg-white dark:bg-[#1A1D27] p-4">
           <div className="flex items-center gap-3">
-            <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-2">
-              <MessageCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-2">
+              <MessageCircle className="h-5 w-5 text-blue-700 dark:text-blue-500" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total Mentions</p>
@@ -614,7 +614,7 @@ export default function SocialMonitoring() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={addKeyword} disabled={!newKeywordText.trim()} className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+            <Button onClick={addKeyword} disabled={!newKeywordText.trim()} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
               Start Tracking
             </Button>
           </div>

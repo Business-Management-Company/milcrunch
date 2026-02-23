@@ -25,7 +25,7 @@ export function getFileIcon(url: string) {
   if (ext === "pdf") return <FileText className="h-4 w-4 text-red-500" />;
   if (["ppt", "pptx"].includes(ext)) return <FileSpreadsheet className="h-4 w-4 text-orange-500" />;
   if (["doc", "docx"].includes(ext)) return <FileText className="h-4 w-4 text-blue-500" />;
-  return <FileText className="h-4 w-4 text-purple-500" />;
+  return <FileText className="h-4 w-4 text-blue-600" />;
 }
 
 interface FileUploadProps {
@@ -165,7 +165,7 @@ export default function FileUpload({
           type="button"
           className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${
             mode === "upload"
-              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500"
               : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
           onClick={() => setMode("upload")}
@@ -177,7 +177,7 @@ export default function FileUpload({
           type="button"
           className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${
             mode === "url"
-              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500"
               : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
           onClick={() => setMode("url")}
@@ -213,8 +213,8 @@ export default function FileUpload({
             <div
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
                 dragOver
-                  ? "border-[#6C5CE7] bg-purple-50 dark:bg-purple-900/20"
-                  : "border-gray-300 dark:border-gray-700 hover:border-[#6C5CE7] hover:bg-purple-50/50 dark:hover:bg-purple-900/10"
+                  ? "border-[#1e3a5f] bg-blue-50 dark:bg-blue-900/20"
+                  : "border-gray-300 dark:border-gray-700 hover:border-[#1e3a5f] hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
               }`}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -233,11 +233,11 @@ export default function FileUpload({
               />
               {uploading ? (
                 <div className="space-y-3">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#6C5CE7]" />
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#1e3a5f]" />
                   <p className="text-sm text-muted-foreground">Uploading...</p>
                   <div className="w-48 mx-auto h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#6C5CE7] rounded-full transition-all duration-300"
+                      className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     />
                   </div>

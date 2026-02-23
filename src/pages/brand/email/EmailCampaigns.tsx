@@ -615,7 +615,7 @@ const EmailCampaigns = () => {
               ))}
               {templates.map(tpl => (
                 <Card key={tpl.id} className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-pd-blue transition-all" onClick={() => { setHtmlContent(tpl.html_content || ""); setShowTemplatePicker(false); toast.success(`"${tpl.name}" template loaded`); }}>
-                  <div className="h-20 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color || "#6C5CE7"}, ${tpl.thumbnail_color || "#6C5CE7"}dd)` }}>
+                  <div className="h-20 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tpl.thumbnail_color || "#1e3a5f"}, ${tpl.thumbnail_color || "#1e3a5f"}dd)` }}>
                     <Mail className="h-8 w-8 text-white/80" />
                   </div>
                   <div className="p-3">
@@ -740,7 +740,7 @@ const EmailCampaigns = () => {
                 {/* Funnel Flow */}
                 <div className="flex items-center justify-between gap-1">
                   {[
-                    { label: "Sent", value: st.sent, color: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300", icon: Send },
+                    { label: "Sent", value: st.sent, color: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400", icon: Send },
                     { label: "Delivered", value: st.delivered, color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300", icon: Mail },
                     { label: "Opened", value: st.opened, color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300", icon: Eye },
                     { label: "Clicked", value: st.clicked, color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300", icon: MousePointerClick },
@@ -798,7 +798,7 @@ const EmailCampaigns = () => {
       {/* Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total Campaigns", value: campaigns.length, icon: Mail, bg: "bg-purple-50 dark:bg-purple-900/20", iconBg: "bg-purple-100 dark:bg-purple-800", iconColor: "text-purple-600 dark:text-purple-300", valueColor: "text-purple-700 dark:text-purple-200" },
+          { label: "Total Campaigns", value: campaigns.length, icon: Mail, bg: "bg-blue-50 dark:bg-blue-900/20", iconBg: "bg-blue-100 dark:bg-blue-800", iconColor: "text-blue-700 dark:text-blue-400", valueColor: "text-blue-800 dark:text-blue-300" },
           { label: "Emails Sent", value: totalSent.toLocaleString(), icon: Send, bg: "bg-blue-50 dark:bg-blue-900/20", iconBg: "bg-blue-100 dark:bg-blue-800", iconColor: "text-blue-600 dark:text-blue-300", valueColor: "text-blue-700 dark:text-blue-200" },
           { label: "Avg Open Rate", value: `${avgOpen}%`, icon: Eye, bg: "bg-green-50 dark:bg-green-900/20", iconBg: "bg-green-100 dark:bg-green-800", iconColor: "text-green-600 dark:text-green-300", valueColor: "text-green-700 dark:text-green-200" },
           { label: "Avg Click Rate", value: `${avgClick}%`, icon: MousePointerClick, bg: "bg-indigo-50 dark:bg-indigo-900/20", iconBg: "bg-indigo-100 dark:bg-indigo-800", iconColor: "text-indigo-600 dark:text-indigo-300", valueColor: "text-indigo-700 dark:text-indigo-200" },
@@ -864,7 +864,7 @@ const EmailCampaigns = () => {
                           </span>
                           {c.status === "sent" && c.stats && (
                             <>
-                              <span className="text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <span className="text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 px-2 py-0.5 rounded-full flex items-center gap-1">
                                 <Users className="h-3 w-3" /> {(c.stats.sent || 0).toLocaleString()} sent
                               </span>
                               <span className="text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full flex items-center gap-1">

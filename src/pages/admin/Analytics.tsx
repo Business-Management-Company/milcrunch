@@ -35,7 +35,7 @@ const registrationData = [
 const trafficSourceData = [
   { name: "Direct", value: 35, color: "hsl(var(--primary))" },
   { name: "Social Media", value: 28, color: "hsl(var(--accent))" },
-  { name: "Email", value: 22, color: "#6C5CE7" },
+  { name: "Email", value: 22, color: "#1e3a5f" },
   { name: "Referral", value: 10, color: "#F59E0B" },
   { name: "Organic", value: 5, color: "#6366F1" },
 ];
@@ -171,8 +171,8 @@ const Analytics = () => {
                   <span className="text-xs text-red-500">{stats.conversionChange}%</span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Target className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Target className="w-5 h-5 text-blue-700" />
               </div>
             </div>
           </Card>

@@ -30,16 +30,12 @@ import {
   Hash,
   ChevronDown,
   ChevronUp,
-  ListPlus,
-  Globe,
-  CalendarPlus,
   Check,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLists } from "@/contexts/ListContext";
-import type { ListCreator } from "@/contexts/ListContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -535,7 +531,7 @@ export default function CreatorPublicProfile() {
           <h1 className="text-3xl font-bold mb-4">Creator Not Found</h1>
           <p className="text-[#6B7280] mb-8">We couldn&apos;t find a creator with that profile.</p>
           <Link to="/creators">
-            <Button className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">Browse All Creators</Button>
+            <Button className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">Browse All Creators</Button>
           </Link>
         </div>
         <PublicFooter />
@@ -557,7 +553,7 @@ export default function CreatorPublicProfile() {
   // Build stats array — only real data
   const stats: { label: string; value: string; icon: React.ReactNode }[] = [];
   if (creator.follower_count && creator.follower_count > 0) {
-    stats.push({ label: "Followers", value: formatFollowerCount(creator.follower_count), icon: <Users className="h-4 w-4 text-[#6C5CE7]" /> });
+    stats.push({ label: "Followers", value: formatFollowerCount(creator.follower_count), icon: <Users className="h-4 w-4 text-[#1e3a5f]" /> });
   }
   if (creator.engagement_rate != null && creator.engagement_rate > 0) {
     stats.push({ label: "Engagement", value: `${creator.engagement_rate.toFixed(1)}%`, icon: <TrendingUp className="h-4 w-4 text-green-600" /> });
@@ -604,7 +600,7 @@ export default function CreatorPublicProfile() {
         {/* Back link */}
         <Link
           to="/creators"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#1e3a5f] mb-4 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Creators
         </Link>
@@ -644,7 +640,7 @@ export default function CreatorPublicProfile() {
               <div
                 className={cn(
                   "w-20 h-20 md:w-[100px] md:h-[100px] rounded-full overflow-hidden border-4 border-white shadow-lg relative",
-                  isVerified && "ring-[3px] ring-[#6C5CE7] ring-offset-2 ring-offset-white"
+                  isVerified && "ring-[3px] ring-[#1e3a5f] ring-offset-2 ring-offset-white"
                 )}
               >
                 {imgSrc && !imgError && (
@@ -657,7 +653,7 @@ export default function CreatorPublicProfile() {
                     onError={() => setImgError(true)}
                   />
                 )}
-                <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-2xl">
+                <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-2xl">
                   {getInitials(creator.display_name, creator.handle)}
                 </div>
               </div>
@@ -682,7 +678,7 @@ export default function CreatorPublicProfile() {
                     {creator.featured_homepage && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <ShieldCheck className="h-5 w-5 text-purple-500 shrink-0" />
+                          <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0" />
                         </TooltipTrigger>
                         <TooltipContent>MilCrunch Verified</TooltipContent>
                       </Tooltip>
@@ -699,7 +695,7 @@ export default function CreatorPublicProfile() {
                       </span>
                     )}
                     {creator.category && (
-                      <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-3 py-1 rounded-full">
+                      <span className="text-xs font-medium text-[#1e3a5f] bg-[#1e3a5f]/10 px-3 py-1 rounded-full">
                         {creator.category}
                       </span>
                     )}
@@ -711,7 +707,7 @@ export default function CreatorPublicProfile() {
                   {following ? (
                     <Button
                       onClick={handleFollowClick}
-                      className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6 rounded-xl w-full md:w-auto"
+                      className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-6 rounded-xl w-full md:w-auto"
                     >
                       <UserCheck className="h-4 w-4 mr-2" />
                       Following
@@ -720,7 +716,7 @@ export default function CreatorPublicProfile() {
                     <Button
                       onClick={handleFollowClick}
                       variant="outline"
-                      className="border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-6 rounded-xl w-full md:w-auto"
+                      className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/10 px-6 rounded-xl w-full md:w-auto"
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
                       Follow
@@ -738,7 +734,7 @@ export default function CreatorPublicProfile() {
                   {bioNeedsToggle && (
                     <button
                       onClick={() => setBioExpanded(!bioExpanded)}
-                      className="text-sm font-medium text-[#6C5CE7] hover:text-[#5B4BD1] mt-1 inline-flex items-center gap-0.5"
+                      className="text-sm font-medium text-[#1e3a5f] hover:text-[#2d5282] mt-1 inline-flex items-center gap-0.5"
                     >
                       {bioExpanded ? (
                         <>
@@ -788,61 +784,6 @@ export default function CreatorPublicProfile() {
           {/* ====== ACTION BAR ====== */}
           {user && (
             <div className="px-4 md:px-6 py-3 border-t border-gray-100 flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-lg text-[#6C5CE7] border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/10"
-                  onClick={() => setListPickerOpen(!listPickerOpen)}
-                >
-                  <ListPlus className="h-4 w-4 mr-1.5" />
-                  Add to List
-                </Button>
-                {listPickerOpen && (
-                  <div className="absolute left-0 top-full mt-1 z-50 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
-                    {lists.map((list) => (
-                      <button
-                        key={list.id}
-                        onClick={() => handleAddToList(list.id)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
-                      >
-                        {list.avatar_url ? (
-                          <img src={list.avatar_url} alt="" className="w-5 h-5 rounded shrink-0" />
-                        ) : (
-                          <ListPlus className="h-4 w-4 text-gray-400 shrink-0" />
-                        )}
-                        <span className="truncate">{list.name}</span>
-                        <span className="ml-auto text-xs text-gray-400">{list.creators.length}</span>
-                      </button>
-                    ))}
-                    <button
-                      onClick={handleCreateAndAdd}
-                      className="w-full text-left px-3 py-2 text-sm text-[#6C5CE7] hover:bg-[#6C5CE7]/5 font-medium border-t border-gray-100 dark:border-gray-700"
-                    >
-                      + Create New List
-                    </button>
-                  </div>
-                )}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
-                onClick={handleAddToDirectory}
-                disabled={addingToDirectory}
-              >
-                {addingToDirectory ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Globe className="h-4 w-4 mr-1.5" />}
-                Add to Directory
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg text-gray-600 border-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-800"
-                onClick={() => toast.info("Invite to Event coming soon")}
-              >
-                <CalendarPlus className="h-4 w-4 mr-1.5" />
-                Invite to Event
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -861,25 +802,25 @@ export default function CreatorPublicProfile() {
               <TabsList className="w-full justify-start bg-transparent rounded-none p-0 h-auto px-4 md:px-6">
                 <TabsTrigger
                   value="overview"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   Overview
                 </TabsTrigger>
                 <TabsTrigger
                   value="content"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   Content
                 </TabsTrigger>
                 <TabsTrigger
                   value="events"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   Events
                 </TabsTrigger>
                 <TabsTrigger
                   value="contact"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#6C5CE7] data-[state=active]:bg-transparent data-[state=active]:text-[#6C5CE7] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   Contact
                 </TabsTrigger>
@@ -907,7 +848,7 @@ export default function CreatorPublicProfile() {
                         href={getPlatformUrl(p)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/5 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/5 transition-colors"
                       >
                         {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
                         {PLATFORM_LABEL[p] ?? p}
@@ -928,10 +869,10 @@ export default function CreatorPublicProfile() {
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+                        className="flex items-center gap-2 p-3 rounded-lg border border-gray-100 hover:border-[#1e3a5f]/30 hover:bg-[#1e3a5f]/5 transition-colors group"
                       >
-                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-[#6C5CE7]" />
-                        <span className="text-sm text-gray-700 group-hover:text-[#6C5CE7] truncate">
+                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-[#1e3a5f]" />
+                        <span className="text-sm text-gray-700 group-hover:text-[#1e3a5f] truncate">
                           {link.label}
                         </span>
                       </a>
@@ -1024,7 +965,7 @@ export default function CreatorPublicProfile() {
             <TabsContent value="events" className="px-4 md:px-6 py-5">
               {eventsLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-[#6C5CE7]" />
+                  <Loader2 className="h-6 w-6 animate-spin text-[#1e3a5f]" />
                 </div>
               ) : events.length > 0 ? (
                 <div className="space-y-6">
@@ -1066,7 +1007,7 @@ export default function CreatorPublicProfile() {
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Email</h3>
                   <a
                     href={`mailto:${enrichment.email}`}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/5 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/5 transition-colors"
                   >
                     <Mail className="h-4 w-4" />
                     {enrichment.email}
@@ -1085,12 +1026,12 @@ export default function CreatorPublicProfile() {
                         href={getPlatformUrl(p)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#1e3a5f]/30 hover:bg-[#1e3a5f]/5 transition-colors group"
                       >
-                        <span className="text-gray-500 group-hover:text-[#6C5CE7] transition-colors">
+                        <span className="text-gray-500 group-hover:text-[#1e3a5f] transition-colors">
                           {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
                         </span>
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-[#6C5CE7]">
+                        <span className="text-sm font-medium text-gray-700 group-hover:text-[#1e3a5f]">
                           {PLATFORM_LABEL[p] ?? p}
                         </span>
                         <ExternalLink className="h-3.5 w-3.5 text-gray-300 ml-auto" />
@@ -1111,10 +1052,10 @@ export default function CreatorPublicProfile() {
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#1e3a5f]/30 hover:bg-[#1e3a5f]/5 transition-colors group"
                       >
-                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-[#6C5CE7]" />
-                        <span className="text-sm text-gray-700 group-hover:text-[#6C5CE7] truncate">
+                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-[#1e3a5f]" />
+                        <span className="text-sm text-gray-700 group-hover:text-[#1e3a5f] truncate">
                           {link.label}
                         </span>
                       </a>
@@ -1170,19 +1111,19 @@ function EventCard({ event }: { event: EventRow }) {
   return (
     <Link
       to={`/events/${event.id}`}
-      className="flex gap-4 p-3 rounded-xl border border-gray-100 hover:border-[#6C5CE7]/30 hover:bg-[#6C5CE7]/5 transition-colors group"
+      className="flex gap-4 p-3 rounded-xl border border-gray-100 hover:border-[#1e3a5f]/30 hover:bg-[#1e3a5f]/5 transition-colors group"
     >
       {/* Event cover thumbnail */}
-      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-[#6C5CE7]/20 to-[#6C5CE7]/5 shrink-0 flex items-center justify-center">
+      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-[#1e3a5f]/20 to-[#1e3a5f]/5 shrink-0 flex items-center justify-center">
         {event.cover_image_url ? (
           <img src={event.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
         ) : (
-          <Calendar className="h-6 w-6 text-[#6C5CE7]/40" />
+          <Calendar className="h-6 w-6 text-[#1e3a5f]/40" />
         )}
       </div>
 
       <div className="min-w-0 flex-1">
-        <h4 className="text-sm font-semibold text-gray-900 group-hover:text-[#6C5CE7] truncate transition-colors">
+        <h4 className="text-sm font-semibold text-gray-900 group-hover:text-[#1e3a5f] truncate transition-colors">
           {event.title}
         </h4>
         <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">

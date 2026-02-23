@@ -62,7 +62,7 @@ interface Props {
 }
 
 /* ---------- helpers ---------- */
-const DEFAULT_THEME = "#6C5CE7";
+const DEFAULT_THEME = "#1e3a5f";
 
 /** Darken a hex color by a percentage (0-1) */
 function darken(hex: string, amount: number): string {
@@ -202,7 +202,7 @@ const AttendeeLayout = ({ activeTab, children, pageTitle }: Props) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -342,11 +342,11 @@ const AttendeeLayout = ({ activeTab, children, pageTitle }: Props) => {
                   >
                     <tab.icon
                       className="h-[22px] w-[22px] transition-colors"
-                      style={{ color: isActive ? "#6C5CE7" : "#6B7280" }}
+                      style={{ color: isActive ? "#1e3a5f" : "#6B7280" }}
                     />
                     <span
                       className="text-[10px] font-medium transition-colors"
-                      style={{ color: isActive ? "#6C5CE7" : "#6B7280" }}
+                      style={{ color: isActive ? "#1e3a5f" : "#6B7280" }}
                     >
                       {tab.label}
                     </span>

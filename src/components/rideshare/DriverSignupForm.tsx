@@ -131,12 +131,12 @@ export default function DriverSignupForm({
         >
           <label className="flex items-center gap-2 cursor-pointer">
             <RadioGroupItem value="pickup" />
-            <Car className="w-4 h-4 text-purple-500" />
+            <Car className="w-4 h-4 text-blue-600" />
             <span className="text-sm">I will pick up</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <RadioGroupItem value="meetup" />
-            <MapPin className="w-4 h-4 text-purple-500" />
+            <MapPin className="w-4 h-4 text-blue-600" />
             <span className="text-sm">Meet at location</span>
           </label>
         </RadioGroup>
@@ -219,7 +219,7 @@ export default function DriverSignupForm({
 
       {/* Submit */}
       <Button
-        className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
         disabled={!canSubmit || saving}
         onClick={handleSubmit}
       >

@@ -32,9 +32,9 @@ const REVENUE_BY_STREAM = [
 ];
 
 const STREAM_COLORS: Record<string, string> = {
-  Events: "#6C5CE7",
+  Events: "#1e3a5f",
   Platform: "#3B82F6",
-  Marketplace: "#8B5CF6",
+  Marketplace: "#2d5282",
   Media: "#14B8A6",
   Community: "#F59E0B",
 };
@@ -85,7 +85,7 @@ const STREAM_ROWS: StreamRow[] = [
 ];
 
 const CAT_COLORS: Record<string, { bg: string; text: string; border: string; darkBg: string; darkBorder: string }> = {
-  Events:      { bg: "bg-purple-50",  text: "text-purple-700",  border: "border-purple-200",  darkBg: "bg-purple-950/30",  darkBorder: "border-purple-800/40" },
+  Events:      { bg: "bg-blue-50",  text: "text-blue-800",  border: "border-blue-300",  darkBg: "bg-blue-950/30",  darkBorder: "border-blue-800/40" },
   Platform:    { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",    darkBg: "bg-blue-950/30",    darkBorder: "border-blue-800/40" },
   Marketplace: { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200",  darkBg: "bg-violet-950/30",  darkBorder: "border-violet-800/40" },
   Media:       { bg: "bg-teal-50",    text: "text-teal-700",    border: "border-teal-200",    darkBg: "bg-teal-950/30",    darkBorder: "border-teal-800/40" },
@@ -93,9 +93,9 @@ const CAT_COLORS: Record<string, { bg: string; text: string; border: string; dar
 };
 
 const CAT_HEADER: Record<string, string> = {
-  Events: "#6C5CE7",
+  Events: "#1e3a5f",
   Platform: "#3B82F6",
-  Marketplace: "#8B5CF6",
+  Marketplace: "#2d5282",
   Media: "#14B8A6",
   Community: "#F59E0B",
 };
@@ -104,7 +104,7 @@ const CAT_HEADER: Record<string, string> = {
 const ASSUMPTIONS = [
   {
     title: "Live Events",
-    color: "#6C5CE7",
+    color: "#1e3a5f",
     items: [
       { label: "Events per year (Y1 \u2192 Y5)", value: "2 \u2192 10" },
       { label: "Avg ticket price", value: "$150 \u2192 $200" },
@@ -128,7 +128,7 @@ const ASSUMPTIONS = [
   },
   {
     title: "Creator Marketplace",
-    color: "#8B5CF6",
+    color: "#2d5282",
     items: [
       { label: "List rentals per year", value: "5 \u2192 350" },
       { label: "Avg list rental fee", value: "$500 \u2192 $1,500" },
@@ -294,8 +294,8 @@ function ForecastSub({ dark, years }: { dark: boolean; years: 3 | 5 }) {
               )}
             >
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-7 h-7 rounded-lg bg-[#6C5CE7]/10 flex items-center justify-center">
-                  <Icon className="h-3.5 w-3.5 text-[#6C5CE7]" />
+                <div className="w-7 h-7 rounded-lg bg-[#1e3a5f]/10 flex items-center justify-center">
+                  <Icon className="h-3.5 w-3.5 text-[#1e3a5f]" />
                 </div>
                 <span className={cn(
                   "text-[11px] font-medium uppercase tracking-wide",
@@ -443,18 +443,18 @@ function ForecastSub({ dark, years }: { dark: boolean; years: 3 | 5 }) {
               <Line
                 type="monotone"
                 dataKey="ebitda"
-                stroke="#6C5CE7"
+                stroke="#1e3a5f"
                 strokeWidth={2.5}
-                dot={{ fill: "#6C5CE7", r: 4, strokeWidth: 2, stroke: dark ? "#0A0A0F" : "#fff" }}
+                dot={{ fill: "#1e3a5f", r: 4, strokeWidth: 2, stroke: dark ? "#0A0A0F" : "#fff" }}
                 name="EBITDA ($K)"
               />
               <Line
                 type="monotone"
                 dataKey="margin"
-                stroke="#A78BFA"
+                stroke="#3b82f6"
                 strokeWidth={2}
                 strokeDasharray="6 3"
-                dot={{ fill: "#A78BFA", r: 3, strokeWidth: 2, stroke: dark ? "#0A0A0F" : "#fff" }}
+                dot={{ fill: "#3b82f6", r: 3, strokeWidth: 2, stroke: dark ? "#0A0A0F" : "#fff" }}
                 name="Margin (%)"
               />
             </LineChart>
@@ -513,7 +513,7 @@ function ForecastSub({ dark, years }: { dark: boolean; years: 3 | 5 }) {
         <button
           type="button"
           onClick={() => window.open("mailto:andrew@recurrentx.com?subject=MilCrunch%20Financial%20Model%20Request&body=I'd%20like%20to%20request%20the%20full%20financial%20model%20Excel%20file.", "_blank")}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold text-sm transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1e3a5f] hover:bg-[#2d5282] text-white font-semibold text-sm transition-colors"
         >
           <Download className="h-4 w-4" /> Request Full Model (.xlsx)
         </button>
@@ -609,7 +609,7 @@ function RevenueStreamsSub({ dark }: { dark: boolean }) {
                               {row.name}
                             </span>
                             {row.newIn && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#6C5CE7]/10 text-[#6C5CE7] whitespace-nowrap">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#1e3a5f]/10 text-[#1e3a5f] whitespace-nowrap">
                                 New in {row.newIn}
                               </span>
                             )}
@@ -671,7 +671,7 @@ function RevenueStreamsSub({ dark }: { dark: boolean }) {
       <div
         className={cn(
           "rounded-xl p-5 border-2 transition-colors duration-300",
-          dark ? "border-[#6C5CE7]/40 bg-[#6C5CE7]/10" : "border-[#6C5CE7]/20 bg-[#6C5CE7]/[0.04]"
+          dark ? "border-[#1e3a5f]/40 bg-[#1e3a5f]/10" : "border-[#1e3a5f]/20 bg-[#1e3a5f]/[0.04]"
         )}
       >
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -785,7 +785,7 @@ function InvestorThesisSub({ dark }: { dark: boolean }) {
           "text-3xl md:text-4xl font-extrabold leading-tight mb-3 transition-colors duration-300",
           dark ? "text-white" : "text-[#111827]"
         )}>
-          Why MilCrunch <span className="text-[#6C5CE7]">Wins</span>
+          Why MilCrunch <span className="text-[#1e3a5f]">Wins</span>
         </h2>
         <p className={cn(
           "text-base leading-relaxed",
@@ -801,14 +801,14 @@ function InvestorThesisSub({ dark }: { dark: boolean }) {
           <div
             key={card.number}
             className={cn(
-              "rounded-xl border p-6 transition-all duration-300 group hover:border-[#6C5CE7]/40",
+              "rounded-xl border p-6 transition-all duration-300 group hover:border-[#1e3a5f]/40",
               dark
                 ? "bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06]"
                 : "bg-white border-[#E5E7EB] shadow-sm hover:shadow-md"
             )}
           >
             <div className="flex items-start gap-4">
-              <span className="text-3xl font-black text-[#6C5CE7]/20 leading-none select-none">
+              <span className="text-3xl font-black text-[#1e3a5f]/20 leading-none select-none">
                 {card.number}
               </span>
               <div className="flex-1 min-w-0">
@@ -818,7 +818,7 @@ function InvestorThesisSub({ dark }: { dark: boolean }) {
                 )}>
                   {card.title}
                 </h4>
-                <p className="text-[#6C5CE7] text-sm font-semibold mb-3">
+                <p className="text-[#1e3a5f] text-sm font-semibold mb-3">
                   {card.headline}
                 </p>
                 <p className={cn(
@@ -834,7 +834,7 @@ function InvestorThesisSub({ dark }: { dark: boolean }) {
       </div>
 
       {/* CTA Banner */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1040 0%, #2d1b69 50%, #6C5CE7 100%)" }}>
+      <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1040 0%, #2d1b69 50%, #1e3a5f 100%)" }}>
         <div className="px-8 py-10 md:py-12 text-center">
           <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-3">
             Ready to see the full picture?
@@ -845,7 +845,7 @@ function InvestorThesisSub({ dark }: { dark: boolean }) {
           <button
             type="button"
             onClick={() => window.open("mailto:andrew@recurrentx.com?subject=MilCrunch%20Investor%20Package%20Request&body=I'd%20like%20to%20request%20the%20full%20investor%20package%20for%20MilCrunch.", "_blank")}
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-white text-[#6C5CE7] font-bold text-sm hover:bg-gray-100 transition-colors shadow-lg shadow-black/20"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-white text-[#1e3a5f] font-bold text-sm hover:bg-gray-100 transition-colors shadow-lg shadow-black/20"
           >
             Request Full Investor Package <ArrowRight className="h-4 w-4" />
           </button>

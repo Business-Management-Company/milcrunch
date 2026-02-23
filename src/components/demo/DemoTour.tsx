@@ -131,7 +131,7 @@ export default function DemoTour({ active, onComplete }: DemoTourProps) {
       {/* Spotlight ring */}
       {rect && (
         <div
-          className="absolute rounded-lg ring-[3px] ring-[#6C5CE7] bg-transparent pointer-events-none"
+          className="absolute rounded-lg ring-[3px] ring-[#1e3a5f] bg-transparent pointer-events-none"
           style={{
             top: rect.top - 4,
             left: rect.left - 4,
@@ -143,7 +143,7 @@ export default function DemoTour({ active, onComplete }: DemoTourProps) {
 
       {/* Tooltip card */}
       <div
-        className="w-72 bg-[#6C5CE7] rounded-xl p-4 shadow-2xl text-white"
+        className="w-72 bg-[#1e3a5f] rounded-xl p-4 shadow-2xl text-white"
         style={style}
       >
         <div className="flex items-center justify-between mb-2">
@@ -165,7 +165,7 @@ export default function DemoTour({ active, onComplete }: DemoTourProps) {
           </button>
           <button
             onClick={next}
-            className="text-xs font-semibold bg-white text-[#6C5CE7] px-4 py-1.5 rounded-full hover:bg-gray-100 transition-colors"
+            className="text-xs font-semibold bg-white text-[#1e3a5f] px-4 py-1.5 rounded-full hover:bg-gray-100 transition-colors"
           >
             {isLast ? "Finish" : "Next"}
           </button>

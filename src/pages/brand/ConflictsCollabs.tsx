@@ -1062,7 +1062,7 @@ Both events serve overlapping audiences. Write the email.`,
                 <button
                   key={s.id}
                   onClick={() => loadSearch(s)}
-                  className="flex items-center gap-1 px-3 py-1 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-full text-sm text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-800 rounded-full text-sm text-blue-800 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                 >
                   <MapPin className="h-3 w-3 shrink-0" />
                   {s.location} · {dateLabel}
@@ -1083,7 +1083,7 @@ Both events serve overlapping audiences. Write the email.`,
       {/* Planning form */}
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Target className="h-4 w-4 text-purple-600" />
+          <Target className="h-4 w-4 text-blue-700" />
           <h2 className="font-semibold text-sm">Plan Your Event</h2>
         </div>
 
@@ -1195,7 +1195,7 @@ Both events serve overlapping audiences. Write the email.`,
                   className={cn(
                     "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
                     audienceTypes.includes(aud)
-                      ? "bg-purple-100 border-purple-300 text-purple-700 dark:bg-purple-900/30 dark:border-purple-600 dark:text-purple-300"
+                      ? "bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-400"
                       : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/50",
                   )}
                 >
@@ -1210,7 +1210,7 @@ Both events serve overlapping audiences. Write the email.`,
             <Button
               onClick={runScan}
               disabled={scanning || !locationInput.trim() || !dateRange?.from}
-              className="bg-purple-600 hover:bg-purple-700 text-white h-10 px-5"
+              className="bg-blue-700 hover:bg-blue-800 text-white h-10 px-5"
             >
               {scanning ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -1229,15 +1229,15 @@ Both events serve overlapping audiences. Write the email.`,
           <div className="flex flex-col items-center gap-6">
             {/* Pulsing icon */}
             <div className="relative h-20 w-20">
-              <div className="absolute inset-0 rounded-full bg-purple-200 animate-ping opacity-30" />
-              <div className="absolute inset-2 rounded-full bg-purple-100 animate-pulse" />
+              <div className="absolute inset-0 rounded-full bg-blue-300 animate-ping opacity-30" />
+              <div className="absolute inset-2 rounded-full bg-blue-100 animate-pulse" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <Radar className="h-8 w-8 text-purple-600" />
+                <Radar className="h-8 w-8 text-blue-700" />
               </div>
             </div>
 
             {/* Step counter */}
-            <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
               Step {scanStep + 1} of {SCAN_MESSAGES.length}
             </p>
 
@@ -1250,7 +1250,7 @@ Both events serve overlapping audiences. Write the email.`,
             <div className="w-full max-w-xs">
               <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-purple-600 transition-all duration-700 ease-out"
+                  className="h-full rounded-full bg-blue-700 transition-all duration-700 ease-out"
                   style={{ width: `${Math.round(((scanStep + 1) / SCAN_MESSAGES.length) * 100)}%` }}
                 />
               </div>
@@ -1312,17 +1312,17 @@ Both events serve overlapping audiences. Write the email.`,
                   return (
                     <div
                       key={i}
-                      className="flex items-start gap-3 p-3 rounded-lg border border-purple-200 bg-purple-50/60 dark:border-purple-800/50 dark:bg-purple-950/20"
+                      className="flex items-start gap-3 p-3 rounded-lg border border-blue-300 bg-blue-50/60 dark:border-blue-800/50 dark:bg-blue-950/20"
                     >
-                      <Info className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+                      <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-purple-900 dark:text-purple-200">{obs.name}</span>
-                          <span className="text-xs text-purple-600 dark:text-purple-400">
+                          <span className="text-sm font-medium text-blue-900 dark:text-blue-300">{obs.name}</span>
+                          <span className="text-xs text-blue-700 dark:text-blue-500">
                             {format(obs.date, "MMM d, yyyy")}
                           </span>
                         </div>
-                        <p className="text-xs text-purple-700/80 dark:text-purple-300/70 mt-1">
+                        <p className="text-xs text-blue-800/80 dark:text-blue-400/70 mt-1">
                           {isSameDay
                             ? `Falls during your event. Consider theming sessions or marketing around ${obs.name} to boost engagement.`
                             : obs.direction === "before"
@@ -1339,7 +1339,7 @@ Both events serve overlapping audiences. Write the email.`,
                           }
                         </p>
                       </div>
-                      <Badge className="text-[10px] shrink-0 bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 border-0">
+                      <Badge className="text-[10px] shrink-0 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-400 border-0">
                         {isLeverage ? "Leverage" : "Caution"}
                       </Badge>
                     </div>
@@ -1713,7 +1713,7 @@ Both events serve overlapping audiences. Write the email.`,
             <div className="flex-1 overflow-y-auto p-4">
               {generatingPitch ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-600 mr-2" />
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-700 mr-2" />
                   <span className="text-sm text-muted-foreground">Generating pitch with AI...</span>
                 </div>
               ) : (

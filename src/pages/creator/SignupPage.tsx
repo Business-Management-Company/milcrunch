@@ -106,7 +106,7 @@ export default function SignupPage() {
       <Card className="w-full max-w-md bg-white/95 dark:bg-card border-border shadow-xl">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">Mil</span><span className="text-[#6C5CE7] font-extrabold">Crunch</span></span>
+            <span className="text-3xl font-bold tracking-tight"><span className="text-[#000741] dark:text-white">Mil</span><span className="text-[#1e3a5f] font-extrabold">Crunch</span></span>
           </div>
           <CardTitle className="text-2xl font-bold">Join MilCrunch</CardTitle>
           <CardDescription>Create your creator account</CardDescription>

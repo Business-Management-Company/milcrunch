@@ -43,11 +43,11 @@ function getLocationLabel(city: string | null, state: string | null): string {
 
 const CARD_GRADIENTS = [
   "from-blue-600 to-blue-800",
-  "from-purple-500 to-purple-700",
-  "from-indigo-500 to-purple-700",
+  "from-blue-600 to-blue-800",
+  "from-indigo-500 to-blue-800",
   "from-slate-500 to-slate-700",
   "from-cyan-600 to-blue-700",
-  "from-purple-600 to-purple-800",
+  "from-blue-700 to-blue-800",
   "from-violet-500 to-indigo-700",
   "from-sky-500 to-blue-700",
 ];
@@ -106,7 +106,7 @@ function EventCard({ event, index }: { event: EventRow & { slug?: string | null 
         <h3 className="text-xl font-bold text-white mb-3 leading-snug">
           {event.title}
         </h3>
-        <div className="flex items-center gap-2 text-[#6C5CE7] font-semibold text-sm opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+        <div className="flex items-center gap-2 text-[#1e3a5f] font-semibold text-sm opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
           {past ? "View Details" : "Register"} <ArrowRight className="h-4 w-4" />
         </div>
       </div>

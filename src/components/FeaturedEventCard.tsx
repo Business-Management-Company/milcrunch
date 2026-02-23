@@ -31,13 +31,13 @@ const FeaturedEventCard = ({
   const gradientClasses = {
     amber: "from-amber-500/20 via-orange-500/10 to-transparent",
     blue: "from-blue-500/20 via-cyan-500/10 to-transparent",
-    purple: "from-purple-500/20 via-pink-500/10 to-transparent"
+    purple: "from-blue-600/20 via-pink-500/10 to-transparent"
   };
 
   const accentClasses = {
     amber: "bg-amber-500 text-white",
     blue: "bg-blue-500 text-white",
-    purple: "bg-purple-500 text-white"
+    purple: "bg-blue-600 text-white"
   };
 
   return (

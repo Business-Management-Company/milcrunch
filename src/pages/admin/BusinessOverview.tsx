@@ -199,7 +199,7 @@ export default function BusinessOverview() {
         <section className="text-center space-y-4">
           <div className="flex items-center justify-center gap-1.5 text-3xl font-extrabold tracking-tight">
             <span className="text-[#000741] dark:text-white">MilCrunch</span>
-            <span className="text-[#9B51E0] font-black">X</span>
+            <span className="text-[#3b82f6] font-black">X</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-[#000741] dark:text-white leading-tight">
             The Operating System for Military<br className="hidden sm:block" /> Events & Communities
@@ -249,11 +249,11 @@ export default function BusinessOverview() {
           {/* Stats row */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-10">
             {[
-              { label: "Creators", value: stats.creators.toLocaleString(), extra: "+ millions via discovery", color: "text-[#6C5CE7]" },
+              { label: "Creators", value: stats.creators.toLocaleString(), extra: "+ millions via discovery", color: "text-[#1e3a5f]" },
               { label: "Podcasts", value: stats.podcasts.toLocaleString(), color: "text-blue-600" },
               { label: "Events", value: stats.events.toLocaleString(), color: "text-green-600" },
               { label: "Sponsors", value: stats.sponsors.toLocaleString(), color: "text-amber-600" },
-              { label: "Verifications", value: stats.verifications.toLocaleString(), color: "text-purple-600" },
+              { label: "Verifications", value: stats.verifications.toLocaleString(), color: "text-blue-700" },
             ].map((s) => (
               <Card key={s.label} className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm text-center">
                 <CardContent className="py-5 px-3">
@@ -271,13 +271,13 @@ export default function BusinessOverview() {
               <Card key={f.title} className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow group">
                 <CardContent className="pt-6 pb-5 space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-[#6C5CE7]/10 flex items-center justify-center shrink-0">
-                      <f.icon className="h-5 w-5 text-[#6C5CE7]" />
+                    <div className="h-10 w-10 rounded-lg bg-[#1e3a5f]/10 flex items-center justify-center shrink-0">
+                      <f.icon className="h-5 w-5 text-[#1e3a5f]" />
                     </div>
                     <h3 className="font-semibold text-[#000741] dark:text-white">{f.title}</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                  <Link to={f.link} className="inline-flex items-center gap-1 text-sm font-medium text-[#6C5CE7] hover:underline group-hover:gap-2 transition-all">
+                  <Link to={f.link} className="inline-flex items-center gap-1 text-sm font-medium text-[#1e3a5f] hover:underline group-hover:gap-2 transition-all">
                     See Demo <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </CardContent>
@@ -317,12 +317,12 @@ export default function BusinessOverview() {
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-[#6C5CE7]/5 dark:bg-[#6C5CE7]/10">
+                  <tr className="bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10">
                     <td className="py-4 px-5 font-bold text-[#000741] dark:text-white">Total</td>
-                    <td className="py-4 px-5 text-right font-bold font-mono tabular-nums text-[#6C5CE7] text-lg">
+                    <td className="py-4 px-5 text-right font-bold font-mono tabular-nums text-[#1e3a5f] text-lg">
                       ${saasTotal.toLocaleString()}/mo
                     </td>
-                    <td className="py-4 px-5 font-medium text-[#6C5CE7]">All replaced</td>
+                    <td className="py-4 px-5 font-medium text-[#1e3a5f]">All replaced</td>
                   </tr>
                 </tfoot>
               </table>
@@ -347,8 +347,8 @@ export default function BusinessOverview() {
                   <AreaChart data={INSIGHTS_DEMO} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="fillPurple" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6C5CE7" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#6C5CE7" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#1e3a5f" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#1e3a5f" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -358,7 +358,7 @@ export default function BusinessOverview() {
                       formatter={(v: number) => [`${(v / 1000).toFixed(0)}K impressions`, "Impressions"]}
                       labelFormatter={(l) => l}
                     />
-                    <Area type="monotone" dataKey="impressions" stroke="#6C5CE7" strokeWidth={2} fill="url(#fillPurple)" />
+                    <Area type="monotone" dataKey="impressions" stroke="#1e3a5f" strokeWidth={2} fill="url(#fillPurple)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -391,11 +391,11 @@ export default function BusinessOverview() {
             {REVENUE_CARDS.map((r) => (
               <Card key={r.title} className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
                 <CardContent className="pt-6 pb-5 space-y-3 text-center">
-                  <div className="h-12 w-12 rounded-xl bg-[#6C5CE7]/10 flex items-center justify-center mx-auto">
-                    <r.icon className="h-6 w-6 text-[#6C5CE7]" />
+                  <div className="h-12 w-12 rounded-xl bg-[#1e3a5f]/10 flex items-center justify-center mx-auto">
+                    <r.icon className="h-6 w-6 text-[#1e3a5f]" />
                   </div>
                   <h3 className="font-bold text-[#000741] dark:text-white">{r.title}</h3>
-                  <p className="text-sm font-semibold text-[#6C5CE7]">{r.price}</p>
+                  <p className="text-sm font-semibold text-[#1e3a5f]">{r.price}</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">{r.desc}</p>
                 </CardContent>
               </Card>
@@ -405,7 +405,7 @@ export default function BusinessOverview() {
 
         {/* ═══════════════ SECTION 6: THE PITCH ═══════════════ */}
         <section className="print-break text-center space-y-8">
-          <div className="max-w-3xl mx-auto rounded-2xl bg-gradient-to-br from-[#000741] to-[#5B4BD1] p-10 sm:p-14 text-white">
+          <div className="max-w-3xl mx-auto rounded-2xl bg-gradient-to-br from-[#000741] to-[#2d5282] p-10 sm:p-14 text-white">
             <Quote className="h-8 w-8 text-white/30 mx-auto mb-4" />
             <blockquote className="text-xl sm:text-2xl font-bold leading-snug">
               "You didn't sponsor a 3-day event.<br />You sponsored a 365-day community."
@@ -417,7 +417,7 @@ export default function BusinessOverview() {
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <Button
                 size="lg"
-                className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white gap-2 rounded-full px-8"
+                className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2 rounded-full px-8"
                 asChild
               >
                 <a href="https://calendly.com" target="_blank" rel="noopener noreferrer">

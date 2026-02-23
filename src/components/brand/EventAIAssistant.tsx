@@ -239,7 +239,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-purple-500" /> Event AI Assistant
+          <Sparkles className="h-5 w-5 text-blue-600" /> Event AI Assistant
         </h3>
         {messages.length > 0 && (
           <Button
@@ -261,7 +261,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
               key={q}
               onClick={() => sendMessage(q)}
               disabled={loading}
-              className="px-3 py-1.5 text-xs rounded-full border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-xs rounded-full border border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors disabled:opacity-50"
             >
               {q}
             </button>
@@ -275,7 +275,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
           {messages.map((m, i) =>
             m.role === "user" ? (
               <div key={i} className="flex justify-end">
-                <div className="max-w-[80%] rounded-xl px-4 py-2.5 bg-purple-50 dark:bg-purple-950/40 text-sm text-gray-800 dark:text-gray-200">
+                <div className="max-w-[80%] rounded-xl px-4 py-2.5 bg-blue-50 dark:bg-blue-950/40 text-sm text-gray-800 dark:text-gray-200">
                   {m.content}
                 </div>
               </div>
@@ -302,7 +302,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
                               handleSaveDraft(cta.draftTitle, cta.draftLocation);
                             }
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors disabled:opacity-50"
                         >
                           {savingDraft && cta.action === "draft" ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -323,7 +323,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
           {loading && (
             <div className="flex justify-start">
               <div className="rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
               </div>
             </div>
           )}
@@ -367,7 +367,7 @@ Keep answers concise but thorough. Use bullet points and headers for readability
           size="icon"
           onClick={() => sendMessage(input)}
           disabled={!input.trim() || loading}
-          className="shrink-0 bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white h-[42px] w-[42px]"
+          className="shrink-0 bg-[#1e3a5f] hover:bg-[#2d5282] text-white h-[42px] w-[42px]"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>

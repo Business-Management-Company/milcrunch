@@ -106,7 +106,7 @@ interface SessionTypeDef {
 }
 
 const SESSION_TYPES: SessionTypeDef[] = [
-  { key: "main_speaker", label: "Main Speaker", icon: Mic, color: "#7C3AED" },
+  { key: "main_speaker", label: "Main Speaker", icon: Mic, color: "#1e3a5f" },
   { key: "experience", label: "Experience", icon: Zap, color: "#0891B2" },
   { key: "breakout", label: "Breakout", icon: Shuffle, color: "#EA580C" },
   { key: "break", label: "Break", icon: Coffee, color: "#6B7280" },
@@ -182,7 +182,7 @@ function SpeakerAvatar({ speaker, size = 28 }: { speaker: SpeakerRow; size?: num
     />
   ) : (
     <div
-      className="rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 flex items-center justify-center text-[10px] font-bold border border-white dark:border-gray-700"
+      className="rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold border border-white dark:border-gray-700"
       style={{ width: size, height: size }}
     >
       {initials}
@@ -277,7 +277,7 @@ function SortableSessionCard({
         setDropRef(node);
       }}
       style={{ ...style, borderLeftColor: typeDef.color }}
-      className={`group rounded-xl border bg-white dark:bg-[#1A1D27] border-l-4 ${showHighlight ? "ring-2 ring-purple-400 bg-purple-50 dark:bg-purple-900/10" : "border-gray-200 dark:border-gray-800"} transition-all`}
+      className={`group rounded-xl border bg-white dark:bg-[#1A1D27] border-l-4 ${showHighlight ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/10" : "border-gray-200 dark:border-gray-800"} transition-all`}
     >
       <div className="p-3">
         {/* Row 1: Handle + Badge + Times + Duration + Room */}
@@ -296,14 +296,14 @@ function SortableSessionCard({
           <input
             type="time"
             defaultValue={session.start_time || ""}
-            className="text-xs bg-transparent border-transparent hover:border-gray-300 dark:hover:border-gray-600 border rounded px-1 py-0.5 w-[80px] focus:outline-none focus:border-purple-400"
+            className="text-xs bg-transparent border-transparent hover:border-gray-300 dark:hover:border-gray-600 border rounded px-1 py-0.5 w-[80px] focus:outline-none focus:border-blue-500"
             onBlur={(e) => onUpdate(session.id, "start_time", e.target.value || null)}
           />
           <span className="text-xs text-muted-foreground">–</span>
           <input
             type="time"
             defaultValue={session.end_time || ""}
-            className="text-xs bg-transparent border-transparent hover:border-gray-300 dark:hover:border-gray-600 border rounded px-1 py-0.5 w-[80px] focus:outline-none focus:border-purple-400"
+            className="text-xs bg-transparent border-transparent hover:border-gray-300 dark:hover:border-gray-600 border rounded px-1 py-0.5 w-[80px] focus:outline-none focus:border-blue-500"
             onBlur={(e) => onUpdate(session.id, "end_time", e.target.value || null)}
           />
           {duration && (
@@ -314,7 +314,7 @@ function SortableSessionCard({
           <input
             defaultValue={session.location_room || ""}
             placeholder="Room"
-            className="text-xs bg-transparent border-transparent hover:border-gray-300 dark:hover:border-gray-600 border rounded px-1 py-0.5 w-[100px] text-muted-foreground focus:outline-none focus:border-purple-400 ml-auto"
+            className="text-xs bg-transparent border-transparent hover:border-gray-300 dark:hover:border-gray-600 border rounded px-1 py-0.5 w-[100px] text-muted-foreground focus:outline-none focus:border-blue-500 ml-auto"
             onBlur={(e) => onUpdate(session.id, "location_room", e.target.value || null)}
           />
           <button
@@ -389,7 +389,7 @@ function DayContainer({
     <SortableContext items={sessionIds} strategy={verticalListSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`space-y-2 min-h-[120px] rounded-lg p-2 transition-colors ${isOver ? "bg-purple-50 dark:bg-purple-900/10" : ""}`}
+        className={`space-y-2 min-h-[120px] rounded-lg p-2 transition-colors ${isOver ? "bg-blue-50 dark:bg-blue-900/10" : ""}`}
       >
         {children}
       </div>
@@ -905,7 +905,7 @@ Total days: ${dayCount}`;
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -989,7 +989,7 @@ Total days: ${dayCount}`;
               onClick={() => {
                 setAiOpen(!aiOpen);
               }}
-              className="gap-1.5 text-purple-600 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-900/20"
+              className="gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-900/20"
             >
               <Wand2 className="h-3.5 w-3.5" />
               AI Schedule
@@ -1012,10 +1012,10 @@ Total days: ${dayCount}`;
 
           {/* AI Config Panel */}
           {aiOpen && (
-            <Card className="mb-3 p-4 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10">
+            <Card className="mb-3 p-4 rounded-xl border border-blue-300 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold flex items-center gap-1.5">
-                  <Wand2 className="h-4 w-4 text-purple-600" />
+                  <Wand2 className="h-4 w-4 text-blue-700" />
                   AI Schedule Generator
                 </h3>
                 <button onClick={() => setAiOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -1077,7 +1077,7 @@ Total days: ${dayCount}`;
                     size="sm"
                     onClick={generateSchedule}
                     disabled={aiGenerating}
-                    className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
+                    className="bg-blue-700 hover:bg-blue-800 text-white gap-1.5"
                   >
                     {aiGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                     Generate Schedule
@@ -1136,7 +1136,7 @@ Total days: ${dayCount}`;
                   setNewDay(activeDay);
                   setAddSheetOpen(true);
                 }}
-                className="w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-sm text-muted-foreground hover:border-purple-300 hover:text-purple-600 dark:hover:border-purple-700 dark:hover:text-purple-400 transition-colors flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-sm text-muted-foreground hover:border-blue-400 hover:text-blue-700 dark:hover:border-blue-800 dark:hover:text-blue-500 transition-colors flex items-center justify-center gap-1.5"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Session
@@ -1159,7 +1159,7 @@ Total days: ${dayCount}`;
       {/* ── Drag Overlay ── */}
       <DragOverlay dropAnimation={null}>
         {activeDragItem?.type === "speaker" && activeDragItem.speaker && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#1A1D27] rounded-lg shadow-lg border border-purple-300 opacity-90">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#1A1D27] rounded-lg shadow-lg border border-blue-400 opacity-90">
             <SpeakerAvatar speaker={activeDragItem.speaker} size={28} />
             <span className="text-xs font-medium">{activeDragItem.speaker.creator_name}</span>
           </div>
@@ -1304,7 +1304,7 @@ Total days: ${dayCount}`;
             <Button
               onClick={handleAddSession}
               disabled={addingSess}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white gap-1.5"
             >
               {addingSess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Add Session
@@ -1333,7 +1333,7 @@ Total days: ${dayCount}`;
                 }
                 setConfirmReplace(false);
               }}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-blue-700 hover:bg-blue-800 text-white"
             >
               Replace All
             </AlertDialogAction>

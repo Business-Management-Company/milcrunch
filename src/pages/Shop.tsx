@@ -45,7 +45,7 @@ export default function Shop() {
         <div className="bg-gradient-to-b from-[#1A1A2E] to-[#0D0D1A] py-16 px-4">
           <div className="max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-3">
-              MilCrunch<span className="text-[#6C5CE7] font-extrabold">X</span> Merch
+              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span> Merch
             </h1>
             <p className="text-gray-400 text-lg max-w-xl mx-auto">
               Official gear for the military creator community
@@ -62,7 +62,7 @@ export default function Shop() {
                 onClick={() => setActiveCategory(cat)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   activeCategory === cat
-                    ? "bg-[#6C5CE7] text-white"
+                    ? "bg-[#1e3a5f] text-white"
                     : "bg-white/10 text-gray-300 hover:bg-white/20"
                 }`}
               >
@@ -74,7 +74,7 @@ export default function Shop() {
           {/* Products */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20">
@@ -90,10 +90,10 @@ export default function Shop() {
                 <Link
                   key={p.id}
                   to={`/shop/${p.id}`}
-                  className="group block rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#6C5CE7]/50 hover:shadow-xl hover:shadow-purple-900/20 transition-all duration-300"
+                  className="group block rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#1e3a5f]/50 hover:shadow-xl hover:shadow-blue-900/20 transition-all duration-300"
                 >
                   {/* Image */}
-                  <div className="h-64 bg-gradient-to-br from-purple-900/30 to-gray-900 flex items-center justify-center overflow-hidden">
+                  <div className="h-64 bg-gradient-to-br from-blue-900/30 to-gray-900 flex items-center justify-center overflow-hidden">
                     {p.images?.[0] ? (
                       <img
                         src={p.images[0]}
@@ -101,12 +101,12 @@ export default function Shop() {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : (
-                      <ShoppingBag className="h-16 w-16 text-purple-700/50" />
+                      <ShoppingBag className="h-16 w-16 text-blue-800/50" />
                     )}
                   </div>
                   {/* Info */}
                   <div className="p-4">
-                    <h3 className="font-semibold text-base mb-2 line-clamp-1 group-hover:text-[#6C5CE7] transition-colors">
+                    <h3 className="font-semibold text-base mb-2 line-clamp-1 group-hover:text-[#1e3a5f] transition-colors">
                       {p.title}
                     </h3>
                     <div className="flex items-baseline gap-2">

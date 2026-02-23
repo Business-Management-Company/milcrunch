@@ -259,7 +259,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
         {/* --- Section 1: App Settings --- */}
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
           <h3 className="font-bold text-base mb-4 flex items-center gap-2">
-            <Wifi className="h-5 w-5 text-[#6C5CE7]" />
+            <Wifi className="h-5 w-5 text-[#1e3a5f]" />
             App Settings
           </h3>
 
@@ -332,7 +332,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
             <Button
               onClick={saveSettings}
               disabled={savingSettings}
-              className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
+              className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
             >
               {savingSettings ? (
                 <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />Saving...</>
@@ -347,7 +347,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-base flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-[#6C5CE7]" />
+              <HelpCircle className="h-5 w-5 text-[#1e3a5f]" />
               FAQ Manager
             </h3>
             <Button
@@ -365,7 +365,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
 
           {/* Add FAQ inline form */}
           {addingFaq && (
-            <div className="mb-4 p-4 border border-dashed border-[#6C5CE7]/30 rounded-lg bg-purple-50/30 dark:bg-purple-900/10 space-y-3">
+            <div className="mb-4 p-4 border border-dashed border-[#1e3a5f]/30 rounded-lg bg-blue-50/30 dark:bg-blue-900/10 space-y-3">
               <div>
                 <Label className="text-xs text-gray-600">Question</Label>
                 <Input
@@ -389,7 +389,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
                 size="sm"
                 onClick={addFaq}
                 disabled={savingFaq}
-                className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
+                className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
               >
                 {savingFaq ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
                 Save FAQ
@@ -427,7 +427,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
                         className="text-sm"
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => updateFaq(faq.id)} disabled={savingFaq} className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white">
+                        <Button size="sm" onClick={() => updateFaq(faq.id)} disabled={savingFaq} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
                           {savingFaq ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => setEditingFaqId(null)}>
@@ -484,7 +484,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
         {/* --- Section 3: Send Notification --- */}
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
           <h3 className="font-bold text-base mb-4 flex items-center gap-2">
-            <Bell className="h-5 w-5 text-[#6C5CE7]" />
+            <Bell className="h-5 w-5 text-[#1e3a5f]" />
             Send Notification
           </h3>
 
@@ -531,7 +531,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
               <Button
                 onClick={sendNotification}
                 disabled={sendingNotif || !notifTitle.trim() || !notifMessage.trim()}
-                className="bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
+                className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
               >
                 {sendingNotif ? (
                   <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />Sending...</>
@@ -546,13 +546,13 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
         {/* --- Section 4: App Link --- */}
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
           <h3 className="font-bold text-base mb-4 flex items-center gap-2">
-            <ExternalLink className="h-5 w-5 text-[#6C5CE7]" />
+            <ExternalLink className="h-5 w-5 text-[#1e3a5f]" />
             App Link
           </h3>
 
           <div className="space-y-4">
             <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <code className="text-sm flex-1 truncate text-[#6C5CE7] font-medium">
+              <code className="text-sm flex-1 truncate text-[#1e3a5f] font-medium">
                 {appUrl}
               </code>
               <Button
@@ -573,7 +573,7 @@ const AttendeeAppTab = ({ eventId, eventSlug, eventTitle }: Props) => {
                   value={appUrl}
                   size={120}
                   level="M"
-                  fgColor="#6C5CE7"
+                  fgColor="#1e3a5f"
                 />
               </div>
               <div className="flex-1 space-y-2 pt-2">

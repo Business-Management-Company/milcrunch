@@ -246,7 +246,7 @@ export default function SwagAdmin() {
             <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-1">SWAG Packages</h1>
             <p className="text-gray-500 dark:text-gray-400">Build and manage SWAG packages for events.</p>
           </div>
-          <Button onClick={openAdd} className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white">
+          <Button onClick={openAdd} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
             <Plus className="w-4 h-4 mr-2" /> Create Package
           </Button>
         </div>
@@ -267,7 +267,7 @@ export default function SwagAdmin() {
             <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium mb-2">{search ? "No packages match" : "No SWAG packages yet"}</p>
             <p className="text-sm text-muted-foreground mb-6">Create your first SWAG package for an event.</p>
-            <Button onClick={openAdd} className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white">
+            <Button onClick={openAdd} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
               <Plus className="w-4 h-4 mr-2" /> Create Package
             </Button>
           </Card>
@@ -289,11 +289,11 @@ export default function SwagAdmin() {
                   <TableRow key={p.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900/20 dark:to-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-gray-800 flex items-center justify-center shrink-0 overflow-hidden">
                           {p.image_url ? (
                             <img src={p.image_url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <Gift className="h-5 w-5 text-purple-400" />
+                            <Gift className="h-5 w-5 text-blue-500" />
                           )}
                         </div>
                         <span className="font-medium">{p.title}</span>
@@ -436,7 +436,7 @@ export default function SwagAdmin() {
 
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave} disabled={saving} className="bg-[#6C5CE7] hover:bg-[#5A4BD1] text-white">
+              <Button onClick={handleSave} disabled={saving} className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 {editing ? "Save Changes" : "Create Package"}
               </Button>

@@ -153,7 +153,7 @@ export default function PodcastDetailModal({
         <div className="p-6 pb-4">
           <DialogHeader>
             <div className="flex gap-4">
-              <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center">
+              <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-[#93c5fd] to-[#3b82f6] flex items-center justify-center">
                 {(podcast.image_url || podcast.artwork_url) ? (
                   <img
                     src={(podcast.image_url || podcast.artwork_url)!}
@@ -172,7 +172,7 @@ export default function PodcastDetailModal({
                   {podcast.author ?? "Unknown host"}
                 </DialogDescription>
                 {podcast.category && (
-                  <span className="inline-block mt-2 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] px-2.5 py-0.5 text-xs font-medium">
+                  <span className="inline-block mt-2 rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f] px-2.5 py-0.5 text-xs font-medium">
                     {podcast.category}
                   </span>
                 )}
@@ -229,7 +229,7 @@ export default function PodcastDetailModal({
                   key={i}
                   className={`rounded-lg border p-3 flex items-start gap-3 transition-colors ${
                     playingIndex === i
-                      ? "border-[#6C5CE7]/30 bg-[#6C5CE7]/5"
+                      ? "border-[#1e3a5f]/30 bg-[#1e3a5f]/5"
                       : "border-gray-100 bg-gray-50"
                   }`}
                 >
@@ -237,7 +237,7 @@ export default function PodcastDetailModal({
                     <button
                       type="button"
                       onClick={() => handlePlay(i)}
-                      className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center hover:bg-[#5A4BD1] transition-colors"
+                      className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-[#1e3a5f] text-white flex items-center justify-center hover:bg-[#2d5282] transition-colors"
                     >
                       {isPlaying(i) ? (
                         <Pause className="h-3.5 w-3.5" />
@@ -280,14 +280,14 @@ export default function PodcastDetailModal({
 
         {nowPlaying && (
           <div className="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-3 space-y-2">
-            <p className="text-xs font-medium text-[#6C5CE7] truncate">
+            <p className="text-xs font-medium text-[#1e3a5f] truncate">
               {nowPlaying.title}
             </p>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => handlePlay(playingIndex!)}
-                className="shrink-0 w-7 h-7 rounded-full bg-[#6C5CE7] text-white flex items-center justify-center hover:bg-[#5A4BD1] transition-colors"
+                className="shrink-0 w-7 h-7 rounded-full bg-[#1e3a5f] text-white flex items-center justify-center hover:bg-[#2d5282] transition-colors"
               >
                 {isPlaying(playingIndex!) ? (
                   <Pause className="h-3 w-3" />
@@ -304,7 +304,7 @@ export default function PodcastDetailModal({
                 max={duration || 0}
                 value={currentTime}
                 onChange={handleSeek}
-                className="flex-1 h-1 accent-[#6C5CE7] cursor-pointer"
+                className="flex-1 h-1 accent-[#1e3a5f] cursor-pointer"
               />
               <span className="text-[10px] text-gray-400 w-10 tabular-nums shrink-0">
                 {formatTime(duration)}
@@ -318,7 +318,7 @@ export default function PodcastDetailModal({
                   step={0.05}
                   value={volume}
                   onChange={handleVolume}
-                  className="w-16 h-1 accent-[#6C5CE7] cursor-pointer"
+                  className="w-16 h-1 accent-[#1e3a5f] cursor-pointer"
                 />
               </div>
             </div>

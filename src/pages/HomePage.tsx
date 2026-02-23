@@ -120,7 +120,7 @@ const INSIGHTS_CHART_DATA = [
 ];
 
 const INSIGHTS_KPIS = [
-  { value: 3400000, display: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#6C5CE7]", border: "border-l-[#6C5CE7]" },
+  { value: 3400000, display: "3.4M", label: "Total Impressions", icon: Eye, color: "text-[#1e3a5f]", border: "border-l-[#1e3a5f]" },
   { value: 2400, display: "2,400", label: "Community Members", icon: Users, color: "text-[#3B82F6]", border: "border-l-[#3B82F6]" },
   { value: 1467, display: "1,467", label: "Active Creators", icon: Mic, color: "text-[#10B981]", border: "border-l-[#10B981]" },
   { value: 34, display: "+34%", label: "Year over Year Growth", icon: TrendingUp, color: "text-[#F59E0B]", border: "border-l-[#F59E0B]" },
@@ -234,7 +234,7 @@ function HeroAvatar({ sources, name, handle }: { sources: (string | null | undef
           }}
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-sm">
+        <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-sm">
           {getInitials(name, handle)}
         </div>
       )}
@@ -287,7 +287,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         <div
           className={`w-[72px] h-[72px] rounded-full overflow-hidden ${
             c.featured_homepage
-              ? "ring-[3px] ring-purple-500 ring-offset-2"
+              ? "ring-[3px] ring-blue-600 ring-offset-2"
               : "ring-1 ring-gray-200 ring-offset-2"
           } bg-white`}
         >
@@ -303,7 +303,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               }}
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-lg">
               {getInitials(c.display_name, c.handle)}
             </div>
           )}
@@ -318,7 +318,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         {c.featured_homepage && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
+              <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0" />
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
           </Tooltip>
@@ -499,7 +499,7 @@ function InsightsPreview() {
     <section className="bg-gray-50 py-20 px-6">
       <div ref={sectionRef} className="max-w-6xl mx-auto text-center">
         {/* Badge */}
-        <span className="inline-block bg-purple-100 text-[#6C5CE7] text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-5">
+        <span className="inline-block bg-blue-100 text-[#1e3a5f] text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-5">
           365 INSIGHTS
         </span>
 
@@ -535,7 +535,7 @@ function InsightsPreview() {
           {/* Legend */}
           <div className="flex items-center justify-end gap-5 mb-4">
             {[
-              { label: "Sponsor Impressions", color: "#6C5CE7" },
+              { label: "Sponsor Impressions", color: "#1e3a5f" },
               { label: "Creator Engagement", color: "#10B981" },
               { label: "Community Growth", color: "#3B82F6" },
             ].map((s) => (
@@ -551,8 +551,8 @@ function InsightsPreview() {
               <AreaChart data={INSIGHTS_CHART_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="fillPurple" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6C5CE7" stopOpacity={0.1} />
-                    <stop offset="100%" stopColor="#6C5CE7" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#1e3a5f" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#1e3a5f" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="fillEmerald" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#10B981" stopOpacity={0.1} />
@@ -580,7 +580,7 @@ function InsightsPreview() {
                 <ReferenceLine x="Mar" stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "MIC 2026", position: "top", fontSize: 9, fill: "#9CA3AF" }} />
                 <ReferenceLine x="May" stroke="#9CA3AF" strokeDasharray="4 4" label={{ value: "MilSpouseFest", position: "top", fontSize: 9, fill: "#9CA3AF" }} />
                 <Area type="monotone" dataKey="community" stroke="#3B82F6" strokeWidth={2} fill="url(#fillBlue)" dot={false} name="Community Growth" />
-                <Area type="monotone" dataKey="impressions" stroke="#6C5CE7" strokeWidth={2} fill="url(#fillPurple)" dot={false} name="Sponsor Impressions" />
+                <Area type="monotone" dataKey="impressions" stroke="#1e3a5f" strokeWidth={2} fill="url(#fillPurple)" dot={false} name="Sponsor Impressions" />
                 <Area type="monotone" dataKey="engagement" stroke="#10B981" strokeWidth={2} fill="url(#fillEmerald)" dot={false} name="Creator Engagement" />
               </AreaChart>
             </ResponsiveContainer>
@@ -718,7 +718,7 @@ export default function HomePage() {
 
               <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
                 <Link to="/plans">
-                  <Button size="lg" className="bg-[#6C5CE7] text-white rounded-full px-8 py-3 font-semibold hover:bg-[#5B4BD1]">
+                  <Button size="lg" className="bg-[#1e3a5f] text-white rounded-full px-8 py-3 font-semibold hover:bg-[#2d5282]">
                     Join the Network →
                   </Button>
                 </Link>
@@ -765,7 +765,7 @@ export default function HomePage() {
 
                   const TAG_COLORS = [
                     "bg-blue-100 text-blue-700",
-                    "bg-purple-100 text-purple-700",
+                    "bg-blue-100 text-blue-800",
                     "bg-green-100 text-green-700",
                   ];
 
@@ -834,7 +834,7 @@ export default function HomePage() {
                 key={label}
                 className="flex flex-col items-center cursor-default transition-transform duration-200 hover:scale-110"
               >
-                <Icon className="h-12 w-12 text-[#6C5CE7] shrink-0" aria-hidden />
+                <Icon className="h-12 w-12 text-[#1e3a5f] shrink-0" aria-hidden />
                 <span className="text-[#1A1A2E] font-medium mt-3 text-base">
                   {label}
                 </span>
@@ -848,7 +848,7 @@ export default function HomePage() {
         <section id="creators" className="px-4 md:px-8 py-16 md:py-24 bg-gradient-to-b from-gray-50 to-white scroll-mt-20">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-3">
+              <p className="text-[#1e3a5f] text-xs font-semibold uppercase tracking-widest mb-3">
                 TRUSTED BY BRANDS NATIONWIDE
               </p>
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1A1A2E] mb-3">
@@ -873,7 +873,7 @@ export default function HomePage() {
 
             <div className="text-center mt-8">
               <Link to="/onboard">
-                <button className="border border-[#6C5CE7] text-[#6C5CE7] hover:bg-purple-50 rounded-full px-6 py-2 font-medium transition-colors">
+                <button className="border border-[#1e3a5f] text-[#1e3a5f] hover:bg-blue-50 rounded-full px-6 py-2 font-medium transition-colors">
                   View More Creators &rarr;
                 </button>
               </Link>
@@ -887,14 +887,14 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
               <div>
-                <p className="text-[#6C5CE7] text-xs font-semibold uppercase tracking-widest mb-2">
+                <p className="text-[#1e3a5f] text-xs font-semibold uppercase tracking-widest mb-2">
                   DISCOVER CREATORS
                 </p>
                 <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E]">
                   Browse by Category
                 </h2>
               </div>
-              <Link to="/brand/discover" className="text-[#6C5CE7] font-medium hover:underline text-sm">
+              <Link to="/brand/discover" className="text-[#1e3a5f] font-medium hover:underline text-sm">
                 View All →
               </Link>
             </div>
@@ -960,7 +960,7 @@ export default function HomePage() {
                       />
                     ) : null}
                     <div
-                      className={`aspect-square w-full rounded-t-xl bg-[#6C5CE7] flex items-center justify-center ${
+                      className={`aspect-square w-full rounded-t-xl bg-[#1e3a5f] flex items-center justify-center ${
                         (p.image_url || p.artwork_url) ? "hidden" : ""
                       }`}
                     >
@@ -977,7 +977,7 @@ export default function HomePage() {
             )}
 
             <div className="text-center mt-8">
-              <Link to="/podcasts" className="text-[#6C5CE7] font-medium hover:underline">
+              <Link to="/podcasts" className="text-[#1e3a5f] font-medium hover:underline">
                 View All Podcasts →
               </Link>
             </div>
@@ -1026,14 +1026,14 @@ export default function HomePage() {
                       />
                     )}
                     <div
-                      className="h-52 w-full bg-gradient-to-r from-[#6C5CE7] to-[#1A1A2E] items-center justify-center px-4"
+                      className="h-52 w-full bg-gradient-to-r from-[#1e3a5f] to-[#1A1A2E] items-center justify-center px-4"
                       style={{ display: imgSrc ? "none" : "flex" }}
                     >
                       <span className="text-white font-semibold text-center text-sm">{title}</span>
                     </div>
                     <div className="p-4 flex flex-col flex-1">
                       {tag && (
-                        <span className="inline-block text-xs font-semibold text-[#6C5CE7] bg-[#6C5CE7]/10 rounded-full px-2.5 py-0.5 w-fit mb-2">
+                        <span className="inline-block text-xs font-semibold text-[#1e3a5f] bg-[#1e3a5f]/10 rounded-full px-2.5 py-0.5 w-fit mb-2">
                           {tag}
                         </span>
                       )}
@@ -1053,7 +1053,7 @@ export default function HomePage() {
                 );
               })}
             </div>
-            <Link to="/events" className="text-[#6C5CE7] font-medium hover:underline">
+            <Link to="/events" className="text-[#1e3a5f] font-medium hover:underline">
               View All Events →
             </Link>
           </div>
@@ -1077,7 +1077,7 @@ export default function HomePage() {
               ))}
             </div>
             <Link to="/brand/discover">
-              <Button size="lg" className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white">
+              <Button size="lg" className="rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
                 Discover Creators
               </Button>
             </Link>
@@ -1092,7 +1092,7 @@ export default function HomePage() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link to="/brand/discover">
-                <Button size="lg" className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8">
+                <Button size="lg" className="rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-8">
                   Join Free
                 </Button>
               </Link>

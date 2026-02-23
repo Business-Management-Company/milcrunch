@@ -155,7 +155,7 @@ export default function RiderSignupForm({
           Cancel
         </Button>
         <Button
-          className="flex-1 bg-purple-500 hover:bg-purple-600 text-white"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           disabled={!canSubmit || saving}
           onClick={handleSubmit}
         >

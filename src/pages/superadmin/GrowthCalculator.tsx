@@ -60,7 +60,7 @@ export default function GrowthCalculator() {
                 min={s.min}
                 max={s.max}
                 step={s.step}
-                className="[&_[role=slider]]:bg-[#7C3AED] [&_[role=slider]]:border-[#7C3AED] [&_.range]:bg-[#7C3AED]"
+                className="[&_[role=slider]]:bg-[#1e3a5f] [&_[role=slider]]:border-[#1e3a5f] [&_.range]:bg-[#1e3a5f]"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1.5">
                 <span>{s.prefix ?? ""}{s.min.toLocaleString()}{s.suffix ?? ""}</span>

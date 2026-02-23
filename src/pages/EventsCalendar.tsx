@@ -47,9 +47,9 @@ const SEED_EVENTS: EventItem[] = [
 ];
 
 const EVENT_TYPE_CONFIG: Record<EventType, { label: string; className: string }> = {
-  in_person: { label: "In-Person", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300" },
+  in_person: { label: "In-Person", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400" },
   virtual: { label: "Virtual", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
-  hybrid: { label: "Hybrid", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300" },
+  hybrid: { label: "Hybrid", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400" },
 };
 
 type DateFilter = "upcoming" | "past" | "this_month" | "this_year";
@@ -91,7 +91,7 @@ export default function EventsCalendar() {
           <h1 className="text-2xl font-bold text-[#000741] dark:text-white">Events</h1>
           <p className="text-muted-foreground mt-0.5">Manage military and veteran community events</p>
         </div>
-        <Button asChild className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg shrink-0">
+        <Button asChild className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg shrink-0">
           <Link to="/brand/events/create">
             <Plus className="h-4 w-4 mr-2" />
             Create Event
@@ -118,7 +118,7 @@ export default function EventsCalendar() {
               size="sm"
               className={cn(
                 "rounded-full h-8",
-                typeFilter === f && "bg-[#6C5CE7] hover:bg-[#5B4BD1]"
+                typeFilter === f && "bg-[#1e3a5f] hover:bg-[#2d5282]"
               )}
               onClick={() => setTypeFilter(f)}
             >
@@ -155,7 +155,7 @@ export default function EventsCalendar() {
           <Calendar className="h-14 w-14 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-[#000741] dark:text-white mb-2">No events yet</h3>
           <p className="text-muted-foreground text-sm mb-4">Create your first event to get started.</p>
-          <Button asChild className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white rounded-lg">
+          <Button asChild className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg">
             <Link to="/brand/events/create">Create Event</Link>
           </Button>
         </Card>
@@ -169,7 +169,7 @@ export default function EventsCalendar() {
                 className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-5 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="rounded-lg bg-[#6C5CE7] text-white text-xs font-bold px-2.5 py-1.5 shrink-0">
+                  <div className="rounded-lg bg-[#1e3a5f] text-white text-xs font-bold px-2.5 py-1.5 shrink-0">
                     {event.dateLabel}
                   </div>
                   <Badge variant="secondary" className={cn("text-xs shrink-0", typeConfig.className)}>

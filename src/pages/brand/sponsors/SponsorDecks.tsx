@@ -82,14 +82,14 @@ export default function SponsorDecks() {
           <h1 className="text-2xl font-bold text-gray-900">Sponsor Decks</h1>
           <p className="text-gray-500 text-sm mt-1">Upload and manage sponsorship deck PDFs.</p>
         </div>
-        <Button onClick={() => setShowAdd(!showAdd)} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+        <Button onClick={() => setShowAdd(!showAdd)} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
           {showAdd ? <><X className="h-4 w-4 mr-2" /> Cancel</> : <><Plus className="h-4 w-4 mr-2" /> Add Deck</>}
         </Button>
       </div>
 
       {/* Add form */}
       {showAdd && (
-        <Card className="p-5 border-[#6C5CE7]/20 bg-[#6C5CE7]/5 space-y-4">
+        <Card className="p-5 border-[#1e3a5f]/20 bg-[#1e3a5f]/5 space-y-4">
           <h3 className="font-semibold text-sm text-gray-700">Add Sponsorship Deck</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -114,7 +114,7 @@ export default function SponsorDecks() {
             label="Deck File *"
             description="PDF, PPT, PPTX, DOC, DOCX up to 50MB"
           />
-          <Button onClick={handleAdd} disabled={saving || !title.trim() || !fileUrl.trim()} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+          <Button onClick={handleAdd} disabled={saving || !title.trim() || !fileUrl.trim()} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             {saving ? "Saving..." : "Save Deck"}
           </Button>
@@ -129,7 +129,7 @@ export default function SponsorDecks() {
           <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="font-semibold text-gray-700 mb-2">No decks uploaded yet</h3>
           <p className="text-gray-500 text-sm mb-4">Add sponsorship deck PDFs so you can quickly share them with prospects.</p>
-          <Button onClick={() => setShowAdd(true)} className="bg-[#6C5CE7] hover:bg-[#5A4BD5]">
+          <Button onClick={() => setShowAdd(true)} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
             <Plus className="h-4 w-4 mr-2" /> Add First Deck
           </Button>
         </Card>

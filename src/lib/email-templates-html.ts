@@ -29,13 +29,13 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
     name: "Event Announcement",
     category: "event",
     description: "Purple header with event details and RSVP button",
-    thumbnail_color: "#6C5CE7",
+    thumbnail_color: "#1e3a5f",
     thumbnail_image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
-<tr><td style="background:url('https://images.unsplash.com/photo-1579192181049-30e4c148cfa0?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#6C5CE7,#000741);padding:0;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1579192181049-30e4c148cfa0?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#1e3a5f,#000741);padding:0;">
 <div style="background:rgba(0,7,65,0.65);padding:48px 40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">You're Invited!</h1>
-<p style="margin:12px 0 0;color:#c4b5fd;font-size:16px;">A special event just for you, {{first_name}}</p>
+<p style="margin:12px 0 0;color:#93c5fd;font-size:16px;">A special event just for you, {{first_name}}</p>
 </div>
 </td></tr>
 <tr><td style="padding:40px;">
@@ -43,7 +43,7 @@ export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
 <p style="margin:0 0 8px;color:#6b7280;font-size:15px;line-height:24px;"><strong>Date:</strong> [Event Date]</p>
 <p style="margin:0 0 8px;color:#6b7280;font-size:15px;line-height:24px;"><strong>Location:</strong> [Event Location]</p>
 <p style="margin:0 0 24px;color:#6b7280;font-size:15px;line-height:24px;">[Event description goes here. Share what attendees can expect, who will be speaking, and why they should attend.]</p>
-<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#6C5CE7;border-radius:8px;">
+<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#1e3a5f;border-radius:8px;">
 <a href="#" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;">RSVP Now</a>
 </td></tr></table>
 </td></tr>
@@ -183,10 +183,10 @@ ${WRAPPER_END}`,
     name: "Post-Event Thank You",
     category: "thankyou",
     description: "Thank you message with event highlights and CTA",
-    thumbnail_color: "#8B5CF6",
+    thumbnail_color: "#2d5282",
     thumbnail_image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
-<tr><td style="background:url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#8B5CF6,#6D28D9);padding:0;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#2d5282,#6D28D9);padding:0;">
 <div style="background:rgba(80,30,160,0.7);padding:48px 40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Thank You!</h1>
 <p style="margin:12px 0 0;color:#ddd6fe;font-size:16px;">We couldn't have done it without you, {{first_name}}</p>
@@ -199,26 +199,26 @@ ${WRAPPER_END}`,
 <td width="33%" style="padding:8px;text-align:center;">
 <div style="background:#f5f3ff;border-radius:12px;padding:20px;">
 <p style="margin:0;color:#6D28D9;font-size:28px;font-weight:700;">[#]</p>
-<p style="margin:4px 0 0;color:#7c3aed;font-size:13px;">Attendees</p>
+<p style="margin:4px 0 0;color:#1e3a5f;font-size:13px;">Attendees</p>
 </div>
 </td>
 <td width="33%" style="padding:8px;text-align:center;">
 <div style="background:#f5f3ff;border-radius:12px;padding:20px;">
 <p style="margin:0;color:#6D28D9;font-size:28px;font-weight:700;">[#]</p>
-<p style="margin:4px 0 0;color:#7c3aed;font-size:13px;">Speakers</p>
+<p style="margin:4px 0 0;color:#1e3a5f;font-size:13px;">Speakers</p>
 </div>
 </td>
 <td width="33%" style="padding:8px;text-align:center;">
 <div style="background:#f5f3ff;border-radius:12px;padding:20px;">
 <p style="margin:0;color:#6D28D9;font-size:28px;font-weight:700;">[#]</p>
-<p style="margin:4px 0 0;color:#7c3aed;font-size:13px;">Sponsors</p>
+<p style="margin:4px 0 0;color:#1e3a5f;font-size:13px;">Sponsors</p>
 </div>
 </td>
 </tr>
 </table>
 <p style="margin:24px 0;color:#6b7280;font-size:15px;line-height:24px;">[Share memorable moments, key takeaways, or post-event resources here.]</p>
 <div style="text-align:center;">
-<a href="#" style="display:inline-block;padding:14px 32px;background:#8B5CF6;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;border-radius:8px;">View Event Recap</a>
+<a href="#" style="display:inline-block;padding:14px 32px;background:#2d5282;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;border-radius:8px;">View Event Recap</a>
 </div>
 </td></tr>
 ${WRAPPER_END}`,

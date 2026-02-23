@@ -225,7 +225,7 @@ export default function SpeakerSelector({
                   className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left"
                 >
                   {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-[#6C5CE7]/10 flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center shrink-0 overflow-hidden">
                     {s.avatar_url ? (
                       <img
                         src={s.avatar_url}
@@ -237,7 +237,7 @@ export default function SpeakerSelector({
                         }}
                       />
                     ) : (
-                      <span className="text-xs font-bold text-[#6C5CE7]">
+                      <span className="text-xs font-bold text-[#1e3a5f]">
                         {initials(s.name)}
                       </span>
                     )}
@@ -261,7 +261,7 @@ export default function SpeakerSelector({
                 setOpen(false);
                 setInviteOpen(true);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 border-t border-gray-100 dark:border-gray-700 text-[#6C5CE7] hover:bg-[#6C5CE7]/5 transition-colors text-sm font-medium"
+              className="w-full flex items-center gap-2 px-3 py-2.5 border-t border-gray-100 dark:border-gray-700 text-[#1e3a5f] hover:bg-[#1e3a5f]/5 transition-colors text-sm font-medium"
             >
               <Plus className="h-4 w-4" />
               Invite New Speaker
@@ -321,7 +321,7 @@ export function SpeakerMultiSelector({
           {names.map((n) => (
             <span
               key={n}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] text-xs font-medium"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f] text-xs font-medium"
             >
               {n}
               <button

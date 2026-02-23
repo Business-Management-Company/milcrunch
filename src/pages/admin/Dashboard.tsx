@@ -113,7 +113,7 @@ const Dashboard = () => {
         {permissions.canJudgeNominations && (
           <Card className="bg-gradient-card border-border p-6 mt-6">
             <div className="flex items-center gap-3 mb-4">
-              <Gavel className="w-8 h-8 text-purple-500" />
+              <Gavel className="w-8 h-8 text-blue-600" />
               <h3 className="font-headline font-bold text-foreground">Judge Portal</h3>
             </div>
             <p className="text-muted-foreground mb-4">Review and score nominations assigned to you.</p>

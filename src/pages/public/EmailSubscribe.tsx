@@ -82,7 +82,7 @@ const EmailSubscribe = () => {
     );
   }
 
-  const styles = form.styles || { bg_color: "#ffffff", button_color: "#6C5CE7", border_radius: 8 };
+  const styles = form.styles || { bg_color: "#ffffff", button_color: "#1e3a5f", border_radius: 8 };
 
   if (success) {
     return (

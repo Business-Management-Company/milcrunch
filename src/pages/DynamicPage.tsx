@@ -83,7 +83,7 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
             )}
             {d.cta_text && (
               <Link to={d.cta_link || "/"}>
-                <Button size="lg" className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-8">
+                <Button size="lg" className="rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-8">
                   {d.cta_text}
                 </Button>
               </Link>
@@ -141,7 +141,7 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
                 className={`rounded-lg px-8 ${
                   d.style === "secondary"
                     ? "bg-white border border-gray-300 text-[#000741] hover:bg-gray-50"
-                    : "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+                    : "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
                 }`}
               >
                 {d.text || "Click Here"}
@@ -302,13 +302,13 @@ export default function DynamicPage() {
         <Link to="/" className="shrink-0">
           <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className="text-[#000741]">MilCrunch</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
+            <span className="text-[#3b82f6] font-extrabold">X</span>
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6">
-          <Link to="/events" className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7]">Events</Link>
-          <Link to="/creators" className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7]">Creators</Link>
-          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#6C5CE7]">Sign In</Link>
+          <Link to="/events" className="text-sm font-medium text-gray-600 hover:text-[#1e3a5f]">Events</Link>
+          <Link to="/creators" className="text-sm font-medium text-gray-600 hover:text-[#1e3a5f]">Creators</Link>
+          <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-[#1e3a5f]">Sign In</Link>
         </nav>
       </header>
 
@@ -327,7 +327,7 @@ export default function DynamicPage() {
         <Link to="/" className="inline-block mb-2">
           <span className="font-bold text-lg" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className="text-[#000741]">MilCrunch</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
+            <span className="text-[#3b82f6] font-extrabold">X</span>
           </span>
         </Link>
         <p className="text-xs text-gray-500">&copy; 2026 MilCrunch. All rights reserved.</p>

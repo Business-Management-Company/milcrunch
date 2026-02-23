@@ -95,7 +95,7 @@ export default function BulkActionBar({
       {showAddToDir && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30">
+            <Button variant="outline" size="sm" className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30">
               <ShieldCheck className="h-4 w-4 mr-1.5" />
               Add to Directory
               <ChevronDown className="h-3.5 w-3.5 ml-1" />

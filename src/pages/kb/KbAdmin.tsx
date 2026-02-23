@@ -86,7 +86,7 @@ function blankArticle(): EditableArticle {
 
 const CATEGORY_COLORS: Record<string, string> = {
   "getting-started": "bg-blue-500/20 text-blue-300",
-  features: "bg-purple-500/20 text-purple-300",
+  features: "bg-blue-600/20 text-blue-400",
   creators: "bg-emerald-500/20 text-emerald-300",
   brands: "bg-amber-500/20 text-amber-300",
   billing: "bg-rose-500/20 text-rose-300",
@@ -280,7 +280,7 @@ export default function KbAdmin() {
                   value={draft.title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="Article title"
-                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-[#6C5CE7]"
+                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-[#1e3a5f]"
                 />
               </div>
 
@@ -295,7 +295,7 @@ export default function KbAdmin() {
                     setDraft((d) => ({ ...d, slug: e.target.value }))
                   }
                   placeholder="article-slug"
-                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 font-mono text-sm focus-visible:ring-[#6C5CE7]"
+                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 font-mono text-sm focus-visible:ring-[#1e3a5f]"
                 />
               </div>
 
@@ -311,7 +311,7 @@ export default function KbAdmin() {
                       setDraft((d) => ({ ...d, category: val }))
                     }
                   >
-                    <SelectTrigger className="bg-white/[0.06] border-white/10 text-white focus:ring-[#6C5CE7]">
+                    <SelectTrigger className="bg-white/[0.06] border-white/10 text-white focus:ring-[#1e3a5f]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -337,7 +337,7 @@ export default function KbAdmin() {
                         readTime: parseInt(e.target.value, 10) || 1,
                       }))
                     }
-                    className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-[#6C5CE7]"
+                    className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 focus-visible:ring-[#1e3a5f]"
                   />
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function KbAdmin() {
                     setDraft((d) => ({ ...d, summary: e.target.value }))
                   }
                   placeholder="Brief description of the article..."
-                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 resize-none focus-visible:ring-[#6C5CE7]"
+                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 resize-none focus-visible:ring-[#1e3a5f]"
                 />
               </div>
 
@@ -370,7 +370,7 @@ export default function KbAdmin() {
                     setDraft((d) => ({ ...d, content: e.target.value }))
                   }
                   placeholder="Write your article content here using markdown..."
-                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 resize-y font-mono text-sm leading-relaxed focus-visible:ring-[#6C5CE7]"
+                  className="bg-white/[0.06] border-white/10 text-white placeholder:text-gray-600 resize-y font-mono text-sm leading-relaxed focus-visible:ring-[#1e3a5f]"
                 />
               </div>
 
@@ -393,7 +393,7 @@ export default function KbAdmin() {
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white"
+                  className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
                 >
                   {saving ? "Saving..." : "Save Article"}
                 </Button>
@@ -446,7 +446,7 @@ export default function KbAdmin() {
             {/* Preview Panel */}
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/[0.08]">
-                <Eye className="h-4 w-4 text-[#6C5CE7]" />
+                <Eye className="h-4 w-4 text-[#1e3a5f]" />
                 <span className="text-sm font-medium text-white/60">
                   Preview
                 </span>
@@ -490,7 +490,7 @@ export default function KbAdmin() {
         <div className="flex items-start justify-between mb-6">
           <div>
             <div className="flex items-center gap-3">
-              <BookOpen className="h-7 w-7 text-[#6C5CE7]" />
+              <BookOpen className="h-7 w-7 text-[#1e3a5f]" />
               <h1 className="text-2xl font-bold">Knowledge Base Editor</h1>
             </div>
             <p className="text-sm text-white/40 mt-1 ml-10">
@@ -499,7 +499,7 @@ export default function KbAdmin() {
           </div>
           <Button
             onClick={openNew}
-            className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white"
+            className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
           >
             <Plus className="h-4 w-4 mr-1.5" />
             New Article
@@ -508,7 +508,7 @@ export default function KbAdmin() {
 
         {/* Info Banner */}
         <div className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3 mb-6">
-          <Info className="h-4 w-4 text-[#6C5CE7] mt-0.5 flex-shrink-0" />
+          <Info className="h-4 w-4 text-[#1e3a5f] mt-0.5 flex-shrink-0" />
           <p className="text-xs text-white/40 leading-relaxed">
             Articles are loaded from static data. Connect Supabase to enable
             persistent editing. Changes made here are saved locally during this
@@ -523,7 +523,7 @@ export default function KbAdmin() {
             className={cn(
               "px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
               activeCategory === "all"
-                ? "bg-[#6C5CE7] text-white"
+                ? "bg-[#1e3a5f] text-white"
                 : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white/70",
             )}
           >
@@ -540,7 +540,7 @@ export default function KbAdmin() {
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
                   activeCategory === cat.slug
-                    ? "bg-[#6C5CE7] text-white"
+                    ? "bg-[#1e3a5f] text-white"
                     : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white/70",
                 )}
               >

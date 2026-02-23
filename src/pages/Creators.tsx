@@ -216,7 +216,7 @@ function CreatorCard({
         <div
           className={cn(
             "w-16 h-16 rounded-full border-[3px] shadow-lg overflow-hidden bg-white relative",
-            isVerified ? "border-[#6C5CE7]" : "border-white",
+            isVerified ? "border-[#1e3a5f]" : "border-white",
           )}
         >
           {imgSrc ? (
@@ -236,14 +236,14 @@ function CreatorCard({
               }}
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold text-base">
+            <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-base">
               {getInitials(c.display_name, c.handle)}
             </div>
           )}
 
           {/* Verified checkmark overlay */}
           {isVerified && (
-            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#6C5CE7] flex items-center justify-center ring-2 ring-white">
+            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#1e3a5f] flex items-center justify-center ring-2 ring-white">
               <ShieldCheck className="h-3 w-3 text-white" />
             </div>
           )}
@@ -260,7 +260,7 @@ function CreatorCard({
           {c.featured_homepage && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <ShieldCheck className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                <ShieldCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">MilCrunch Verified</TooltipContent>
             </Tooltip>
@@ -318,7 +318,7 @@ function CreatorCard({
 
         {/* View Profile link */}
         <div className="border-t border-gray-100 mt-3 pt-3 w-full">
-          <span className="flex items-center justify-center gap-1 text-sm font-medium text-[#6C5CE7] group-hover:gap-2 transition-all">
+          <span className="flex items-center justify-center gap-1 text-sm font-medium text-[#1e3a5f] group-hover:gap-2 transition-all">
             View Profile <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </div>
@@ -503,7 +503,7 @@ export default function Creators() {
         <div className="max-w-7xl mx-auto">
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#6C5CE7] mb-6"
+            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#1e3a5f] mb-6"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Home
           </Link>
@@ -532,7 +532,7 @@ export default function Creators() {
                 className={cn(
                   "w-full pl-11 pr-10 py-3 rounded-full text-sm",
                   "border border-gray-200 bg-white shadow-sm",
-                  "focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]",
+                  "focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f]",
                   "placeholder:text-gray-400 transition-all",
                 )}
               />
@@ -562,7 +562,7 @@ export default function Creators() {
                     className={cn(
                       "text-xs font-medium px-3 py-1.5 rounded-full border transition-colors",
                       isActive
-                        ? BRANCH_SELECTED[b] ?? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                        ? BRANCH_SELECTED[b] ?? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
                         : "bg-white text-gray-600 border-gray-200 hover:border-gray-300",
                     )}
                   >
@@ -587,7 +587,7 @@ export default function Creators() {
                     className={cn(
                       "text-xs font-medium px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5",
                       isActive
-                        ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
+                        ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
                         : "bg-white text-gray-600 border-gray-200 hover:border-gray-300",
                     )}
                   >
@@ -610,7 +610,7 @@ export default function Creators() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="text-[#6C5CE7] hover:underline font-medium"
+                  className="text-[#1e3a5f] hover:underline font-medium"
                 >
                   Clear filters
                 </button>
@@ -653,7 +653,7 @@ export default function Creators() {
                       className={cn(
                         "w-full text-left px-3 py-2 text-sm transition-colors",
                         sortBy === opt.value
-                          ? "bg-purple-50 text-[#6C5CE7] font-medium"
+                          ? "bg-blue-50 text-[#1e3a5f] font-medium"
                           : "text-gray-600 hover:bg-gray-50",
                       )}
                     >
@@ -695,7 +695,7 @@ export default function Creators() {
               <Button
                 variant="outline"
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-full border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/10 px-8"
+                className="rounded-full border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/10 px-8"
               >
                 Load More ({filtered.length - paged.length} remaining)
               </Button>

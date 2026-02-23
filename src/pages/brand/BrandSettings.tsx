@@ -66,8 +66,8 @@ const BrandSettings = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {pres.active ? (
-                    <div className="w-9 h-9 rounded-lg bg-[#6C5CE7]/10 flex items-center justify-center">
-                      <EyeOff className="h-4.5 w-4.5 text-[#6C5CE7]" />
+                    <div className="w-9 h-9 rounded-lg bg-[#1e3a5f]/10 flex items-center justify-center">
+                      <EyeOff className="h-4.5 w-4.5 text-[#1e3a5f]" />
                     </div>
                   ) : (
                     <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
@@ -87,9 +87,9 @@ const BrandSettings = () => {
                   type="button"
                   onClick={pres.toggle}
                   className={cn(
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6C5CE7] focus-visible:ring-offset-2",
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a5f] focus-visible:ring-offset-2",
                     pres.active
-                      ? "bg-[#6C5CE7]"
+                      ? "bg-[#1e3a5f]"
                       : "bg-gray-200 dark:bg-gray-700"
                   )}
                   role="switch"
@@ -105,7 +105,7 @@ const BrandSettings = () => {
                 </button>
               </div>
               {pres.active && (
-                <p className="mt-2 text-xs text-[#6C5CE7] font-medium bg-[#6C5CE7]/5 rounded-lg px-3 py-2">
+                <p className="mt-2 text-xs text-[#1e3a5f] font-medium bg-[#1e3a5f]/5 rounded-lg px-3 py-2">
                   Demo Mode is ON — displaying as "Demo User" / "demo@milcrunch.com" everywhere.
                 </p>
               )}
@@ -124,17 +124,17 @@ const BrandSettings = () => {
           <ul className="space-y-2 text-sm">
             <li className="flex items-center justify-between">
               <span>Supabase</span>
-              <span className="text-purple-600 dark:text-purple-400 font-medium">Connected</span>
+              <span className="text-blue-700 dark:text-blue-500 font-medium">Connected</span>
             </li>
             <li className="flex items-center justify-between">
               <span>Influencers.club</span>
-              <span className={hasInfluencersClub ? "text-purple-600 dark:text-purple-400 font-medium" : "text-muted-foreground"}>
+              <span className={hasInfluencersClub ? "text-blue-700 dark:text-blue-500 font-medium" : "text-muted-foreground"}>
                 {hasInfluencersClub ? "Configured" : "Not configured"}
               </span>
             </li>
             <li className="flex items-center justify-between">
               <span>Anthropic (AI)</span>
-              <span className={hasAnthropic ? "text-purple-600 dark:text-purple-400 font-medium" : "text-muted-foreground"}>
+              <span className={hasAnthropic ? "text-blue-700 dark:text-blue-500 font-medium" : "text-muted-foreground"}>
                 {hasAnthropic ? "Configured" : "Not configured"}
               </span>
             </li>

@@ -185,9 +185,9 @@ function FormSection({
 }) {
   return (
     <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
-      <div className="border-l-4 border-[#6C5CE7] p-5 space-y-4">
+      <div className="border-l-4 border-[#1e3a5f] p-5 space-y-4">
         <div className="flex items-center gap-3">
-          <span className="w-7 h-7 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] text-xs font-bold flex items-center justify-center shrink-0">
+          <span className="w-7 h-7 rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f] text-xs font-bold flex items-center justify-center shrink-0">
             {number}
           </span>
           <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
@@ -226,8 +226,8 @@ function PlatformToggles({
           className={cn(
             "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all",
             selected.includes(key)
-              ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-              : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
+              ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+              : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#1e3a5f]/40"
           )}
         >
           <Icon className="h-4 w-4" />
@@ -322,12 +322,12 @@ function DirectoryMemberCombobox({
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border",
                   isFromEvent
-                    ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                    : "bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/20"
+                    ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                    : "bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20"
                 )}
               >
                 {name}
-                <button type="button" onClick={() => removeSpeaker(name)} className={isFromEvent ? "hover:text-white/70" : "hover:text-[#5B4BD1]"}>
+                <button type="button" onClick={() => removeSpeaker(name)} className={isFromEvent ? "hover:text-white/70" : "hover:text-[#2d5282]"}>
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -445,12 +445,12 @@ function SponsorCombobox({
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border",
                   isFromEvent
-                    ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                    : "bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/20"
+                    ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                    : "bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20"
                 )}
               >
                 {s.name}
-                <button type="button" onClick={() => removeSponsor(s.id)} className={isFromEvent ? "hover:text-white/70" : "hover:text-[#5B4BD1]"}>
+                <button type="button" onClick={() => removeSponsor(s.id)} className={isFromEvent ? "hover:text-white/70" : "hover:text-[#2d5282]"}>
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -483,14 +483,14 @@ function SponsorCombobox({
                   className={cn(
                     "w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors",
                     isSelected
-                      ? "bg-[#6C5CE7]/5 text-[#6C5CE7]"
+                      ? "bg-[#1e3a5f]/5 text-[#1e3a5f]"
                       : "hover:bg-gray-50 dark:hover:bg-[#0F1117] text-gray-800 dark:text-gray-200"
                   )}
                 >
                   <div
                     className={cn(
                       "w-4 h-4 rounded border-2 flex items-center justify-center shrink-0",
-                      isSelected ? "bg-[#6C5CE7] border-[#6C5CE7]" : "border-gray-300 dark:border-gray-600"
+                      isSelected ? "bg-[#1e3a5f] border-[#1e3a5f]" : "border-gray-300 dark:border-gray-600"
                     )}
                   >
                     {isSelected && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
@@ -553,7 +553,7 @@ function TagGroupModal({
               onChange={(e) => setTags(e.target.value)}
               placeholder="#MIC2026 #MilitaryInfluencer #VeteranCreators"
               rows={3}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7]"
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f]"
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -567,7 +567,7 @@ function TagGroupModal({
                 onSave(name.trim(), tags.trim());
                 onClose();
               }}
-              className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+              className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
             >
               Save Group
             </Button>
@@ -633,7 +633,7 @@ function PostCard({
     <div className="bg-white dark:bg-[#1A1D27] border border-gray-100 dark:border-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold text-[#1e3a5f] bg-[#1e3a5f]/10 px-2.5 py-1 rounded-full">
             {post.date_label}
           </span>
           <span className="flex items-center gap-1 text-gray-500">
@@ -654,7 +654,7 @@ function PostCard({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="p-1 rounded-md text-gray-400 hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/10 transition-colors"
+              className="p-1 rounded-md text-gray-400 hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors"
               title="Edit post"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -674,12 +674,12 @@ function PostCard({
             value={editCaption}
             onChange={(e) => setEditCaption(e.target.value)}
             rows={4}
-            className="w-full px-3 py-2 rounded-lg border border-[#6C5CE7]/30 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+            className="w-full px-3 py-2 rounded-lg border border-[#1e3a5f]/30 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
           />
           <input
             value={editHashtags}
             onChange={(e) => setEditHashtags(e.target.value)}
-            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-xs text-[#6C5CE7] focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-xs text-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
             placeholder="Hashtags..."
           />
         </div>
@@ -687,7 +687,7 @@ function PostCard({
         <>
           <p className="text-sm text-gray-800 dark:text-gray-200 mb-2 leading-relaxed">{post.caption}</p>
           {post.hashtags && (
-            <p className="text-xs text-[#6C5CE7] font-medium mb-2">{post.hashtags}</p>
+            <p className="text-xs text-[#1e3a5f] font-medium mb-2">{post.hashtags}</p>
           )}
         </>
       )}
@@ -740,7 +740,7 @@ function PostCard({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={mediaUploading}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/5 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 transition-colors"
           >
             {mediaUploading ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -811,7 +811,7 @@ function CampaignLivePreview({
       <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl p-12"
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.10)" }}
       >
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#6C5CE7] to-[#8B7CF7] flex items-center justify-center mb-5 shadow-md">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1e3a5f] to-[#8B7CF7] flex items-center justify-center mb-5 shadow-md">
           <Megaphone className="h-8 w-8 text-white" />
         </div>
         <p className="text-gray-800 dark:text-gray-200 font-semibold text-base mb-1.5">Campaign Preview</p>
@@ -840,7 +840,7 @@ function CampaignLivePreview({
       {/* Date range */}
       {(startDate || endDate) && (
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <CalendarClock className="h-4 w-4 text-[#6C5CE7]" />
+          <CalendarClock className="h-4 w-4 text-[#1e3a5f]" />
           <span>
             {formatDate(startDate)}
             {startDate && endDate && " — "}
@@ -851,7 +851,7 @@ function CampaignLivePreview({
 
       {/* Goal badge + duration pill */}
       <div className="flex flex-wrap gap-2">
-        <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20">
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#1e3a5f]/10 text-[#1e3a5f] border border-[#1e3a5f]/20">
           {goal}
         </span>
         <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
@@ -867,7 +867,7 @@ function CampaignLivePreview({
             {platforms.map((p) => (
               <span
                 key={p}
-                className="w-8 h-8 rounded-lg bg-[#6C5CE7]/10 text-[#6C5CE7] flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-[#1e3a5f]/10 text-[#1e3a5f] flex items-center justify-center"
               >
                 {PLATFORM_ICONS[p]}
               </span>
@@ -910,7 +910,7 @@ function CampaignLivePreview({
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Hashtags</p>
           <div className="flex flex-wrap gap-1.5">
             {hashtagList.map((tag) => (
-              <span key={tag} className="px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20">
+              <span key={tag} className="px-2.5 py-1 rounded-full text-xs font-medium bg-[#1e3a5f]/10 text-[#1e3a5f] border border-[#1e3a5f]/20">
                 {tag}
               </span>
             ))}
@@ -968,7 +968,7 @@ function CampaignSummary({
 
   return (
     <div className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
-      <div className="border-l-4 border-[#6C5CE7]">
+      <div className="border-l-4 border-[#1e3a5f]">
         {/* Header row */}
         <button
           type="button"
@@ -1009,7 +1009,7 @@ function CampaignSummary({
               </div>
               <div>
                 <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Goal</p>
-                <span className="inline-flex items-center gap-1 text-sm text-[#6C5CE7] font-medium">
+                <span className="inline-flex items-center gap-1 text-sm text-[#1e3a5f] font-medium">
                   <Target className="h-3.5 w-3.5" />
                   {goal}
                 </span>
@@ -1037,7 +1037,7 @@ function CampaignSummary({
                   {platforms.map((p) => (
                     <span
                       key={p}
-                      className="w-7 h-7 rounded-lg bg-[#6C5CE7]/10 text-[#6C5CE7] flex items-center justify-center"
+                      className="w-7 h-7 rounded-lg bg-[#1e3a5f]/10 text-[#1e3a5f] flex items-center justify-center"
                       title={p}
                     >
                       {PLATFORM_ICONS[p]}
@@ -1085,7 +1085,7 @@ function CampaignSummary({
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Campaign Window</p>
               <div className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                <Calendar className="h-3.5 w-3.5 text-[#6C5CE7]" />
+                <Calendar className="h-3.5 w-3.5 text-[#1e3a5f]" />
                 <span>
                   Day {minDay < 0 ? minDay : `+${minDay}`} through Day {maxDay > 0 ? `+${maxDay}` : maxDay}
                 </span>
@@ -1156,13 +1156,13 @@ function CampaignCalendar({ campaign, startDate }: { campaign: CampaignData; sta
               key={dateKey}
               className={cn(
                 "relative flex flex-col items-center justify-center h-8 rounded-md text-xs",
-                isToday && "ring-1 ring-[#6C5CE7]",
+                isToday && "ring-1 ring-[#1e3a5f]",
                 count > 0 ? "font-semibold text-gray-900 dark:text-white" : "text-gray-400"
               )}
             >
               {day}
               {count > 0 && (
-                <span className="absolute -bottom-0.5 w-4 h-1.5 rounded-full bg-[#6C5CE7] text-[7px] text-white flex items-center justify-center leading-none">
+                <span className="absolute -bottom-0.5 w-4 h-1.5 rounded-full bg-[#1e3a5f] text-[7px] text-white flex items-center justify-center leading-none">
                   {count}
                 </span>
               )}
@@ -1910,8 +1910,8 @@ Make the captions authentic and engaging for a military community audience. Refe
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#6C5CE7]/10 flex items-center justify-center">
-              <Megaphone className="h-5 w-5 text-[#6C5CE7]" />
+            <div className="w-10 h-10 rounded-xl bg-[#1e3a5f]/10 flex items-center justify-center">
+              <Megaphone className="h-5 w-5 text-[#1e3a5f]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
@@ -1973,8 +1973,8 @@ Make the captions authentic and engaging for a military community audience. Refe
                       className={cn(
                         "px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all",
                         goal === g
-                          ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                          : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
+                          ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                          : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#1e3a5f]/40"
                       )}
                     >
                       {g}
@@ -1995,7 +1995,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
                     />
                   </div>
                   <div>
@@ -2005,12 +2005,12 @@ Make the captions authentic and engaging for a military community audience. Refe
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       min={startDate || undefined}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30"
                     />
                   </div>
                 </div>
                 {hasDateRange && (
-                  <p className="text-xs text-[#6C5CE7] font-medium mt-1.5">
+                  <p className="text-xs text-[#1e3a5f] font-medium mt-1.5">
                     {dateDuration} days
                   </p>
                 )}
@@ -2031,8 +2031,8 @@ Make the captions authentic and engaging for a military community audience. Refe
                         className={cn(
                           "px-4 py-1.5 rounded-full text-xs font-medium border transition-all",
                           duration === d
-                            ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-                            : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#6C5CE7]/40"
+                            ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                            : "bg-white dark:bg-[#0F1117] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#1e3a5f]/40"
                         )}
                       >
                         {d} days
@@ -2076,7 +2076,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                         <button
                           type="button"
                           onClick={() => applyTagGroup(g)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20 hover:bg-[#6C5CE7]/20 transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#1e3a5f]/10 text-[#1e3a5f] border border-[#1e3a5f]/20 hover:bg-[#1e3a5f]/20 transition-colors"
                         >
                           <Tag className="h-3 w-3" />
                           {g.name}
@@ -2098,7 +2098,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                 <button
                   type="button"
                   onClick={() => setShowTagModal(true)}
-                  className="flex items-center gap-1 text-xs text-[#6C5CE7] hover:underline font-medium"
+                  className="flex items-center gap-1 text-xs text-[#1e3a5f] hover:underline font-medium"
                 >
                   <Plus className="h-3 w-3" /> New Tag Group
                 </button>
@@ -2116,10 +2116,10 @@ Make the captions authentic and engaging for a military community audience. Refe
                   {hashtagChips.map((tag, i) => (
                     <span
                       key={`${tag}-${i}`}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] border border-[#6C5CE7]/20"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#1e3a5f]/10 text-[#1e3a5f] border border-[#1e3a5f]/20"
                     >
                       {tag}
-                      <button type="button" onClick={() => removeHashtag(tag)} className="hover:text-[#5B4BD1]">
+                      <button type="button" onClick={() => removeHashtag(tag)} className="hover:text-[#2d5282]">
                         <X className="h-3 w-3" />
                       </button>
                     </span>
@@ -2147,7 +2147,7 @@ Make the captions authentic and engaging for a military community audience. Refe
               <Button
                 onClick={handleGenerate}
                 disabled={!selectedEventId || platforms.length === 0 || generating}
-                className="w-full bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold py-3"
+                className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white font-semibold py-3"
               >
                 {generating ? (
                   <>
@@ -2183,10 +2183,10 @@ Make the captions authentic and engaging for a military community audience. Refe
                 <div className="flex flex-col items-center gap-6 max-w-sm text-center p-8">
                   {/* Pulsing icon */}
                   <div className="relative">
-                    <div className="w-16 h-16 rounded-2xl bg-purple-600 flex items-center justify-center animate-pulse">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-700 flex items-center justify-center animate-pulse">
                       <span className="text-2xl text-white">✦</span>
                     </div>
-                    <div className="absolute inset-0 rounded-2xl bg-purple-400 animate-ping opacity-20" />
+                    <div className="absolute inset-0 rounded-2xl bg-blue-500 animate-ping opacity-20" />
                   </div>
 
                   <div>
@@ -2201,7 +2201,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                         {genStep > i ? (
                           <span className="text-green-500 font-bold">✓</span>
                         ) : genStep === i ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-purple-500" />
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                         ) : (
                           <span className="text-gray-300 dark:text-gray-600">○</span>
                         )}
@@ -2213,7 +2213,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                   {/* Progress bar */}
                   <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
                     <div
-                      className="bg-purple-600 h-1.5 rounded-full transition-all duration-1000"
+                      className="bg-blue-700 h-1.5 rounded-full transition-all duration-1000"
                       style={{ width: `${Math.min((genStep / GEN_STEPS.length) * 100, 100)}%` }}
                     />
                   </div>
@@ -2277,7 +2277,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                           <span className="text-xs text-gray-400">(loaded from saved)</span>
                         )}
                       </div>
-                      <span className="text-xs font-medium text-[#6C5CE7] bg-[#6C5CE7]/10 px-2.5 py-1 rounded-full">
+                      <span className="text-xs font-medium text-[#1e3a5f] bg-[#1e3a5f]/10 px-2.5 py-1 rounded-full">
                         {campaign.total_posts} posts
                       </span>
                     </div>
@@ -2294,7 +2294,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                         size="sm"
                         onClick={scheduleAll}
                         disabled={scheduleAllLoading}
-                        className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+                        className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
                       >
                         {scheduleAllLoading ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -2323,7 +2323,7 @@ Make the captions authentic and engaging for a military community audience. Refe
                       {scheduleFeedback.type === "success" && (
                         <button
                           onClick={() => navigate("/brand/posting")}
-                          className="ml-auto text-xs font-semibold text-[#6C5CE7] hover:underline whitespace-nowrap"
+                          className="ml-auto text-xs font-semibold text-[#1e3a5f] hover:underline whitespace-nowrap"
                         >
                           View in Posting →
                         </button>

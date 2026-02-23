@@ -137,7 +137,7 @@ export const CONTACT_STATUS_COLORS: Record<string, { bg: string; text: string }>
 
 export const DEFAULT_FORM_STYLES: FormStyles = {
   bg_color: "#ffffff",
-  button_color: "#6C5CE7",
+  button_color: "#1e3a5f",
   border_radius: 8,
 };
 

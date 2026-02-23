@@ -183,8 +183,8 @@ export default function BrandTags() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#6C5CE7]/10 flex items-center justify-center">
-            <Tags className="h-5 w-5 text-[#6C5CE7]" />
+          <div className="w-10 h-10 rounded-xl bg-[#1e3a5f]/10 flex items-center justify-center">
+            <Tags className="h-5 w-5 text-[#1e3a5f]" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Hashtag Tag Groups</h1>
@@ -195,7 +195,7 @@ export default function BrandTags() {
         </div>
         <Button
           onClick={openNew}
-          className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+          className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
         >
           <Plus className="h-4 w-4 mr-2" />
           New Tag Group
@@ -205,7 +205,7 @@ export default function BrandTags() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
         </div>
       )}
 
@@ -334,7 +334,7 @@ export default function BrandTags() {
             <Button
               onClick={handleSave}
               disabled={!formName.trim() || saving}
-              className="bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+              className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
               {editingGroup ? "Save Changes" : "Create Group"}

@@ -17,7 +17,7 @@ export default function PublicFooter() {
             <Link to="/">
               <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 <span className="text-white">MilCrunch</span>
-                <span className="text-[#6C5CE7] font-extrabold">X</span>
+                <span className="text-[#3b82f6] font-extrabold">X</span>
               </span>
             </Link>
             <p className="text-sm text-gray-400 max-w-xs">
@@ -25,16 +25,16 @@ export default function PublicFooter() {
             </p>
             {/* Social icons */}
             <div className="flex items-center gap-4 pt-1">
-              <a href="#" className="text-gray-400 hover:text-[#6C5CE7] transition-colors" aria-label="Instagram">
+              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="Instagram">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-[#6C5CE7] transition-colors" aria-label="YouTube">
+              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="YouTube">
                 <Youtube className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-[#6C5CE7] transition-colors" aria-label="Twitter">
+              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="Twitter">
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-[#6C5CE7] transition-colors" aria-label="TikTok">
+              <a href="#" className="text-gray-400 hover:text-[#1e3a5f] transition-colors" aria-label="TikTok">
                 <TikTokIcon className="h-5 w-5" />
               </a>
             </div>
@@ -44,10 +44,10 @@ export default function PublicFooter() {
           <div>
             <h4 className="font-semibold text-white mb-4">Platform</h4>
             <ul className="space-y-2">
-              <li><Link to="/events" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Events</Link></li>
-              <li><Link to="/creators" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Creators</Link></li>
-              <li><Link to="/podcasts" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Podcasts</Link></li>
-              <li><Link to="/brand/discover" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Discovery</Link></li>
+              <li><Link to="/events" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Events</Link></li>
+              <li><Link to="/creators" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Creators</Link></li>
+              <li><Link to="/podcasts" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Podcasts</Link></li>
+              <li><Link to="/brand/discover" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Discovery</Link></li>
             </ul>
           </div>
 
@@ -55,9 +55,9 @@ export default function PublicFooter() {
           <div>
             <h4 className="font-semibold text-white mb-4">Company</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">About</a></li>
-              <li><a href="#" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Contact</a></li>
-              <li><Link to="/pricing" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Pricing</Link></li>
+              <li><a href="#" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">About</a></li>
+              <li><a href="#" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Contact</a></li>
+              <li><Link to="/pricing" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Pricing</Link></li>
             </ul>
           </div>
 
@@ -65,8 +65,8 @@ export default function PublicFooter() {
           <div>
             <h4 className="font-semibold text-white mb-4">Legal</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-sm text-gray-400 hover:text-[#6C5CE7] transition-colors">Terms of Service</a></li>
+              <li><a href="#" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Privacy Policy</a></li>
+              <li><a href="#" className="text-sm text-gray-400 hover:text-[#1e3a5f] transition-colors">Terms of Service</a></li>
             </ul>
           </div>
         </div>

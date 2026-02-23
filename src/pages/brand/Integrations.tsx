@@ -116,7 +116,7 @@ const OTHER_INTEGRATIONS: OtherIntegration[] = [
     name: "Stripe",
     description: "Accept payments and manage subscriptions",
     logo: "https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg",
-    bgColor: "bg-purple-50",
+    bgColor: "bg-blue-50",
   },
   {
     id: "mailchimp",
@@ -289,7 +289,7 @@ export default function Integrations() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Link2 className="w-7 h-7 text-purple-600" />
+          <Link2 className="w-7 h-7 text-blue-700" />
           Integrations
         </h1>
         <p className="text-gray-500 mt-1">
@@ -313,7 +313,7 @@ export default function Integrations() {
           <Button
             onClick={openConnectPopup}
             disabled={connectLoading || !connectUrl}
-            style={{ backgroundColor: "#7C3AED" }}
+            style={{ backgroundColor: "#1e3a5f" }}
             className="hover:opacity-90 text-white"
           >
             {connectLoading ? (
@@ -327,7 +327,7 @@ export default function Integrations() {
             variant="outline"
             onClick={syncAccounts}
             disabled={syncing}
-            style={{ borderColor: "#7C3AED", color: "#7C3AED" }}
+            style={{ borderColor: "#1e3a5f", color: "#1e3a5f" }}
           >
             {syncing ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -381,14 +381,14 @@ export default function Integrations() {
 
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   {isConnected ? (
-                    <Badge className="border-0 flex items-center gap-1" style={{ backgroundColor: "#ede9fe", color: "#7C3AED" }}>
+                    <Badge className="border-0 flex items-center gap-1" style={{ backgroundColor: "#ede9fe", color: "#1e3a5f" }}>
                       <Check className="w-3 h-3" />
                       Connected
                     </Badge>
                   ) : (
                     <Button
                       size="sm"
-                      style={{ backgroundColor: "#7C3AED" }}
+                      style={{ backgroundColor: "#1e3a5f" }}
                       className="hover:opacity-90 text-white"
                       onClick={openConnectPopup}
                       disabled={connectLoading || !connectUrl}
@@ -442,7 +442,7 @@ export default function Integrations() {
                     <p className="font-semibold text-gray-900">{integration.name}</p>
                     <Badge
                       className="text-[10px] font-medium text-white border-0"
-                      style={{ backgroundColor: "#7C3AED" }}
+                      style={{ backgroundColor: "#1e3a5f" }}
                     >
                       Coming Soon
                     </Badge>

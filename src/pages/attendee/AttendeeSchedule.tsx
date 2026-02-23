@@ -39,7 +39,7 @@ interface PersonalBookmark {
 }
 
 const SESSION_COLORS: Record<string, string> = {
-  keynote: "border-l-[#6C5CE7]",
+  keynote: "border-l-[#1e3a5f]",
   panel: "border-l-blue-500",
   workshop: "border-l-green-500",
   networking: "border-l-orange-500",
@@ -49,7 +49,7 @@ const SESSION_COLORS: Record<string, string> = {
 };
 
 const SESSION_BADGE_COLORS: Record<string, string> = {
-  keynote: "bg-purple-100 text-purple-700",
+  keynote: "bg-blue-100 text-blue-800",
   panel: "bg-blue-100 text-blue-700",
   workshop: "bg-green-100 text-green-700",
   networking: "bg-orange-100 text-orange-700",
@@ -269,7 +269,7 @@ const AttendeeScheduleContent = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6C5CE7]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
       </div>
     );
   }
@@ -286,10 +286,10 @@ const AttendeeScheduleContent = () => {
           {event.city && <span>· {event.city}{event.state ? `, ${event.state}` : ""}</span>}
         </div>
         {getCountdown() && (
-          <p className="text-sm font-medium text-[#6C5CE7] mt-1">{getCountdown()}</p>
+          <p className="text-sm font-medium text-[#1e3a5f] mt-1">{getCountdown()}</p>
         )}
         {!isRegistered && (
-          <Button asChild className="w-full mt-3 bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white">
+          <Button asChild className="w-full mt-3 bg-[#1e3a5f] hover:bg-[#2d5282] text-white">
             <Link to={`/attend/${eventSlug}/register`}>Register Now</Link>
           </Button>
         )}
@@ -306,8 +306,8 @@ const AttendeeScheduleContent = () => {
               className={cn(
                 "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap",
                 selectedDay === dayNum
-                  ? "bg-[#6C5CE7] text-white shadow-sm"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-[#6C5CE7]"
+                  ? "bg-[#1e3a5f] text-white shadow-sm"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-[#1e3a5f]"
               )}
             >
               Day {dayNum}
@@ -325,7 +325,7 @@ const AttendeeScheduleContent = () => {
             onClick={() => setShowMySchedule(false)}
             className={cn(
               "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
-              !showMySchedule ? "bg-[#6C5CE7] text-white" : "bg-gray-100 text-gray-600"
+              !showMySchedule ? "bg-[#1e3a5f] text-white" : "bg-gray-100 text-gray-600"
             )}
           >
             Full Agenda
@@ -334,7 +334,7 @@ const AttendeeScheduleContent = () => {
             onClick={() => setShowMySchedule(true)}
             className={cn(
               "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
-              showMySchedule ? "bg-[#6C5CE7] text-white" : "bg-gray-100 text-gray-600"
+              showMySchedule ? "bg-[#1e3a5f] text-white" : "bg-gray-100 text-gray-600"
             )}
           >
             My Schedule ({bookmarks.length})
@@ -443,7 +443,7 @@ const AttendeeScheduleContent = () => {
                           className={cn(
                             "h-5 w-5 transition-colors",
                             isBookmarked(session.id)
-                              ? "fill-[#6C5CE7] text-[#6C5CE7]"
+                              ? "fill-[#1e3a5f] text-[#1e3a5f]"
                               : "text-gray-300"
                           )}
                         />
@@ -477,12 +477,12 @@ const AttendeeScheduleContent = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span className="flex items-center gap-1.5">
-                    <Clock className="h-4 w-4 text-[#6C5CE7]" />
+                    <Clock className="h-4 w-4 text-[#1e3a5f]" />
                     {formatTime(selectedSession.start_time)} - {formatTime(selectedSession.end_time)}
                   </span>
                   {selectedSession.location_room && (
                     <span className="flex items-center gap-1.5">
-                      <MapPin className="h-4 w-4 text-[#6C5CE7]" />
+                      <MapPin className="h-4 w-4 text-[#1e3a5f]" />
                       {selectedSession.location_room}
                     </span>
                   )}
@@ -543,7 +543,7 @@ const AttendeeScheduleContent = () => {
                     "w-full",
                     isBookmarked(selectedSession.id)
                       ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      : "bg-[#6C5CE7] hover:bg-[#5B4BD5] text-white"
+                      : "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
                   )}
                 >
                   <Star className={cn("h-4 w-4 mr-1.5", isBookmarked(selectedSession.id) && "fill-current")} />

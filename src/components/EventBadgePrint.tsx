@@ -21,7 +21,7 @@ interface EventBadgePrintProps {
 
 const TICKET_COLORS: Record<string, { bg: string; text: string; printBg: string }> = {
   vip: { bg: "bg-amber-100", text: "text-amber-800", printBg: "#fef3c7" },
-  creator: { bg: "bg-purple-100", text: "text-purple-800", printBg: "#f3e8ff" },
+  creator: { bg: "bg-blue-100", text: "text-blue-800", printBg: "#f3e8ff" },
   general: { bg: "bg-blue-100", text: "text-blue-800", printBg: "#dbeafe" },
   default: { bg: "bg-gray-100", text: "text-gray-800", printBg: "#f3f4f6" },
 };
@@ -106,7 +106,7 @@ const EventBadgePrint = ({ eventTitle, eventDate, eventVenue, badges, onClose }:
           <p className="text-sm text-gray-500">{badges.length} badge{badges.length !== 1 ? "s" : ""} ready to print</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={handlePrint} className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button onClick={handlePrint} className="bg-blue-700 hover:bg-blue-800 text-white">
             <Printer className="h-4 w-4 mr-2" /> Print All Badges
           </Button>
           <Button variant="outline" onClick={onClose}>

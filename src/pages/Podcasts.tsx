@@ -106,7 +106,7 @@ export default function PodcastsPage() {
                     className="rounded-xl border border-[#E5E7EB] bg-white overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 text-left"
                     onClick={() => setSelectedPodcast(podcast)}
                   >
-                    <div className="aspect-square bg-gradient-to-br from-[#c4b5fd] to-[#a78bfa] flex items-center justify-center overflow-hidden">
+                    <div className="aspect-square bg-gradient-to-br from-[#93c5fd] to-[#3b82f6] flex items-center justify-center overflow-hidden">
                       {(podcast.image_url || podcast.artwork_url) ? (
                         <img src={(podcast.image_url || podcast.artwork_url)!} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }} />
                       ) : null}
@@ -118,7 +118,7 @@ export default function PodcastsPage() {
                       </h3>
                       <p className="text-sm text-[#6B7280] mt-0.5">{podcast.author ?? "\u2014"}</p>
                       {podcast.category && (
-                        <span className="inline-block mt-2 rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] px-2.5 py-0.5 text-xs font-medium">
+                        <span className="inline-block mt-2 rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f] px-2.5 py-0.5 text-xs font-medium">
                           {podcast.category}
                         </span>
                       )}

@@ -34,7 +34,7 @@ const STATUS_STYLES: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   published: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   active: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  completed: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  completed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -228,15 +228,15 @@ const BrandEvents = () => {
         {/* AI Agent Prompt Bar */}
         <div className="mb-6">
           <div className="relative flex items-center">
-            <Sparkles className="absolute left-4 h-5 w-5 text-[#6C5CE7]" />
+            <Sparkles className="absolute left-4 h-5 w-5 text-[#1e3a5f]" />
             <input
               type="text"
               placeholder="Ask about your events... e.g. 'Which event has the most registrations?' or 'What should I focus on this week?'"
               className={cn(
                 "w-full pl-12 pr-14 py-4 rounded-2xl text-sm",
-                "border-2 border-purple-200 dark:border-purple-800 focus:border-[#6C5CE7]",
+                "border-2 border-blue-300 dark:border-blue-800 focus:border-[#1e3a5f]",
                 "bg-white dark:bg-[#1A1D27]",
-                "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#6C5CE7]/30",
+                "shadow-sm hover:shadow-md focus:shadow-md focus:ring-2 focus:ring-[#1e3a5f]/30",
                 "outline-none transition-all placeholder:text-gray-400",
               )}
               value={aiPrompt}
@@ -251,7 +251,7 @@ const BrandEvents = () => {
               className={cn(
                 "absolute right-3 rounded-xl p-2 transition-colors",
                 aiPrompt.trim() && !aiLoading
-                  ? "bg-[#6C5CE7] text-white hover:bg-[#5B4BD1]"
+                  ? "bg-[#1e3a5f] text-white hover:bg-[#2d5282]"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-400",
               )}
             >
@@ -262,7 +262,7 @@ const BrandEvents = () => {
 
         {/* AI Response Card */}
         {aiResponse && (
-          <div className="mb-6 rounded-2xl border-2 border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 p-5 relative">
+          <div className="mb-6 rounded-2xl border-2 border-blue-300 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-5 relative">
             <button
               type="button"
               onClick={() => setAiResponse(null)}
@@ -271,8 +271,8 @@ const BrandEvents = () => {
               <X className="h-4 w-4" />
             </button>
             <div className="flex items-start gap-3 pr-8">
-              <div className="w-7 h-7 rounded-lg bg-[#6C5CE7]/10 flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="h-4 w-4 text-[#6C5CE7]" />
+              <div className="w-7 h-7 rounded-lg bg-[#1e3a5f]/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="h-4 w-4 text-[#1e3a5f]" />
               </div>
               <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap min-w-0">
                 {aiResponse}

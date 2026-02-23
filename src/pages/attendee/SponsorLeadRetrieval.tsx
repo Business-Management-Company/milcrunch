@@ -83,7 +83,7 @@ function timeAgo(dateStr: string): string {
 function Avatar({ name }: { name: string }) {
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#6C5CE7] to-purple-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
+    <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[#1e3a5f] to-blue-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
       {initials}
     </div>
   );
@@ -435,7 +435,7 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
 
     return (
       <div className="px-4 py-4 space-y-4">
-        <button onClick={() => { setView("list"); setSelectedLead(null); }} className="flex items-center gap-1.5 text-sm text-[#6C5CE7] font-medium">
+        <button onClick={() => { setView("list"); setSelectedLead(null); }} className="flex items-center gap-1.5 text-sm text-[#1e3a5f] font-medium">
           <ArrowLeft className="h-4 w-4" /> Back to Leads
         </button>
 
@@ -462,13 +462,13 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
           {email && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Email</span>
-              <a href={`mailto:${email}`} className="text-[#6C5CE7] font-medium">{email}</a>
+              <a href={`mailto:${email}`} className="text-[#1e3a5f] font-medium">{email}</a>
             </div>
           )}
           {phone && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Phone</span>
-              <a href={`tel:${phone}`} className="text-[#6C5CE7] font-medium">{phone}</a>
+              <a href={`tel:${phone}`} className="text-[#1e3a5f] font-medium">{phone}</a>
             </div>
           )}
           {!email && !phone && (
@@ -489,7 +489,7 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
             size="sm"
             onClick={saveNotes}
             disabled={savingNotes}
-            className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white"
+            className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
           >
             {savingNotes ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
             Save Notes
@@ -503,7 +503,7 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
   if (view === "scanner") {
     return (
       <div className="px-4 py-4 space-y-4">
-        <button onClick={() => { stopCamera(); setView("list"); }} className="flex items-center gap-1.5 text-sm text-[#6C5CE7] font-medium">
+        <button onClick={() => { stopCamera(); setView("list"); }} className="flex items-center gap-1.5 text-sm text-[#1e3a5f] font-medium">
           <ArrowLeft className="h-4 w-4" /> Back to Leads
         </button>
 
@@ -516,14 +516,14 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
             <video ref={videoRef} className="w-full aspect-square object-cover" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-48 h-48 border-2 border-[#6C5CE7] rounded-2xl">
-                <div className="w-full h-full border-2 border-[#6C5CE7]/30 rounded-2xl" />
+              <div className="w-48 h-48 border-2 border-[#1e3a5f] rounded-2xl">
+                <div className="w-full h-full border-2 border-[#1e3a5f]/30 rounded-2xl" />
               </div>
             </div>
           </div>
           <div className="p-4 text-center">
             {scanning ? (
-              <div className="flex items-center justify-center gap-2 text-sm text-[#6C5CE7]">
+              <div className="flex items-center justify-center gap-2 text-sm text-[#1e3a5f]">
                 <Loader2 className="h-4 w-4 animate-spin" /> Scanning...
               </div>
             ) : (
@@ -539,7 +539,7 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
   if (view === "manual") {
     return (
       <div className="px-4 py-4 space-y-4">
-        <button onClick={() => setView("list")} className="flex items-center gap-1.5 text-sm text-[#6C5CE7] font-medium">
+        <button onClick={() => setView("list")} className="flex items-center gap-1.5 text-sm text-[#1e3a5f] font-medium">
           <ArrowLeft className="h-4 w-4" /> Back to Leads
         </button>
 
@@ -576,7 +576,7 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
           <Button
             onClick={submitManualLead}
             disabled={submitting || !manualName.trim()}
-            className="w-full bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white"
+            className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <UserPlus className="h-4 w-4 mr-1" />}
             Add Lead
@@ -608,9 +608,9 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
       </div>
 
       {/* Stats Bar */}
-      <Card className="p-4 bg-gradient-to-r from-[#6C5CE7]/10 to-purple-100/50 border-[#6C5CE7]/20 rounded-xl">
+      <Card className="p-4 bg-gradient-to-r from-[#1e3a5f]/10 to-blue-100/50 border-[#1e3a5f]/20 rounded-xl">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#6C5CE7] flex items-center justify-center text-white font-bold text-lg">
+          <div className="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white font-bold text-lg">
             {leads.length}
           </div>
           <div>
@@ -626,14 +626,14 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
       <div className="grid grid-cols-2 gap-3">
         <Button
           onClick={() => setView("scanner")}
-          className="bg-[#6C5CE7] hover:bg-[#5A4BD5] text-white gap-2 h-12"
+          className="bg-[#1e3a5f] hover:bg-[#2d5282] text-white gap-2 h-12"
         >
           <ScanLine className="h-5 w-5" /> Scan QR Code
         </Button>
         <Button
           onClick={() => setView("manual")}
           variant="outline"
-          className="gap-2 h-12 border-[#6C5CE7] text-[#6C5CE7] hover:bg-[#6C5CE7]/5"
+          className="gap-2 h-12 border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
         >
           <UserPlus className="h-5 w-5" /> Add Manually
         </Button>
@@ -655,7 +655,7 @@ export default function SponsorLeadRetrieval({ eventId, sponsorId, sponsorName, 
       {/* Lead List */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-[#6C5CE7]" />
+          <Loader2 className="h-6 w-6 animate-spin text-[#1e3a5f]" />
         </div>
       ) : filteredLeads.length === 0 ? (
         leads.length === 0 ? (

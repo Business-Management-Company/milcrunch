@@ -33,7 +33,7 @@ const KnowledgeBase = () => {
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-1 text-xl font-bold">
             <span className="text-gray-900">MilCrunch</span>
-            <span className="text-[#6C5CE7] font-extrabold">X</span>
+            <span className="text-[#3b82f6] font-extrabold">X</span>
           </Link>
           <Link
             to="/"
@@ -48,7 +48,7 @@ const KnowledgeBase = () => {
       <section className="bg-gray-50 border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-4 py-16 text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <BookOpen className="h-6 w-6 text-[#6C5CE7]" />
+            <BookOpen className="h-6 w-6 text-[#1e3a5f]" />
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
               Knowledge Base
             </h1>
@@ -64,7 +64,7 @@ const KnowledgeBase = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search articles..."
-              className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/40 focus:border-[#6C5CE7] transition shadow-sm text-base"
+              className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/40 focus:border-[#1e3a5f] transition shadow-sm text-base"
             />
           </div>
         </div>
@@ -88,7 +88,7 @@ const KnowledgeBase = () => {
                 </p>
                 <button
                   onClick={() => setQuery("")}
-                  className="mt-4 text-[#6C5CE7] hover:underline text-sm"
+                  className="mt-4 text-[#1e3a5f] hover:underline text-sm"
                 >
                   Clear search
                 </button>
@@ -103,14 +103,14 @@ const KnowledgeBase = () => {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 group-hover:text-[#6C5CE7] transition-colors">
+                        <h3 className="font-semibold text-gray-900 group-hover:text-[#1e3a5f] transition-colors">
                           {article.title}
                         </h3>
                         <p className="text-gray-500 text-sm mt-1 line-clamp-2">
                           {article.summary}
                         </p>
                         <div className="flex items-center gap-3 mt-3">
-                          <span className="inline-block text-xs font-medium bg-[#6C5CE7]/10 text-[#6C5CE7] px-2 py-0.5 rounded-full">
+                          <span className="inline-block text-xs font-medium bg-[#1e3a5f]/10 text-[#1e3a5f] px-2 py-0.5 rounded-full">
                             {article.category}
                           </span>
                           <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -119,7 +119,7 @@ const KnowledgeBase = () => {
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-[#6C5CE7] transition-colors mt-1 flex-shrink-0" />
+                      <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-[#1e3a5f] transition-colors mt-1 flex-shrink-0" />
                     </div>
                   </Link>
                 ))}
@@ -143,7 +143,7 @@ const KnowledgeBase = () => {
                   )}
                 >
                   <div className="text-3xl mb-3">{cat.emoji}</div>
-                  <h3 className="font-semibold text-gray-900 group-hover:text-[#6C5CE7] transition-colors">
+                  <h3 className="font-semibold text-gray-900 group-hover:text-[#1e3a5f] transition-colors">
                     {cat.label}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2">
@@ -169,7 +169,7 @@ const KnowledgeBase = () => {
             Can't find what you need?{" "}
             <a
               href="mailto:support@recurrentx.com"
-              className="text-[#6C5CE7] hover:underline font-medium"
+              className="text-[#1e3a5f] hover:underline font-medium"
             >
               Contact support
             </a>

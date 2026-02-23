@@ -122,8 +122,8 @@ function Pill({
       className={cn(
         "px-4 py-2 rounded-full text-sm font-medium border transition-all",
         selected
-          ? "bg-[#6C5CE7] text-white border-[#6C5CE7]"
-          : "bg-white text-gray-700 border-gray-200 hover:border-[#6C5CE7]/40 hover:text-[#6C5CE7]"
+          ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+          : "bg-white text-gray-700 border-gray-200 hover:border-[#1e3a5f]/40 hover:text-[#1e3a5f]"
       )}
     >
       {selected && <Check className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
@@ -174,7 +174,7 @@ function Step1({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Marcus Thompson"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
           />
         </div>
 
@@ -187,7 +187,7 @@ function Step1({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@email.com"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
           />
         </div>
 
@@ -200,7 +200,7 @@ function Step1({
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="(555) 123-4567"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
           />
         </div>
 
@@ -214,7 +214,7 @@ function Step1({
             onChange={(e) => setZip(e.target.value)}
             placeholder="22314"
             maxLength={10}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
           />
           <p className="text-xs text-gray-400 mt-1">
             We use this to surface events near you.
@@ -407,7 +407,7 @@ function Step3({
             value={extraAnswer}
             onChange={(e) => setExtraAnswer(e.target.value)}
             placeholder="Share a brief answer..."
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#6C5CE7]/30 focus:border-[#6C5CE7] transition-all"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
           />
         </div>
       )}
@@ -478,7 +478,7 @@ function Step4({
                 "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all text-left",
                 connected
                   ? "bg-green-50 border-green-200"
-                  : "bg-white border-gray-200 hover:border-[#6C5CE7]/40 cursor-pointer"
+                  : "bg-white border-gray-200 hover:border-[#1e3a5f]/40 cursor-pointer"
               )}
             >
               <div
@@ -520,7 +520,7 @@ function Step4({
           type="button"
           onClick={onSync}
           disabled={syncing}
-          className="flex items-center gap-2 text-sm text-[#6C5CE7] hover:underline mx-auto"
+          className="flex items-center gap-2 text-sm text-[#1e3a5f] hover:underline mx-auto"
         >
           <RefreshCw className={cn("h-3.5 w-3.5", syncing && "animate-spin")} />
           {syncing ? "Syncing..." : "Refresh connected accounts"}
@@ -564,7 +564,7 @@ function SuccessScreen({
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
         <Link
           to={`/creators/${memberId}`}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white font-semibold text-sm transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1e3a5f] hover:bg-[#2d5282] text-white font-semibold text-sm transition-colors"
         >
           View My Profile <ArrowRight className="h-4 w-4" />
         </Link>
@@ -591,7 +591,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
           <div className="flex-1 relative">
             <div className="h-1.5 rounded-full bg-gray-200" />
             <div
-              className="absolute top-0 left-0 h-1.5 rounded-full bg-[#6C5CE7] transition-all duration-500"
+              className="absolute top-0 left-0 h-1.5 rounded-full bg-[#1e3a5f] transition-all duration-500"
               style={{ width: i < step ? "100%" : i === step ? "50%" : "0%" }}
             />
           </div>
@@ -925,7 +925,7 @@ export default function Onboard() {
                 className={cn(
                   "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all",
                   canNext() && !saving
-                    ? "bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white"
+                    ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 )}
               >
@@ -950,11 +950,11 @@ export default function Onboard() {
           {!userId && step === 3 && (
             <p className="text-center text-xs text-gray-400 mt-4">
               Social connections require a MilCrunch account.{" "}
-              <Link to="/login" className="text-[#6C5CE7] hover:underline">
+              <Link to="/login" className="text-[#1e3a5f] hover:underline">
                 Sign in
               </Link>{" "}
               or{" "}
-              <Link to="/signup" className="text-[#6C5CE7] hover:underline">
+              <Link to="/signup" className="text-[#1e3a5f] hover:underline">
                 create one
               </Link>{" "}
               to connect your socials.

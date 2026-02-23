@@ -49,7 +49,7 @@ const TIER_CONFIG = {
   bronze: { icon: Award, color: "text-amber-700", bg: "bg-amber-100", border: "border-amber-300" },
   silver: { icon: Star, color: "text-slate-500", bg: "bg-slate-100", border: "border-slate-300" },
   gold: { icon: Trophy, color: "text-yellow-600", bg: "bg-yellow-100", border: "border-yellow-400" },
-  platinum: { icon: Crown, color: "text-purple-600", bg: "bg-purple-100", border: "border-purple-400" },
+  platinum: { icon: Crown, color: "text-blue-700", bg: "bg-blue-100", border: "border-blue-500" },
   custom: { icon: Star, color: "text-primary", bg: "bg-primary/10", border: "border-primary/30" },
 };
 
