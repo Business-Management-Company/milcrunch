@@ -296,20 +296,14 @@ function getTotalReach(creator: ShowcaseCreator): { total: number; platformCount
 }
 
 function getBestStats(creator: ShowcaseCreator): { value: string; label: string }[] {
-  const candidates: { value: string; label: string; priority: number }[] = [];
-
+  const stats: { value: string; label: string }[] = [];
+  if (creator.follower_count && creator.follower_count > 0) {
+    stats.push({ value: formatFollowerCount(creator.follower_count), label: "Followers" });
+  }
   if (creator.avg_likes != null && Number(creator.avg_likes) > 0) {
-    candidates.push({ value: formatFollowerCount(Number(creator.avg_likes)), label: "Avg Likes", priority: 1 });
+    stats.push({ value: formatFollowerCount(Number(creator.avg_likes)), label: "Avg Likes" });
   }
-  if (creator.avg_comments != null && creator.avg_comments > 0) {
-    candidates.push({ value: formatFollowerCount(creator.avg_comments), label: "Avg Comments", priority: 3 });
-  }
-  if (creator.avg_views != null && String(creator.avg_views) !== "—" && String(creator.avg_views) !== "0" && Number(creator.avg_views) > 0) {
-    candidates.push({ value: typeof creator.avg_views === "string" ? creator.avg_views : formatFollowerCount(Number(creator.avg_views)), label: "Avg Views", priority: 4 });
-  }
-
-  candidates.sort((a, b) => a.priority - b.priority);
-  return candidates.slice(0, 3);
+  return stats.slice(0, 2);
 }
 
 function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
@@ -420,17 +414,16 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
 
       {/* Stats row */}
       {(() => {
-        const reach = getTotalReach(c);
         const best = getBestStats(c);
-        const parts = [
-          `${formatFollowerCount(reach.total)} followers`,
-          ...best.map((s) => `${s.value} ${s.label.toLowerCase()}`),
-        ];
-        return (
-          <p className="text-xs text-gray-500 px-4 mb-2 truncate">
-            {parts.join(" · ")}
-          </p>
-        );
+        return best.length > 0 ? (
+          <div className="flex items-center gap-3 px-4 mb-2">
+            {best.map((s) => (
+              <p key={s.label} className="text-xs text-gray-500 whitespace-nowrap">
+                <span className="font-semibold text-[#1A1A2E]">{s.value}</span> {s.label.toLowerCase()}
+              </p>
+            ))}
+          </div>
+        ) : null;
       })()}
 
       {/* Platform icons */}
@@ -864,7 +857,6 @@ export default function HomePage() {
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
                     const heroSources = [db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string];
 
-                    const reach = getTotalReach(db);
                     const best = getBestStats(db);
 
                     return (
@@ -879,11 +871,15 @@ export default function HomePage() {
                             <span className={`text-[12px] font-medium px-3 py-1.5 rounded-full ${TAG_COLORS[i % TAG_COLORS.length]}`}>{db.category}</span>
                           )}
                         </div>
-                        <div className="border-t border-gray-100 mt-2 pt-2">
-                          <p className="text-[13px] text-gray-500 truncate">
-                            {[`${formatFollowerCount(reach.total)} followers`, ...best.map((s) => `${s.value} ${s.label.toLowerCase()}`)].join(" · ")}
-                          </p>
-                        </div>
+                        {best.length > 0 && (
+                          <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-3">
+                            {best.map((s) => (
+                              <p key={s.label} className="text-[13px] text-gray-500 whitespace-nowrap">
+                                <span className="font-semibold text-gray-900">{s.value}</span> {s.label.toLowerCase()}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   });
