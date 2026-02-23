@@ -539,23 +539,25 @@ const BrandDirectory = () => {
     const row = {
       directory_id: targetDirId,
       creator_handle: m.creator_handle ?? "",
-      creator_name: m.creator_name ?? "",
-      avatar_url: m.avatar_url,
-      follower_count: m.follower_count,
-      engagement_rate: m.engagement_rate,
+      creator_name: m.creator_name ?? null,
+      avatar_url: m.avatar_url ?? null,
+      ic_avatar_url: m.ic_avatar_url ?? m.avatar_url ?? null,
+      branch: m.branch ?? null,
+      follower_count: m.follower_count ?? null,
+      avg_likes: m.avg_likes ?? null,
       platform: m.platform ?? "instagram",
-      branch: m.branch,
-      tags: (m as any).tags ?? null,
+      approved: true,
+      platforms: m.platforms ?? [],
+      enrichment_data: m.enrichment_data ?? null,
     };
 
     const { error } = await supabase
       .from("directory_members")
-      .upsert(row, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
+      .upsert(row, { onConflict: "creator_handle", ignoreDuplicates: true });
     if (error) {
-      console.error("copyToDirectory upsert error:", error);
+      console.error("copyToDirectory upsert error:", error.message, error.details, error.hint, error.code, JSON.stringify(row));
       return "failed";
     }
-    // ignoreDuplicates returns success even for duplicates, so we can't distinguish added vs skipped
     return "added";
   };
 
