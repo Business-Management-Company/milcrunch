@@ -357,10 +357,14 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-1 w-full px-4 mb-2">
+      <div className="grid grid-cols-4 gap-1 w-full px-4 mb-2">
         <div className="text-center">
           <p className="text-sm font-bold text-[#1A1A2E]">{formatFollowerCount(c.follower_count)}</p>
           <p className="text-[10px] text-gray-400 uppercase tracking-wide">Followers</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-bold text-[#1A1A2E]">{c.engagement_rate != null && c.engagement_rate > 0 ? `${c.engagement_rate.toFixed(2)}%` : "—"}</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Engagement</p>
         </div>
         <div className="text-center">
           <p className="text-sm font-bold text-[#1A1A2E]">{c.avg_likes != null && Number(c.avg_likes) > 0 ? formatFollowerCount(Number(c.avg_likes)) : "—"}</p>

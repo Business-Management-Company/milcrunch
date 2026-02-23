@@ -132,6 +132,7 @@ export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]
 
     if (!error && data && data.length > 0) {
       console.log("[featured-creators] Homepage: using DB creators:", data.length);
+      console.log("[featured-creators] Raw query result:", JSON.stringify(data, null, 2));
       return data.map((r: Record<string, unknown>) => mapDirectoryRow(r));
     }
 
