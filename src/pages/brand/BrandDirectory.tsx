@@ -300,10 +300,12 @@ const BrandDirectory = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCreator, setDrawerCreator] = useState<CreatorCard | null>(null);
   const [drawerMemberId, setDrawerMemberId] = useState<string | null>(null);
+  const [drawerEnrichment, setDrawerEnrichment] = useState<Record<string, unknown> | null>(null);
 
   const openCreatorDrawer = (m: DirectoryMember) => {
     setDrawerCreator(memberToCreatorCard(m));
     setDrawerMemberId(m.id);
+    setDrawerEnrichment(m.enrichment_data && typeof m.enrichment_data === "object" ? m.enrichment_data as Record<string, unknown> : null);
     setDrawerOpen(true);
   };
 
@@ -1647,6 +1649,7 @@ const BrandDirectory = () => {
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           creator={drawerCreator}
+          cachedEnrichment={drawerEnrichment}
           hideDirectoryActions
           onRemoveFromDirectory={handleRemoveFromDirectory}
         />

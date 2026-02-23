@@ -52,6 +52,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import CreateListModal from "@/components/CreateListModal";
 
+/** TikTok brand SVG icon (matches PlatformIcons.tsx) */
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.75a8.18 8.18 0 004.77 1.52V6.82a4.84 4.84 0 01-1-.13z" />
+    </svg>
+  );
+}
+
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800 dark:bg-green-800/20 dark:text-green-400",
   Navy: "bg-blue-900/10 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400",
@@ -72,7 +81,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 const PLATFORM_PILL_STYLES: Record<string, { active: string; inactive: string; icon: React.ComponentType<{ className?: string }> }> = {
   instagram: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Instagram },
-  tiktok: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Music },
+  tiktok: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: TikTokIcon },
   youtube: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Youtube },
   facebook: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Facebook },
   twitter: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: X },
@@ -1439,7 +1448,7 @@ export default function CreatorProfileModal({
                           title={PLATFORM_LABELS[p] ?? p}
                         >
                           {(p === "instagram" && <Instagram className="h-5 w-5" />) ||
-                            (p === "tiktok" && <Music className="h-5 w-5" />) ||
+                            (p === "tiktok" && <TikTokIcon className="h-5 w-5" />) ||
                             (p === "youtube" && <Youtube className="h-5 w-5" />) ||
                             (p === "facebook" && <Facebook className="h-5 w-5" />) ||
                             (p === "twitter" && <X className="h-5 w-5" />) || (
