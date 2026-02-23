@@ -2865,25 +2865,14 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   useEffect(() => {
     if (record.profile_photo_url) return; // already has a photo
     (async () => {
+      // Try to find photo from directory_members by name or source_username
       const handle = record.source_username;
-      // 1. Try directory_members — check both ic_avatar_url and avatar_url
-      const dmQuery = handle
-        ? supabase.from('directory_members').select('ic_avatar_url, avatar_url').eq('creator_handle', handle).maybeSingle()
-        : supabase.from('directory_members').select('ic_avatar_url, avatar_url').ilike('creator_name', record.person_name).maybeSingle();
-      const { data: dmData } = await dmQuery;
-      const dmPhoto = dmData?.ic_avatar_url || dmData?.avatar_url || null;
-      if (dmPhoto) {
-        await supabase.from('verifications').update({ profile_photo_url: dmPhoto }).eq('id', record.id);
-        onRefresh?.();
-        return;
-      }
-      // 2. Try creator_profiles.profile_image_url
-      const cpQuery = handle
-        ? supabase.from('creator_profiles').select('profile_image_url').eq('instagram_handle', handle).maybeSingle()
-        : supabase.from('creator_profiles').select('profile_image_url').ilike('display_name', record.person_name).maybeSingle();
-      const { data: cpData } = await cpQuery;
-      if (cpData?.profile_image_url) {
-        await supabase.from('verifications').update({ profile_photo_url: cpData.profile_image_url }).eq('id', record.id);
+      const query = handle
+        ? supabase.from('directory_members').select('ic_avatar_url').eq('creator_handle', handle).maybeSingle()
+        : supabase.from('directory_members').select('ic_avatar_url').ilike('name', record.person_name).maybeSingle();
+      const { data } = await query;
+      if (data?.ic_avatar_url) {
+        await supabase.from('verifications').update({ profile_photo_url: data.ic_avatar_url }).eq('id', record.id);
         onRefresh?.();
       }
     })();
