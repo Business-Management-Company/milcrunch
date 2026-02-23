@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
 const RAW_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/raw/";
 const FULL_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
-const LOCATIONS_URL = "/api/influencers/public/v1/locations";
+const LOCATIONS_URL = "/api/ic-locations";
 
 /**
  * Unified creator card format for display (used by both API and mock data).

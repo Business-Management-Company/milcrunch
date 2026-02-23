@@ -617,6 +617,7 @@ const BrandDiscover = () => {
   const [locationInput, setLocationInput] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const locationAbortRef = useRef<AbortController | null>(null);
   const locationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const locationWrapperRef = useRef<HTMLDivElement>(null);
@@ -723,11 +724,17 @@ const BrandDiscover = () => {
       setLocationFilter("");
       setLocationSuggestions([]);
       setLocationDropdownOpen(false);
+      setLocationLoading(false);
       return;
     }
+    // If user edits a previously selected location, clear the filter
+    // so raw text never gets sent to the API
+    setLocationFilter("");
     // Debounce API call
     if (locationTimerRef.current) clearTimeout(locationTimerRef.current);
     locationAbortRef.current?.abort();
+    setLocationLoading(true);
+    setLocationDropdownOpen(true);
     locationTimerRef.current = setTimeout(async () => {
       const controller = new AbortController();
       locationAbortRef.current = controller;
@@ -735,10 +742,11 @@ const BrandDiscover = () => {
         const results = await searchLocations(value, "instagram", controller.signal);
         if (!controller.signal.aborted) {
           setLocationSuggestions(results);
+          setLocationLoading(false);
           setLocationDropdownOpen(results.length > 0);
         }
       } catch {
-        // aborted or network error — ignore
+        if (!controller.signal.aborted) setLocationLoading(false);
       }
     }, 300);
   }, []);
@@ -748,6 +756,7 @@ const BrandDiscover = () => {
     setLocationInput(loc);
     setLocationDropdownOpen(false);
     setLocationSuggestions([]);
+    setLocationLoading(false);
   }, []);
 
   // Close location dropdown on outside click
@@ -2109,13 +2118,22 @@ const BrandDiscover = () => {
             <div className="relative" ref={locationWrapperRef}>
               <Input
                 placeholder="Location"
-                className="w-[200px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
+                className="w-[200px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border pr-8"
                 value={locationInput}
                 onChange={(e) => handleLocationInputChange(e.target.value)}
                 onFocus={() => { if (locationSuggestions.length > 0) setLocationDropdownOpen(true); }}
               />
-              {locationDropdownOpen && locationSuggestions.length > 0 && (
+              {locationLoading && (
+                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+              {locationDropdownOpen && (locationSuggestions.length > 0 || locationLoading) && (
                 <div className="absolute z-50 top-full left-0 mt-1 w-[320px] max-h-[240px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] shadow-lg">
+                  {locationLoading && locationSuggestions.length === 0 && (
+                    <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Searching locations...
+                    </div>
+                  )}
                   {locationSuggestions.map((loc) => (
                     <button
                       key={loc}
