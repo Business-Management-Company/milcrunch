@@ -535,23 +535,28 @@ const BrandDirectory = () => {
     toast.success(`Added to ${targetList?.name ?? "list"}`);
   };
 
-  const copyToDirectory = async (m: DirectoryMember, _targetDirId: string): Promise<"added" | "skipped" | "failed"> => {
+  const copyToDirectory = async (m: DirectoryMember, targetDirId: string): Promise<"added" | "skipped" | "failed"> => {
     const payload = {
-      handle: m.creator_handle ?? "",
-      name: m.creator_name ?? null,
-      avatar_url: m.avatar_url ?? m.ic_avatar_url ?? null,
-      branch: m.branch ?? null,
-      followers: Math.round(Number(m.follower_count)) || 0,
-      avg_likes: parseFloat(String(m.avg_likes ?? "0")) || 0,
+      directory_id: targetDirId,
+      creator_handle: m.creator_handle ?? "",
+      creator_name: m.creator_name ?? null,
+      avatar_url: m.avatar_url ?? null,
+      ic_avatar_url: m.ic_avatar_url ?? m.avatar_url ?? null,
       platform: m.platform ?? "instagram",
-      public: true,
+      branch: m.branch ?? null,
+      follower_count: m.follower_count ?? null,
+      avg_likes: m.avg_likes ?? null,
+      bio: m.bio ?? null,
+      platforms: m.platforms ?? [],
+      enrichment_data: m.enrichment_data ?? null,
+      approved: true,
     };
 
     const { error } = await supabase
-      .from("featured_creators")
-      .upsert(payload, { onConflict: "handle", ignoreDuplicates: true });
+      .from("directory_members")
+      .upsert(payload, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
     if (error) {
-      console.error("upsert error:", error);
+      console.error("[copyToDirectory] upsert error:", error.message, error.details, error.hint, error.code);
       return "failed";
     }
     return "added";
