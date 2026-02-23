@@ -58,6 +58,7 @@ import {
   ListPlus,
   FolderPlus,
   ChevronRight,
+  UserPlus,
 } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import {
@@ -233,6 +234,12 @@ const BrandDirectory = () => {
   const [descValue, setDescValue] = useState("");
 
   // Edit modal state (avg_views, avg_likes)
+  // Manual add-to-directory dialog
+  const [manualAddOpen, setManualAddOpen] = useState(false);
+  const [manualAddHandle, setManualAddHandle] = useState("");
+  const [manualAddName, setManualAddName] = useState("");
+  const [manualAddLoading, setManualAddLoading] = useState(false);
+
   const [editMember, setEditMember] = useState<DirectoryMember | null>(null);
   const [editAvgViews, setEditAvgViews] = useState("");
   const [editAvgLikes, setEditAvgLikes] = useState("");
@@ -718,6 +725,26 @@ const BrandDirectory = () => {
     setSelectedIds(new Set());
   };
 
+  const handleManualAdd = async () => {
+    if (!manualAddHandle.trim() || !selectedDir) return;
+    setManualAddLoading(true);
+    const { error } = await addToDirectory(selectedDir.id, {
+      handle: manualAddHandle.trim(),
+      display_name: manualAddName.trim() || manualAddHandle.trim(),
+      platform: "instagram",
+    });
+    setManualAddLoading(false);
+    if (error) {
+      toast.error(`Failed to add: ${error}`);
+    } else {
+      toast.success(`Added @${manualAddHandle.trim()} to directory`);
+      setManualAddOpen(false);
+      setManualAddHandle("");
+      setManualAddName("");
+      loadMembers(selectedDir.id);
+    }
+  };
+
   // ─── RENDER: Directory list ────────────────────────────────
 
   if (!selectedDir) {
@@ -1166,8 +1193,19 @@ const BrandDirectory = () => {
               Discover Creators
             </Button>
           </a>
+          <div className="flex-grow" />
+          {lists.length > 0 && (
+            <Button size="sm" variant="outline" className="rounded-lg" onClick={() => setPromoteOpen(true)}>
+              <Upload className="h-4 w-4 mr-1.5" />
+              Promote from List
+            </Button>
+          )}
+          <Button size="sm" variant="outline" className="rounded-lg" onClick={() => setManualAddOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-1.5" />
+            Add to Directory
+          </Button>
           {/* View toggle */}
-          <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ml-auto">
+          <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <button type="button" onClick={() => handleViewChange("table")} className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-pd-blue text-white" : "bg-background text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800")} title="Table view">
               <List className="h-4 w-4" />
             </button>
@@ -1175,12 +1213,6 @@ const BrandDirectory = () => {
               <LayoutGrid className="h-4 w-4" />
             </button>
           </div>
-          {lists.length > 0 && (
-            <Button size="sm" variant="outline" className="rounded-lg" onClick={() => setPromoteOpen(true)}>
-              <Upload className="h-4 w-4 mr-1.5" />
-              Promote from List
-            </Button>
-          )}
         </div>
 
         {/* Loading */}
@@ -1509,6 +1541,32 @@ const BrandDirectory = () => {
               >
                 {promoting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
                 Promote All
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add to Directory Modal */}
+        <Dialog open={manualAddOpen} onOpenChange={(open) => { if (!open) { setManualAddHandle(""); setManualAddName(""); } setManualAddOpen(open); }}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Add Creator to Directory</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label htmlFor="add-handle">Handle *</Label>
+                <Input id="add-handle" placeholder="@username" value={manualAddHandle} onChange={(e) => setManualAddHandle(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="add-name">Display Name</Label>
+                <Input id="add-name" placeholder="Creator name (optional)" value={manualAddName} onChange={(e) => setManualAddName(e.target.value)} className="mt-1" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setManualAddOpen(false)}>Cancel</Button>
+              <Button className="bg-pd-blue hover:bg-pd-darkblue text-white" onClick={handleManualAdd} disabled={manualAddLoading || !manualAddHandle.trim()}>
+                {manualAddLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                Add
               </Button>
             </DialogFooter>
           </DialogContent>
