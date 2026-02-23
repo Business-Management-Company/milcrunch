@@ -246,8 +246,9 @@ function getTagColor(tag: string): string {
   const t = tag.toLowerCase();
   if (t.includes("milspouse") || t.includes("spouse")) return "bg-pink-100 text-pink-700";
   if (t.includes("veteran") || t.includes("military")) return "bg-green-100 text-green-700";
-  if (t.includes("fitness")) return "bg-orange-100 text-orange-700";
-  return "bg-blue-100 text-blue-700";
+  if (t.includes("music") || t.includes("patriotic")) return "bg-blue-100 text-blue-700";
+  if (t.includes("motherhood") || t.includes("lifestyle")) return "bg-amber-100 text-amber-700";
+  return "bg-gray-100 text-gray-700";
 }
 
 function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
@@ -371,8 +372,8 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
           <p className="text-[10px] text-gray-400 uppercase tracking-wide">Avg Likes</p>
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold text-[#1A1A2E]">{c.post_count != null && c.post_count > 0 ? formatFollowerCount(c.post_count) : "—"}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Posts/Mo</p>
+          <p className="text-sm font-bold text-[#1A1A2E]">{c.avg_comments != null && c.avg_comments > 0 ? formatFollowerCount(c.avg_comments) : "—"}</p>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Avg Comments</p>
         </div>
       </div>
 
@@ -807,12 +808,12 @@ export default function HomePage() {
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
                     const heroSources = [db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string];
 
-                    // Build 4 stats: Followers, Engagement Rate, Avg Likes, Posts/Month
+                    // Build 4 stats: Followers, Engagement Rate, Avg Likes, Avg Comments
                     const stats: { value: string; label: string }[] = [
                       { value: db.follower_count ? formatFollowerCount(db.follower_count) : "—", label: "Followers" },
                       { value: db.engagement_rate ? `${db.engagement_rate.toFixed(2)}%` : "—", label: "Engagement" },
                       { value: (db.avg_likes && db.avg_likes !== "—" && db.avg_likes !== "0") ? db.avg_likes : "—", label: "Avg Likes" },
-                      { value: db.post_count ? formatFollowerCount(db.post_count) : "—", label: "Posts/Mo" },
+                      { value: db.avg_comments != null && db.avg_comments > 0 ? formatFollowerCount(db.avg_comments) : "—", label: "Avg Comments" },
                     ];
 
                     return (

@@ -125,7 +125,7 @@ export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]
   try {
     const { data, error } = await supabase
       .from("directory_members")
-      .select("id, creator_handle, creator_name, platform, avatar_url, ic_avatar_url, follower_count, engagement_rate, post_count, avg_comments, avg_views, avg_likes, category, sort_order, branch, status, bio, platforms, profile_slug, platform_urls, enrichment_data, featured_homepage, approved, tags")
+      .select("id, creator_handle, creator_name, platform, avatar_url, ic_avatar_url, follower_count, engagement_rate, avg_likes, avg_comments, tags, category, sort_order, branch, status, bio, platforms, profile_slug, platform_urls, enrichment_data, featured_homepage, approved")
       .eq("featured_homepage", true)
       .order("sort_order", { ascending: true })
       .limit(3);
