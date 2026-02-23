@@ -906,7 +906,7 @@ export default function HomePage() {
             </div>
 
             <div className="text-center mt-8">
-              <Link to="/onboard">
+              <Link to="/brand/discover">
                 <button className="border border-[#1e3a5f] text-[#1e3a5f] hover:bg-blue-50 rounded-full px-6 py-2 font-medium transition-colors">
                   View More Creators &rarr;
                 </button>
