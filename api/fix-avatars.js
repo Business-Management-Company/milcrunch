@@ -196,8 +196,9 @@ export default async function handler(req, res) {
 
   // Determine which table(s) to operate on
   const tableName = body.table || "directory_members";
-  const cfg = TABLE_CONFIG[tableName];
-  if (!cfg) return res.status(400).json({ error: `Unknown table: ${tableName}. Use "directory_members" or "featured_creators"` });
+  const isAll = tableName === "all";
+  const cfg = isAll ? TABLE_CONFIG.directory_members : TABLE_CONFIG[tableName];
+  if (!cfg && !isAll) return res.status(400).json({ error: `Unknown table: ${tableName}. Use "directory_members", "featured_creators", or "all"` });
 
   // scan=true mode: find all broken avatars and optionally fix them
   if (body.scan) {
