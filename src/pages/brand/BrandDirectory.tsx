@@ -538,14 +538,13 @@ const BrandDirectory = () => {
   const copyToDirectory = async (m: DirectoryMember, _targetDirId: string): Promise<"added" | "skipped" | "failed"> => {
     const payload = {
       handle: m.creator_handle ?? "",
-      display_name: m.creator_name ?? null,
+      name: m.creator_name ?? null,
       avatar_url: m.avatar_url ?? m.ic_avatar_url ?? null,
       branch: m.branch ?? null,
-      follower_count: Math.round(Number(m.follower_count)) || 0,
+      followers: Math.round(Number(m.follower_count)) || 0,
       avg_likes: parseFloat(String(m.avg_likes ?? "0")) || 0,
       platform: m.platform ?? "instagram",
-      is_verified: false,
-      approved: true,
+      public: true,
     };
 
     const { error } = await supabase
