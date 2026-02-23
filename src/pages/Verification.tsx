@@ -1383,9 +1383,19 @@ function MediaTab({ record }: { record: VerificationRecord }) {
       const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
 
       // Primary: results from MediaTab's own YouTube API search
-      const saved = checks.youtube_media as { videos?: YouTubeVideoResult[]; searched_at?: string } | undefined;
+      const saved = checks.youtube_media as { videos?: (YouTubeVideoResult & { url?: string; type?: string })[] ; searched_at?: string } | undefined;
       if (saved?.videos?.length) {
-        setVideos(saved.videos);
+        // Normalize: pipeline stores mediaAppearances { type, title, url, snippet }
+        // which lack videoId/thumbnail — extract videoId from url for those
+        const normalized = saved.videos.map((v) => {
+          if (v.videoId && v.thumbnail) return v; // already proper shape
+          const url = v.url || '';
+          const m = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
+          const vid = m?.[1];
+          if (!vid) return v; // keep as-is, getThumbnail will handle
+          return { ...v, videoId: vid, thumbnail: `https://img.youtube.com/vi/${vid}/hqdefault.jpg` };
+        });
+        setVideos(normalized);
         setLastSearchedAt(saved.searched_at ?? null);
         setHasSearched(true);
         setDbLoaded(true);
@@ -1610,12 +1620,11 @@ No markdown formatting, just the JSON array.`;
                         <img
                           src={thumb}
                           alt={v.title}
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          className="w-full h-full object-cover rounded-t-lg"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                         />
                       ) : (
-                        <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
                           <Video className="h-8 w-8 text-gray-400" />
                         </div>
                       )}
