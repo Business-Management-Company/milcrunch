@@ -45,6 +45,14 @@ function initials(first?: string | null, last?: string | null, email?: string): 
   return "?";
 }
 
+function avatarUrl(email?: string, idx = 0): string {
+  let hash = 0;
+  if (email) for (let i = 0; i < email.length; i++) hash += email.charCodeAt(i);
+  const num = hash % 50;
+  const gender = idx % 2 === 0 ? "women" : "men";
+  return `https://randomuser.me/api/portraits/${gender}/${num}.jpg`;
+}
+
 const EmailContacts = () => {
   const { contactId } = useParams();
   const navigate = useNavigate();
@@ -384,8 +392,14 @@ const EmailContacts = () => {
           </Button>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xl font-bold">
-                {initials(detail.first_name, detail.last_name, detail.email)}
+              <div className="relative h-14 w-14 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xl font-bold overflow-hidden shrink-0">
+                <span>{initials(detail.first_name, detail.last_name, detail.email)}</span>
+                <img
+                  src={avatarUrl(detail.email)}
+                  alt=""
+                  className="absolute inset-0 w-14 h-14 rounded-full object-cover"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
@@ -828,14 +842,20 @@ const EmailContacts = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.slice(0, 100).map(c => {
+              {filtered.slice(0, 100).map((c, idx) => {
                 const sc = CONTACT_STATUS_COLORS[c.status] || CONTACT_STATUS_COLORS.subscribed;
                 const src = c.source || "manual";
                 return (
                   <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/brand/email/contacts/${c.id}`)}>
                     <TableCell>
-                      <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold">
-                        {initials(c.first_name, c.last_name, c.email)}
+                      <div className="relative h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold overflow-hidden">
+                        <span>{initials(c.first_name, c.last_name, c.email)}</span>
+                        <img
+                          src={avatarUrl(c.email, idx)}
+                          alt=""
+                          className="absolute inset-0 w-8 h-8 rounded-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{c.first_name || "—"}</TableCell>
