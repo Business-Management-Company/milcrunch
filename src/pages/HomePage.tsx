@@ -422,22 +422,14 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       {(() => {
         const reach = getTotalReach(c);
         const best = getBestStats(c);
+        const parts = [
+          `${formatFollowerCount(reach.total)} followers`,
+          ...best.map((s) => `${s.value} ${s.label.toLowerCase()}`),
+        ];
         return (
-          <div className={`grid gap-1 w-full px-4 mb-2 ${best.length === 3 ? "grid-cols-4" : best.length === 2 ? "grid-cols-3" : best.length === 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-            <div className="text-center">
-              <p className="text-sm font-bold text-[#1A1A2E]">{formatFollowerCount(reach.total)}</p>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Total Reach</p>
-              {reach.platformCount > 1 && (
-                <p className="text-[9px] text-gray-300 leading-tight">across {reach.platformCount} platforms</p>
-              )}
-            </div>
-            {best.map((s) => (
-              <div key={s.label} className="text-center">
-                <p className="text-sm font-bold text-[#1A1A2E]">{s.value}</p>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide">{s.label}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-gray-500 px-4 mb-2 truncate">
+            {parts.join(" · ")}
+          </p>
         );
       })()}
 
@@ -887,20 +879,10 @@ export default function HomePage() {
                             <span className={`text-[12px] font-medium px-3 py-1.5 rounded-full ${TAG_COLORS[i % TAG_COLORS.length]}`}>{db.category}</span>
                           )}
                         </div>
-                        <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-2 gap-x-3 gap-y-2">
-                          <div>
-                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{formatFollowerCount(reach.total)}</p>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Total Reach</p>
-                            {reach.platformCount > 1 && (
-                              <p className="text-[9px] text-gray-300 leading-tight">across {reach.platformCount} platforms</p>
-                            )}
-                          </div>
-                          {best.map((s) => (
-                            <div key={s.label}>
-                              <p className="text-[16px] font-bold text-gray-900 leading-tight">{s.value}</p>
-                              <p className="text-[10px] text-gray-400 uppercase tracking-wide">{s.label}</p>
-                            </div>
-                          ))}
+                        <div className="border-t border-gray-100 mt-2 pt-2">
+                          <p className="text-[13px] text-gray-500 truncate">
+                            {[`${formatFollowerCount(reach.total)} followers`, ...best.map((s) => `${s.value} ${s.label.toLowerCase()}`)].join(" · ")}
+                          </p>
                         </div>
                       </div>
                     );
