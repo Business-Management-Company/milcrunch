@@ -331,6 +331,33 @@ export default function CreatorPublicProfile() {
     }
   }, [creator?.enrichment_data]);
 
+  // IC enrichment data is the source of truth for platform pills
+  const icPlatforms = useMemo(
+    () => getPlatformsFromEnrichmentData(creator?.enrichment_data),
+    [creator?.enrichment_data]
+  );
+  // Legacy platforms list used for other logic (e.g., overview tab icons)
+  const platforms = useMemo(() => {
+    const basePlatforms = Array.isArray(creator?.platforms) ? creator.platforms : [];
+    const set = new Set(basePlatforms.filter((p): p is string => typeof p === "string").map((p) => p.toLowerCase()));
+    // Include IC platforms too
+    for (const p of icPlatforms) set.add(p.platform);
+    const enrichData = (creator?.enrichment_data && typeof creator.enrichment_data === "object") ? creator.enrichment_data as Record<string, unknown> : undefined;
+    const rawCreatorHas = (enrichData?.result as Record<string, unknown> | undefined)?.creator_has
+      ?? enrichData?.creator_has;
+    const creatorHas = (rawCreatorHas && typeof rawCreatorHas === "object" && !Array.isArray(rawCreatorHas))
+      ? rawCreatorHas as Record<string, boolean>
+      : undefined;
+    if (creatorHas) {
+      try {
+        for (const [k, v] of Object.entries(creatorHas)) {
+          if (v && PLATFORM_URLS[k]) set.add(k);
+        }
+      } catch { /* ignore malformed creatorHas */ }
+    }
+    return [...set];
+  }, [creator?.enrichment_data, creator?.platforms, icPlatforms]);
+
   /* ---- Resolve banner image ---- */
   const resolveBanner = useCallback(async () => {
     if (!creator) return;
@@ -479,33 +506,6 @@ export default function CreatorPublicProfile() {
   }
 
   /* ---- Computed values ---- */
-  console.log("Creator IC data:", creator);
-  const enrichData = (creator.enrichment_data && typeof creator.enrichment_data === "object") ? creator.enrichment_data as Record<string, unknown> : undefined;
-  const rawCreatorHas = (enrichData?.result as Record<string, unknown> | undefined)?.creator_has
-    ?? enrichData?.creator_has;
-  const creatorHas = (rawCreatorHas && typeof rawCreatorHas === "object" && !Array.isArray(rawCreatorHas))
-    ? rawCreatorHas as Record<string, boolean>
-    : undefined;
-  // IC enrichment data is the source of truth for platform pills
-  const icPlatforms = useMemo(
-    () => getPlatformsFromEnrichmentData(creator.enrichment_data),
-    [creator.enrichment_data]
-  );
-  // Legacy platforms list used for other logic (e.g., overview tab icons)
-  const basePlatforms = Array.isArray(creator.platforms) ? creator.platforms : [];
-  const platforms = useMemo(() => {
-    const set = new Set(basePlatforms.filter((p): p is string => typeof p === "string").map((p) => p.toLowerCase()));
-    // Include IC platforms too
-    for (const p of icPlatforms) set.add(p.platform);
-    if (creatorHas) {
-      try {
-        for (const [k, v] of Object.entries(creatorHas)) {
-          if (v && PLATFORM_URLS[k]) set.add(k);
-        }
-      } catch { /* ignore malformed creatorHas */ }
-    }
-    return [...set];
-  }, [basePlatforms, icPlatforms, creatorHas]);
   const bannerGradient = BRANCH_BANNER[creator.branch ?? ""] ?? DEFAULT_BANNER;
   const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-600 text-white";
   const isVerified = !!creator.featured_homepage;
