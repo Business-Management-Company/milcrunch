@@ -277,6 +277,9 @@ export default function CreatorPublicProfile() {
   const [bannerFailed, setBannerFailed] = useState(false);
   const [resolvedBanner, setResolvedBanner] = useState<string | null>(null);
 
+  // Verification
+  const [verification, setVerification] = useState<{ confidence_score: number; status: string; public_token: string } | null>(null);
+
   /* ---- Fetch creator ---- */
   useEffect(() => {
     if (!handle) return;
@@ -295,6 +298,20 @@ export default function CreatorPublicProfile() {
       document.title = "MilCrunch";
     };
   }, [handle]);
+
+  /* ---- Fetch verification record ---- */
+  useEffect(() => {
+    if (!creator?.handle) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("verifications")
+      .select("confidence_score, status, public_token")
+      .eq("creator_handle", creator.handle)
+      .single()
+      .then(({ data }: { data: { confidence_score: number; status: string; public_token: string } | null }) => {
+        if (data) setVerification(data);
+      });
+  }, [creator?.handle]);
 
   /* ---- Image fallback ---- */
   const enrichAvatar = creator ? extractAvatarFromEnrichment(creator.enrichment_data) : null;
@@ -723,6 +740,29 @@ export default function CreatorPublicProfile() {
                         <TooltipContent>MilCrunch Verified</TooltipContent>
                       </Tooltip>
                     )}
+                    {verification && verification.confidence_score != null && (
+                      <>
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          Verified
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <svg className="h-7 w-7" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="15.915" fill="none" stroke="#dcfce7" strokeWidth="2.5" />
+                            <circle
+                              cx="18" cy="18" r="15.915" fill="none" stroke="#15803d" strokeWidth="2.5"
+                              strokeDasharray={`${verification.confidence_score} ${100 - verification.confidence_score}`}
+                              strokeDashoffset="25"
+                              strokeLinecap="round"
+                            />
+                            <text x="18" y="18" textAnchor="middle" dominantBaseline="central" fill="#15803d" fontSize="9" fontWeight="bold">
+                              {Math.round(verification.confidence_score)}
+                            </text>
+                          </svg>
+                          <span className="text-xs font-semibold text-green-700">{verification.confidence_score}%</span>
+                        </span>
+                      </>
+                    )}
                     {hasUpcomingEvents && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">
                         <Calendar className="h-3 w-3" />
@@ -740,6 +780,14 @@ export default function CreatorPublicProfile() {
                       </span>
                     )}
                   </div>
+                  {verification?.public_token && (
+                    <Link
+                      to={`/report/${verification.public_token}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-green-700 hover:text-green-800 mt-1.5 transition-colors"
+                    >
+                      View Verification Report <span aria-hidden="true">&rarr;</span>
+                    </Link>
+                  )}
                 </div>
 
                 {/* Follow button */}
