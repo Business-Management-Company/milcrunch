@@ -381,7 +381,7 @@ export default function Integrations() {
 
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   {isConnected ? (
-                    <Badge className="border-0 flex items-center gap-1" style={{ backgroundColor: "#ede9fe", color: "#1e3a5f" }}>
+                    <Badge className="border-0 flex items-center gap-1" style={{ backgroundColor: "#dbeafe", color: "#1e3a5f" }}>
                       <Check className="w-3 h-3" />
                       Connected
                     </Badge>

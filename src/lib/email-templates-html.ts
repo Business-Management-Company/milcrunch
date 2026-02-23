@@ -186,10 +186,10 @@ ${WRAPPER_END}`,
     thumbnail_color: "#2d5282",
     thumbnail_image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=200&fit=crop",
     html: `${WRAPPER_START}
-<tr><td style="background:url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#2d5282,#6D28D9);padding:0;">
-<div style="background:rgba(80,30,160,0.7);padding:48px 40px;text-align:center;">
+<tr><td style="background:url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=200&fit=crop&crop=center') center/cover no-repeat, linear-gradient(135deg,#2d5282,#1e3a5f);padding:0;">
+<div style="background:rgba(30,58,95,0.7);padding:48px 40px;text-align:center;">
 <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">Thank You!</h1>
-<p style="margin:12px 0 0;color:#ddd6fe;font-size:16px;">We couldn't have done it without you, {{first_name}}</p>
+<p style="margin:12px 0 0;color:#bfdbfe;font-size:16px;">We couldn't have done it without you, {{first_name}}</p>
 </div>
 </td></tr>
 <tr><td style="padding:40px;">
@@ -197,20 +197,20 @@ ${WRAPPER_END}`,
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 <tr>
 <td width="33%" style="padding:8px;text-align:center;">
-<div style="background:#f5f3ff;border-radius:12px;padding:20px;">
-<p style="margin:0;color:#6D28D9;font-size:28px;font-weight:700;">[#]</p>
+<div style="background:#eff6ff;border-radius:12px;padding:20px;">
+<p style="margin:0;color:#1e3a5f;font-size:28px;font-weight:700;">[#]</p>
 <p style="margin:4px 0 0;color:#1e3a5f;font-size:13px;">Attendees</p>
 </div>
 </td>
 <td width="33%" style="padding:8px;text-align:center;">
-<div style="background:#f5f3ff;border-radius:12px;padding:20px;">
-<p style="margin:0;color:#6D28D9;font-size:28px;font-weight:700;">[#]</p>
+<div style="background:#eff6ff;border-radius:12px;padding:20px;">
+<p style="margin:0;color:#1e3a5f;font-size:28px;font-weight:700;">[#]</p>
 <p style="margin:4px 0 0;color:#1e3a5f;font-size:13px;">Speakers</p>
 </div>
 </td>
 <td width="33%" style="padding:8px;text-align:center;">
-<div style="background:#f5f3ff;border-radius:12px;padding:20px;">
-<p style="margin:0;color:#6D28D9;font-size:28px;font-weight:700;">[#]</p>
+<div style="background:#eff6ff;border-radius:12px;padding:20px;">
+<p style="margin:0;color:#1e3a5f;font-size:28px;font-weight:700;">[#]</p>
 <p style="margin:4px 0 0;color:#1e3a5f;font-size:13px;">Sponsors</p>
 </div>
 </td>

@@ -140,7 +140,7 @@ export default function RoiCalculator() {
           <Button
             onClick={analyze}
             disabled={aiLoading}
-            className="w-full bg-[#1e3a5f] hover:bg-[#6D28D9] text-white h-12 text-sm font-semibold"
+            className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white h-12 text-sm font-semibold"
           >
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
             Analyze with AI

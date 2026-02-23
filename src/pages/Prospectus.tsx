@@ -2487,7 +2487,7 @@ export default function Prospectus() {
             {/* Explore Demo */}
             <a
               href="/login?demo=true"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e3a5f] hover:bg-[#6D28D9] text-white transition-all duration-300"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e3a5f] hover:bg-[#2d5282] text-white transition-all duration-300"
             >
               🎯 Explore Demo
             </a>

@@ -118,7 +118,7 @@ export default function SaasCalculator() {
 
           <Button
             onClick={copyToClipboard}
-            className="w-full bg-[#1e3a5f] hover:bg-[#6D28D9] text-white h-12 text-sm font-semibold"
+            className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white h-12 text-sm font-semibold"
           >
             {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
             {copied ? "Copied!" : "Add to Prospectus"}
