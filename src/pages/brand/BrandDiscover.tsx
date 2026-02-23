@@ -345,7 +345,7 @@ function DiscoverAvatar({ url, name, username, size = "w-10 h-10", borderClass =
           className={`${size} rounded-full object-cover ${borderClass} absolute inset-0 z-10`}
         />
       )}
-      <div className={`${size} rounded-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold ${size === "w-14 h-14" ? "text-sm" : "text-xs"} ${borderClass}`}>
+      <div className={`${size} rounded-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold ${size === "w-14 h-14" ? "text-sm" : "text-xs"} ${borderClass}`}>
         {getDiscoverInitials(name)}
       </div>
       {verified && (
@@ -559,7 +559,7 @@ class DiscoverErrorBoundary extends React.Component<
               try { localStorage.removeItem(LAST_SEARCH_KEY); } catch { /* */ }
               this.setState({ hasError: false, error: null });
             }}
-            className="px-4 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#5A4BD1] transition-colors text-sm font-medium"
           >
             Clear cache & reload
           </button>
@@ -1385,7 +1385,7 @@ const BrandDiscover = () => {
     return { level: level as "high" | "medium" | "low", score, matches: allMatches };
   }, [searchQuery, niche, selectedBranches, keywordsInBio]);
   const confidenceColors = {
-    high: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    high: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
     medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     low: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
     none: "hidden",
@@ -1779,7 +1779,7 @@ const BrandDiscover = () => {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserSearch className="h-5 w-5 text-purple-600" />
+              <UserSearch className="h-5 w-5 text-blue-700" />
               Get Contact Info
             </DialogTitle>
           </DialogHeader>
@@ -1803,7 +1803,7 @@ const BrandDiscover = () => {
             <Button
               onClick={() => contactConfirmCreator && handleGetContactInfo(contactConfirmCreator)}
               disabled={contactLoading}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-blue-700 hover:bg-blue-800 text-white"
             >
               {contactLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Mail className="h-4 w-4 mr-1" />}
               Get Contact Info (1.03 cr)
@@ -1840,7 +1840,7 @@ const BrandDiscover = () => {
                     ? "text-red-500"
                     : creditBalance && (creditBalance.credits_remaining ?? 0) < 10
                     ? "text-yellow-500"
-                    : "text-purple-500"
+                    : "text-blue-600"
                 )} />
                 <div>
                   <p className="font-semibold text-foreground">
@@ -1894,7 +1894,7 @@ const BrandDiscover = () => {
                       className={cn(
                         "flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer transition-colors text-sm",
                         isChecked
-                          ? "bg-purple-50 dark:bg-purple-950/30"
+                          ? "bg-blue-50 dark:bg-blue-950/30"
                           : "hover:bg-muted"
                       )}
                     >
@@ -1907,7 +1907,7 @@ const BrandDiscover = () => {
                               : safePlatform.filter((v) => v !== p.value)
                           );
                         }}
-                        className="border-gray-300 data-[state=checked]:bg-[#6C5CE7] data-[state=checked]:border-[#6C5CE7]"
+                        className="border-gray-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f]"
                       />
                       {p.label}
                     </label>
@@ -1978,7 +1978,7 @@ const BrandDiscover = () => {
                 onKeyDown={handleSearchKeyDown}
               />
             </div>
-            <Button onClick={handleSmartSearch} className="h-12 rounded-lg shrink-0 bg-[#6C5CE7] hover:bg-[#5B4BD1] text-white px-6">
+            <Button onClick={handleSmartSearch} className="h-12 rounded-lg shrink-0 bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-6">
               <Search className="h-4 w-4 mr-2" />
               Search
             </Button>
@@ -1990,12 +1990,12 @@ const BrandDiscover = () => {
               {creatorType !== "all" && (() => {
                 const ct = CREATOR_TYPES.find((t) => t.value === creatorType);
                 return ct ? (
-                  <Badge variant="secondary" className="bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/20 text-xs font-medium gap-1.5 pr-1">
+                  <Badge variant="secondary" className="bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20 text-xs font-medium gap-1.5 pr-1">
                     {ct.icon && <span>{ct.icon}</span>}
                     Filtering: {ct.label}
                     <button
                       onClick={() => setCreatorType("all")}
-                      className="ml-1 hover:bg-[#6C5CE7]/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold"
+                      className="ml-1 hover:bg-[#1e3a5f]/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold"
                     >
                       ✕
                     </button>
@@ -2218,7 +2218,7 @@ const BrandDiscover = () => {
                           <Badge
                             key={p}
                             variant="outline"
-                            className="cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 transition-colors capitalize"
+                            className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-400 transition-colors capitalize"
                             onClick={() => {
                               setPlatform([p]);
                               setUsernameNotFound(null);
@@ -2390,7 +2390,7 @@ const BrandDiscover = () => {
                                     {creator.name}
                                     {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
                                     {isInAnyDirectory(creator.username) && (
-                                      <span className="inline-flex items-center gap-0.5 rounded bg-purple-50 dark:bg-purple-900/30 px-1 py-0.5 text-[9px] font-semibold text-purple-600 dark:text-purple-400" title="In directory"><ShieldCheck className="h-2.5 w-2.5" /></span>
+                                      <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 text-[9px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-2.5 w-2.5" /></span>
                                     )}
                                   </p>
                                   {creator.username && (
@@ -2429,7 +2429,7 @@ const BrandDiscover = () => {
                                   className="inline-flex items-center justify-center"
                                   title="Get email (1.03 credits)"
                                 >
-                                  <Mail className="h-4 w-4 text-purple-500 hover:text-purple-600" />
+                                  <Mail className="h-4 w-4 text-blue-600 hover:text-blue-700" />
                                 </button>
                               ) : pending ? (
                                 <div className="mx-auto"><EnrichShimmer /></div>
@@ -2506,7 +2506,7 @@ const BrandDiscover = () => {
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        className="h-7 w-7 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                        className="h-7 w-7 p-0 text-blue-700 hover:text-blue-800 hover:bg-blue-50"
                                         title="Add to Directory"
                                         disabled={approvingDir}
                                       >
@@ -2547,13 +2547,31 @@ const BrandDiscover = () => {
                     const socialPlatforms = creator.socialPlatforms ?? [];
                     const externalLinks = creator.externalLinks ?? [];
                     const linkCount = externalLinks.length;
+                    // Derive keyword tag from bio/category
+                    const tagColors = [
+                      "bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400",
+                      "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
+                      "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400",
+                      "bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400",
+                      "bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400",
+                    ];
+                    const bioLower = (creator.bio || "").toLowerCase() + " " + (creator.category || "").toLowerCase() + " " + (creator.nicheClass || "").toLowerCase();
+                    const derivedTag = bioLower.match(/military spouse|milspouse/) ? "MilSpouse"
+                      : bioLower.includes("veteran") ? "Veteran"
+                      : bioLower.match(/fitness|health/) ? "Fitness"
+                      : bioLower.includes("lifestyle") ? "Lifestyle"
+                      : bioLower.match(/food|cooking/) ? "Food"
+                      : bioLower.match(/entrepreneur|founder/) ? "Entrepreneur"
+                      : bioLower.includes("podcast") ? "Podcaster"
+                      : "Creator";
+
                     return (
                       <Card
                         key={creator.id}
                         role="button"
                         tabIndex={0}
                         className={cn(
-                          "relative rounded-xl border p-5 flex flex-col transition-all duration-200 cursor-pointer",
+                          "relative rounded-2xl border p-5 flex flex-col transition-all duration-200 cursor-pointer shadow-sm",
                           "bg-white border-gray-200 hover:shadow-md hover:border-[#6C5CE7]/30",
                           "dark:bg-[#1A1D27] dark:border-gray-800 dark:hover:border-[#6C5CE7]/30"
                         )}
@@ -2569,6 +2587,7 @@ const BrandDiscover = () => {
                           }
                         }}
                       >
+                        {/* Checkbox top-left */}
                         <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selectedIds.has(creator.id)}
@@ -2576,31 +2595,57 @@ const BrandDiscover = () => {
                             aria-label={`Select ${creator.name}`}
                           />
                         </div>
-                        <div className="flex items-center gap-3 mb-2">
+
+                        {/* Tag pill top-right */}
+                        <span className={`absolute top-4 right-4 text-xs px-2 py-0.5 rounded-full font-medium ${tagColors[_idx % tagColors.length]}`}>
+                          {derivedTag}
+                        </span>
+
+                        {/* Header: Avatar + Name + Handle */}
+                        <div className="flex items-center gap-3 mb-3">
                           <DiscoverAvatar url={creator.avatar} name={creator.name} username={creator.username} size="w-14 h-14" borderClass="border-2 border-white dark:border-slate-700 shadow-md" verified={creator.isVerified} badgeClass="h-5 w-5 text-[#6C5CE7]" />
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-bold text-base text-[#000741] dark:text-white truncate flex items-center gap-1.5">
+                            <h3 className="font-bold text-base text-gray-900 dark:text-white truncate flex items-center gap-1.5">
                               {creator.name}
                               {(creator.hasEmail || contactEmails[creator.id]) && !contactEmails[creator.id] && (
-                                <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available for outreach"><Mail className="h-3 w-3" />Email</span>
+                                <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available"><Mail className="h-3 w-3" /></span>
                               )}
                               {isInAnyDirectory(creator.username) && (
-                                <span className="inline-flex items-center gap-0.5 rounded bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 ml-1" title="Already in a directory"><ShieldCheck className="h-3 w-3" />In Directory</span>
+                                <span className="inline-flex items-center gap-0.5 rounded bg-purple-50 dark:bg-purple-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-400 ml-1" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
                               )}
                             </h3>
-                            <p className="text-sm text-[#6C5CE7] truncate">
+                            <p className="text-sm text-gray-400 dark:text-gray-500 truncate">
                               {creator.username ? `@${creator.username}` : "\u00A0"}
                             </p>
-                            {creator.location && (
-                              <p className="flex items-center gap-1 text-xs text-gray-400 dark:text-muted-foreground truncate mt-0.5">
-                                <MapPin className="h-3 w-3 shrink-0" />
-                                {creator.location}
-                              </p>
-                            )}
                           </div>
                         </div>
+
+                        {/* Thin divider */}
+                        <div className="border-t border-gray-100 dark:border-gray-800 mb-3" />
+
+                        {/* Single stats row — all 4 inline */}
+                        <div className="flex items-center gap-4 text-sm mb-3">
+                          <div>
+                            <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatFollowers(creator.followers)}</span>
+                            <span className="text-xs text-gray-400 ml-1">Followers</span>
+                          </div>
+                          <div>
+                            <span className="font-bold text-emerald-500 tabular-nums">{typeof creator.engagementRate === "number" ? creator.engagementRate.toFixed(2) : "—"}%</span>
+                            <span className="text-xs text-gray-400 ml-1">Engagement</span>
+                          </div>
+                          <div>
+                            <span className="font-bold text-gray-900 dark:text-white tabular-nums">{creator.avgLikes ? formatFollowers(creator.avgLikes) : "—"}</span>
+                            <span className="text-xs text-gray-400 ml-1">Avg Likes</span>
+                          </div>
+                          <div>
+                            <span className="font-bold text-gray-900 dark:text-white tabular-nums">{creator.postsPerMonth ?? "—"}</span>
+                            <span className="text-xs text-gray-400 ml-1">Posts/Mo</span>
+                          </div>
+                        </div>
+
+                        {/* Platform icons + email */}
                         {(socialPlatforms.length > 0 || creator.hasEmail) && (
-                          <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
                             <PlatformIcons platforms={socialPlatforms} username={creator.username} max={5} />
                             {contactEmails[creator.id] ? (
                               <a
@@ -2622,85 +2667,17 @@ const BrandDiscover = () => {
                             ) : null}
                           </div>
                         )}
-                        {creator.hashtags && creator.hashtags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {creator.hashtags.slice(0, 3).map((tag) => (
-                              <span
-                                key={tag}
-                                className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-[11px] px-2 py-0.5"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
-                            {creator.hashtags.length > 3 && (
-                              <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-[11px] px-2 py-0.5">
-                                +{creator.hashtags.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {confidence.level !== "none" && (
-                          <div className="mb-2 flex items-center gap-1.5" title={confidence.matches.length > 0 ? `Matching: ${confidence.matches.join(", ")}` : "No keyword matches found"}>
-                            <span className={`inline-flex items-center rounded-full text-xs px-2 py-0.5 font-semibold ${confidenceColors[confidence.level]}`}>
-                              {confidence.level === "high" ? "High Match" : confidence.level === "medium" ? "Mid Match" : "Low Match"}
-                            </span>
-                            <span className="text-xs text-gray-400">{Math.round(confidence.score * 100)}%</span>
-                          </div>
-                        )}
-                        {creator.bio && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">
-                            {creator.bio}
-                          </p>
-                        )}
-                        {nicheTags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {nicheTags.slice(0, 3).map((tag) => (
-                              <span
-                                key={tag}
-                                className="inline-flex items-center rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] dark:bg-[#6C5CE7]/20 dark:text-[#6C5CE7] text-xs px-2 py-0.5 font-medium"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                            {nicheTags.length > 3 && (
-                              <span className="inline-flex items-center rounded-full bg-[#6C5CE7]/10 text-[#6C5CE7] dark:bg-[#6C5CE7]/20 dark:text-[#6C5CE7] text-xs px-2 py-0.5">
-                                +{nicheTags.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex items-center justify-center gap-4 py-2 mb-3 text-center border-y border-gray-100 dark:border-gray-800">
-                          <div>
-                            <p className="text-lg font-bold text-[#000741] dark:text-white tabular-nums">
-                              {formatFollowers(creator.followers)}
-                            </p>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Followers</p>
-                          </div>
-                          <div>
-                            <p className="text-lg font-bold text-[#000741] dark:text-white tabular-nums">
-                              {typeof creator.engagementRate === "number"
-                                ? creator.engagementRate.toFixed(2)
-                                : "—"}%
-                            </p>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Engagement</p>
-                          </div>
-                          <div>
-                            <p className="text-lg font-bold text-[#000741] dark:text-white tabular-nums flex items-center justify-center gap-1">
-                              <ExternalLink className="h-4 w-4 text-gray-400" />
-                              {linkCount}
-                            </p>
-                            <p className="text-xs text-gray-500 uppercase tracking-wide">Links</p>
-                          </div>
-                        </div>
+
+                        {/* Actions */}
                         <div className="mt-auto space-y-2" onClick={(e) => e.stopPropagation()}>
                           {isCreatorInList(creator.id) ? (
                             <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" disabled>
-                              Added ✓
+                              Added
                             </Button>
                           ) : (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-[#000741] hover:bg-[#5B4BD1] text-white dark:bg-[#000741] dark:hover:bg-[#5B4BD1]">
+                                <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-[#000741] hover:bg-[#2d5282] text-white dark:bg-[#000741] dark:hover:bg-[#2d5282]">
                                   <ListPlus className="h-4 w-4" />
                                   Add to List
                                 </Button>
