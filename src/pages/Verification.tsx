@@ -362,6 +362,8 @@ export default function Verification() {
   const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
+  // Batch-fetched IC enrichment data from directory_members, keyed by creator_handle
+  const [dirEnrichmentMap, setDirEnrichmentMap] = useState<Record<string, unknown>>({});
 
   const fetchVerifications = async () => {
     const { data, error } = await supabase
@@ -377,6 +379,24 @@ export default function Verification() {
       setLoading(false);
     })();
   }, []);
+
+  // Batch-fetch IC enrichment data for all verification records' source usernames
+  useEffect(() => {
+    const handles = list.map((r) => r.source_username).filter(Boolean) as string[];
+    if (handles.length === 0) return;
+    supabase
+      .from("directory_members")
+      .select("creator_handle, enrichment_data")
+      .in("creator_handle", handles)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, unknown> = {};
+        for (const d of data) {
+          if (d.enrichment_data) map[d.creator_handle] = d.enrichment_data;
+        }
+        setDirEnrichmentMap(map);
+      });
+  }, [list]);
 
   // Fetch directory members when add modal opens
   useEffect(() => {
@@ -3041,37 +3061,17 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             if (record.linkedin_url) addPlatformPill('linkedin', 'LinkedIn', record.linkedin_url);
             if (record.source_username) addPlatformPill('instagram', `@${record.source_username}`, `https://instagram.com/${record.source_username}`);
 
-            // 2. Saved social_profiles from verification pipeline (already filtered during pipeline)
-            const savedProfiles = manualChecks?.social_profiles as { network: string; url: string }[] | undefined;
-            if (Array.isArray(savedProfiles)) {
-              for (const sp of savedProfiles) {
-                const net = sp.network?.toLowerCase();
-                const info = HEADER_PLATFORM_ICONS[net];
-                if (info && sp.url) addPlatformPill(net, net === 'twitter' ? 'Twitter/X' : info ? net.charAt(0).toUpperCase() + net.slice(1) : net, sp.url);
+            // 2. IC enrichment data from directory_members (source of truth for social links)
+            const icHandle = record.source_username;
+            const icEnrichment = icHandle ? dirEnrichmentMap[icHandle] : null;
+            if (icEnrichment) {
+              const icPlats = getPlatformsFromEnrichmentData(icEnrichment);
+              for (const p of icPlats) {
+                addPlatformPill(p.platform, p.label, p.url);
               }
             }
 
-            // 3. Evidence source URLs
-            for (const s of sources.filter(s => s.category === 'Social Media')) {
-              const url = s.url.toLowerCase();
-              if (url.includes('facebook')) addPlatformPill('facebook', 'Facebook', s.url);
-              if (url.includes('twitter') || url.includes('x.com')) addPlatformPill('twitter', 'Twitter/X', s.url);
-              if (url.includes('youtube')) addPlatformPill('youtube', 'YouTube', s.url);
-              if (url.includes('tiktok')) addPlatformPill('tiktok', 'TikTok', s.url);
-              if (url.includes('linkedin')) addPlatformPill('linkedin', 'LinkedIn', s.url);
-            }
-
-            // 4. PDL profiles
-            if (pdlData?.profiles) {
-              for (const p of (pdlData.profiles as any[])) {
-                const net = (p.network ?? '').toLowerCase();
-                if (p.url && HEADER_PLATFORM_ICONS[net]) {
-                  addPlatformPill(net, net === 'twitter' ? 'Twitter/X' : net.charAt(0).toUpperCase() + net.slice(1), p.url);
-                }
-              }
-            }
-
-            // 5. ic_data
+            // 3. ic_data from record (fallback IC source)
             const icData = record.ic_data as any;
             if (icData?.tiktok_url) addPlatformPill('tiktok', 'TikTok', icData.tiktok_url);
             if (icData?.profiles) {
@@ -3083,7 +3083,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               }
             }
 
-            // 6. creator_has flags from manual_checks (skip linkedin — low confidence)
+            // 4. creator_has flags from manual_checks (skip linkedin — low confidence)
             const creatorHas = manualChecks?.creator_has as Record<string, boolean> | undefined;
             if (creatorHas) {
               for (const [k, v] of Object.entries(creatorHas)) {
