@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-export const config = { maxDuration: 120 };
+export const config = { maxDuration: 300 };
 
 /**
  * POST /api/fix-avatars
@@ -121,6 +121,8 @@ export default async function handler(req, res) {
   const sb = createClient(supabaseUrl, supabaseKey);
 
   // scan=true mode: find all broken avatars and fix them
+  // Checks both URL format AND actual image file size to catch placeholders
+  // that were uploaded to Supabase Storage by earlier migrations.
   if (body.scan) {
     const { data: allMembers, error: scanErr } = await sb
       .from("directory_members")
@@ -128,27 +130,52 @@ export default async function handler(req, res) {
     if (scanErr) return res.status(500).json({ error: scanErr.message });
 
     const broken = [];
+    const details = [];
+
     for (const m of allMembers || []) {
       const av = m.avatar_url || "";
       const ic = m.ic_avatar_url || "";
-      const hasGood = av.includes("supabase.co/storage/") || ic.includes("supabase.co/storage/");
-      const hasBad = av.includes("cloudfront") || ic.includes("cloudfront") || av.includes("ui-avatars") || ic.includes("ui-avatars");
+      const hasBadDomain = av.includes("cloudfront") || ic.includes("cloudfront") || av.includes("ui-avatars") || ic.includes("ui-avatars");
       const empty = !av && !ic;
-      if (!hasGood || hasBad || empty) {
+
+      if (hasBadDomain || empty) {
         broken.push(m.creator_handle);
+        details.push({ handle: m.creator_handle, reason: empty ? "no URL" : "bad domain" });
+        continue;
+      }
+
+      // URL looks like Supabase — verify the image actually exists and is real
+      const checkUrl = av || ic;
+      if (checkUrl.includes("supabase.co/storage/")) {
+        try {
+          const head = await fetch(checkUrl, { method: "HEAD" });
+          const size = parseInt(head.headers.get("content-length") || "0", 10);
+          if (!head.ok) {
+            broken.push(m.creator_handle);
+            details.push({ handle: m.creator_handle, reason: `HTTP ${head.status}` });
+          } else if (size < MIN_AVATAR_BYTES) {
+            broken.push(m.creator_handle);
+            details.push({ handle: m.creator_handle, reason: `${size} bytes (placeholder)` });
+          }
+        } catch (e) {
+          broken.push(m.creator_handle);
+          details.push({ handle: m.creator_handle, reason: `fetch error: ${e.message}` });
+        }
+      } else {
+        // Non-Supabase, non-bad-domain URL — still needs migration
+        broken.push(m.creator_handle);
+        details.push({ handle: m.creator_handle, reason: "not in Supabase Storage" });
       }
     }
 
     if (body.scanOnly) {
-      return res.json({ total: (allMembers || []).length, broken: broken.length, handles: broken });
+      return res.json({ total: (allMembers || []).length, broken: broken.length, handles: broken, details });
     }
 
-    // If no broken found, return early
     if (broken.length === 0) {
       return res.json({ message: "All avatars are healthy", total: (allMembers || []).length, broken: 0 });
     }
 
-    // Fall through to fix the broken handles
     body.handles = broken;
   }
 
