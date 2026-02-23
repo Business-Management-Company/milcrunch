@@ -86,6 +86,8 @@ const PLATFORM_URLS: Record<string, (handle: string) => string> = {
   tiktok: (h) => `https://tiktok.com/@${h}`,
   youtube: (h) => `https://youtube.com/@${h}`,
   twitter: (h) => `https://x.com/${h}`,
+  facebook: (h) => `https://facebook.com/${h}`,
+  linkedin: (h) => `https://linkedin.com/in/${h}`,
 };
 
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
@@ -93,13 +95,17 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   tiktok: <TikTokIcon className="h-4 w-4" />,
   youtube: <Youtube className="h-4 w-4" />,
   twitter: <Twitter className="h-4 w-4" />,
+  facebook: <span className="text-sm font-bold text-blue-600">f</span>,
+  linkedin: <span className="text-xs font-bold text-blue-700">in</span>,
 };
 
 const PLATFORM_LABEL: Record<string, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
   youtube: "YouTube",
-  twitter: "X / Twitter",
+  twitter: "X",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
 };
 
 /* ------------------------------------------------------------------ */
@@ -468,7 +474,21 @@ export default function CreatorPublicProfile() {
   }
 
   /* ---- Computed values ---- */
-  const platforms = creator.platforms ?? [];
+  console.log("Creator IC data:", creator);
+  const enrichData = creator.enrichment_data as Record<string, unknown> | undefined;
+  const creatorHas = (enrichData?.result as Record<string, unknown>)?.creator_has as Record<string, boolean> | undefined
+    ?? enrichData?.creator_has as Record<string, boolean> | undefined;
+  const basePlatforms = creator.platforms ?? [];
+  // Merge in platforms from IC creator_has flags
+  const platforms = useMemo(() => {
+    const set = new Set(basePlatforms.map((p) => p.toLowerCase()));
+    if (creatorHas) {
+      for (const [k, v] of Object.entries(creatorHas)) {
+        if (v && PLATFORM_URLS[k]) set.add(k);
+      }
+    }
+    return [...set];
+  }, [basePlatforms, creatorHas]);
   const bannerGradient = BRANCH_BANNER[creator.branch ?? ""] ?? DEFAULT_BANNER;
   const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-600 text-white";
   const isVerified = !!creator.featured_homepage;
@@ -770,18 +790,22 @@ export default function CreatorPublicProfile() {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Platforms</h3>
                   <div className="flex flex-wrap gap-2">
-                    {platforms.map((p) => (
-                      <a
-                        key={p}
-                        href={getPlatformUrl(p)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-700 hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/5 transition-colors"
-                      >
-                        {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
-                        {PLATFORM_LABEL[p] ?? p}
-                      </a>
-                    ))}
+                    {platforms.map((p) => {
+                      const handle = creator.creator_handle || creator.profile_slug || "";
+                      return (
+                        <a
+                          key={p}
+                          href={getPlatformUrl(p)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-sm hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                        >
+                          {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
+                          <span className="font-medium">{PLATFORM_LABEL[p] ?? p}</span>
+                          {handle && <span className="text-gray-400">@{handle}</span>}
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -947,24 +971,23 @@ export default function CreatorPublicProfile() {
               {platforms.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Social</h3>
-                  <div className="space-y-2">
-                    {platforms.map((p) => (
-                      <a
-                        key={p}
-                        href={getPlatformUrl(p)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-[#1e3a5f]/30 hover:bg-[#1e3a5f]/5 transition-colors group"
-                      >
-                        <span className="text-gray-500 group-hover:text-[#1e3a5f] transition-colors">
+                  <div className="flex flex-wrap gap-2">
+                    {platforms.map((p) => {
+                      const handle = creator.creator_handle || creator.profile_slug || "";
+                      return (
+                        <a
+                          key={p}
+                          href={getPlatformUrl(p)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-sm hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                        >
                           {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
-                        </span>
-                        <span className="text-sm font-medium text-gray-700 group-hover:text-[#1e3a5f]">
-                          {PLATFORM_LABEL[p] ?? p}
-                        </span>
-                        <ExternalLink className="h-3.5 w-3.5 text-gray-300 ml-auto" />
-                      </a>
-                    ))}
+                          <span className="font-medium">{PLATFORM_LABEL[p] ?? p}</span>
+                          {handle && <span className="text-gray-400">@{handle}</span>}
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}
