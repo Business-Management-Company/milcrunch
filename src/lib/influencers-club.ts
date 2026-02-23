@@ -360,18 +360,26 @@ export async function searchCreators(
     hashtagTerms.push(...options.hashtags.map((h) => h.replace(/^#/, "").trim()).filter(Boolean));
   }
 
+  // Fold location into ai_search for semantic matching instead of a hard
+  // geographic filter. "military spouses" + location "Norfolk" becomes
+  // ai_search: "military spouses Norfolk" so IC finds creators who mention
+  // the location in their bio/content, not just exact GPS coordinates.
+  const locationTrimmed = (options.location ?? "").trim();
+  const aiSearch = locationTrimmed && trimmed
+    ? `${trimmed} ${locationTrimmed}`
+    : locationTrimmed || trimmed;
+
   const body: Record<string, unknown> = {
     platform: platformValue,
     paging: { limit: 25, page: options.page ?? 1 },
     sort: { sort_by: options.sort_by ?? "relevancy", sort_order: "desc" as const },
     filters: {
-      ai_search: trimmed,
+      ai_search: aiSearch,
       number_of_followers: { min: number_of_followers.min, max: number_of_followers.max },
       engagement_percent: { min: engagement_percent.min, max: engagement_percent.max },
       keywords_in_bio,
       exclude_role_based_emails: false,
       ...(hashtagTerms.length > 0 ? { hashtags: hashtagTerms } : {}),
-      ...(options.location ? { location: [options.location] } : {}),
       ...(options.gender ? { gender: options.gender } : {}),
       ...(options.language ? { language: { code: options.language } } : {}),
     },
