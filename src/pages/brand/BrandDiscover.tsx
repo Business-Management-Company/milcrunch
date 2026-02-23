@@ -83,6 +83,39 @@ const CREATOR_TYPES = [
 
 const ALL_SOCIAL_PLATFORMS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin"] as const;
 
+const NON_PERSONAL_DOMAINS = new Set([
+  "bbc.com", "bbc.co.uk", "cnn.com", "nytimes.com", "washingtonpost.com",
+  "theguardian.com", "reuters.com", "apnews.com", "nbcnews.com", "abcnews.go.com",
+  "foxnews.com", "sony.com", "microsoft.com", "apple.com", "google.com",
+  "wikipedia.org", "imdb.com", "rottentomatoes.com", "museum.org",
+  "si.edu", "nasa.gov", "smithsonianmag.com",
+]);
+
+function getPersonalLinks(externalLinks: { label: string; url?: string }[]): string[] {
+  return externalLinks
+    .filter((link) => {
+      const url = link.url;
+      if (!url) return false;
+      const lower = url.toLowerCase();
+      if (lower.includes("/company/") || lower.includes("/school/")) return false;
+      try {
+        const host = new URL(lower).hostname.replace(/^www\./, "");
+        if (NON_PERSONAL_DOMAINS.has(host)) return false;
+      } catch {
+        return false;
+      }
+      return true;
+    })
+    .map((link) => {
+      try {
+        return new URL(link.url!).hostname.replace(/^www\./, "");
+      } catch {
+        return link.url!;
+      }
+    })
+    .slice(0, 5);
+}
+
 const PLATFORM_URLS: Record<string, (u: string) => string> = {
   instagram: (u) => `https://instagram.com/${u}`,
   tiktok: (u) => `https://tiktok.com/@${u}`,
@@ -2363,7 +2396,8 @@ const BrandDiscover = () => {
                         console.log(`[BrandDiscover] Creator[${_idx}] (table):`, { name: creator.name, username: creator.username, socialPlatforms: creator.socialPlatforms, hasEmail: creator.hasEmail, hashtags: creator.hashtags, externalLinks: creator.externalLinks, full: creator });
                         const socialPlatforms = creator.socialPlatforms ?? [];
                         const socialSet = new Set(socialPlatforms.map((p) => p.toLowerCase()));
-                        const linkCount = (creator.externalLinks ?? []).length;
+                        const personalLinks = getPersonalLinks(creator.externalLinks ?? []);
+                        const linkCount = personalLinks.length;
                         const hashtags = creator.hashtags ?? [];
                         const pending = enrichRunning && !enrichCache[baseCreator.id] && !!baseCreator.username;
                         const isActiveEnrich = enrichingIds.has(baseCreator.id);
@@ -2442,7 +2476,10 @@ const BrandDiscover = () => {
                             {/* External Links Used */}
                             <td className="p-3 text-center">
                               {linkCount > 0 ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[11px] font-medium px-2.5 py-0.5">
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[11px] font-medium px-2.5 py-0.5 cursor-default"
+                                  title={personalLinks.join("\n")}
+                                >
                                   <LinkIcon className="h-3 w-3" />
                                   {linkCount}
                                 </span>
@@ -2545,8 +2582,8 @@ const BrandDiscover = () => {
                       ? `https://instagram.com/${creator.username}`
                       : null;
                     const socialPlatforms = creator.socialPlatforms ?? [];
-                    const externalLinks = creator.externalLinks ?? [];
-                    const linkCount = externalLinks.length;
+                    const personalLinks = getPersonalLinks(creator.externalLinks ?? []);
+                    const linkCount = personalLinks.length;
                     // Derive keyword tag from bio/category
                     const tagColors = [
                       "bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400",
