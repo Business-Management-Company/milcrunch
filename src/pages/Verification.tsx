@@ -1343,7 +1343,7 @@ interface YouTubeVideoResult {
   relevanceScore?: number;
 }
 
-function MediaTab({ record, autoSearch = false }: { record: VerificationRecord; autoSearch?: boolean }) {
+function MediaTab({ record }: { record: VerificationRecord }) {
   const [videos, setVideos] = useState<YouTubeVideoResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [filtering, setFiltering] = useState(false);
@@ -1351,6 +1351,7 @@ function MediaTab({ record, autoSearch = false }: { record: VerificationRecord; 
   const [showAll, setShowAll] = useState(false);
   const [lastSearchedAt, setLastSearchedAt] = useState<string | null>(null);
   const [dbLoaded, setDbLoaded] = useState(false);
+  const [autoSearchTriggered, setAutoSearchTriggered] = useState(false);
   const VISIBLE_COUNT = 6;
 
   // Load saved results on mount — check youtube_media first, then youtube_results (auto-run fallback)
@@ -1530,15 +1531,23 @@ No markdown formatting, just the JSON array.`;
     }
   };
 
+  // Auto-trigger YouTube search if no saved data exists
+  useEffect(() => {
+    if (!dbLoaded || hasSearched || autoSearchTriggered || searching) return;
+    setAutoSearchTriggered(true);
+    handleSearch();
+  }, [dbLoaded, hasSearched, autoSearchTriggered, searching]);
+
   const visibleVideos = showAll ? videos : videos.slice(0, VISIBLE_COUNT);
   const hiddenCount = videos.length - VISIBLE_COUNT;
 
   return (
     <div className="space-y-4">
-      {!hasSearched ? (
+      {!hasSearched && !searching && !filtering ? (
         <div className="text-center py-8">
           <Video className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No data found. Re-verify to refresh.</p>
+          <Loader2 className="h-5 w-5 animate-spin text-[#1e3a5f] mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Loading media data...</p>
         </div>
       ) : (
         <>
@@ -1667,6 +1676,9 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
   const [lastReviewedAt, setLastReviewedAt] = useState<string | null>(null);
   const VISIBLE_COUNT = 5;
 
+  const [autoRunTriggered, setAutoRunTriggered] = useState(false);
+  const [dbLoaded, setDbLoaded] = useState(false);
+
   // Load saved results on mount
   useEffect(() => {
     (async () => {
@@ -1679,6 +1691,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
         setLastReviewedAt((saved.reviewed_at ?? null) as string | null);
         setHasSearched(true);
       }
+      setDbLoaded(true);
     })();
   }, [recordId]);
 
@@ -1752,6 +1765,13 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     }
   };
 
+  // Auto-run background review if no saved data exists
+  useEffect(() => {
+    if (!dbLoaded || hasSearched || autoRunTriggered || searching) return;
+    setAutoRunTriggered(true);
+    handleRunBackgroundReview();
+  }, [dbLoaded, hasSearched, autoRunTriggered, searching]);
+
   // Determine concern dot color for each result
   const getConcernDot = (r: AIFilteredCriminalResult) => {
     const isStolenValor = /stolen valor|fraud/i.test(r.title + " " + r.snippet + " " + r.reasoning);
@@ -1781,19 +1801,8 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     <div className="space-y-4">
       {!hasSearched ? (
         <div className="text-center py-8">
-          <ShieldCheck className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <p className="text-base font-medium text-foreground mb-1">Run Background Review</p>
-          <p className="text-sm text-muted-foreground mb-5">
-            Search public records for brand safety and due diligence
-          </p>
-          <Button
-            onClick={handleRunBackgroundReview}
-            disabled={searching}
-            className="bg-[#1e3a5f] hover:bg-[#2d5282]"
-          >
-            {searching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-            Run Background Review
-          </Button>
+          <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f] mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Running background review...</p>
         </div>
       ) : (
         <>
@@ -3249,7 +3258,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Globe className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
-          <StatusDot status={record.source_username || record.linkedin_url ? 'green' : 'red'} />
+          <StatusDot status={(() => {
+            const mc = record.manual_checks as Record<string, unknown> | null;
+            const savedProfiles = mc?.social_profiles as unknown[] | undefined;
+            const hasSocial = !!(record.source_username || record.linkedin_url || (Array.isArray(savedProfiles) && savedProfiles.length > 0));
+            return hasSocial ? 'green' : 'red';
+          })()} />
         </button>
         {socialOpen && <div className="ml-6 mt-4 mb-2"><SocialVerificationSection record={record} /></div>}
       </section>
@@ -3262,16 +3276,14 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
           <StatusDot status={(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
-            if (!mc) return 'red';
+            if (!mc) return 'yellow';
             const videos = (mc as any)?.youtube_media?.videos as unknown[] | undefined;
             // Green: media search found results
             if (Array.isArray(videos) && videos.length > 0) return 'green';
-            // Red: actual fetch failure
+            // Red: actual fetch failure only
             if ((mc as any)?.media_error) return 'red';
-            // Yellow: search ran (youtube_media key exists) but found nothing
-            if ((mc as any)?.youtube_media) return 'yellow';
-            // Red: never ran
-            return 'red';
+            // Yellow: search ran but found nothing, or hasn't run yet (will auto-run)
+            return 'yellow';
           })()} />
         </button>
         {mediaOpen && (
