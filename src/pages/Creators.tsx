@@ -16,6 +16,7 @@ import {
   Search,
   X,
   ChevronDown,
+  Heart,
 } from "lucide-react";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
@@ -113,6 +114,39 @@ const PLATFORM_LABEL: Record<string, string> = {
   twitter: "X",
 };
 
+const KNOWN_PLATFORMS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin", "twitch", "pinterest", "snapchat", "threads"];
+
+/** Extract all platforms from ShowcaseCreator: platforms array, platform_urls, and enrichment_data. */
+function getAllPlatforms(c: ShowcaseCreator): string[] {
+  const set = new Set<string>();
+  if (Array.isArray(c.platforms)) c.platforms.forEach((p) => set.add(p.toLowerCase()));
+  if (c.platform_urls && typeof c.platform_urls === "object") {
+    Object.entries(c.platform_urls).forEach(([k, v]) => { if (v) set.add(k.toLowerCase()); });
+  }
+  if (c.enrichment_data && typeof c.enrichment_data === "object") {
+    const ed = c.enrichment_data as Record<string, unknown>;
+    const result = (ed.result as Record<string, unknown>) ?? ed;
+    const creatorHas = (result.creator_has ?? ed.creator_has) as Record<string, boolean> | undefined;
+    if (creatorHas && typeof creatorHas === "object") {
+      Object.entries(creatorHas).forEach(([k, v]) => { if (v) set.add(k.toLowerCase()); });
+    }
+    for (const pkey of KNOWN_PLATFORMS) {
+      if (result[pkey] && typeof result[pkey] === "object") set.add(pkey);
+    }
+    const accounts = (result.accounts ?? ed.accounts) as { platform?: string }[] | undefined;
+    if (Array.isArray(accounts)) {
+      accounts.forEach((a) => { if (a.platform) set.add(a.platform.toLowerCase()); });
+    }
+    const plinks = (result.platform_links ?? ed.platform_links) as Record<string, string> | undefined;
+    if (plinks && typeof plinks === "object") {
+      Object.entries(plinks).forEach(([k, v]) => { if (v) set.add(k.toLowerCase()); });
+    }
+  }
+  const ordered = KNOWN_PLATFORMS.filter((p) => set.has(p));
+  set.forEach((p) => { if (!ordered.includes(p)) ordered.push(p); });
+  return ordered;
+}
+
 /* ------------------------------------------------------------------ */
 /* Skeleton Card                                                       */
 /* ------------------------------------------------------------------ */
@@ -180,7 +214,7 @@ function CreatorCard({
       setImgSrc(initialSrc);
     }
   }, [initialSrc]);
-  const platforms = c.platforms ?? [];
+  const platforms = getAllPlatforms(c);
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
   const isVerified = !!c.featured_homepage;
   const branchGradient = BRANCH_GRADIENT[c.branch ?? ""] ?? BRANCH_GRADIENT.default;
@@ -292,12 +326,13 @@ function CreatorCard({
             </p>
             <p className="text-[11px] text-gray-400">Followers</p>
           </div>
-          {c.engagement_rate != null && c.engagement_rate > 0 && (
+          {c.avg_likes != null && String(c.avg_likes) !== "0" && String(c.avg_likes) !== "—" && (
             <div className="text-center">
-              <p className="text-sm font-bold text-teal-600">
-                {c.engagement_rate.toFixed(1)}%
+              <p className="text-sm font-bold text-gray-900 flex items-center justify-center gap-1">
+                <Heart className="h-3 w-3 text-pink-500 fill-pink-500" />
+                {formatFollowerCount(Number(c.avg_likes))}
               </p>
-              <p className="text-[11px] text-gray-400">Engagement</p>
+              <p className="text-[11px] text-gray-400">Avg Likes</p>
             </div>
           )}
         </div>
