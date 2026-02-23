@@ -81,7 +81,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
-import { type CreatorCard } from "@/lib/influencers-club";
+import { type CreatorCard, enrichCreatorProfile, type EnrichedProfileResponse } from "@/lib/influencers-club";
 import { PlatformIcons } from "@/components/PlatformIcons";
 
 interface PreviewMember {
@@ -303,10 +303,46 @@ const BrandDirectory = () => {
   const [drawerMemberId, setDrawerMemberId] = useState<string | null>(null);
   const [drawerEnrichment, setDrawerEnrichment] = useState<Record<string, unknown> | null>(null);
 
+  // Enrichment prefetch cache & hover debounce
+  const enrichmentCacheRef = useRef(new Map<string, EnrichedProfileResponse | null>());
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const prefetchEnrichment = useCallback((handle: string) => {
+    if (!handle || enrichmentCacheRef.current.has(handle)) return;
+    // Mark as in-flight to prevent duplicate fetches
+    enrichmentCacheRef.current.set(handle, null);
+    enrichCreatorProfile(handle).then((data) => {
+      if (data) enrichmentCacheRef.current.set(handle, data);
+      else enrichmentCacheRef.current.delete(handle);
+    }).catch(() => {
+      enrichmentCacheRef.current.delete(handle);
+    });
+  }, []);
+
+  const handleRowMouseEnter = useCallback((m: DirectoryMember) => {
+    const handle = m.creator_handle?.replace(/^@/, "").trim();
+    if (!handle) return;
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      prefetchEnrichment(handle);
+    }, 300);
+  }, [prefetchEnrichment]);
+
+  const handleRowMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  }, []);
+
   const openCreatorDrawer = (m: DirectoryMember) => {
     setDrawerCreator(memberToCreatorCard(m));
     setDrawerMemberId(m.id);
-    setDrawerEnrichment(m.enrichment_data && typeof m.enrichment_data === "object" ? m.enrichment_data as Record<string, unknown> : null);
+    const handle = m.creator_handle?.replace(/^@/, "").trim();
+    // Check prefetch cache first, then fall back to stored enrichment_data
+    const cached = handle ? enrichmentCacheRef.current.get(handle) : null;
+    const storedEnrichment = m.enrichment_data && typeof m.enrichment_data === "object" ? m.enrichment_data as Record<string, unknown> : null;
+    setDrawerEnrichment(cached ?? storedEnrichment);
     setDrawerOpen(true);
   };
 
@@ -1263,7 +1299,7 @@ const BrandDirectory = () => {
                 const platforms = getAllPlatforms(m);
                 if (platforms.length <= 1) console.log("[DirCard]", m.creator_handle, "platforms:", platforms, "enrichment_data:", m.enrichment_data, "platform_urls:", m.platform_urls);
                 return (
-                  <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
+                  <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)} onMouseEnter={() => handleRowMouseEnter(m)} onMouseLeave={handleRowMouseLeave}>
                     <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#1e3a5f] mb-1 truncate max-w-full">@{m.creator_handle}</p>
@@ -1436,7 +1472,7 @@ const BrandDirectory = () => {
                   const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                   const isToggling = togglingIds.has(m.id);
                   return (
-                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60", selectedIds.has(m.id) && "bg-blue-50 dark:bg-blue-950/20")} onClick={() => openCreatorDrawer(m)}>
+                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60", selectedIds.has(m.id) && "bg-blue-50 dark:bg-blue-950/20")} onClick={() => openCreatorDrawer(m)} onMouseEnter={() => handleRowMouseEnter(m)} onMouseLeave={handleRowMouseLeave}>
                       <td className="p-3 w-10" onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 accent-pd-blue" checked={selectedIds.has(m.id)} onChange={() => toggleSelect(m.id)} />
                       </td>

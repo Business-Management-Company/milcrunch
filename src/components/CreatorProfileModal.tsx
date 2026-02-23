@@ -803,13 +803,13 @@ export default function CreatorProfileModal({
     const computed = computeFromPostData(igRecord, fc);
     return {
       followers: fc,
-      engagement: Number(igRecord?.engagement_percent ?? 0) || computed.engagement || Number(creator?.engagementRate ?? 0),
-      mediaCount: Number(igRecord?.media_count ?? 0),
-      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? 0) || computed.postsPerMonth,
-      avgLikes: Number(igRecord?.avg_likes ?? igRecord?.avg_like_count ?? 0) || computed.avgLikes,
-      avgComments: Number(igRecord?.avg_comments ?? igRecord?.avg_comment_count ?? 0) || computed.avgComments,
-      avgSpecial: Number(reelsObj?.avg_like_count ?? reelsObj?.avg_likes ?? 0),
-      avgViews: Number(reelsObj?.avg_view_count ?? igRecord?.avg_views ?? igRecord?.avg_view_count ?? 0) || computed.avgViews,
+      engagement: Number(igRecord?.engagement_percent ?? igRecord?.engagement_rate ?? 0) || computed.engagement || Number(creator?.engagementRate ?? 0),
+      mediaCount: Number(igRecord?.media_count ?? igRecord?.number_of_posts ?? 0),
+      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? igRecord?.posts_per_month ?? igRecord?.posting_frequency ?? 0) || computed.postsPerMonth,
+      avgLikes: Number(igRecord?.avg_likes ?? igRecord?.avg_like_count ?? igRecord?.average_likes ?? 0) || computed.avgLikes,
+      avgComments: Number(igRecord?.avg_comments ?? igRecord?.avg_comment_count ?? igRecord?.average_comments ?? 0) || computed.avgComments,
+      avgSpecial: Number(reelsObj?.avg_like_count ?? reelsObj?.avg_likes ?? igRecord?.avg_reel_likes ?? 0),
+      avgViews: Number(reelsObj?.avg_view_count ?? igRecord?.avg_reels_plays ?? igRecord?.average_reels_plays ?? igRecord?.avg_views ?? igRecord?.avg_view_count ?? 0) || computed.avgViews,
     };
   }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, reelsObj, creator]);
 
@@ -1284,19 +1284,19 @@ export default function CreatorProfileModal({
             <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
             <div className="space-y-0 text-sm">
               {[
-                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—", alwaysShow: true },
-                { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : "—", alwaysShow: true },
+                { label: statLabels.followers, value: followers ? formatNumber(followers) : null },
+                { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : null },
                 { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : null },
                 { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : null },
                 { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : null },
                 { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : null },
                 { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : null },
                 { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : null },
-              ].map(({ label, value, alwaysShow }) => (
+              ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">{label}</span>
-                  {showEnrichmentLoading && !value && !alwaysShow ? (
-                    <Skeleton className="h-4 w-12" />
+                  {showEnrichmentLoading && !value ? (
+                    <Skeleton className="h-4 w-16" />
                   ) : (
                     <span className="font-semibold text-gray-900 dark:text-white">{value ?? "—"}</span>
                   )}
