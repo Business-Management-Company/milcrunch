@@ -1,16 +1,16 @@
 export default async function handler(req, res) {
-  const query = req.query.q || req.query.query || "";
-  const platform = req.query.platform || "instagram";
+  // Accept both POST body and GET query params.
+  // POST avoids Vercel WAF which blocks certain header+queryparam combos on GET.
+  const body = req.body || {};
+  const query = body.q || body.query || req.query.q || req.query.query || "";
+  const platform = body.platform || req.query.platform || "instagram";
+  const clientKey = body.token || "";
 
   if (!query) {
     return res.status(400).json({ error: "q parameter is required" });
   }
 
-  // NOTE: Vercel WAF blocks headers containing "key", "auth", or "authorization"
-  // when combined with query params on this endpoint, so we use "x-ic-token".
-  const apiKey =
-    req.headers["x-ic-token"] ||
-    process.env.VITE_INFLUENCERS_CLUB_API_KEY;
+  const apiKey = clientKey || process.env.VITE_INFLUENCERS_CLUB_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: "API key not configured" });
@@ -29,13 +29,13 @@ export default async function handler(req, res) {
       },
     });
 
-    const body = await resp.text();
-    console.log("[ic-locations] upstream status:", resp.status, "| body (first 500):", body.substring(0, 500));
+    const respBody = await resp.text();
+    console.log("[ic-locations] upstream status:", resp.status, "| body (first 500):", respBody.substring(0, 500));
 
     res
       .status(resp.status)
       .setHeader("Content-Type", "application/json")
-      .send(body);
+      .send(respBody);
   } catch (err) {
     console.error("[ic-locations] proxy error:", err.message || err);
     res.status(502).json({ error: "Upstream request failed", detail: err.message || String(err) });

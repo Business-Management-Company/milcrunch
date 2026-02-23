@@ -587,9 +587,10 @@ export async function searchLocations(
   const apiKey = getApiKey();
   if (!apiKey) return [];
 
-  const params = new URLSearchParams({ q, platform });
-  const res = await fetch(`${LOCATIONS_URL}?${params}`, {
-    headers: { "X-Ic-Token": apiKey },
+  const res = await fetch(LOCATIONS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ q, platform, token: apiKey }),
     signal,
   });
   if (!res.ok) return [];
