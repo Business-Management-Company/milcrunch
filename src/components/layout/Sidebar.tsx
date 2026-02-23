@@ -265,7 +265,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
   return (
     <aside
       className={cn(
-        "fixed left-0 bottom-0 z-30 flex flex-col bg-white dark:bg-[#111827] border-r border-gray-100 dark:border-gray-800 transition-[width] duration-200",
+        "fixed left-0 bottom-0 z-30 flex flex-col bg-[#0f1f3d] border-r border-[#0f1f3d] transition-[width] duration-200",
         collapsed ? "w-16" : "w-64"
       )}
       style={{ top: `calc(3.5rem + ${demoOffset}px)` }}
@@ -285,13 +285,13 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                   onClick={() => toggleSection(section.key)}
                   className="flex items-center justify-between w-full px-4 pt-5 pb-1 group"
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-500">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                     {section.label}
                   </span>
-                  <Chevron className="h-3 w-3 text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
+                  <Chevron className="h-3 w-3 text-slate-500 group-hover:text-slate-400 transition-colors" />
                 </button>
               ) : (
-                <div className="h-px bg-gray-100 dark:bg-gray-700 mx-3 mb-2" />
+                <div className="h-px bg-white/10 mx-3 mb-2" />
               )}
 
               {/* Section items */}
@@ -303,8 +303,8 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                     const linkClasses = cn(
                       "flex items-center gap-3 px-4 py-2 mx-2 rounded-lg text-sm transition-colors",
                       active
-                        ? "bg-blue-50 dark:bg-[#1F2937] text-blue-800 dark:text-white font-medium border-l-4 border-blue-700 dark:border-[#1e3a5f]"
-                        : "text-gray-600 dark:text-[#D1D5DB] font-normal hover:bg-blue-50 dark:hover:bg-[#1F2937] hover:text-blue-800 dark:hover:text-white",
+                        ? "bg-white/10 text-white font-semibold border-l-2 border-white"
+                        : "text-slate-300 font-normal hover:bg-white/5 hover:text-white",
                       collapsed && "justify-center px-2 mx-1"
                     );
                     const linkContent = (
@@ -312,7 +312,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0",
-                            active ? "text-blue-700 dark:text-white" : "text-gray-400 dark:text-[#D1D5DB] group-hover/nav:text-blue-700 dark:group-hover/nav:text-white"
+                            active ? "text-white" : "text-slate-400 group-hover/nav:text-white"
                           )}
                           strokeWidth={1.75}
                         />
@@ -320,10 +320,10 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                           <span className="truncate">{item.label}</span>
                         )}
                         {!collapsed && item.external && (
-                          <ExternalLink className="ml-auto h-3.5 w-3.5 text-gray-400 dark:text-[#6B7280]" />
+                          <ExternalLink className="ml-auto h-3.5 w-3.5 text-slate-500" />
                         )}
                         {!collapsed && item.badge && (
-                          <span className="ml-auto text-[10px] font-semibold text-gray-500 dark:text-[#9CA3AF] bg-gray-100 dark:bg-[#1F2937] rounded-full px-2 py-0.5 whitespace-nowrap">
+                          <span className="ml-auto text-[10px] font-semibold text-slate-400 bg-white/10 rounded-full px-2 py-0.5 whitespace-nowrap">
                             {item.badge}
                           </span>
                         )}
@@ -378,8 +378,8 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
 
       {/* Footer */}
       {!collapsed && (
-        <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-700">
-          <p className="text-xs text-gray-300 dark:text-[#4B5563] text-center">
+        <div className="px-5 py-4 border-t border-white/10">
+          <p className="text-xs text-slate-600 text-center">
             MilCrunch<span className="text-[#3b82f6] font-bold">X</span> &middot; v1.0
           </p>
         </div>

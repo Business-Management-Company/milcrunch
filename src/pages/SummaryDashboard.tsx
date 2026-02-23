@@ -261,7 +261,7 @@ export default function SummaryDashboard() {
         <div className="inline-flex items-center gap-2.5 mb-2">
           <Sparkles className="h-7 w-7 text-[#1e3a5f]" />
           <h1 className="text-2xl md:text-3xl font-bold text-[#000741] dark:text-white tracking-tight">
-            {getGreeting()}, <span className="text-[#1e3a5f]">{firstName}</span>
+            {getGreeting()}, <span className="text-amber-400">{firstName}</span>
           </h1>
         </div>
         <p className="text-sm text-muted-foreground">{formatDateTime()}</p>
@@ -270,10 +270,10 @@ export default function SummaryDashboard() {
       {/* Large chat-style input card */}
       <div className="max-w-3xl mx-auto">
         <div className={cn(
-          "rounded-2xl border-2 bg-white dark:bg-[#1A1D27] transition-all",
+          "rounded-2xl border bg-white dark:bg-[#1A1D27] transition-all",
           prompt.trim() || followUp
             ? "border-[#1e3a5f] shadow-[0_0_20px_rgba(30,58,95,0.15)]"
-            : "border-[#1e3a5f]/25 hover:border-[#1e3a5f]/40 shadow-sm hover:shadow-md",
+            : "border-slate-200 dark:border-slate-700 shadow-md hover:shadow-lg",
         )}>
           <textarea
             placeholder="Describe what you need — find creators, plan an event, build a list..."
@@ -418,7 +418,7 @@ export default function SummaryDashboard() {
             key={pill.label}
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent("open-ai-chat", { detail: { message: pill.prompt } }))}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] text-sm font-medium text-[#000741] dark:text-gray-200 hover:border-current hover:shadow-sm transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-100 dark:border-gray-700 bg-white dark:bg-[#1A1D27] shadow-sm text-sm font-medium text-[#000741] dark:text-gray-200 hover:shadow-md transition-all"
             style={{ "--tw-border-opacity": 1 } as React.CSSProperties}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = pill.color;
@@ -438,7 +438,7 @@ export default function SummaryDashboard() {
       {/* Three-column section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Recent Activity */}
-        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-sm border-l-4 border-l-blue-500">
           <div className="px-6 py-3 bg-gradient-to-r from-[#1e3a5f]/10 to-[#1e3a5f]/5 border-b border-[#1e3a5f]/10">
             <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-[#1e3a5f]/15">
@@ -465,7 +465,7 @@ export default function SummaryDashboard() {
         </div>
 
         {/* Upcoming Events */}
-        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-sm border-l-4 border-l-amber-500">
           <div className="px-6 py-3 bg-gradient-to-r from-[#0EA5E9]/10 to-[#0EA5E9]/5 border-b border-[#0EA5E9]/10">
             <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-[#0EA5E9]/15">
@@ -517,7 +517,7 @@ export default function SummaryDashboard() {
         </div>
 
         {/* Network Stats — Top Directories */}
-        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        <div className="rounded-2xl border border-[#E2E8F0] dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden shadow-sm border-l-4 border-l-green-500">
           <div className="px-6 py-3 bg-gradient-to-r from-[#22C55E]/10 to-[#22C55E]/5 border-b border-[#22C55E]/10">
             <h2 className="font-bold text-[#000741] dark:text-white flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-[#22C55E]/15">
