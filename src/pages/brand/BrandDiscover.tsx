@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { PlatformIcons } from "@/components/PlatformIcons";
 
@@ -1477,66 +1478,55 @@ const BrandDiscover = () => {
   };
   const enrichRunning = enrichingIds.size > 0;
 
-  // Confidence scoring: how well does this creator match the search terms?
-  // Prioritizes hashtag/bio content matches over vague location-only matches.
+  // Confidence scoring: combines military domain score (from military-scoring.ts)
+  // with keyword-match scoring against the user's search terms.
   const getConfidence = useCallback((creator: CreatorCard) => {
     const targets: string[] = [];
-    const militaryVariants = ["military", "veteran", "military spouse", "milspouse", "milso", "army", "navy", "air force", "marines", "coast guard", "national guard", "usmc", "usaf", "vet", "service member", "active duty", "reserve"];
     if (searchQuery.trim()) targets.push(...searchQuery.trim().toLowerCase().split(/\s+/));
     if (niche !== "All niches") targets.push(niche.toLowerCase());
     selectedBranches.forEach((b) => targets.push(b.toLowerCase()));
     if (keywordsInBio.trim()) targets.push(...keywordsInBio.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean));
-    if (targets.length === 0) return { level: "none" as const, score: 0, matches: [] as string[] };
+    if (targets.length === 0 && !creator.militaryScore) return { level: "none" as const, score: 0, matches: [] as string[], evidence: [] as string[], militaryPct: 0 };
 
-    // Separate text sources for weighted scoring
+    // Keyword match scoring (search terms vs creator content)
     const bioText = (creator.bio ?? "").toLowerCase();
     const hashtagText = (creator.hashtags ?? []).join(" ").toLowerCase();
     const nicheText = [creator.nicheClass ?? "", creator.category ?? "", ...(creator.specialties ?? [])].join(" ").toLowerCase();
-    const nameText = (creator.name ?? "").toLowerCase();
-    const usernameText = (creator.username ?? "").toLowerCase();
+    const nameText = [(creator.name ?? ""), (creator.username ?? "")].join(" ").toLowerCase();
 
-    // Count matches in each source (weighted differently)
-    let score = 0;
+    let keywordScore = 0;
     const allMatches: string[] = [];
     const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
     const contentTargets = targets.filter((t) => t.length > 2 && !stopWords.has(t));
 
     for (const t of contentTargets) {
-      const inBio = bioText.includes(t);
       const inHashtags = hashtagText.includes(t);
+      const inBio = bioText.includes(t);
       const inNiche = nicheText.includes(t);
-      const inName = nameText.includes(t) || usernameText.includes(t);
-      if (inBio || inHashtags || inNiche || inName) allMatches.push(t);
-      // Hashtag match = strongest signal (creator actively posts about this)
-      if (inHashtags) score += 0.25;
-      // Bio match = strong signal (creator self-identifies with this topic)
-      if (inBio) score += 0.20;
-      // Niche/category = moderate signal
-      if (inNiche) score += 0.10;
-      // Name/username = moderate signal
-      if (inName) score += 0.10;
+      const inName = nameText.includes(t);
+      if (inHashtags || inBio || inNiche || inName) allMatches.push(t);
+      if (inHashtags) keywordScore += 0.25;
+      if (inBio) keywordScore += 0.20;
+      if (inNiche) keywordScore += 0.10;
+      if (inName) keywordScore += 0.10;
     }
 
-    // Military variant bonus (check across all text)
-    const allText = [bioText, hashtagText, nicheText, nameText, usernameText].join(" ");
-    const milMatches = militaryVariants.filter((v) => allText.includes(v));
-    if (milMatches.length > 0) {
-      score += Math.min(0.3, milMatches.length * 0.10);
-      allMatches.push(...milMatches);
+    // Blend: 60% military domain score + 40% keyword match score
+    const milNorm = (creator.militaryScore ?? 0) / 100; // 0–1
+    const kwNorm = Math.min(1, keywordScore); // 0–1
+    const blended = milNorm * 0.6 + kwNorm * 0.4;
+
+    // Include military evidence terms in matches
+    if (creator.militaryEvidence) {
+      allMatches.push(...creator.militaryEvidence);
     }
 
-    // Normalize: cap at 1.0
-    score = Math.min(1, score);
     const uniqueMatches = [...new Set(allMatches)];
-    const level = score >= 0.5 ? "high" : score >= 0.2 ? "medium" : "low";
-    return { level: level as "high" | "medium" | "low", score, matches: uniqueMatches };
+    const level = blended >= 0.4 ? "high" : blended >= 0.15 ? "medium" : "low";
+    const militaryPct = creator.militaryScore ?? 0;
+    const evidence = creator.militaryEvidence ?? [];
+    return { level: level as "high" | "medium" | "low", score: blended, matches: uniqueMatches, evidence, militaryPct };
   }, [searchQuery, niche, selectedBranches, keywordsInBio]);
-  const confidenceColors = {
-    high: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
-    medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    low: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
-    none: "hidden",
-  };
   // Sort by confidence when selected (client-side sort)
   const displayCreators = useMemo(() => {
     if (sortBy !== "confidence") return creators;
@@ -2820,6 +2810,26 @@ const BrandDiscover = () => {
                             <span className="text-xs text-gray-400 ml-1">Posts/Mo</span>
                           </div>
                         </div>
+
+                        {/* Military Match Score */}
+                        {creator.militaryScore != null && creator.militaryScore > 0 && (
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className={cn(
+                              "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold",
+                              creator.militaryScore >= 60 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                              creator.militaryScore >= 30 ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+                              "bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                            )}>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              {creator.militaryScore}% Mil Match
+                            </div>
+                            {creator.militaryEvidence && creator.militaryEvidence.length > 0 && (
+                              <span className="text-[10px] text-muted-foreground truncate flex-1" title={creator.militaryEvidence.join(" · ")}>
+                                {creator.militaryEvidence[0]}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Platform icons + email */}
                         {(socialPlatforms.length > 0 || creator.hasEmail) && (

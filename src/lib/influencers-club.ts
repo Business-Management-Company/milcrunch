@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { scoreMilitaryRelevance, isMilitaryQuery } from "@/lib/military-scoring";
 
 // Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
 // (Vercel does not inject headers), so we always send Authorization in every fetch.
@@ -44,6 +45,10 @@ export interface CreatorCard {
   avgComments?: number;
   avgViews?: number;
   avgReelLikes?: number;
+  /** Military relevance score (0–100), computed by military-scoring.ts */
+  militaryScore?: number;
+  /** Evidence strings explaining why this creator matched military terms */
+  militaryEvidence?: string[];
 }
 
 /** API profile shape (nested under each account). */
@@ -408,7 +413,20 @@ export async function searchCreators(
   if (list[0]) {
     console.log("[Discovery] Full account data:", JSON.stringify(list[0], null, 2));
   }
-  const creators: CreatorCard[] = list.map((acc, i) => mapAccountToCard(acc, i));
+  const rawCreators: CreatorCard[] = list.map((acc, i) => mapAccountToCard(acc, i));
+
+  // Apply military relevance scoring
+  const scored = await scoreMilitaryRelevance(rawCreators);
+
+  // Sort by military score when query contains military keywords
+  const shouldSortByMilitary = isMilitaryQuery(trimmed);
+  const creators = shouldSortByMilitary
+    ? scored.sort((a, b) => b.militaryScore - a.militaryScore)
+    : scored;
+
+  if (shouldSortByMilitary && creators[0]) {
+    console.log("[Discovery] Military sort applied. Top result:", creators[0].name, "score:", creators[0].militaryScore, "evidence:", creators[0].militaryEvidence);
+  }
 
   return { creators, total, rawResponse };
 }
