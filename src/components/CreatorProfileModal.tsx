@@ -213,6 +213,7 @@ export default function CreatorProfileModal({
   const [eventDropdownOpen, setEventDropdownOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [showNewListInput, setShowNewListInput] = useState(false);
+  const [selectedListIds, setSelectedListIds] = useState<Set<string>>(new Set());
   const [newDirName, setNewDirName] = useState("");
   const [showNewDirInput, setShowNewDirInput] = useState(false);
   const [eventsList, setEventsList] = useState<{ id: string; title: string; start_date: string }[]>([]);
@@ -261,6 +262,7 @@ export default function CreatorProfileModal({
         setListDropdownOpen(false);
         setShowNewListInput(false);
         setNewListName("");
+        setSelectedListIds(new Set());
       }
       if (dirDropdownOpen && dirDropdownRef.current && !dirDropdownRef.current.contains(e.target as Node)) {
         setDirDropdownOpen(false);
@@ -278,6 +280,7 @@ export default function CreatorProfileModal({
         setEventDropdownOpen(false);
         setShowNewListInput(false);
         setShowNewDirInput(false);
+        setSelectedListIds(new Set());
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -298,6 +301,7 @@ export default function CreatorProfileModal({
       setShowNewDirInput(false);
       setNewListName("");
       setNewDirName("");
+      setSelectedListIds(new Set());
     }
   }, [open]);
 
@@ -509,11 +513,15 @@ export default function CreatorProfileModal({
     return err;
   };
 
-  const handleAddToList = (listId: string, listName: string) => {
-    if (!listCreator) return;
-    addCreatorToList(listId, listCreator);
+  const handleConfirmAddToLists = () => {
+    if (!listCreator || selectedListIds.size === 0) return;
+    for (const listId of selectedListIds) {
+      addCreatorToList(listId, listCreator);
+    }
     onAddToList?.(listCreator);
-    toast.success(`Added ${listCreator.name} to ${listName}`);
+    toast.success(`Added to ${selectedListIds.size} list${selectedListIds.size !== 1 ? "s" : ""}`);
+    setSelectedListIds(new Set());
+    setListDropdownOpen(false);
   };
 
   const handleOpenCreateListModal = () => {
@@ -543,14 +551,11 @@ export default function CreatorProfileModal({
   };
 
   const handleInlineCreateList = () => {
-    if (!listCreator || !newListName.trim()) return;
+    if (!newListName.trim()) return;
     const newId = createList(newListName.trim());
-    addCreatorToList(newId, listCreator);
-    onAddToList?.(listCreator);
-    toast.success(`Added ${listCreator.name} to ${newListName.trim()}`);
+    setSelectedListIds((prev) => new Set(prev).add(newId));
     setNewListName("");
     setShowNewListInput(false);
-    setListDropdownOpen(false);
   };
 
   const handleInlineCreateDir = async () => {
@@ -1043,39 +1048,57 @@ export default function CreatorProfileModal({
             <div className="space-y-2">
               {/* ── Add to List ── */}
               <div className="relative" ref={listDropdownRef}>
-                {addedToList ? (
-                  <Button className="w-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 rounded-lg" disabled>
-                    Added ✓
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg"
-                    disabled={!listCreator}
-                    onClick={() => { setListDropdownOpen(!listDropdownOpen); setDirDropdownOpen(false); setEventDropdownOpen(false); }}
-                  >
-                    <ListPlus className="mr-2 h-4 w-4" />
-                    + Add to List
-                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                )}
+                <Button
+                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg"
+                  disabled={!listCreator}
+                  onClick={() => {
+                    if (!listDropdownOpen && listCreator) {
+                      const alreadyIn = new Set<string>();
+                      for (const list of lists) {
+                        if (list.creators.some((c) => c.id === listCreator.id)) alreadyIn.add(list.id);
+                      }
+                      setSelectedListIds(alreadyIn);
+                    }
+                    setListDropdownOpen(!listDropdownOpen);
+                    setDirDropdownOpen(false);
+                    setEventDropdownOpen(false);
+                  }}
+                >
+                  <ListPlus className="mr-2 h-4 w-4" />
+                  + Add to List
+                  <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                </Button>
                 {listDropdownOpen && (
-                  <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                  <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[260px] overflow-y-auto">
                     {lists.length === 0 ? (
                       <div className="py-3 px-3 text-xs text-gray-400 text-center">No lists yet</div>
                     ) : (
-                      lists.map((list) => (
-                        <button
-                          key={list.id}
-                          type="button"
-                          onClick={() => { handleAddToList(list.id, list.name); setListDropdownOpen(false); }}
-                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-[#1e3a5f]/10 flex items-center justify-center shrink-0">
-                            <ListPlus className="h-3.5 w-3.5 text-[#1e3a5f]" />
-                          </div>
-                          <span className="truncate flex-1">{list.name}</span>
-                        </button>
-                      ))
+                      lists.map((list) => {
+                        const alreadyIn = listCreator ? list.creators.some((c) => c.id === listCreator.id) : false;
+                        const checked = selectedListIds.has(list.id);
+                        return (
+                          <label
+                            key={list.id}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedListIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(list.id)) next.delete(list.id);
+                                  else next.add(list.id);
+                                  return next;
+                                });
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]/40 shrink-0"
+                            />
+                            <span className="truncate flex-1">{list.name}</span>
+                            {alreadyIn && <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />}
+                          </label>
+                        );
+                      })
                     )}
                     <div className="border-t border-gray-100 dark:border-gray-700">
                       {showNewListInput ? (
@@ -1103,6 +1126,16 @@ export default function CreatorProfileModal({
                           Create New List
                         </button>
                       )}
+                    </div>
+                    <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                      <button
+                        type="button"
+                        disabled={selectedListIds.size === 0}
+                        onClick={handleConfirmAddToLists}
+                        className="w-full py-1.5 px-3 text-sm font-medium rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Confirm
+                      </button>
                     </div>
                   </div>
                 )}
