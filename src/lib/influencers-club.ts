@@ -119,12 +119,33 @@ function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
 
   const platforms = [(p?.platform as string) ?? "instagram"];
   const bio = (p?.biography ?? "") as string;
-  const postsPerMonth = typeof p?.posts_per_month === "number" ? p.posts_per_month : undefined;
-  const mediaCount = Number(p?.media_count ?? p?.number_of_posts ?? p?.post_count) || undefined;
-  const avgLikes = Number(p?.avg_likes ?? p?.average_likes) || undefined;
-  const avgComments = Number(p?.avg_comments ?? p?.average_comments) || undefined;
-  const avgViews = Number(p?.avg_views ?? p?.average_views ?? p?.avg_video_views) || undefined;
-  const avgReelLikes = Number(p?.avg_reel_likes ?? p?.average_reel_likes) || undefined;
+  // Check multiple levels for analytics: profile, account root, account.instagram, account.stats
+  const a = account as Record<string, unknown>;
+  const ig = a.instagram as Record<string, unknown> | undefined;
+  const stats = a.stats as Record<string, unknown> | undefined;
+  const analyticsSourcesArr = [p as Record<string, unknown> | undefined, a, ig, stats].filter(Boolean) as Record<string, unknown>[];
+  const pickNum = (...keys: string[]): number | undefined => {
+    for (const src of analyticsSourcesArr) {
+      for (const k of keys) {
+        const v = src[k];
+        if (v != null && v !== "" && v !== false) {
+          const n = Number(v);
+          if (!isNaN(n) && n > 0) return n;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  const postsPerMonth = pickNum("posts_per_month", "posting_frequency") ?? undefined;
+  const mediaCount = pickNum("media_count", "number_of_posts", "post_count", "posts_count") ?? undefined;
+  const avgLikes = pickNum("avg_likes", "average_likes", "avg_like_count") ?? undefined;
+  const avgComments = pickNum("avg_comments", "average_comments", "avg_comment_count") ?? undefined;
+  const avgViews = pickNum("avg_views", "average_views", "avg_video_views", "avg_reels_plays", "average_reels_plays", "avg_view_count") ?? undefined;
+  const avgReelLikes = pickNum("avg_reel_likes", "average_reel_likes") ?? undefined;
+  if (index === 0) {
+    console.log("[mapAccountToCard] Analytics debug for first creator:", { postsPerMonth, mediaCount, avgLikes, avgComments, avgViews, avgReelLikes });
+  }
   const location =
     (p?.location && String(p.location).trim()) ||
     [p?.city, p?.state, p?.country].filter(Boolean).join(", ").trim() ||

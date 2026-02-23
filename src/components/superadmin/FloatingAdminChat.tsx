@@ -1236,16 +1236,17 @@ For all other questions, respond naturally and concisely.`;
               {/* Analytics */}
               <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Analytics</p>
+                {(() => { console.log("[Drawer] selectedCreator analytics:", { mediaCount: selectedCreator.mediaCount, postsPerMonth: selectedCreator.postsPerMonth, avgViews: selectedCreator.avgViews, avgReelLikes: selectedCreator.avgReelLikes, avgLikes: selectedCreator.avgLikes, avgComments: selectedCreator.avgComments, followers: selectedCreator.followers, engagementRate: selectedCreator.engagementRate }); return null; })()}
                 <div>
                   {([
-                    ["Followers", selectedCreator.followers ? formatFollowers(selectedCreator.followers) : null],
-                    ["Engagement Rate", selectedCreator.engagementRate ? `${selectedCreator.engagementRate}%` : null],
-                    ["Number of Posts", selectedCreator.mediaCount ? selectedCreator.mediaCount.toLocaleString() : null],
-                    ["Posts per Month", selectedCreator.postsPerMonth ? selectedCreator.postsPerMonth.toFixed(1) : null],
-                    ["Average Views", selectedCreator.avgViews ? formatFollowers(selectedCreator.avgViews) : null],
-                    ["Average Reel Likes", selectedCreator.avgReelLikes ? formatFollowers(selectedCreator.avgReelLikes) : null],
-                    ["Average Likes", selectedCreator.avgLikes ? formatFollowers(selectedCreator.avgLikes) : null],
-                    ["Average Comments", selectedCreator.avgComments ? formatFollowers(selectedCreator.avgComments) : null],
+                    ["Followers", selectedCreator.followers != null && selectedCreator.followers > 0 ? formatFollowers(selectedCreator.followers) : null],
+                    ["Engagement Rate", selectedCreator.engagementRate != null && selectedCreator.engagementRate > 0 ? `${selectedCreator.engagementRate}%` : null],
+                    ["Number of Posts", selectedCreator.mediaCount != null && selectedCreator.mediaCount > 0 ? formatFollowers(selectedCreator.mediaCount) : null],
+                    ["Posts per Month", selectedCreator.postsPerMonth != null && selectedCreator.postsPerMonth > 0 ? selectedCreator.postsPerMonth.toFixed(1) : null],
+                    ["Average Views", selectedCreator.avgViews != null && selectedCreator.avgViews > 0 ? formatFollowers(selectedCreator.avgViews) : null],
+                    ["Average Reel Likes", selectedCreator.avgReelLikes != null && selectedCreator.avgReelLikes > 0 ? formatFollowers(selectedCreator.avgReelLikes) : null],
+                    ["Average Likes", selectedCreator.avgLikes != null && selectedCreator.avgLikes > 0 ? formatFollowers(selectedCreator.avgLikes) : null],
+                    ["Average Comments", selectedCreator.avgComments != null && selectedCreator.avgComments > 0 ? formatFollowers(selectedCreator.avgComments) : null],
                   ] as [string, string | null][]).map(([label, value]) => (
                     <div key={label} className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-b-0 text-sm">
                       <span className="text-gray-500 dark:text-gray-400">{label}</span>
