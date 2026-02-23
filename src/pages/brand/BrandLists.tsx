@@ -301,7 +301,7 @@ const BrandLists = () => {
 
       {viewMode === 'card' && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {lists.map((list) => (
+          {(lists ?? []).map((list) => (
             <Card
               key={list.id}
               className="bg-gradient-card border-border p-5 cursor-pointer transition-colors hover:border-primary/50 relative group"
@@ -370,9 +370,9 @@ const BrandLists = () => {
                       </h3>
                     )}
                     <div className="flex items-center gap-2 mt-1">
-                      {list.creators.length > 0 && (
+                      {(list.creators ?? []).length > 0 && (
                         <div className="flex -space-x-2">
-                          {list.creators.slice(0, 4).map((member, i) => (
+                          {(list.creators ?? []).slice(0, 4).map((member, i) => (
                             member.avatar ? (
                               <img
                                 key={member.id || i}
@@ -390,7 +390,7 @@ const BrandLists = () => {
                         </div>
                       )}
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}
+                        {(list.creators ?? []).length} creator{(list.creators ?? []).length !== 1 ? "s" : ""}
                       </span>
                     </div>
                   </div>
@@ -418,7 +418,7 @@ const BrandLists = () => {
 
       {viewMode === 'list' && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-          {lists.map((list) => (
+          {(lists ?? []).map((list) => (
             <div
               key={list.id}
               className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 cursor-pointer relative group"
@@ -445,9 +445,9 @@ const BrandLists = () => {
                 ) : (
                   <span className="font-medium text-gray-900 dark:text-white text-sm">{list.name}</span>
                 )}
-                {list.creators.length > 0 && (
+                {(list.creators ?? []).length > 0 && (
                   <div className="flex -space-x-1.5">
-                    {list.creators.slice(0, 4).map((member, i) => (
+                    {(list.creators ?? []).slice(0, 4).map((member, i) => (
                       member.avatar ? (
                         <img
                           key={member.id || i}
@@ -464,7 +464,7 @@ const BrandLists = () => {
                     ))}
                   </div>
                 )}
-                <span className="text-xs text-gray-400">{list.creators.length} creator{list.creators.length !== 1 ? "s" : ""}</span>
+                <span className="text-xs text-gray-400">{(list.creators ?? []).length} creator{(list.creators ?? []).length !== 1 ? "s" : ""}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -532,7 +532,7 @@ export const BrandListDetail = () => {
   const [editingListDesc, setEditingListDesc] = useState(false);
   const [listDescValue, setListDescValue] = useState("");
 
-  const selectedList = lists.find((l) => l.id === listId) ?? null;
+  const selectedList = Array.isArray(lists) ? (lists.find((l) => l.id === listId) ?? null) : null;
   const creators = Array.isArray(selectedList?.creators) ? selectedList.creators : [];
 
   useEffect(() => {
@@ -774,9 +774,9 @@ export const BrandListDetail = () => {
                 {creator.bio || "\u2014"}
               </p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                <span>{formatFollowers(creator.followers)} followers</span>
+                <span>{formatFollowers(creator.followers ?? 0)} followers</span>
                 <span>&middot;</span>
-                <span>{creator.engagementRate}% engagement</span>
+                <span>{(creator.engagementRate ?? 0)}% engagement</span>
               </div>
               <div className="mt-auto flex gap-2 flex-wrap">
                 <Button
