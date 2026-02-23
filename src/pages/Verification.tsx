@@ -351,7 +351,7 @@ export default function Verification() {
   const [modalPhotoUrl, setModalPhotoUrl] = useState<string | null>(null);
   const [phases, setPhases] = useState<(PipelinePhase | { phase: number; name: string; status: string })[]>([]);
   const [newRecordId, setNewRecordId] = useState<string | null>(null);
-  const [dirMembers, setDirMembers] = useState<{ id: string; creator_name: string; creator_handle: string; ic_avatar_url: string | null; platform: string | null }[]>([]);
+  const [dirMembers, setDirMembers] = useState<{ id: string; creator_name: string; creator_handle: string; ic_avatar_url: string | null; avatar_url: string | null; platform: string | null }[]>([]);
   const [creatorSearch, setCreatorSearch] = useState("");
   const [showCreatorDropdown, setShowCreatorDropdown] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -383,9 +383,18 @@ export default function Verification() {
     (async () => {
       const { data } = await supabase
         .from('directory_members')
-        .select('id, creator_name, creator_handle, ic_avatar_url, platform')
+        .select('id, creator_name, creator_handle, ic_avatar_url, avatar_url, platform')
         .order('creator_name', { ascending: true });
-      setDirMembers(data ?? []);
+      // Deduplicate by creator_handle, preferring entries that have an avatar
+      const seen = new Map<string, typeof data extends (infer T)[] | null ? T : never>();
+      for (const m of data ?? []) {
+        const key = (m.creator_handle ?? '').toLowerCase();
+        const existing = seen.get(key);
+        if (!existing || (!existing.ic_avatar_url && !existing.avatar_url && (m.ic_avatar_url || m.avatar_url))) {
+          seen.set(key, m);
+        }
+      }
+      setDirMembers(Array.from(seen.values()));
       setCreatorSearch("");
     })();
   }, [addOpen]);
@@ -408,6 +417,7 @@ export default function Verification() {
         zip: p.zip || "",
         source: p.source || "manual",
         sourceUsername: p.sourceUsername || "",
+        profilePhotoUrl: "",
       });
       setAddOpen(true);
       navigate(location.pathname, { replace: true, state: {} });
@@ -436,14 +446,14 @@ export default function Verification() {
     // Resolve photo URL before opening the modal
     const handle = addForm.instagramHandle.trim().replace('@', '');
     const localMatch = handle ? dirMembers.find((m) => m.creator_handle === handle) : null;
-    let resolvedPhoto = localMatch?.ic_avatar_url || addForm.profilePhotoUrl || null;
+    let resolvedPhoto = localMatch?.ic_avatar_url || localMatch?.avatar_url || addForm.profilePhotoUrl || null;
     if (!resolvedPhoto && handle) {
       const { data: memberData } = await supabase
         .from('directory_members')
-        .select('ic_avatar_url')
+        .select('ic_avatar_url, avatar_url')
         .eq('creator_handle', handle)
         .maybeSingle();
-      resolvedPhoto = memberData?.ic_avatar_url || null;
+      resolvedPhoto = memberData?.ic_avatar_url || memberData?.avatar_url || null;
     }
     setModalPhotoUrl(resolvedPhoto);
 
@@ -905,6 +915,15 @@ export default function Verification() {
                   </TooltipProvider>
                 </DialogTitle>
               </DialogHeader>
+              {addForm.profilePhotoUrl && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                  <img src={addForm.profilePhotoUrl} alt="" className="w-12 h-12 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 dark:text-white truncate">{addForm.fullName}</p>
+                    {addForm.instagramHandle && <p className="text-sm text-muted-foreground truncate">@{addForm.instagramHandle}</p>}
+                  </div>
+                </div>
+              )}
               <div className="space-y-4">
                 <div>
                   <Label>Full Name *</Label>
@@ -939,15 +958,15 @@ export default function Verification() {
                                   ...f,
                                   fullName: m.creator_name ?? m.creator_handle,
                                   instagramHandle: (m.creator_handle ?? '').replace('@', ''),
-                                  profilePhotoUrl: m.ic_avatar_url || '',
+                                  profilePhotoUrl: m.ic_avatar_url || m.avatar_url || '',
                                   claimedStatus: detectStatus(m.creator_name ?? ''),
                                 }));
                                 setCreatorSearch("");
                                 setShowCreatorDropdown(false);
                               }}
                             >
-                              {m.ic_avatar_url ? (
-                                <img src={m.ic_avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                              {(m.ic_avatar_url || m.avatar_url) ? (
+                                <img src={(m.ic_avatar_url || m.avatar_url)!} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
                               ) : (
                                 <div className="w-7 h-7 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                                   {(m.creator_name ?? '?').charAt(0).toUpperCase()}
