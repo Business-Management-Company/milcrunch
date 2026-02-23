@@ -539,16 +539,13 @@ const BrandDirectory = () => {
     const payload = {
       directory_id: targetDirId,
       creator_handle: m.creator_handle ?? "",
-      creator_name: m.creator_name ?? null,
-      avatar_url: m.avatar_url ?? null,
-      ic_avatar_url: m.ic_avatar_url ?? m.avatar_url ?? null,
+      creator_name: m.creator_name ?? "",
+      avatar_url: m.avatar_url ?? "",
       platform: m.platform ?? "instagram",
-      branch: m.branch ?? null,
-      follower_count: m.follower_count ?? null,
-      avg_likes: m.avg_likes ?? null,
-      bio: m.bio ?? null,
-      platforms: m.platforms ?? [],
-      enrichment_data: m.enrichment_data ?? null,
+      branch: m.branch ?? "",
+      follower_count: Math.round(Number(m.follower_count)) || 0,
+      engagement_rate: parseFloat(String(m.engagement_rate ?? "0")) || 0,
+      bio: m.bio ?? "",
       approved: true,
     };
 
@@ -556,7 +553,7 @@ const BrandDirectory = () => {
       .from("directory_members")
       .upsert(payload, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
     if (error) {
-      console.error("[copyToDirectory] upsert error:", error.message, error.details, error.hint, error.code);
+      console.error("upsert error:", error);
       return "failed";
     }
     return "added";
