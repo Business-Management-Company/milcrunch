@@ -13,11 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Plus, ArrowLeft, Upload, Download, Loader2, Trash2, Search,
   Users, UserCheck, UserX, AlertTriangle, Mail, Send,
   RefreshCw, Calendar, FolderOpen, Handshake, Edit2, X,
   Clock, Eye, MousePointer, CheckCircle2,
+  Instagram, Youtube, Twitter, Linkedin, Globe, Phone, Building2, Briefcase, Tag, ListPlus,
 } from "lucide-react";
 import {
   getAllContacts, getContactById, getContactStats, addFullContact,
@@ -51,6 +53,270 @@ function avatarUrl(email?: string, idx = 0): string {
   const num = hash % 50;
   const gender = idx % 2 === 0 ? "women" : "men";
   return `https://randomuser.me/api/portraits/${gender}/${num}.jpg`;
+}
+
+const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
+  </svg>
+);
+
+const SOCIAL_PLATFORMS = [
+  { key: "instagram", label: "Instagram", icon: <Instagram className="h-4 w-4" />, urlPrefix: "https://instagram.com/" },
+  { key: "tiktok", label: "TikTok", icon: <TikTokIcon className="h-4 w-4" />, urlPrefix: "https://tiktok.com/@" },
+  { key: "youtube", label: "YouTube", icon: <Youtube className="h-4 w-4" />, urlPrefix: "https://youtube.com/@" },
+  { key: "linkedin", label: "LinkedIn", icon: <Linkedin className="h-4 w-4" />, urlPrefix: "https://linkedin.com/in/" },
+  { key: "twitter", label: "X / Twitter", icon: <Twitter className="h-4 w-4" />, urlPrefix: "https://x.com/" },
+];
+
+function getSocials(contact: EmailContact): { key: string; label: string; handle: string; icon: React.ReactNode; url: string }[] {
+  const results: { key: string; label: string; handle: string; icon: React.ReactNode; url: string }[] = [];
+  const meta = contact.metadata ?? {};
+  const tags = contact.tags ?? [];
+  for (const p of SOCIAL_PLATFORMS) {
+    const handle = meta[p.key] as string | undefined;
+    if (handle && typeof handle === "string") {
+      results.push({ key: p.key, label: p.label, handle, icon: p.icon, url: `${p.urlPrefix}${handle.replace(/^@/, "")}` });
+    } else {
+      const tag = tags.find(t => t.toLowerCase().startsWith(`${p.key}:`));
+      if (tag) {
+        const h = tag.split(":")[1]?.trim() ?? "";
+        if (h) results.push({ key: p.key, label: p.label, handle: h, icon: p.icon, url: `${p.urlPrefix}${h.replace(/^@/, "")}` });
+      }
+    }
+  }
+  return results;
+}
+
+interface ContactDrawerProps {
+  contact: EmailContact | null;
+  open: boolean;
+  onClose: () => void;
+  lists: EmailList[];
+  contactLists: Array<{ list_id: string; list_name: string; status: string }>;
+  onEdit: () => void;
+  onDelete: () => void;
+  onUnsubscribe: () => void;
+  onAddToList: (listId: string) => void;
+  contactIndex: number;
+}
+
+function ContactDrawer({ contact, open, onClose, lists, contactLists, onEdit, onDelete, onUnsubscribe, onAddToList, contactIndex }: ContactDrawerProps) {
+  if (!contact) return null;
+
+  const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(" ") || contact.email;
+  const socials = getSocials(contact);
+  const sc = CONTACT_STATUS_COLORS[contact.status] || CONTACT_STATUS_COLORS.subscribed;
+  const src = contact.source || "manual";
+  const srcColor = SOURCE_COLORS[src] || SOURCE_COLORS.manual;
+  const availableLists = lists.filter(l => !contactLists.some(cl => cl.list_id === l.id));
+
+  const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
+    email_sent: <Send className="h-3.5 w-3.5 text-blue-500" />,
+    email_opened: <Eye className="h-3.5 w-3.5 text-green-500" />,
+    email_clicked: <MousePointer className="h-3.5 w-3.5 text-blue-600" />,
+    unsubscribed: <UserX className="h-3.5 w-3.5 text-red-500" />,
+    subscribed: <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />,
+    imported: <Download className="h-3.5 w-3.5 text-amber-500" />,
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={cn("fixed inset-0 bg-black/40 z-40 transition-opacity duration-300", open ? "opacity-100" : "opacity-0 pointer-events-none")}
+        onClick={onClose}
+      />
+      {/* Drawer */}
+      <div
+        className={cn(
+          "fixed top-0 right-0 h-full w-full max-w-lg bg-white dark:bg-[#1A1D27] shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out",
+          open ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        {/* Navy header */}
+        <div className="bg-[#1e3a5f] px-6 py-6 shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="relative h-16 w-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold overflow-hidden shrink-0 ring-2 ring-white/30">
+              <span>{initials(contact.first_name, contact.last_name, contact.email)}</span>
+              <img
+                src={avatarUrl(contact.email, contactIndex)}
+                alt=""
+                className="absolute inset-0 w-16 h-16 rounded-full object-cover"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xl font-bold text-white truncate">{fullName}</h2>
+              <p className="text-white/70 text-sm truncate">{contact.email}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <Badge className={`${sc.bg} ${sc.text} text-xs`}>{contact.status}</Badge>
+                <Badge className={`${srcColor} text-xs capitalize`}>{src}</Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Contact Info */}
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Contact Info</h3>
+            <div className="space-y-2.5">
+              {[
+                { icon: <Mail className="h-4 w-4 text-gray-400" />, label: "Email", value: contact.email },
+                { icon: <Phone className="h-4 w-4 text-gray-400" />, label: "Phone", value: contact.phone },
+                { icon: <Building2 className="h-4 w-4 text-gray-400" />, label: "Company", value: contact.company },
+                { icon: <Briefcase className="h-4 w-4 text-gray-400" />, label: "Title", value: contact.title },
+                { icon: <Globe className="h-4 w-4 text-gray-400" />, label: "Website", value: (contact.metadata?.website as string) || null },
+              ].map(({ icon, label, value }) => (
+                <div key={label} className="flex items-center gap-3 text-sm">
+                  {icon}
+                  <span className="text-gray-400 w-16 shrink-0">{label}</span>
+                  <span className="text-gray-900 dark:text-white font-medium truncate">{value || "—"}</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-3 text-sm">
+                <Tag className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-400 w-16 shrink-0">Source</span>
+                <Badge className={`${srcColor} text-xs capitalize`}>{src}</Badge>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-400 w-16 shrink-0">Added</span>
+                <span className="text-gray-900 dark:text-white font-medium">{new Date(contact.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+              </div>
+            </div>
+            {contact.tags && contact.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {contact.tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Social Media */}
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Social Media</h3>
+            {socials.length > 0 ? (
+              <div className="space-y-2">
+                {socials.map(s => (
+                  <a
+                    key={s.key}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-[#1e3a5f]/30 hover:bg-[#1e3a5f]/5 transition-colors group"
+                  >
+                    <span className="text-gray-500 group-hover:text-[#1e3a5f]">{s.icon}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-[#1e3a5f]">{s.label}</span>
+                    <span className="text-sm text-gray-400 ml-auto truncate">@{s.handle.replace(/^@/, "")}</span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-400">No social profiles linked</p>
+                <button
+                  onClick={onEdit}
+                  className="text-xs text-[#1e3a5f] hover:text-[#2d5282] font-medium mt-1 inline-flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" /> Add
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Activity */}
+          <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Activity</h3>
+            {(!contact.activity || contact.activity.length === 0) ? (
+              <p className="text-sm text-gray-400 py-2">No activity recorded yet</p>
+            ) : (
+              <div className="space-y-3">
+                {contact.activity.slice(0, 15).map((a, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="mt-0.5 shrink-0">
+                      {ACTIVITY_ICONS[a.type] ?? <Clock className="h-3.5 w-3.5 text-gray-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white capitalize">{a.type.replace(/_/g, " ")}</p>
+                      {a.campaign_name && <p className="text-xs text-gray-500 truncate">{a.campaign_name}</p>}
+                      {a.detail && <p className="text-xs text-gray-400 truncate">{a.detail}</p>}
+                      <p className="text-xs text-gray-400">{new Date(a.timestamp).toLocaleString()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Lists */}
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Lists</h3>
+              {availableLists.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-xs text-[#1e3a5f] hover:text-[#2d5282] font-medium inline-flex items-center gap-1">
+                      <ListPlus className="h-3 w-3" /> Add to List
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {availableLists.map(l => (
+                      <DropdownMenuItem key={l.id} onClick={() => onAddToList(l.id)}>
+                        {l.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+            {contactLists.length === 0 ? (
+              <p className="text-sm text-gray-400 py-2">Not in any lists</p>
+            ) : (
+              <div className="space-y-2">
+                {contactLists.map(m => {
+                  const lsc = CONTACT_STATUS_COLORS[m.status] || CONTACT_STATUS_COLORS.subscribed;
+                  return (
+                    <div key={m.list_id} className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{m.list_name}</span>
+                      <Badge className={`${lsc.bg} ${lsc.text} text-xs`}>{m.status}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom actions */}
+        <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 px-6 py-4 flex items-center gap-2 bg-white dark:bg-[#1A1D27]">
+          <Button variant="outline" size="sm" className="rounded-lg" onClick={onEdit}>
+            <Edit2 className="h-4 w-4 mr-1.5" /> Edit Contact
+          </Button>
+          {contact.status === "subscribed" && (
+            <Button variant="outline" size="sm" className="rounded-lg text-amber-600 border-amber-300 hover:bg-amber-50" onClick={onUnsubscribe}>
+              <UserX className="h-4 w-4 mr-1.5" /> Unsubscribe
+            </Button>
+          )}
+          <div className="flex-1" />
+          <Button variant="outline" size="sm" className="rounded-lg text-destructive border-red-300 hover:bg-red-50" onClick={onDelete}>
+            <Trash2 className="h-4 w-4 mr-1.5" /> Delete
+          </Button>
+        </div>
+      </div>
+    </>
+  );
 }
 
 const EmailContacts = () => {
@@ -92,6 +358,75 @@ const EmailContacts = () => {
 
   // Sync
   const [syncing, setSyncing] = useState<string | null>(null);
+
+  // Drawer state
+  const [drawerContact, setDrawerContact] = useState<EmailContact | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerLists, setDrawerLists] = useState<Array<{ list_id: string; list_name: string; status: string }>>([]);
+  const [drawerIndex, setDrawerIndex] = useState(0);
+
+  const openDrawer = async (contact: EmailContact, idx: number) => {
+    setDrawerContact(contact);
+    setDrawerIndex(idx);
+    setDrawerOpen(true);
+    const memberships = await getContactListMemberships(contact.email);
+    setDrawerLists(memberships);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setTimeout(() => { setDrawerContact(null); setDrawerLists([]); }, 300);
+  };
+
+  const handleDrawerEdit = () => {
+    if (!drawerContact) return;
+    setEditForm({
+      first_name: drawerContact.first_name,
+      last_name: drawerContact.last_name,
+      email: drawerContact.email,
+      phone: drawerContact.phone,
+      company: drawerContact.company,
+      title: drawerContact.title,
+      tags: drawerContact.tags,
+    });
+    setDetail(drawerContact);
+    setEditMode(true);
+  };
+
+  const handleDrawerUnsubscribe = async () => {
+    if (!drawerContact) return;
+    const ok = await updateFullContact(drawerContact.id, { status: "unsubscribed" });
+    if (ok) {
+      toast.success("Contact unsubscribed");
+      setDrawerContact({ ...drawerContact, status: "unsubscribed" });
+      loadData();
+    } else {
+      toast.error("Failed to unsubscribe");
+    }
+  };
+
+  const handleDrawerAddToList = async (listId: string) => {
+    if (!drawerContact) return;
+    const result = await addFullContact({
+      list_id: listId,
+      email: drawerContact.email,
+      first_name: drawerContact.first_name || undefined,
+      last_name: drawerContact.last_name || undefined,
+      phone: drawerContact.phone || undefined,
+      company: drawerContact.company || undefined,
+      title: drawerContact.title || undefined,
+      tags: drawerContact.tags ?? [],
+      source: drawerContact.source,
+    });
+    if (result) {
+      toast.success("Added to list");
+      const memberships = await getContactListMemberships(drawerContact.email);
+      setDrawerLists(memberships);
+      loadData();
+    } else {
+      toast.error("Failed — may already exist in this list");
+    }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -262,7 +597,11 @@ const EmailContacts = () => {
       setEditMode(false);
       // Reload detail
       const updated = await getContactById(detail.id);
-      if (updated) setDetail(updated);
+      if (updated) {
+        setDetail(updated);
+        // Also refresh drawer if it's showing the same contact
+        if (drawerContact?.id === updated.id) setDrawerContact(updated);
+      }
       loadData();
     } else {
       toast.error("Failed to update");
@@ -846,7 +1185,7 @@ const EmailContacts = () => {
                 const sc = CONTACT_STATUS_COLORS[c.status] || CONTACT_STATUS_COLORS.subscribed;
                 const src = c.source || "manual";
                 return (
-                  <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/brand/email/contacts/${c.id}`)}>
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30" onClick={() => openDrawer(c, idx)}>
                     <TableCell>
                       <div className="relative h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold overflow-hidden">
                         <span>{initials(c.first_name, c.last_name, c.email)}</span>
@@ -885,6 +1224,19 @@ const EmailContacts = () => {
           )}
         </div>
       )}
+      {/* Contact Drawer */}
+      <ContactDrawer
+        contact={drawerContact}
+        open={drawerOpen}
+        onClose={closeDrawer}
+        lists={lists}
+        contactLists={drawerLists}
+        onEdit={handleDrawerEdit}
+        onDelete={() => { if (drawerContact) { setDeleteId(drawerContact.id); closeDrawer(); } }}
+        onUnsubscribe={handleDrawerUnsubscribe}
+        onAddToList={handleDrawerAddToList}
+        contactIndex={drawerIndex}
+      />
     </>
   );
 };
