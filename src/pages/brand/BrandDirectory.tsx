@@ -67,6 +67,7 @@ import {
   fetchDirectoryMembers,
   createDirectory,
   deleteDirectory,
+  addToDirectory,
   toggleMemberApproval,
   removeMember,
   promoteListToDirectory,
