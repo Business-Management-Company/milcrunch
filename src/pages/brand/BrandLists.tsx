@@ -15,14 +15,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus } from "lucide-react";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import type { CreatorCard } from "@/lib/influencers-club";
 import type { ListCreator } from "@/contexts/ListContext";
-import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
-import { fetchDirectoriesWithCounts, type Directory } from "@/lib/directories";
+import { detectBranch } from "@/lib/featured-creators";
+import { fetchDirectoriesWithCounts, addToDirectory, type Directory } from "@/lib/directories";
 import { PlatformIcons } from "@/components/PlatformIcons";
 import { toast } from "sonner";
 
@@ -54,30 +54,6 @@ const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
 };
 
-async function promoteCreatorToDirectory(
-  creator: ListCreator,
-  sourceListId: string | null,
-  addedBy: string | null
-): Promise<string | null> {
-  const branch = detectBranch(creator.bio ?? "");
-  const { error } = await approveForDirectory({
-    handle: creator.username ?? creator.id,
-    display_name: creator.name,
-    platform: creator.platforms?.[0] ?? "instagram",
-    avatar_url: creator.avatar || null,
-    follower_count: creator.followers ?? null,
-    engagement_rate: creator.engagementRate ?? null,
-    bio: creator.bio || null,
-    branch,
-    status: "veteran",
-    platforms: creator.platforms || [],
-    category: null,
-    ic_avatar_url: creator.avatar || null,
-    source_list_id: sourceListId,
-    added_by: addedBy,
-  });
-  return error;
-}
 
 const BrandLists = () => {
   const { lists, createList, deleteList, renameList, updateListAvatar } = useLists();
@@ -525,13 +501,11 @@ const BrandLists = () => {
 export const BrandListDetail = () => {
   const { listId } = useParams<{ listId: string }>();
   const navigate = useNavigate();
-  const { lists, removeCreatorFromList, renameList } = useLists();
-  const { isSuperAdmin, effectiveUserId } = useAuth();
+  const { lists, addCreatorToList, removeCreatorFromList, renameList } = useLists();
+  const { effectiveUserId } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
-  const [promotingAll, setPromotingAll] = useState(false);
   const [directories, setDirectories] = useState<Directory[]>([]);
   const [editingListTitle, setEditingListTitle] = useState<string | false>(false);
   const [listTitleValue, setListTitleValue] = useState("");
@@ -604,39 +578,6 @@ export const BrandListDetail = () => {
     selectedIds.forEach((id) => removeCreatorFromList(selectedList.id, id));
     toast.success(`Removed ${selectedIds.size} creator${selectedIds.size !== 1 ? "s" : ""} from list`);
     setSelectedIds(new Set());
-  };
-
-  const handlePromoteOne = async (creator: ListCreator) => {
-    setPromotingIds((prev) => new Set(prev).add(creator.id));
-    const err = await promoteCreatorToDirectory(creator, listId ?? null, effectiveUserId ?? null);
-    setPromotingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(creator.id);
-      return next;
-    });
-    if (err) {
-      toast.error(`Failed to add ${creator.name} to directory: ${err}`);
-    } else {
-      toast.success(`${creator.name} added to public directory`);
-    }
-  };
-
-  const handlePromoteAll = async () => {
-    if (!selectedList || creators.length === 0) return;
-    setPromotingAll(true);
-    let success = 0;
-    let failed = 0;
-    for (const creator of creators) {
-      const err = await promoteCreatorToDirectory(creator, listId ?? null, effectiveUserId ?? null);
-      if (err) failed++;
-      else success++;
-    }
-    setPromotingAll(false);
-    if (failed > 0) {
-      toast.error(`Promoted ${success} creator${success !== 1 ? "s" : ""}, ${failed} failed`);
-    } else {
-      toast.success(`All ${success} creator${success !== 1 ? "s" : ""} added to public directory`);
-    }
   };
 
   if (!selectedList) {
@@ -771,7 +712,6 @@ export const BrandListDetail = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {creators.map((creator) => {
-          const isPromoting = promotingIds.has(creator.id);
           return (
             <Card
               key={creator.id}
@@ -835,21 +775,66 @@ export const BrandListDetail = () => {
                   <User className="h-3.5 w-3.5 mr-1.5" />
                   View Profile
                 </Button>
-                {isSuperAdmin && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePromoteOne(creator);
-                    }}
-                    disabled={isPromoting}
-                  >
-                    {isPromoting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1" />}
-                    {!isPromoting && "Directory"}
-                  </Button>
-                )}
+                {/* Add to List dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="rounded-lg text-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10">
+                      <ListPlus className="h-3.5 w-3.5 mr-1" />
+                      Add to List
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    {(lists ?? []).filter((l) => l.id !== listId).map((l) => (
+                      <DropdownMenuItem key={l.id} onClick={() => {
+                        addCreatorToList(l.id, creator);
+                        toast.success(`Added ${creator.name} to ${l.name}`);
+                      }}>
+                        {l.name}
+                      </DropdownMenuItem>
+                    ))}
+                    {(lists ?? []).filter((l) => l.id !== listId).length === 0 && (
+                      <DropdownMenuItem disabled>No other lists</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {/* Add to Directory dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="outline" size="sm" className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30">
+                      <FolderPlus className="h-3.5 w-3.5 mr-1" />
+                      Add to Directory
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    {directories.map((d) => (
+                      <DropdownMenuItem key={d.id} onClick={async () => {
+                        const handle = (creator.username ?? creator.id).replace(/^@/, "").trim();
+                        const { error } = await addToDirectory(d.id, {
+                          handle,
+                          display_name: creator.name,
+                          platform: creator.platforms?.[0] ?? "instagram",
+                          avatar_url: creator.avatar || null,
+                          follower_count: creator.followers ?? null,
+                          bio: creator.bio || null,
+                          branch: detectBranch(creator.bio ?? "") || null,
+                          platforms: creator.platforms || [],
+                          added_by: effectiveUserId ?? null,
+                        });
+                        if (error) {
+                          toast.error(`Failed to add to ${d.name}: ${error}`);
+                        } else {
+                          toast.success(`${creator.name} added to ${d.name}`);
+                        }
+                      }}>
+                        {d.name}
+                        {d.member_count != null && <span className="ml-auto text-xs text-gray-400 pl-4">{d.member_count}</span>}
+                      </DropdownMenuItem>
+                    ))}
+                    {directories.length === 0 && (
+                      <DropdownMenuItem disabled>No directories</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   variant="outline"
                   size="sm"
