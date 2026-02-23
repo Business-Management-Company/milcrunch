@@ -685,6 +685,36 @@ const BrandDirectory = () => {
     toast.success(`Deleted ${deleted} creator${deleted !== 1 ? "s" : ""} from directory`);
   };
 
+  const handleBulkAddToDirectory = async (targetDirId: string) => {
+    if (selectedIds.size === 0) return;
+    let added = 0;
+    let failed = 0;
+    for (const id of selectedIds) {
+      const m = members.find((mem) => mem.id === id);
+      if (!m) { failed++; continue; }
+      const { error } = await addToDirectory(targetDirId, {
+        handle: m.creator_handle ?? "",
+        display_name: m.creator_name ?? "",
+        platform: "instagram",
+        avatar_url: m.avatar_url,
+        ic_avatar_url: m.ic_avatar_url,
+        follower_count: m.follower_count,
+        engagement_rate: m.engagement_rate,
+        bio: m.bio,
+        branch: m.branch,
+        platforms: m.platforms,
+        platform_urls: m.platform_urls as Record<string, string> | undefined,
+        enrichment_data: m.enrichment_data,
+      });
+      if (error) failed++;
+      else added++;
+    }
+    const targetDir = directories.find((d) => d.id === targetDirId);
+    if (added > 0) toast.success(`Added ${added} creator${added !== 1 ? "s" : ""} to ${targetDir?.name ?? "directory"}`);
+    if (failed > 0) toast.error(`Failed to add ${failed} creator${failed !== 1 ? "s" : ""}`);
+    setSelectedIds(new Set());
+  };
+
   // ─── RENDER: Directory list ────────────────────────────────
 
   if (!selectedDir) {
@@ -1284,6 +1314,23 @@ const BrandDirectory = () => {
               {bulkDeleting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
               Delete Selected
             </Button>
+            {directories.filter((d) => d.id !== selectedDir?.id).length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-lg">
+                    <FolderPlus className="h-4 w-4 mr-1.5" />
+                    Add to Directory
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {directories.filter((d) => d.id !== selectedDir?.id).map((d) => (
+                    <DropdownMenuItem key={d.id} onClick={() => handleBulkAddToDirectory(d.id)}>
+                      {d.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button size="sm" variant="ghost" className="rounded-lg text-blue-800 dark:text-blue-400" onClick={() => setSelectedIds(new Set())}>
               Clear Selection
             </Button>
