@@ -18,6 +18,7 @@ import type { ListCreator } from "@/contexts/ListContext";
 import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
 import { PlatformIcons } from "@/components/PlatformIcons";
 import { toast } from "sonner";
+import AddToDestinationModal, { type DestinationCreator } from "@/components/AddToDestinationModal";
 
 function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -525,6 +526,7 @@ export const BrandListDetail = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
   const [promotingAll, setPromotingAll] = useState(false);
+  const [destModalOpen, setDestModalOpen] = useState(false);
   const [editingListTitle, setEditingListTitle] = useState<string | false>(false);
   const [listTitleValue, setListTitleValue] = useState("");
   const [editingListDesc, setEditingListDesc] = useState(false);
@@ -698,16 +700,15 @@ export const BrandListDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isSuperAdmin && creators.length > 0 && (
+            {creators.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
                 className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30"
-                onClick={handlePromoteAll}
-                disabled={promotingAll}
+                onClick={() => setDestModalOpen(true)}
               >
-                {promotingAll ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1.5" />}
-                Promote All to Directory
+                <Globe className="h-3.5 w-3.5 mr-1.5" />
+                Add All to...
               </Button>
             )}
             {creators.length > 0 && (
@@ -832,6 +833,23 @@ export const BrandListDetail = () => {
         selectedCount={selectedIds.size}
         onClearSelection={() => setSelectedIds(new Set())}
         onRemoveFromList={handleBulkRemove}
+      />
+
+      <AddToDestinationModal
+        open={destModalOpen}
+        defaultTab="directory"
+        creators={creators.map((c): DestinationCreator => ({
+          handle: c.username ?? c.id,
+          name: c.name,
+          avatar_url: c.avatar || null,
+          follower_count: c.followers ?? null,
+          engagement_rate: c.engagementRate ?? null,
+          platform: c.platforms?.[0] ?? "instagram",
+          branch: null,
+          platforms: c.platforms ?? [],
+          bio: c.bio ?? "",
+        }))}
+        onClose={() => setDestModalOpen(false)}
       />
     </>
   );
