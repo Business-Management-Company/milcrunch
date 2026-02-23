@@ -1449,7 +1449,7 @@ No markdown formatting, just the JSON array.`;
               title: item.snippet?.title ?? "Untitled",
               channelTitle: item.snippet?.channelTitle ?? "",
               description: item.snippet?.description ?? "",
-              thumbnail: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url ?? "",
+              thumbnail: id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : (item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url ?? ""),
               publishedAt: item.snippet?.publishedAt ?? "",
             });
           }
@@ -1524,19 +1524,34 @@ No markdown formatting, just the JSON array.`;
                   className="group block pl-6 pr-10 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#1e3a5f] hover:shadow-md transition-all"
                 >
                   <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
-                    {v.thumbnail ? (
-                      <img
-                        src={v.thumbnail}
-                        alt={v.title}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <Video className="h-8 w-8 text-gray-400" />
-                      </div>
-                    )}
+                    {(() => {
+                      // Prefer img.youtube.com which has no CORS/referrer issues
+                      const thumbSrc = v.videoId
+                        ? `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`
+                        : v.thumbnail || "";
+                      if (!thumbSrc) return (
+                        <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+                          <Video className="h-8 w-8 text-gray-400" />
+                        </div>
+                      );
+                      return (
+                        <img
+                          src={thumbSrc}
+                          alt={v.title}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          crossOrigin="anonymous"
+                          onError={(e) => {
+                            const el = e.currentTarget;
+                            el.style.display = "none";
+                            const fallback = document.createElement("div");
+                            fallback.className = "flex items-center justify-center h-full w-full absolute inset-0 bg-gray-100 dark:bg-gray-800";
+                            fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>';
+                            el.parentElement?.appendChild(fallback);
+                          }}
+                        />
+                      );
+                    })()}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
                       <Play className="h-10 w-10 text-white drop-shadow-lg" />
                     </div>
@@ -3077,10 +3092,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             const mc = record.manual_checks as Record<string, unknown> | null;
             const career = (mc as any)?.career_track?.result;
             const pdl = record.pdl_data as any;
-            if (career) return 'green';
+            // Green: career extraction found data OR PDL has employment
+            if (career && (career.career?.length > 0 || career.education?.length > 0 || career.awards?.length > 0 || career.military_summary?.branch)) return 'green';
             if (pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) return 'green';
-            if (pdl) return 'yellow';
-            if (!pdl) return 'red';
+            // Yellow: phase ran but returned empty results
+            if (career || pdl) return 'yellow';
+            // Red: not yet run or actual failure
             return 'red';
           })()} />
         </button>
@@ -3106,10 +3123,16 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
           <StatusDot status={(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
+            if (!mc) return 'red';
             const videos = (mc as any)?.youtube_media?.videos as unknown[] | undefined;
+            // Green: media search found results
             if (Array.isArray(videos) && videos.length > 0) return 'green';
+            // Red: actual fetch failure
             if ((mc as any)?.media_error) return 'red';
-            return 'yellow';
+            // Yellow: search ran (youtube_media key exists) but found nothing
+            if ((mc as any)?.youtube_media) return 'yellow';
+            // Red: never ran
+            return 'red';
           })()} />
         </button>
         {mediaOpen && (
