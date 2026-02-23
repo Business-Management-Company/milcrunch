@@ -164,9 +164,43 @@ function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" 
   );
 }
 
+const KNOWN_PLATFORMS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin", "twitch", "pinterest", "snapchat", "threads"];
+
+/** Merge platforms from m.platforms, m.platform_urls keys, and enrichment_data.result.creator_has. */
+function getAllPlatforms(m: DirectoryMember): string[] {
+  const set = new Set<string>();
+  // 1. platforms array
+  if (Array.isArray(m.platforms)) {
+    m.platforms.forEach((p) => set.add(p.toLowerCase()));
+  }
+  // 2. platform_urls keys
+  if (m.platform_urls && typeof m.platform_urls === "object") {
+    Object.keys(m.platform_urls).forEach((k) => {
+      if (m.platform_urls[k]) set.add(k.toLowerCase());
+    });
+  }
+  // 3. enrichment_data → result.creator_has (boolean flags)
+  if (m.enrichment_data && typeof m.enrichment_data === "object") {
+    const ed = m.enrichment_data as Record<string, unknown>;
+    const creatorHas =
+      ((ed.result as Record<string, unknown>)?.creator_has as Record<string, boolean>) ??
+      (ed.creator_has as Record<string, boolean>);
+    if (creatorHas && typeof creatorHas === "object") {
+      Object.entries(creatorHas).forEach(([k, v]) => {
+        if (v) set.add(k.toLowerCase());
+      });
+    }
+  }
+  // Return in canonical order, known platforms first
+  const ordered = KNOWN_PLATFORMS.filter((p) => set.has(p));
+  set.forEach((p) => { if (!ordered.includes(p)) ordered.push(p); });
+  return ordered;
+}
+
 /** Map a DirectoryMember to the CreatorCard shape the profile drawer expects. */
 function memberToCreatorCard(m: DirectoryMember): CreatorCard {
   const enrichAvatar = extractAvatarFromEnrichment(m.enrichment_data);
+  const allPlatforms = getAllPlatforms(m);
   return {
     id: m.id,
     name: m.creator_name ?? m.creator_handle,
@@ -174,11 +208,11 @@ function memberToCreatorCard(m: DirectoryMember): CreatorCard {
     avatar: safeImageUrl(m.ic_avatar_url) ?? safeImageUrl(m.avatar_url) ?? safeImageUrl(enrichAvatar) ?? "",
     followers: m.follower_count ?? 0,
     engagementRate: m.engagement_rate ?? 0,
-    platforms: m.platforms ?? ["instagram"],
+    platforms: allPlatforms.length > 0 ? allPlatforms : ["instagram"],
     bio: m.bio ?? "",
     location: undefined,
     category: m.category ?? undefined,
-    socialPlatforms: m.platforms ?? ["instagram"],
+    socialPlatforms: allPlatforms.length > 0 ? allPlatforms : ["instagram"],
     branch: m.branch ?? undefined,
   };
 }
@@ -1230,7 +1264,7 @@ const BrandDirectory = () => {
               {filtered.map((m) => {
                 const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                 const isToggling = togglingIds.has(m.id);
-                const platforms = m.platforms ?? [];
+                const platforms = getAllPlatforms(m);
                 return (
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                     <DirAvatar m={m} size="lg" />
