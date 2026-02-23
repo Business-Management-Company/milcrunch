@@ -1275,15 +1275,21 @@ export default function CreatorProfileModal({
             <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
             <div className="space-y-0 text-sm">
               {[
-                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—" },
-                { label: "Avg Likes", value: avgLikes ? formatNumber(avgLikes) : "—" },
-              ].map(({ label, value }) => (
+                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—", alwaysShow: true },
+                { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : "—", alwaysShow: true },
+                { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : null },
+                { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : null },
+                { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : null },
+                { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : null },
+                { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : null },
+                { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : null },
+              ].map(({ label, value, alwaysShow }) => (
                 <div key={label} className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">{label}</span>
-                  {showEnrichmentLoading && value === "—" ? (
+                  {showEnrichmentLoading && !value && !alwaysShow ? (
                     <Skeleton className="h-4 w-12" />
                   ) : (
-                    <span className="font-semibold text-gray-900 dark:text-white">{value}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{value ?? "—"}</span>
                   )}
                 </div>
               ))}
@@ -1340,10 +1346,20 @@ export default function CreatorProfileModal({
                         <p className="text-xs text-muted-foreground">{statLabels.followers}</p>
                         <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(followers)}</p>
                       </div>
-                      {avgLikes > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Engagement</p>
+                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatPercent(engagement)}</p>
+                      </div>
+                      {mediaCount > 0 && (
                         <div>
-                          <p className="text-xs text-muted-foreground">Avg Likes</p>
-                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(avgLikes)}</p>
+                          <p className="text-xs text-muted-foreground">{statLabels.mediaCount}</p>
+                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(mediaCount)}</p>
+                        </div>
+                      )}
+                      {avgViews > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Avg Views</p>
+                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(avgViews)}</p>
                         </div>
                       )}
                     </div>
@@ -1423,8 +1439,10 @@ export default function CreatorProfileModal({
                           title={PLATFORM_LABELS[p] ?? p}
                         >
                           {(p === "instagram" && <Instagram className="h-5 w-5" />) ||
-                            (p === "tiktok" && <Video className="h-5 w-5" />) ||
-                            (p === "youtube" && <Youtube className="h-5 w-5" />) || (
+                            (p === "tiktok" && <Music className="h-5 w-5" />) ||
+                            (p === "youtube" && <Youtube className="h-5 w-5" />) ||
+                            (p === "facebook" && <Facebook className="h-5 w-5" />) ||
+                            (p === "twitter" && <X className="h-5 w-5" />) || (
                               <ExternalLink className="h-5 w-5" />
                             )}
                         </a>
