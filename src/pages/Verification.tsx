@@ -1341,6 +1341,28 @@ interface YouTubeVideoResult {
   thumbnail: string;
   publishedAt: string;
   relevanceScore?: number;
+  url?: string;
+  thumbnail_url?: string;
+}
+
+/** Extract a reliable YouTube thumbnail URL from various video object shapes */
+function getThumbnail(video: YouTubeVideoResult): string | null {
+  if (video.thumbnail_url) return video.thumbnail_url;
+  if (video.videoId) return `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`;
+  if (video.thumbnail) return video.thumbnail;
+  // Extract videoId from URL
+  const url = video.url || '';
+  const match = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
+  const id = match?.[1];
+  if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+  return null;
+}
+
+/** Get a clickable URL for a video */
+function getVideoUrl(video: YouTubeVideoResult): string {
+  if (video.url) return video.url;
+  if (video.videoId) return `https://www.youtube.com/watch?v=${video.videoId}`;
+  return '#';
 }
 
 function MediaTab({ record }: { record: VerificationRecord }) {
@@ -1572,57 +1594,47 @@ No markdown formatting, just the JSON array.`;
 
           {!searching && !filtering && visibleVideos.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {visibleVideos.map((v) => (
-                <a
-                  key={v.videoId}
-                  href={`https://www.youtube.com/watch?v=${v.videoId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block pl-6 pr-10 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#1e3a5f] hover:shadow-md transition-all"
-                >
-                  <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
-                    {(() => {
-                      // Prefer img.youtube.com which has no CORS/referrer issues
-                      const thumbSrc = v.videoId
-                        ? `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`
-                        : v.thumbnail || "";
-                      if (!thumbSrc) return (
-                        <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
-                          <Video className="h-8 w-8 text-gray-400" />
-                        </div>
-                      );
-                      return (
+              {visibleVideos.map((v, i) => {
+                const thumb = getThumbnail(v);
+                const href = getVideoUrl(v);
+                return (
+                  <a
+                    key={v.videoId || `media-${i}`}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-[#1e3a5f] hover:shadow-md transition-all"
+                  >
+                    <div className="relative aspect-video bg-gray-100 dark:bg-gray-900">
+                      {thumb ? (
                         <img
-                          src={thumbSrc}
+                          src={thumb}
                           alt={v.title}
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            const el = e.currentTarget;
-                            el.style.display = "none";
-                            const fallback = document.createElement("div");
-                            fallback.className = "flex items-center justify-center h-full w-full absolute inset-0 bg-gray-100 dark:bg-gray-800";
-                            fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>';
-                            el.parentElement?.appendChild(fallback);
-                          }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
-                      );
-                    })()}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                      <Play className="h-10 w-10 text-white drop-shadow-lg" />
+                      ) : (
+                        <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+                          <Video className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                        <Play className="h-10 w-10 text-white drop-shadow-lg" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium line-clamp-2 group-hover:text-[#1e3a5f]">{v.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{v.channelTitle}</p>
-                    {v.publishedAt && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(v.publishedAt).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                </a>
-              ))}
+                    <div className="p-3">
+                      <p className="text-sm font-medium line-clamp-2 group-hover:text-[#1e3a5f]">{v.title}</p>
+                      {v.channelTitle && <p className="text-xs text-muted-foreground mt-1">{v.channelTitle}</p>}
+                      {v.publishedAt && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(v.publishedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </a>
+                );
+              })}
             </div>
           )}
 
