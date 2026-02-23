@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { generateProfileSlug } from "@/lib/directories";
+import { generateProfileSlug, saveCreatorAvatar } from "@/lib/directories";
 import { enrichCreatorProfile, type EnrichedProfileResponse } from "@/lib/influencers-club";
 
 // Homepage showcase functions use `featured_creators` table.
