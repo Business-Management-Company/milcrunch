@@ -25,10 +25,26 @@ export default async function handler(req, res) {
     });
 
     clearTimeout(timeout);
-    console.log("[ic-locations] response status:", response.status);
 
-    const data = await response.json();
-    return res.status(response.status).json(data);
+    const text = await response.text();
+    console.log("[ic-locations] status:", response.status, "body:", text.substring(0, 300));
+
+    // If upstream returned HTML (404 page etc.), return a clear error
+    if (text.trimStart().startsWith("<")) {
+      return res.status(502).json({
+        error: "Upstream returned HTML, not JSON",
+        upstreamStatus: response.status,
+        upstreamUrl: url,
+        snippet: text.substring(0, 200)
+      });
+    }
+
+    try {
+      const data = JSON.parse(text);
+      return res.status(response.status).json(data);
+    } catch {
+      return res.status(502).json({ error: "Invalid JSON from upstream", snippet: text.substring(0, 200) });
+    }
   } catch (err) {
     console.error("[ic-locations] error name:", err.name);
     console.error("[ic-locations] error message:", err.message);
