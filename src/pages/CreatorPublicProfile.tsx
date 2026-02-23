@@ -331,32 +331,105 @@ export default function CreatorPublicProfile() {
     }
   }, [creator?.enrichment_data]);
 
-  // IC enrichment data is the source of truth for platform pills
-  const icPlatforms = useMemo(
-    () => getPlatformsFromEnrichmentData(creator?.enrichment_data),
-    [creator?.enrichment_data]
-  );
-  // Legacy platforms list used for other logic (e.g., overview tab icons)
-  const platforms = useMemo(() => {
-    const basePlatforms = Array.isArray(creator?.platforms) ? creator.platforms : [];
-    const set = new Set(basePlatforms.filter((p): p is string => typeof p === "string").map((p) => p.toLowerCase()));
-    // Include IC platforms too
-    for (const p of icPlatforms) set.add(p.platform);
-    const enrichData = (creator?.enrichment_data && typeof creator.enrichment_data === "object") ? creator.enrichment_data as Record<string, unknown> : undefined;
-    const rawCreatorHas = (enrichData?.result as Record<string, unknown> | undefined)?.creator_has
-      ?? enrichData?.creator_has;
-    const creatorHas = (rawCreatorHas && typeof rawCreatorHas === "object" && !Array.isArray(rawCreatorHas))
-      ? rawCreatorHas as Record<string, boolean>
-      : undefined;
-    if (creatorHas) {
-      try {
-        for (const [k, v] of Object.entries(creatorHas)) {
-          if (v && PLATFORM_URLS[k]) set.add(k);
-        }
-      } catch { /* ignore malformed creatorHas */ }
+  // Merge platforms from all sources into styled pill objects
+  const PILL_STYLES: Record<string, { label: string; pillClass: string }> = {
+    instagram: { label: "Instagram", pillClass: "bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100" },
+    tiktok: { label: "TikTok", pillClass: "bg-slate-900 text-white border-slate-900 hover:bg-slate-800" },
+    youtube: { label: "YouTube", pillClass: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100" },
+    facebook: { label: "Facebook", pillClass: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" },
+    twitter: { label: "X", pillClass: "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200" },
+  };
+
+  const icPlatforms = useMemo(() => {
+    // 1. IC enrichment data — source of truth (has verified usernames)
+    const fromIC = getPlatformsFromEnrichmentData(creator?.enrichment_data);
+    const seen = new Set(fromIC.map((p) => p.platform));
+
+    // 2. platform_urls (jsonb) — extract handle from URL
+    const platformUrls = creator?.platform_urls;
+    if (platformUrls && typeof platformUrls === "object") {
+      for (const [key, url] of Object.entries(platformUrls)) {
+        const k = key.toLowerCase();
+        if (seen.has(k) || !url || !PILL_STYLES[k]) continue;
+        // Try to extract a handle from the URL
+        let handle = "";
+        try {
+          const pathname = new URL(url).pathname.replace(/\/$/, "");
+          handle = pathname.split("/").pop()?.replace(/^@/, "") || "";
+        } catch { /* skip malformed URLs */ }
+        if (!handle) continue;
+        seen.add(k);
+        const style = PILL_STYLES[k];
+        fromIC.push({
+          platform: k,
+          label: style.label,
+          username: handle,
+          url,
+          pillClass: style.pillClass,
+        });
+      }
     }
-    return [...set];
-  }, [creator?.enrichment_data, creator?.platforms, icPlatforms]);
+
+    // 3. enrichment_data.result.creator_has (boolean flags) + platform sub-objects
+    const ed = (creator?.enrichment_data && typeof creator.enrichment_data === "object")
+      ? creator.enrichment_data as Record<string, unknown>
+      : undefined;
+    const result = (ed?.result as Record<string, unknown>) ?? ed;
+    if (result) {
+      const creatorHas = (result.creator_has as Record<string, boolean>) ?? {};
+      for (const [k, v] of Object.entries(creatorHas)) {
+        const key = k.toLowerCase();
+        if (!v || seen.has(key) || !PILL_STYLES[key]) continue;
+        // Check if there's a sub-object with username
+        const platData = result[key];
+        let handle = "";
+        if (platData && typeof platData === "object") {
+          const pd = platData as Record<string, unknown>;
+          handle = ((pd.username ?? pd.handle) as string || "").replace(/^@/, "").trim();
+        }
+        if (!handle) handle = creator?.handle || "";
+        if (!handle) continue;
+        seen.add(key);
+        const style = PILL_STYLES[key];
+        const builder = PLATFORM_URLS[key];
+        fromIC.push({
+          platform: key,
+          label: style.label,
+          username: handle,
+          url: builder ? builder(handle) : "#",
+          pillClass: style.pillClass,
+        });
+      }
+    }
+
+    // 4. creator.platforms (legacy string array) — fallback
+    const legacyPlatforms = Array.isArray(creator?.platforms) ? creator.platforms : [];
+    for (const p of legacyPlatforms) {
+      if (typeof p !== "string") continue;
+      const key = p.toLowerCase();
+      if (seen.has(key) || !PILL_STYLES[key]) continue;
+      const handle = creator?.handle || "";
+      if (!handle) continue;
+      seen.add(key);
+      const style = PILL_STYLES[key];
+      const builder = PLATFORM_URLS[key];
+      fromIC.push({
+        platform: key,
+        label: style.label,
+        username: handle,
+        url: builder ? builder(handle) : "#",
+        pillClass: style.pillClass,
+      });
+    }
+
+    return fromIC;
+  }, [creator?.enrichment_data, creator?.platform_urls, creator?.platforms, creator?.handle]);
+
+  // Flat platform name list for other logic
+  const platforms = useMemo(
+    () => icPlatforms.map((p) => p.platform),
+    [icPlatforms]
+  );
 
   /* ---- Resolve banner image ---- */
   const resolveBanner = useCallback(async () => {
@@ -805,7 +878,7 @@ export default function CreatorPublicProfile() {
               )}
 
               {/* Platforms */}
-              {(icPlatforms.length > 0 || platforms.length > 0) && (
+              {icPlatforms.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Platforms</h3>
                   <div className="flex flex-wrap gap-2">
@@ -821,21 +894,6 @@ export default function CreatorPublicProfile() {
                         <span className="opacity-60">@{p.username}</span>
                       </a>
                     ))}
-                    {/* Fallback: platforms not covered by IC data */}
-                    {platforms
-                      .filter((p) => !icPlatforms.some((ic) => ic.platform === p))
-                      .map((p) => (
-                        <a
-                          key={p}
-                          href={getPlatformUrl(p)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-sm hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                        >
-                          {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
-                          <span className="font-medium">{PLATFORM_LABEL[p] ?? p}</span>
-                        </a>
-                      ))}
                   </div>
                 </div>
               )}
@@ -998,7 +1056,7 @@ export default function CreatorPublicProfile() {
               )}
 
               {/* Social platforms */}
-              {(icPlatforms.length > 0 || platforms.length > 0) && (
+              {icPlatforms.length > 0 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Social</h3>
                   <div className="flex flex-wrap gap-2">
@@ -1013,20 +1071,6 @@ export default function CreatorPublicProfile() {
                         <span className="font-medium">{p.label}</span>
                         <span className="opacity-60">@{p.username}</span>
                       </a>
-                    ))}
-                    {platforms
-                      .filter((p) => !icPlatforms.some((ic) => ic.platform === p))
-                      .map((p) => (
-                        <a
-                          key={p}
-                          href={getPlatformUrl(p)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-sm hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                        >
-                          {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
-                          <span className="font-medium">{PLATFORM_LABEL[p] ?? p}</span>
-                        </a>
                       ))}
                   </div>
                 </div>
