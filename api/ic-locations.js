@@ -1,12 +1,13 @@
 export default async function handler(req, res) {
-  const query = req.query.query || "";
+  const query = req.query.q || req.query.query || "";
   const platform = req.query.platform || "instagram";
 
   if (!query) {
-    return res.status(400).json({ error: "query parameter is required" });
+    return res.status(400).json({ error: "q parameter is required" });
   }
 
   const apiKey =
+    req.headers["x-ic-key"] ||
     req.headers["x-api-key"] ||
     req.headers.authorization?.replace(/^Bearer\s+/i, "") ||
     process.env.VITE_INFLUENCERS_CLUB_API_KEY;
