@@ -1012,7 +1012,15 @@ const BrandDiscover = () => {
     const branchKeys = selectedBranches.size > 0 ? Array.from(selectedBranches) : [];
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
     const ctKeywords = ctConfig?.keywords ?? [];
-    const allBioKeys = [...branchKeys, ...bioKeys, ...ctKeywords];
+    // Merge search query content terms into keywords_in_bio for tighter relevancy
+    const searchContentTerms: string[] = [];
+    if (q) {
+      const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
+      searchContentTerms.push(
+        ...q.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w))
+      );
+    }
+    const allBioKeys = [...new Set([...branchKeys, ...bioKeys, ...ctKeywords, ...searchContentTerms])];
     const keywords_in_bio = allBioKeys.length > 0 ? allBioKeys : [""];
     const searchPlatforms = resolveSearchPlatforms(platform, ctConfig?.platformOverride ?? null);
     const baseOptions = {
@@ -1074,8 +1082,17 @@ const BrandDiscover = () => {
     setLoadingMore(true);
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === followersRange);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === engagementMin);
-    const keywords_in_bio = selectedBranches.size > 0 ? Array.from(selectedBranches) : [""];
+    const branchKeys = selectedBranches.size > 0 ? Array.from(selectedBranches) : [];
+    const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
     const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
+    const ctKeywords = ctConfig?.keywords ?? [];
+    const loadMoreContentTerms: string[] = [];
+    if (q) {
+      const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
+      loadMoreContentTerms.push(...q.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w)));
+    }
+    const allBioKeysMore = [...new Set([...branchKeys, ...bioKeys, ...ctKeywords, ...loadMoreContentTerms])];
+    const keywords_in_bio = allBioKeysMore.length > 0 ? allBioKeysMore : [""];
     const searchPlatforms = resolveSearchPlatforms(platform, ctConfig?.platformOverride ?? null);
     const baseOptions = {
       number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
@@ -1274,7 +1291,12 @@ const BrandDiscover = () => {
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === effEngagement);
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
     const ctKeywords = ctConfig?.keywords ?? [];
-    const kw = [...effBranches, ...bioKeys, ...ctKeywords];
+    const smartContentTerms: string[] = [];
+    if (effectiveQuery) {
+      const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
+      smartContentTerms.push(...effectiveQuery.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2 && !stopWords.has(w)));
+    }
+    const kw = [...new Set([...effBranches, ...bioKeys, ...ctKeywords, ...smartContentTerms])];
     const keywords_in_bio = kw.length > 0 ? kw : [""];
     const baseOptions = {
       number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
@@ -1456,6 +1478,7 @@ const BrandDiscover = () => {
   const enrichRunning = enrichingIds.size > 0;
 
   // Confidence scoring: how well does this creator match the search terms?
+  // Prioritizes hashtag/bio content matches over vague location-only matches.
   const getConfidence = useCallback((creator: CreatorCard) => {
     const targets: string[] = [];
     const militaryVariants = ["military", "veteran", "military spouse", "milspouse", "milso", "army", "navy", "air force", "marines", "coast guard", "national guard", "usmc", "usaf", "vet", "service member", "active duty", "reserve"];
@@ -1464,22 +1487,49 @@ const BrandDiscover = () => {
     selectedBranches.forEach((b) => targets.push(b.toLowerCase()));
     if (keywordsInBio.trim()) targets.push(...keywordsInBio.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean));
     if (targets.length === 0) return { level: "none" as const, score: 0, matches: [] as string[] };
-    const creatorText = [
-      creator.bio ?? "",
-      ...(creator.hashtags ?? []),
-      creator.nicheClass ?? "",
-      creator.category ?? "",
-      ...(creator.specialties ?? []),
-      creator.name ?? "",
-    ].join(" ").toLowerCase();
-    const matches = targets.filter((t) => creatorText.includes(t));
-    const milMatches = militaryVariants.filter((v) => creatorText.includes(v));
-    const milBoost = milMatches.length > 0 ? 0.4 : 0;
-    const baseScore = targets.length > 0 ? matches.length / targets.length : 0;
-    const score = Math.min(1, baseScore + milBoost);
-    const allMatches = [...new Set([...matches, ...milMatches])];
-    const level = score >= 0.6 ? "high" : score >= 0.3 ? "medium" : "low";
-    return { level: level as "high" | "medium" | "low", score, matches: allMatches };
+
+    // Separate text sources for weighted scoring
+    const bioText = (creator.bio ?? "").toLowerCase();
+    const hashtagText = (creator.hashtags ?? []).join(" ").toLowerCase();
+    const nicheText = [creator.nicheClass ?? "", creator.category ?? "", ...(creator.specialties ?? [])].join(" ").toLowerCase();
+    const nameText = (creator.name ?? "").toLowerCase();
+    const usernameText = (creator.username ?? "").toLowerCase();
+
+    // Count matches in each source (weighted differently)
+    let score = 0;
+    const allMatches: string[] = [];
+    const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
+    const contentTargets = targets.filter((t) => t.length > 2 && !stopWords.has(t));
+
+    for (const t of contentTargets) {
+      const inBio = bioText.includes(t);
+      const inHashtags = hashtagText.includes(t);
+      const inNiche = nicheText.includes(t);
+      const inName = nameText.includes(t) || usernameText.includes(t);
+      if (inBio || inHashtags || inNiche || inName) allMatches.push(t);
+      // Hashtag match = strongest signal (creator actively posts about this)
+      if (inHashtags) score += 0.25;
+      // Bio match = strong signal (creator self-identifies with this topic)
+      if (inBio) score += 0.20;
+      // Niche/category = moderate signal
+      if (inNiche) score += 0.10;
+      // Name/username = moderate signal
+      if (inName) score += 0.10;
+    }
+
+    // Military variant bonus (check across all text)
+    const allText = [bioText, hashtagText, nicheText, nameText, usernameText].join(" ");
+    const milMatches = militaryVariants.filter((v) => allText.includes(v));
+    if (milMatches.length > 0) {
+      score += Math.min(0.3, milMatches.length * 0.10);
+      allMatches.push(...milMatches);
+    }
+
+    // Normalize: cap at 1.0
+    score = Math.min(1, score);
+    const uniqueMatches = [...new Set(allMatches)];
+    const level = score >= 0.5 ? "high" : score >= 0.2 ? "medium" : "low";
+    return { level: level as "high" | "medium" | "low", score, matches: uniqueMatches };
   }, [searchQuery, niche, selectedBranches, keywordsInBio]);
   const confidenceColors = {
     high: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",

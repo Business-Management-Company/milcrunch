@@ -311,6 +311,8 @@ export interface SearchCreatorsOptions {
   location?: string;
   gender?: string;
   language?: string;
+  /** Hashtag terms to filter by (sent as `hashtags` filter to IC API) */
+  hashtags?: string[];
 }
 
 /** Result of a discovery search: mapped cards, total count, raw response. */
@@ -346,7 +348,22 @@ export async function searchCreators(
     : [""];
   if (keywords_in_bio.length === 0) keywords_in_bio.push("");
 
-  const body = {
+  // Build hashtags filter: explicit hashtags from options, plus extract content keywords from the search query
+  const hashtagTerms: string[] = [];
+  if (options.hashtags && options.hashtags.length > 0) {
+    hashtagTerms.push(...options.hashtags.map((h) => h.replace(/^#/, "").trim()).filter(Boolean));
+  }
+  // Also extract meaningful content words from the search query as hashtags
+  // (skip common stop words and location-like terms to focus on topic/niche terms)
+  if (trimmed) {
+    const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
+    const queryWords = trimmed.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w));
+    for (const w of queryWords) {
+      if (!hashtagTerms.includes(w)) hashtagTerms.push(w);
+    }
+  }
+
+  const body: Record<string, unknown> = {
     platform: platformValue,
     paging: { limit: 25, page: options.page ?? 1 },
     sort: { sort_by: options.sort_by ?? "relevancy", sort_order: "desc" as const },
@@ -356,6 +373,7 @@ export async function searchCreators(
       engagement_percent: { min: engagement_percent.min, max: engagement_percent.max },
       keywords_in_bio,
       exclude_role_based_emails: false,
+      ...(hashtagTerms.length > 0 ? { hashtags: hashtagTerms } : {}),
       ...(options.location ? { location: [options.location] } : {}),
       ...(options.gender ? { gender: options.gender } : {}),
       ...(options.language ? { language: { code: options.language } } : {}),
