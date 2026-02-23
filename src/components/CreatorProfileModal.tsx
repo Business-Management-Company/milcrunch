@@ -51,7 +51,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import CreateListModal from "@/components/CreateListModal";
-import AddToDestinationModal, { type DestinationCreator } from "@/components/AddToDestinationModal";
 
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800 dark:bg-green-800/20 dark:text-green-400",
@@ -217,8 +216,6 @@ export default function CreatorProfileModal({
   const [selectedListIds, setSelectedListIds] = useState<Set<string>>(new Set());
   const [newDirName, setNewDirName] = useState("");
   const [showNewDirInput, setShowNewDirInput] = useState(false);
-  const [destModalOpen, setDestModalOpen] = useState(false);
-  const [destModalTab, setDestModalTab] = useState<"directory" | "list">("list");
   const [eventsList, setEventsList] = useState<{ id: string; title: string; start_date: string }[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [invitingEvent, setInvitingEvent] = useState(false);
@@ -1049,25 +1046,163 @@ export default function CreatorProfileModal({
               </div>
             )}
             <div className="space-y-2">
-              {/* ── Add to List / Directory ── */}
-              <Button
-                className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg"
-                disabled={!listCreator}
-                onClick={() => { setDestModalOpen(true); setDestModalTab("list"); }}
-              >
-                <ListPlus className="mr-2 h-4 w-4" />
-                + Add to List
-              </Button>
-              {!hideDirectoryActions && (
+              {/* ── Add to List ── */}
+              <div className="relative" ref={listDropdownRef}>
                 <Button
-                  variant="outline"
-                  className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
+                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg"
                   disabled={!listCreator}
-                  onClick={() => { setDestModalOpen(true); setDestModalTab("directory"); }}
+                  onClick={() => {
+                    if (!listDropdownOpen && listCreator) {
+                      const alreadyIn = new Set<string>();
+                      for (const list of lists) {
+                        if (list.creators.some((c) => c.id === listCreator.id)) alreadyIn.add(list.id);
+                      }
+                      setSelectedListIds(alreadyIn);
+                    }
+                    setListDropdownOpen(!listDropdownOpen);
+                    setDirDropdownOpen(false);
+                    setEventDropdownOpen(false);
+                  }}
                 >
-                  <FolderPlus className="mr-2 h-4 w-4" />
-                  Add to Directory
+                  <ListPlus className="mr-2 h-4 w-4" />
+                  + Add to List
+                  <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
+                {listDropdownOpen && (
+                  <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[260px] overflow-y-auto">
+                    {lists.length === 0 ? (
+                      <div className="py-3 px-3 text-xs text-gray-400 text-center">No lists yet</div>
+                    ) : (
+                      lists.map((list) => {
+                        const alreadyIn = listCreator ? list.creators.some((c) => c.id === listCreator.id) : false;
+                        const checked = selectedListIds.has(list.id);
+                        return (
+                          <label
+                            key={list.id}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedListIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(list.id)) next.delete(list.id);
+                                  else next.add(list.id);
+                                  return next;
+                                });
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]/40 shrink-0"
+                            />
+                            <span className="truncate flex-1">{list.name}</span>
+                            {alreadyIn && <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />}
+                          </label>
+                        );
+                      })
+                    )}
+                    <div className="border-t border-gray-100 dark:border-gray-700">
+                      {showNewListInput ? (
+                        <div className="flex items-center gap-1.5 p-2">
+                          <input
+                            type="text"
+                            value={newListName}
+                            onChange={(e) => setNewListName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleInlineCreateList()}
+                            placeholder="List name..."
+                            autoFocus
+                            className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                          />
+                          <button type="button" onClick={handleInlineCreateList} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewListInput(true)}
+                          className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create New List
+                        </button>
+                      )}
+                    </div>
+                    <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                      <button
+                        type="button"
+                        disabled={selectedListIds.size === 0}
+                        onClick={handleConfirmAddToLists}
+                        className="w-full py-1.5 px-3 text-sm font-medium rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Add to Directory ── */}
+              {!hideDirectoryActions && (
+                <div className="relative" ref={dirDropdownRef}>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
+                    disabled={approvingDir}
+                    onClick={() => { setDirDropdownOpen(!dirDropdownOpen); setListDropdownOpen(false); setEventDropdownOpen(false); }}
+                  >
+                    {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
+                    Add to Directory
+                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                  {dirDropdownOpen && (
+                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                      {directoriesList.length === 0 ? (
+                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No directories yet</div>
+                      ) : (
+                        directoriesList.map((dir) => (
+                          <button
+                            key={dir.id}
+                            type="button"
+                            onClick={() => handleStandaloneApprove(dir.id)}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                              <FolderPlus className="h-3.5 w-3.5 text-blue-700 dark:text-blue-500" />
+                            </div>
+                            <span className="truncate flex-1">{dir.name}</span>
+                          </button>
+                        ))
+                      )}
+                      <div className="border-t border-gray-100 dark:border-gray-700">
+                        {showNewDirInput ? (
+                          <div className="flex items-center gap-1.5 p-2">
+                            <input
+                              type="text"
+                              value={newDirName}
+                              onChange={(e) => setNewDirName(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleInlineCreateDir()}
+                              placeholder="Directory name..."
+                              autoFocus
+                              className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                            />
+                            <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewDirInput(true)}
+                            className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Create New Directory
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* ── Invite to Event ── */}
@@ -1551,22 +1686,6 @@ export default function CreatorProfileModal({
         </div>
       </SheetContent>
     </Sheet>
-    <AddToDestinationModal
-      open={destModalOpen}
-      defaultTab={destModalTab}
-      creators={listCreator ? [{
-        handle: listCreator.username ?? listCreator.id,
-        name: listCreator.name,
-        avatar_url: listCreator.avatar || null,
-        follower_count: listCreator.followers ?? null,
-        engagement_rate: listCreator.engagementRate ?? null,
-        platform: listCreator.platforms?.[0] ?? "instagram",
-        branch: null,
-        platforms: listCreator.platforms ?? [],
-        bio: listCreator.bio ?? "",
-      }] : []}
-      onClose={() => setDestModalOpen(false)}
-    />
     </>
   );
 }

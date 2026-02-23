@@ -81,7 +81,6 @@ import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard } from "@/lib/influencers-club";
 import { PlatformIcons } from "@/components/PlatformIcons";
-import AddToDestinationModal, { type DestinationCreator } from "@/components/AddToDestinationModal";
 
 interface PreviewMember {
   directory_id: string;
@@ -277,8 +276,6 @@ const BrandDirectory = () => {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [destModalOpen, setDestModalOpen] = useState(false);
-  const [destModalTab, setDestModalTab] = useState<"directory" | "list">("directory");
 
   // Inline title/description editing
   const [editingTitle, setEditingTitle] = useState(false);
@@ -1269,7 +1266,7 @@ const BrandDirectory = () => {
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
                     <div className="flex items-center gap-4 text-xs mb-3">
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
-                      <div><span className="font-bold text-[#000741] dark:text-white">{typeof m.engagement_rate === "number" ? `${m.engagement_rate.toFixed(1)}%` : "—"}</span><span className="text-muted-foreground ml-1">eng.</span></div>
+                      <div><span className="font-bold text-[#000741] dark:text-white">{m.avg_likes ?? "—"}</span><span className="text-muted-foreground ml-1">avg likes</span></div>
                     </div>
                     {platforms.length > 0 && <div className="mb-4"><PlatformIcons platforms={platforms} username={m.creator_handle} max={5} /></div>}
                     <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center flex-wrap" onClick={(e) => e.stopPropagation()}>
@@ -1372,24 +1369,40 @@ const BrandDirectory = () => {
               {bulkDeleting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
               Delete Selected
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-lg"
-              onClick={() => { setDestModalTab("directory"); setDestModalOpen(true); }}
-            >
-              <FolderPlus className="h-4 w-4 mr-1.5" />
-              Add to Directory
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-lg"
-              onClick={() => { setDestModalTab("list"); setDestModalOpen(true); }}
-            >
-              <ListPlus className="h-4 w-4 mr-1.5" />
-              Add to List
-            </Button>
+            {directories.filter((d) => d.id !== selectedDir?.id).length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-lg">
+                    <FolderPlus className="h-4 w-4 mr-1.5" />
+                    Add to Directory
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {directories.filter((d) => d.id !== selectedDir?.id).map((d) => (
+                    <DropdownMenuItem key={d.id} onClick={() => handleBulkAddToDirectory(d.id)}>
+                      {d.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {lists.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-lg">
+                    <ListPlus className="h-4 w-4 mr-1.5" />
+                    Add to List
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {lists.map((l) => (
+                    <DropdownMenuItem key={l.id} onClick={() => handleBulkAddToList(l.id)}>
+                      {l.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button size="sm" variant="ghost" className="rounded-lg text-blue-800 dark:text-blue-400" onClick={() => setSelectedIds(new Set())}>
               Clear Selection
             </Button>
@@ -1635,26 +1648,6 @@ const BrandDirectory = () => {
           creator={drawerCreator}
           hideDirectoryActions
           onRemoveFromDirectory={handleRemoveFromDirectory}
-        />
-
-        <AddToDestinationModal
-          open={destModalOpen}
-          defaultTab={destModalTab}
-          creators={Array.from(selectedIds).map((id) => {
-            const m = members.find((mem) => mem.id === id);
-            return m ? {
-              handle: m.creator_handle ?? "",
-              name: m.creator_name ?? "",
-              avatar_url: m.avatar_url,
-              follower_count: m.follower_count,
-              engagement_rate: m.engagement_rate,
-              platform: m.platform ?? "instagram",
-              branch: m.branch,
-              platforms: m.platforms ?? [],
-              bio: m.bio ?? "",
-            } : null;
-          }).filter(Boolean) as DestinationCreator[]}
-          onClose={() => { setDestModalOpen(false); setSelectedIds(new Set()); }}
         />
       </div>
     </div>
