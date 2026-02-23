@@ -14,8 +14,6 @@ import {
   Twitter,
   ArrowLeft,
   Users,
-  Eye,
-  LayoutGrid,
   UserPlus,
   UserCheck,
   Loader2,
@@ -638,13 +636,8 @@ export default function CreatorPublicProfile() {
   if (creator.follower_count && creator.follower_count > 0) {
     stats.push({ label: "Followers", value: formatFollowerCount(creator.follower_count), icon: <Users className="h-4 w-4 text-[#1e3a5f]" /> });
   }
-  if (creator.avg_views && typeof creator.avg_views === "string") {
-    stats.push({ label: "Avg Views", value: creator.avg_views, icon: <Eye className="h-4 w-4 text-blue-500" /> });
-  } else if (creator.avg_views) {
-    stats.push({ label: "Avg Views", value: String(creator.avg_views), icon: <Eye className="h-4 w-4 text-blue-500" /> });
-  }
-  if (creator.media_count && creator.media_count > 0) {
-    stats.push({ label: "Posts", value: formatFollowerCount(creator.media_count), icon: <LayoutGrid className="h-4 w-4 text-gray-500" /> });
+  if (creator.avg_likes) {
+    stats.push({ label: "Avg Likes", value: String(creator.avg_likes), icon: <Heart className="h-4 w-4 text-red-500" /> });
   }
 
   // Upcoming vs past events
