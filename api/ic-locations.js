@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     const apiKey = process.env.INFLUENCERS_CLUB_API_KEY || process.env.VITE_INFLUENCERS_CLUB_API_KEY;
     if (!apiKey) return res.status(500).json({ error: "API key not configured" });
 
-    const url = `https://api.influencers.club/public/v1/locations?query=${encodeURIComponent(query)}&platform=${platform}`;
+    const url = `https://api-dashboard.influencers.club/public/v1/locations?query=${encodeURIComponent(query)}&platform=${platform}`;
 
     console.log("[ic-locations] fetching:", url);
 
