@@ -390,12 +390,21 @@ export interface YouTubeResult {
   publishedAt: string;
 }
 
-export async function searchYouTube(personName: string, branch?: string): Promise<YouTubeResult[]> {
+export async function searchYouTube(personName: string, branch?: string, socialHandle?: string): Promise<YouTubeResult[]> {
+  // Build queries with increasing specificity
+  const handleTerm = socialHandle ? ` "${socialHandle}"` : "";
+  const branchTerm = branch && branch !== "Unknown" ? branch : "military";
   const queries = [
-    `"${personName}"`,
-    `"${personName}" ${branch ?? "military"}`.trim(),
+    // Most specific: name + handle
+    socialHandle ? `"${personName}" "${socialHandle}"` : null,
+    // Name + branch/military context
+    `"${personName}" ${branchTerm}`,
+    // Name + veteran
     `"${personName}" veteran`,
-  ];
+    // Handle alone (if available) — catches content posted by/about their handle
+    socialHandle ? `"${socialHandle}" ${branchTerm}` : null,
+  ].filter((q): q is string => q !== null);
+
   const allVideos: YouTubeResult[] = [];
   const seenIds = new Set<string>();
 
@@ -427,7 +436,21 @@ export async function searchYouTube(personName: string, branch?: string): Promis
       // continue with next query
     }
   }
-  return allVideos;
+
+  // Post-fetch relevance filter: keep only results mentioning the person's name, handle, or military context
+  const nameParts = personName.toLowerCase().split(/\s+/).filter((p) => p.length > 2);
+  const handleLower = (socialHandle || "").toLowerCase().replace(/^@/, "");
+  const filtered = allVideos.filter((v) => {
+    const haystack = `${v.title} ${v.channelTitle} ${v.description}`.toLowerCase();
+    // Must match at least one: handle, last name, or first+last name combo
+    const matchesHandle = handleLower && haystack.includes(handleLower);
+    const matchesLastName = nameParts.length > 0 && haystack.includes(nameParts[nameParts.length - 1]);
+    const matchesFullName = nameParts.length >= 2 && nameParts.every((part) => haystack.includes(part));
+    return matchesHandle || matchesFullName || matchesLastName;
+  });
+
+  console.log(`[searchYouTube] ${allVideos.length} raw → ${filtered.length} after relevance filter (name="${personName}", handle="${socialHandle || ""}")`);
+  return filtered.slice(0, 20);
 }
 
 // --- Pipeline ---
@@ -439,6 +462,8 @@ export interface VerificationInput {
   linkedinUrl?: string;
   websiteUrl?: string;
   notes?: string;
+  /** Social handle (e.g. "joellerblades") — used to tighten YouTube/media search queries */
+  socialHandle?: string;
 }
 
 export interface PipelinePhase {
@@ -561,7 +586,7 @@ export async function runVerificationPipeline(
 
   // YouTube media search — starts in parallel, awaited before Media phase
   let youtubeResults: YouTubeResult[] = [];
-  const youtubePromise = searchYouTube(input.fullName, input.claimedBranch).then(
+  const youtubePromise = searchYouTube(input.fullName, input.claimedBranch, input.socialHandle).then(
     (results) => { youtubeResults = results; },
     (err) => { console.warn("[Verify] YouTube search failed:", err); }
   );
@@ -582,11 +607,25 @@ export async function runVerificationPipeline(
         snippet: yt.description,
       });
     }
+    // Relevance filter: only keep SerpAPI media results that mention the person's name, handle, or platforms
+    const mediaNameParts = input.fullName.toLowerCase().split(/\s+/).filter((p) => p.length > 2);
+    const mediaHandleLower = (input.socialHandle || "").toLowerCase().replace(/^@/, "");
+    const isMediaRelevant = (title: string, snippet: string, url: string): boolean => {
+      const haystack = `${title} ${snippet} ${url}`.toLowerCase();
+      if (mediaHandleLower && haystack.includes(mediaHandleLower)) return true;
+      if (mediaNameParts.length >= 2 && mediaNameParts.every((part) => haystack.includes(part))) return true;
+      // Last name match + military context
+      const lastName = mediaNameParts[mediaNameParts.length - 1];
+      if (lastName && haystack.includes(lastName) && /military|veteran|army|navy|marine|air force|coast guard|national guard/i.test(haystack)) return true;
+      return false;
+    };
     for (const es of evidenceSources) {
       const url = es.url ?? "";
       const text = `${es.title ?? ""} ${es.snippet ?? ""}`;
       if (MEDIA_URL_PATTERN.test(url) || MEDIA_TEXT_PATTERN.test(text)) {
         if (mediaAppearances.some((m) => url.includes(m.url) || m.url.includes(url))) continue;
+        // Skip results that don't mention the actual person
+        if (!isMediaRelevant(es.title ?? "", es.snippet ?? "", url)) continue;
         let type = "article";
         if (/youtube|youtu\.be|vimeo|rumble/i.test(url)) type = "video";
         else if (/podcast|spotify|apple.*podcast|anchor|iheart|stitcher|soundcloud/i.test(url)) type = "podcast";
@@ -594,6 +633,8 @@ export async function runVerificationPipeline(
         mediaAppearances.push({ type, title: es.title ?? "", url, snippet: es.snippet });
       }
     }
+    // Cap at 20 results
+    if (mediaAppearances.length > 20) mediaAppearances.length = 20;
     mediaComplete = true;
   } catch (err) {
     console.warn("[Verify] Phase 5 (Media) failed:", err);
