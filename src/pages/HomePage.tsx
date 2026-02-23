@@ -242,6 +242,14 @@ function HeroAvatar({ sources, name, handle }: { sources: (string | null | undef
   );
 }
 
+function getTagColor(tag: string): string {
+  const t = tag.toLowerCase();
+  if (t.includes("milspouse") || t.includes("spouse")) return "bg-pink-100 text-pink-700";
+  if (t.includes("veteran") || t.includes("military")) return "bg-green-100 text-green-700";
+  if (t.includes("fitness")) return "bg-orange-100 text-orange-700";
+  return "bg-blue-100 text-blue-700";
+}
+
 function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
@@ -267,13 +275,24 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   return (
     <Link
       to={`/creators/${c.profile_slug || c.handle}`}
-      className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center overflow-hidden"
+      className="group relative bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col items-center text-center overflow-hidden"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? "translateY(0)" : "translateY(24px)",
         transition: `opacity 0.5s ease-out ${index * 70}ms, transform 0.5s ease-out ${index * 70}ms, box-shadow 0.3s ease`,
       }}
     >
+      {/* Tag pills */}
+      {c.tags && c.tags.length > 0 && (
+        <div className="absolute top-3 right-3 z-10 flex flex-col gap-1 items-end">
+          {c.tags.slice(0, 2).map((tag, i) => (
+            <span key={i} className={`rounded-full text-xs font-semibold px-2 py-0.5 ${getTagColor(tag)}`}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Banner — animated branch gradient mesh */}
       <div className="h-20 w-full relative overflow-hidden">
         <div

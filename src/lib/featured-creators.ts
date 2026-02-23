@@ -38,6 +38,7 @@ export interface ShowcaseCreator extends FeaturedCreator {
   post_count?: number | null;
   media_count?: number | null;
   banner_image_url?: string | null;
+  tags?: string[] | null;
 }
 
 /** Permanent Supabase Storage URLs for hero creators — never expire */
@@ -124,7 +125,7 @@ export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]
   try {
     const { data, error } = await supabase
       .from("directory_members")
-      .select("id, creator_handle, creator_name, platform, avatar_url, ic_avatar_url, follower_count, engagement_rate, post_count, avg_comments, avg_views, avg_likes, category, sort_order, branch, status, bio, platforms, profile_slug, platform_urls, enrichment_data, featured_homepage, approved")
+      .select("id, creator_handle, creator_name, platform, avatar_url, ic_avatar_url, follower_count, engagement_rate, post_count, avg_comments, avg_views, avg_likes, category, sort_order, branch, status, bio, platforms, profile_slug, platform_urls, enrichment_data, featured_homepage, approved, tags")
       .eq("featured_homepage", true)
       .order("sort_order", { ascending: true })
       .limit(3);
@@ -593,6 +594,7 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     post_count: r.post_count != null ? Number(r.post_count) : null,
     media_count: (r.media_count as number) ?? null,
     banner_image_url: (r.banner_image_url as string) ?? null,
+    tags: Array.isArray(r.tags) ? r.tags as string[] : null,
   };
 }
 
