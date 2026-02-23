@@ -35,7 +35,6 @@ import {
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLists } from "@/contexts/ListContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -45,8 +44,6 @@ import {
   extractAvatarFromEnrichment,
   extractBannerImage,
   fetchBannerFromPosts,
-  approveForDirectory,
-  detectBranch,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
@@ -248,7 +245,6 @@ function ProfileSkeleton() {
 export default function CreatorPublicProfile() {
   const { handle } = useParams<{ handle: string }>();
   const { user } = useAuth();
-  const { lists, addCreatorToList, createList } = useLists();
   const navigate = useNavigate();
 
   // Core state
@@ -273,74 +269,6 @@ export default function CreatorPublicProfile() {
   // Banner image
   const [bannerFailed, setBannerFailed] = useState(false);
   const [resolvedBanner, setResolvedBanner] = useState<string | null>(null);
-
-  // Action bar state
-  const [listPickerOpen, setListPickerOpen] = useState(false);
-  const [addingToDirectory, setAddingToDirectory] = useState(false);
-
-  /* ---- Action bar handlers ---- */
-  const creatorAsListItem = useCallback((): ListCreator | null => {
-    if (!creator) return null;
-    return {
-      id: creator.id ?? creator.handle,
-      name: creator.display_name ?? creator.handle,
-      username: creator.handle,
-      avatar: creatorAvatarUrl(creator) ?? "",
-      followers: creator.follower_count ?? 0,
-      engagementRate: creator.engagement_rate ? Number((creator.engagement_rate * 100).toFixed(2)) : 0,
-      platforms: creator.platforms ?? [creator.platform ?? "instagram"],
-      bio: creator.bio ?? "",
-    };
-  }, [creator]);
-
-  const handleAddToList = (listId: string) => {
-    const item = creatorAsListItem();
-    if (!item) return;
-    addCreatorToList(listId, item);
-    const listName = lists.find((l) => l.id === listId)?.name ?? "list";
-    toast.success(`Added to ${listName}`);
-    setListPickerOpen(false);
-  };
-
-  const handleCreateAndAdd = () => {
-    const item = creatorAsListItem();
-    if (!item) return;
-    const name = creator?.display_name ? `${creator.display_name} list` : "New List";
-    const id = createList(name);
-    addCreatorToList(id, item);
-    toast.success(`Created "${name}" and added creator`);
-    setListPickerOpen(false);
-  };
-
-  const handleAddToDirectory = async () => {
-    if (!creator) return;
-    setAddingToDirectory(true);
-    const branch = detectBranch(creator.bio ?? "");
-    const { error } = await approveForDirectory({
-      handle: creator.handle,
-      display_name: creator.display_name ?? creator.handle,
-      platform: creator.platform ?? "instagram",
-      avatar_url: creatorAvatarUrl(creator) ?? null,
-      follower_count: creator.follower_count ?? null,
-      engagement_rate: creator.engagement_rate ?? null,
-      bio: creator.bio ?? null,
-      branch,
-      status: "veteran",
-      platforms: creator.platforms ?? [creator.platform ?? "instagram"],
-      category: creator.category ?? null,
-      ic_avatar_url: creatorAvatarUrl(creator) ?? null,
-    });
-    setAddingToDirectory(false);
-    if (error) {
-      if (error.toLowerCase().includes("duplicate") || error.toLowerCase().includes("unique")) {
-        toast.info("Already in Directory");
-      } else {
-        toast.error(`Failed: ${error}`);
-      }
-    } else {
-      toast.success("Added to Directory");
-    }
-  };
 
   /* ---- Fetch creator ---- */
   useEffect(() => {
