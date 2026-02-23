@@ -916,11 +916,11 @@ export default function HomePage() {
             </div>
 
             <div className="text-center mt-8">
-              <Link to="/brand/discover">
+              <a href="https://www.milcrunch.com/creators">
                 <button className="border border-[#1e3a5f] text-[#1e3a5f] hover:bg-blue-50 rounded-full px-6 py-2 font-medium transition-colors">
                   View More Creators &rarr;
                 </button>
-              </Link>
+              </a>
             </div>
           </div>
         </section>
