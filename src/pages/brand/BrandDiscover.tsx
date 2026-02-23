@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn, goodAvatarCache } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { searchCreators, searchByUsername, searchLookalike, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
+import { searchCreators, searchByUsername, searchLookalike, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, searchLocations, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
 import { upsertCreator } from "@/lib/creators-db";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import CreateListModal from "@/components/CreateListModal";
@@ -614,6 +614,12 @@ const BrandDiscover = () => {
   const [followersRange, setFollowersRange] = useState<string>("any");
   const [engagementMin, setEngagementMin] = useState<string>("any");
   const [locationFilter, setLocationFilter] = useState("");
+  const [locationInput, setLocationInput] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const locationAbortRef = useRef<AbortController | null>(null);
+  const locationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locationWrapperRef = useRef<HTMLDivElement>(null);
   const [niche, setNiche] = useState<string>("All niches");
   const [gender, setGender] = useState<string>("any");
   const [language, setLanguage] = useState<string>("any");
@@ -709,6 +715,53 @@ const BrandDiscover = () => {
     return false;
   };
 
+  // --- Location autocomplete ---
+  const handleLocationInputChange = useCallback((value: string) => {
+    setLocationInput(value);
+    // If user clears input, clear the selected location too
+    if (!value.trim()) {
+      setLocationFilter("");
+      setLocationSuggestions([]);
+      setLocationDropdownOpen(false);
+      return;
+    }
+    // Debounce API call
+    if (locationTimerRef.current) clearTimeout(locationTimerRef.current);
+    locationAbortRef.current?.abort();
+    locationTimerRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      locationAbortRef.current = controller;
+      try {
+        const results = await searchLocations(value, "instagram", controller.signal);
+        if (!controller.signal.aborted) {
+          setLocationSuggestions(results);
+          setLocationDropdownOpen(results.length > 0);
+        }
+      } catch {
+        // aborted or network error — ignore
+      }
+    }, 300);
+  }, []);
+
+  const handleLocationSelect = useCallback((loc: string) => {
+    setLocationFilter(loc);
+    setLocationInput(loc);
+    setLocationDropdownOpen(false);
+    setLocationSuggestions([]);
+  }, []);
+
+  // Close location dropdown on outside click
+  useEffect(() => {
+    if (!locationDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (locationWrapperRef.current && !locationWrapperRef.current.contains(e.target as Node)) {
+        setLocationDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [locationDropdownOpen]);
+
   // --- Saved searches state ---
   const [savedSearches, setSavedSearches] = useState<SavedSearchRow[]>([]);
   const [saveSearchOpen, setSaveSearchOpen] = useState(false);
@@ -743,6 +796,7 @@ const BrandDiscover = () => {
       setFollowersRange(f.followersRange ?? "any");
       setEngagementMin(f.engagementMin ?? "any");
       setLocationFilter(f.locationFilter ?? "");
+      setLocationInput(f.locationFilter ?? "");
       setNiche(f.niche ?? "All niches");
       setGender(f.gender ?? "any");
       setLanguage(f.language ?? "any");
@@ -1186,7 +1240,7 @@ const BrandDiscover = () => {
     if (parsed.followersRange) setFollowersRange(parsed.followersRange);
     if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
     if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
-    if (parsed.location) setLocationFilter(parsed.location);
+    if (parsed.location) { setLocationFilter(parsed.location); setLocationInput(parsed.location); }
     // Default to "military" when all text was parsed into filters
     const effectiveQuery = parsed.remainingQuery.trim() || "military";
     setSearchQuery(effectiveQuery);
@@ -1264,6 +1318,7 @@ const BrandDiscover = () => {
     setFollowersRange("any");
     setEngagementMin("any");
     setLocationFilter("");
+    setLocationInput("");
     setNiche("All niches");
     setSortBy("confidence");
     setSelectedBranches(new Set());
@@ -2051,12 +2106,30 @@ const BrandDiscover = () => {
 
           {/* Filter bar — primary filters always visible */}
           <div className="flex flex-wrap items-end gap-3 mb-2">
-            <Input
-              placeholder="Location"
-              className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-            />
+            <div className="relative" ref={locationWrapperRef}>
+              <Input
+                placeholder="Location"
+                className="w-[200px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
+                value={locationInput}
+                onChange={(e) => handleLocationInputChange(e.target.value)}
+                onFocus={() => { if (locationSuggestions.length > 0) setLocationDropdownOpen(true); }}
+              />
+              {locationDropdownOpen && locationSuggestions.length > 0 && (
+                <div className="absolute z-50 top-full left-0 mt-1 w-[320px] max-h-[240px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] shadow-lg">
+                  {locationSuggestions.map((loc) => (
+                    <button
+                      key={loc}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition-colors"
+                      onClick={() => handleLocationSelect(loc)}
+                    >
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate">{loc}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Select value={followersRange} onValueChange={setFollowersRange}>
               <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
                 <SelectValue placeholder="Followers" />

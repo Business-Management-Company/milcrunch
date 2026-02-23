@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
 const RAW_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/raw/";
 const FULL_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
+const LOCATIONS_URL = "/api/influencers/public/v1/locations";
 
 /**
  * Unified creator card format for display (used by both API and mock data).
@@ -570,6 +571,43 @@ export async function fetchCredits(): Promise<CreditBalance | null> {
     console.error("[Credits] Fetch error:", err);
     return null;
   }
+}
+
+/**
+ * Search IC location autocomplete endpoint.
+ * Returns location strings like "Tampa, Florida, United States".
+ */
+export async function searchLocations(
+  query: string,
+  platform: string = "instagram",
+  signal?: AbortSignal
+): Promise<string[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const apiKey = getApiKey();
+  if (!apiKey) return [];
+
+  const params = new URLSearchParams({ query: q, platform });
+  const res = await fetch(`${LOCATIONS_URL}?${params}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal,
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  // API may return an array of strings or objects with a name/label field
+  if (Array.isArray(data)) {
+    return data.map((item) =>
+      typeof item === "string" ? item : (item.name ?? item.label ?? item.title ?? String(item))
+    );
+  }
+  // Some endpoints nest under a key like "locations" or "results"
+  const arr = data.locations ?? data.results ?? data.data ?? [];
+  if (Array.isArray(arr)) {
+    return arr.map((item: unknown) =>
+      typeof item === "string" ? item : ((item as Record<string, string>).name ?? (item as Record<string, string>).label ?? String(item))
+    );
+  }
+  return [];
 }
 
 /**
