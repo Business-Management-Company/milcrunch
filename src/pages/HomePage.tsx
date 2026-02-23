@@ -30,6 +30,7 @@ import {
   Eye,
   Mic,
   TrendingUp,
+  Heart,
 } from "lucide-react";
 import {
   AreaChart,
@@ -418,7 +419,8 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         return best.length > 0 ? (
           <div className="flex items-center gap-3 px-4 mb-2">
             {best.map((s) => (
-              <p key={s.label} className="text-xs text-gray-500 whitespace-nowrap">
+              <p key={s.label} className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
+                {s.label === "Avg Likes" && <Heart className="h-3 w-3 text-pink-500 fill-pink-500" />}
                 <span className="font-semibold text-[#1A1A2E]">{s.value}</span> {s.label.toLowerCase()}
               </p>
             ))}
@@ -874,7 +876,8 @@ export default function HomePage() {
                         {best.length > 0 && (
                           <div className="border-t border-gray-100 mt-2 pt-2 flex items-center gap-3">
                             {best.map((s) => (
-                              <p key={s.label} className="text-[13px] text-gray-500 whitespace-nowrap">
+                              <p key={s.label} className="text-[13px] text-gray-500 whitespace-nowrap flex items-center gap-1">
+                                {s.label === "Avg Likes" && <Heart className="h-3 w-3 text-pink-500 fill-pink-500" />}
                                 <span className="font-semibold text-gray-900">{s.value}</span> {s.label.toLowerCase()}
                               </p>
                             ))}
