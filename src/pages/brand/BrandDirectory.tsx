@@ -180,16 +180,32 @@ function getAllPlatforms(m: DirectoryMember): string[] {
       if (m.platform_urls[k]) set.add(k.toLowerCase());
     });
   }
-  // 3. enrichment_data → result.creator_has (boolean flags)
+  // 3. enrichment_data
   if (m.enrichment_data && typeof m.enrichment_data === "object") {
     const ed = m.enrichment_data as Record<string, unknown>;
+    const result = (ed.result as Record<string, unknown>) ?? ed;
+    // 3a. creator_has boolean flags
     const creatorHas =
-      ((ed.result as Record<string, unknown>)?.creator_has as Record<string, boolean>) ??
+      (result.creator_has as Record<string, boolean>) ??
       (ed.creator_has as Record<string, boolean>);
     if (creatorHas && typeof creatorHas === "object") {
       Object.entries(creatorHas).forEach(([k, v]) => {
         if (v) set.add(k.toLowerCase());
       });
+    }
+    // 3b. Direct platform objects (result.instagram, result.tiktok, etc.)
+    for (const pkey of KNOWN_PLATFORMS) {
+      if (result[pkey] && typeof result[pkey] === "object") set.add(pkey);
+    }
+    // 3c. accounts array: [{ platform: "tiktok", ... }]
+    const accounts = (result.accounts ?? ed.accounts) as { platform?: string }[] | undefined;
+    if (Array.isArray(accounts)) {
+      accounts.forEach((a) => { if (a.platform) set.add(a.platform.toLowerCase()); });
+    }
+    // 3d. platform_links: { instagram: "url", ... }
+    const plinks = (result.platform_links ?? ed.platform_links) as Record<string, string> | undefined;
+    if (plinks && typeof plinks === "object") {
+      Object.entries(plinks).forEach(([k, v]) => { if (v) set.add(k.toLowerCase()); });
     }
   }
   // Return in canonical order, known platforms first
