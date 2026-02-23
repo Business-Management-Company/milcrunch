@@ -78,50 +78,113 @@ function detectMilitaryKeywords(creator: CreatorCard): { branch: string | null; 
   return { branch, keywords: [...new Set(keywords)].slice(0, 5) };
 }
 
-function getRelevancePills(creator: CreatorCard, searchQuery: string): string[] {
-  const pills: string[] = [];
-  const query = (searchQuery || "").toLowerCase();
-  const bio = (creator.bio || "").toLowerCase();
-  const name = (creator.name || creator.username || "").toLowerCase();
+interface TagPill {
+  label: string;
+  color: string; // tailwind classes for bg + text
+}
 
-  // Military detection
-  if (
-    bio.includes("veteran") || bio.includes("army") || bio.includes("marine") ||
-    bio.includes("navy") || bio.includes("air force") || bio.includes("military") ||
-    name.includes("veteran") || name.includes("military")
-  ) {
-    pills.push("🎖️ Military");
+const TAG_COLOR_MAP: Record<string, string> = {
+  military: "bg-green-100 text-green-700",
+  veteran: "bg-green-100 text-green-700",
+  army: "bg-green-100 text-green-700",
+  navy: "bg-green-100 text-green-700",
+  marines: "bg-green-100 text-green-700",
+  marine: "bg-green-100 text-green-700",
+  "air force": "bg-green-100 text-green-700",
+  "coast guard": "bg-green-100 text-green-700",
+  spouse: "bg-pink-100 text-pink-700",
+  milspouse: "bg-pink-100 text-pink-700",
+  "mil spouse": "bg-pink-100 text-pink-700",
+  business: "bg-blue-100 text-blue-700",
+  entrepreneur: "bg-blue-100 text-blue-700",
+  founder: "bg-blue-100 text-blue-700",
+  ceo: "bg-blue-100 text-blue-700",
+  fitness: "bg-orange-100 text-orange-700",
+  health: "bg-orange-100 text-orange-700",
+  wellness: "bg-orange-100 text-orange-700",
+};
+
+function getTagColor(tag: string): string {
+  const lower = tag.toLowerCase();
+  for (const [key, color] of Object.entries(TAG_COLOR_MAP)) {
+    if (lower.includes(key)) return color;
   }
-  if (bio.includes("milspouse") || bio.includes("mil spouse") || bio.includes("military sp")) {
-    pills.push("💛 MilSpouse");
-  }
+  return "bg-slate-100 text-slate-600";
+}
 
-  // Follower tiers
-  const followers = creator.followers || 0;
-  if (followers >= 1_000_000) pills.push("🌟 Mega");
-  else if (followers >= 100_000) pills.push("⭐ Macro");
-  else if (followers >= 10_000) pills.push("📈 Mid-Tier");
-  else pills.push("🌱 Micro");
+function getRelevancePills(creator: CreatorCard): TagPill[] {
+  const seen = new Set<string>();
+  const military: TagPill[] = [];
+  const topic: TagPill[] = [];
 
-  // Content/business type from bio
-  if (bio.includes("podcast")) pills.push("🎙️ Podcaster");
-  if (bio.includes("author") || bio.includes("book")) pills.push("📚 Author");
-  if (bio.includes("speaker")) pills.push("🎤 Speaker");
-  if (bio.includes("entrepreneur") || bio.includes("founder") || bio.includes("ceo")) pills.push("💼 Entrepreneur");
-  if (bio.includes("fitness") || bio.includes("health") || bio.includes("wellness")) pills.push("💪 Fitness");
-  if (bio.includes("real estate") || bio.includes("realtor")) pills.push("🏠 Real Estate");
-  if (bio.includes("coach")) pills.push("🏆 Coach");
-  if (bio.includes("content creator") || bio.includes("ugc")) pills.push("📱 Content Creator");
+  const addPill = (label: string, isMilitary: boolean) => {
+    const key = label.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    const pill = { label, color: getTagColor(label) };
+    if (isMilitary) military.push(pill);
+    else topic.push(pill);
+  };
 
-  // Query-word matches
-  const queryWords = query.split(" ").filter((w) => w.length > 3);
-  queryWords.forEach((word) => {
-    if ((bio + name).includes(word) && !pills.some((p) => p.toLowerCase().includes(word))) {
-      pills.push(`🔍 ${word.charAt(0).toUpperCase() + word.slice(1)}`);
+  // 1. Pull from hashtags (primary source)
+  if (creator.hashtags?.length) {
+    for (const h of creator.hashtags) {
+      const clean = h.replace(/^#/, "").trim();
+      if (!clean) continue;
+      const lower = clean.toLowerCase();
+      const isMil = /\b(military|veteran|army|navy|marine|air\s?force|coast\s?guard|milspouse|mil\s?spouse|spouse)\b/i.test(lower);
+      addPill(clean.charAt(0).toUpperCase() + clean.slice(1), isMil);
     }
-  });
+  }
 
-  return pills.slice(0, 4);
+  // 2. Pull from specialties
+  if (creator.specialties?.length) {
+    for (const s of creator.specialties) {
+      const lower = s.toLowerCase();
+      const isMil = /\b(military|veteran|army|navy|marine|air\s?force|coast\s?guard|milspouse|mil\s?spouse|spouse)\b/i.test(lower);
+      addPill(s, isMil);
+    }
+  }
+
+  // 3. Pull from category / nicheClass
+  if (creator.category) addPill(creator.category, false);
+  if (creator.nicheClass && creator.nicheClass !== creator.category) addPill(creator.nicheClass, false);
+
+  // 4. Parse from bio if we still need more
+  if (military.length + topic.length < 3) {
+    const bio = (creator.bio || "").toLowerCase();
+    const bioChecks: [RegExp, string, boolean][] = [
+      [/\b(veteran)\b/, "Veteran", true],
+      [/\b(military)\b/, "Military", true],
+      [/\b(army)\b/, "Army", true],
+      [/\b(navy)\b/, "Navy", true],
+      [/\b(marine)\b/, "Marines", true],
+      [/\b(air\s?force)\b/, "Air Force", true],
+      [/\b(milspouse|mil spouse)\b/, "MilSpouse", true],
+      [/\b(military\s?sp)\b/, "MilSpouse", true],
+      [/\b(fitness|health|wellness)\b/, "Fitness", false],
+      [/\b(entrepreneur|founder|ceo)\b/, "Business", false],
+      [/\b(podcast)\b/, "Podcaster", false],
+      [/\b(speaker)\b/, "Speaker", false],
+      [/\b(author|book)\b/, "Author", false],
+      [/\b(coach)\b/, "Coach", false],
+      [/\b(real estate|realtor)\b/, "Real Estate", false],
+      [/\b(content creator|ugc)\b/, "Creator", false],
+    ];
+    for (const [re, label, isMil] of bioChecks) {
+      if (re.test(bio)) addPill(label, isMil);
+    }
+  }
+
+  return [...military, ...topic].slice(0, 3);
+}
+
+function getTierBadge(followers: number): string | null {
+  if (followers >= 1_000_000) return "Mega";
+  if (followers >= 100_000) return "Macro";
+  if (followers >= 10_000) return "Mid-Tier";
+  if (followers >= 1_000) return "Micro";
+  return null;
 }
 
 export default function FloatingAdminChat() {
@@ -809,17 +872,23 @@ For all other questions, respond naturally and concisely.`;
                                     </p>
                                   )}
                                   {(() => {
-                                    const pills = getRelevancePills(c, lastQueryRef.current);
-                                    return pills.length > 0 ? (
-                                      <div className="flex flex-wrap gap-1 mt-1">
+                                    const pills = getRelevancePills(c);
+                                    const tier = getTierBadge(c.followers || 0);
+                                    return (pills.length > 0 || tier) ? (
+                                      <div className="flex flex-wrap items-center gap-1 mt-1">
                                         {pills.map((pill, pi) => (
                                           <span
                                             key={pi}
-                                            className="text-xs px-2 py-0.5 bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-800"
+                                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${pill.color}`}
                                           >
-                                            {pill}
+                                            {pill.label}
                                           </span>
                                         ))}
+                                        {tier && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                                            {tier}
+                                          </span>
+                                        )}
                                       </div>
                                     ) : null;
                                   })()}
