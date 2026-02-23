@@ -496,6 +496,7 @@ export default function Verification() {
             youtube_results: result.youtubeResults ?? [],
             youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
             career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
+            social_profiles: result.socialVerification?.profiles ?? [],
           },
           last_verified_at: new Date().toISOString(),
         })
@@ -577,6 +578,7 @@ export default function Verification() {
               youtube_results: result.youtubeResults ?? [],
               youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
               career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
+              social_profiles: result.socialVerification?.profiles ?? [],
             },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -726,6 +728,7 @@ export default function Verification() {
         youtube_results: result.youtubeResults ?? [],
         youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
         career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
+        social_profiles: result.socialVerification?.profiles ?? [],
       };
       const { error: reverifyError } = await supabase.from("verifications").update({
         verification_score: result.verificationScore,
@@ -2155,38 +2158,93 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
   );
 }
 
-const SOCIAL_PLATFORM_MAP: Record<string, { icon: string; label: string; base: string }> = {
-  instagram: { icon: "📸", label: "Instagram", base: "https://instagram.com/" },
-  youtube: { icon: "▶️", label: "YouTube", base: "https://youtube.com/@" },
-  twitter: { icon: "𝕏", label: "X", base: "https://twitter.com/" },
-  tiktok: { icon: "🎵", label: "TikTok", base: "https://tiktok.com/@" },
-  facebook: { icon: "f", label: "Facebook", base: "https://facebook.com/" },
-  linkedin: { icon: "in", label: "LinkedIn", base: "https://linkedin.com/in/" },
+const SOCIAL_PLATFORM_MAP: Record<string, { icon: string; label: string; base: string; pillColor: string }> = {
+  instagram: { icon: "📸", label: "Instagram", base: "https://instagram.com/", pillColor: "border-pink-200 text-pink-700 hover:bg-pink-50 dark:border-pink-800 dark:text-pink-400 dark:hover:bg-pink-900/20" },
+  youtube: { icon: "▶️", label: "YouTube", base: "https://youtube.com/@", pillColor: "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20" },
+  twitter: { icon: "𝕏", label: "X", base: "https://twitter.com/", pillColor: "border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" },
+  tiktok: { icon: "🎵", label: "TikTok", base: "https://tiktok.com/@", pillColor: "border-gray-300 text-gray-900 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800" },
+  facebook: { icon: "f", label: "Facebook", base: "https://facebook.com/", pillColor: "border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20" },
+  linkedin: { icon: "in", label: "LinkedIn", base: "https://linkedin.com/in/", pillColor: "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20" },
 };
+
+const SOCIAL_URL_PATTERNS: { network: string; pattern: RegExp; extractHandle: (url: string) => string }[] = [
+  { network: "instagram", pattern: /instagram\.com\/([a-zA-Z0-9_.]+)/i, extractHandle: (u) => u.match(/instagram\.com\/([a-zA-Z0-9_.]+)/i)?.[1] ?? "" },
+  { network: "tiktok", pattern: /tiktok\.com\/@?([a-zA-Z0-9_.]+)/i, extractHandle: (u) => u.match(/tiktok\.com\/@?([a-zA-Z0-9_.]+)/i)?.[1] ?? "" },
+  { network: "youtube", pattern: /youtube\.com\/(?:@|channel\/|c\/)([a-zA-Z0-9_-]+)/i, extractHandle: (u) => u.match(/youtube\.com\/(?:@|channel\/|c\/)([a-zA-Z0-9_-]+)/i)?.[1] ?? "" },
+  { network: "twitter", pattern: /(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i, extractHandle: (u) => u.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i)?.[1] ?? "" },
+  { network: "facebook", pattern: /facebook\.com\/([a-zA-Z0-9_.]+)/i, extractHandle: (u) => u.match(/facebook\.com\/([a-zA-Z0-9_.]+)/i)?.[1] ?? "" },
+  { network: "linkedin", pattern: /linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i, extractHandle: (u) => u.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i)?.[1] ?? "" },
+];
 
 function SocialVerificationSection({ record }: { record: VerificationRecord }) {
   const igHandle = (record as any).instagram_handle || record.source_username || null;
   const linkedinUrl = record.linkedin_url || null;
   const websiteUrl = record.website_url || null;
+  const manualChecks = record.manual_checks as Record<string, unknown> | null;
 
-  // Build platform pills from available data
+  // Build platform pills from ALL available data sources
+  const seen = new Set<string>();
   const socialPills: { platform: string; handle: string; url: string }[] = [];
-  if (igHandle) {
-    socialPills.push({ platform: "instagram", handle: igHandle, url: `https://instagram.com/${igHandle}` });
-  }
+
+  const addPill = (platform: string, handle: string, url: string) => {
+    if (seen.has(platform) || !handle) return;
+    seen.add(platform);
+    socialPills.push({ platform, handle, url });
+  };
+
+  // 1. Explicit fields
+  if (igHandle) addPill("instagram", igHandle, `https://instagram.com/${igHandle}`);
   if (linkedinUrl) {
     const liHandle = linkedinUrl.replace(/.*linkedin\.com\/in\//i, "").replace(/\/$/, "") || "profile";
-    socialPills.push({ platform: "linkedin", handle: liHandle, url: linkedinUrl });
+    addPill("linkedin", liHandle, linkedinUrl);
   }
 
-  // Try to pull additional platforms from manual_checks or enrichment data stored on the record
-  const manualChecks = record.manual_checks as Record<string, unknown> | null;
+  // 2. Saved social_profiles from verification pipeline (most comprehensive)
+  const savedProfiles = manualChecks?.social_profiles as { network: string; url: string }[] | undefined;
+  if (Array.isArray(savedProfiles)) {
+    for (const sp of savedProfiles) {
+      const network = sp.network?.toLowerCase();
+      const info = SOCIAL_PLATFORM_MAP[network];
+      if (!info || seen.has(network)) continue;
+      // Extract handle from URL
+      const matcher = SOCIAL_URL_PATTERNS.find((p) => p.network === network);
+      const handle = matcher ? matcher.extractHandle(sp.url) : "";
+      addPill(network, handle || record.person_name.toLowerCase().replace(/\s+/g, ""), sp.url || info.base + handle);
+    }
+  }
+
+  // 3. PDL profiles
+  const pdlData = record.pdl_data as { profiles?: { network: string; url: string }[] } | null;
+  if (pdlData?.profiles) {
+    for (const p of pdlData.profiles) {
+      const network = p.network?.toLowerCase();
+      const info = SOCIAL_PLATFORM_MAP[network];
+      if (!info || seen.has(network)) continue;
+      const matcher = SOCIAL_URL_PATTERNS.find((m) => m.network === network);
+      const handle = matcher ? matcher.extractHandle(p.url) : "";
+      addPill(network, handle || record.person_name.toLowerCase().replace(/\s+/g, ""), p.url);
+    }
+  }
+
+  // 4. Evidence source URLs
+  const evidenceSources = (record.evidence_sources ?? []) as { url?: string }[];
+  for (const es of evidenceSources) {
+    const url = es.url ?? "";
+    for (const { network, pattern, extractHandle } of SOCIAL_URL_PATTERNS) {
+      if (!seen.has(network) && pattern.test(url)) {
+        const handle = extractHandle(url);
+        if (handle) addPill(network, handle, url);
+      }
+    }
+  }
+
+  // 5. creator_has flags from manual_checks (fallback)
   const creatorHas = manualChecks?.creator_has as Record<string, boolean> | undefined;
   if (creatorHas) {
     for (const [k, v] of Object.entries(creatorHas)) {
-      if (v && SOCIAL_PLATFORM_MAP[k] && !socialPills.some((s) => s.platform === k)) {
+      if (v && SOCIAL_PLATFORM_MAP[k] && !seen.has(k)) {
         const handle = igHandle || record.person_name.toLowerCase().replace(/\s+/g, "");
-        socialPills.push({ platform: k, handle, url: SOCIAL_PLATFORM_MAP[k].base + handle });
+        addPill(k, handle, SOCIAL_PLATFORM_MAP[k].base + handle);
       }
     }
   }
@@ -2217,7 +2275,7 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-sm hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm transition-colors ${info.pillColor}`}
                     >
                       <span>{info.icon}</span>
                       <span className="font-medium">{info.label}</span>
