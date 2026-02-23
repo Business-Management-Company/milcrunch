@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,8 @@ import type { ListCreator } from "@/contexts/ListContext";
 import { approveForDirectory, detectBranch } from "@/lib/featured-creators";
 import { PlatformIcons } from "@/components/PlatformIcons";
 import { toast } from "sonner";
-import AddToDestinationModal, { type DestinationCreator } from "@/components/AddToDestinationModal";
+import { type DestinationCreator } from "@/components/AddToDestinationModal";
+const AddToDestinationModal = React.lazy(() => import("@/components/AddToDestinationModal"));
 
 function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -835,22 +836,24 @@ export const BrandListDetail = () => {
         onRemoveFromList={handleBulkRemove}
       />
 
-      <AddToDestinationModal
-        open={destModalOpen}
-        defaultTab="directory"
-        creators={creators.map((c): DestinationCreator => ({
-          handle: c.username ?? c.id,
-          name: c.name,
-          avatar_url: c.avatar || null,
-          follower_count: c.followers ?? null,
-          engagement_rate: c.engagementRate ?? null,
-          platform: c.platforms?.[0] ?? "instagram",
-          branch: null,
-          platforms: c.platforms ?? [],
-          bio: c.bio ?? "",
-        }))}
-        onClose={() => setDestModalOpen(false)}
-      />
+      <React.Suspense fallback={null}>
+        <AddToDestinationModal
+          open={destModalOpen}
+          defaultTab="directory"
+          creators={creators.map((c): DestinationCreator => ({
+            handle: c.username ?? c.id,
+            name: c.name,
+            avatar_url: c.avatar || null,
+            follower_count: c.followers ?? null,
+            engagement_rate: c.engagementRate ?? null,
+            platform: c.platforms?.[0] ?? "instagram",
+            branch: null,
+            platforms: c.platforms ?? [],
+            bio: c.bio ?? "",
+          }))}
+          onClose={() => setDestModalOpen(false)}
+        />
+      </React.Suspense>
     </>
   );
 };
