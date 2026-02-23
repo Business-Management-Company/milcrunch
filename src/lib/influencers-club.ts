@@ -417,6 +417,11 @@ export async function searchCreators(
 
   // Apply military relevance scoring
   const scored = await scoreMilitaryRelevance(rawCreators);
+  const withScore = scored.filter((c) => c.militaryScore > 0);
+  console.log(`[Discovery] Scoring complete: ${scored.length} creators, ${withScore.length} with militaryScore > 0`);
+  if (withScore.length > 0) {
+    console.log(`[Discovery] Top scored:`, withScore.slice(0, 3).map((c) => `${c.username}=${c.militaryScore}`));
+  }
 
   // Sort by military score when query contains military keywords
   const shouldSortByMilitary = isMilitaryQuery(trimmed);

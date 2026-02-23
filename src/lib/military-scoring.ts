@@ -330,8 +330,11 @@ export async function scoreMilitaryRelevance<
 >(creators: T[]): Promise<(T & { militaryScore: number; militaryEvidence: string[] })[]> {
   const terms = await loadTerms();
 
-  return creators.map((c) => {
+  return creators.map((c, i) => {
     const result = scoreCreator(c, terms);
+    if (i < 3) {
+      console.log(`[MilitaryScoring] Creator #${i} ${c.username}: bio="${(c.bio ?? "").substring(0, 80)}", hashtags=${(c.hashtags ?? []).slice(0, 5).join(",")}, score=${result.score}, evidence=`, result.evidence);
+    }
     return {
       ...c,
       militaryScore: result.score,
