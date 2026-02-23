@@ -311,14 +311,34 @@ export default function CreatorPublicProfile() {
   /* ---- Fetch verification record ---- */
   useEffect(() => {
     if (!creator?.handle) return;
+    const handle = creator.handle.replace(/^@/, "");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from("verifications")
       .select("confidence_score, status, public_token")
-      .eq("creator_handle", creator.handle)
+      .or(`creator_handle.eq.${handle},creator_handle.eq.@${handle}`)
+      .limit(1)
       .single()
       .then(({ data }: { data: { confidence_score: number; status: string; public_token: string } | null }) => {
-        if (data) setVerification(data);
+        if (data) {
+          setVerification(data);
+          return;
+        }
+        // Fallback: try display_name or other stored handle variants
+        const displayHandle = (creator as Record<string, unknown>).creator_handle as string | undefined;
+        if (displayHandle && displayHandle !== handle && displayHandle !== `@${handle}`) {
+          const clean = displayHandle.replace(/^@/, "");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any)
+            .from("verifications")
+            .select("confidence_score, status, public_token")
+            .or(`creator_handle.eq.${clean},creator_handle.eq.@${clean}`)
+            .limit(1)
+            .single()
+            .then(({ data: d2 }: { data: { confidence_score: number; status: string; public_token: string } | null }) => {
+              if (d2) setVerification(d2);
+            });
+        }
       });
   }, [creator?.handle]);
 
@@ -771,7 +791,7 @@ export default function CreatorPublicProfile() {
                         <TooltipContent>MilCrunch Verified</TooltipContent>
                       </Tooltip>
                     )}
-                    {verification && verification.confidence_score != null ? (
+                    {verification && verification.confidence_score != null && (
                       <>
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
                           <ShieldCheck className="h-3.5 w-3.5" />
@@ -793,14 +813,7 @@ export default function CreatorPublicProfile() {
                           <span className="text-xs font-semibold text-green-700">{verification.confidence_score}%</span>
                         </span>
                       </>
-                    ) : user ? (
-                      <span
-                        onClick={() => navigate(`/brand/verification?name=${encodeURIComponent(creator?.display_name ?? creator?.handle ?? "")}`)}
-                        className="text-sm text-gray-400 underline cursor-pointer hover:text-gray-500 transition-colors"
-                      >
-                        Not yet verified
-                      </span>
-                    ) : null}
+                    )}
                     {hasUpcomingEvents && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">
                         <Calendar className="h-3 w-3" />
@@ -850,31 +863,6 @@ export default function CreatorPublicProfile() {
                   )}
                 </div>
               </div>
-
-              {/* ====== BIO ====== */}
-              {bio && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                    {bioDisplay}
-                  </p>
-                  {bioNeedsToggle && (
-                    <button
-                      onClick={() => setBioExpanded(!bioExpanded)}
-                      className="text-sm font-medium text-[#1e3a5f] hover:text-[#2d5282] mt-1 inline-flex items-center gap-0.5"
-                    >
-                      {bioExpanded ? (
-                        <>
-                          See less <ChevronUp className="h-3 w-3" />
-                        </>
-                      ) : (
-                        <>
-                          See more <ChevronDown className="h-3 w-3" />
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              )}
 
               {/* ====== STATS ROW + SPONSOR FIT ====== */}
               <div className="mt-5 flex items-center flex-wrap gap-3 md:gap-6">
