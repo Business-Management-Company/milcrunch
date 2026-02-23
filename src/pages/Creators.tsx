@@ -259,16 +259,15 @@ function CreatorCard({
               alt={c.display_name}
               className="w-full h-full object-cover"
               loading="lazy"
-              onError={(e) => {
-                const el = e.currentTarget;
+              onError={() => {
                 const fallback =
                   c?.ic_avatar_url ||
                   c?.avatar_url ||
                   null;
-                if (fallback && el.src !== fallback) {
-                  el.src = fallback;
+                if (fallback && imgSrc !== fallback) {
+                  setImgSrc(fallback);
                 } else {
-                  el.style.display = 'none';
+                  setImgSrc(null);
                 }
               }}
             />
