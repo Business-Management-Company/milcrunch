@@ -206,40 +206,22 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
   twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
-function HeroAvatar({ sources, name, handle }: { sources: (string | null | undefined)[]; name: string; handle: string }) {
-  const chain = sources.map((s) => safeImageUrl(s)).filter((s): s is string => !!s);
-  const [failedSrcs, setFailedSrcs] = useState<Set<string>>(new Set());
-
-  // Reset failed set when the source chain changes (e.g. enrichment loaded)
-  const chainKey = chain.join("|");
-  const prevChainKey = useRef(chainKey);
-  if (chainKey !== prevChainKey.current) {
-    prevChainKey.current = chainKey;
-    if (failedSrcs.size > 0) setFailedSrcs(new Set());
-  }
-
-  // Always derived from latest props — no stale state
-  const imgSrc = chain.find((s) => !failedSrcs.has(s)) ?? null;
-
+function HeroAvatar({ avatarUrl, name, handle }: { avatarUrl: string | null; name: string; handle: string }) {
   return (
     <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-gray-100">
-      {imgSrc ? (
+      {avatarUrl ? (
         <img
-          src={imgSrc}
+          src={avatarUrl}
           alt={name}
           fetchPriority="high"
           loading="eager"
           className="w-full h-full object-cover"
-          onError={(e) => {
-            const src = e.currentTarget.src;
-            setFailedSrcs((prev) => new Set(prev).add(src));
-          }}
+          onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden'); }}
         />
-      ) : (
-        <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-sm">
-          {getInitials(name, handle)}
-        </div>
-      )}
+      ) : null}
+      <div className={`w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-sm ${avatarUrl ? 'hidden' : ''}`}>
+        {getInitials(name, handle)}
+      </div>
     </div>
   );
 }
@@ -313,21 +295,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
   const branchGradient = BRANCH_GRADIENT[c.branch ?? ""] ?? BRANCH_GRADIENT.default;
 
-  const primaryUrl = getCreatorAvatar(c);
-  const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
-  const chain = [primaryUrl, enrichUrl].filter((s): s is string => !!s);
-  const [failedSrcs, setFailedSrcs] = useState<Set<string>>(new Set());
-
-  // Reset failed set when the source chain changes (e.g. after cache fill)
-  const chainKey = chain.join("|");
-  const prevChainKey = useRef(chainKey);
-  if (chainKey !== prevChainKey.current) {
-    prevChainKey.current = chainKey;
-    if (failedSrcs.size > 0) setFailedSrcs(new Set());
-  }
-
-  // Always derived from latest props — no stale state
-  const imgSrc = chain.find((s) => !failedSrcs.has(s)) ?? null;
+  const avatarUrl = getCreatorAvatar(c) ?? safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
 
   return (
     <Link
@@ -367,22 +335,18 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
               : "ring-1 ring-gray-200 ring-offset-2"
           } bg-white`}
         >
-          {imgSrc ? (
+          {avatarUrl ? (
             <img
-              src={imgSrc}
+              src={avatarUrl}
               alt={c.display_name}
               className="w-full h-full object-cover"
               loading="lazy"
-              onError={(e) => {
-                const src = e.currentTarget.src;
-                setFailedSrcs((prev) => new Set(prev).add(src));
-              }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden'); }}
             />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-lg">
-              {getInitials(c.display_name, c.handle)}
-            </div>
-          )}
+          ) : null}
+          <div className={`w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-lg ${avatarUrl ? 'hidden' : ''}`}>
+            {getInitials(c.display_name, c.handle)}
+          </div>
         </div>
       </div>
 
@@ -856,15 +820,14 @@ export default function HomePage() {
 
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
-                    const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
-                    const heroSources = [getCreatorAvatar(db), enrichAvatar].filter(Boolean) as string[];
+                    const heroAvatarUrl = getCreatorAvatar(db) ?? safeImageUrl(extractAvatarFromEnrichment(db.enrichment_data));
 
                     const best = getBestStats(db);
 
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
                         <div className="flex items-center gap-4">
-                          <HeroAvatar sources={heroSources} name={db.display_name} handle={db.handle} />
+                          <HeroAvatar avatarUrl={heroAvatarUrl} name={db.display_name} handle={db.handle} />
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-[17px] text-gray-900">{db.display_name}</p>
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>

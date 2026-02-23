@@ -201,19 +201,7 @@ function CreatorCard({
   inView: boolean;
   index: number;
 }) {
-  const primaryUrl = getCreatorAvatar(c);
-  const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
-  const initialSrc = primaryUrl ?? enrichUrl;
-  const [imgSrc, setImgSrc] = useState<string | null>(initialSrc);
-
-  // Reset when upstream data changes (e.g. after CDN URL persisted)
-  const prevInitial = useRef(initialSrc);
-  useEffect(() => {
-    if (initialSrc !== prevInitial.current) {
-      prevInitial.current = initialSrc;
-      setImgSrc(initialSrc);
-    }
-  }, [initialSrc]);
+  const avatarUrl = getCreatorAvatar(c) ?? safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
   const platforms = getAllPlatforms(c);
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
   const isVerified = !!c.featured_homepage;
@@ -253,29 +241,18 @@ function CreatorCard({
             isVerified ? "border-[#1e3a5f]" : "border-white",
           )}
         >
-          {imgSrc ? (
+          {avatarUrl ? (
             <img
-              src={imgSrc}
+              src={avatarUrl}
               alt={c.display_name}
               className="w-full h-full object-cover"
               loading="lazy"
-              onError={() => {
-                const fallback =
-                  c?.ic_avatar_url ||
-                  c?.avatar_url ||
-                  null;
-                if (fallback && imgSrc !== fallback) {
-                  setImgSrc(fallback);
-                } else {
-                  setImgSrc(null);
-                }
-              }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden'); }}
             />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-base">
+          ) : null}
+          <div className={`w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-base ${avatarUrl ? 'hidden' : ''}`}>
               {getInitials(c.display_name, c.handle)}
             </div>
-          )}
 
           {/* Verified checkmark overlay */}
           {isVerified && (
