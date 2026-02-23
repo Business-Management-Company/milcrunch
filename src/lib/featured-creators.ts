@@ -294,7 +294,15 @@ export async function enrichHomepageHeroCreators(
         const enrichAvatar = extractAvatarFromEnrichment(responseData);
 
         // 3b. Cache avatar to permanent Supabase Storage (fire-and-forget)
-        if (enrichAvatar && !enrichAvatar.includes("supabase.co/storage")) {
+        // Skip if creator already has a permanent Supabase URL, or if the enrichment
+        // URL is an expired CDN domain (CloudFront, fbcdn, etc.)
+        const alreadyPermanent = (c.avatar_url || "").includes("supabase.co/storage")
+          || (c.ic_avatar_url || "").includes("supabase.co/storage");
+        const isExpiredCdn = enrichAvatar && (
+          enrichAvatar.includes("cloudfront") || enrichAvatar.includes("fbcdn")
+          || enrichAvatar.includes("cdninstagram")
+        );
+        if (enrichAvatar && !alreadyPermanent && !isExpiredCdn && !enrichAvatar.includes("supabase.co/storage")) {
           saveCreatorAvatar(handle, enrichAvatar).catch(() => {});
         }
 
@@ -369,9 +377,12 @@ export async function fillShowcaseAvatarsFromCache(
   });
 
   // --- Phase 2: Persist non-permanent CDN URLs to Supabase storage ---
+  // Skip expired CDN domains (CloudFront, fbcdn) — these would 502 on download
+  const isExpiredCdn = (url: string) =>
+    url.includes("cloudfront") || url.includes("fbcdn") || url.includes("cdninstagram");
   const needsPersist = result.filter((c) => {
     const url = c.ic_avatar_url || c.avatar_url || "";
-    return url && !isPermanent(url);
+    return url && !isPermanent(url) && !isExpiredCdn(url);
   });
 
   if (needsPersist.length > 0) {
