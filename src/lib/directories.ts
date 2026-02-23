@@ -1,11 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Persist a creator avatar URL to directory_members.
- * Stores the CDN URL as-is — browsers load it fine via <img> tags.
- * No fetch/re-upload (CloudFront blocks CORS fetch from JS).
+ * Download a creator avatar server-side and persist to Supabase Storage.
+ * The serverless function fetches the CDN image (no CORS issues server-side),
+ * uploads to Supabase Storage, and updates directory_members with the permanent URL.
  *
- * Returns the URL on success, or null on failure.
+ * Returns the permanent Supabase public URL, or null on failure.
  */
 export async function saveCreatorAvatar(
   handle: string,
@@ -15,13 +15,18 @@ export async function saveCreatorAvatar(
   if (imageUrl.includes("supabase.co/storage")) return imageUrl;
 
   try {
-    const url = imageUrl.replace(/^http:\/\//i, "https://");
-    await supabase
-      .from("directory_members")
-      .update({ ic_avatar_url: url, avatar_url: url })
-      .eq("creator_handle", handle);
-    console.log("[saveAvatar]", handle, "✓ stored URL directly");
-    return url;
+    const resp = await fetch("/api/save-avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ handle, imageUrl }),
+    });
+    if (!resp.ok) {
+      console.warn("[saveAvatar]", handle, "server returned", resp.status);
+      return null;
+    }
+    const data = await resp.json();
+    console.log("[saveAvatar]", handle, "✓", data.url);
+    return data.url || null;
   } catch (err) {
     console.warn("[saveAvatar]", handle, "error:", err);
     return null;
