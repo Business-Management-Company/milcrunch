@@ -154,7 +154,7 @@ function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" 
         />
       ) : (
         <div className={cn(
-          "w-full h-full bg-gradient-to-br from-[#6C5CE7] to-[#5B4BD1] flex items-center justify-center text-white font-bold",
+          "w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold",
           isLg ? "text-lg" : "text-xs",
         )}>
           {getInitials(m.creator_name ?? "", m.creator_handle)}
@@ -227,6 +227,12 @@ const BrandDirectory = () => {
   const [refreshingPhotos, setRefreshingPhotos] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // Inline title/description editing
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState("");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState("");
 
   // Edit modal state (avg_views, avg_likes)
   const [editMember, setEditMember] = useState<DirectoryMember | null>(null);
@@ -364,6 +370,8 @@ const BrandDirectory = () => {
 
   const openDirectory = (dir: Directory) => {
     setSelectedDir(dir);
+    setTitleValue(dir.name);
+    setDescValue(dir.description || "");
     setSearchQuery("");
     setBranchFilter("all");
     setSelectedIds(new Set());
@@ -803,7 +811,7 @@ const BrandDirectory = () => {
                             onChange={(e) => setRenameValue(e.target.value)}
                             onBlur={handleDirFinishRename}
                             onKeyDown={(e) => { if (e.key === "Enter") handleDirFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
-                            className="font-semibold text-foreground text-lg bg-transparent border-b-2 border-[#6C5CE7] outline-none w-full"
+                            className="font-semibold text-foreground text-lg bg-transparent border-b-2 border-[#1e3a5f] outline-none w-full"
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
@@ -829,8 +837,8 @@ const BrandDirectory = () => {
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                             ) : (
-                              <div key={i} className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                                <span className="text-xs text-purple-600 dark:text-purple-300 font-semibold">{member.creator_name?.charAt(0)}</span>
+                              <div key={i} className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                                <span className="text-xs text-blue-700 dark:text-blue-400 font-semibold">{member.creator_name?.charAt(0)}</span>
                               </div>
                             )
                           ))}
@@ -838,7 +846,7 @@ const BrandDirectory = () => {
                       )}
                       <span className="text-sm text-gray-500 dark:text-gray-400">{dir.member_count ?? 0} creator{(dir.member_count ?? 0) !== 1 ? "s" : ""}</span>
                       {dir.is_public ? (
-                        <Badge variant="outline" className="text-[10px] border-purple-300 text-purple-700 dark:text-purple-400 ml-auto">
+                        <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-800 dark:text-blue-500 ml-auto">
                           <Eye className="h-3 w-3 mr-1" /> Public
                         </Badge>
                       ) : (
@@ -869,7 +877,7 @@ const BrandDirectory = () => {
                         onChange={(e) => setRenameValue(e.target.value)}
                         onBlur={handleDirFinishRename}
                         onKeyDown={(e) => { if (e.key === "Enter") handleDirFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
-                        className="font-medium text-gray-900 dark:text-white text-sm bg-transparent border-b-2 border-[#6C5CE7] outline-none"
+                        className="font-medium text-gray-900 dark:text-white text-sm bg-transparent border-b-2 border-[#1e3a5f] outline-none"
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
@@ -887,8 +895,8 @@ const BrandDirectory = () => {
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
-                            <div key={i} className="w-5 h-5 rounded-full border border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                              <span className="text-[8px] text-purple-600 dark:text-purple-300 font-semibold">{member.creator_name?.charAt(0)}</span>
+                            <div key={i} className="w-5 h-5 rounded-full border border-white dark:border-gray-900 bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                              <span className="text-[8px] text-blue-700 dark:text-blue-400 font-semibold">{member.creator_name?.charAt(0)}</span>
                             </div>
                           )
                         ))}
@@ -898,7 +906,7 @@ const BrandDirectory = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     {dir.is_public && (
-                      <Badge variant="outline" className="text-[10px] border-purple-300 text-purple-700 dark:text-purple-400">
+                      <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-800 dark:text-blue-500">
                         Public
                       </Badge>
                     )}
@@ -990,9 +998,59 @@ const BrandDirectory = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Directories
           </Button>
-          <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">{selectedDir.name}</h1>
-          {selectedDir.description && (
-            <p className="text-gray-500 dark:text-gray-400">{selectedDir.description}</p>
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
+              onBlur={async () => {
+                if (titleValue.trim() && titleValue.trim() !== selectedDir.name) {
+                  await supabase.from("directories").update({ name: titleValue.trim() }).eq("id", selectedDir.id);
+                  setSelectedDir({ ...selectedDir, name: titleValue.trim() });
+                  setDirectories((prev) => prev.map((d) => d.id === selectedDir.id ? { ...d, name: titleValue.trim() } : d));
+                }
+                setEditingTitle(false);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              className="text-3xl font-bold text-gray-900 dark:text-white border-b-2 border-blue-500 outline-none bg-transparent w-full mb-2"
+            />
+          ) : (
+            <h1
+              onClick={() => setEditingTitle(true)}
+              className="text-3xl font-bold text-pd-navy dark:text-white mb-2 cursor-pointer hover:text-blue-700 dark:hover:text-blue-400 group flex items-center gap-2"
+            >
+              {titleValue || selectedDir.name}
+              <span className="opacity-0 group-hover:opacity-100 text-gray-400 transition-opacity">
+                <Pencil className="h-4 w-4" />
+              </span>
+            </h1>
+          )}
+          {editingDesc ? (
+            <input
+              autoFocus
+              value={descValue}
+              onChange={(e) => setDescValue(e.target.value)}
+              onBlur={async () => {
+                if (descValue !== (selectedDir.description || "")) {
+                  await supabase.from("directories").update({ description: descValue.trim() || null }).eq("id", selectedDir.id);
+                  setSelectedDir({ ...selectedDir, description: descValue.trim() || null });
+                  setDirectories((prev) => prev.map((d) => d.id === selectedDir.id ? { ...d, description: descValue.trim() || null } : d));
+                }
+                setEditingDesc(false);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+              className="text-gray-500 dark:text-gray-400 border-b border-blue-400 outline-none bg-transparent w-full text-sm"
+            />
+          ) : (
+            <p
+              onClick={() => setEditingDesc(true)}
+              className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 group flex items-center gap-2 text-sm mt-1"
+            >
+              {descValue || "Click to add a description..."}
+              <span className="opacity-0 group-hover:opacity-100 text-gray-400 transition-opacity">
+                <Pencil className="h-3.5 w-3.5" />
+              </span>
+            </p>
           )}
         </div>
 
@@ -1011,8 +1069,8 @@ const BrandDirectory = () => {
           </Card>
           <Card className="p-4 bg-white dark:bg-[#1A1D27] border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <Eye className="h-5 w-5 text-purple-600" />
+              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-blue-700" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stats.active}</p>
@@ -1083,7 +1141,7 @@ const BrandDirectory = () => {
             </button>
           </div>
           <a href="/brand/discover" target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="outline" className="rounded-lg border-[#6C5CE7] text-[#6C5CE7] hover:bg-purple-50 dark:hover:bg-purple-950/30">
+            <Button size="sm" variant="outline" className="rounded-lg border-[#1e3a5f] text-[#1e3a5f] hover:bg-blue-50 dark:hover:bg-blue-950/30">
               <Search className="h-4 w-4 mr-1.5" />
               Discover Creators
             </Button>
@@ -1119,7 +1177,7 @@ const BrandDirectory = () => {
                   <Card key={m.id} className={cn("p-5 bg-white dark:bg-[#1A1D27] border-border flex flex-col items-center text-center cursor-pointer hover:shadow-lg transition-shadow", !m.approved && "opacity-60")} onClick={() => openCreatorDrawer(m)}>
                     <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
-                    <p className="text-xs text-[#6C5CE7] mb-2 truncate max-w-full">@{m.creator_handle}</p>
+                    <p className="text-xs text-[#1e3a5f] mb-2 truncate max-w-full">@{m.creator_handle}</p>
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
                     <div className="flex items-center gap-4 text-xs mb-3">
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
@@ -1212,8 +1270,8 @@ const BrandDirectory = () => {
 
         {/* Bulk selection bar */}
         {selectedIds.size > 0 && (
-          <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
-            <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+          <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-300 dark:border-blue-800">
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
               {selectedIds.size} selected
             </span>
             <Button
@@ -1226,7 +1284,7 @@ const BrandDirectory = () => {
               {bulkDeleting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
               Delete Selected
             </Button>
-            <Button size="sm" variant="ghost" className="rounded-lg text-purple-700 dark:text-purple-300" onClick={() => setSelectedIds(new Set())}>
+            <Button size="sm" variant="ghost" className="rounded-lg text-blue-800 dark:text-blue-400" onClick={() => setSelectedIds(new Set())}>
               Clear Selection
             </Button>
           </div>
@@ -1255,7 +1313,7 @@ const BrandDirectory = () => {
                   const branchStyle = BRANCH_STYLES[m.branch ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
                   const isToggling = togglingIds.has(m.id);
                   return (
-                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60", selectedIds.has(m.id) && "bg-purple-50 dark:bg-purple-950/20")} onClick={() => openCreatorDrawer(m)}>
+                    <tr key={m.id} className={cn("border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors cursor-pointer", !m.approved && "opacity-60", selectedIds.has(m.id) && "bg-blue-50 dark:bg-blue-950/20")} onClick={() => openCreatorDrawer(m)}>
                       <td className="p-3 w-10" onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 accent-pd-blue" checked={selectedIds.has(m.id)} onChange={() => toggleSelect(m.id)} />
                       </td>
@@ -1264,7 +1322,7 @@ const BrandDirectory = () => {
                           <DirAvatar m={m} size="sm" />
                           <div className="min-w-0">
                             <p className="font-semibold text-[#000741] dark:text-white truncate">{m.creator_name}</p>
-                            <p className="text-xs text-[#6C5CE7] truncate">@{m.creator_handle}</p>
+                            <p className="text-xs text-[#1e3a5f] truncate">@{m.creator_handle}</p>
                           </div>
                         </div>
                       </td>

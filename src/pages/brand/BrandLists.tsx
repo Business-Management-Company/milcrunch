@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera } from "lucide-react";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
@@ -84,6 +84,11 @@ const BrandLists = () => {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imageTargetId, setImageTargetId] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
+  // Inline title/description editing for list detail
+  const [editingListTitle, setEditingListTitle] = useState(false);
+  const [listTitleValue, setListTitleValue] = useState("");
+  const [editingListDesc, setEditingListDesc] = useState(false);
+  const [listDescValue, setListDescValue] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const createAvatarRef = useRef<HTMLInputElement>(null);
@@ -240,7 +245,7 @@ const BrandLists = () => {
             <Button variant="outline" onClick={() => setCreateModalOpen(false)} className="rounded-lg">
               Cancel
             </Button>
-            <Button onClick={handleCreateList} disabled={!newListName.trim()} className="rounded-lg bg-[#6C5CE7] hover:bg-[#5B4BD1]">
+            <Button onClick={handleCreateList} disabled={!newListName.trim()} className="rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282]">
               Create
             </Button>
           </DialogFooter>
@@ -357,7 +362,7 @@ const BrandLists = () => {
                         onChange={(e) => setRenameValue(e.target.value)}
                         onBlur={handleFinishRename}
                         onKeyDown={(e) => { if (e.key === "Enter") handleFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
-                        className="text-lg font-semibold text-foreground bg-transparent border-b-2 border-[#6C5CE7] outline-none w-full"
+                        className="text-lg font-semibold text-foreground bg-transparent border-b-2 border-[#1e3a5f] outline-none w-full"
                         onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
@@ -378,8 +383,8 @@ const BrandLists = () => {
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                             ) : (
-                              <div key={member.id || i} className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                                <span className="text-xs text-purple-600 dark:text-purple-300 font-semibold">{member.name?.charAt(0)}</span>
+                              <div key={member.id || i} className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                                <span className="text-xs text-blue-700 dark:text-blue-400 font-semibold">{member.name?.charAt(0)}</span>
                               </div>
                             )
                           ))}
@@ -435,7 +440,7 @@ const BrandLists = () => {
                     onChange={(e) => setRenameValue(e.target.value)}
                     onBlur={handleFinishRename}
                     onKeyDown={(e) => { if (e.key === "Enter") handleFinishRename(); if (e.key === "Escape") setRenamingId(null); }}
-                    className="font-medium text-gray-900 dark:text-white text-sm bg-transparent border-b-2 border-[#6C5CE7] outline-none"
+                    className="font-medium text-gray-900 dark:text-white text-sm bg-transparent border-b-2 border-[#1e3a5f] outline-none"
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
@@ -453,8 +458,8 @@ const BrandLists = () => {
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                       ) : (
-                        <div key={member.id || i} className="w-5 h-5 rounded-full border border-white dark:border-gray-900 bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                          <span className="text-[8px] text-purple-600 dark:text-purple-300 font-semibold">{member.name?.charAt(0)}</span>
+                        <div key={member.id || i} className="w-5 h-5 rounded-full border border-white dark:border-gray-900 bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                          <span className="text-[8px] text-blue-700 dark:text-blue-400 font-semibold">{member.name?.charAt(0)}</span>
                         </div>
                       )
                     ))}
@@ -528,6 +533,13 @@ export const BrandListDetail = () => {
   useEffect(() => {
     setSelectedIds(new Set());
   }, [listId]);
+
+  useEffect(() => {
+    if (selectedList) {
+      setListTitleValue(selectedList.name);
+      setListDescValue("");
+    }
+  }, [selectedList?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openProfile = (creator: ListCreator) => {
     setProfileCreator(listCreatorToCard(creator));
@@ -629,13 +641,55 @@ export const BrandListDetail = () => {
                 <List className="w-5 h-5 text-muted-foreground" />
               </div>
             )}
-            <div>
-              <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
-                {selectedList.name}
-              </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {selectedList.creators.length} creator{selectedList.creators.length !== 1 ? "s" : ""}
-              </p>
+            <div className="flex-1 min-w-0">
+              {editingListTitle ? (
+                <input
+                  autoFocus
+                  value={listTitleValue}
+                  onChange={(e) => setListTitleValue(e.target.value)}
+                  onBlur={() => {
+                    if (listTitleValue.trim() && listTitleValue.trim() !== selectedList.name) {
+                      renameList(selectedList.id, listTitleValue.trim());
+                    }
+                    setEditingListTitle(false);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                  className="text-2xl font-bold text-gray-900 dark:text-white border-b-2 border-blue-500 outline-none bg-transparent w-full"
+                />
+              ) : (
+                <h1
+                  onClick={() => setEditingListTitle(true)}
+                  className="text-2xl font-bold text-pd-navy dark:text-white cursor-pointer hover:text-blue-700 dark:hover:text-blue-400 group flex items-center gap-2"
+                >
+                  {listTitleValue || selectedList.name}
+                  <span className="opacity-0 group-hover:opacity-100 text-gray-400 transition-opacity">
+                    <Pencil className="h-4 w-4" />
+                  </span>
+                </h1>
+              )}
+              {editingListDesc ? (
+                <input
+                  autoFocus
+                  value={listDescValue}
+                  onChange={(e) => setListDescValue(e.target.value)}
+                  onBlur={async () => {
+                    await supabase.from("influencer_lists").update({ description: listDescValue.trim() || null }).eq("id", selectedList.id);
+                    setEditingListDesc(false);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                  className="text-gray-500 dark:text-gray-400 border-b border-blue-400 outline-none bg-transparent w-full text-sm mt-1"
+                />
+              ) : (
+                <p
+                  onClick={() => setEditingListDesc(true)}
+                  className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 group flex items-center gap-2 mt-1"
+                >
+                  {listDescValue || `${selectedList.creators.length} creator${selectedList.creators.length !== 1 ? "s" : ""} · Click to add a description`}
+                  <span className="opacity-0 group-hover:opacity-100 text-gray-400 transition-opacity">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </span>
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -643,7 +697,7 @@ export const BrandListDetail = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
+                className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30"
                 onClick={handlePromoteAll}
                 disabled={promotingAll}
               >
@@ -722,7 +776,7 @@ export const BrandListDetail = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 rounded-lg text-[#6C5CE7] hover:text-[#6C5CE7] hover:bg-[#6C5CE7]/10"
+                  className="flex-1 rounded-lg text-[#1e3a5f] hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10"
                   onClick={(e) => {
                     e.stopPropagation();
                     openProfile(creator);
@@ -735,7 +789,7 @@ export const BrandListDetail = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-lg text-purple-700 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
+                    className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30"
                     onClick={(e) => {
                       e.stopPropagation();
                       handlePromoteOne(creator);
