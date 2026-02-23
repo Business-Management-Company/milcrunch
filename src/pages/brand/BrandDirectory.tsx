@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { getCreatorAvatar, getAvatarFallback } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -964,17 +965,16 @@ const BrandDirectory = () => {
                       {dir.previewMembers && dir.previewMembers.length > 0 && (
                         <div className="flex -space-x-2">
                           {dir.previewMembers.slice(0, 4).map((member, i) => (
-                            member.ic_avatar_url || member.avatar_url ? (
+                            getCreatorAvatar(member) ? (
                               <img
                                 key={i}
-                                src={member.ic_avatar_url || member.avatar_url!}
-                                referrerPolicy="no-referrer"
+                                src={getCreatorAvatar(member)!}
                                 className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 object-cover"
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                             ) : (
                               <div key={i} className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                                <span className="text-xs text-blue-700 dark:text-blue-400 font-semibold">{member.creator_name?.charAt(0)}</span>
+                                <span className="text-xs text-blue-700 dark:text-blue-400 font-semibold">{getAvatarFallback(member.creator_name || '')}</span>
                               </div>
                             )
                           ))}
@@ -1022,17 +1022,16 @@ const BrandDirectory = () => {
                     {dir.previewMembers && dir.previewMembers.length > 0 && (
                       <div className="flex -space-x-1.5">
                         {dir.previewMembers.slice(0, 4).map((member, i) => (
-                          member.ic_avatar_url || member.avatar_url ? (
+                          getCreatorAvatar(member) ? (
                             <img
                               key={i}
-                              src={member.ic_avatar_url || member.avatar_url!}
-                              referrerPolicy="no-referrer"
+                              src={getCreatorAvatar(member)!}
                               className="w-5 h-5 rounded-full border border-white dark:border-gray-900 object-cover"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           ) : (
                             <div key={i} className="w-5 h-5 rounded-full border border-white dark:border-gray-900 bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                              <span className="text-[8px] text-blue-700 dark:text-blue-400 font-semibold">{member.creator_name?.charAt(0)}</span>
+                              <span className="text-[8px] text-blue-700 dark:text-blue-400 font-semibold">{getAvatarFallback(member.creator_name || '')}</span>
                             </div>
                           )
                         ))}

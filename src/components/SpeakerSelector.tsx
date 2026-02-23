@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { getCreatorAvatar } from "@/lib/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -226,9 +227,9 @@ export default function SpeakerSelector({
                 >
                   {/* Avatar */}
                   <div className="w-10 h-10 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center shrink-0 overflow-hidden">
-                    {s.avatar_url ? (
+                    {getCreatorAvatar(s) ? (
                       <img
-                        src={s.avatar_url}
+                        src={getCreatorAvatar(s)!}
                         alt=""
                         className="w-full h-full object-cover"
                         onError={(e) => {

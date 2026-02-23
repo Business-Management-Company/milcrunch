@@ -44,6 +44,7 @@ import {
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
+import { getCreatorAvatar } from "@/lib/avatar";
 import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
 
 /* ------------------------------------------------------------------ */
@@ -341,7 +342,7 @@ export default function CreatorPublicProfile() {
 
   /* ---- Image fallback ---- */
   const enrichAvatar = creator ? extractAvatarFromEnrichment(creator.enrichment_data) : null;
-  const imgSrc = creator ? creatorAvatarUrl(creator.ic_avatar_url, creator.avatar_url, enrichAvatar, (creator as Record<string, unknown>).profile_image_url as string) : null;
+  const imgSrc = creator ? (getCreatorAvatar(creator) || safeImageUrl(enrichAvatar)) : null;
 
   // Reset error/loaded state when creator changes
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { getCreatorAvatar, getAvatarFallback } from "@/lib/avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -173,9 +174,9 @@ function SpeakerAvatar({ speaker, size = 28 }: { speaker: SpeakerRow; size?: num
     .slice(0, 2)
     .toUpperCase();
 
-  return speaker.avatar_url ? (
+  return getCreatorAvatar(speaker) ? (
     <img
-      src={speaker.avatar_url}
+      src={getCreatorAvatar(speaker)!}
       alt={speaker.creator_name || ""}
       className="rounded-full object-cover border border-white dark:border-gray-700"
       style={{ width: size, height: size }}

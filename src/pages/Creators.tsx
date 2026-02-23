@@ -31,6 +31,7 @@ import {
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl } from "@/lib/utils";
+import { getCreatorAvatar } from "@/lib/avatar";
 
 /* ------------------------------------------------------------------ */
 /* Icons                                                               */
@@ -200,10 +201,9 @@ function CreatorCard({
   inView: boolean;
   index: number;
 }) {
-  const icUrl = safeImageUrl(c.ic_avatar_url);
-  const avUrl = safeImageUrl(c.avatar_url);
+  const primaryUrl = getCreatorAvatar(c);
   const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
-  const initialSrc = icUrl ?? avUrl ?? enrichUrl;
+  const initialSrc = primaryUrl ?? enrichUrl;
   const [imgSrc, setImgSrc] = useState<string | null>(initialSrc);
 
   // Reset when upstream data changes (e.g. after CDN URL persisted)

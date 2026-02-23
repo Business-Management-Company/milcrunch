@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { cn, safeImageUrl, goodAvatarCache } from "@/lib/utils";
+import { getCreatorAvatar } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -715,12 +716,11 @@ export default function CreatorProfileModal({
     (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username ?? username ?? "";
   const displayName =
     (igRecord?.full_name as string) ?? (resultTop.first_name as string) ?? creator?.name ?? displayUsername ?? "—";
-  // Avatar: ic_avatar_url → avatar (from grid card) → enrichment → cached working URL
+  // Avatar: getCreatorAvatar (all fields) → enrichment → cached working URL
   const enrichedAvatarUrl = safeImageUrl(extractAvatarFromEnrichment(enriched));
-  const creatorIcAvatar = safeImageUrl((creator as Record<string, unknown> | null)?.ic_avatar_url as string | undefined);
-  const creatorAvatar = safeImageUrl(creator?.avatar);
+  const creatorPrimary = getCreatorAvatar(creator) || safeImageUrl(creator?.avatar);
   const cachedWorkingUrl = goodAvatarCache.get(displayUsername || creator?.username || "") || null;
-  const modalAvatarInitial = creatorIcAvatar ?? creatorAvatar ?? enrichedAvatarUrl ?? cachedWorkingUrl ?? null;
+  const modalAvatarInitial = creatorPrimary ?? enrichedAvatarUrl ?? cachedWorkingUrl ?? null;
   const [modalAvatarSrc, setModalAvatarSrc] = useState<string | null>(modalAvatarInitial);
   // Reset when the modal opens for a different creator or enrichment arrives
   const prevModalAvatar = useRef(modalAvatarInitial);
@@ -1009,9 +1009,7 @@ export default function CreatorProfileModal({
                     if (key && modalAvatarSrc) goodAvatarCache.set(key, modalAvatarSrc);
                   }}
                   onError={() => {
-                    if (modalAvatarSrc === creatorIcAvatar && creatorAvatar) {
-                      setModalAvatarSrc(creatorAvatar);
-                    } else if (modalAvatarSrc !== enrichedAvatarUrl && enrichedAvatarUrl) {
+                    if (modalAvatarSrc !== enrichedAvatarUrl && enrichedAvatarUrl) {
                       setModalAvatarSrc(enrichedAvatarUrl);
                     } else if (modalAvatarSrc !== cachedWorkingUrl && cachedWorkingUrl) {
                       setModalAvatarSrc(cachedWorkingUrl);

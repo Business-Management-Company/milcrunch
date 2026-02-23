@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { getCreatorAvatar, getAvatarFallback } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -424,11 +425,11 @@ const EventDetail = () => {
               {speakers.map((s) => (
                 <div key={s.id} className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
-                    {s.avatar_url ? (
-                      <img src={s.avatar_url} alt={s.creator_name || ""} className="w-full h-full object-cover" />
+                    {getCreatorAvatar(s) ? (
+                      <img src={getCreatorAvatar(s)!} alt={s.creator_name || ""} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-lg font-semibold text-gray-400">
-                        {(s.creator_name || "?")[0]}
+                        {getAvatarFallback(s.creator_name || '')}
                       </span>
                     )}
                   </div>

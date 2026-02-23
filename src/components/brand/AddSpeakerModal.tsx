@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getCreatorAvatar } from "@/lib/avatar";
 import {
   Dialog,
   DialogContent,
@@ -258,8 +259,8 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-pd-blue/10 flex items-center justify-center shrink-0 overflow-hidden">
-                      {person.photo_url ? (
-                        <img src={person.photo_url} alt="" className="w-full h-full object-cover" />
+                      {getCreatorAvatar(person) ? (
+                        <img src={getCreatorAvatar(person)!} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <Mic className="h-4 w-4 text-pd-blue" />
                       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { getCreatorAvatar } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, ShieldCheck, ShieldAlert, Clock, AlertTriangle, XCircle, Globe, Briefcase, FileText, Search, Video, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -130,7 +131,7 @@ export default function PublicVerificationReport() {
   const score = record.verification_score ?? 0;
   const sources = (record.evidence_sources ?? []);
   const pdl = record.pdl_data as Record<string, unknown> | null;
-  const heroPhoto = record.profile_photo_url || (pdl as any)?.profile_pic_url || (pdl as any)?.photo_url || null;
+  const heroPhoto = getCreatorAvatar(record) || (pdl as any)?.profile_pic_url || (pdl as any)?.photo_url || null;
   const initials = (record.person_name || "??").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
   // Status dots

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { getCreatorAvatar } from "@/lib/avatar";
 import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
   Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
@@ -983,8 +984,8 @@ const BrandEventDetail = () => {
                   <Card key={s.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
                     <div className="flex items-start gap-3">
                       <div className="w-12 h-12 rounded-full bg-pd-blue/10 flex items-center justify-center shrink-0 overflow-hidden">
-                        {s.avatar_url ? (
-                          <img src={s.avatar_url} alt="" className="w-full h-full object-cover" />
+                        {getCreatorAvatar(s) ? (
+                          <img src={getCreatorAvatar(s)!} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-sm font-semibold text-pd-blue">{initials}</span>
                         )}

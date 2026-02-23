@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
+import { getCreatorAvatar } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -448,8 +449,7 @@ export default function FeaturedCreators() {
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      const icAvatar = (row as Record<string, unknown>).ic_avatar_url as string | null;
-                      const src = creatorAvatarUrl(icAvatar, row.avatar_url);
+                      const src = getCreatorAvatar(row);
                       if (!src) return (
                         <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold bg-[#1e3a5f]">
                           {getInitials(row.display_name, row.handle)}
@@ -461,15 +461,8 @@ export default function FeaturedCreators() {
                           alt={row.display_name}
                           className="h-10 w-10 rounded-full object-cover"
                           onError={(e) => {
-                            const el = e.currentTarget;
-                            const fallback = safeImageUrl(row.avatar_url);
-                            if (!el.dataset.retried && fallback && el.src !== fallback) {
-                              el.dataset.retried = "1";
-                              el.src = fallback;
-                              return;
-                            }
-                            el.onerror = null;
-                            el.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.display_name)}&background=6C5CE7&color=fff&size=128`;
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.display_name)}&background=6C5CE7&color=fff&size=128`;
                           }}
                         />
                       );

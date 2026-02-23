@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { safeImageUrl } from "@/lib/utils";
+import { getCreatorAvatar } from "@/lib/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -312,10 +313,9 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
   const branchGradient = BRANCH_GRADIENT[c.branch ?? ""] ?? BRANCH_GRADIENT.default;
 
-  const icUrl = safeImageUrl(c.ic_avatar_url);
-  const avUrl = safeImageUrl(c.avatar_url);
+  const primaryUrl = getCreatorAvatar(c);
   const enrichUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
-  const chain = [icUrl, avUrl, enrichUrl].filter((s): s is string => !!s);
+  const chain = [primaryUrl, enrichUrl].filter((s): s is string => !!s);
   const [failedSrcs, setFailedSrcs] = useState<Set<string>>(new Set());
 
   // Reset failed set when the source chain changes (e.g. after cache fill)
@@ -857,7 +857,7 @@ export default function HomePage() {
                   return heroCreators.slice(0, 3).map((db, i) => {
                     const style = CARD_STYLES[i];
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
-                    const heroSources = [db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string];
+                    const heroSources = [getCreatorAvatar(db), enrichAvatar].filter(Boolean) as string[];
 
                     const best = getBestStats(db);
 

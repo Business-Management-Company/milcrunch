@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { getCreatorAvatar, getAvatarFallback } from "@/lib/avatar";
 import { MarkdownResponse } from "@/components/MarkdownResponse";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -958,18 +959,18 @@ export default function Verification() {
                                   ...f,
                                   fullName: m.creator_name ?? m.creator_handle,
                                   instagramHandle: (m.creator_handle ?? '').replace('@', ''),
-                                  profilePhotoUrl: m.ic_avatar_url || m.avatar_url || '',
+                                  profilePhotoUrl: getCreatorAvatar(m) || '',
                                   claimedStatus: detectStatus(m.creator_name ?? ''),
                                 }));
                                 setCreatorSearch("");
                                 setShowCreatorDropdown(false);
                               }}
                             >
-                              {(m.ic_avatar_url || m.avatar_url) ? (
-                                <img src={(m.ic_avatar_url || m.avatar_url)!} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                              {getCreatorAvatar(m) ? (
+                                <img src={getCreatorAvatar(m)!} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
                               ) : (
                                 <div className="w-7 h-7 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                  {(m.creator_name ?? '?').charAt(0).toUpperCase()}
+                                  {getAvatarFallback(m.creator_name ?? '')}
                                 </div>
                               )}
                               <div className="min-w-0">
@@ -1123,11 +1124,10 @@ export default function Verification() {
                       </TableCell>
                       <TableCell className="text-base font-semibold text-gray-900 dark:text-gray-100">
                         <div className="flex items-center gap-2">
-                          {row.profile_photo_url ? (
+                          {getCreatorAvatar(row) ? (
                             <img
-                              src={row.profile_photo_url}
+                              src={getCreatorAvatar(row)!}
                               alt={row.person_name}
-                              referrerPolicy="no-referrer"
                               className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
@@ -1136,7 +1136,7 @@ export default function Verification() {
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                               <span className="text-xs font-semibold text-blue-700">
-                                {row.person_name?.charAt(0) || '?'}
+                                {getAvatarFallback(row.person_name || '')}
                               </span>
                             </div>
                           )}
