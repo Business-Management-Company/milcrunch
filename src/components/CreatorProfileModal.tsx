@@ -397,6 +397,12 @@ export default function CreatorProfileModal({
   const resultTop = enriched?.result ?? {};
   const ig = enriched?.instagram;
 
+  const igRecord = ig && typeof ig === "object" ? (ig as Record<string, unknown>) : undefined;
+  const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
+  const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
+  const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
+  const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
+
   /** Merge platforms from all possible IC response shapes + creator card */
   const { availablePlatforms, platformHandles } = useMemo(() => {
     const handles = new Map<string, string>(); // platform → username
@@ -680,12 +686,6 @@ export default function CreatorProfileModal({
       },
     });
   };
-
-  const igRecord = ig && typeof ig === "object" ? (ig as Record<string, unknown>) : undefined;
-  const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
-  const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
-  const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
-  const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
 
   useEffect(() => {
     if (enriched && ig) {
