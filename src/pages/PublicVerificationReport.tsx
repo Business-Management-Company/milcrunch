@@ -154,15 +154,33 @@ export default function PublicVerificationReport() {
     linkedin: "border-blue-200 text-blue-700 hover:border-blue-500",
     website: "border-gray-200 text-gray-600 hover:border-gray-400",
   };
+  // LinkedIn confidence check: only show if URL matches creator identity
+  const isLinkedInConfident = (url: string): boolean => {
+    if (record.linkedin_url && url.toLowerCase().includes(record.linkedin_url.toLowerCase().replace(/\/$/, ""))) return true;
+    const slug = url.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i)?.[1]?.toLowerCase() ?? "";
+    if (!slug) return false;
+    const handle = record.source_username?.toLowerCase();
+    if (handle && slug.includes(handle)) return true;
+    const nameParts = record.person_name.trim().toLowerCase().split(/\s+/);
+    const lastName = nameParts[nameParts.length - 1];
+    if (lastName && lastName.length >= 3 && slug.includes(lastName)) return true;
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      if (firstName.length >= 3 && slug.includes(firstName) && slug.includes(lastName)) return true;
+    }
+    return false;
+  };
   const addSocialPill = (network: string, label: string, url: string) => {
     if (seenPlatforms.has(network)) return;
+    // Filter LinkedIn through confidence check (explicit linkedin_url is always trusted)
+    if (network === "linkedin" && url !== record.linkedin_url && !isLinkedInConfident(url)) return;
     seenPlatforms.add(network);
     socialLinks.push({ name: label, url, color: PLATFORM_COLORS[network] ?? PLATFORM_COLORS.website });
   };
-  // 1. Explicit fields
+  // 1. Explicit fields (linkedin_url is user-provided, always trusted)
   if (record.source_username) addSocialPill("instagram", `@${record.source_username}`, `https://instagram.com/${record.source_username}`);
   if (record.linkedin_url) addSocialPill("linkedin", "LinkedIn", record.linkedin_url);
-  // 2. Saved social_profiles from verification pipeline
+  // 2. Saved social_profiles from verification pipeline (already filtered during pipeline)
   const savedProfiles = record.manual_checks?.social_profiles as { network: string; url: string }[] | undefined;
   if (Array.isArray(savedProfiles)) {
     for (const sp of savedProfiles) {
@@ -178,6 +196,7 @@ export default function PublicVerificationReport() {
     if (url.includes("twitter") || url.includes("x.com")) addSocialPill("twitter", "Twitter/X", s.url);
     if (url.includes("youtube")) addSocialPill("youtube", "YouTube", s.url);
     if (url.includes("tiktok")) addSocialPill("tiktok", "TikTok", s.url);
+    if (url.includes("linkedin")) addSocialPill("linkedin", "LinkedIn", s.url);
   }
   // 4. PDL profiles
   const pdlProfiles = (record.pdl_data as any)?.profiles as { network: string; url: string }[] | undefined;
@@ -187,10 +206,10 @@ export default function PublicVerificationReport() {
       if (net && p.url && PLATFORM_COLORS[net]) addSocialPill(net, net === "twitter" ? "Twitter/X" : net.charAt(0).toUpperCase() + net.slice(1), p.url);
     }
   }
-  // 5. creator_has flags
+  // 5. creator_has flags (skip linkedin — no URL to validate)
   const creatorHas = record.manual_checks?.creator_has as Record<string, boolean> | undefined;
   if (creatorHas) {
-    const bases: Record<string, string> = { instagram: "https://instagram.com/", youtube: "https://youtube.com/@", tiktok: "https://tiktok.com/@", twitter: "https://twitter.com/", facebook: "https://facebook.com/", linkedin: "https://linkedin.com/in/" };
+    const bases: Record<string, string> = { instagram: "https://instagram.com/", youtube: "https://youtube.com/@", tiktok: "https://tiktok.com/@", twitter: "https://twitter.com/", facebook: "https://facebook.com/" };
     for (const [k, v] of Object.entries(creatorHas)) {
       if (v && bases[k]) {
         const handle = record.source_username || record.person_name.toLowerCase().replace(/\s+/g, "");

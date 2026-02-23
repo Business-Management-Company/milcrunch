@@ -3016,19 +3016,38 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               linkedin: { color: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800', icon: <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> },
             };
 
+            // LinkedIn confidence check: only show if URL matches creator identity
+            const isLinkedInConfident = (url: string): boolean => {
+              if (record.linkedin_url && url.toLowerCase().includes(record.linkedin_url.toLowerCase().replace(/\/$/, ""))) return true;
+              const slug = url.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i)?.[1]?.toLowerCase() ?? "";
+              if (!slug) return false;
+              const handle = record.source_username?.toLowerCase();
+              if (handle && slug.includes(handle)) return true;
+              const nameParts = record.person_name.trim().toLowerCase().split(/\s+/);
+              const lastName = nameParts[nameParts.length - 1];
+              if (lastName && lastName.length >= 3 && slug.includes(lastName)) return true;
+              if (nameParts.length >= 2) {
+                const firstName = nameParts[0];
+                if (firstName.length >= 3 && slug.includes(firstName) && slug.includes(lastName)) return true;
+              }
+              return false;
+            };
+
             const addPlatformPill = (network: string, label: string, url: string) => {
               if (seen.has(network)) return;
               const info = HEADER_PLATFORM_ICONS[network];
               if (!info) return;
+              // Filter LinkedIn through confidence check (except explicit linkedin_url which is trusted)
+              if (network === 'linkedin' && url !== record.linkedin_url && !isLinkedInConfident(url)) return;
               seen.add(network);
               pills.push({ name: label, url, color: info.color, icon: info.icon });
             };
 
-            // 1. Explicit fields
+            // 1. Explicit fields (linkedin_url is user-provided, always trusted)
             if (record.linkedin_url) addPlatformPill('linkedin', 'LinkedIn', record.linkedin_url);
             if (record.source_username) addPlatformPill('instagram', `@${record.source_username}`, `https://instagram.com/${record.source_username}`);
 
-            // 2. Saved social_profiles from verification pipeline
+            // 2. Saved social_profiles from verification pipeline (already filtered during pipeline)
             const savedProfiles = manualChecks?.social_profiles as { network: string; url: string }[] | undefined;
             if (Array.isArray(savedProfiles)) {
               for (const sp of savedProfiles) {
@@ -3045,6 +3064,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               if (url.includes('twitter') || url.includes('x.com')) addPlatformPill('twitter', 'Twitter/X', s.url);
               if (url.includes('youtube')) addPlatformPill('youtube', 'YouTube', s.url);
               if (url.includes('tiktok')) addPlatformPill('tiktok', 'TikTok', s.url);
+              if (url.includes('linkedin')) addPlatformPill('linkedin', 'LinkedIn', s.url);
             }
 
             // 4. PDL profiles
@@ -3069,13 +3089,14 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               }
             }
 
-            // 6. creator_has flags from manual_checks
+            // 6. creator_has flags from manual_checks (skip linkedin — low confidence)
             const creatorHas = manualChecks?.creator_has as Record<string, boolean> | undefined;
             if (creatorHas) {
               for (const [k, v] of Object.entries(creatorHas)) {
+                if (k === 'linkedin') continue; // creator_has flags have no URL to validate
                 if (v && HEADER_PLATFORM_ICONS[k]) {
                   const handle = record.source_username || record.person_name.toLowerCase().replace(/\s+/g, "");
-                  const base = k === 'linkedin' ? 'https://linkedin.com/in/' : k === 'youtube' ? 'https://youtube.com/@' : k === 'tiktok' ? 'https://tiktok.com/@' : k === 'twitter' ? 'https://twitter.com/' : k === 'facebook' ? 'https://facebook.com/' : 'https://instagram.com/';
+                  const base = k === 'youtube' ? 'https://youtube.com/@' : k === 'tiktok' ? 'https://tiktok.com/@' : k === 'twitter' ? 'https://twitter.com/' : k === 'facebook' ? 'https://facebook.com/' : 'https://instagram.com/';
                   addPlatformPill(k, k === 'twitter' ? 'Twitter/X' : k.charAt(0).toUpperCase() + k.slice(1), base + handle);
                 }
               }

@@ -682,14 +682,38 @@ export async function runVerificationPipeline(
   onPhase({ phase: 7, name: "Social Verification", status: "running" });
   let socialComplete = false;
   const socialProfiles: SocialProfile[] = [];
+
+  // LinkedIn confidence check: only include if URL matches creator identity
+  const isLinkedInConfident = (url: string): boolean => {
+    // If user explicitly provided this LinkedIn URL, always trust it
+    if (input.linkedinUrl && url.toLowerCase().includes(input.linkedinUrl.toLowerCase().replace(/\/$/, ""))) return true;
+    const slug = url.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i)?.[1]?.toLowerCase() ?? "";
+    if (!slug) return false;
+    // Match against social handle (e.g. "joellerblades")
+    if (input.socialHandle && slug.includes(input.socialHandle.toLowerCase())) return true;
+    // Match against last name
+    const nameParts = input.fullName.trim().toLowerCase().split(/\s+/);
+    const lastName = nameParts[nameParts.length - 1];
+    if (lastName && lastName.length >= 3 && slug.includes(lastName)) return true;
+    // Match against first name + last name combination
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      if (firstName.length >= 3 && slug.includes(firstName) && slug.includes(lastName)) return true;
+    }
+    return false;
+  };
+
   try {
     if (pdlData?.profiles?.length) {
       for (const p of pdlData.profiles) {
-        socialProfiles.push({
-          network: p.network ?? "unknown",
-          url: p.url ?? "",
-          verified: true,
-        });
+        const network = p.network ?? "unknown";
+        const url = p.url ?? "";
+        // Filter LinkedIn through confidence check
+        if (network === "linkedin" && !isLinkedInConfident(url)) {
+          console.log("[Verify] Skipping unconfident LinkedIn from PDL:", url);
+          continue;
+        }
+        socialProfiles.push({ network, url, verified: true });
       }
     }
     const SOCIAL_PATTERNS: { network: string; pattern: RegExp }[] = [
@@ -705,6 +729,11 @@ export async function runVerificationPipeline(
       const url = es.url ?? "";
       for (const { network, pattern } of SOCIAL_PATTERNS) {
         if (!seenNetworks.has(network) && pattern.test(url)) {
+          // Filter LinkedIn through confidence check
+          if (network === "linkedin" && !isLinkedInConfident(url)) {
+            console.log("[Verify] Skipping unconfident LinkedIn from evidence:", url);
+            continue;
+          }
           socialProfiles.push({ network, url, verified: false });
           seenNetworks.add(network);
         }
