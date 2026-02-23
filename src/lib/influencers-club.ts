@@ -589,7 +589,7 @@ export async function searchLocations(
 
   const params = new URLSearchParams({ q, platform });
   const res = await fetch(`${LOCATIONS_URL}?${params}`, {
-    headers: { "X-Ic-Auth": apiKey },
+    headers: { "X-Ic-Token": apiKey },
     signal,
   });
   if (!res.ok) return [];

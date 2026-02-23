@@ -6,10 +6,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "q parameter is required" });
   }
 
-  // NOTE: Vercel WAF blocks headers containing "key" or "authorization" when
-  // combined with query params on this endpoint, so we use "x-ic-auth" instead.
+  // NOTE: Vercel WAF blocks headers containing "key", "auth", or "authorization"
+  // when combined with query params on this endpoint, so we use "x-ic-token".
   const apiKey =
-    req.headers["x-ic-auth"] ||
+    req.headers["x-ic-token"] ||
     process.env.VITE_INFLUENCERS_CLUB_API_KEY;
 
   if (!apiKey) {
