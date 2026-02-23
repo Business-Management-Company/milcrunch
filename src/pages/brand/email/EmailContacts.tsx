@@ -47,11 +47,13 @@ function initials(first?: string | null, last?: string | null, email?: string): 
   return "?";
 }
 
-function avatarUrl(email?: string, idx = 0): string {
+const FEMALE_NAMES = new Set(['sarah','jennifer','ashley','emily','jessica','amanda','brittany','alexis','amber','morgan','rachel','taylor','madison','hannah','samantha','stephanie','melissa','elizabeth','lauren','megan','kayla','nicole','crystal','tiffany','brittney','vanessa','natalie','danielle','heather','kelly','katie','holly','jackie','lexi','jade','victoria','olivia','sophia','emma','isabella','ava','mia','grace','anna','maria','lisa','michelle']);
+
+function avatarUrl(email?: string, firstName?: string | null): string {
   let hash = 0;
   if (email) for (let i = 0; i < email.length; i++) hash += email.charCodeAt(i);
   const num = hash % 50;
-  const gender = idx % 2 === 0 ? "women" : "men";
+  const gender = firstName && FEMALE_NAMES.has(firstName.toLowerCase()) ? "women" : "men";
   return `https://randomuser.me/api/portraits/${gender}/${num}.jpg`;
 }
 
@@ -148,7 +150,7 @@ function ContactDrawer({ contact, open, onClose, lists, contactLists, onEdit, on
             <div className="relative h-16 w-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold overflow-hidden shrink-0 ring-2 ring-white/30">
               <span>{initials(contact.first_name, contact.last_name, contact.email)}</span>
               <img
-                src={avatarUrl(contact.email, contactIndex)}
+                src={avatarUrl(contact.email, contact.first_name)}
                 alt=""
                 className="absolute inset-0 w-16 h-16 rounded-full object-cover"
                 onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -239,11 +241,11 @@ function ContactDrawer({ contact, open, onClose, lists, contactLists, onEdit, on
           {/* Activity */}
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Activity</h3>
-            {(!contact.activity || contact.activity.length === 0) ? (
+            {(!Array.isArray(contact.activity) || contact.activity.length === 0) ? (
               <p className="text-sm text-gray-400 py-2">No activity recorded yet</p>
             ) : (
               <div className="space-y-3">
-                {contact.activity.slice(0, 15).map((a, i) => (
+                {(Array.isArray(contact.activity) ? contact.activity : []).slice(0, 15).map((a, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className="mt-0.5 shrink-0">
                       {ACTIVITY_ICONS[a.type] ?? <Clock className="h-3.5 w-3.5 text-gray-400" />}
@@ -734,7 +736,7 @@ const EmailContacts = () => {
               <div className="relative h-14 w-14 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xl font-bold overflow-hidden shrink-0">
                 <span>{initials(detail.first_name, detail.last_name, detail.email)}</span>
                 <img
-                  src={avatarUrl(detail.email)}
+                  src={avatarUrl(detail.email, detail.first_name)}
                   alt=""
                   className="absolute inset-0 w-14 h-14 rounded-full object-cover"
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -861,11 +863,11 @@ const EmailContacts = () => {
           {/* Activity Timeline */}
           <Card className="p-5 col-span-1">
             <h3 className="font-semibold mb-4">Activity</h3>
-            {(!detail.activity || detail.activity.length === 0) ? (
+            {(!Array.isArray(detail.activity) || detail.activity.length === 0) ? (
               <p className="text-sm text-muted-foreground">No activity recorded yet</p>
             ) : (
               <div className="space-y-3">
-                {detail.activity.slice(0, 20).map((a, i) => (
+                {(Array.isArray(detail.activity) ? detail.activity : []).slice(0, 20).map((a, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className="mt-0.5">
                       {a.type === "email_sent" && <Send className="h-3.5 w-3.5 text-blue-500" />}
@@ -1190,7 +1192,7 @@ const EmailContacts = () => {
                       <div className="relative h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold overflow-hidden">
                         <span>{initials(c.first_name, c.last_name, c.email)}</span>
                         <img
-                          src={avatarUrl(c.email, idx)}
+                          src={avatarUrl(c.email, c.first_name)}
                           alt=""
                           className="absolute inset-0 w-8 h-8 rounded-full object-cover"
                           onError={(e) => { e.currentTarget.style.display = "none"; }}
