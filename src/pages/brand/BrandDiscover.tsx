@@ -2741,7 +2741,9 @@ const BrandDiscover = () => {
                         className={cn(
                           "relative rounded-2xl border p-5 flex flex-col transition-all duration-200 cursor-pointer shadow-sm",
                           "bg-white border-gray-200 hover:shadow-md hover:border-[#6C5CE7]/30",
-                          "dark:bg-[#1A1D27] dark:border-gray-800 dark:hover:border-[#6C5CE7]/30"
+                          "dark:bg-[#1A1D27] dark:border-gray-800 dark:hover:border-[#6C5CE7]/30",
+                          confidence.level === "high" && "ring-1 ring-emerald-300/60 border-emerald-200 dark:ring-emerald-700/40 dark:border-emerald-800",
+                          confidence.level === "medium" && "border-amber-200 dark:border-amber-800/60",
                         )}
                         onClick={() => {
                           setProfileCreator(creator);
@@ -2790,6 +2792,41 @@ const BrandDiscover = () => {
 
                         {/* Thin divider */}
                         <div className="border-t border-gray-100 dark:border-gray-800 mb-3" />
+
+                        {/* Military Match Badge */}
+                        {confidence.level !== "none" && confidence.militaryPct > 0 && (
+                          <div className="mb-2" onClick={(e) => e.stopPropagation()}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={cn(
+                                  "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-help",
+                                  confidence.level === "high" && "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800",
+                                  confidence.level === "medium" && "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800",
+                                  confidence.level === "low" && "bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:border-gray-700",
+                                )}>
+                                  <span>🎖️</span>
+                                  <span>{confidence.militaryPct}% Military Match</span>
+                                  <Info className="h-3 w-3 opacity-50" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" align="start" className="max-w-xs p-3">
+                                <p className="font-semibold text-xs mb-1.5">Military Match Evidence</p>
+                                {confidence.evidence.length > 0 ? (
+                                  <ul className="space-y-1">
+                                    {confidence.evidence.map((e, i) => (
+                                      <li key={i} className="flex items-start gap-1.5 text-xs">
+                                        <span className="text-emerald-500 shrink-0 mt-0.5">✓</span>
+                                        <span>{e}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">Matched via search keywords</p>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        )}
 
                         {/* Single stats row — all 4 inline */}
                         <div className="flex items-center gap-4 text-sm mb-3">
