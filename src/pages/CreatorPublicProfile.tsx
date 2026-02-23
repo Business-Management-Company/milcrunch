@@ -316,14 +316,18 @@ export default function CreatorPublicProfile() {
 
   /* ---- Parse enrichment data ---- */
   const enrichment = useMemo(() => {
-    const data = creator?.enrichment_data;
-    return {
-      bannerImage: extractBannerImage(data),
-      email: extractEmailFromEnrichment(data),
-      posts: extractPosts(data),
-      otherLinks: extractOtherLinks(data),
-      hashtags: extractHashtags(data),
-    };
+    try {
+      const data = creator?.enrichment_data;
+      return {
+        bannerImage: extractBannerImage(data) ?? null,
+        email: extractEmailFromEnrichment(data) ?? null,
+        posts: extractPosts(data) ?? [],
+        otherLinks: extractOtherLinks(data) ?? [],
+        hashtags: extractHashtags(data) ?? [],
+      };
+    } catch {
+      return { bannerImage: null, email: null, posts: [], otherLinks: [], hashtags: [] };
+    }
   }, [creator?.enrichment_data]);
 
   /* ---- Resolve banner image ---- */
@@ -475,17 +479,22 @@ export default function CreatorPublicProfile() {
 
   /* ---- Computed values ---- */
   console.log("Creator IC data:", creator);
-  const enrichData = creator.enrichment_data as Record<string, unknown> | undefined;
-  const creatorHas = (enrichData?.result as Record<string, unknown>)?.creator_has as Record<string, boolean> | undefined
-    ?? enrichData?.creator_has as Record<string, boolean> | undefined;
-  const basePlatforms = creator.platforms ?? [];
+  const enrichData = (creator.enrichment_data && typeof creator.enrichment_data === "object") ? creator.enrichment_data as Record<string, unknown> : undefined;
+  const rawCreatorHas = (enrichData?.result as Record<string, unknown> | undefined)?.creator_has
+    ?? enrichData?.creator_has;
+  const creatorHas = (rawCreatorHas && typeof rawCreatorHas === "object" && !Array.isArray(rawCreatorHas))
+    ? rawCreatorHas as Record<string, boolean>
+    : undefined;
+  const basePlatforms = Array.isArray(creator.platforms) ? creator.platforms : [];
   // Merge in platforms from IC creator_has flags
   const platforms = useMemo(() => {
-    const set = new Set(basePlatforms.map((p) => p.toLowerCase()));
+    const set = new Set(basePlatforms.filter((p): p is string => typeof p === "string").map((p) => p.toLowerCase()));
     if (creatorHas) {
-      for (const [k, v] of Object.entries(creatorHas)) {
-        if (v && PLATFORM_URLS[k]) set.add(k);
-      }
+      try {
+        for (const [k, v] of Object.entries(creatorHas)) {
+          if (v && PLATFORM_URLS[k]) set.add(k);
+        }
+      } catch { /* ignore malformed creatorHas */ }
     }
     return [...set];
   }, [basePlatforms, creatorHas]);
@@ -494,7 +503,7 @@ export default function CreatorPublicProfile() {
   const isVerified = !!creator.featured_homepage;
   const bannerImg = !bannerFailed ? (resolvedBanner || enrichment.bannerImage || null) : null;
 
-  const bio = creator.bio || "";
+  const bio = (typeof creator.bio === "string" ? creator.bio : "") || "";
   const bioNeedsToggle = bio.length > 180;
   const bioDisplay = bioExpanded || !bioNeedsToggle ? bio : bio.slice(0, 180) + "...";
 
@@ -506,8 +515,10 @@ export default function CreatorPublicProfile() {
   if (creator.engagement_rate != null && creator.engagement_rate > 0) {
     stats.push({ label: "Engagement", value: `${creator.engagement_rate.toFixed(1)}%`, icon: <TrendingUp className="h-4 w-4 text-green-600" /> });
   }
-  if (creator.avg_views) {
+  if (creator.avg_views && typeof creator.avg_views === "string") {
     stats.push({ label: "Avg Views", value: creator.avg_views, icon: <Eye className="h-4 w-4 text-blue-500" /> });
+  } else if (creator.avg_views) {
+    stats.push({ label: "Avg Views", value: String(creator.avg_views), icon: <Eye className="h-4 w-4 text-blue-500" /> });
   }
   if (creator.media_count && creator.media_count > 0) {
     stats.push({ label: "Posts", value: formatFollowerCount(creator.media_count), icon: <LayoutGrid className="h-4 w-4 text-gray-500" /> });
@@ -637,12 +648,12 @@ export default function CreatorPublicProfile() {
                         Attending Events
                       </span>
                     )}
-                    {creator.status && (
+                    {creator.status && typeof creator.status === "string" && (
                       <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                         {creator.status}
                       </span>
                     )}
-                    {creator.category && (
+                    {creator.category && typeof creator.category === "string" && (
                       <span className="text-xs font-medium text-[#1e3a5f] bg-[#1e3a5f]/10 px-3 py-1 rounded-full">
                         {creator.category}
                       </span>
