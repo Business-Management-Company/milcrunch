@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus } from "lucide-react";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus, Upload } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
@@ -73,6 +73,9 @@ const BrandLists = () => {
   const [editingListDesc, setEditingListDesc] = useState(false);
   const [listDescValue, setListDescValue] = useState("");
   const [createAvatarUrl, setCreateAvatarUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const createFileInputRef = useRef<HTMLInputElement>(null);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -138,6 +141,26 @@ const BrandLists = () => {
     setImageUrlValue("");
   };
 
+  const handleFileUpload = async (file: File, id: string, setUrl: (url: string) => void) => {
+    setUploading(true);
+    try {
+      const path = `${id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error } = await supabase.storage.from("list-avatars").upload(path, file, { upsert: true });
+      if (error) {
+        toast.error("Upload failed: " + error.message);
+        return;
+      }
+      const { data: pub } = supabase.storage.from("list-avatars").getPublicUrl(path);
+      setUrl(pub.publicUrl);
+      toast.success("Image uploaded");
+    } catch (err) {
+      toast.error("Upload failed");
+      console.error("[handleFileUpload]", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleDeleteList = () => {
     if (!deleteConfirmId) return;
     deleteList(deleteConfirmId);
@@ -153,25 +176,54 @@ const BrandLists = () => {
             <DialogTitle>Create New List</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {/* Avatar URL */}
-            <div className="space-y-2">
-              <Label htmlFor="create-avatar-url">Image URL (optional)</Label>
-              <div className="flex items-center gap-3">
+            {/* Avatar upload + URL */}
+            <div className="space-y-3">
+              <Label>Image (optional)</Label>
+              <input
+                ref={createFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const tempId = crypto.randomUUID();
+                    handleFileUpload(file, tempId, setCreateAvatarUrl);
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => createFileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 flex items-center gap-3 hover:border-[#1e3a5f] hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer disabled:opacity-50"
+              >
                 <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200">
                   {createAvatarUrl.trim() ? (
                     <img src={createAvatarUrl.trim()} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  ) : uploading ? (
+                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
                   ) : (
                     <Camera className="w-5 h-5 text-gray-400" />
                   )}
                 </div>
-                <Input
-                  id="create-avatar-url"
-                  placeholder="https://example.com/image.jpg"
-                  value={createAvatarUrl}
-                  onChange={(e) => setCreateAvatarUrl(e.target.value)}
-                  className="rounded-lg"
-                />
+                <span className="text-sm text-gray-500">{uploading ? "Uploading..." : "Click to upload image"}</span>
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+                <span className="text-xs text-gray-400">or paste a URL</span>
+                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
               </div>
+
+              <Input
+                id="create-avatar-url"
+                placeholder="https://example.com/image.jpg"
+                value={createAvatarUrl}
+                onChange={(e) => setCreateAvatarUrl(e.target.value)}
+                className="rounded-lg"
+              />
             </div>
 
             {/* List name */}
@@ -240,8 +292,39 @@ const BrandLists = () => {
       <Dialog open={!!imageTargetId} onOpenChange={(open) => { if (!open) { setImageTargetId(null); setImageUrlValue(""); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Change List Image</DialogTitle></DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="image-url-input">Image URL</Label>
+          <div className="space-y-3 py-2">
+            {/* File upload area */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && imageTargetId) handleFileUpload(file, imageTargetId, setImageUrlValue);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 flex flex-col items-center gap-2 hover:border-[#1e3a5f] hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {uploading ? (
+                <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+              ) : (
+                <Upload className="h-6 w-6 text-gray-400" />
+              )}
+              <span className="text-sm text-gray-500">{uploading ? "Uploading..." : "Click to upload image"}</span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+              <span className="text-xs text-gray-400">or paste a URL</span>
+              <div className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+            </div>
+
             <Input
               id="image-url-input"
               placeholder="https://example.com/image.jpg"
@@ -251,14 +334,14 @@ const BrandLists = () => {
               className="rounded-lg"
             />
             {imageUrlValue.trim() && (
-              <div className="mt-2 flex justify-center">
+              <div className="mt-1 flex justify-center">
                 <img src={imageUrlValue.trim()} alt="Preview" className="w-16 h-16 rounded-lg object-cover border border-gray-200" onError={(e) => { e.currentTarget.style.display = "none"; }} />
               </div>
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => { setImageTargetId(null); setImageUrlValue(""); }} className="rounded-lg">Cancel</Button>
-            <Button onClick={handleSaveImageUrl} disabled={!imageUrlValue.trim()} className="rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282]">Save</Button>
+            <Button onClick={handleSaveImageUrl} disabled={!imageUrlValue.trim() || uploading} className="rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282]">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
