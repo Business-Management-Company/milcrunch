@@ -459,6 +459,7 @@ export default function Verification() {
           linkedinUrl: addForm.linkedinUrl.trim() || undefined,
           websiteUrl: addForm.websiteUrl.trim() || undefined,
           notes: addForm.notes.trim() || undefined,
+          socialHandle: addForm.instagramHandle.trim().replace(/^@/, "") || undefined,
         },
         onPhase
       );
@@ -717,6 +718,7 @@ export default function Verification() {
           claimedStatus: row.claimed_status ?? "veteran",
           linkedinUrl: row.linkedin_url ?? undefined,
           websiteUrl: row.website_url ?? undefined,
+          socialHandle: row.source_username?.replace(/^@/, "") || undefined,
         },
         onReverifyPhase
       );
@@ -2720,6 +2722,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           claimedStatus: record.claimed_status ?? "veteran",
           linkedinUrl: record.linkedin_url ?? undefined,
           websiteUrl: record.website_url ?? undefined,
+          socialHandle: record.source_username?.replace(/^@/, "") || undefined,
         },
         () => {}
       );
