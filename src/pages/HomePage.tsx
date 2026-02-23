@@ -251,6 +251,70 @@ function getTagColor(tag: string): string {
   return "bg-gray-100 text-gray-700";
 }
 
+function getTotalReach(creator: ShowcaseCreator): { total: number; platformCount: number } {
+  const ed = creator.enrichment_data;
+  if (!ed || typeof ed !== "object") {
+    return { total: creator.follower_count ?? 0, platformCount: creator.follower_count ? 1 : 0 };
+  }
+  const data = ed as Record<string, unknown>;
+  const result = (data.result && typeof data.result === "object") ? data.result as Record<string, unknown> : undefined;
+
+  let total = 0;
+  let platformCount = 0;
+
+  // Instagram
+  const ig = ((result?.instagram ?? data.instagram) && typeof (result?.instagram ?? data.instagram) === "object")
+    ? (result?.instagram ?? data.instagram) as Record<string, unknown> : undefined;
+  const igF = Number(ig?.follower_count ?? ig?.followers ?? 0);
+  if (igF > 0) { total += igF; platformCount++; }
+
+  // TikTok
+  const tt = ((result?.tiktok ?? data.tiktok) && typeof (result?.tiktok ?? data.tiktok) === "object")
+    ? (result?.tiktok ?? data.tiktok) as Record<string, unknown> : undefined;
+  const ttF = Number(tt?.follower_count ?? tt?.followers ?? 0);
+  if (ttF > 0) { total += ttF; platformCount++; }
+
+  // YouTube
+  const yt = ((result?.youtube ?? data.youtube) && typeof (result?.youtube ?? data.youtube) === "object")
+    ? (result?.youtube ?? data.youtube) as Record<string, unknown> : undefined;
+  const ytF = Number(yt?.subscriber_count ?? yt?.follower_count ?? yt?.subscribers ?? 0);
+  if (ytF > 0) { total += ytF; platformCount++; }
+
+  // Twitter/X
+  const tw = ((result?.twitter ?? data.twitter) && typeof (result?.twitter ?? data.twitter) === "object")
+    ? (result?.twitter ?? data.twitter) as Record<string, unknown> : undefined;
+  const twF = Number(tw?.follower_count ?? tw?.followers ?? 0);
+  if (twF > 0) { total += twF; platformCount++; }
+
+  // Fallback to stored follower_count if no enrichment platforms found
+  if (total === 0 && creator.follower_count) {
+    total = creator.follower_count;
+    platformCount = 1;
+  }
+
+  return { total, platformCount };
+}
+
+function getBestStats(creator: ShowcaseCreator): { value: string; label: string }[] {
+  const candidates: { value: string; label: string; priority: number }[] = [];
+
+  if (creator.engagement_rate != null && creator.engagement_rate > 0) {
+    candidates.push({ value: `${creator.engagement_rate.toFixed(2)}%`, label: "Engagement", priority: 1 });
+  }
+  if (creator.avg_likes != null && Number(creator.avg_likes) > 0) {
+    candidates.push({ value: formatFollowerCount(Number(creator.avg_likes)), label: "Avg Likes", priority: 2 });
+  }
+  if (creator.avg_comments != null && creator.avg_comments > 0) {
+    candidates.push({ value: formatFollowerCount(creator.avg_comments), label: "Avg Comments", priority: 3 });
+  }
+  if (creator.avg_views != null && String(creator.avg_views) !== "—" && String(creator.avg_views) !== "0" && Number(creator.avg_views) > 0) {
+    candidates.push({ value: typeof creator.avg_views === "string" ? creator.avg_views : formatFollowerCount(Number(creator.avg_views)), label: "Avg Views", priority: 4 });
+  }
+
+  candidates.sort((a, b) => a.priority - b.priority);
+  return candidates.slice(0, 3);
+}
+
 function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
   const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
@@ -358,24 +422,27 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-1 w-full px-4 mb-2">
-        <div className="text-center">
-          <p className="text-sm font-bold text-[#1A1A2E]">{formatFollowerCount(c.follower_count)}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Followers</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-bold text-[#1A1A2E]">{c.engagement_rate != null && c.engagement_rate > 0 ? `${c.engagement_rate.toFixed(2)}%` : "—"}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Engagement</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-bold text-[#1A1A2E]">{c.avg_likes != null && Number(c.avg_likes) > 0 ? formatFollowerCount(Number(c.avg_likes)) : "—"}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Avg Likes</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-bold text-[#1A1A2E]">{c.avg_comments != null && c.avg_comments > 0 ? formatFollowerCount(c.avg_comments) : "—"}</p>
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Avg Comments</p>
-        </div>
-      </div>
+      {(() => {
+        const reach = getTotalReach(c);
+        const best = getBestStats(c);
+        return (
+          <div className={`grid gap-1 w-full px-4 mb-2 ${best.length === 3 ? "grid-cols-4" : best.length === 2 ? "grid-cols-3" : best.length === 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+            <div className="text-center">
+              <p className="text-sm font-bold text-[#1A1A2E]">{formatFollowerCount(reach.total)}</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide">Total Reach</p>
+              {reach.platformCount > 1 && (
+                <p className="text-[9px] text-gray-300 leading-tight">across {reach.platformCount} platforms</p>
+              )}
+            </div>
+            {best.map((s) => (
+              <div key={s.label} className="text-center">
+                <p className="text-sm font-bold text-[#1A1A2E]">{s.value}</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Platform icons */}
       {platforms.length > 0 && (
@@ -808,13 +875,8 @@ export default function HomePage() {
                     const enrichAvatar = extractAvatarFromEnrichment(db.enrichment_data);
                     const heroSources = [db.ic_avatar_url, db.avatar_url, enrichAvatar, (db as Record<string, unknown>).profile_image_url as string];
 
-                    // Build 4 stats: Followers, Engagement Rate, Avg Likes, Avg Comments
-                    const stats: { value: string; label: string }[] = [
-                      { value: db.follower_count ? formatFollowerCount(db.follower_count) : "—", label: "Followers" },
-                      { value: db.engagement_rate ? `${db.engagement_rate.toFixed(2)}%` : "—", label: "Engagement" },
-                      { value: (db.avg_likes && db.avg_likes !== "—" && db.avg_likes !== "0") ? db.avg_likes : "—", label: "Avg Likes" },
-                      { value: db.avg_comments != null && db.avg_comments > 0 ? formatFollowerCount(db.avg_comments) : "—", label: "Avg Comments" },
-                    ];
+                    const reach = getTotalReach(db);
+                    const best = getBestStats(db);
 
                     return (
                       <div key={db.id} className={`relative ${style.z} bg-white rounded-2xl ${style.shadow} border border-gray-100 w-[420px] px-5 py-2.5 ${style.mt} ${style.ml}`}>
@@ -829,7 +891,14 @@ export default function HomePage() {
                           )}
                         </div>
                         <div className="border-t border-gray-100 mt-2 pt-2 grid grid-cols-2 gap-x-3 gap-y-2">
-                          {stats.map((s) => (
+                          <div>
+                            <p className="text-[16px] font-bold text-gray-900 leading-tight">{formatFollowerCount(reach.total)}</p>
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Total Reach</p>
+                            {reach.platformCount > 1 && (
+                              <p className="text-[9px] text-gray-300 leading-tight">across {reach.platformCount} platforms</p>
+                            )}
+                          </div>
+                          {best.map((s) => (
                             <div key={s.label}>
                               <p className="text-[16px] font-bold text-gray-900 leading-tight">{s.value}</p>
                               <p className="text-[10px] text-gray-400 uppercase tracking-wide">{s.label}</p>
