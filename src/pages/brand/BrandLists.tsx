@@ -141,20 +141,28 @@ const BrandLists = () => {
     setImageUrlValue("");
   };
 
-  const handleFileUpload = async (file: File, id: string, setUrl: (url: string) => void) => {
+  const handleFileUpload = async (file: File, listId: string, setUrl: (url: string) => void) => {
     setUploading(true);
     try {
-      const path = `${id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const { error } = await supabase.storage.from("list-avatars").upload(path, file, { upsert: true });
-      if (error) {
-        toast.error("Upload failed: " + error.message);
-        return;
-      }
-      const { data: pub } = supabase.storage.from("list-avatars").getPublicUrl(path);
-      setUrl(pub.publicUrl);
+      const fileExt = file.name.split(".").pop();
+      const filePath = `lists/${listId}-${Date.now()}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      await supabase.from("influencer_lists").update({ image_url: publicUrl }).eq("id", listId);
+
+      setUrl(publicUrl);
       toast.success("Image uploaded");
-    } catch (err) {
-      toast.error("Upload failed");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      toast.error("Upload failed: " + msg);
       console.error("[handleFileUpload]", err);
     } finally {
       setUploading(false);
