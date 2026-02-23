@@ -277,18 +277,21 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
           const Chevron = isSectionCollapsed ? ChevronRight : ChevronDown;
 
           return (
-            <div key={section.key} className={cn(idx > 0 && "mt-5")}>
+            <div key={section.key} className={cn(idx > 0 && "mt-2")}>
               {/* Section header */}
               {!collapsed ? (
                 <button
                   type="button"
                   onClick={() => toggleSection(section.key)}
-                  className="flex items-center justify-between w-full px-4 pt-5 pb-1 group"
+                  className={cn(
+                    "flex items-center justify-between w-full px-4 pt-3 pb-2.5 group",
+                    idx > 0 && "mt-1 border-t border-white/[0.06]"
+                  )}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     {section.label}
                   </span>
-                  <Chevron className="h-3 w-3 text-slate-500 group-hover:text-slate-400 transition-colors" />
+                  <Chevron className="h-3 w-3 text-slate-500 group-hover:text-slate-300 transition-colors" />
                 </button>
               ) : (
                 <div className="h-px bg-white/10 mx-3 mb-2" />
