@@ -517,51 +517,26 @@ const BrandDirectory = () => {
   };
 
   const copyToDirectory = async (m: DirectoryMember, targetDirId: string): Promise<"added" | "skipped" | "failed"> => {
-    // Check if creator already exists in target directory
-    const { data: existing } = await supabase
-      .from("directory_members")
-      .select("id")
-      .eq("directory_id", targetDirId)
-      .eq("creator_handle", m.creator_handle ?? "")
-      .maybeSingle();
-    if (existing) return "skipped"; // already there
-
-    const { data: maxRow } = await supabase
-      .from("directory_members")
-      .select("sort_order")
-      .eq("directory_id", targetDirId)
-      .order("sort_order", { ascending: false })
-      .limit(1);
-    const nextOrder = ((maxRow as { sort_order: number }[] | null)?.[0]?.sort_order ?? 0) + 1;
-
     const row = {
       directory_id: targetDirId,
       creator_handle: m.creator_handle ?? "",
       creator_name: m.creator_name ?? "",
-      platform: m.platform ?? "instagram",
       avatar_url: m.avatar_url,
-      ic_avatar_url: m.ic_avatar_url,
       follower_count: m.follower_count,
       engagement_rate: m.engagement_rate,
-      bio: m.bio,
+      platform: m.platform ?? "instagram",
       branch: m.branch,
-      status: m.status,
-      platforms: m.platforms ?? [],
-      platform_urls: m.platform_urls ?? {},
-      enrichment_data: m.enrichment_data,
-      category: m.category,
-      approved: true,
-      sort_order: nextOrder,
-      profile_slug: m.profile_slug,
-      added_at: new Date().toISOString(),
+      tags: (m as any).tags ?? null,
     };
 
-    // Use upsert to handle race conditions / unique constraint violations
-    const { error } = await supabase.from("directory_members").upsert(row, { onConflict: "directory_id,creator_handle" });
+    const { error } = await supabase
+      .from("directory_members")
+      .upsert(row, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
     if (error) {
       console.error("copyToDirectory upsert error:", error);
       return "failed";
     }
+    // ignoreDuplicates returns success even for duplicates, so we can't distinguish added vs skipped
     return "added";
   };
 
@@ -729,25 +704,19 @@ const BrandDirectory = () => {
 
   const handleBulkAddToDirectory = async (targetDirId: string) => {
     if (selectedIds.size === 0) return;
-    let added = 0;
-    let skipped = 0;
+    let copied = 0;
     let failed = 0;
     for (const id of selectedIds) {
       const m = members.find((mem) => mem.id === id);
       if (!m) { failed++; continue; }
       const result = await copyToDirectory(m, targetDirId);
-      if (result === "added") added++;
-      else if (result === "skipped") skipped++;
+      if (result === "added") copied++;
       else failed++;
     }
     const targetDir = directories.find((d) => d.id === targetDirId);
     const dirName = targetDir?.name ?? "directory";
-    if (added > 0 && skipped === 0) {
-      toast.success(`Added ${added} creator${added !== 1 ? "s" : ""} to ${dirName}`);
-    } else if (added > 0 && skipped > 0) {
-      toast.warning(`${added} added, ${skipped} already in ${dirName}`);
-    } else if (added === 0 && skipped > 0) {
-      toast.info(`All ${skipped} creator${skipped !== 1 ? "s" : ""} already in ${dirName}`);
+    if (copied > 0) {
+      toast.success(`Copied ${copied} creator${copied !== 1 ? "s" : ""} to ${dirName}`);
     }
     if (failed > 0) toast.error(`Failed to copy ${failed} creator${failed !== 1 ? "s" : ""}`);
     setSelectedIds(new Set());
