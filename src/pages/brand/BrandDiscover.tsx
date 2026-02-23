@@ -490,7 +490,7 @@ const FOLLOWER_OPTIONS = [
   { value: "mega", label: "Mega (1M+)", min: 1000000, max: null as number | null },
 ] as const;
 const ENGAGEMENT_OPTIONS = [
-  { value: "any", label: "All Engagement", min: null as number | null },
+  { value: "any", label: "Engagement", min: null as number | null },
   { value: "1", label: ">1%", min: 1 },
   { value: "2", label: ">2%", min: 2 },
   { value: "3", label: ">3%", min: 3 },
