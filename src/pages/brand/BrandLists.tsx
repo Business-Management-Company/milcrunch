@@ -518,15 +518,20 @@ const BrandLists = () => {
 export const BrandListDetail = () => {
   const { listId } = useParams<{ listId: string }>();
   const navigate = useNavigate();
-  const { lists, removeCreatorFromList } = useLists();
+  const { lists, removeCreatorFromList, renameList } = useLists();
   const { isSuperAdmin, effectiveUserId } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
   const [promotingAll, setPromotingAll] = useState(false);
+  const [editingListTitle, setEditingListTitle] = useState<string | false>(false);
+  const [listTitleValue, setListTitleValue] = useState("");
+  const [editingListDesc, setEditingListDesc] = useState(false);
+  const [listDescValue, setListDescValue] = useState("");
 
   const selectedList = lists.find((l) => l.id === listId) ?? null;
+  const creators = Array.isArray(selectedList?.creators) ? selectedList.creators : [];
 
   useEffect(() => {
     setSelectedIds(new Set());
@@ -555,8 +560,8 @@ export const BrandListDetail = () => {
 
   const selectAll = () => {
     if (!selectedList) return;
-    if (selectedIds.size === selectedList.creators.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(selectedList.creators.map((c) => c.id)));
+    if (selectedIds.size === creators.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(creators.map((c) => c.id)));
   };
 
   const handleBulkRemove = () => {
@@ -582,11 +587,11 @@ export const BrandListDetail = () => {
   };
 
   const handlePromoteAll = async () => {
-    if (!selectedList || selectedList.creators.length === 0) return;
+    if (!selectedList || creators.length === 0) return;
     setPromotingAll(true);
     let success = 0;
     let failed = 0;
-    for (const creator of selectedList.creators) {
+    for (const creator of creators) {
       const err = await promoteCreatorToDirectory(creator, listId ?? null, effectiveUserId ?? null);
       if (err) failed++;
       else success++;
@@ -609,6 +614,8 @@ export const BrandListDetail = () => {
       </div>
     );
   }
+
+  console.log("selectedList:", selectedList);
 
   return (
     <>
@@ -682,7 +689,7 @@ export const BrandListDetail = () => {
                   onClick={() => setEditingListDesc(true)}
                   className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 group flex items-center gap-2 mt-1"
                 >
-                  {listDescValue || `${selectedList.creators.length} creator${selectedList.creators.length !== 1 ? "s" : ""} · Click to add a description`}
+                  {listDescValue || `${creators.length} creator${creators.length !== 1 ? "s" : ""} · Click to add a description`}
                   <span className="opacity-0 group-hover:opacity-100 text-gray-400 transition-opacity">
                     <Pencil className="h-3.5 w-3.5" />
                   </span>
@@ -691,7 +698,7 @@ export const BrandListDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {isSuperAdmin && selectedList.creators.length > 0 && (
+            {isSuperAdmin && creators.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
@@ -703,10 +710,10 @@ export const BrandListDetail = () => {
                 Promote All to Directory
               </Button>
             )}
-            {selectedList.creators.length > 0 && (
+            {creators.length > 0 && (
               <div className="flex items-center gap-2">
                 <Checkbox
-                  checked={selectedIds.size === selectedList.creators.length}
+                  checked={selectedIds.size === creators.length}
                   onCheckedChange={selectAll}
                   aria-label="Select all"
                 />
@@ -718,7 +725,7 @@ export const BrandListDetail = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {selectedList.creators.map((creator) => {
+        {creators.map((creator) => {
           const isPromoting = promotingIds.has(creator.id);
           return (
             <Card
@@ -753,7 +760,7 @@ export const BrandListDetail = () => {
                     </p>
                   )}
                 </div>
-                {creator.platforms && creator.platforms.length > 0 && (
+                {Array.isArray(creator.platforms) && creator.platforms.length > 0 && (
                   <PlatformIcons
                     platforms={creator.platforms}
                     username={creator.username}
@@ -814,7 +821,7 @@ export const BrandListDetail = () => {
           );
         })}
       </div>
-      {selectedList.creators.length === 0 && (
+      {creators.length === 0 && (
         <p className="text-muted-foreground text-sm py-6">
           No creators in this list yet. Add creators from Discover.
         </p>
