@@ -5,6 +5,7 @@ import { Loader2, ShieldCheck, ShieldAlert, Clock, AlertTriangle, XCircle, Globe
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MarkdownResponse } from "@/components/MarkdownResponse";
+import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
 
 interface ReportRecord {
   id: string;
@@ -70,6 +71,7 @@ export default function PublicVerificationReport() {
   const [record, setRecord] = useState<ReportRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [enrichmentData, setEnrichmentData] = useState<unknown>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -87,6 +89,21 @@ export default function PublicVerificationReport() {
       setLoading(false);
     })();
   }, [token]);
+
+  // Fetch IC enrichment data from directory_members
+  useEffect(() => {
+    const handle = record?.source_username;
+    if (!handle) return;
+    (async () => {
+      const { data } = await supabase
+        .from("directory_members")
+        .select("enrichment_data")
+        .eq("creator_handle", handle)
+        .limit(1)
+        .maybeSingle();
+      if (data?.enrichment_data) setEnrichmentData(data.enrichment_data);
+    })();
+  }, [record?.source_username]);
 
   if (loading) {
     return (
@@ -142,82 +159,19 @@ export default function PublicVerificationReport() {
     return (record.ai_analysis || pdl) ? "green" : "yellow";
   })();
 
-  // Social links — pull from all available data sources
-  const socialLinks: { name: string; url: string; color: string }[] = [];
-  const seenPlatforms = new Set<string>();
-  const PLATFORM_COLORS: Record<string, string> = {
-    instagram: "border-pink-200 text-pink-700 hover:border-pink-400",
-    youtube: "border-red-200 text-red-700 hover:border-red-400",
-    twitter: "border-slate-300 text-slate-700 hover:border-slate-500",
-    tiktok: "border-gray-800 text-gray-900 hover:border-black",
-    facebook: "border-blue-200 text-blue-700 hover:border-blue-400",
-    linkedin: "border-blue-200 text-blue-700 hover:border-blue-500",
-    website: "border-gray-200 text-gray-600 hover:border-gray-400",
-  };
-  // LinkedIn confidence check: only show if URL matches creator identity
-  const isLinkedInConfident = (url: string): boolean => {
-    if (record.linkedin_url && url.toLowerCase().includes(record.linkedin_url.toLowerCase().replace(/\/$/, ""))) return true;
-    const slug = url.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i)?.[1]?.toLowerCase() ?? "";
-    if (!slug) return false;
-    const handle = record.source_username?.toLowerCase();
-    if (handle && slug.includes(handle)) return true;
-    const nameParts = record.person_name.trim().toLowerCase().split(/\s+/);
-    const lastName = nameParts[nameParts.length - 1];
-    if (lastName && lastName.length >= 3 && slug.includes(lastName)) return true;
-    if (nameParts.length >= 2) {
-      const firstName = nameParts[0];
-      if (firstName.length >= 3 && slug.includes(firstName) && slug.includes(lastName)) return true;
-    }
-    return false;
-  };
-  const addSocialPill = (network: string, label: string, url: string) => {
-    if (seenPlatforms.has(network)) return;
-    // Filter LinkedIn through confidence check (explicit linkedin_url is always trusted)
-    if (network === "linkedin" && url !== record.linkedin_url && !isLinkedInConfident(url)) return;
-    seenPlatforms.add(network);
-    socialLinks.push({ name: label, url, color: PLATFORM_COLORS[network] ?? PLATFORM_COLORS.website });
-  };
-  // 1. Explicit fields (linkedin_url is user-provided, always trusted)
-  if (record.source_username) addSocialPill("instagram", `@${record.source_username}`, `https://instagram.com/${record.source_username}`);
-  if (record.linkedin_url) addSocialPill("linkedin", "LinkedIn", record.linkedin_url);
-  // 2. Saved social_profiles from verification pipeline (already filtered during pipeline)
-  const savedProfiles = record.manual_checks?.social_profiles as { network: string; url: string }[] | undefined;
-  if (Array.isArray(savedProfiles)) {
-    for (const sp of savedProfiles) {
-      const net = sp.network?.toLowerCase();
-      if (net && sp.url) addSocialPill(net, net === "twitter" ? "Twitter/X" : net.charAt(0).toUpperCase() + net.slice(1), sp.url);
-    }
+  // IC enrichment data is the source of truth for platform pills
+  const icPlatforms = getPlatformsFromEnrichmentData(enrichmentData);
+
+  // Fallback: Instagram from explicit handle if IC doesn't cover it
+  const seenPlatforms = new Set(icPlatforms.map((p) => p.platform));
+  const fallbackLinks: { name: string; url: string; pillClass: string }[] = [];
+  if (record.source_username && !seenPlatforms.has("instagram")) {
+    fallbackLinks.push({
+      name: `@${record.source_username}`,
+      url: `https://instagram.com/${record.source_username}`,
+      pillClass: "bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100",
+    });
   }
-  // 3. Evidence source URLs
-  const evidenceSources = (record.evidence_sources ?? []);
-  for (const s of evidenceSources.filter(s => s.category === "Social Media")) {
-    const url = s.url.toLowerCase();
-    if (url.includes("facebook")) addSocialPill("facebook", "Facebook", s.url);
-    if (url.includes("twitter") || url.includes("x.com")) addSocialPill("twitter", "Twitter/X", s.url);
-    if (url.includes("youtube")) addSocialPill("youtube", "YouTube", s.url);
-    if (url.includes("tiktok")) addSocialPill("tiktok", "TikTok", s.url);
-    if (url.includes("linkedin")) addSocialPill("linkedin", "LinkedIn", s.url);
-  }
-  // 4. PDL profiles
-  const pdlProfiles = (record.pdl_data as any)?.profiles as { network: string; url: string }[] | undefined;
-  if (Array.isArray(pdlProfiles)) {
-    for (const p of pdlProfiles) {
-      const net = (p.network ?? "").toLowerCase();
-      if (net && p.url && PLATFORM_COLORS[net]) addSocialPill(net, net === "twitter" ? "Twitter/X" : net.charAt(0).toUpperCase() + net.slice(1), p.url);
-    }
-  }
-  // 5. creator_has flags (skip linkedin — no URL to validate)
-  const creatorHas = record.manual_checks?.creator_has as Record<string, boolean> | undefined;
-  if (creatorHas) {
-    const bases: Record<string, string> = { instagram: "https://instagram.com/", youtube: "https://youtube.com/@", tiktok: "https://tiktok.com/@", twitter: "https://twitter.com/", facebook: "https://facebook.com/" };
-    for (const [k, v] of Object.entries(creatorHas)) {
-      if (v && bases[k]) {
-        const handle = record.source_username || record.person_name.toLowerCase().replace(/\s+/g, "");
-        addSocialPill(k, k === "twitter" ? "Twitter/X" : k.charAt(0).toUpperCase() + k.slice(1), bases[k] + handle);
-      }
-    }
-  }
-  if (record.website_url) addSocialPill("website", "Website", record.website_url);
 
   // Category counts for evidence
   const categoryCounts = new Map<string, number>();
@@ -269,17 +223,28 @@ export default function PublicVerificationReport() {
                 </div>
 
                 {/* Social links */}
-                {socialLinks.length > 0 && (
+                {(icPlatforms.length > 0 || fallbackLinks.length > 0) && (
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
-                    {socialLinks.map((link) => (
+                    {icPlatforms.map((p) => (
+                      <a
+                        key={p.platform}
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${p.pillClass}`}
+                      >
+                        {p.label}
+                        <span className="opacity-60">@{p.username}</span>
+                      </a>
+                    ))}
+                    {fallbackLinks.map((link) => (
                       <a
                         key={link.url}
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${link.color}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${link.pillClass}`}
                       >
-                        <ExternalLink className="h-3 w-3" />
                         {link.name}
                       </a>
                     ))}

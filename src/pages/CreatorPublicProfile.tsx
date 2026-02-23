@@ -47,6 +47,7 @@ import {
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
+import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
 
 /* ------------------------------------------------------------------ */
 /* Icons                                                               */
@@ -485,10 +486,17 @@ export default function CreatorPublicProfile() {
   const creatorHas = (rawCreatorHas && typeof rawCreatorHas === "object" && !Array.isArray(rawCreatorHas))
     ? rawCreatorHas as Record<string, boolean>
     : undefined;
+  // IC enrichment data is the source of truth for platform pills
+  const icPlatforms = useMemo(
+    () => getPlatformsFromEnrichmentData(creator.enrichment_data),
+    [creator.enrichment_data]
+  );
+  // Legacy platforms list used for other logic (e.g., overview tab icons)
   const basePlatforms = Array.isArray(creator.platforms) ? creator.platforms : [];
-  // Merge in platforms from IC creator_has flags
   const platforms = useMemo(() => {
     const set = new Set(basePlatforms.filter((p): p is string => typeof p === "string").map((p) => p.toLowerCase()));
+    // Include IC platforms too
+    for (const p of icPlatforms) set.add(p.platform);
     if (creatorHas) {
       try {
         for (const [k, v] of Object.entries(creatorHas)) {
@@ -497,7 +505,7 @@ export default function CreatorPublicProfile() {
       } catch { /* ignore malformed creatorHas */ }
     }
     return [...set];
-  }, [basePlatforms, creatorHas]);
+  }, [basePlatforms, icPlatforms, creatorHas]);
   const bannerGradient = BRANCH_BANNER[creator.branch ?? ""] ?? DEFAULT_BANNER;
   const branchStyle = BRANCH_STYLES[creator.branch ?? ""] ?? "bg-gray-600 text-white";
   const isVerified = !!creator.featured_homepage;
@@ -797,13 +805,26 @@ export default function CreatorPublicProfile() {
               )}
 
               {/* Platforms */}
-              {platforms.length > 0 && (
+              {(icPlatforms.length > 0 || platforms.length > 0) && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Platforms</h3>
                   <div className="flex flex-wrap gap-2">
-                    {platforms.map((p) => {
-                      const handle = creator.creator_handle || creator.profile_slug || "";
-                      return (
+                    {icPlatforms.map((p) => (
+                      <a
+                        key={p.platform}
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition-colors ${p.pillClass}`}
+                      >
+                        <span className="font-medium">{p.label}</span>
+                        <span className="opacity-60">@{p.username}</span>
+                      </a>
+                    ))}
+                    {/* Fallback: platforms not covered by IC data */}
+                    {platforms
+                      .filter((p) => !icPlatforms.some((ic) => ic.platform === p))
+                      .map((p) => (
                         <a
                           key={p}
                           href={getPlatformUrl(p)}
@@ -813,10 +834,8 @@ export default function CreatorPublicProfile() {
                         >
                           {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
                           <span className="font-medium">{PLATFORM_LABEL[p] ?? p}</span>
-                          {handle && <span className="text-gray-400">@{handle}</span>}
                         </a>
-                      );
-                    })}
+                      ))}
                   </div>
                 </div>
               )}
@@ -979,13 +998,25 @@ export default function CreatorPublicProfile() {
               )}
 
               {/* Social platforms */}
-              {platforms.length > 0 && (
+              {(icPlatforms.length > 0 || platforms.length > 0) && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Social</h3>
                   <div className="flex flex-wrap gap-2">
-                    {platforms.map((p) => {
-                      const handle = creator.creator_handle || creator.profile_slug || "";
-                      return (
+                    {icPlatforms.map((p) => (
+                      <a
+                        key={p.platform}
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition-colors ${p.pillClass}`}
+                      >
+                        <span className="font-medium">{p.label}</span>
+                        <span className="opacity-60">@{p.username}</span>
+                      </a>
+                    ))}
+                    {platforms
+                      .filter((p) => !icPlatforms.some((ic) => ic.platform === p))
+                      .map((p) => (
                         <a
                           key={p}
                           href={getPlatformUrl(p)}
@@ -995,10 +1026,8 @@ export default function CreatorPublicProfile() {
                         >
                           {PLATFORM_ICON[p] ?? <ExternalLink className="h-4 w-4" />}
                           <span className="font-medium">{PLATFORM_LABEL[p] ?? p}</span>
-                          {handle && <span className="text-gray-400">@{handle}</span>}
                         </a>
-                      );
-                    })}
+                      ))}
                   </div>
                 </div>
               )}

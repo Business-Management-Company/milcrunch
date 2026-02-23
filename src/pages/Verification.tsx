@@ -113,6 +113,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
 
 const MILITARY_KEYWORDS = /military|veteran|army|navy|marine|air force|coast guard|served|deployment|dd-214|rank|sergeant|lieutenant|captain|medal|decorated|combat|reserve|guard|usmc|dod|veterans affairs/gi;
 
@@ -2199,29 +2200,31 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
     })();
   }, [igHandle]);
 
-  // Build platform pills from ALL available data sources
-  const seen = new Set<string>();
-  const socialPills: { platform: string; handle: string; url: string }[] = [];
+  // IC enrichment data is the source of truth for platforms
+  const icPlatforms = dirMember?.enrichment_data
+    ? getPlatformsFromEnrichmentData(dirMember.enrichment_data)
+    : [];
+
+  // Fallback: build from other sources only for platforms IC doesn't cover
+  const seen = new Set<string>(icPlatforms.map((p) => p.platform));
+  const fallbackPills: { platform: string; handle: string; url: string }[] = [];
 
   const addPill = (platform: string, handle: string, url: string) => {
     const key = platform.toLowerCase();
     if (seen.has(key) || !handle) return;
     seen.add(key);
-    socialPills.push({ platform: key, handle, url });
+    fallbackPills.push({ platform: key, handle, url });
   };
 
-  // 1. Explicit fields
-  if (igHandle) addPill("instagram", igHandle, `https://instagram.com/${igHandle}`);
-  if (linkedinUrl) {
-    const liHandle = linkedinUrl.replace(/.*linkedin\.com\/in\//i, "").replace(/\/$/, "") || "profile";
-    addPill("linkedin", liHandle, linkedinUrl);
-  }
+  // Explicit fields
+  if (igHandle && !seen.has("instagram")) addPill("instagram", igHandle, `https://instagram.com/${igHandle}`);
 
-  // 2. Saved social_profiles from verification pipeline (most comprehensive)
+  // Saved social_profiles from verification pipeline
   const savedProfiles = manualChecks?.social_profiles as { network: string; url: string }[] | undefined;
   if (Array.isArray(savedProfiles)) {
     for (const sp of savedProfiles) {
       const network = sp.network?.toLowerCase();
+      if (network === "linkedin") continue; // skip LinkedIn unless from IC
       const info = SOCIAL_PLATFORM_MAP[network];
       if (!info || seen.has(network)) continue;
       const matcher = SOCIAL_URL_PATTERNS.find((p) => p.network === network);
@@ -2230,82 +2233,7 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
     }
   }
 
-  // 3. PDL profiles
-  const pdlData = record.pdl_data as { profiles?: { network: string; url: string }[] } | null;
-  if (pdlData?.profiles) {
-    for (const p of pdlData.profiles) {
-      const network = p.network?.toLowerCase();
-      const info = SOCIAL_PLATFORM_MAP[network];
-      if (!info || seen.has(network)) continue;
-      const matcher = SOCIAL_URL_PATTERNS.find((m) => m.network === network);
-      const handle = matcher ? matcher.extractHandle(p.url) : "";
-      addPill(network, handle || record.person_name.toLowerCase().replace(/\s+/g, ""), p.url);
-    }
-  }
-
-  // 4. Evidence source URLs
-  const evidenceSources = (record.evidence_sources ?? []) as { url?: string }[];
-  for (const es of evidenceSources) {
-    const url = es.url ?? "";
-    for (const { network, pattern, extractHandle } of SOCIAL_URL_PATTERNS) {
-      if (!seen.has(network) && pattern.test(url)) {
-        const handle = extractHandle(url);
-        if (handle) addPill(network, handle, url);
-      }
-    }
-  }
-
-  // 5. creator_has flags from manual_checks (fallback)
-  const creatorHas = manualChecks?.creator_has as Record<string, boolean> | undefined;
-  if (creatorHas) {
-    for (const [k, v] of Object.entries(creatorHas)) {
-      if (v && SOCIAL_PLATFORM_MAP[k] && !seen.has(k)) {
-        const handle = igHandle || record.person_name.toLowerCase().replace(/\s+/g, "");
-        addPill(k, handle, SOCIAL_PLATFORM_MAP[k].base + handle);
-      }
-    }
-  }
-
-  // 6. Directory member — platform_urls (explicit URLs per platform)
-  if (dirMember) {
-    const platformUrls = dirMember.platform_urls as Record<string, string> | undefined;
-    if (platformUrls) {
-      for (const [plat, url] of Object.entries(platformUrls)) {
-        const key = plat.toLowerCase();
-        if (!url || seen.has(key) || !SOCIAL_PLATFORM_MAP[key]) continue;
-        const matcher = SOCIAL_URL_PATTERNS.find((m) => m.network === key);
-        const handle = matcher ? matcher.extractHandle(url) : "";
-        addPill(key, handle || igHandle || record.person_name.toLowerCase().replace(/\s+/g, ""), url);
-      }
-    }
-
-    // 7. Directory member — platforms array (platform names without URLs)
-    const dmPlatforms = dirMember.platforms as string[] | undefined;
-    if (Array.isArray(dmPlatforms)) {
-      for (const p of dmPlatforms) {
-        const key = p.toLowerCase();
-        if (seen.has(key) || !SOCIAL_PLATFORM_MAP[key]) continue;
-        const handle = igHandle || record.person_name.toLowerCase().replace(/\s+/g, "");
-        addPill(key, handle, SOCIAL_PLATFORM_MAP[key].base + handle);
-      }
-    }
-
-    // 8. Directory member — enrichment_data.creator_has flags
-    const enrichData = dirMember.enrichment_data as Record<string, unknown> | undefined;
-    const enrichCreatorHas = (enrichData?.result as Record<string, unknown>)?.creator_has as Record<string, boolean> | undefined
-      ?? enrichData?.creator_has as Record<string, boolean> | undefined;
-    if (enrichCreatorHas) {
-      for (const [k, v] of Object.entries(enrichCreatorHas)) {
-        const key = k.toLowerCase();
-        if (v && SOCIAL_PLATFORM_MAP[key] && !seen.has(key)) {
-          const handle = igHandle || record.person_name.toLowerCase().replace(/\s+/g, "");
-          addPill(key, handle, SOCIAL_PLATFORM_MAP[key].base + handle);
-        }
-      }
-    }
-  }
-
-  const hasAnySocial = socialPills.length > 0 || !!websiteUrl;
+  const hasAnySocial = icPlatforms.length > 0 || fallbackPills.length > 0 || !!websiteUrl;
 
   return (
     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
@@ -2319,10 +2247,22 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
           <p className="text-sm text-muted-foreground">No social media profiles found.</p>
         ) : (
           <>
-            {/* Platform pills row */}
-            {socialPills.length > 0 && (
+            {/* Platform pills row — IC enrichment data first, then fallbacks */}
+            {(icPlatforms.length > 0 || fallbackPills.length > 0) && (
               <div className="flex flex-wrap gap-2">
-                {socialPills.map(({ platform, handle, url }) => {
+                {icPlatforms.map((p) => (
+                  <a
+                    key={p.platform}
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm transition-colors ${p.pillClass}`}
+                  >
+                    <span className="font-medium">{p.label}</span>
+                    <span className="opacity-60">@{p.username}</span>
+                  </a>
+                ))}
+                {fallbackPills.map(({ platform, handle, url }) => {
                   const info = SOCIAL_PLATFORM_MAP[platform];
                   if (!info) return null;
                   return (
@@ -2333,7 +2273,6 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
                       rel="noopener noreferrer"
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-sm transition-colors ${info.pillColor}`}
                     >
-                      <span>{info.icon}</span>
                       <span className="font-medium">{info.label}</span>
                       <span className="text-gray-400">@{handle}</span>
                     </a>
