@@ -723,6 +723,10 @@ export async function approveForDirectory(data: {
   added_by?: string | null;
   directory_id?: string | null;
   banner_image_url?: string | null;
+  avg_likes?: string | null;
+  avg_comments?: number | null;
+  avg_views?: string | null;
+  post_count?: number | null;
 }): Promise<{ error: string | null }> {
   const handle = data.handle.replace(/^@/, "").trim();
 
@@ -762,7 +766,22 @@ export async function approveForDirectory(data: {
     profile_slug: slug,
   };
 
-  if (data.enrichment_data) payload.enrichment_data = data.enrichment_data;
+  if (data.enrichment_data) {
+    payload.enrichment_data = data.enrichment_data;
+    // Auto-extract analytics from enrichment data if not explicitly provided
+    if (!data.avg_likes && !data.avg_comments && !data.avg_views) {
+      const stats = extractHeroStats(data.enrichment_data as Record<string, unknown>);
+      if (stats.avg_likes > 0) payload.avg_likes = String(stats.avg_likes);
+      if (stats.avg_comments > 0) payload.avg_comments = stats.avg_comments;
+      if (stats.avg_views > 0) payload.avg_views = String(stats.avg_views);
+      if (stats.media_count > 0) payload.post_count = stats.media_count;
+    }
+  }
+  // Explicit values override auto-extracted ones
+  if (data.avg_likes != null) payload.avg_likes = data.avg_likes;
+  if (data.avg_comments != null) payload.avg_comments = data.avg_comments;
+  if (data.avg_views != null) payload.avg_views = data.avg_views;
+  if (data.post_count != null) payload.post_count = data.post_count;
   if (data.source_list_id) payload.source_list_id = data.source_list_id;
   if (data.banner_image_url) payload.banner_image_url = data.banner_image_url;
 
