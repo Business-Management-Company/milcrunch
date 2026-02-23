@@ -1588,7 +1588,6 @@ No markdown formatting, just the JSON array.`;
                           alt={v.title}
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
-                          crossOrigin="anonymous"
                           onError={(e) => {
                             const el = e.currentTarget;
                             el.style.display = "none";
