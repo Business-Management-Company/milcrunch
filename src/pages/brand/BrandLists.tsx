@@ -820,7 +820,7 @@ export const BrandListDetail = () => {
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
                 <span>{formatFollowers(creator.followers ?? 0)} followers</span>
                 <span>&middot;</span>
-                <span>{(creator.engagementRate ?? 0)}% engagement</span>
+                <span>{(creator as Record<string, unknown>).avgLikes != null ? formatFollowers(Number((creator as Record<string, unknown>).avgLikes)) : "—"} avg likes</span>
               </div>
               <div className="mt-auto flex gap-2 flex-wrap">
                 <Button

@@ -298,11 +298,8 @@ function getTotalReach(creator: ShowcaseCreator): { total: number; platformCount
 function getBestStats(creator: ShowcaseCreator): { value: string; label: string }[] {
   const candidates: { value: string; label: string; priority: number }[] = [];
 
-  if (creator.engagement_rate != null && creator.engagement_rate > 0) {
-    candidates.push({ value: `${creator.engagement_rate.toFixed(2)}%`, label: "Engagement", priority: 1 });
-  }
   if (creator.avg_likes != null && Number(creator.avg_likes) > 0) {
-    candidates.push({ value: formatFollowerCount(Number(creator.avg_likes)), label: "Avg Likes", priority: 2 });
+    candidates.push({ value: formatFollowerCount(Number(creator.avg_likes)), label: "Avg Likes", priority: 1 });
   }
   if (creator.avg_comments != null && creator.avg_comments > 0) {
     candidates.push({ value: formatFollowerCount(creator.avg_comments), label: "Avg Comments", priority: 3 });
