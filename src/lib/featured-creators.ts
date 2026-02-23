@@ -774,7 +774,7 @@ export async function approveForDirectory(data: {
 
   const { error } = await supabase
     .from("directory_members")
-    .upsert(payload, { onConflict: "creator_handle", ignoreDuplicates: false });
+    .upsert(payload, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
 
   if (error) {
     console.error("[approveForDirectory] UPSERT FAILED:", error.message, error.details, error.hint, error.code);

@@ -552,7 +552,7 @@ const BrandDirectory = () => {
 
     const { error } = await supabase
       .from("directory_members")
-      .upsert(payload, { onConflict: "creator_handle", ignoreDuplicates: true });
+      .upsert(payload, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
     if (error) {
       console.error("upsert error:", error);
       return "failed";
