@@ -444,7 +444,7 @@ export interface VerificationInput {
 export interface PipelinePhase {
   phase: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   name: string;
-  status: "running" | "done" | "error" | "skipped";
+  status: "running" | "done" | "empty" | "error" | "skipped";
   data?: unknown;
 }
 
@@ -598,7 +598,12 @@ export async function runVerificationPipeline(
   } catch (err) {
     console.warn("[Verify] Phase 5 (Media) failed:", err);
   }
-  onPhase({ phase: 5, name: "Media & Appearances", status: "done", data: { count: mediaAppearances.length, mediaComplete } });
+  onPhase({
+    phase: 5,
+    name: "Media & Appearances",
+    status: mediaComplete ? (mediaAppearances.length > 0 ? "done" : "empty") : "error",
+    data: { count: mediaAppearances.length, mediaComplete, mediaAppearances },
+  });
 
   // Phase 6: Career Extraction — AI-powered career timeline from PDL + web search data
   onPhase({ phase: 6, name: "Career Extraction", status: "running" });
@@ -624,7 +629,13 @@ export async function runVerificationPipeline(
   } catch (err) {
     console.warn("[Verify] Phase 6 (Career) failed:", err);
   }
-  onPhase({ phase: 6, name: "Career Extraction", status: "done", data: { careerComplete } });
+  const careerHasData = !!(careerData && (careerData.career.length > 0 || careerData.education.length > 0 || careerData.awards.length > 0 || careerData.military_summary?.branch));
+  onPhase({
+    phase: 6,
+    name: "Career Extraction",
+    status: careerComplete ? (careerHasData ? "done" : "empty") : "error",
+    data: { careerComplete, careerData },
+  });
 
   // Phase 7: Social Verification — validate social handles from PDL + evidence
   onPhase({ phase: 7, name: "Social Verification", status: "running" });

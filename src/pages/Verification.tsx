@@ -687,6 +687,26 @@ export default function Verification() {
   const handleReverify = async (row: VerificationRecord) => {
     toast.info(`Re-verifying ${row.person_name}...`);
     try {
+      // Incremental save: write career/media to DB as each phase completes
+      const onReverifyPhase = async (p: PipelinePhase | { phase: number; name: string; status: string; data?: unknown }) => {
+        const phaseData = (p as PipelinePhase).data as Record<string, unknown> | undefined;
+        if (p.phase === 5 && (p.status === "done" || p.status === "empty")) {
+          const mediaItems = phaseData?.mediaAppearances ?? [];
+          const { data: existing5 } = await supabase.from("verifications").select("manual_checks").eq("id", row.id).single();
+          const mc5 = (existing5?.manual_checks ?? {}) as Record<string, unknown>;
+          await supabase.from("verifications").update({
+            manual_checks: { ...mc5, youtube_media: { videos: mediaItems, searched_at: new Date().toISOString() } },
+          }).eq("id", row.id);
+        }
+        if (p.phase === 6 && (p.status === "done" || p.status === "empty")) {
+          const careerResult = phaseData?.careerData ?? null;
+          const { data: existing6 } = await supabase.from("verifications").select("manual_checks").eq("id", row.id).single();
+          const mc6 = (existing6?.manual_checks ?? {}) as Record<string, unknown>;
+          await supabase.from("verifications").update({
+            manual_checks: { ...mc6, career_track: { result: careerResult, generated_at: new Date().toISOString() } },
+          }).eq("id", row.id);
+        }
+      };
       const result = await runVerificationPipeline(
         {
           fullName: row.person_name,
@@ -696,9 +716,9 @@ export default function Verification() {
           linkedinUrl: row.linkedin_url ?? undefined,
           websiteUrl: row.website_url ?? undefined,
         },
-        () => {}
+        onReverifyPhase
       );
-      // Merge new results into existing manual_checks to preserve background_review
+      // Final save merges everything including phases that may not have triggered incremental saves
       const { data: existingReverify } = await supabase.from("verifications").select("manual_checks").eq("id", row.id).single();
       const existingChecksReverify = (existingReverify?.manual_checks ?? {}) as Record<string, unknown>;
       const mergedChecks = {
@@ -782,13 +802,16 @@ export default function Verification() {
               {[1, 2, 5, 6, 7, 3, 4].map((n) => {
                 const p = phases.find((x) => x.phase === n);
                 const labelMap: Record<number, string> = { 1: "People Data Labs", 2: "Web Search", 5: "Media & Appearances", 6: "Military / Civilian Career", 7: "Social Verification", 3: "Deep Extraction", 4: "AI Analysis" };
-                const isDone = p?.status === "done";
+                const isComplete = p?.status === "done" || p?.status === "empty";
+                const isError = p?.status === "error";
                 const isRunning = p?.status === "running";
                 const phasePrefix = (n <= 4) ? `Phase ${n}: ` : "";
                 return (
-                  <div key={n} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${isRunning ? "bg-blue-50 dark:bg-blue-950/30 border border-blue-300 dark:border-blue-800" : isDone ? "opacity-50" : "opacity-30"}`}>
-                    {isDone ? (
-                      <Check className="h-4 w-4 text-blue-700 shrink-0" />
+                  <div key={n} className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${isRunning ? "bg-blue-50 dark:bg-blue-950/30 border border-blue-300 dark:border-blue-800" : isComplete ? "opacity-50" : isError ? "opacity-60" : "opacity-30"}`}>
+                    {isComplete ? (
+                      <Check className="h-4 w-4 text-green-600 shrink-0" />
+                    ) : isError ? (
+                      <span className="h-4 w-4 rounded-full bg-amber-400 shrink-0" />
                     ) : isRunning ? (
                       <Loader2 className="h-4 w-4 animate-spin text-[#1e3a5f] shrink-0" />
                     ) : (
