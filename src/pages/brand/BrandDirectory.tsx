@@ -67,7 +67,6 @@ import {
   deleteDirectory,
   toggleMemberApproval,
   removeMember,
-  addToDirectory,
   promoteListToDirectory,
   type Directory,
   type DirectoryMember,
@@ -476,26 +475,55 @@ const BrandDirectory = () => {
     toast.success(`Added to ${targetList?.name ?? "list"}`);
   };
 
-  const handleAddToOtherDirectory = async (m: DirectoryMember, dirId: string) => {
-    const { error } = await addToDirectory(dirId, {
-      handle: m.creator_handle ?? "",
-      display_name: m.creator_name ?? "",
-      platform: "instagram",
+  const copyToDirectory = async (m: DirectoryMember, targetDirId: string): Promise<boolean> => {
+    // Check if creator already exists in target directory
+    const { data: existing } = await supabase
+      .from("directory_members")
+      .select("id")
+      .eq("directory_id", targetDirId)
+      .eq("creator_handle", m.creator_handle ?? "")
+      .maybeSingle();
+    if (existing) return true; // already there, skip
+
+    const { data: maxRow } = await supabase
+      .from("directory_members")
+      .select("sort_order")
+      .eq("directory_id", targetDirId)
+      .order("sort_order", { ascending: false })
+      .limit(1);
+    const nextOrder = ((maxRow as { sort_order: number }[] | null)?.[0]?.sort_order ?? 0) + 1;
+
+    const { error } = await supabase.from("directory_members").insert({
+      directory_id: targetDirId,
+      creator_handle: m.creator_handle ?? "",
+      creator_name: m.creator_name ?? "",
+      platform: m.platform ?? "instagram",
       avatar_url: m.avatar_url,
       ic_avatar_url: m.ic_avatar_url,
       follower_count: m.follower_count,
       engagement_rate: m.engagement_rate,
       bio: m.bio,
       branch: m.branch,
-      platforms: m.platforms,
-      platform_urls: m.platform_urls as Record<string, string> | undefined,
+      status: m.status,
+      platforms: m.platforms ?? [],
+      platform_urls: m.platform_urls ?? {},
       enrichment_data: m.enrichment_data,
+      category: m.category,
+      approved: true,
+      sort_order: nextOrder,
+      profile_slug: m.profile_slug,
+      added_at: new Date().toISOString(),
     });
-    if (error) {
-      toast.error(`Failed to add: ${error}`);
+    return !error;
+  };
+
+  const handleAddToOtherDirectory = async (m: DirectoryMember, dirId: string) => {
+    const ok = await copyToDirectory(m, dirId);
+    if (!ok) {
+      toast.error("Failed to copy creator");
     } else {
       const targetDir = directories.find((d) => d.id === dirId);
-      toast.success(`Added to ${targetDir?.name ?? "directory"}`);
+      toast.success(`Copied to ${targetDir?.name ?? "directory"}`);
     }
   };
 
@@ -652,30 +680,41 @@ const BrandDirectory = () => {
   const handleBulkAddToDirectory = async (targetDirId: string) => {
     if (selectedIds.size === 0) return;
     let added = 0;
+    let skipped = 0;
     let failed = 0;
     for (const id of selectedIds) {
       const m = members.find((mem) => mem.id === id);
       if (!m) { failed++; continue; }
-      const { error } = await addToDirectory(targetDirId, {
-        handle: m.creator_handle ?? "",
-        display_name: m.creator_name ?? "",
-        platform: "instagram",
-        avatar_url: m.avatar_url,
-        ic_avatar_url: m.ic_avatar_url,
-        follower_count: m.follower_count,
-        engagement_rate: m.engagement_rate,
-        bio: m.bio,
-        branch: m.branch,
-        platforms: m.platforms,
-        platform_urls: m.platform_urls as Record<string, string> | undefined,
-        enrichment_data: m.enrichment_data,
-      });
-      if (error) failed++;
-      else added++;
+      const ok = await copyToDirectory(m, targetDirId);
+      if (ok) added++;
+      else failed++;
     }
     const targetDir = directories.find((d) => d.id === targetDirId);
-    if (added > 0) toast.success(`Added ${added} creator${added !== 1 ? "s" : ""} to ${targetDir?.name ?? "directory"}`);
-    if (failed > 0) toast.error(`Failed to add ${failed} creator${failed !== 1 ? "s" : ""}`);
+    if (added > 0) toast.success(`Copied ${added} creator${added !== 1 ? "s" : ""} to ${targetDir?.name ?? "directory"}`);
+    if (failed > 0) toast.error(`Failed to copy ${failed} creator${failed !== 1 ? "s" : ""}`);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkAddToList = (listId: string) => {
+    if (selectedIds.size === 0) return;
+    let added = 0;
+    for (const id of selectedIds) {
+      const m = members.find((mem) => mem.id === id);
+      if (!m) continue;
+      addCreatorToList(listId, {
+        id: m.creator_handle ?? m.id,
+        name: m.creator_name ?? "",
+        username: m.creator_handle ?? "",
+        avatar: m.avatar_url ?? "",
+        followers: m.follower_count ?? 0,
+        engagementRate: m.engagement_rate ?? 0,
+        platforms: m.platforms ?? ["instagram"],
+        bio: m.bio ?? "",
+      });
+      added++;
+    }
+    const targetList = lists.find((l) => l.id === listId);
+    if (added > 0) toast.success(`Added ${added} creator${added !== 1 ? "s" : ""} to ${targetList?.name ?? "list"}`);
     setSelectedIds(new Set());
   };
 
@@ -1283,6 +1322,23 @@ const BrandDirectory = () => {
                   {directories.filter((d) => d.id !== selectedDir?.id).map((d) => (
                     <DropdownMenuItem key={d.id} onClick={() => handleBulkAddToDirectory(d.id)}>
                       {d.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {lists.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="rounded-lg">
+                    <ListPlus className="h-4 w-4 mr-1.5" />
+                    Add to List
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {lists.map((l) => (
+                    <DropdownMenuItem key={l.id} onClick={() => handleBulkAddToList(l.id)}>
+                      {l.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
