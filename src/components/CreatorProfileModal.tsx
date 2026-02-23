@@ -71,12 +71,12 @@ const PLATFORM_LABELS: Record<string, string> = {
   linkedin: "LinkedIn",
 };
 const PLATFORM_PILL_STYLES: Record<string, { active: string; inactive: string; icon: React.ComponentType<{ className?: string }> }> = {
-  instagram: { active: "bg-pink-600 text-white", inactive: "bg-pink-50 text-pink-700 border border-pink-200 hover:bg-pink-100", icon: Instagram },
-  tiktok: { active: "bg-slate-900 text-white", inactive: "bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200", icon: Music },
-  youtube: { active: "bg-red-600 text-white", inactive: "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100", icon: Youtube },
-  facebook: { active: "bg-blue-600 text-white", inactive: "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100", icon: Facebook },
-  twitter: { active: "bg-slate-800 text-white", inactive: "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200", icon: X },
-  linkedin: { active: "bg-blue-700 text-white", inactive: "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100", icon: ExternalLink },
+  instagram: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Instagram },
+  tiktok: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Music },
+  youtube: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Youtube },
+  facebook: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: Facebook },
+  twitter: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: X },
+  linkedin: { active: "bg-[#1a56db] text-white", inactive: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50", icon: ExternalLink },
 };
 
 /**
@@ -1275,21 +1275,15 @@ export default function CreatorProfileModal({
             <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
             <div className="space-y-0 text-sm">
               {[
-                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—", alwaysShow: true },
-                { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : "—", alwaysShow: true },
-                { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : null },
-                { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : null },
-                { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : null },
-                { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : null },
-                { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : null },
-                { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : null },
-              ].map(({ label, value, alwaysShow }) => (
+                { label: statLabels.followers, value: followers ? formatNumber(followers) : "—" },
+                { label: "Avg Likes", value: avgLikes ? formatNumber(avgLikes) : "—" },
+              ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">{label}</span>
-                  {showEnrichmentLoading && !value && !alwaysShow ? (
+                  {showEnrichmentLoading && value === "—" ? (
                     <Skeleton className="h-4 w-12" />
                   ) : (
-                    <span className="font-semibold text-gray-900 dark:text-white">{value ?? "—"}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{value}</span>
                   )}
                 </div>
               ))}
@@ -1346,20 +1340,10 @@ export default function CreatorProfileModal({
                         <p className="text-xs text-muted-foreground">{statLabels.followers}</p>
                         <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(followers)}</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Engagement</p>
-                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatPercent(engagement)}</p>
-                      </div>
-                      {mediaCount > 0 && (
+                      {avgLikes > 0 && (
                         <div>
-                          <p className="text-xs text-muted-foreground">{statLabels.mediaCount}</p>
-                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(mediaCount)}</p>
-                        </div>
-                      )}
-                      {avgViews > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Avg Views</p>
-                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(avgViews)}</p>
+                          <p className="text-xs text-muted-foreground">Avg Likes</p>
+                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(avgLikes)}</p>
                         </div>
                       )}
                     </div>
