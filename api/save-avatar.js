@@ -36,8 +36,9 @@ export default async function handler(req, res) {
     }
 
     // Validate: check content-type is actually an image
+    // Allow octet-stream (generic binary) since CDNs sometimes don't set proper MIME
     const contentType = imgRes.headers.get("content-type") || "";
-    if (contentType && !contentType.startsWith("image/")) {
+    if (contentType && !contentType.startsWith("image/") && !contentType.includes("octet-stream")) {
       return res.status(422).json({ error: `Invalid content-type: ${contentType}` });
     }
 
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
 
     const { error: uploadError } = await supabase.storage
       .from("creator-images")
-      .upload(path, buffer, { contentType: contentType || "image/jpeg", upsert: true });
+      .upload(path, buffer, { contentType: "image/jpeg", upsert: true });
 
     if (uploadError) return res.status(500).json({ error: uploadError.message });
 

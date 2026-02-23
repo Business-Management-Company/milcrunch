@@ -157,7 +157,9 @@ export default async function handler(req, res) {
           } else if (size < MIN_AVATAR_BYTES) {
             broken.push(m.creator_handle);
             details.push({ handle: m.creator_handle, reason: `${size} bytes (placeholder)` });
-          } else if (ct && !ct.startsWith("image/")) {
+          } else if (ct && !ct.startsWith("image/") && !ct.includes("octet-stream")) {
+            // Flag only clearly wrong types (text/html, application/json, etc.)
+            // binary/octet-stream is OK — Supabase serves valid images with this type
             broken.push(m.creator_handle);
             details.push({ handle: m.creator_handle, reason: `bad content-type: ${ct}` });
           }
