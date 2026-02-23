@@ -78,6 +78,15 @@ function detectMilitaryKeywords(creator: CreatorCard): { branch: string | null; 
   return { branch, keywords: [...new Set(keywords)].slice(0, 5) };
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 interface TagPill {
   label: string;
   color: string; // tailwind classes for bg + text
@@ -609,7 +618,8 @@ For all other questions, respond naturally and concisely.`;
               ? { ...msg, text: `Searching for ${parsed.count ?? 10} ${parsed.branch ?? "military"} creators...` }
               : msg
           ));
-          const { creators: searchResults } = await searchCreators(parsed.query, { page: 1 });
+          const { creators: rawResults } = await searchCreators(parsed.query, { page: 1 });
+          const searchResults = shuffleArray(rawResults);
 
           const displayCount = Math.min(searchResults.length, parsed.count ?? 10);
 
