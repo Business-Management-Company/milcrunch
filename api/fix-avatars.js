@@ -110,10 +110,6 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
   const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-  const handles = body.handles;
-  if (!Array.isArray(handles) || handles.length === 0) {
-    return res.status(400).json({ error: "Provide { handles: ['handle1', 'handle2', ...] }" });
-  }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -123,6 +119,44 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: "IC API key not configured" });
 
   const sb = createClient(supabaseUrl, supabaseKey);
+
+  // scan=true mode: find all broken avatars and fix them
+  if (body.scan) {
+    const { data: allMembers, error: scanErr } = await sb
+      .from("directory_members")
+      .select("creator_handle, avatar_url, ic_avatar_url");
+    if (scanErr) return res.status(500).json({ error: scanErr.message });
+
+    const broken = [];
+    for (const m of allMembers || []) {
+      const av = m.avatar_url || "";
+      const ic = m.ic_avatar_url || "";
+      const hasGood = av.includes("supabase.co/storage/") || ic.includes("supabase.co/storage/");
+      const hasBad = av.includes("cloudfront") || ic.includes("cloudfront") || av.includes("ui-avatars") || ic.includes("ui-avatars");
+      const empty = !av && !ic;
+      if (!hasGood || hasBad || empty) {
+        broken.push(m.creator_handle);
+      }
+    }
+
+    if (body.scanOnly) {
+      return res.json({ total: (allMembers || []).length, broken: broken.length, handles: broken });
+    }
+
+    // If no broken found, return early
+    if (broken.length === 0) {
+      return res.json({ message: "All avatars are healthy", total: (allMembers || []).length, broken: 0 });
+    }
+
+    // Fall through to fix the broken handles
+    body.handles = broken;
+  }
+
+  const handles = body.handles;
+  if (!Array.isArray(handles) || handles.length === 0) {
+    return res.status(400).json({ error: "Provide { handles: [...] } or { scan: true }" });
+  }
+
   const results = [];
 
   for (const rawHandle of handles) {
