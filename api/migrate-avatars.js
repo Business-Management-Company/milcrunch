@@ -1,3 +1,5 @@
+export const config = { maxDuration: 300 };
+
 export default async function handler(req, res) {
   try {
     const { createClient } = await import("@supabase/supabase-js");
@@ -14,7 +16,7 @@ export default async function handler(req, res) {
     const { data: creators, error: fetchError } = await supabase
       .from("directory_members")
       .select("id, creator_handle, ic_avatar_url, avatar_url")
-      .like("ic_avatar_url", "%d32n58yyab954y.cloudfront.net%")
+      .like("ic_avatar_url", "%d32n50yyqb954y.cloudfront.net%")
       .limit(limit);
 
     if (fetchError) {
@@ -29,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         message: "Dry run — these creators would be migrated",
         total: creators.length,
-        creators: creators.map(c => ({ handle: c.creator_handle, current_url: c.ic_avatar_url }))
+        creators: creators.map(c => ({ handle: c.creator_handle, current_url: c.ic_avatar_url.substring(0, 80) + "..." }))
       });
     }
 
@@ -41,20 +43,27 @@ export default async function handler(req, res) {
       const imageUrl = creator.ic_avatar_url;
 
       try {
-        // Download from CloudFront
-        const imgRes = await fetch(imageUrl);
+        // Download from CloudFront (signed URLs)
+        const imgRes = await fetch(imageUrl, {
+          redirect: "follow",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; MilCrunch/1.0)",
+            Accept: "image/*,*/*",
+          },
+        });
         if (!imgRes.ok) {
           results.push({ handle, status: "failed", reason: `Fetch failed: ${imgRes.status}` });
           continue;
         }
 
         const buffer = Buffer.from(await imgRes.arrayBuffer());
+        const contentType = imgRes.headers.get("content-type") || "image/jpeg";
         const path = `avatars/${handle}.jpg`;
 
-        // Upload to Supabase Storage
+        // Upload to Supabase Storage (same bucket as save-avatar.js)
         const { error: uploadError } = await supabase.storage
           .from("creator-images")
-          .upload(path, buffer, { contentType: "image/jpeg", upsert: true });
+          .upload(path, buffer, { contentType, upsert: true });
 
         if (uploadError) {
           results.push({ handle, status: "failed", reason: `Upload failed: ${uploadError.message}` });
@@ -81,6 +90,9 @@ export default async function handler(req, res) {
       } catch (err) {
         results.push({ handle, status: "failed", reason: err.message });
       }
+
+      // Small delay to avoid rate limits
+      await new Promise(r => setTimeout(r, 200));
     }
 
     const migrated = results.filter(r => r.status === "migrated").length;
