@@ -356,7 +356,7 @@ export async function searchCreators(
       engagement_percent: { min: engagement_percent.min, max: engagement_percent.max },
       keywords_in_bio,
       exclude_role_based_emails: false,
-      ...(options.location ? { location: options.location } : {}),
+      ...(options.location ? { location: [options.location] } : {}),
       ...(options.gender ? { gender: options.gender } : {}),
       ...(options.language ? { language: { code: options.language } } : {}),
     },
