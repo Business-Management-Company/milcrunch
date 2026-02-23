@@ -34,6 +34,8 @@ import {
   CalendarPlus,
   FolderPlus,
   X,
+  Facebook,
+  Music,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import {
@@ -59,13 +61,22 @@ const BRANCH_STYLES: Record<string, string> = {
   "Space Force": "bg-indigo-600/10 text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-400",
 };
 
-const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "twitter", "linkedin"];
+const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "facebook", "twitter", "linkedin"];
 const PLATFORM_LABELS: Record<string, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
   youtube: "YouTube",
-  twitter: "Twitter",
+  facebook: "Facebook",
+  twitter: "X",
   linkedin: "LinkedIn",
+};
+const PLATFORM_PILL_STYLES: Record<string, { active: string; inactive: string; icon: React.ComponentType<{ className?: string }> }> = {
+  instagram: { active: "bg-pink-600 text-white", inactive: "bg-pink-50 text-pink-700 border border-pink-200 hover:bg-pink-100", icon: Instagram },
+  tiktok: { active: "bg-slate-900 text-white", inactive: "bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200", icon: Music },
+  youtube: { active: "bg-red-600 text-white", inactive: "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100", icon: Youtube },
+  facebook: { active: "bg-blue-600 text-white", inactive: "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100", icon: Facebook },
+  twitter: { active: "bg-slate-800 text-white", inactive: "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200", icon: X },
+  linkedin: { active: "bg-blue-700 text-white", inactive: "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100", icon: ExternalLink },
 };
 
 /**
@@ -382,13 +393,69 @@ export default function CreatorProfileModal({
   const resultTop = enriched?.result ?? {};
   const ig = enriched?.instagram;
 
-  const availablePlatforms = useMemo(() => {
+  /** Merge platforms from all possible IC response shapes + creator card */
+  const { availablePlatforms, platformHandles } = useMemo(() => {
+    const handles = new Map<string, string>(); // platform → username
+    const found = new Set<string>();
+
+    // 1. creator_has boolean flags (most common in FULL enrichment)
     const has = resultTop.creator_has as Record<string, boolean> | undefined;
     if (has && typeof has === "object") {
-      return PLATFORM_ORDER.filter((p) => has[p] === true);
+      for (const [k, v] of Object.entries(has)) {
+        if (v) found.add(k.toLowerCase());
+      }
     }
-    return ["instagram"];
-  }, [resultTop.creator_has]);
+
+    // 2. accounts array: [{ platform: "instagram", username: "..." }, ...]
+    const accounts = (resultTop.accounts ?? (enriched as Record<string, unknown> | null)?.accounts) as { platform?: string; username?: string; handle?: string }[] | undefined;
+    if (Array.isArray(accounts)) {
+      for (const acc of accounts) {
+        const p = acc.platform?.toLowerCase();
+        if (!p) continue;
+        found.add(p);
+        const u = acc.username || acc.handle;
+        if (u && !handles.has(p)) handles.set(p, u.replace(/^@/, ""));
+      }
+    }
+
+    // 3. platform_links: { instagram: "url", tiktok: "url" }
+    const plinks = (resultTop.platform_links ?? (enriched as Record<string, unknown> | null)?.platform_links) as Record<string, string> | undefined;
+    if (plinks && typeof plinks === "object") {
+      for (const [k, url] of Object.entries(plinks)) {
+        const p = k.toLowerCase();
+        if (!url) continue;
+        found.add(p);
+        if (!handles.has(p)) {
+          try { const path = new URL(url).pathname.replace(/\/$/, ""); const seg = path.split("/").pop()?.replace(/^@/, ""); if (seg) handles.set(p, seg); } catch {}
+        }
+      }
+    }
+
+    // 4. Per-platform data objects (enrichment result keys)
+    if (tiktokData) { found.add("tiktok"); if (!handles.has("tiktok") && tiktokData.username) handles.set("tiktok", String(tiktokData.username).replace(/^@/, "")); }
+    if (youtubeData) { found.add("youtube"); if (!handles.has("youtube")) { const u = (youtubeData.custom_url as string) ?? (youtubeData.username as string); if (u) handles.set("youtube", u.replace(/^@/, "")); } }
+    if (twitterData) { found.add("twitter"); if (!handles.has("twitter") && twitterData.username) handles.set("twitter", String(twitterData.username).replace(/^@/, "")); }
+    if (ig) found.add("instagram");
+
+    // 5. creator.socialPlatforms / creator.platforms from the card
+    const cardPlatforms = creator?.socialPlatforms ?? creator?.platforms;
+    if (Array.isArray(cardPlatforms)) {
+      for (const p of cardPlatforms) { if (typeof p === "string") found.add(p.toLowerCase()); }
+    }
+
+    // Extract IG handle
+    if (found.has("instagram") && !handles.has("instagram")) {
+      const igU = (igRecord?.username as string) ?? (resultTop.username as string) ?? creator?.username;
+      if (igU) handles.set("instagram", igU.replace(/^@/, ""));
+    }
+
+    // Fallback: always include at least instagram
+    if (found.size === 0) found.add("instagram");
+
+    const ordered = PLATFORM_ORDER.filter((p) => found.has(p));
+    found.forEach((p) => { if (!ordered.includes(p)) ordered.push(p); });
+    return { availablePlatforms: ordered, platformHandles: handles };
+  }, [resultTop.creator_has, resultTop.accounts, resultTop.platform_links, resultTop.username, enriched, tiktokData, youtubeData, twitterData, ig, igRecord, creator?.socialPlatforms, creator?.platforms, creator?.username]);
 
   const listCreator: ListCreator | null = creator
     ? {
@@ -1205,11 +1272,14 @@ export default function CreatorProfileModal({
             )}
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-6">
-                {/* Platform tabs - pills: active blue with icon+handle, inactive gray with icon only */}
+                {/* Platform tabs - pills with platform-specific colors and per-platform handles */}
                 <div className="flex flex-wrap gap-2">
                   {availablePlatforms.map((p) => {
                     const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
+                    const style = PLATFORM_PILL_STYLES[p.toLowerCase()];
                     const label = PLATFORM_LABELS[p.toLowerCase()] ?? p;
+                    const handle = platformHandles.get(p.toLowerCase()) || displayUsername;
+                    const IconComp = style?.icon ?? Video;
                     return (
                       <button
                         key={p}
@@ -1218,16 +1288,12 @@ export default function CreatorProfileModal({
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
                           isActive
-                            ? "bg-[#1e3a5f] text-white"
-                            : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                            ? (style?.active ?? "bg-[#1e3a5f] text-white")
+                            : (style?.inactive ?? "bg-gray-200 text-gray-600 hover:bg-gray-300")
                         )}
                       >
-                        {(p === "instagram" && <Instagram className="h-4 w-4" />) ||
-                          (p === "tiktok" && <Video className="h-4 w-4" />) ||
-                          (p === "youtube" && <Youtube className="h-4 w-4" />) || (
-                            <Video className="h-4 w-4" />
-                          )}
-                        {isActive ? `@${displayUsername || label}` : label}
+                        <IconComp className="h-4 w-4" />
+                        {handle ? `@${handle}` : label}
                       </button>
                     );
                   })}
