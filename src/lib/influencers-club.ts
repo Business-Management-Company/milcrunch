@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 // Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
 // (Vercel does not inject headers), so we always send Authorization in every fetch.
 const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
@@ -824,17 +826,12 @@ export function logCreditUsage(
   creditsUsed: number,
   metadata?: Record<string, unknown>
 ): void {
-  // Dynamic import to avoid circular deps — use the existing supabase singleton
-  import("@/integrations/supabase/client").then(({ supabase }) => {
-    supabase.from("api_credit_log").insert({
-      user_id: userId,
-      action,
-      credits_used: creditsUsed,
-      metadata: metadata ?? null,
-    } as Record<string, unknown>).then(({ error }) => {
-      if (error) console.warn("[CreditLog] Failed to log:", error.message);
-    });
-  }).catch((err) => {
-    console.warn("[CreditLog] Failed to import supabase:", err);
+  supabase.from("api_credit_log").insert({
+    user_id: userId,
+    action,
+    credits_used: creditsUsed,
+    metadata: metadata ?? null,
+  } as Record<string, unknown>).then(({ error }) => {
+    if (error) console.warn("[CreditLog] Failed to log:", error.message);
   });
 }
