@@ -2161,12 +2161,12 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
 }
 
 const SOCIAL_PLATFORM_MAP: Record<string, { icon: string; label: string; base: string; pillColor: string }> = {
-  instagram: { icon: "📸", label: "Instagram", base: "https://instagram.com/", pillColor: "border-pink-200 text-pink-700 hover:bg-pink-50 dark:border-pink-800 dark:text-pink-400 dark:hover:bg-pink-900/20" },
-  youtube: { icon: "▶️", label: "YouTube", base: "https://youtube.com/@", pillColor: "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20" },
-  twitter: { icon: "𝕏", label: "X", base: "https://twitter.com/", pillColor: "border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800" },
-  tiktok: { icon: "🎵", label: "TikTok", base: "https://tiktok.com/@", pillColor: "border-gray-300 text-gray-900 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800" },
-  facebook: { icon: "f", label: "Facebook", base: "https://facebook.com/", pillColor: "border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20" },
-  linkedin: { icon: "in", label: "LinkedIn", base: "https://linkedin.com/in/", pillColor: "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20" },
+  instagram: { icon: "📸", label: "Instagram", base: "https://instagram.com/", pillColor: "bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100 dark:bg-pink-900/30 dark:text-pink-400 dark:border-pink-800" },
+  youtube: { icon: "▶️", label: "YouTube", base: "https://youtube.com/@", pillColor: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800" },
+  twitter: { icon: "𝕏", label: "X", base: "https://twitter.com/", pillColor: "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600" },
+  tiktok: { icon: "🎵", label: "TikTok", base: "https://tiktok.com/@", pillColor: "bg-slate-900 text-white border-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:text-white dark:border-slate-600" },
+  facebook: { icon: "f", label: "Facebook", base: "https://facebook.com/", pillColor: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800" },
+  linkedin: { icon: "in", label: "LinkedIn", base: "https://linkedin.com/in/", pillColor: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800" },
 };
 
 const SOCIAL_URL_PATTERNS: { network: string; pattern: RegExp; extractHandle: (url: string) => string }[] = [
@@ -2184,14 +2184,30 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
   const websiteUrl = record.website_url || null;
   const manualChecks = record.manual_checks as Record<string, unknown> | null;
 
+  // Fetch linked directory member data for platform_urls, platforms, enrichment_data
+  const [dirMember, setDirMember] = useState<Record<string, unknown> | null>(null);
+  useEffect(() => {
+    if (!igHandle) return;
+    (async () => {
+      const { data } = await supabase
+        .from("directory_members")
+        .select("platforms, platform_urls, enrichment_data")
+        .eq("creator_handle", igHandle)
+        .limit(1)
+        .maybeSingle();
+      if (data) setDirMember(data as Record<string, unknown>);
+    })();
+  }, [igHandle]);
+
   // Build platform pills from ALL available data sources
   const seen = new Set<string>();
   const socialPills: { platform: string; handle: string; url: string }[] = [];
 
   const addPill = (platform: string, handle: string, url: string) => {
-    if (seen.has(platform) || !handle) return;
-    seen.add(platform);
-    socialPills.push({ platform, handle, url });
+    const key = platform.toLowerCase();
+    if (seen.has(key) || !handle) return;
+    seen.add(key);
+    socialPills.push({ platform: key, handle, url });
   };
 
   // 1. Explicit fields
@@ -2208,7 +2224,6 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
       const network = sp.network?.toLowerCase();
       const info = SOCIAL_PLATFORM_MAP[network];
       if (!info || seen.has(network)) continue;
-      // Extract handle from URL
       const matcher = SOCIAL_URL_PATTERNS.find((p) => p.network === network);
       const handle = matcher ? matcher.extractHandle(sp.url) : "";
       addPill(network, handle || record.person_name.toLowerCase().replace(/\s+/g, ""), sp.url || info.base + handle);
@@ -2247,6 +2262,45 @@ function SocialVerificationSection({ record }: { record: VerificationRecord }) {
       if (v && SOCIAL_PLATFORM_MAP[k] && !seen.has(k)) {
         const handle = igHandle || record.person_name.toLowerCase().replace(/\s+/g, "");
         addPill(k, handle, SOCIAL_PLATFORM_MAP[k].base + handle);
+      }
+    }
+  }
+
+  // 6. Directory member — platform_urls (explicit URLs per platform)
+  if (dirMember) {
+    const platformUrls = dirMember.platform_urls as Record<string, string> | undefined;
+    if (platformUrls) {
+      for (const [plat, url] of Object.entries(platformUrls)) {
+        const key = plat.toLowerCase();
+        if (!url || seen.has(key) || !SOCIAL_PLATFORM_MAP[key]) continue;
+        const matcher = SOCIAL_URL_PATTERNS.find((m) => m.network === key);
+        const handle = matcher ? matcher.extractHandle(url) : "";
+        addPill(key, handle || igHandle || record.person_name.toLowerCase().replace(/\s+/g, ""), url);
+      }
+    }
+
+    // 7. Directory member — platforms array (platform names without URLs)
+    const dmPlatforms = dirMember.platforms as string[] | undefined;
+    if (Array.isArray(dmPlatforms)) {
+      for (const p of dmPlatforms) {
+        const key = p.toLowerCase();
+        if (seen.has(key) || !SOCIAL_PLATFORM_MAP[key]) continue;
+        const handle = igHandle || record.person_name.toLowerCase().replace(/\s+/g, "");
+        addPill(key, handle, SOCIAL_PLATFORM_MAP[key].base + handle);
+      }
+    }
+
+    // 8. Directory member — enrichment_data.creator_has flags
+    const enrichData = dirMember.enrichment_data as Record<string, unknown> | undefined;
+    const enrichCreatorHas = (enrichData?.result as Record<string, unknown>)?.creator_has as Record<string, boolean> | undefined
+      ?? enrichData?.creator_has as Record<string, boolean> | undefined;
+    if (enrichCreatorHas) {
+      for (const [k, v] of Object.entries(enrichCreatorHas)) {
+        const key = k.toLowerCase();
+        if (v && SOCIAL_PLATFORM_MAP[key] && !seen.has(key)) {
+          const handle = igHandle || record.person_name.toLowerCase().replace(/\s+/g, "");
+          addPill(key, handle, SOCIAL_PLATFORM_MAP[key].base + handle);
+        }
       }
     }
   }
