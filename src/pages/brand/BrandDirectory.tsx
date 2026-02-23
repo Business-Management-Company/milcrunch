@@ -539,20 +539,20 @@ const BrandDirectory = () => {
   const copyToDirectory = async (m: DirectoryMember, targetDirId: string): Promise<"added" | "skipped" | "failed"> => {
     const payload = {
       directory_id: targetDirId,
-      creator_handle: m.creator_handle ?? "",
-      creator_name: m.creator_name ?? "",
-      avatar_url: m.avatar_url ?? "",
-      platform: m.platform ?? "instagram",
-      branch: m.branch ?? "",
+      creator_handle: m.creator_handle,
+      creator_name: m.creator_name,
+      avatar_url: m.avatar_url || "",
+      platform: m.platform || "instagram",
+      branch: m.branch || "",
       follower_count: Math.round(Number(m.follower_count)) || 0,
-      engagement_rate: parseFloat(String(m.engagement_rate ?? "0")) || 0,
-      bio: m.bio ?? "",
+      engagement_rate: parseFloat(String(m.engagement_rate)) || 0,
+      bio: m.bio || "",
       approved: true,
     };
 
     const { error } = await supabase
       .from("directory_members")
-      .upsert(payload, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
+      .upsert(payload, { onConflict: "creator_handle", ignoreDuplicates: true });
     if (error) {
       console.error("upsert error:", error);
       return "failed";
