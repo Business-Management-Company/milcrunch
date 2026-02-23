@@ -15,19 +15,27 @@ export default async function handler(req, res) {
   }
 
   const params = new URLSearchParams({ query, platform });
-  const url = `https://api.influencers.club/public/v1/locations?${params}`;
+  const url = `https://api-dashboard.influencers.club/public/v1/locations?${params}`;
+
+  console.log("[ic-locations] GET", url, "| key present:", !!apiKey);
 
   try {
     const resp = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
     });
-    const data = await resp.text();
+
+    const body = await resp.text();
+    console.log("[ic-locations] upstream status:", resp.status, "| body (first 500):", body.substring(0, 500));
+
     res
       .status(resp.status)
       .setHeader("Content-Type", "application/json")
-      .send(data);
+      .send(body);
   } catch (err) {
-    console.error("[ic-locations] proxy error:", err);
-    res.status(502).json({ error: "Upstream request failed" });
+    console.error("[ic-locations] proxy error:", err.message || err);
+    res.status(502).json({ error: "Upstream request failed", detail: err.message || String(err) });
   }
 }
