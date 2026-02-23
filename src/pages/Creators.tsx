@@ -247,7 +247,7 @@ function CreatorCard({
               alt={c.display_name}
               className="w-full h-full object-cover"
               loading="lazy"
-              onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden'); }}
+              onError={(e) => { console.log('[IMG ERROR] failed to load:', e.currentTarget.src); e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove('hidden'); }}
             />
           ) : null}
           <div className={`w-full h-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5282] flex items-center justify-center text-white font-bold text-base ${avatarUrl ? 'hidden' : ''}`}>
