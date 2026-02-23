@@ -85,7 +85,7 @@ const BrandLists = () => {
   const [imageTargetId, setImageTargetId] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
   // Inline title/description editing for list detail
-  const [editingListTitle, setEditingListTitle] = useState(false);
+  const [editingListTitle, setEditingListTitle] = useState<string | false>(false);
   const [listTitleValue, setListTitleValue] = useState("");
   const [editingListDesc, setEditingListDesc] = useState(false);
   const [listDescValue, setListDescValue] = useState("");
