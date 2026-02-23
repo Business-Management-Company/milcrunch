@@ -353,19 +353,11 @@ export async function searchCreators(
     : [""];
   if (keywords_in_bio.length === 0) keywords_in_bio.push("");
 
-  // Build hashtags filter: explicit hashtags from options, plus extract content keywords from the search query
+  // Only send hashtags filter when explicitly provided (not auto-extracted from query).
+  // ai_search handles semantic matching; our military scoring ranks results after.
   const hashtagTerms: string[] = [];
   if (options.hashtags && options.hashtags.length > 0) {
     hashtagTerms.push(...options.hashtags.map((h) => h.replace(/^#/, "").trim()).filter(Boolean));
-  }
-  // Also extract meaningful content words from the search query as hashtags
-  // (skip common stop words and location-like terms to focus on topic/niche terms)
-  if (trimmed) {
-    const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
-    const queryWords = trimmed.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w));
-    for (const w of queryWords) {
-      if (!hashtagTerms.includes(w)) hashtagTerms.push(w);
-    }
   }
 
   const body: Record<string, unknown> = {

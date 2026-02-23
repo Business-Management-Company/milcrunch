@@ -1013,15 +1013,9 @@ const BrandDiscover = () => {
     const branchKeys = selectedBranches.size > 0 ? Array.from(selectedBranches) : [];
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
     const ctKeywords = ctConfig?.keywords ?? [];
-    // Merge search query content terms into keywords_in_bio for tighter relevancy
-    const searchContentTerms: string[] = [];
-    if (q) {
-      const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
-      searchContentTerms.push(
-        ...q.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w))
-      );
-    }
-    const allBioKeys = [...new Set([...branchKeys, ...bioKeys, ...ctKeywords, ...searchContentTerms])];
+    // Only send explicit filter values — don't merge search query terms here.
+    // ai_search handles semantic matching; military scoring ranks results after.
+    const allBioKeys = [...new Set([...branchKeys, ...bioKeys, ...ctKeywords])];
     const keywords_in_bio = allBioKeys.length > 0 ? allBioKeys : [""];
     const searchPlatforms = resolveSearchPlatforms(platform, ctConfig?.platformOverride ?? null);
     const baseOptions = {
@@ -1087,12 +1081,7 @@ const BrandDiscover = () => {
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
     const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
     const ctKeywords = ctConfig?.keywords ?? [];
-    const loadMoreContentTerms: string[] = [];
-    if (q) {
-      const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
-      loadMoreContentTerms.push(...q.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !stopWords.has(w)));
-    }
-    const allBioKeysMore = [...new Set([...branchKeys, ...bioKeys, ...ctKeywords, ...loadMoreContentTerms])];
+    const allBioKeysMore = [...new Set([...branchKeys, ...bioKeys, ...ctKeywords])];
     const keywords_in_bio = allBioKeysMore.length > 0 ? allBioKeysMore : [""];
     const searchPlatforms = resolveSearchPlatforms(platform, ctConfig?.platformOverride ?? null);
     const baseOptions = {
@@ -1292,12 +1281,7 @@ const BrandDiscover = () => {
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === effEngagement);
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
     const ctKeywords = ctConfig?.keywords ?? [];
-    const smartContentTerms: string[] = [];
-    if (effectiveQuery) {
-      const stopWords = new Set(["in", "on", "at", "the", "a", "an", "and", "or", "for", "with", "who", "that", "from", "based", "near", "around"]);
-      smartContentTerms.push(...effectiveQuery.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2 && !stopWords.has(w)));
-    }
-    const kw = [...new Set([...effBranches, ...bioKeys, ...ctKeywords, ...smartContentTerms])];
+    const kw = [...new Set([...effBranches, ...bioKeys, ...ctKeywords])];
     const keywords_in_bio = kw.length > 0 ? kw : [""];
     const baseOptions = {
       number_of_followers: { min: followerOpt?.min ?? null, max: followerOpt?.max ?? null },
@@ -2767,12 +2751,12 @@ const BrandDiscover = () => {
                         </div>
 
                         {/* Tag pill top-right */}
-                        <span className={`absolute top-4 right-4 text-xs px-2 py-0.5 rounded-full font-medium ${tagColors[_idx % tagColors.length]}`}>
+                        <span className={`absolute top-3 right-4 text-xs px-2 py-0.5 rounded-full font-medium ${tagColors[_idx % tagColors.length]}`}>
                           {derivedTag}
                         </span>
 
-                        {/* Header: Avatar + Name + Handle */}
-                        <div className="flex items-center gap-3 mb-3">
+                        {/* Header: Avatar + Name + Handle — pl-7 clears the checkbox */}
+                        <div className="flex items-center gap-3 mb-4 pl-7">
                           <DiscoverAvatar url={creator.avatar} name={creator.name} username={creator.username} size="w-14 h-14" borderClass="border-2 border-white dark:border-slate-700 shadow-md" verified={creator.isVerified} badgeClass="h-5 w-5 text-[#6C5CE7]" />
                           <div className="min-w-0 flex-1">
                             <h3 className="font-bold text-base text-gray-900 dark:text-white truncate flex items-center gap-1.5">
@@ -2828,23 +2812,23 @@ const BrandDiscover = () => {
                           </div>
                         )}
 
-                        {/* Single stats row — all 4 inline */}
-                        <div className="flex items-center gap-4 text-sm mb-3">
+                        {/* Stats — 2×2 grid for breathing room */}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-4">
                           <div>
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Followers</span>
                             <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatFollowers(creator.followers)}</span>
-                            <span className="text-xs text-gray-400 ml-1">Followers</span>
                           </div>
                           <div>
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Engagement</span>
                             <span className="font-bold text-emerald-500 tabular-nums">{typeof creator.engagementRate === "number" ? creator.engagementRate.toFixed(2) : "—"}%</span>
-                            <span className="text-xs text-gray-400 ml-1">Engagement</span>
                           </div>
                           <div>
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Avg Likes</span>
                             <span className="font-bold text-gray-900 dark:text-white tabular-nums">{creator.avgLikes ? formatFollowers(creator.avgLikes) : "—"}</span>
-                            <span className="text-xs text-gray-400 ml-1">Avg Likes</span>
                           </div>
                           <div>
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Posts/Mo</span>
                             <span className="font-bold text-gray-900 dark:text-white tabular-nums">{creator.postsPerMonth ?? "—"}</span>
-                            <span className="text-xs text-gray-400 ml-1">Posts/Mo</span>
                           </div>
                         </div>
 
