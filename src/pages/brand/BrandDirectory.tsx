@@ -516,7 +516,7 @@ const BrandDirectory = () => {
     toast.success(`Added to ${targetList?.name ?? "list"}`);
   };
 
-  const copyToDirectory = async (m: DirectoryMember, targetDirId: string): Promise<boolean> => {
+  const copyToDirectory = async (m: DirectoryMember, targetDirId: string): Promise<"added" | "skipped" | "failed"> => {
     // Check if creator already exists in target directory
     const { data: existing } = await supabase
       .from("directory_members")
@@ -524,7 +524,7 @@ const BrandDirectory = () => {
       .eq("directory_id", targetDirId)
       .eq("creator_handle", m.creator_handle ?? "")
       .maybeSingle();
-    if (existing) return true; // already there, skip
+    if (existing) return "skipped"; // already there
 
     const { data: maxRow } = await supabase
       .from("directory_members")
@@ -534,7 +534,7 @@ const BrandDirectory = () => {
       .limit(1);
     const nextOrder = ((maxRow as { sort_order: number }[] | null)?.[0]?.sort_order ?? 0) + 1;
 
-    const { error } = await supabase.from("directory_members").insert({
+    const row = {
       directory_id: targetDirId,
       creator_handle: m.creator_handle ?? "",
       creator_name: m.creator_name ?? "",
@@ -554,16 +554,25 @@ const BrandDirectory = () => {
       sort_order: nextOrder,
       profile_slug: m.profile_slug,
       added_at: new Date().toISOString(),
-    });
-    return !error;
+    };
+
+    // Use upsert to handle race conditions / unique constraint violations
+    const { error } = await supabase.from("directory_members").upsert(row, { onConflict: "directory_id,creator_handle" });
+    if (error) {
+      console.error("copyToDirectory upsert error:", error);
+      return "failed";
+    }
+    return "added";
   };
 
   const handleAddToOtherDirectory = async (m: DirectoryMember, dirId: string) => {
-    const ok = await copyToDirectory(m, dirId);
-    if (!ok) {
+    const result = await copyToDirectory(m, dirId);
+    const targetDir = directories.find((d) => d.id === dirId);
+    if (result === "failed") {
       toast.error("Failed to copy creator");
+    } else if (result === "skipped") {
+      toast.info(`Already in ${targetDir?.name ?? "directory"}`);
     } else {
-      const targetDir = directories.find((d) => d.id === dirId);
       toast.success(`Copied to ${targetDir?.name ?? "directory"}`);
     }
   };
@@ -726,12 +735,20 @@ const BrandDirectory = () => {
     for (const id of selectedIds) {
       const m = members.find((mem) => mem.id === id);
       if (!m) { failed++; continue; }
-      const ok = await copyToDirectory(m, targetDirId);
-      if (ok) added++;
+      const result = await copyToDirectory(m, targetDirId);
+      if (result === "added") added++;
+      else if (result === "skipped") skipped++;
       else failed++;
     }
     const targetDir = directories.find((d) => d.id === targetDirId);
-    if (added > 0) toast.success(`Copied ${added} creator${added !== 1 ? "s" : ""} to ${targetDir?.name ?? "directory"}`);
+    const dirName = targetDir?.name ?? "directory";
+    if (added > 0 && skipped === 0) {
+      toast.success(`Added ${added} creator${added !== 1 ? "s" : ""} to ${dirName}`);
+    } else if (added > 0 && skipped > 0) {
+      toast.warning(`${added} added, ${skipped} already in ${dirName}`);
+    } else if (added === 0 && skipped > 0) {
+      toast.info(`All ${skipped} creator${skipped !== 1 ? "s" : ""} already in ${dirName}`);
+    }
     if (failed > 0) toast.error(`Failed to copy ${failed} creator${failed !== 1 ? "s" : ""}`);
     setSelectedIds(new Set());
   };
@@ -1228,16 +1245,6 @@ const BrandDirectory = () => {
             </Button>
           </a>
           <div className="flex-grow" />
-          {lists.length > 0 && (
-            <Button size="sm" variant="outline" className="rounded-lg" onClick={() => setPromoteOpen(true)}>
-              <Upload className="h-4 w-4 mr-1.5" />
-              Promote from List
-            </Button>
-          )}
-          <Button size="sm" variant="outline" className="rounded-lg" onClick={() => setManualAddOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-1.5" />
-            Add to Directory
-          </Button>
           {/* View toggle */}
           <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <button type="button" onClick={() => handleViewChange("table")} className={cn("p-1.5 transition-colors", viewMode === "table" ? "bg-pd-blue text-white" : "bg-background text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800")} title="Table view">
