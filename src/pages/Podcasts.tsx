@@ -49,7 +49,7 @@ export default function PodcastsPage() {
         {/* Hero — light gray to match site */}
         <section className="bg-[#F8F9FA] px-4 md:px-8 py-12 md:py-16">
           <div className="max-w-6xl mx-auto">
-            <h1 className="font-serif text-3xl md:text-4xl font-bold text-[#1A1A2E]">
+            <h1 className="font-sans text-3xl md:text-4xl font-bold text-[#1A1A2E]">
               Veteran & Military Podcast Network
             </h1>
             <p className="text-[#4A4A5A] mt-2">

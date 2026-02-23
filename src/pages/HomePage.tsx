@@ -1058,7 +1058,7 @@ export default function HomePage() {
             )}
 
             <div className="text-center mt-8">
-              <Link to="/podcasts" className="text-[#1e3a5f] font-medium hover:underline">
+              <Link to="/podcasts" className="text-[#1e3a5f] font-medium hover:underline" onClick={() => window.scrollTo(0, 0)}>
                 View All Podcasts →
               </Link>
             </div>
