@@ -2723,7 +2723,7 @@ const BrandDiscover = () => {
                         role="button"
                         tabIndex={0}
                         className={cn(
-                          "relative rounded-2xl border p-5 flex flex-col transition-all duration-200 cursor-pointer shadow-sm",
+                          "relative rounded-2xl border p-6 flex flex-col transition-all duration-200 cursor-pointer shadow-sm",
                           "bg-white border-gray-200 hover:shadow-md hover:border-[#6C5CE7]/30",
                           "dark:bg-[#1A1D27] dark:border-gray-800 dark:hover:border-[#6C5CE7]/30",
                           confidence.level === "high" && "ring-1 ring-emerald-300/60 border-emerald-200 dark:ring-emerald-700/40 dark:border-emerald-800",
@@ -2832,30 +2832,10 @@ const BrandDiscover = () => {
                           </div>
                         </div>
 
-                        {/* Military Match Score */}
-                        {creator.militaryScore != null && creator.militaryScore > 0 && (
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className={cn(
-                              "flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold",
-                              creator.militaryScore >= 60 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" :
-                              creator.militaryScore >= 30 ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-                              "bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                            )}>
-                              <ShieldCheck className="h-3.5 w-3.5" />
-                              {creator.militaryScore}% Mil Match
-                            </div>
-                            {creator.militaryEvidence && creator.militaryEvidence.length > 0 && (
-                              <span className="text-[10px] text-muted-foreground truncate flex-1" title={creator.militaryEvidence.join(" · ")}>
-                                {creator.militaryEvidence[0]}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
                         {/* Platform icons + email */}
                         {(socialPlatforms.length > 0 || creator.hasEmail) && (
-                          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-                            <PlatformIcons platforms={socialPlatforms} username={creator.username} max={5} />
+                          <div className="flex items-center gap-2 mb-4 flex-wrap">
+                            <PlatformIcons platforms={socialPlatforms} username={creator.username} max={8} size="h-[18px] w-[18px]" />
                             {contactEmails[creator.id] ? (
                               <a
                                 href={`mailto:${contactEmails[creator.id]}`}
