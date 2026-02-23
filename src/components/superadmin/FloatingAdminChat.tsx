@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
-import { searchCreators, type CreatorCard } from "@/lib/influencers-club";
+import { searchCreators, enrichCreatorProfile, type CreatorCard } from "@/lib/influencers-club";
 
 import { useLists } from "@/contexts/ListContext";
 import CreateListModal from "@/components/CreateListModal";
@@ -270,6 +270,63 @@ export default function FloatingAdminChat() {
 
   // Close drawer dropdown when selected creator changes
   useEffect(() => { setDrawerDropdown(null); }, [selectedCreator]);
+
+  // Auto-enrich creator when drawer opens to populate analytics fields
+  useEffect(() => {
+    if (!selectedCreator) return;
+    // Skip if we already have analytics data
+    if (selectedCreator.mediaCount || selectedCreator.avgLikes || selectedCreator.avgViews) return;
+    const handle = selectedCreator.username || selectedCreator.name.toLowerCase().replace(/\s+/g, "");
+    const platform = selectedCreator.platforms?.[0] || "instagram";
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const enrichment = await enrichCreatorProfile(handle, controller.signal, platform);
+        if (!enrichment || controller.signal.aborted) return;
+        const ig = enrichment.instagram || {};
+        const result = enrichment.result || {};
+        const pickNum = (...keys: string[]): number | undefined => {
+          for (const src of [ig, result]) {
+            for (const k of keys) {
+              const v = (src as Record<string, unknown>)[k];
+              if (v != null && v !== "" && v !== false) {
+                const n = Number(v);
+                if (!isNaN(n) && n > 0) return n;
+              }
+            }
+          }
+          return undefined;
+        };
+        const mediaCount = pickNum("media_count", "number_of_posts", "post_count", "posts_count");
+        const avgLikes = pickNum("avg_likes", "average_likes", "avg_like_count");
+        const avgComments = pickNum("avg_comments", "average_comments", "avg_comment_count");
+        const avgViews = pickNum("avg_views", "average_views", "avg_video_views", "avg_reels_plays", "avg_view_count");
+        const avgReelLikes = pickNum("avg_reel_likes", "average_reel_likes");
+        const postsPerMonth = pickNum("posts_per_month", "posting_frequency");
+        const followers = pickNum("follower_count", "followers", "number_of_followers");
+        const engagementRate = pickNum("engagement_percent", "engagement_rate", "er");
+        console.log("[Drawer enrich]", handle, { mediaCount, avgLikes, avgComments, avgViews, avgReelLikes, postsPerMonth });
+        if (mediaCount || avgLikes || avgComments || avgViews || avgReelLikes || postsPerMonth) {
+          setSelectedCreator((prev) => prev ? {
+            ...prev,
+            mediaCount: prev.mediaCount || mediaCount,
+            avgLikes: prev.avgLikes || avgLikes,
+            avgComments: prev.avgComments || avgComments,
+            avgViews: prev.avgViews || avgViews,
+            avgReelLikes: prev.avgReelLikes || avgReelLikes,
+            postsPerMonth: prev.postsPerMonth || postsPerMonth,
+            followers: prev.followers || followers || prev.followers,
+            engagementRate: prev.engagementRate || engagementRate || prev.engagementRate,
+          } : prev);
+        }
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") {
+          console.warn("[Drawer enrich] failed for", handle, err);
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [selectedCreator?.username, selectedCreator?.name]);
 
   const openDrawerDropdown = async (type: "list" | "directory" | "event") => {
     if (drawerDropdown === type) { setDrawerDropdown(null); return; }
