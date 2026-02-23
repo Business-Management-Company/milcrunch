@@ -1507,9 +1507,14 @@ const BrandDiscover = () => {
 
     const uniqueMatches = [...new Set(allMatches)];
     const level = blended >= 0.4 ? "high" : blended >= 0.15 ? "medium" : "low";
-    const militaryPct = creator.militaryScore ?? 0;
+    // Use blended score as displayed percentage — combines military scoring + keyword match
+    const militaryPct = Math.round(blended * 100);
     const evidence = creator.militaryEvidence ?? [];
-    return { level: level as "high" | "medium" | "low", score: blended, matches: uniqueMatches, evidence, militaryPct };
+    // Also build keyword-based evidence when military scoring didn't produce any
+    const keywordEvidence = evidence.length > 0 ? evidence : allMatches.length > 0
+      ? [`Matched keywords: ${allMatches.slice(0, 5).map((t) => `"${t}"`).join(", ")}`]
+      : [];
+    return { level: level as "high" | "medium" | "low", score: blended, matches: uniqueMatches, evidence: keywordEvidence, militaryPct };
   }, [searchQuery, niche, selectedBranches, keywordsInBio]);
   // Sort by confidence when selected (client-side sort)
   const displayCreators = useMemo(() => {
