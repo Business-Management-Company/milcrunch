@@ -145,15 +145,15 @@ const BrandLists = () => {
     setUploading(true);
     try {
       const fileExt = file.name.split(".").pop();
-      const filePath = `lists/${listId}-${Date.now()}.${fileExt}`;
+      const filePath = `${listId}-${Date.now()}.${fileExt}`;
 
       const { error } = await supabase.storage
-        .from("avatars")
+        .from("list-images")
         .upload(filePath, file, { upsert: true, contentType: file.type });
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
+        .from("list-images")
         .getPublicUrl(filePath);
 
       await supabase.from("influencer_lists").update({ image_url: publicUrl }).eq("id", listId);
