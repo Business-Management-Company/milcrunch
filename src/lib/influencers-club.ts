@@ -590,7 +590,7 @@ export async function searchLocations(
   const res = await fetch(LOCATIONS_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ q, platform, t: apiKey }),
+    body: JSON.stringify({ q, platform, cfg: apiKey }),
     signal,
   });
   if (!res.ok) return [];

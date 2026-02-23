@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   const body = req.body || {};
   const query = body.q || body.query || req.query.q || req.query.query || "";
   const platform = body.platform || req.query.platform || "instagram";
-  const clientKey = body.t || "";
+  const clientKey = body.cfg || "";
 
   if (!query) {
     return res.status(400).json({ error: "q parameter is required" });
