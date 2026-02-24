@@ -1,19 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Lock, Play, Share2, Check, Calendar, Users, Video,
   ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
-  FileText, Layers, Target, XCircle, CheckCircle2,
-  Smartphone, Search, TrendingUp, Radio, Handshake,
-  DollarSign, ClipboardList, BookOpen, Settings, X, Save,
+  CheckCircle2, Smartphone, DollarSign, BookOpen,
+  Settings, X, Save, Upload, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, ResponsiveContainer,
-} from "recharts";
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -26,7 +21,8 @@ const TABS = [
   "Overview",
   "Events & Attendee App",
   "MilCrunch Experience",
-  "Creator Network",
+  "Discovery",
+  "Verification",
   "365 Insights",
   "Streaming & Media",
   "Partnership Model",
@@ -40,7 +36,8 @@ const TAB_LABELS: Record<TabId, string> = {
   "Overview": "Overview",
   "Events & Attendee App": "Events & App",
   "MilCrunch Experience": "Experience",
-  "Creator Network": "Creators",
+  "Discovery": "Discovery",
+  "Verification": "Verification",
   "365 Insights": "365 Insights",
   "Streaming & Media": "Streaming",
   "Partnership Model": "Partnership",
@@ -58,25 +55,10 @@ const SAAS_ROWS = [
   { tool: "Manual Creator Verification", cost: 2000, replaces: "Military ID Verification" },
 ];
 
-const TAB_PLACEHOLDERS: Record<string, string> = {
-  "Events & Attendee App":
-    "See how MilCrunch powers end-to-end event creation, ticketing, check-in, and a mobile-first attendee experience.",
-  "MilCrunch Experience":
-    "Discover the MilCrunch Experience — a turnkey live-stage production that turns any event into a multi-platform streaming powerhouse.",
-  "Creator Network":
-    "Explore our verified military creator marketplace — discovery, vetting, and campaign management in one place.",
-  "365 Insights":
-    "Learn how sponsors get year-round analytics, community engagement metrics, and automated renewal reports.",
-  "Streaming & Media":
-    "Watch our AI production pipeline in action — multi-camera streaming, auto-highlights, and social clip generation.",
-  "Partnership Model":
-    "Understand our pricing, revenue share, and white-label options for media companies and event organizers.",
-};
-
 const TAB_KB_CATEGORY: Record<string, string> = {
   "Events & Attendee App": "events-pdx",
   "MilCrunch Experience": "events-pdx",
-  "Creator Network": "creator-network",
+  "Discovery": "creator-network",
   "365 Insights": "365-insights",
   "Streaming & Media": "streaming-media",
   "Partnership Model": "sponsorship-revenue",
@@ -149,6 +131,14 @@ function ProspectusVideo({ url, dark, isSuperAdmin }: { url?: string; dark: bool
 /* Manage Videos Panel (super_admin)                                   */
 /* ------------------------------------------------------------------ */
 
+const VIDEO_BUCKET = "prospectus-videos";
+const ACCEPTED_VIDEO_TYPES = ".mp4,.mov,.webm,.avi";
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB
+
+function tabSlug(tab: string): string {
+  return tab.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 function ManageVideosPanel({
   open,
   onClose,
@@ -164,10 +154,65 @@ function ManageVideosPanel({
 }) {
   const [draft, setDraft] = useState<VideoUrls>({});
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     if (open) setDraft({ ...videos });
   }, [open, videos]);
+
+  const handleFileUpload = async (tab: string, file: File) => {
+    if (file.size > MAX_VIDEO_SIZE) {
+      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 100 MB.`);
+      return;
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
+    const path = `${tabSlug(tab)}-video.${ext}`;
+    setUploading(tab);
+    setUploadProgress(0);
+
+    // Simulate progress during upload
+    const progressTimer = setInterval(() => {
+      setUploadProgress((p) => Math.min(p + 8, 90));
+    }, 200);
+
+    const { error } = await supabase.storage
+      .from(VIDEO_BUCKET)
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    clearInterval(progressTimer);
+
+    if (error) {
+      console.error("[ManageVideosPanel] upload error:", error);
+      alert(`Upload failed: ${error.message}`);
+      setUploading(null);
+      setUploadProgress(0);
+      return;
+    }
+
+    setUploadProgress(100);
+    const { data: { publicUrl } } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
+    setDraft((d) => ({ ...d, [tab]: publicUrl }));
+
+    setTimeout(() => {
+      setUploading(null);
+      setUploadProgress(0);
+    }, 500);
+  };
+
+  const handleDelete = async (tab: string) => {
+    const url = draft[tab];
+    if (!url) return;
+    // Try to delete from storage if it's a Supabase URL
+    if (url.includes(VIDEO_BUCKET)) {
+      const pathMatch = url.split(`${VIDEO_BUCKET}/`)[1];
+      if (pathMatch) {
+        await supabase.storage.from(VIDEO_BUCKET).remove([pathMatch]);
+      }
+    }
+    setDraft((d) => ({ ...d, [tab]: "" }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -213,16 +258,19 @@ function ManageVideosPanel({
           {TABS.map((tab) => {
             const val = draft[tab] ?? "";
             const parsed = val ? parseVideoEmbed(val) : null;
+            const isUploading = uploading === tab;
             return (
               <div key={tab}>
                 <label className="text-sm font-semibold block mb-1.5">
                   {TAB_LABELS[tab]}
                 </label>
+
+                {/* URL input */}
                 <input
                   type="text"
                   value={val}
                   onChange={(e) => setDraft((d) => ({ ...d, [tab]: e.target.value }))}
-                  placeholder="Paste YouTube, Vimeo, or .mp4 URL"
+                  placeholder="Paste URL or upload a file below"
                   className={cn(
                     "w-full rounded-lg px-3 py-2 text-sm border transition-colors",
                     dark
@@ -230,10 +278,83 @@ function ManageVideosPanel({
                       : "bg-white border-gray-300 placeholder:text-gray-400 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
                   )}
                 />
-                {val && (
+
+                {/* Status line */}
+                {val && !isUploading && (
                   <p className={cn("text-xs mt-1", parsed ? "text-emerald-500" : "text-amber-500")}>
                     {parsed ? `${parsed.type.toUpperCase()} detected` : "Unrecognized URL format"}
                   </p>
+                )}
+
+                {/* Upload progress */}
+                {isUploading && (
+                  <div className="mt-2">
+                    <div className="h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-[#1e3a5f] mt-1">Uploading... {uploadProgress}%</p>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    ref={(el) => { fileInputRefs.current[tab] = el; }}
+                    type="file"
+                    accept={ACCEPTED_VIDEO_TYPES}
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(tab, file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRefs.current[tab]?.click()}
+                    disabled={!!uploading}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
+                      dark
+                        ? "border-white/10 hover:bg-white/5"
+                        : "border-gray-300 hover:bg-gray-50"
+                    )}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    {val ? "Replace" : "Upload File"}
+                  </button>
+                  {val && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(tab)}
+                      disabled={!!uploading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  )}
+                </div>
+
+                {/* Video preview */}
+                {val && parsed && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-white/10">
+                    {parsed.type === "mp4" ? (
+                      <video src={parsed.embedUrl} controls className="w-full aspect-video bg-black" preload="metadata" />
+                    ) : (
+                      <iframe
+                        src={parsed.embedUrl}
+                        title={`${TAB_LABELS[tab]} preview`}
+                        className="w-full aspect-video"
+                        style={{ border: 0 }}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -244,7 +365,7 @@ function ManageVideosPanel({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !!uploading}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282] text-white text-sm font-semibold transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -270,6 +391,15 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
     setChecking(true);
+
+    // Allow any @recurrent.io email automatically
+    if (trimmed.endsWith("@recurrent.io")) {
+      setChecking(false);
+      sessionStorage.setItem(SESSION_KEY, "1");
+      onAccess();
+      return;
+    }
+
     const { data } = await supabase
       .from("prospectus_access")
       .select("id")
@@ -1072,53 +1202,284 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
   );
 }
 
+/* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
+
 /* ------------------------------------------------------------------ */
-/* Tab: PDX Experience                                                 */
+/* Tab content data for all non-Overview, non-Financial tabs            */
 /* ------------------------------------------------------------------ */
 
-const PDX_PHASES = [
-  { icon: Handshake, label: "Partnership", description: "Define the event relationship, assign your Experience team, and lock in dates and contacts." },
-  { icon: ClipboardList, label: "Agenda & ROS", description: "Build a color-coded run-of-show with time blocks, speakers, and conflict detection." },
-  { icon: DollarSign, label: "Budget", description: "Track estimated vs. actual costs with real-time margin and sponsor coverage calculations." },
-  { icon: Handshake, label: "Sponsors", description: "Manage sponsor packages, obligation checklists, and deliverables per tier." },
-  { icon: Users, label: "Creators", description: "Build a creator roster with reach calculators and social posting schedules." },
-  { icon: Video, label: "Production", description: "Day-of checklist, multi-destination streaming setup, and emergency contacts." },
-  { icon: FileText, label: "AAR Report", description: "AI-generated After Action Report with audience metrics, sponsor ROI, and PDF export." },
-];
+interface TabContent {
+  headline: string;
+  headlineAccent?: string;
+  description: string;
+  sections: { heading: string; items: string[] }[];
+  bottomNote?: { heading: string; text: string };
+}
 
-function PdxTab({ dark }: { dark: boolean }) {
-  return (
-    <div className="space-y-16">
-      {/* Deep Dive link */}
-      <div className="flex justify-end -mb-12">
-        <a
-          href="/kb/events-pdx"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(
-            "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
-            dark
-              ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
-              : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
-          )}
-        >
-          <BookOpen className="h-3.5 w-3.5" />
-          Deep Dive
-        </a>
+const TAB_CONTENT: Record<string, TabContent> = {
+  "Events & Attendee App": {
+    headline: "Mobile-First Event Management",
+    headlineAccent: "Built for Military Communities",
+    description:
+      "MilCrunch replaces platforms like Whova with a military-native PWA that works before, during, and after every event \u2014 no App Store required. Attendees get instant QR check-in, live schedules, and year-round community access.",
+    sections: [
+      {
+        heading: "Key Features",
+        items: [
+          "PWA Technology \u2014 Works on any device, zero downloads",
+          "QR Code Check-In \u2014 Instant registration and badge printing",
+          "Live Event Feed \u2014 Real-time updates, announcements, schedule changes",
+          "Sponsor Integration \u2014 Booth locations, branded content, ROI tracking",
+          "Post-Event Engagement \u2014 Community continues beyond event day",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "Why It Matters",
+      text: "Traditional event apps die when the conference ends. MilCrunch keeps attendees connected 365 days a year, solving the \u201Cone-and-done\u201D problem that plagues military events.",
+    },
+  },
+  "MilCrunch Experience": {
+    headline: "From the Team That Built the",
+    headlineAccent: "Parade Deck Experience",
+    description:
+      "For three years, we operated the Parade Deck Experience at Military Influencer Conference \u2014 the premier live streaming stage showcasing military creators. That hands-on experience taught us what military event producers actually need: a platform that understands the unique dynamics of military communities.",
+    sections: [
+      {
+        heading: "Track Record",
+        items: [
+          "3 Years running MilCon\u2019s featured stage",
+          "100+ Creators interviewed and showcased",
+          "Live Production \u2014 Multi-camera streaming, sponsor integration",
+          "Community Building \u2014 Created connections between creators, brands, and service members",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "From Experience to Platform",
+      text: "We took everything we learned from producing live events and built it into software. MilCrunch is the event platform we wish existed when we were running PDX.",
+    },
+  },
+  "Discovery": {
+    headline: "Military Creator",
+    headlineAccent: "Intelligence Engine",
+    description:
+      "MilCrunch integrates with Influencers.club\u2019s 310M+ creator database to provide military-specific discovery powered by proprietary relevance scoring. Find verified military creators, veterans, and military spouses with confidence.",
+    sections: [
+      {
+        heading: "Key Features",
+        items: [
+          "Military Match Scoring \u2014 AI-powered relevance algorithm using 95+ military terms, 27 base locations, and branch identification",
+          "Advanced Filtering \u2014 Search by branch, location, follower count, engagement rate, niche",
+          "Platform Coverage \u2014 Instagram, TikTok, YouTube, Twitter/X, Twitch",
+          "Real-Time Data \u2014 Live follower counts, engagement metrics, content analysis",
+          "Evidence-Based Results \u2014 See exactly why each creator matched (hashtags, bio, location proximity)",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "Competitive Advantage",
+      text: "Generic influencer platforms return gyms and businesses when you search \u201Cmilitary Norfolk.\u201D MilCrunch returns actual military spouses and veterans because we understand the domain.",
+    },
+  },
+  "Verification": {
+    headline: "4-Phase AI Verification Pipeline",
+    headlineAccent: "for Military Authenticity",
+    description:
+      "Military affiliation fraud is rampant in influencer marketing. MilCrunch\u2019s proprietary verification system combines People Data Labs, web intelligence, and AI analysis to deliver 85\u201395% confidence scores on military status.",
+    sections: [
+      {
+        heading: "Verification Process",
+        items: [
+          "Phase 1: Identity Verification \u2014 People Data Labs integration for identity resolution",
+          "Phase 2: Web Intelligence \u2014 Multi-source web search for military evidence",
+          "Phase 3: Deep Extraction \u2014 AI-powered content analysis across social platforms",
+          "Phase 4: Confidence Scoring \u2014 Evidence synthesis and military status determination",
+        ],
+      },
+      {
+        heading: "Output",
+        items: [
+          "Intelligence Summary \u2014 AI-generated brief on military background",
+          "Evidence Sources \u2014 25\u201330 verified sources with relevance scoring",
+          "Military/Civilian Career Timeline \u2014 Service history and transition points",
+          "Social Verification \u2014 Platform authenticity checks",
+          "Media & Appearances \u2014 Public speaking, podcast appearances, published work",
+          "Background Review \u2014 Public records and reputation analysis",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "Why It Matters",
+      text: "Brands pay premium rates for military influencers. Our verification ensures they\u2019re getting authentic military voices, not stolen valor.",
+    },
+  },
+  "365 Insights": {
+    headline: "Year-Round",
+    headlineAccent: "Community Intelligence",
+    description:
+      "Military creators don\u2019t go dormant between conferences. MilCrunch tracks engagement, content performance, and community sentiment 365 days a year to help brands make informed partnership decisions.",
+    sections: [
+      {
+        heading: "Key Features",
+        items: [
+          "Engagement Tracking \u2014 Monitor creator performance across all platforms",
+          "Content Analysis \u2014 AI-powered theme detection and sentiment analysis",
+          "Audience Demographics \u2014 Military affiliation, geographic distribution, interests",
+          "Partnership Opportunities \u2014 Smart matching between brands and creators",
+          "ROI Measurement \u2014 Track campaign performance from impression to conversion",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "Data-Driven Decisions",
+      text: "Know which creators are trending, which niches are growing, and where to invest your marketing budget before competitors do.",
+    },
+  },
+  "Streaming & Media": {
+    headline: "Professional Live",
+    headlineAccent: "Production Infrastructure",
+    description:
+      "Built from our experience producing 100+ live interviews at Military Influencer Conference, MilCrunch provides enterprise-grade streaming capabilities for military events.",
+    sections: [
+      {
+        heading: "Capabilities",
+        items: [
+          "Multi-Platform Streaming \u2014 Simultaneous broadcast to YouTube, Facebook, Instagram, LinkedIn",
+          "Professional Production \u2014 Multi-camera switching, graphics overlays, sponsor integration",
+          "VOD Archive \u2014 Automatic recording and post-event content library",
+          "Sponsor Showcases \u2014 Branded segments, booth tours, product demos",
+          "Creator Interviews \u2014 Structured format for authentic conversations",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "Production Quality",
+      text: "Broadcast-quality streaming without broadcast-level costs. Perfect for military conferences, expos, and virtual events.",
+    },
+  },
+  "Partnership Model": {
+    headline: "Connect Brands with",
+    headlineAccent: "Military Communities",
+    description:
+      "MilCrunch facilitates authentic partnerships between brands and military creators, solving the discovery problem that keeps military marketing inefficient.",
+    sections: [
+      {
+        heading: "For Brands",
+        items: [
+          "Vetted Creator Network \u2014 Pre-verified military authenticity",
+          "Campaign Management \u2014 End-to-end influencer campaign execution",
+          "ROI Tracking \u2014 Measure impact from awareness to conversion",
+          "Community Access \u2014 Reach military families through trusted voices",
+        ],
+      },
+      {
+        heading: "For Creators",
+        items: [
+          "Brand Opportunities \u2014 Get discovered by companies seeking military partnerships",
+          "Fair Compensation \u2014 Transparent rate cards and payment processing",
+          "Content Support \u2014 Guidance on brand partnerships that maintain authenticity",
+          "Community Connection \u2014 Network with other military creators",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "Win-Win-Win",
+      text: "Brands reach military audiences authentically. Creators monetize their platforms. Military communities get relevant products and services.",
+    },
+  },
+  "Financial Model": {
+    headline: "Built for Acquisition:",
+    headlineAccent: "Clean Revenue Model & Technical Moat",
+    description:
+      "MilCrunch operates on a proven B2B SaaS model with multiple revenue streams and proprietary technology that creates sustainable competitive advantages.",
+    sections: [
+      {
+        heading: "Revenue Streams",
+        items: [
+          "Event Management \u2014 Per-event licensing for conferences and expos",
+          "Creator Discovery \u2014 Subscription tiers for brand access to verified military creators",
+          "Verification Services \u2014 API access for third-party platforms",
+          "Streaming Production \u2014 Live event production and VOD hosting",
+        ],
+      },
+      {
+        heading: "Technical Moat",
+        items: [
+          "Military Relevance Algorithm \u2014 Proprietary scoring system (95+ terms, 27 bases, branch ID)",
+          "Verification Pipeline \u2014 4-phase AI system with 85\u201395% accuracy",
+          "Creator Database \u2014 Curated network of verified military creators",
+          "Event Infrastructure \u2014 Battle-tested PWA with 3 years production experience",
+        ],
+      },
+      {
+        heading: "Acquisition Value",
+        items: [
+          "Immediate Revenue \u2014 Existing contracts and proven pricing",
+          "Scalable Technology \u2014 SaaS platform ready for 10x growth",
+          "Defensible Position \u2014 Domain expertise and technical differentiation",
+          "Customer Pipeline \u2014 Military event producers actively seeking alternatives to Whova",
+        ],
+      },
+      {
+        heading: "Growth Potential",
+        items: [
+          "Expand to All Military Events \u2014 500+ military conferences annually",
+          "Enterprise Partnerships \u2014 USO, MOAA, veteran service organizations",
+          "International \u2014 Allied militaries (UK, Canada, Australia)",
+          "Adjacent Markets \u2014 First responders, government contractors",
+        ],
+      },
+    ],
+  },
+};
+
+function ContentTab({ dark, tab }: { dark: boolean; tab: string }) {
+  const content = TAB_CONTENT[tab];
+  const kbSlug = TAB_KB_CATEGORY[tab];
+
+  if (!content) {
+    return (
+      <div className="py-24 text-center">
+        <p className={cn("text-sm", dark ? "text-gray-400" : "text-gray-500")}>Content coming soon.</p>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-12">
+      {/* Deep Dive link */}
+      {kbSlug && (
+        <div className="flex justify-end -mb-8">
+          <a
+            href={`/kb/${kbSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
+              dark
+                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
+                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
+            )}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Deep Dive
+          </a>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="text-center max-w-3xl mx-auto pt-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#1e3a5f]/15 flex items-center justify-center mx-auto mb-5">
-          <Radio className="h-7 w-7 text-[#1e3a5f]" />
-        </div>
         <h2
           className={cn(
-            "text-3xl md:text-4xl font-extrabold leading-tight mb-3 transition-colors duration-300",
+            "text-3xl md:text-4xl font-extrabold leading-tight mb-4 transition-colors duration-300",
             dark ? "text-white" : "text-[#111827]"
           )}
         >
-          The MilCrunch{" "}
-          <span className="text-[#1e3a5f]">Experience</span>
+          {content.headline}{" "}
+          {content.headlineAccent && (
+            <span className="text-[#1e3a5f]">{content.headlineAccent}</span>
+          )}
         </h2>
         <p
           className={cn(
@@ -1126,1217 +1487,71 @@ function PdxTab({ dark }: { dark: boolean }) {
             dark ? "text-gray-400" : "text-[#6B7280]"
           )}
         >
-          A turnkey live-stage production that drops into any event or conference — delivering
-          non-stop creator-led sessions, multi-platform streaming, and sponsor
-          activations that turn dead stage time into a six-figure revenue engine.
+          {content.description}
         </p>
       </section>
 
-      {/* Visual Timeline */}
-      <section className="max-w-4xl mx-auto">
-        <div className="relative">
-          {/* Vertical line */}
-          <div
+      {/* Sections */}
+      {content.sections.map((section) => (
+        <section key={section.heading} className="max-w-3xl mx-auto">
+          <h3
             className={cn(
-              "absolute left-[23px] top-4 bottom-4 w-px transition-colors duration-300",
-              dark ? "bg-[#1e3a5f]/30" : "bg-[#1e3a5f]/20"
-            )}
-          />
-          <div className="space-y-6">
-            {PDX_PHASES.map((p, i) => {
-              const Icon = p.icon;
-              return (
-                <div key={p.label + i} className="flex items-start gap-5 relative">
-                  {/* Node */}
-                  <div
-                    className={cn(
-                      "w-[46px] h-[46px] rounded-xl flex items-center justify-center flex-shrink-0 z-10 transition-colors duration-300",
-                      dark
-                        ? "bg-[#1e3a5f]/15 border border-[#1e3a5f]/30"
-                        : "bg-[#1e3a5f]/10 border border-[#1e3a5f]/20"
-                    )}
-                  >
-                    <Icon className="h-5 w-5 text-[#1e3a5f]" />
-                  </div>
-                  {/* Content */}
-                  <div
-                    className={cn(
-                      "flex-1 rounded-xl p-5 transition-colors duration-300",
-                      dark
-                        ? "bg-white/[0.04] border border-white/[0.08]"
-                        : "bg-white border border-[#E5E7EB]"
-                    )}
-                  >
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <span className="text-[10px] font-bold text-[#1e3a5f] uppercase tracking-widest">
-                        Phase {i + 1}
-                      </span>
-                    </div>
-                    <h4
-                      className={cn(
-                        "font-bold text-sm mb-1 transition-colors duration-300",
-                        dark ? "text-white" : "text-[#111827]"
-                      )}
-                    >
-                      {p.label}
-                    </h4>
-                    <p
-                      className={cn(
-                        "text-sm leading-relaxed transition-colors duration-300",
-                        dark ? "text-gray-400" : "text-[#6B7280]"
-                      )}
-                    >
-                      {p.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Solution Brief data per tab                                         */
-/* ------------------------------------------------------------------ */
-
-interface SolutionBriefData {
-  summary: string;
-  components: string[];
-  problemSolved: { pain: string; solution: string }[];
-  summaryIcon: typeof FileText;
-  componentsIcon: typeof Layers;
-  problemIcon: typeof Target;
-}
-
-const SOLUTION_BRIEFS: Record<string, SolutionBriefData> = {
-  "Events & Attendee App": {
-    summaryIcon: Smartphone,
-    componentsIcon: Layers,
-    problemIcon: Target,
-    summary:
-      "MilCrunch replaces Whova with a mobile-first PWA attendee app that works before, during, and after every event — keeping the community engaged 365 days without requiring an App Store download.",
-    components: [
-      "Mobile schedule + agenda builder",
-      "Speaker & sponsor discovery",
-      "Community feed with real-time posts",
-      "QR-based networking & lead retrieval",
-      "Push notifications & announcements",
-    ],
-    problemSolved: [
-      {
-        pain: "Whova charges $5K–$15K per event and the app goes dark after Day 3",
-        solution:
-          "MilCrunch is included in the platform license with year-round community access",
-      },
-      {
-        pain: "Attendees forget speakers and sponsors within a week",
-        solution:
-          "Persistent profiles and community keep relationships active long after the event ends",
-      },
-    ],
-  },
-  "MilCrunch Experience": {
-    summaryIcon: Radio,
-    componentsIcon: Layers,
-    problemIcon: Target,
-    summary:
-      "The MilCrunch Experience is a turnkey live-stage production that drops into any military event — delivering 8+ hours of live podcast sessions, multi-platform streaming, and sponsor activations that generate $150K–$250K in revenue from a single stage.",
-    components: [
-      "7-phase event wizard (partnership → AAR)",
-      "Run-of-show builder with conflict detection",
-      "Sponsor integration with obligation tracking",
-      "Creator roster with reach calculator",
-      "Multi-destination live streaming",
-      "AI-generated After Action Reports",
-    ],
-    problemSolved: [
-      {
-        pain: "Event stages sit dark between keynotes with no monetization",
-        solution:
-          "The Experience fills every hour with creator-led sessions that sponsors pay to be part of",
-      },
-      {
-        pain: "Post-event reporting takes weeks of manual work",
-        solution:
-          "AI generates executive After Action Reports with audience metrics, sponsor ROI, and strategic recommendations in minutes",
-      },
-    ],
-  },
-  "Creator Network": {
-    summaryIcon: Search,
-    componentsIcon: Layers,
-    problemIcon: Target,
-    summary:
-      "A verified directory of 1,000+ military and veteran creators — influencers, podcasters, speakers, and authors — with AI-powered discovery, brand safety verification, and built-in campaign management.",
-    components: [
-      "AI-powered creator search with 20+ filters",
-      "4-phase military verification pipeline",
-      "Creator profile pages with social analytics",
-      "Brand deal facilitation and list building",
-      "Creator onboarding with social account connection",
-    ],
-    problemSolved: [
-      {
-        pain: "Brands can't verify if creators actually served",
-        solution:
-          "4-phase AI verification with confidence scores and evidence",
-      },
-      {
-        pain: "Finding niche military creators requires 5+ different tools",
-        solution:
-          "One search finds verified creators across all platforms and niches",
-      },
-    ],
-  },
-  "365 Insights": {
-    summaryIcon: TrendingUp,
-    componentsIcon: Layers,
-    problemIcon: Target,
-    summary:
-      "Year-round sponsor analytics that turn event spend into a measurable, data-driven asset — giving sponsors the ROI story they need to renew and upsell every year.",
-    components: [
-      "Multi-sponsor impression tracking",
-      "12-month time-series dashboards",
-      "YoY comparison and event benchmarking",
-      "Exportable ROI reports",
-      "Sponsor renewal pipeline tools",
-    ],
-    problemSolved: [
-      {
-        pain: 'Sponsors ask "what did I get?" with no data to answer',
-        solution:
-          "Real-time dashboards show impressions, engagement, and attribution by sponsor tier",
-      },
-      {
-        pain: "Sponsor renewal rates under 50% industry-wide",
-        solution:
-          "Data-driven renewal conversations drive 85%+ retention target",
-      },
-    ],
-  },
-  "Streaming & Media": {
-    summaryIcon: Radio,
-    componentsIcon: Layers,
-    problemIcon: Target,
-    summary:
-      "Multi-destination live streaming with AI post-production built in — replacing StreamYard, Restream, and manual video editing with one integrated media engine.",
-    components: [
-      "Multi-platform streaming (YouTube, Facebook, Twitch, custom RTMP)",
-      "Browser-based streaming without hardware",
-      "AI auto-framing and lower thirds",
-      "Highlight reel generation",
-      "Social clip repurposing via Upload-Post",
-    ],
-    problemSolved: [
-      {
-        pain: "StreamYard + Restream costs $50–$200/mo and still requires manual editing",
-        solution:
-          "MilCrunch streams to all platforms simultaneously with AI post-production included",
-      },
-      {
-        pain: "Event recordings sit unwatched after the event",
-        solution:
-          "AI generates clips and schedules them across social channels for months of long-tail impressions",
-      },
-    ],
-  },
-  "Partnership Model": {
-    summaryIcon: Handshake,
-    componentsIcon: Layers,
-    problemIcon: Target,
-    summary:
-      "A white-label platform licensing model that gives Recurrent.io full ownership of the technology under their brand — turning MilCrunch into the infrastructure layer for their entire event portfolio.",
-    components: [
-      "Platform license per event property",
-      "Sponsor Dashboard access add-on ($5K–$10K per sponsor)",
-      "Creator marketplace revenue share",
-      "White-label branding options",
-      "API access for custom integrations",
-    ],
-    problemSolved: [
-      {
-        pain: "Recurrent.io consolidates $3,800+/mo in SaaS tools across their event portfolio",
-        solution:
-          "One license replaces Eventbrite, Grin, StreamYard, Jotform, Brandwatch, and manual verification",
-      },
-      {
-        pain: "No recurring data asset between events",
-        solution:
-          "MilCrunch builds a proprietary creator and audience database that grows in value with every event",
-      },
-    ],
-  },
-};
-
-/* ------------------------------------------------------------------ */
-/* Solution Brief component                                            */
-/* ------------------------------------------------------------------ */
-
-function SolutionBrief({ data, dark }: { data: SolutionBriefData; dark: boolean }) {
-  const cardClass = cn(
-    "rounded-xl p-6 transition-colors duration-300",
-    dark
-      ? "bg-[#1a1f2e] border border-white/[0.08]"
-      : "bg-white border border-[#E5E7EB]"
-  );
-
-  return (
-    <section className="mt-16">
-      {/* Section heading */}
-      <p className="text-xs font-semibold tracking-[0.15em] uppercase text-[#1e3a5f] mb-5">
-        Solution Brief
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Card 1 — Summary of Service */}
-        <div className={cardClass}>
-          <div className="w-10 h-10 rounded-lg bg-[#1e3a5f]/15 flex items-center justify-center mb-4">
-            <data.summaryIcon className="h-5 w-5 text-[#1e3a5f]" />
-          </div>
-          <h4
-            className={cn(
-              "font-bold text-sm mb-3 transition-colors duration-300",
+              "text-lg font-bold mb-4 transition-colors duration-300",
               dark ? "text-white" : "text-[#111827]"
             )}
           >
-            Summary of Service
-          </h4>
+            {section.heading}
+          </h3>
+          <div className="space-y-3">
+            {section.items.map((item) => (
+              <div key={item} className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <p
+                  className={cn(
+                    "text-sm leading-relaxed transition-colors duration-300",
+                    dark ? "text-gray-300" : "text-[#374151]"
+                  )}
+                >
+                  {item}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Bottom note */}
+      {content.bottomNote && (
+        <section
+          className={cn(
+            "max-w-3xl mx-auto rounded-xl p-6 transition-colors duration-300",
+            dark
+              ? "bg-white/[0.04] border border-white/[0.08]"
+              : "bg-white border border-[#E5E7EB]"
+          )}
+        >
+          <h3
+            className={cn(
+              "text-base font-bold mb-2 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            {content.bottomNote.heading}
+          </h3>
           <p
             className={cn(
               "text-sm leading-relaxed transition-colors duration-300",
               dark ? "text-gray-400" : "text-[#6B7280]"
             )}
           >
-            {data.summary}
+            {content.bottomNote.text}
           </p>
-        </div>
-
-        {/* Card 2 — Major Components */}
-        <div className={cardClass}>
-          <div className="w-10 h-10 rounded-lg bg-[#1e3a5f]/15 flex items-center justify-center mb-4">
-            <data.componentsIcon className="h-5 w-5 text-[#1e3a5f]" />
-          </div>
-          <h4
-            className={cn(
-              "font-bold text-sm mb-3 transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
-            )}
-          >
-            Major Components
-          </h4>
-          <ul className="space-y-2">
-            {data.components.map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-[#1e3a5f] mt-0.5 flex-shrink-0" />
-                <span
-                  className={cn(
-                    "text-sm leading-snug transition-colors duration-300",
-                    dark ? "text-gray-400" : "text-[#6B7280]"
-                  )}
-                >
-                  {item}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Card 3 — Problem Solved */}
-        <div className={cardClass}>
-          <div className="w-10 h-10 rounded-lg bg-[#1e3a5f]/15 flex items-center justify-center mb-4">
-            <data.problemIcon className="h-5 w-5 text-[#1e3a5f]" />
-          </div>
-          <h4
-            className={cn(
-              "font-bold text-sm mb-3 transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
-            )}
-          >
-            Problem Solved
-          </h4>
-          <div className="space-y-4">
-            {data.problemSolved.map((ps, i) => (
-              <div key={i} className="space-y-1.5">
-                <div className="flex items-start gap-2">
-                  <XCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
-                  <span
-                    className={cn(
-                      "text-sm leading-snug transition-colors duration-300",
-                      dark ? "text-gray-500" : "text-[#9CA3AF]"
-                    )}
-                  >
-                    {ps.pain}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span
-                    className={cn(
-                      "text-sm leading-snug font-medium transition-colors duration-300",
-                      dark ? "text-gray-300" : "text-[#374151]"
-                    )}
-                  >
-                    {ps.solution}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Tab: Events & Attendee App                                          */
-/* ------------------------------------------------------------------ */
-
-function EventsAttendeeTab({ dark }: { dark: boolean }) {
-  const kbSlug = TAB_KB_CATEGORY["Events & Attendee App"];
-
-  return (
-    <div>
-      {/* Deep Dive link */}
-      {kbSlug && (
-        <div className="flex justify-end mb-2">
-          <a
-            href={`/kb/${kbSlug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
-              dark
-                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
-                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
-            )}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Deep Dive
-          </a>
-        </div>
+        </section>
       )}
-
-      {/* Intro paragraph */}
-      <div className="max-w-[760px] mx-auto py-12">
-        <p
-          className={cn(
-            "text-base leading-relaxed transition-colors duration-300",
-            dark ? "text-gray-300" : "text-[#374151]"
-          )}
-        >
-          MilCrunch replaces platforms like Whova with a mobile-first PWA attendee app that works
-          before, during, and after every event — no App Store required. Attendees get instant QR
-          check-in, a live personal agenda builder, real-time community feed, and QR-based
-          networking. Sponsors and organizers get persistent engagement long after the event ends —
-          turning a 3-day conference into a year-round community.
-        </p>
-
-
-
-
-        {/* Registration & Check-In */}
-        <h3
-          className={cn(
-            "text-xl font-bold mt-10 mb-4 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          Registration &amp; Check-In
-        </h3>
-
-      </div>
-
-      {/* PWA Showcase */}
-      <section className="mt-16 max-w-4xl mx-auto">
-        <p
-          className={cn(
-            "text-[11px] font-semibold tracking-[0.15em] uppercase mb-6 transition-colors duration-300",
-            dark ? "text-gray-500" : "text-[#9CA3AF]"
-          )}
-        >
-          PROGRESSIVE WEB APP (PWA) — NO APP STORE REQUIRED
-        </p>
-
-        <h3
-          className={cn(
-            "text-xl md:text-2xl font-extrabold leading-tight mb-2 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          Built for Organizers.{" "}
-          <span className="text-[#1e3a5f]">Loved by Attendees.</span>
-        </h3>
-        <p
-          className={cn(
-            "text-base leading-relaxed mb-8 transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
-          )}
-        >
-          Manage every detail from the backend — and watch it appear instantly in the attendee PWA.
-        </p>
-
-        {/* Admin + Phone Preview Mockup */}
-        <div
-          className={cn(
-            "rounded-2xl border overflow-hidden transition-colors duration-300",
-            dark
-              ? "bg-[#111827] border-white/[0.08]"
-              : "bg-[#F9FAFB] border-[#E5E7EB]"
-          )}
-        >
-          <div className="flex flex-col md:flex-row">
-            {/* Left — Admin Panel Mockup */}
-            <div className="flex-1 p-6 md:p-8">
-              <p
-                className={cn(
-                  "text-[10px] font-semibold tracking-widest uppercase mb-4 transition-colors duration-300",
-                  dark ? "text-gray-500" : "text-[#9CA3AF]"
-                )}
-              >
-                Event Admin Dashboard
-              </p>
-              {/* Simulated admin settings */}
-              <div className="space-y-3">
-                {/* Tab bar */}
-                <div className="flex gap-1">
-                  {["Details", "Schedule", "Sponsors", "Attendee App"].map((t, i) => (
-                    <span
-                      key={t}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors duration-300",
-                        i === 3
-                          ? "bg-[#1e3a5f] text-white"
-                          : dark
-                            ? "bg-white/[0.06] text-gray-400"
-                            : "bg-white text-[#6B7280]"
-                      )}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-                {/* Settings fields */}
-                <div
-                  className={cn(
-                    "rounded-xl p-4 space-y-3 transition-colors duration-300",
-                    dark ? "bg-white/[0.04]" : "bg-white"
-                  )}
-                >
-                  <p
-                    className={cn(
-                      "text-xs font-bold transition-colors duration-300",
-                      dark ? "text-white" : "text-[#111827]"
-                    )}
-                  >
-                    App Settings
-                  </p>
-                  {[
-                    { label: "Event WiFi Network", value: "MIC-Guest-2026" },
-                    { label: "WiFi Password", value: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" },
-                    { label: "Emergency Contact", value: "(555) 012-3456" },
-                    { label: "Venue Map URL", value: "maps.mic2026.com" },
-                  ].map((f) => (
-                    <div key={f.label} className="flex items-center justify-between">
-                      <span
-                        className={cn(
-                          "text-[11px] transition-colors duration-300",
-                          dark ? "text-gray-400" : "text-[#6B7280]"
-                        )}
-                      >
-                        {f.label}
-                      </span>
-                      <span
-                        className={cn(
-                          "text-[11px] font-medium transition-colors duration-300",
-                          dark ? "text-gray-300" : "text-[#374151]"
-                        )}
-                      >
-                        {f.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {/* Toggle rows */}
-                <div
-                  className={cn(
-                    "rounded-xl p-4 space-y-2.5 transition-colors duration-300",
-                    dark ? "bg-white/[0.04]" : "bg-white"
-                  )}
-                >
-                  {[
-                    { label: "Push Notifications", on: true },
-                    { label: "Community Feed", on: true },
-                    { label: "QR Networking", on: true },
-                    { label: "Sponsor Banner Ads", on: false },
-                  ].map((toggle) => (
-                    <div key={toggle.label} className="flex items-center justify-between">
-                      <span
-                        className={cn(
-                          "text-[11px] transition-colors duration-300",
-                          dark ? "text-gray-400" : "text-[#6B7280]"
-                        )}
-                      >
-                        {toggle.label}
-                      </span>
-                      <div
-                        className={cn(
-                          "w-8 h-[18px] rounded-full relative transition-colors",
-                          toggle.on ? "bg-[#1e3a5f]" : dark ? "bg-gray-600" : "bg-gray-300"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all",
-                            toggle.on ? "left-[16px]" : "left-[2px]"
-                          )}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Right — Phone Preview */}
-            <div className="flex items-center justify-center p-6 md:p-8 md:border-l border-t md:border-t-0 border-inherit">
-              <div>
-                <p
-                  className={cn(
-                    "text-[10px] font-semibold tracking-widest uppercase mb-3 text-center transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#9CA3AF]"
-                  )}
-                >
-                  Live Attendee Preview
-                </p>
-                <div
-                  className={cn(
-                    "relative w-[200px] h-[400px] rounded-[2rem] border-[5px] overflow-hidden shadow-xl transition-colors duration-300",
-                    dark
-                      ? "border-gray-700 bg-white shadow-black/40"
-                      : "border-gray-800 bg-white shadow-gray-400/30"
-                  )}
-                >
-                  {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80px] h-[20px] bg-black rounded-b-xl z-10" />
-                  {/* Screen */}
-                  <div className="w-full h-full flex flex-col bg-white">
-                    <div className="h-[24px] bg-[#1e3a5f]" />
-                    <div className="bg-[#1e3a5f] px-3 py-2 text-center">
-                      <p className="text-white text-[9px] font-bold">MIC 2026</p>
-                      <p className="text-white/70 text-[7px]">Sep 23–25, Washington DC</p>
-                    </div>
-                    {/* Info cards */}
-                    <div className="flex-1 bg-[#F9FAFB] px-2.5 py-2 space-y-1.5 overflow-hidden">
-                      <div className="bg-white rounded-lg p-2 shadow-sm">
-                        <p className="text-[8px] font-bold text-[#111827]">WiFi</p>
-                        <p className="text-[7px] text-gray-500">MIC-Guest-2026</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-2 shadow-sm">
-                        <p className="text-[8px] font-bold text-[#111827]">Next Session</p>
-                        <p className="text-[7px] text-gray-500">Opening Keynote - 9:00 AM</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-2 shadow-sm">
-                        <p className="text-[8px] font-bold text-[#111827]">Notifications</p>
-                        <p className="text-[7px] text-gray-500">3 new announcements</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-2 shadow-sm">
-                        <p className="text-[8px] font-bold text-[#111827]">Community</p>
-                        <p className="text-[7px] text-gray-500">47 attendees nearby</p>
-                      </div>
-                    </div>
-                    {/* Bottom nav */}
-                    <div className="h-[36px] bg-[#F9FAFB] border-t border-gray-200 flex items-center justify-around px-2">
-                      <span className="text-[6px] text-[#1e3a5f] font-medium">Home</span>
-                      <span className="text-[6px] text-gray-400 font-medium">Schedule</span>
-                      <span className="text-[6px] text-gray-400 font-medium">Map</span>
-                      <span className="text-[6px] text-gray-400 font-medium">Profile</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bullet points */}
-        <div className="mt-8 space-y-3 max-w-2xl">
-          {[
-            "Manage WiFi credentials, FAQs, and notifications from one dashboard",
-            "Live Attendee Preview shows exactly what attendees see on their phone — in real time",
-            "No app download required — the PWA installs directly from the browser to any home screen",
-          ].map((point) => (
-            <div key={point} className="flex items-start gap-2.5">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-300" : "text-[#374151]"
-                )}
-              >
-                {point}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Tab: Creator Network                                                */
-/* ------------------------------------------------------------------ */
-
-const CREATOR_BULLETS = [
-  "Filter by niche, platform, followers, and engagement rate",
-  "AI-powered military verification with confidence scoring",
-  "One-click list building and campaign outreach",
-  "Cross-platform analytics — Instagram, TikTok, YouTube, X",
-  "Brand safety and audience quality scoring",
-  "Creator profile pages with linked social accounts",
-];
-
-function CreatorNetworkTab({ dark }: { dark: boolean }) {
-  const kbSlug = TAB_KB_CATEGORY["Creator Network"];
-
-  return (
-    <div>
-      {/* Deep Dive link */}
-      {kbSlug && (
-        <div className="flex justify-end mb-2">
-          <a
-            href={`/kb/${kbSlug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
-              dark
-                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
-                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
-            )}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Deep Dive
-          </a>
-        </div>
-      )}
-
-      {/* Video placeholder */}
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#1e3a5f]/15 flex items-center justify-center mb-6">
-          <Play className="h-8 w-8 text-[#1e3a5f] ml-1" />
-        </div>
-        <h3
-          className={cn(
-            "text-xl font-bold mb-2 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          Creator Network
-        </h3>
-        <p
-          className={cn(
-            "text-sm max-w-md transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
-          )}
-        >
-          Explore our verified military creator marketplace — discovery, vetting, and campaign management in one place.
-        </p>
-        <p className="text-[#1e3a5f] text-sm font-medium mt-4">Demo video coming soon</p>
-      </div>
-
-      {/* Description paragraph */}
-      <div className="max-w-[680px] mx-auto mt-6">
-        <p
-          className={cn(
-            "text-base leading-relaxed text-center transition-colors duration-300",
-            dark ? "text-gray-300" : "text-[#374151]"
-          )}
-        >
-          MilCrunch connects event organizers and brands to a searchable database of millions of
-          creator profiles — filterable by niche, platform, follower range, engagement rate,
-          location, and military affiliation. Vetted creators build full media profiles, link their
-          social channels, and get discovered for brand partnerships, speaking opportunities, and
-          event activations.
-        </p>
-      </div>
-
-      {/* Bullet grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto mt-8">
-        {CREATOR_BULLETS.map((bullet) => (
-          <div key={bullet} className="flex items-start gap-2.5">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-            <p
-              className={cn(
-                "text-sm leading-relaxed transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              {bullet}
-            </p>
-          </div>
-        ))}
-      </div>
-
-
-
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Tab: 365 Insights                                                   */
-/* ------------------------------------------------------------------ */
-
-const INSIGHTS_CHART_DATA = [
-  { month: "Jan", value: 12400 },
-  { month: "Feb", value: 18200 },
-  { month: "Mar", value: 24800 },
-  { month: "Apr", value: 21300 },
-  { month: "May", value: 31500 },
-  { month: "Jun", value: 28700 },
-  { month: "Jul", value: 35200 },
-  { month: "Aug", value: 42100 },
-  { month: "Sep", value: 68500 },
-  { month: "Oct", value: 45300 },
-  { month: "Nov", value: 38900 },
-  { month: "Dec", value: 29400 },
-];
-
-const INSIGHTS_CREATORS_BY_MONTH: Record<string, { name: string; initials: string; color: string }[]> = {
-  Jan: [
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-  ],
-  Feb: [
-    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-  ],
-  Mar: [
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-  ],
-  Apr: [
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-  ],
-  May: [
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
-  ],
-  Jun: [
-    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-  ],
-  Jul: [
-    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-  ],
-  Aug: [
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
-    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-  ],
-  Sep: [
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
-  ],
-  Oct: [
-    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-  ],
-  Nov: [
-    { name: "Jen Rivera", initials: "JR", color: "#10B981" },
-    { name: "Devon Brooks", initials: "DB", color: "#3B82F6" },
-    { name: "Sarah Chen", initials: "SC", color: "#EC4899" },
-  ],
-  Dec: [
-    { name: "Marcus Cole", initials: "MC", color: "#1e3a5f" },
-    { name: "Taylor Kim", initials: "TK", color: "#F59E0B" },
-    { name: "Chris Vega", initials: "CV", color: "#EF4444" },
-  ],
-};
-
-const TOP_CREATORS = [
-  { name: "Marcus Cole", handle: "@marcus.vet", role: "Fitness & Veteran Lifestyle", impressions: "1.2M", engagement: "5.1%", initials: "MC", color: "#1e3a5f" },
-  { name: "Jen Rivera", handle: "@jenrivera_mil", role: "Military Spouse Advocate", impressions: "892K", engagement: "4.3%", initials: "JR", color: "#10B981" },
-  { name: "Devon Brooks", handle: "@devonbrooks", role: "Transition & Career Coach", impressions: "764K", engagement: "6.2%", initials: "DB", color: "#3B82F6" },
-  { name: "Taylor Kim", handle: "@taylork_usmc", role: "USMC Content Creator", impressions: "631K", engagement: "5.8%", initials: "TK", color: "#F59E0B" },
-];
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function InsightsCustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  const month = label as string;
-  const value = payload[0].value as number;
-  const creators = INSIGHTS_CREATORS_BY_MONTH[month] ?? [];
-
-  return (
-    <div className="bg-[#1a1f2e] border border-white/10 rounded-xl px-4 py-3 shadow-xl min-w-[200px]">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-white text-sm font-bold">{month} 2025</span>
-        <span className="text-[#1e3a5f] text-sm font-bold">{value.toLocaleString()}</span>
-      </div>
-      <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-2">Top Creators</p>
-      <div className="space-y-1.5">
-        {creators.map((c) => (
-          <div key={c.initials} className="flex items-center gap-2">
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
-              style={{ backgroundColor: c.color }}
-            >
-              {c.initials}
-            </div>
-            <span className="text-gray-300 text-xs">{c.name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InsightsTab({ dark }: { dark: boolean }) {
-  const kbSlug = TAB_KB_CATEGORY["365 Insights"];
-
-  return (
-    <div>
-      {/* Deep Dive link */}
-      {kbSlug && (
-        <div className="flex justify-end mb-2">
-          <a
-            href={`/kb/${kbSlug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
-              dark
-                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
-                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
-            )}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Deep Dive
-          </a>
-        </div>
-      )}
-
-      {/* Hero */}
-      <section className="text-center max-w-3xl mx-auto pt-4 mb-12">
-        <div className="w-14 h-14 rounded-2xl bg-[#1e3a5f]/15 flex items-center justify-center mx-auto mb-5">
-          <TrendingUp className="h-7 w-7 text-[#1e3a5f]" />
-        </div>
-        <h2
-          className={cn(
-            "text-3xl md:text-4xl font-extrabold leading-tight mb-3 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          365{" "}
-          <span className="text-[#1e3a5f]">Insights</span>
-        </h2>
-        <p
-          className={cn(
-            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
-          )}
-        >
-          Year-round sponsor analytics that turn event spend into a measurable, data-driven
-          asset — giving sponsors the ROI story they need to renew every year.
-        </p>
-      </section>
-
-      {/* Engagement Chart */}
-      <section className="max-w-4xl mx-auto">
-        <div
-          className={cn(
-            "rounded-2xl p-6 md:p-8 border transition-colors duration-300",
-            dark
-              ? "bg-[#111827] border-white/[0.08]"
-              : "bg-white border-[#E5E7EB]"
-          )}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3
-                className={cn(
-                  "text-lg font-bold transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Community Engagement
-              </h3>
-              <p
-                className={cn(
-                  "text-sm transition-colors duration-300",
-                  dark ? "text-gray-500" : "text-[#9CA3AF]"
-                )}
-              >
-                Total impressions across all creator activations
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium",
-                  dark ? "bg-[#1e3a5f]/15 text-[#1e3a5f]" : "bg-[#1e3a5f]/10 text-[#1e3a5f]"
-                )}
-              >
-                2025
-              </span>
-            </div>
-          </div>
-
-          <div className="h-[320px] w-full" style={{ paddingLeft: 4 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={INSIGHTS_CHART_DATA}
-                margin={{ top: 10, right: 20, left: 20, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="insightsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1e3a5f" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#1e3a5f" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: dark ? "#6B7280" : "#9CA3AF", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: dark ? "#6B7280" : "#9CA3AF", fontSize: 12 }}
-                  tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
-                  width={45}
-                />
-                <RechartsTooltip content={<InsightsCustomTooltip />} cursor={{ stroke: "#1e3a5f", strokeWidth: 1, strokeDasharray: "4 4" }} />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#1e3a5f"
-                  strokeWidth={2.5}
-                  fill="url(#insightsGrad)"
-                  dot={{ fill: "#1e3a5f", stroke: dark ? "#111827" : "#fff", strokeWidth: 2, r: 4 }}
-                  activeDot={{ fill: "#1e3a5f", stroke: "#fff", strokeWidth: 2, r: 6 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-inherit">
-            {[
-              { label: "Total Impressions", value: "396.3K" },
-              { label: "Peak Month", value: "Sep — 68.5K" },
-              { label: "Avg. Engagement", value: "4.8%" },
-            ].map((s) => (
-              <div key={s.label} className="text-center">
-                <p className={cn("text-xs transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-                  {s.label}
-                </p>
-                <p className={cn("text-lg font-bold mt-1 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
-                  {s.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Top Creators This Period */}
-      <section className="max-w-4xl mx-auto mt-12">
-        <p
-          className={cn(
-            "text-[11px] font-semibold tracking-[0.15em] uppercase mb-6 transition-colors duration-300",
-            dark ? "text-gray-500" : "text-[#9CA3AF]"
-          )}
-        >
-          TOP CREATORS THIS PERIOD
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {TOP_CREATORS.map((c) => (
-            <div
-              key={c.handle}
-              className={cn(
-                "rounded-xl p-5 border transition-colors duration-300",
-                dark
-                  ? "bg-white/[0.04] border-white/[0.08]"
-                  : "bg-white border-[#E5E7EB]"
-              )}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                  style={{ backgroundColor: c.color }}
-                >
-                  {c.initials}
-                </div>
-                <div>
-                  <p className={cn("text-sm font-bold transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
-                    {c.name}
-                  </p>
-                  <p className={cn("text-xs transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-                    {c.handle}
-                  </p>
-                </div>
-              </div>
-              <p className={cn("text-xs mb-3 transition-colors duration-300", dark ? "text-gray-400" : "text-[#6B7280]")}>
-                {c.role}
-              </p>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className={cn("text-[10px] uppercase tracking-wider transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-                    Impressions
-                  </p>
-                  <p className={cn("text-sm font-bold transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
-                    {c.impressions}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={cn("text-[10px] uppercase tracking-wider transition-colors duration-300", dark ? "text-gray-500" : "text-[#9CA3AF]")}>
-                    Engagement
-                  </p>
-                  <p className="text-sm font-bold text-emerald-400">
-                    {c.engagement}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Sponsor ROI summary */}
-      <section className="max-w-4xl mx-auto mt-12">
-        <div
-          className={cn(
-            "rounded-2xl p-6 md:p-8 border transition-colors duration-300",
-            dark
-              ? "bg-[#1e3a5f]/[0.08] border-[#1e3a5f]/20"
-              : "bg-[#1e3a5f]/[0.04] border-[#1e3a5f]/15"
-          )}
-        >
-          <h3
-            className={cn(
-              "text-lg font-bold mb-2 transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
-            )}
-          >
-            Why 365 Insights Drives Renewals
-          </h3>
-          <p
-            className={cn(
-              "text-sm leading-relaxed transition-colors duration-300",
-              dark ? "text-gray-300" : "text-[#374151]"
-            )}
-          >
-            Instead of a single post-event PDF, sponsors see their ROI accumulate in real time —
-            week over week, month over month. When renewal conversations start, the data is already
-            there: total impressions, creator activations, audience demographics, and year-over-year
-            comparisons. Sponsors don&rsquo;t ask &ldquo;what did I get?&rdquo; — they already know.
-          </p>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Tab: Placeholder                                                    */
-/* ------------------------------------------------------------------ */
-
-function PlaceholderTab({
-  title,
-  description,
-  dark,
-}: {
-  title: string;
-  description: string;
-  dark: boolean;
-}) {
-  const brief = SOLUTION_BRIEFS[title];
-  const kbSlug = TAB_KB_CATEGORY[title];
-
-  return (
-    <div>
-      {/* Deep Dive link */}
-      {kbSlug && (
-        <div className="flex justify-end mb-2">
-          <a
-            href={`/kb/${kbSlug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors",
-              dark
-                ? "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/20"
-                : "text-[#1e3a5f] bg-[#1e3a5f]/10 hover:bg-[#1e3a5f]/15"
-            )}
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            Deep Dive
-          </a>
-        </div>
-      )}
-      {/* Video placeholder */}
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="w-20 h-20 rounded-full bg-[#1e3a5f]/15 flex items-center justify-center mb-6">
-          <Play className="h-8 w-8 text-[#1e3a5f] ml-1" />
-        </div>
-        <h3
-          className={cn(
-            "text-xl font-bold mb-2 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          {title}
-        </h3>
-        <p
-          className={cn(
-            "text-sm max-w-md transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
-          )}
-        >
-          {description}
-        </p>
-        <p className="text-[#1e3a5f] text-sm font-medium mt-4">Demo video coming soon</p>
-      </div>
-
-      {/* Solution Brief */}
-      {brief && <SolutionBrief data={brief} dark={dark} />}
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Main Page                                                           */
@@ -2577,28 +1792,14 @@ export default function Prospectus() {
         )}
 
         {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} />}
-        {activeTab === "MilCrunch Experience" && (
-          <PdxTab dark={darkMode} />
-        )}
-        {activeTab === "Events & Attendee App" && (
-          <EventsAttendeeTab dark={darkMode} />
-        )}
-        {activeTab === "Creator Network" && (
-          <CreatorNetworkTab dark={darkMode} />
-        )}
-        {activeTab === "365 Insights" && (
-          <InsightsTab dark={darkMode} />
-        )}
-        {activeTab === "Financial Model" && (
-          <FinancialModelTab dark={darkMode} />
-        )}
-        {activeTab !== "Overview" && activeTab !== "MilCrunch Experience" && activeTab !== "Events & Attendee App" && activeTab !== "Creator Network" && activeTab !== "365 Insights" && activeTab !== "Financial Model" && (
-          <PlaceholderTab
-            title={activeTab}
-            description={TAB_PLACEHOLDERS[activeTab] ?? "Content coming soon."}
-            dark={darkMode}
-          />
-        )}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" />}
+        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" />}
+        {activeTab === "Streaming & Media" && <ContentTab dark={darkMode} tab="Streaming & Media" />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" />}
+        {activeTab === "Financial Model" && <FinancialModelTab dark={darkMode} />}
       </main>
 
       {/* Footer */}
