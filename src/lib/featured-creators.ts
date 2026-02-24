@@ -48,6 +48,11 @@ const HERO_PERMANENT_AVATARS: Record<string, string> = {
   brittanyyycampbelll: "https://zribaooztsaatufbulku.supabase.co/storage/v1/object/public/creator-avatars/brittanyyycampbelll.jpg",
 };
 
+/** Hardcoded avg_likes overrides for creators the IC API can't enrich */
+const HERO_STATS_OVERRIDES: Record<string, { avg_likes?: number }> = {
+  patriotickenny: { avg_likes: 142400 },
+};
+
 /** Hardcoded fallback creators shown when directory_members table is unavailable. */
 const FALLBACK_HERO_CREATORS: ShowcaseCreator[] = [
   {
@@ -318,14 +323,20 @@ export async function enrichHomepageHeroCreators(
           ic_avatar_url: existingIcIsPermanent ? c.ic_avatar_url : (enrichAvatar || c.ic_avatar_url),
           enrichment_data: responseData,
           avg_views: stats.avg_views > 0 ? formatFollowerCount(stats.avg_views) : (c.avg_views || null),
-          avg_likes: stats.avg_likes > 0 ? formatFollowerCount(stats.avg_likes) : (c.avg_likes || null),
+          avg_likes: stats.avg_likes > 0
+            ? formatFollowerCount(stats.avg_likes)
+            : (c.avg_likes || (HERO_STATS_OVERRIDES[handle]?.avg_likes ? formatFollowerCount(HERO_STATS_OVERRIDES[handle].avg_likes!) : null)),
           avg_comments: stats.avg_comments > 0 ? stats.avg_comments : (c.avg_comments ?? null),
           post_count: stats.media_count > 0 ? stats.media_count : (c.post_count ?? null),
           media_count: stats.media_count > 0 ? stats.media_count : (c.media_count || null),
         };
       } catch (err) {
         console.warn("[HeroEnrich] Failed for", handle, ":", err);
-        return c; // Fallback to existing data
+        const override = HERO_STATS_OVERRIDES[handle];
+        if (override?.avg_likes && !c.avg_likes) {
+          return { ...c, avg_likes: formatFollowerCount(override.avg_likes) };
+        }
+        return c;
       }
     }),
   );
