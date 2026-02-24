@@ -3,7 +3,7 @@ import {
   Lock, Play, Share2, Check, Calendar, Users, Video,
   ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
   CheckCircle2, Smartphone, DollarSign, BookOpen,
-  Settings, X, Save, Upload, Trash2,
+  Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
@@ -80,145 +80,245 @@ function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4"; embe
   return null;
 }
 
-function ProspectusVideo({ url, dark, isSuperAdmin }: { url?: string; dark: boolean; isSuperAdmin: boolean }) {
-  if (!url) {
-    if (!isSuperAdmin) return null;
-    return (
-      <div
-        className={cn(
-          "w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors duration-300",
-          dark ? "border-white/10 bg-white/[0.02]" : "border-gray-300 bg-gray-50"
-        )}
-      >
-        <Play className={cn("h-10 w-10", dark ? "text-gray-600" : "text-gray-400")} />
-        <p className={cn("text-sm font-medium", dark ? "text-gray-500" : "text-gray-400")}>
-          No video uploaded yet
-        </p>
-        <p className={cn("text-xs", dark ? "text-gray-600" : "text-gray-400")}>
-          Use &ldquo;Manage Videos&rdquo; to add one
-        </p>
-      </div>
-    );
+function ProspectusMedia({
+  videoUrl,
+  imageUrl,
+  dark,
+  isSuperAdmin,
+}: {
+  videoUrl?: string;
+  imageUrl?: string;
+  dark: boolean;
+  isSuperAdmin: boolean;
+}) {
+  // Priority 1: Video
+  if (videoUrl) {
+    const parsed = parseVideoEmbed(videoUrl);
+    if (parsed) {
+      if (parsed.type === "mp4") {
+        return (
+          <video
+            src={parsed.embedUrl}
+            controls
+            className="w-full aspect-video rounded-xl bg-black"
+            preload="metadata"
+          />
+        );
+      }
+      return (
+        <iframe
+          src={parsed.embedUrl}
+          title="Video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full aspect-video rounded-xl"
+          style={{ border: 0 }}
+        />
+      );
+    }
   }
 
-  const parsed = parseVideoEmbed(url);
-  if (!parsed) return null;
-
-  if (parsed.type === "mp4") {
+  // Priority 2: Image
+  if (imageUrl) {
     return (
-      <video
-        src={parsed.embedUrl}
-        controls
-        className="w-full aspect-video rounded-xl bg-black"
-        preload="metadata"
+      <img
+        src={imageUrl}
+        alt="Tab content"
+        className="w-full rounded-xl object-cover max-h-[500px]"
       />
     );
   }
 
+  // Priority 3: Placeholder (super admin only)
+  if (!isSuperAdmin) return null;
   return (
-    <iframe
-      src={parsed.embedUrl}
-      title="Video"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-      className="w-full aspect-video rounded-xl"
-      style={{ border: 0 }}
-    />
+    <div
+      className={cn(
+        "w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors duration-300",
+        dark ? "border-white/10 bg-white/[0.02]" : "border-gray-300 bg-gray-50"
+      )}
+    >
+      <Play className={cn("h-10 w-10", dark ? "text-gray-600" : "text-gray-400")} />
+      <p className={cn("text-sm font-medium", dark ? "text-gray-500" : "text-gray-400")}>
+        No media uploaded yet
+      </p>
+      <p className={cn("text-xs", dark ? "text-gray-600" : "text-gray-400")}>
+        Use &ldquo;Manage Content&rdquo; to add video or image
+      </p>
+    </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Manage Videos Panel (super_admin)                                   */
+/* Manage Content Panel (super_admin)                                  */
 /* ------------------------------------------------------------------ */
 
 const VIDEO_BUCKET = "prospectus-videos";
 const ACCEPTED_VIDEO_TYPES = ".mp4,.mov,.webm,.avi";
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB
 
+const IMAGE_BUCKET = "prospectus-images";
+const ACCEPTED_IMAGE_TYPES = ".jpg,.jpeg,.png,.webp";
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+type ImageUrls = Record<string, string>;
+
 function tabSlug(tab: string): string {
   return tab.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-function ManageVideosPanel({
+const CONTENT_TABS = TABS.filter(
+  (t) => t !== "Overview" && t !== "Financial Model"
+);
+
+function ManageContentPanel({
   open,
   onClose,
   videos,
-  onSave,
+  images,
+  tabContent,
+  onSaveMedia,
+  onSaveContent,
   dark,
 }: {
   open: boolean;
   onClose: () => void;
   videos: VideoUrls;
-  onSave: (updated: VideoUrls) => void;
+  images: ImageUrls;
+  tabContent: Record<string, TabContent>;
+  onSaveMedia: (v: VideoUrls, i: ImageUrls) => void;
+  onSaveContent: (c: Record<string, TabContent>) => void;
   dark: boolean;
 }) {
-  const [draft, setDraft] = useState<VideoUrls>({});
+  const [panelTab, setPanelTab] = useState<"media" | "content">("media");
+
+  // --- Media state ---
+  const [videoDraft, setVideoDraft] = useState<VideoUrls>({});
+  const [imageDraft, setImageDraft] = useState<ImageUrls>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const videoFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const imageFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // --- Content state ---
+  const [contentDraft, setContentDraft] = useState<Record<string, TabContent>>({});
+  const [contentSaving, setContentSaving] = useState(false);
 
   useEffect(() => {
-    if (open) setDraft({ ...videos });
-  }, [open, videos]);
+    if (open) {
+      setVideoDraft({ ...videos });
+      setImageDraft({ ...images });
+      // Initialize content draft from DB content, falling back to hardcoded
+      const cd: Record<string, TabContent> = {};
+      for (const tab of CONTENT_TABS) {
+        const src = tabContent[tab] || TAB_CONTENT[tab];
+        if (src) {
+          cd[tab] = {
+            headline: src.headline,
+            headlineAccent: src.headlineAccent || "",
+            description: src.description,
+            sections: src.sections.map((s) => ({
+              heading: s.heading,
+              items: [...s.items],
+            })),
+            bottomNote: src.bottomNote
+              ? { heading: src.bottomNote.heading, text: src.bottomNote.text }
+              : undefined,
+          };
+        }
+      }
+      setContentDraft(cd);
+    }
+  }, [open, videos, images, tabContent]);
 
-  const handleFileUpload = async (tab: string, file: File) => {
+  // --- Video upload ---
+  const handleVideoUpload = async (tab: string, file: File) => {
     if (file.size > MAX_VIDEO_SIZE) {
       alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 100 MB.`);
       return;
     }
     const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
     const path = `${tabSlug(tab)}-video.${ext}`;
-    setUploading(tab);
+    setUploading(`video-${tab}`);
     setUploadProgress(0);
-
-    // Simulate progress during upload
     const progressTimer = setInterval(() => {
       setUploadProgress((p) => Math.min(p + 8, 90));
     }, 200);
-
     const { error } = await supabase.storage
       .from(VIDEO_BUCKET)
       .upload(path, file, { upsert: true, contentType: file.type });
-
     clearInterval(progressTimer);
-
     if (error) {
-      console.error("[ManageVideosPanel] upload error:", error);
+      console.error("[ManageContent] video upload error:", error);
       alert(`Upload failed: ${error.message}`);
       setUploading(null);
       setUploadProgress(0);
       return;
     }
-
     setUploadProgress(100);
     const { data: { publicUrl } } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
-    setDraft((d) => ({ ...d, [tab]: publicUrl }));
-
-    setTimeout(() => {
-      setUploading(null);
-      setUploadProgress(0);
-    }, 500);
+    setVideoDraft((d) => ({ ...d, [tab]: publicUrl }));
+    setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
   };
 
-  const handleDelete = async (tab: string) => {
-    const url = draft[tab];
+  const handleVideoDelete = async (tab: string) => {
+    const url = videoDraft[tab];
     if (!url) return;
-    // Try to delete from storage if it's a Supabase URL
     if (url.includes(VIDEO_BUCKET)) {
       const pathMatch = url.split(`${VIDEO_BUCKET}/`)[1];
-      if (pathMatch) {
-        await supabase.storage.from(VIDEO_BUCKET).remove([pathMatch]);
-      }
+      if (pathMatch) await supabase.storage.from(VIDEO_BUCKET).remove([pathMatch]);
     }
-    setDraft((d) => ({ ...d, [tab]: "" }));
+    setVideoDraft((d) => ({ ...d, [tab]: "" }));
   };
 
-  const handleSave = async () => {
+  // --- Image upload ---
+  const handleImageUpload = async (tab: string, file: File) => {
+    if (file.size > MAX_IMAGE_SIZE) {
+      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 5 MB.`);
+      return;
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${tabSlug(tab)}-image.${ext}`;
+    setUploading(`image-${tab}`);
+    setUploadProgress(0);
+    const progressTimer = setInterval(() => {
+      setUploadProgress((p) => Math.min(p + 10, 90));
+    }, 150);
+    const { error } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(path, file, { upsert: true, contentType: file.type });
+    clearInterval(progressTimer);
+    if (error) {
+      console.error("[ManageContent] image upload error:", error);
+      alert(`Upload failed: ${error.message}`);
+      setUploading(null);
+      setUploadProgress(0);
+      return;
+    }
+    setUploadProgress(100);
+    const { data: { publicUrl } } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+    setImageDraft((d) => ({ ...d, [tab]: publicUrl }));
+    setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
+  };
+
+  const handleImageDelete = async (tab: string) => {
+    const url = imageDraft[tab];
+    if (!url) return;
+    if (url.includes(IMAGE_BUCKET)) {
+      const pathMatch = url.split(`${IMAGE_BUCKET}/`)[1];
+      if (pathMatch) await supabase.storage.from(IMAGE_BUCKET).remove([pathMatch]);
+    }
+    setImageDraft((d) => ({ ...d, [tab]: "" }));
+  };
+
+  // --- Save media ---
+  const handleSaveMedia = async () => {
     setSaving(true);
     const upserts = TABS.map((tab) => ({
       tab_name: tab,
-      video_url: draft[tab]?.trim() || null,
+      video_url: videoDraft[tab]?.trim() || null,
+      image_url: imageDraft[tab]?.trim() || null,
       updated_at: new Date().toISOString(),
     }));
     const { error } = await supabase
@@ -226,150 +326,342 @@ function ManageVideosPanel({
       .upsert(upserts, { onConflict: "tab_name" });
     setSaving(false);
     if (error) {
-      console.error("[ManageVideosPanel] save error:", error);
-      alert("Failed to save — check console");
+      console.error("[ManageContent] media save error:", error);
+      alert("Failed to save media — check console");
       return;
     }
-    onSave(draft);
+    onSaveMedia(videoDraft, imageDraft);
     onClose();
+  };
+
+  // --- Save content ---
+  const handleSaveContent = async () => {
+    setContentSaving(true);
+    const upserts = CONTENT_TABS.filter((tab) => contentDraft[tab]).map((tab) => {
+      const c = contentDraft[tab];
+      return {
+        tab_name: tab,
+        headline: c.headline || null,
+        headline_accent: c.headlineAccent || null,
+        description: c.description || null,
+        sections: c.sections,
+        bottom_note: c.bottomNote || null,
+        updated_at: new Date().toISOString(),
+      };
+    });
+    const { error } = await supabase
+      .from("prospectus_tab_content")
+      .upsert(upserts, { onConflict: "tab_name" });
+    setContentSaving(false);
+    if (error) {
+      console.error("[ManageContent] content save error:", error);
+      alert("Failed to save content — check console");
+      return;
+    }
+    onSaveContent(contentDraft);
+    onClose();
+  };
+
+  // --- Content editor helpers ---
+  const updateContent = (tab: string, field: string, value: string) => {
+    setContentDraft((prev) => ({
+      ...prev,
+      [tab]: { ...prev[tab], [field]: value },
+    }));
+  };
+
+  const updateSection = (tab: string, idx: number, field: "heading" | "items", value: string | string[]) => {
+    setContentDraft((prev) => {
+      const sections = [...(prev[tab]?.sections || [])];
+      sections[idx] = { ...sections[idx], [field]: value };
+      return { ...prev, [tab]: { ...prev[tab], sections } };
+    });
+  };
+
+  const addSection = (tab: string) => {
+    setContentDraft((prev) => {
+      const sections = [...(prev[tab]?.sections || []), { heading: "", items: [""] }];
+      return { ...prev, [tab]: { ...prev[tab], sections } };
+    });
+  };
+
+  const removeSection = (tab: string, idx: number) => {
+    setContentDraft((prev) => {
+      const sections = (prev[tab]?.sections || []).filter((_, i) => i !== idx);
+      return { ...prev, [tab]: { ...prev[tab], sections } };
+    });
+  };
+
+  const updateBottomNote = (tab: string, field: "heading" | "text", value: string) => {
+    setContentDraft((prev) => {
+      const existing = prev[tab]?.bottomNote || { heading: "", text: "" };
+      return {
+        ...prev,
+        [tab]: { ...prev[tab], bottomNote: { ...existing, [field]: value } },
+      };
+    });
   };
 
   if (!open) return null;
 
+  const isUploading = !!uploading;
+  const inputCls = cn(
+    "w-full rounded-lg px-3 py-2 text-sm border transition-colors",
+    dark
+      ? "bg-white/5 border-white/10 placeholder:text-gray-500 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
+      : "bg-white border-gray-300 placeholder:text-gray-400 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
+  );
+
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} />
-      {/* Panel */}
       <div
         className={cn(
           "fixed top-0 right-0 z-[61] h-full w-full max-w-md shadow-2xl flex flex-col transition-colors duration-300",
           dark ? "bg-[#111827] text-white" : "bg-white text-[#111827]"
         )}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
-          <h3 className="text-base font-bold">Manage Tab Videos</h3>
+        {/* Header */}
+        <div className={cn("flex items-center justify-between px-5 py-4 border-b", dark ? "border-white/10" : "border-gray-200")}>
+          <h3 className="text-base font-bold">Manage Content</h3>
           <button type="button" onClick={onClose} className="p-1 hover:opacity-70">
             <X className="h-5 w-5" />
           </button>
         </div>
 
+        {/* Sub-tabs */}
+        <div className={cn("flex px-5 pt-3 gap-1 border-b", dark ? "border-white/10" : "border-gray-200")}>
+          {(["media", "content"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setPanelTab(t)}
+              className={cn(
+                "px-4 py-2 text-sm font-medium rounded-t-lg transition-colors -mb-px border-b-2",
+                panelTab === t
+                  ? "border-[#1e3a5f] text-[#1e3a5f]"
+                  : cn("border-transparent", dark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900")
+              )}
+            >
+              {t === "media" ? "Media" : "Content"}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-          {TABS.map((tab) => {
-            const val = draft[tab] ?? "";
-            const parsed = val ? parseVideoEmbed(val) : null;
-            const isUploading = uploading === tab;
+          {panelTab === "media" && TABS.map((tab) => {
+            const videoVal = videoDraft[tab] ?? "";
+            const imageVal = imageDraft[tab] ?? "";
+            const parsed = videoVal ? parseVideoEmbed(videoVal) : null;
+            const isVideoUploading = uploading === `video-${tab}`;
+            const isImageUploading = uploading === `image-${tab}`;
+
             return (
-              <div key={tab}>
+              <div key={tab} className={cn("pb-4 border-b", dark ? "border-white/10" : "border-gray-100")}>
                 <label className="text-sm font-semibold block mb-1.5">
                   {TAB_LABELS[tab]}
                 </label>
 
-                {/* URL input */}
+                {/* --- Video section --- */}
+                <p className={cn("text-xs font-medium mb-1 flex items-center gap-1", dark ? "text-gray-400" : "text-gray-500")}>
+                  <Video className="h-3 w-3" /> Video
+                </p>
                 <input
                   type="text"
-                  value={val}
-                  onChange={(e) => setDraft((d) => ({ ...d, [tab]: e.target.value }))}
-                  placeholder="Paste URL or upload a file below"
-                  className={cn(
-                    "w-full rounded-lg px-3 py-2 text-sm border transition-colors",
-                    dark
-                      ? "bg-white/5 border-white/10 placeholder:text-gray-500 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
-                      : "bg-white border-gray-300 placeholder:text-gray-400 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
-                  )}
+                  value={videoVal}
+                  onChange={(e) => setVideoDraft((d) => ({ ...d, [tab]: e.target.value }))}
+                  placeholder="Paste URL or upload a file"
+                  className={inputCls}
                 />
-
-                {/* Status line */}
-                {val && !isUploading && (
+                {videoVal && !isVideoUploading && (
                   <p className={cn("text-xs mt-1", parsed ? "text-emerald-500" : "text-amber-500")}>
                     {parsed ? `${parsed.type.toUpperCase()} detected` : "Unrecognized URL format"}
                   </p>
                 )}
-
-                {/* Upload progress */}
-                {isUploading && (
+                {isVideoUploading && (
                   <div className="mt-2">
                     <div className="h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
-                      <div
-                        className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
+                      <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                     </div>
                     <p className="text-xs text-[#1e3a5f] mt-1">Uploading... {uploadProgress}%</p>
                   </div>
                 )}
-
-                {/* Action buttons */}
                 <div className="flex items-center gap-2 mt-2">
                   <input
-                    ref={(el) => { fileInputRefs.current[tab] = el; }}
+                    ref={(el) => { videoFileRefs.current[tab] = el; }}
                     type="file"
                     accept={ACCEPTED_VIDEO_TYPES}
                     className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(tab, file);
-                      e.target.value = "";
-                    }}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoUpload(tab, f); e.target.value = ""; }}
                   />
                   <button
                     type="button"
-                    onClick={() => fileInputRefs.current[tab]?.click()}
-                    disabled={!!uploading}
+                    onClick={() => videoFileRefs.current[tab]?.click()}
+                    disabled={isUploading}
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
-                      dark
-                        ? "border-white/10 hover:bg-white/5"
-                        : "border-gray-300 hover:bg-gray-50"
+                      dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50"
                     )}
                   >
                     <Upload className="h-3.5 w-3.5" />
-                    {val ? "Replace" : "Upload File"}
+                    {videoVal ? "Replace" : "Upload"}
                   </button>
-                  {val && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(tab)}
-                      disabled={!!uploading}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete
+                  {videoVal && (
+                    <button type="button" onClick={() => handleVideoDelete(tab)} disabled={isUploading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50">
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
                     </button>
                   )}
                 </div>
-
-                {/* Video preview */}
-                {val && parsed && (
-                  <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 dark:border-white/10">
+                {videoVal && parsed && (
+                  <div className={cn("mt-2 rounded-lg overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
                     {parsed.type === "mp4" ? (
                       <video src={parsed.embedUrl} controls className="w-full aspect-video bg-black" preload="metadata" />
                     ) : (
-                      <iframe
-                        src={parsed.embedUrl}
-                        title={`${TAB_LABELS[tab]} preview`}
-                        className="w-full aspect-video"
-                        style={{ border: 0 }}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                      <iframe src={parsed.embedUrl} title={`${TAB_LABELS[tab]} preview`} className="w-full aspect-video" style={{ border: 0 }}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                     )}
+                  </div>
+                )}
+
+                {/* --- Image section --- */}
+                <p className={cn("text-xs font-medium mt-3 mb-1 flex items-center gap-1", dark ? "text-gray-400" : "text-gray-500")}>
+                  <ImageIcon className="h-3 w-3" /> Image (fallback when no video)
+                </p>
+                {isImageUploading && (
+                  <div className="mt-1 mb-2">
+                    <div className="h-1.5 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+                      <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                    <p className="text-xs text-[#1e3a5f] mt-1">Uploading... {uploadProgress}%</p>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={(el) => { imageFileRefs.current[tab] = el; }}
+                    type="file"
+                    accept={ACCEPTED_IMAGE_TYPES}
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(tab, f); e.target.value = ""; }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => imageFileRefs.current[tab]?.click()}
+                    disabled={isUploading}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
+                      dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50"
+                    )}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    {imageVal ? "Replace" : "Upload"}
+                  </button>
+                  {imageVal && (
+                    <button type="button" onClick={() => handleImageDelete(tab)} disabled={isUploading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50">
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </button>
+                  )}
+                </div>
+                {imageVal && (
+                  <div className={cn("mt-2 rounded-lg overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
+                    <img src={imageVal} alt={`${TAB_LABELS[tab]} image`} className="w-full max-h-48 object-cover" />
                   </div>
                 )}
               </div>
             );
           })}
+
+          {panelTab === "content" && CONTENT_TABS.map((tab) => {
+            const c = contentDraft[tab];
+            if (!c) return null;
+            return (
+              <div key={tab} className={cn("pb-5 border-b", dark ? "border-white/10" : "border-gray-100")}>
+                <label className="text-sm font-semibold block mb-2">{TAB_LABELS[tab]}</label>
+
+                {/* Headline */}
+                <label className={cn("text-xs block mb-0.5", dark ? "text-gray-400" : "text-gray-500")}>Headline</label>
+                <input type="text" value={c.headline} onChange={(e) => updateContent(tab, "headline", e.target.value)} className={inputCls} />
+
+                {/* Headline accent */}
+                <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-400" : "text-gray-500")}>Headline Accent</label>
+                <input type="text" value={c.headlineAccent || ""} onChange={(e) => updateContent(tab, "headlineAccent", e.target.value)} className={inputCls} />
+
+                {/* Description */}
+                <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-400" : "text-gray-500")}>Description</label>
+                <textarea value={c.description} onChange={(e) => updateContent(tab, "description", e.target.value)} rows={3} className={inputCls} />
+
+                {/* Sections */}
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={cn("text-xs font-medium", dark ? "text-gray-400" : "text-gray-500")}>Sections</label>
+                    <button type="button" onClick={() => addSection(tab)}
+                      className="flex items-center gap-1 text-xs text-[#1e3a5f] hover:underline">
+                      <Plus className="h-3 w-3" /> Add
+                    </button>
+                  </div>
+                  {c.sections.map((section, idx) => (
+                    <div key={idx} className={cn("p-3 rounded-lg mb-2", dark ? "bg-white/5" : "bg-gray-50")}>
+                      <div className="flex items-center justify-between mb-1">
+                        <input
+                          type="text"
+                          value={section.heading}
+                          onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
+                          placeholder="Section heading"
+                          className={cn(inputCls, "text-xs font-medium")}
+                        />
+                        {c.sections.length > 1 && (
+                          <button type="button" onClick={() => removeSection(tab, idx)}
+                            className="ml-2 p-1 text-red-500 hover:text-red-700 flex-shrink-0">
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Items (one per line)</label>
+                      <textarea
+                        value={section.items.join("\n")}
+                        onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
+                        rows={Math.max(3, section.items.length + 1)}
+                        className={cn(inputCls, "text-xs")}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottom note */}
+                <div className="mt-3">
+                  <label className={cn("text-xs font-medium block mb-1", dark ? "text-gray-400" : "text-gray-500")}>Bottom Note</label>
+                  <input
+                    type="text"
+                    value={c.bottomNote?.heading || ""}
+                    onChange={(e) => updateBottomNote(tab, "heading", e.target.value)}
+                    placeholder="Note heading"
+                    className={cn(inputCls, "mb-1")}
+                  />
+                  <textarea
+                    value={c.bottomNote?.text || ""}
+                    onChange={(e) => updateBottomNote(tab, "text", e.target.value)}
+                    placeholder="Note text"
+                    rows={2}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-200 dark:border-white/10">
+        {/* Footer */}
+        <div className={cn("px-5 py-4 border-t", dark ? "border-white/10" : "border-gray-200")}>
           <button
             type="button"
-            onClick={handleSave}
-            disabled={saving || !!uploading}
+            onClick={panelTab === "media" ? handleSaveMedia : handleSaveContent}
+            disabled={saving || contentSaving || isUploading}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#1e3a5f] hover:bg-[#2d5282] text-white text-sm font-semibold transition-colors disabled:opacity-50"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? "Saving…" : "Save All"}
+            {(saving || contentSaving) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {(saving || contentSaving) ? "Saving…" : panelTab === "media" ? "Save Media" : "Save Content"}
           </button>
         </div>
       </div>
@@ -586,7 +878,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
           </p>
 
           <div style={{ margin: "24px 0" }}>
-            <ProspectusVideo url={videoUrl} dark={dark} isSuperAdmin={isSuperAdmin} />
+            <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={isSuperAdmin} />
           </div>
         </div>
       </section>
@@ -1434,8 +1726,8 @@ const TAB_CONTENT: Record<string, TabContent> = {
   },
 };
 
-function ContentTab({ dark, tab }: { dark: boolean; tab: string }) {
-  const content = TAB_CONTENT[tab];
+function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbContent?: TabContent }) {
+  const content = dbContent || TAB_CONTENT[tab];
   const kbSlug = TAB_KB_CATEGORY[tab];
 
   if (!content) {
@@ -1570,6 +1862,8 @@ export default function Prospectus() {
     () => window.matchMedia("(prefers-color-scheme: dark)").matches
   );
   const [videoUrls, setVideoUrls] = useState<VideoUrls>({});
+  const [imageUrls, setImageUrls] = useState<ImageUrls>({});
+  const [tabContent, setTabContent] = useState<Record<string, TabContent>>({});
   const [manageOpen, setManageOpen] = useState(false);
 
   const { isSuperAdmin } = useAuth();
@@ -1583,18 +1877,50 @@ export default function Prospectus() {
     }
   }, []);
 
-  // Fetch saved video URLs
+  // Fetch saved media URLs (video + image)
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("prospectus_videos")
-        .select("tab_name, video_url");
+        .select("tab_name, video_url, image_url");
       if (data) {
-        const map: VideoUrls = {};
-        for (const row of data as { tab_name: string; video_url: string | null }[]) {
-          if (row.video_url) map[row.tab_name] = row.video_url;
+        const vMap: VideoUrls = {};
+        const iMap: ImageUrls = {};
+        for (const row of data as { tab_name: string; video_url: string | null; image_url: string | null }[]) {
+          if (row.video_url) vMap[row.tab_name] = row.video_url;
+          if (row.image_url) iMap[row.tab_name] = row.image_url;
         }
-        setVideoUrls(map);
+        setVideoUrls(vMap);
+        setImageUrls(iMap);
+      }
+    })();
+  }, []);
+
+  // Fetch saved tab content
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("prospectus_tab_content")
+        .select("*");
+      if (data) {
+        const map: Record<string, TabContent> = {};
+        for (const row of data as {
+          tab_name: string;
+          headline: string | null;
+          headline_accent: string | null;
+          description: string | null;
+          sections: { heading: string; items: string[] }[] | null;
+          bottom_note: { heading: string; text: string } | null;
+        }[]) {
+          map[row.tab_name] = {
+            headline: row.headline || "",
+            headlineAccent: row.headline_accent || undefined,
+            description: row.description || "",
+            sections: row.sections || [],
+            bottomNote: row.bottom_note || undefined,
+          };
+        }
+        setTabContent(map);
       }
     })();
   }, []);
@@ -1744,7 +2070,7 @@ export default function Prospectus() {
                 )}
               >
                 <Settings className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Manage Videos</span>
+                <span className="hidden sm:inline">Manage Content</span>
               </button>
             )}
           </div>
@@ -1784,21 +2110,21 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {/* Tab video — rendered above content for non-Overview tabs */}
-        {activeTab !== "Overview" && (videoUrls[activeTab] || isSuperAdmin) && (
+        {/* Tab media — rendered above content for non-Overview tabs */}
+        {activeTab !== "Overview" && (videoUrls[activeTab] || imageUrls[activeTab] || isSuperAdmin) && (
           <div className="mb-8">
-            <ProspectusVideo url={videoUrls[activeTab]} dark={darkMode} isSuperAdmin={!!isSuperAdmin} />
+            <ProspectusMedia videoUrl={videoUrls[activeTab]} imageUrl={imageUrls[activeTab]} dark={darkMode} isSuperAdmin={!!isSuperAdmin} />
           </div>
         )}
 
         {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} />}
-        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" />}
-        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" />}
-        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" />}
-        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" />}
-        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" />}
-        {activeTab === "Streaming & Media" && <ContentTab dark={darkMode} tab="Streaming & Media" />}
-        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" />}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} />}
+        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} />}
+        {activeTab === "Streaming & Media" && <ContentTab dark={darkMode} tab="Streaming & Media" dbContent={tabContent["Streaming & Media"]} />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} />}
         {activeTab === "Financial Model" && <FinancialModelTab dark={darkMode} />}
       </main>
 
@@ -1821,13 +2147,16 @@ export default function Prospectus() {
         </div>
       </footer>
 
-      {/* Manage Videos Panel */}
+      {/* Manage Content Panel */}
       {isSuperAdmin && (
-        <ManageVideosPanel
+        <ManageContentPanel
           open={manageOpen}
           onClose={() => setManageOpen(false)}
           videos={videoUrls}
-          onSave={(updated) => setVideoUrls(updated)}
+          images={imageUrls}
+          tabContent={tabContent}
+          onSaveMedia={(v, i) => { setVideoUrls(v); setImageUrls(i); }}
+          onSaveContent={(c) => setTabContent(c)}
           dark={darkMode}
         />
       )}
