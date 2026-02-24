@@ -15,14 +15,11 @@ import {
   Copy,
   Check,
   ChevronRight,
-  Radio,
   Youtube,
   Facebook,
   Twitter,
   Twitch,
-  Linkedin,
   Wifi,
-  Plus,
   AlertTriangle,
   X,
   Calendar,
@@ -53,6 +50,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import StreamingStudioMockup from "@/components/brand/StreamingStudioMockup";
 
 // -- Types --
 
@@ -541,27 +539,23 @@ export default function Streaming() {
         </Card>
       )}
 
-      {/* Active Streams / Empty State */}
+      {/* Active Streams / Studio Mockup */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Active Streams</h2>
-        <Card className="p-12 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-            <Radio className="w-8 h-8 text-gray-400" />
+        <Card className="p-5 sm:p-6">
+          <StreamingStudioMockup />
+          <div className="flex justify-center mt-5">
+            <Button
+              className="bg-blue-700 hover:bg-blue-800"
+              onClick={() => {
+                resetSetup();
+                setShowSetup(true);
+              }}
+            >
+              <Play className="w-4 h-4 mr-2" />
+              New Live Stream
+            </Button>
           </div>
-          <p className="text-gray-500 font-medium">No active streams</p>
-          <p className="text-sm text-gray-400 mt-1">
-            Start streaming to go live on connected platforms.
-          </p>
-          <Button
-            className="mt-4 bg-blue-700 hover:bg-blue-800"
-            onClick={() => {
-              resetSetup();
-              setShowSetup(true);
-            }}
-          >
-            <Play className="w-4 h-4 mr-2" />
-            New Live Stream
-          </Button>
         </Card>
       </div>
 
