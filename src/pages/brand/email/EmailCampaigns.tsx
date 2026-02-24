@@ -705,7 +705,8 @@ const EmailCampaigns = () => {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>{statsDialog?.name || "Campaign Stats"}</DialogTitle></DialogHeader>
           {statsDialog && (() => {
-            const st = statsDialog.stats || { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0 };
+            const raw = statsDialog.stats;
+            const st = { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0, ...(raw && typeof raw === "object" ? raw : {}) };
             const openRate = st.sent > 0 ? Math.round((st.opened / st.sent) * 100) : 0;
             const circumference = 2 * Math.PI * 54;
             const dashOffset = circumference - (circumference * openRate) / 100;

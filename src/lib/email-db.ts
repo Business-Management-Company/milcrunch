@@ -317,17 +317,19 @@ export async function syncBulkContacts(
 
 // ── Campaigns ──────────────────────────────────────────────────────
 
+const DEFAULT_STATS: CampaignStats = { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0 };
+
 export async function getEmailCampaigns(): Promise<EmailCampaign[]> {
   const { data, error } = await sb.from("email_campaigns").select("*").order("created_at", { ascending: false });
   if (error) { console.error("getEmailCampaigns", error); return []; }
-  return (data ?? []).map((r: any) => ({ ...r, list_ids: r.list_ids ?? [], stats: r.stats ?? { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0 } }));
+  return (data ?? []).map((r: any) => ({ ...r, list_ids: r.list_ids ?? [], stats: { ...DEFAULT_STATS, ...(r.stats || {}) } }));
 }
 
 export async function getEmailCampaign(id: string): Promise<EmailCampaign | null> {
   const { data, error } = await sb.from("email_campaigns").select("*").eq("id", id).single();
   if (error) { console.error("getEmailCampaign", error); return null; }
   if (!data) return null;
-  return { ...data, list_ids: data.list_ids ?? [], stats: data.stats ?? { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0 } };
+  return { ...data, list_ids: data.list_ids ?? [], stats: { ...DEFAULT_STATS, ...(data.stats || {}) } };
 }
 
 export async function upsertEmailCampaign(campaign: { id?: string; name: string; subject?: string | null; preview_text?: string | null; from_name?: string; from_email?: string; html_content?: string | null; list_ids?: string[]; status?: string; scheduled_at?: string | null; sent_at?: string | null; stats?: CampaignStats }): Promise<EmailCampaign | null> {
@@ -345,7 +347,7 @@ export async function upsertEmailCampaign(campaign: { id?: string; name: string;
   if (campaign.id) payload.id = campaign.id;
   const { data, error } = await sb.from("email_campaigns").upsert(payload).select("*").single();
   if (error) { console.error("upsertEmailCampaign", error); return null; }
-  return data ? { ...data, list_ids: data.list_ids ?? [], stats: data.stats ?? { sent: 0, delivered: 0, opened: 0, clicked: 0, unsubscribed: 0 } } : null;
+  return data ? { ...data, list_ids: data.list_ids ?? [], stats: { ...DEFAULT_STATS, ...(data.stats || {}) } } : null;
 }
 
 export async function deleteEmailCampaign(id: string): Promise<boolean> {
