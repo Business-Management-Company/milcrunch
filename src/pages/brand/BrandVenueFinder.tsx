@@ -13,6 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
   Search,
   MapPin,
   Phone,
@@ -26,6 +34,11 @@ import {
   Navigation,
   Sparkles,
   Send,
+  Save,
+  FolderOpen,
+  Trash2,
+  Clock,
+  ChevronDown,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────
@@ -61,6 +74,25 @@ interface SavedVenue {
   venue_type: string | null;
   notes: string | null;
   saved_at: string;
+}
+
+interface VenueSearchParams {
+  searchTerm: string;
+  location: string;
+  selectedStyles: string[];
+  sortBy: string;
+  minRating: string;
+  minReviews: string;
+  priceFilter: string;
+}
+
+interface SavedVenueSearch {
+  id: string;
+  name: string;
+  description: string | null;
+  search_params: VenueSearchParams;
+  result_count: number | null;
+  created_at: string;
 }
 
 // ─── Constants ──────────────────────────────────────────────
@@ -278,6 +310,16 @@ export default function BrandVenueFinder() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [showSaved, setShowSaved] = useState(false);
 
+  // Saved searches
+  const [savedSearches, setSavedSearches] = useState<SavedVenueSearch[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState("");
+  const [saveSearchDesc, setSaveSearchDesc] = useState("");
+  const [savingSearch, setSavingSearch] = useState(false);
+  const [showSearchesList, setShowSearchesList] = useState(false);
+  const [activeSearchName, setActiveSearchName] = useState<string | null>(null);
+  const searchesRef = useRef<HTMLDivElement>(null);
+
   // ─── Load saved venues ──────────────────────────────────
   const loadSavedVenues = useCallback(async () => {
     if (!user) return;
@@ -296,6 +338,116 @@ export default function BrandVenueFinder() {
   useEffect(() => {
     loadSavedVenues();
   }, [loadSavedVenues]);
+
+  // ─── Load saved searches ───────────────────────────────────
+  const loadSavedSearches = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("saved_venue_searches")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.warn("[VenueFinder] Error loading saved searches:", error.message);
+      return;
+    }
+    setSavedSearches((data ?? []) as SavedVenueSearch[]);
+  }, [user]);
+
+  useEffect(() => {
+    loadSavedSearches();
+  }, [loadSavedSearches]);
+
+  // Close saved searches dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchesRef.current && !searchesRef.current.contains(e.target as Node)) {
+        setShowSearchesList(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleSaveSearch = async () => {
+    if (!user || !saveSearchName.trim()) return;
+    setSavingSearch(true);
+    const params: VenueSearchParams = {
+      searchTerm,
+      location,
+      selectedStyles,
+      sortBy,
+      minRating,
+      minReviews,
+      priceFilter,
+    };
+    const { error } = await supabase.from("saved_venue_searches").insert({
+      user_id: user.id,
+      name: saveSearchName.trim(),
+      description: saveSearchDesc.trim() || null,
+      search_params: params,
+      result_count: filteredResults.length || null,
+    });
+    if (error) {
+      toast({ title: "Save Failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Search Saved" });
+      setShowSaveModal(false);
+      setSaveSearchName("");
+      setSaveSearchDesc("");
+      loadSavedSearches();
+    }
+    setSavingSearch(false);
+  };
+
+  const handleDeleteSearch = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("saved_venue_searches")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Search Deleted" });
+      if (activeSearchName && savedSearches.find((s) => s.id === id)?.name === activeSearchName) {
+        setActiveSearchName(null);
+      }
+      loadSavedSearches();
+    }
+  };
+
+  const handleLoadSearch = async (search: SavedVenueSearch) => {
+    const p = search.search_params;
+    setSearchTerm(p.searchTerm || "");
+    setLocation(p.location || "");
+    setSelectedStyles(p.selectedStyles || []);
+    setSortBy(p.sortBy || "fit_score");
+    setMinRating(p.minRating || "0");
+    setMinReviews(p.minReviews || "0");
+    setPriceFilter(p.priceFilter || "any");
+    setActiveSearchName(search.name);
+    setShowSearchesList(false);
+    setShowSaved(false);
+
+    // Auto-run the search if location is set
+    if (p.location) {
+      await handleSearch({
+        searchTerm: p.searchTerm,
+        location: p.location,
+        selectedStyles: p.selectedStyles,
+      });
+    }
+  };
+
+  const hasActiveFilters =
+    searchTerm.trim() !== "" ||
+    location.trim() !== "" ||
+    selectedStyles.length > 0 ||
+    minRating !== "0" ||
+    minReviews !== "0" ||
+    priceFilter !== "any";
 
   // ─── Build queries & search ───────────────────────────────
   const handleSearch = async (overrides?: {
@@ -495,6 +647,7 @@ export default function BrandVenueFinder() {
     setMinRating("0");
     setMinReviews("0");
     setPriceFilter("any");
+    setActiveSearchName(null);
   };
 
   // ─── AI Concierge submit ─────────────────────────────────
@@ -566,15 +719,90 @@ export default function BrandVenueFinder() {
             Search for event venues powered by Google Places
           </p>
         </div>
-        <Button
-          variant={showSaved ? "default" : "outline"}
-          onClick={() => setShowSaved(!showSaved)}
-          className={showSaved ? "bg-blue-700 hover:bg-blue-800" : ""}
-        >
-          <Bookmark className="w-4 h-4 mr-2" />
-          Saved ({savedVenues.length})
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Saved Searches dropdown */}
+          <div className="relative" ref={searchesRef}>
+            <Button
+              variant="outline"
+              onClick={() => setShowSearchesList(!showSearchesList)}
+              className="gap-2"
+            >
+              <FolderOpen className="w-4 h-4" />
+              Searches ({savedSearches.length})
+              <ChevronDown className="w-3 h-3" />
+            </Button>
+            {showSearchesList && (
+              <div className="absolute right-0 z-50 mt-1 w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Saved Searches</p>
+                </div>
+                {savedSearches.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-sm text-gray-400">
+                    No saved searches yet
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto">
+                    {savedSearches.map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 group cursor-pointer"
+                        onClick={() => handleLoadSearch(s)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                            {s.name}
+                          </p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(s.created_at).toLocaleDateString()}
+                            {s.result_count != null && (
+                              <span className="ml-1">· {s.result_count} results</span>
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSearch(s.id);
+                          }}
+                          className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Delete search"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <Button
+            variant={showSaved ? "default" : "outline"}
+            onClick={() => setShowSaved(!showSaved)}
+            className={showSaved ? "bg-blue-700 hover:bg-blue-800" : ""}
+          >
+            <Bookmark className="w-4 h-4 mr-2" />
+            Saved ({savedVenues.length})
+          </Button>
+        </div>
       </div>
+
+      {/* Active saved search indicator */}
+      {activeSearchName && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <FolderOpen className="w-4 h-4 text-blue-600" />
+          <span className="text-sm text-blue-700 dark:text-blue-400">
+            Viewing saved search: <strong>{activeSearchName}</strong>
+          </span>
+          <button
+            onClick={() => setActiveSearchName(null)}
+            className="ml-auto p-0.5 rounded hover:bg-blue-100 dark:hover:bg-blue-800"
+          >
+            <X className="w-3.5 h-3.5 text-blue-500" />
+          </button>
+        </div>
+      )}
 
       {/* AI Venue Concierge */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border-2 border-blue-300 dark:border-blue-800 p-4">
@@ -755,16 +983,86 @@ export default function BrandVenueFinder() {
           </div>
         </div>
 
-        {activeFilterCount > 0 && (
-          <button
-            onClick={clearFilters}
-            className="text-sm text-blue-700 hover:text-blue-800 flex items-center gap-1"
-          >
-            <X className="w-3 h-3" />
-            Clear all filters
-          </button>
-        )}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="text-sm text-blue-700 hover:text-blue-800 flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                Clear all filters
+              </button>
+            )}
+          </div>
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSaveSearchName("");
+                setSaveSearchDesc("");
+                setShowSaveModal(true);
+              }}
+              className="gap-1.5 text-xs"
+            >
+              <Save className="w-3.5 h-3.5" />
+              Save Search
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Save Search Modal */}
+      <Dialog open={showSaveModal} onOpenChange={setShowSaveModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Search</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Search Name *</Label>
+              <Input
+                value={saveSearchName}
+                onChange={(e) => setSaveSearchName(e.target.value)}
+                placeholder='e.g. "Tampa 500+ capacity venues"'
+                onKeyDown={(e) => e.key === "Enter" && saveSearchName.trim() && handleSaveSearch()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description (optional)</Label>
+              <Textarea
+                value={saveSearchDesc}
+                onChange={(e) => setSaveSearchDesc(e.target.value)}
+                placeholder="Notes about this search..."
+                rows={2}
+              />
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Search Parameters</p>
+              {location && <p className="text-xs text-gray-600 dark:text-gray-400">Location: {location}</p>}
+              {searchTerm && <p className="text-xs text-gray-600 dark:text-gray-400">Keywords: {searchTerm}</p>}
+              {selectedStyles.length > 0 && <p className="text-xs text-gray-600 dark:text-gray-400">Styles: {selectedStyles.join(", ")}</p>}
+              {minRating !== "0" && <p className="text-xs text-gray-600 dark:text-gray-400">Min Rating: {minRating}+</p>}
+              {minReviews !== "0" && <p className="text-xs text-gray-600 dark:text-gray-400">Min Reviews: {minReviews}+</p>}
+              {priceFilter !== "any" && <p className="text-xs text-gray-600 dark:text-gray-400">Price: {"$".repeat(parseInt(priceFilter))}</p>}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowSaveModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveSearch}
+                disabled={!saveSearchName.trim() || savingSearch}
+                className="bg-blue-700 hover:bg-blue-800"
+              >
+                {savingSearch ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Saved venues view */}
       {showSaved && (
