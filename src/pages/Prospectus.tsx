@@ -232,12 +232,35 @@ function ManageContentPanel({
     }
   }, [open, videos, images, tabContent]);
 
+  // --- Auth check helper ---
+  const ensureSession = async (): Promise<boolean> => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error("[ManageContent] getSession error:", error);
+    }
+    if (!session) {
+      console.error("[ManageContent] No active session. User must be logged in to upload.");
+      // Try refreshing the session
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        console.error("[ManageContent] Session refresh failed:", refreshError);
+        alert("Your session has expired. Please log in again before saving.");
+        return false;
+      }
+      console.log("[ManageContent] Session refreshed successfully. User:", refreshData.session.user.email);
+      return true;
+    }
+    console.log("[ManageContent] Active session confirmed. User:", session.user.email, "| Role:", session.user.role);
+    return true;
+  };
+
   // --- Video upload ---
   const handleVideoUpload = async (tab: string, file: File) => {
     if (file.size > MAX_VIDEO_SIZE) {
       alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 100 MB.`);
       return;
     }
+    if (!(await ensureSession())) return;
     const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
     const path = `${tabSlug(tab)}-video.${ext}`;
     setUploading(`video-${tab}`);
@@ -245,21 +268,29 @@ function ManageContentPanel({
     const progressTimer = setInterval(() => {
       setUploadProgress((p) => Math.min(p + 8, 90));
     }, 200);
-    const { error } = await supabase.storage
-      .from(VIDEO_BUCKET)
-      .upload(path, file, { upsert: true, contentType: file.type });
-    clearInterval(progressTimer);
-    if (error) {
-      console.error("[ManageContent] video upload error:", error);
-      alert(`Upload failed: ${error.message}`);
+    try {
+      const { error } = await supabase.storage
+        .from(VIDEO_BUCKET)
+        .upload(path, file, { upsert: true, contentType: file.type });
+      clearInterval(progressTimer);
+      if (error) {
+        console.error("[ManageContent] video upload error:", JSON.stringify(error, null, 2));
+        alert(`Upload failed: ${error.message}`);
+        setUploading(null);
+        setUploadProgress(0);
+        return;
+      }
+      setUploadProgress(100);
+      const { data: { publicUrl } } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
+      setVideoDraft((d) => ({ ...d, [tab]: publicUrl }));
+      setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
+    } catch (err) {
+      clearInterval(progressTimer);
+      console.error("[ManageContent] video upload exception:", err);
+      alert(`Upload failed unexpectedly — check console`);
       setUploading(null);
       setUploadProgress(0);
-      return;
     }
-    setUploadProgress(100);
-    const { data: { publicUrl } } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
-    setVideoDraft((d) => ({ ...d, [tab]: publicUrl }));
-    setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
   };
 
   const handleVideoDelete = async (tab: string) => {
@@ -267,7 +298,10 @@ function ManageContentPanel({
     if (!url) return;
     if (url.includes(VIDEO_BUCKET)) {
       const pathMatch = url.split(`${VIDEO_BUCKET}/`)[1];
-      if (pathMatch) await supabase.storage.from(VIDEO_BUCKET).remove([pathMatch]);
+      if (pathMatch) {
+        const { error } = await supabase.storage.from(VIDEO_BUCKET).remove([pathMatch]);
+        if (error) console.error("[ManageContent] video delete error:", JSON.stringify(error, null, 2));
+      }
     }
     setVideoDraft((d) => ({ ...d, [tab]: "" }));
   };
@@ -278,6 +312,7 @@ function ManageContentPanel({
       alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 5 MB.`);
       return;
     }
+    if (!(await ensureSession())) return;
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${tabSlug(tab)}-image.${ext}`;
     setUploading(`image-${tab}`);
@@ -285,21 +320,29 @@ function ManageContentPanel({
     const progressTimer = setInterval(() => {
       setUploadProgress((p) => Math.min(p + 10, 90));
     }, 150);
-    const { error } = await supabase.storage
-      .from(IMAGE_BUCKET)
-      .upload(path, file, { upsert: true, contentType: file.type });
-    clearInterval(progressTimer);
-    if (error) {
-      console.error("[ManageContent] image upload error:", error);
-      alert(`Upload failed: ${error.message}`);
+    try {
+      const { error } = await supabase.storage
+        .from(IMAGE_BUCKET)
+        .upload(path, file, { upsert: true, contentType: file.type });
+      clearInterval(progressTimer);
+      if (error) {
+        console.error("[ManageContent] image upload error:", JSON.stringify(error, null, 2));
+        alert(`Upload failed: ${error.message}`);
+        setUploading(null);
+        setUploadProgress(0);
+        return;
+      }
+      setUploadProgress(100);
+      const { data: { publicUrl } } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      setImageDraft((d) => ({ ...d, [tab]: publicUrl }));
+      setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
+    } catch (err) {
+      clearInterval(progressTimer);
+      console.error("[ManageContent] image upload exception:", err);
+      alert(`Upload failed unexpectedly — check console`);
       setUploading(null);
       setUploadProgress(0);
-      return;
     }
-    setUploadProgress(100);
-    const { data: { publicUrl } } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
-    setImageDraft((d) => ({ ...d, [tab]: publicUrl }));
-    setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
   };
 
   const handleImageDelete = async (tab: string) => {
@@ -307,13 +350,17 @@ function ManageContentPanel({
     if (!url) return;
     if (url.includes(IMAGE_BUCKET)) {
       const pathMatch = url.split(`${IMAGE_BUCKET}/`)[1];
-      if (pathMatch) await supabase.storage.from(IMAGE_BUCKET).remove([pathMatch]);
+      if (pathMatch) {
+        const { error } = await supabase.storage.from(IMAGE_BUCKET).remove([pathMatch]);
+        if (error) console.error("[ManageContent] image delete error:", JSON.stringify(error, null, 2));
+      }
     }
     setImageDraft((d) => ({ ...d, [tab]: "" }));
   };
 
   // --- Save media ---
   const handleSaveMedia = async () => {
+    if (!(await ensureSession())) return;
     setSaving(true);
     const upserts = TABS.map((tab) => ({
       tab_name: tab,
@@ -321,21 +368,36 @@ function ManageContentPanel({
       image_url: imageDraft[tab]?.trim() || null,
       updated_at: new Date().toISOString(),
     }));
-    const { error } = await supabase
-      .from("prospectus_videos")
-      .upsert(upserts, { onConflict: "tab_name" });
-    setSaving(false);
-    if (error) {
-      console.error("[ManageContent] media save error:", error);
+    try {
+      console.log("[ManageContent] Saving media upserts:", JSON.stringify(upserts, null, 2));
+      const { data, error } = await supabase
+        .from("prospectus_videos")
+        .upsert(upserts, { onConflict: "tab_name" })
+        .select();
+      setSaving(false);
+      if (error) {
+        console.error("[ManageContent] media save error:", JSON.stringify({
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        }, null, 2));
+        alert(`Failed to save media: ${error.message}${error.hint ? ` (${error.hint})` : ""}`);
+        return;
+      }
+      console.log("[ManageContent] media saved successfully:", data);
+      onSaveMedia(videoDraft, imageDraft);
+      onClose();
+    } catch (err) {
+      setSaving(false);
+      console.error("[ManageContent] media save exception:", err);
       alert("Failed to save media — check console");
-      return;
     }
-    onSaveMedia(videoDraft, imageDraft);
-    onClose();
   };
 
   // --- Save content ---
   const handleSaveContent = async () => {
+    if (!(await ensureSession())) return;
     setContentSaving(true);
     const upserts = CONTENT_TABS.filter((tab) => contentDraft[tab]).map((tab) => {
       const c = contentDraft[tab];
@@ -349,17 +411,31 @@ function ManageContentPanel({
         updated_at: new Date().toISOString(),
       };
     });
-    const { error } = await supabase
-      .from("prospectus_tab_content")
-      .upsert(upserts, { onConflict: "tab_name" });
-    setContentSaving(false);
-    if (error) {
-      console.error("[ManageContent] content save error:", error);
+    try {
+      console.log("[ManageContent] Saving content upserts:", JSON.stringify(upserts, null, 2));
+      const { data, error } = await supabase
+        .from("prospectus_tab_content")
+        .upsert(upserts, { onConflict: "tab_name" })
+        .select();
+      setContentSaving(false);
+      if (error) {
+        console.error("[ManageContent] content save error:", JSON.stringify({
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        }, null, 2));
+        alert(`Failed to save content: ${error.message}${error.hint ? ` (${error.hint})` : ""}`);
+        return;
+      }
+      console.log("[ManageContent] content saved successfully:", data);
+      onSaveContent(contentDraft);
+      onClose();
+    } catch (err) {
+      setContentSaving(false);
+      console.error("[ManageContent] content save exception:", err);
       alert("Failed to save content — check console");
-      return;
     }
-    onSaveContent(contentDraft);
-    onClose();
   };
 
   // --- Content editor helpers ---
