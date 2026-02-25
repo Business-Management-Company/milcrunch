@@ -517,7 +517,7 @@ function ManageContentPanel({
   const handleSaveContent = async () => {
     if (!(await ensureSession())) return;
     setContentSaving(true);
-    const upserts = CONTENT_TABS.filter((tab) => contentDraft[tab]).map((tab) => {
+    const baseUpserts = CONTENT_TABS.filter((tab) => contentDraft[tab]).map((tab) => {
       const c = contentDraft[tab];
       return {
         tab_name: tab,
@@ -526,20 +526,35 @@ function ManageContentPanel({
         description: c.description || null,
         sections: c.sections,
         bottom_note: c.bottomNote || null,
-        visibility: {
-          headline: c.headlineVisible !== false,
-          headlineAccent: c.headlineAccentVisible !== false,
-          description: c.descriptionVisible !== false,
-        },
         updated_at: new Date().toISOString(),
       };
     });
+    // Build visibility data per tab
+    const visibilityMap: Record<string, { headline: boolean; headlineAccent: boolean; description: boolean }> = {};
+    CONTENT_TABS.filter((tab) => contentDraft[tab]).forEach((tab) => {
+      const c = contentDraft[tab];
+      visibilityMap[tab] = {
+        headline: c.headlineVisible !== false,
+        headlineAccent: c.headlineAccentVisible !== false,
+        description: c.descriptionVisible !== false,
+      };
+    });
+    // Try saving with visibility column first, fall back without it
+    const upsertsWithVis = baseUpserts.map((u) => ({ ...u, visibility: visibilityMap[u.tab_name] }));
     try {
-      console.log("[ManageContent] Saving content upserts:", JSON.stringify(upserts, null, 2));
-      const { data, error } = await supabase
+      console.log("[ManageContent] Saving content upserts:", JSON.stringify(upsertsWithVis, null, 2));
+      let { data, error } = await supabase
         .from("prospectus_tab_content")
-        .upsert(upserts, { onConflict: "tab_name" })
+        .upsert(upsertsWithVis, { onConflict: "tab_name" })
         .select();
+      // If visibility column doesn't exist yet, retry without it
+      if (error && (error.message?.includes("visibility") || error.code === "PGRST204" || error.code === "42703")) {
+        console.warn("[ManageContent] visibility column not found, saving without it");
+        ({ data, error } = await supabase
+          .from("prospectus_tab_content")
+          .upsert(baseUpserts, { onConflict: "tab_name" })
+          .select());
+      }
       setContentSaving(false);
       if (error) {
         console.error("[ManageContent] content save error:", JSON.stringify({
