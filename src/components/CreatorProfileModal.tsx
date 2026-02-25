@@ -98,6 +98,7 @@ const PLATFORM_PILL_STYLES: Record<string, { active: string; inactive: string; i
  */
 function computeFromPostData(igRecord: Record<string, unknown> | undefined, followerCount: number) {
   const posts = Array.isArray(igRecord?.post_data) ? (igRecord.post_data as Record<string, unknown>[]) : [];
+  console.log("[DEBUG-computeFromPostData] posts.length:", posts.length, "followerCount:", followerCount, "post_data type:", typeof igRecord?.post_data, "isArray:", Array.isArray(igRecord?.post_data));
   if (posts.length === 0) return { avgLikes: 0, avgComments: 0, avgViews: 0, engagement: 0, postsPerMonth: 0 };
 
   let totalLikes = 0;
@@ -469,6 +470,30 @@ export default function CreatorProfileModal({
 
   const igRecord = ig && typeof ig === "object" ? (ig as Record<string, unknown>) : undefined;
   const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
+
+  // === DEBUG: Log enrichment data shape ===
+  useEffect(() => {
+    if (!enriched) return;
+    console.log("[DEBUG-ENRICH] enriched object keys:", Object.keys(enriched));
+    console.log("[DEBUG-ENRICH] resultTop keys:", Object.keys(resultTop));
+    console.log("[DEBUG-ENRICH] igRecord keys:", igRecord ? Object.keys(igRecord) : "NO igRecord");
+    if (igRecord) {
+      console.log("[DEBUG-ENRICH] igRecord.post_data:", Array.isArray(igRecord.post_data) ? `Array(${(igRecord.post_data as unknown[]).length})` : typeof igRecord.post_data, igRecord.post_data);
+      console.log("[DEBUG-ENRICH] igRecord analytics fields:", {
+        avg_likes: igRecord.avg_likes, avg_like_count: igRecord.avg_like_count, average_likes: igRecord.average_likes,
+        avg_comments: igRecord.avg_comments, avg_comment_count: igRecord.avg_comment_count,
+        avg_views: igRecord.avg_views, avg_view_count: igRecord.avg_view_count, avg_reels_plays: igRecord.avg_reels_plays,
+        media_count: igRecord.media_count, number_of_posts: igRecord.number_of_posts,
+        posting_frequency_recent_months: igRecord.posting_frequency_recent_months, posts_per_month: igRecord.posts_per_month,
+        follower_count: igRecord.follower_count, engagement_percent: igRecord.engagement_percent,
+        reels: igRecord.reels,
+      });
+      // Log first post_data item if present
+      if (Array.isArray(igRecord.post_data) && (igRecord.post_data as unknown[]).length > 0) {
+        console.log("[DEBUG-ENRICH] post_data[0]:", JSON.stringify((igRecord.post_data as unknown[])[0]).substring(0, 500));
+      }
+    }
+  }, [enriched, resultTop, igRecord]);
   const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
   const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
   const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
@@ -871,6 +896,7 @@ export default function CreatorProfileModal({
     // RAW endpoint: compute from post_data. FULL endpoint: use direct fields.
     const fc = Number(igRecord?.follower_count ?? creator?.followers ?? 0);
     const computed = computeFromPostData(igRecord, fc);
+    console.log("[DEBUG-STATS] Instagram default — fc:", fc, "computed:", computed, "igRecord?.media_count:", igRecord?.media_count, "igRecord?.number_of_posts:", igRecord?.number_of_posts);
     return {
       followers: fc,
       engagement: Number(igRecord?.engagement_percent ?? igRecord?.engagement_rate ?? 0) || computed.engagement || Number(creator?.engagementRate ?? 0),
