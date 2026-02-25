@@ -357,7 +357,7 @@ export default function Verification() {
   const [showCreatorDropdown, setShowCreatorDropdown] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [addSpeakerOpen, setAddSpeakerOpen] = useState(false);
-  const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "" });
+  const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "", verification_status: "" });
   const [inviteEventOpen, setInviteEventOpen] = useState(false);
   const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
@@ -646,6 +646,7 @@ export default function Verification() {
         return "";
       })(),
       verification_id: row.id,
+      verification_status: row.status ?? "pending",
     });
     setAddSpeakerOpen(true);
   };
@@ -657,7 +658,8 @@ export default function Verification() {
       rank: speakerForm.rank || null,
       bio: speakerForm.bio || null,
       verification_id: speakerForm.verification_id || null,
-    });
+      verification_status: speakerForm.verification_status || null,
+    } as Record<string, unknown>);
     if (error) {
       toast.error("Failed to save speaker: " + error.message);
     } else {

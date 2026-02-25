@@ -266,7 +266,80 @@ export default function Speakers() {
       .from("speakers")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error) setSpeakers((data ?? []) as Speaker[]);
+    if (error || !data) return;
+
+    const rows = data as Speaker[];
+
+    // Batch-fetch verification statuses for speakers that have a verification_id
+    const withVid = rows.filter((s) => s.verification_id);
+    const withoutVid = rows.filter((s) => !s.verification_id);
+
+    let verificationMap = new Map<string, { status: string; score: number | null }>();
+
+    if (withVid.length > 0) {
+      const vids = withVid.map((s) => s.verification_id!);
+      const { data: vRows } = await supabase
+        .from("verifications")
+        .select("id, status, verification_score")
+        .in("id", vids);
+      if (vRows) {
+        for (const v of vRows) {
+          verificationMap.set(v.id, { status: v.status ?? "pending", score: v.verification_score });
+        }
+      }
+    }
+
+    // For speakers WITHOUT a verification_id, try matching by name
+    // This handles cases where a speaker was added manually but a verification exists
+    if (withoutVid.length > 0) {
+      const names = withoutVid.map((s) => s.name);
+      const { data: nameMatches } = await supabase
+        .from("verifications")
+        .select("id, person_name, status, verification_score")
+        .in("person_name", names);
+
+      if (nameMatches && nameMatches.length > 0) {
+        // Build name -> verification mapping
+        const nameMap = new Map<string, typeof nameMatches[0]>();
+        for (const v of nameMatches) {
+          // If multiple verifications for same name, pick the highest score
+          const existing = nameMap.get(v.person_name);
+          if (!existing || (v.verification_score ?? 0) > (existing.verification_score ?? 0)) {
+            nameMap.set(v.person_name, v);
+          }
+        }
+
+        // Auto-link speakers to their verifications
+        for (const speaker of withoutVid) {
+          const match = nameMap.get(speaker.name);
+          if (match) {
+            console.log(`[Speakers] Auto-linking "${speaker.name}" to verification ${match.id} (score: ${match.verification_score})`);
+            speaker.verification_id = match.id;
+            speaker.verification_status = match.status ?? "pending";
+            verificationMap.set(match.id, { status: match.status ?? "pending", score: match.verification_score });
+
+            // Persist the link to the database so it sticks
+            supabase
+              .from("speakers")
+              .update({ verification_id: match.id, verification_status: match.status } as Record<string, unknown>)
+              .eq("id", speaker.id)
+              .then(({ error: updateErr }) => {
+                if (updateErr) console.warn(`[Speakers] Failed to persist link for ${speaker.name}:`, updateErr.message);
+              });
+          }
+        }
+      }
+    }
+
+    // Merge verification_status from verifications table into speaker data
+    const enriched = rows.map((s) => {
+      if (s.verification_id && verificationMap.has(s.verification_id)) {
+        return { ...s, verification_status: verificationMap.get(s.verification_id)!.status };
+      }
+      return s;
+    });
+
+    setSpeakers(enriched);
   };
 
   useEffect(() => {
@@ -305,26 +378,57 @@ export default function Speakers() {
     setReviewStatus(speaker.review_status ?? "");
     setReviewNotes(speaker.review_notes ?? "");
 
-    // Fetch full verification data
+    // Fetch full verification data — by ID first, then fallback to name match
+    const VERIFICATION_COLS = "id, person_name, verification_score, status, claimed_branch, claimed_type, claimed_status, ai_analysis, manual_checks, evidence_sources, notes, verified_by, last_verified_at, source_username, profile_photo_url, city, state, pdl_data, linkedin_url, website_url, created_at";
+    let verificationData: FullVerification | null = null;
+
     if (speaker.verification_id) {
       const { data } = await supabase
         .from("verifications")
-        .select("id, person_name, verification_score, status, claimed_branch, claimed_type, claimed_status, ai_analysis, manual_checks, evidence_sources, notes, verified_by, last_verified_at, source_username, profile_photo_url, city, state, pdl_data, linkedin_url, website_url, created_at")
+        .select(VERIFICATION_COLS)
         .eq("id", speaker.verification_id)
         .single();
-      if (data) {
-        setExpandedVerification(data as FullVerification);
+      if (data) verificationData = data as FullVerification;
+    }
 
-        // Try to fetch IC enrichment from directory_members by source_username
-        const handle = (data as FullVerification).source_username;
-        if (handle) {
-          const { data: dm } = await supabase
-            .from("directory_members")
-            .select("enrichment_data, creator_handle, avatar_url, ic_avatar_url")
-            .eq("creator_handle", handle)
-            .maybeSingle();
-          if (dm) setExpandedEnrichment(dm as EnrichmentData);
-        }
+    // Fallback: lookup by name if no verification_id or lookup failed
+    if (!verificationData) {
+      const { data: nameMatch } = await supabase
+        .from("verifications")
+        .select(VERIFICATION_COLS)
+        .eq("person_name", speaker.name)
+        .order("verification_score", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (nameMatch) {
+        verificationData = nameMatch as FullVerification;
+        console.log(`[Speakers] Found verification by name match for "${speaker.name}" → ${nameMatch.id} (${nameMatch.verification_score}%)`);
+        // Auto-link for next time
+        speaker.verification_id = nameMatch.id;
+        speaker.verification_status = (nameMatch as FullVerification).status;
+        setSpeakers((prev) =>
+          prev.map((s) => s.id === speaker.id ? { ...s, verification_id: nameMatch.id, verification_status: (nameMatch as FullVerification).status } : s)
+        );
+        supabase
+          .from("speakers")
+          .update({ verification_id: nameMatch.id, verification_status: (nameMatch as FullVerification).status } as Record<string, unknown>)
+          .eq("id", speaker.id)
+          .then(({ error: e }) => { if (e) console.warn("[Speakers] Failed to persist verification link:", e.message); });
+      }
+    }
+
+    if (verificationData) {
+      setExpandedVerification(verificationData);
+
+      // Try to fetch IC enrichment from directory_members by source_username
+      const handle = verificationData.source_username;
+      if (handle) {
+        const { data: dm } = await supabase
+          .from("directory_members")
+          .select("enrichment_data, creator_handle, avatar_url, ic_avatar_url")
+          .eq("creator_handle", handle)
+          .maybeSingle();
+        if (dm) setExpandedEnrichment(dm as EnrichmentData);
       }
     }
 
