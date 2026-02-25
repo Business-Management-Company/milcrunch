@@ -59,7 +59,6 @@ import {
   Eye,
   Plus,
   FileText,
-  Briefcase,
   Globe,
   Mail,
   Phone,
@@ -688,14 +687,6 @@ export default function Speakers() {
     });
   };
 
-  // Extract career data from manual_checks
-  const getCareerData = (v: FullVerification) => {
-    const mc = v.manual_checks;
-    if (!mc) return null;
-    const ct = mc.career_track as { result?: Record<string, unknown> } | undefined;
-    return ct?.result ?? null;
-  };
-
   // Extract social platforms from enrichment data
   const getSocialPlatforms = () => {
     if (!expandedEnrichment?.enrichment_data) return [];
@@ -712,10 +703,8 @@ export default function Speakers() {
 
   /** Render the expanded row for a VERIFIED speaker */
   const renderVerifiedExpanded = (speaker: Speaker, v: FullVerification) => {
-    const careerData = getCareerData(v);
     const platforms = getSocialPlatforms();
     const photo = getSpeakerPhoto(speaker);
-    const pdl = v.pdl_data as Record<string, unknown> | null;
 
     return (
       <div className="space-y-4">
@@ -771,102 +760,6 @@ export default function Speakers() {
 
         {/* Row 2: Collapsible sections */}
         <div className="space-y-2">
-          {/* Intelligence Summary */}
-          <CollapsibleSection
-            title="Intelligence Summary"
-            icon={<FileText className="h-4 w-4 text-[#1e3a5f]" />}
-            defaultOpen={true}
-          >
-            <div className="mt-3">
-              {v.ai_analysis ? (
-                <MarkdownResponse content={v.ai_analysis} />
-              ) : (
-                <p className="text-sm text-muted-foreground">No intelligence summary available. Run verification to generate.</p>
-              )}
-            </div>
-          </CollapsibleSection>
-
-          {/* Military / Civilian Career */}
-          <CollapsibleSection
-            title="Military / Civilian Career"
-            icon={<Briefcase className="h-4 w-4 text-[#1e3a5f]" />}
-          >
-            <div className="mt-3 space-y-3">
-              {careerData ? (
-                <>
-                  {/* Military Summary */}
-                  {(careerData as Record<string, unknown>).military_summary && (() => {
-                    const ms = (careerData as Record<string, unknown>).military_summary as Record<string, unknown>;
-                    return (
-                      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                        <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-300 mb-1">Military Service</h4>
-                        <div className="text-sm space-y-0.5">
-                          {ms.branch && <p><span className="text-muted-foreground">Branch:</span> {ms.branch as string}</p>}
-                          {ms.rank && <p><span className="text-muted-foreground">Rank:</span> {ms.rank as string}</p>}
-                          {ms.mos && <p><span className="text-muted-foreground">MOS:</span> {ms.mos as string}</p>}
-                          {ms.years_of_service && <p><span className="text-muted-foreground">Service:</span> {ms.years_of_service as string}</p>}
-                          {ms.service_dates && <p><span className="text-muted-foreground">Dates:</span> {ms.service_dates as string}</p>}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Career entries */}
-                  {Array.isArray((careerData as Record<string, unknown>).career) && ((careerData as Record<string, unknown>).career as Array<Record<string, unknown>>).length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm mb-2">Career History</h4>
-                      <div className="space-y-2">
-                        {((careerData as Record<string, unknown>).career as Array<Record<string, unknown>>).slice(0, 5).map((entry, i) => (
-                          <div key={i} className="flex items-start gap-2 text-sm">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f] mt-2 shrink-0" />
-                            <div>
-                              <span className="font-medium">{entry.title as string || entry.role as string}</span>
-                              {entry.company && <span className="text-muted-foreground"> at {entry.company as string}</span>}
-                              {entry.dates && <span className="text-xs text-muted-foreground ml-2">({entry.dates as string})</span>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Awards */}
-                  {Array.isArray((careerData as Record<string, unknown>).awards) && ((careerData as Record<string, unknown>).awards as unknown[]).length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm mb-1">Awards & Decorations</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {((careerData as Record<string, unknown>).awards as Array<Record<string, unknown>>).map((award, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {(award.name ?? award.title ?? award) as string}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : pdl ? (
-                <div className="text-sm">
-                  {/* PDL employment fallback */}
-                  {Array.isArray(pdl.employment) && (pdl.employment as Array<Record<string, unknown>>).length > 0 && (
-                    <div className="space-y-2">
-                      {(pdl.employment as Array<Record<string, unknown>>).slice(0, 5).map((job, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f] mt-2 shrink-0" />
-                          <div>
-                            <span className="font-medium">{job.title as string}</span>
-                            {job.company && <span className="text-muted-foreground"> at {(job.company as Record<string, unknown>)?.name as string ?? job.company as string}</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No career data available. Run verification to extract career timeline.</p>
-              )}
-            </div>
-          </CollapsibleSection>
-
           {/* Contact Information */}
           <CollapsibleSection
             title="Contact Information"
@@ -1017,6 +910,20 @@ export default function Speakers() {
                   Save Review
                 </Button>
               </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Intelligence Summary */}
+          <CollapsibleSection
+            title="Intelligence Summary"
+            icon={<FileText className="h-4 w-4 text-[#1e3a5f]" />}
+          >
+            <div className="mt-3">
+              {v.ai_analysis ? (
+                <MarkdownResponse content={v.ai_analysis} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No intelligence summary available. Run verification to generate.</p>
+              )}
             </div>
           </CollapsibleSection>
         </div>
