@@ -17,6 +17,8 @@ export interface ListCreator {
   platforms: string[];
   bio: string;
   location?: string;
+  email?: string;
+  enrichmentStatus?: "none" | "pending" | "enriched" | "no_email";
 }
 
 export interface List {
@@ -40,6 +42,7 @@ type ListContextValue = {
   deleteList: (listId: string) => void;
   renameList: (listId: string, name: string) => void;
   updateListAvatar: (listId: string, avatarUrl: string) => void;
+  updateCreatorInList: (listId: string, creatorId: string, updates: Partial<ListCreator>) => void;
   isCreatorInList: (creatorId: string, listId?: string) => boolean;
 };
 
@@ -132,6 +135,18 @@ export function ListProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateCreatorInList = useCallback((listId: string, creatorId: string, updates: Partial<ListCreator>) => {
+    setLists((prev) => {
+      const next = prev.map((l) =>
+        l.id === listId
+          ? { ...l, creators: l.creators.map((c) => c.id === creatorId ? { ...c, ...updates } : c) }
+          : l
+      );
+      try { localStorage.setItem("parade-deck-lists", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
   const updateListAvatar = useCallback((listId: string, avatarUrl: string) => {
     setLists((prev) => {
       const next = prev.map((l) => l.id === listId ? { ...l, avatar_url: avatarUrl } : l);
@@ -160,9 +175,10 @@ export function ListProvider({ children }: { children: ReactNode }) {
       deleteList,
       renameList,
       updateListAvatar,
+      updateCreatorInList,
       isCreatorInList,
     }),
-    [lists, addCreatorToList, removeCreatorFromList, createList, deleteList, renameList, updateListAvatar, isCreatorInList]
+    [lists, addCreatorToList, removeCreatorFromList, createList, deleteList, renameList, updateListAvatar, updateCreatorInList, isCreatorInList]
   );
 
   return (

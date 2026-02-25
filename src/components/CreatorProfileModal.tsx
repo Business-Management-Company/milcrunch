@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   enrichCreatorProfile,
+  fullEnrichCreatorProfile,
+  logCreditUsage,
   type CreatorCard,
   type EnrichedProfileResponse,
 } from "@/lib/influencers-club";
@@ -281,6 +283,10 @@ export default function CreatorProfileModal({
   const [eventsList, setEventsList] = useState<{ id: string; title: string; start_date: string }[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [invitingEvent, setInvitingEvent] = useState(false);
+  // Get Email state
+  const [fetchingEmail, setFetchingEmail] = useState(false);
+  const [fetchedEmail, setFetchedEmail] = useState<string | null>(null);
+  const [emailNotFound, setEmailNotFound] = useState(false);
 
   const listDropdownRef = useRef<HTMLDivElement>(null);
   const dirDropdownRef = useRef<HTMLDivElement>(null);
@@ -379,6 +385,9 @@ export default function CreatorProfileModal({
       setSelectedPlatform("instagram");
       setEnrichmentLoading(false);
       setEnrichmentSource(null);
+      setFetchingEmail(false);
+      setFetchedEmail(null);
+      setEmailNotFound(false);
       return;
     }
     const rawHandle = creator.username || username;
@@ -1086,6 +1095,31 @@ export default function CreatorProfileModal({
     return { links, othersCount: Math.max(0, other.length - OTHER_LINKS_SHOWN) };
   }, [resultTop.other_links, resultTop.links_in_bio]);
 
+  const handleGetEmail = async () => {
+    if (!creator?.username) return;
+    setFetchingEmail(true);
+    setEmailNotFound(false);
+    try {
+      const data = await fullEnrichCreatorProfile(creator.username, undefined, selectedPlatform);
+      const email = data?.result?.email as string | undefined;
+      if (email) {
+        setFetchedEmail(email);
+      } else {
+        setEmailNotFound(true);
+      }
+      if (user?.id) {
+        logCreditUsage(user.id, "full_enrichment", 1.03, { handle: creator.username, source: "profile_modal" });
+      }
+    } catch (err) {
+      console.error("[GetEmail] Error:", err);
+      setEmailNotFound(true);
+    } finally {
+      setFetchingEmail(false);
+    }
+  };
+
+  const displayEmail = fetchedEmail || enrichedEmail;
+
   return (
     <>
       <CreateListModal
@@ -1540,14 +1574,28 @@ export default function CreatorProfileModal({
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900 dark:text-white">Email</p>
-                      {showEnrichmentLoading && !enrichedEmail ? (
+                      {showEnrichmentLoading && !displayEmail ? (
                         <Skeleton className="h-4 w-32 mt-1" />
-                      ) : enrichedEmail ? (
-                        <a href={`mailto:${enrichedEmail}`} className="text-sm text-[#1e3a5f] hover:underline mt-1 flex items-center gap-1">
-                          <Mail className="h-3.5 w-3.5 shrink-0" /> {enrichedEmail}
+                      ) : displayEmail ? (
+                        <a href={`mailto:${displayEmail}`} className="text-sm text-[#1e3a5f] hover:underline mt-1 flex items-center gap-1">
+                          <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
                         </a>
+                      ) : emailNotFound ? (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">No email found</p>
+                      ) : fetchingEmail ? (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                          <span className="text-sm text-blue-600">Fetching email...</span>
+                        </div>
+                      ) : creator?.username ? (
+                        <button
+                          onClick={handleGetEmail}
+                          className="mt-1 inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
+                        </button>
                       ) : (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">—</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">&mdash;</p>
                       )}
                     </div>
                   </div>

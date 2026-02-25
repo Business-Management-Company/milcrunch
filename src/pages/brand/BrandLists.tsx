@@ -15,12 +15,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus, Upload } from "lucide-react";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus, Upload, Download, Mail, MailX, UserSearch } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
-import type { CreatorCard } from "@/lib/influencers-club";
+import { fullEnrichCreatorProfile, logCreditUsage, type CreatorCard } from "@/lib/influencers-club";
 import type { ListCreator } from "@/contexts/ListContext";
+import { Progress } from "@/components/ui/progress";
 import { detectBranch } from "@/lib/featured-creators";
 import { fetchDirectoriesWithCounts, addToDirectory, type Directory } from "@/lib/directories";
 import { PlatformIcons } from "@/components/PlatformIcons";
@@ -586,7 +587,7 @@ const BrandLists = () => {
 export const BrandListDetail = () => {
   const { listId } = useParams<{ listId: string }>();
   const navigate = useNavigate();
-  const { lists, addCreatorToList, removeCreatorFromList, renameList } = useLists();
+  const { lists, addCreatorToList, removeCreatorFromList, renameList, updateCreatorInList } = useLists();
   const { effectiveUserId } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
@@ -596,6 +597,11 @@ export const BrandListDetail = () => {
   const [listTitleValue, setListTitleValue] = useState("");
   const [editingListDesc, setEditingListDesc] = useState(false);
   const [listDescValue, setListDescValue] = useState("");
+  // Export & enrichment state
+  const [enrichConfirmOpen, setEnrichConfirmOpen] = useState(false);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichProgress, setEnrichProgress] = useState(0);
+  const [enrichTotal, setEnrichTotal] = useState(0);
 
   const selectedList = Array.isArray(lists) ? (lists.find((l) => l.id === listId) ?? null) : null;
   const creators = Array.isArray(selectedList?.creators) ? selectedList.creators : [];
@@ -665,6 +671,76 @@ export const BrandListDetail = () => {
     setSelectedIds(new Set());
   };
 
+  const downloadCsv = (rows: string[][], filename: string) => {
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const escCsv = (val: string) => `"${(val ?? "").replace(/"/g, '""')}"`;
+
+  const handleExportCsv = () => {
+    if (!selectedList || creators.length === 0) return;
+    const rows: string[][] = [
+      ["Name", "Username", "Email", "Platform", "Followers", "Engagement Rate", "Bio", "Location"],
+    ];
+    for (const c of creators) {
+      rows.push([
+        escCsv(c.name),
+        c.username ?? "",
+        c.email ?? "",
+        c.platforms?.[0] ?? "instagram",
+        String(c.followers ?? 0),
+        String(c.engagementRate ?? 0),
+        escCsv(c.bio ?? ""),
+        escCsv(c.location ?? ""),
+      ]);
+    }
+    downloadCsv(rows, `${selectedList.name.replace(/\s+/g, "_")}_creators.csv`);
+    toast.success("CSV exported");
+  };
+
+  const handleExportWithEmails = async () => {
+    if (!selectedList || !listId) return;
+    setEnrichConfirmOpen(false);
+    setEnriching(true);
+    const toEnrich = creators.filter((c) => !c.email && c.username);
+    setEnrichTotal(toEnrich.length);
+    setEnrichProgress(0);
+    let found = 0;
+    for (let i = 0; i < toEnrich.length; i++) {
+      const c = toEnrich[i];
+      setEnrichProgress(i + 1);
+      try {
+        updateCreatorInList(listId, c.id, { enrichmentStatus: "pending" });
+        const data = await fullEnrichCreatorProfile(c.username!, undefined, c.platforms?.[0] ?? "instagram");
+        const email = data?.result?.email as string | undefined;
+        if (email) {
+          updateCreatorInList(listId, c.id, { email, enrichmentStatus: "enriched" });
+          found++;
+        } else {
+          updateCreatorInList(listId, c.id, { enrichmentStatus: "no_email" });
+        }
+        if (effectiveUserId) {
+          logCreditUsage(effectiveUserId, "full_enrichment", 1.03, { handle: c.username });
+        }
+      } catch (err) {
+        console.error("[ExportWithEmails] Error enriching", c.username, err);
+        updateCreatorInList(listId, c.id, { enrichmentStatus: "no_email" });
+      }
+    }
+    setEnriching(false);
+    const alreadyHad = creators.filter((c) => !!c.email).length;
+    toast.success(`Found emails for ${found} of ${toEnrich.length} creators (${alreadyHad + found} total with email)`);
+    // Auto-download CSV after enrichment
+    setTimeout(() => handleExportCsv(), 300);
+  };
+
   if (!selectedList) {
     return (
       <div className="text-center py-12">
@@ -685,6 +761,60 @@ export const BrandListDetail = () => {
         onOpenChange={setProfileModalOpen}
         creator={profileCreator}
       />
+      {/* Export with Emails confirmation dialog */}
+      <Dialog open={enrichConfirmOpen} onOpenChange={setEnrichConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserSearch className="h-5 w-5 text-blue-700" />
+              Export with Emails
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3 space-y-3">
+            {(() => {
+              const needEnrich = creators.filter((c) => !c.email && c.username).length;
+              const alreadyHave = creators.filter((c) => !!c.email).length;
+              return (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    This will use the full enrichment API to retrieve emails for creators in this list.
+                  </p>
+                  {alreadyHave > 0 && (
+                    <p className="text-sm text-green-700 dark:text-green-400">
+                      {alreadyHave} creator{alreadyHave !== 1 ? "s" : ""} already have email — they will be skipped.
+                    </p>
+                  )}
+                  <p className="text-sm font-medium">
+                    <span className="font-bold">{needEnrich}</span> creator{needEnrich !== 1 ? "s" : ""} to enrich
+                    {" "}&middot;{" "}
+                    <span className="font-bold text-blue-700">{(needEnrich * 1.03).toFixed(2)} credits</span> (1.03/creator)
+                  </p>
+                </>
+              );
+            })()}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEnrichConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={handleExportWithEmails} className="bg-blue-700 hover:bg-blue-800 text-white">
+              <Mail className="h-4 w-4 mr-1" />
+              Enrich & Export
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Enrichment progress bar */}
+      {enriching && (
+        <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Enriching creators...
+            </span>
+            <span className="text-sm text-blue-600 dark:text-blue-400">{enrichProgress} of {enrichTotal}</span>
+          </div>
+          <Progress value={enrichTotal > 0 ? (enrichProgress / enrichTotal) * 100 : 0} className="h-2" />
+        </div>
+      )}
       <div className="mb-6">
         <Button
           variant="ghost"
@@ -759,6 +889,28 @@ export const BrandListDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {creators.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg"
+                onClick={handleExportCsv}
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Export CSV
+              </Button>
+            )}
+            {creators.length > 0 && (
+              <Button
+                size="sm"
+                className="rounded-lg bg-blue-700 hover:bg-blue-800 text-white"
+                onClick={() => setEnrichConfirmOpen(true)}
+                disabled={enriching}
+              >
+                {enriching ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 mr-1.5" />}
+                Export with Emails
+              </Button>
+            )}
             {creators.length > 0 && directories.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -821,13 +973,29 @@ export const BrandListDetail = () => {
                   }}
                 />
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-foreground truncate">
-                    {creator.name}
-                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-medium text-foreground truncate">
+                      {creator.name}
+                    </h3>
+                    {creator.enrichmentStatus === "enriched" && creator.email && (
+                      <Mail className="h-3.5 w-3.5 text-green-600 shrink-0" title={`Email: ${creator.email}`} />
+                    )}
+                    {creator.enrichmentStatus === "no_email" && (
+                      <MailX className="h-3.5 w-3.5 text-gray-400 shrink-0" title="No email found" />
+                    )}
+                    {creator.enrichmentStatus === "pending" && (
+                      <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin shrink-0" />
+                    )}
+                  </div>
                   {creator.username && (
                     <p className="text-xs text-muted-foreground truncate">
                       @{creator.username}
                     </p>
+                  )}
+                  {creator.email && (
+                    <a href={`mailto:${creator.email}`} className="text-[11px] text-blue-600 hover:underline truncate block">
+                      {creator.email}
+                    </a>
                   )}
                 </div>
                 {Array.isArray(creator.platforms) && creator.platforms.length > 0 && (
