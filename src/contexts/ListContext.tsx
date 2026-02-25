@@ -19,6 +19,7 @@ export interface ListCreator {
   location?: string;
   email?: string;
   enrichmentStatus?: "none" | "pending" | "enriched" | "no_email";
+  importSource?: string;
 }
 
 export interface List {
@@ -37,6 +38,7 @@ const defaultLists: List[] = [
 type ListContextValue = {
   lists: List[];
   addCreatorToList: (listId: string, creator: ListCreator) => void;
+  addCreatorsToList: (listId: string, creators: ListCreator[]) => void;
   removeCreatorFromList: (listId: string, creatorId: string) => void;
   createList: (name: string) => string;
   deleteList: (listId: string) => void;
@@ -71,6 +73,37 @@ export function ListProvider({ children }: { children: ReactNode }) {
         const next = prev.map((l) =>
           l.id === listId
             ? { ...l, creators: [...l.creators, creator] }
+            : l
+        );
+        try {
+          localStorage.setItem("parade-deck-lists", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const addCreatorsToList = useCallback(
+    (listId: string, creators: ListCreator[]) => {
+      setLists((prev) => {
+        const list = prev.find((l) => l.id === listId);
+        if (!list) return prev;
+        const existingIds = new Set(list.creators.map((c) => c.id));
+        const existingUsernames = new Set(
+          list.creators.map((c) => c.username?.toLowerCase()).filter(Boolean)
+        );
+        const newCreators = creators.filter((c) => {
+          if (existingIds.has(c.id)) return false;
+          if (c.username && existingUsernames.has(c.username.toLowerCase())) return false;
+          return true;
+        });
+        if (newCreators.length === 0) return prev;
+        const next = prev.map((l) =>
+          l.id === listId
+            ? { ...l, creators: [...l.creators, ...newCreators] }
             : l
         );
         try {
@@ -170,6 +203,7 @@ export function ListProvider({ children }: { children: ReactNode }) {
     () => ({
       lists,
       addCreatorToList,
+      addCreatorsToList,
       removeCreatorFromList,
       createList,
       deleteList,
@@ -178,7 +212,7 @@ export function ListProvider({ children }: { children: ReactNode }) {
       updateCreatorInList,
       isCreatorInList,
     }),
-    [lists, addCreatorToList, removeCreatorFromList, createList, deleteList, renameList, updateListAvatar, updateCreatorInList, isCreatorInList]
+    [lists, addCreatorToList, addCreatorsToList, removeCreatorFromList, createList, deleteList, renameList, updateListAvatar, updateCreatorInList, isCreatorInList]
   );
 
   return (

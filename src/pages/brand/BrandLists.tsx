@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus, Upload, Download, Mail, MailX, UserSearch } from "lucide-react";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus, Upload, Download, Mail, MailX, UserSearch, FileSpreadsheet } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
@@ -26,6 +26,18 @@ import { detectBranch } from "@/lib/featured-creators";
 import { fetchDirectoriesWithCounts, addToDirectory, type Directory } from "@/lib/directories";
 import { PlatformIcons } from "@/components/PlatformIcons";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { parseICCSV, importRowToListCreator, importRowToSupabaseItem, type ICImportRow } from "@/lib/csv-import";
+import CSVImportModal from "@/components/brand/CSVImportModal";
+import { syncBulkContacts, getEmailLists } from "@/lib/email-db";
+import type { EmailList } from "@/lib/email-types";
 
 function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
@@ -587,7 +599,7 @@ const BrandLists = () => {
 export const BrandListDetail = () => {
   const { listId } = useParams<{ listId: string }>();
   const navigate = useNavigate();
-  const { lists, addCreatorToList, removeCreatorFromList, renameList, updateCreatorInList } = useLists();
+  const { lists, addCreatorToList, addCreatorsToList, removeCreatorFromList, renameList, updateCreatorInList } = useLists();
   const { effectiveUserId } = useAuth();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileCreator, setProfileCreator] = useState<CreatorCard | null>(null);
@@ -602,6 +614,18 @@ export const BrandListDetail = () => {
   const [enriching, setEnriching] = useState(false);
   const [enrichProgress, setEnrichProgress] = useState(0);
   const [enrichTotal, setEnrichTotal] = useState(0);
+  // CSV Import state
+  const [csvImportRows, setCsvImportRows] = useState<ICImportRow[]>([]);
+  const [csvSkippedRows, setCsvSkippedRows] = useState(0);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvImportProgress, setCsvImportProgress] = useState(0);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  // Add to Email List state
+  const [addToEmailOpen, setAddToEmailOpen] = useState(false);
+  const [emailLists, setEmailLists] = useState<EmailList[]>([]);
+  const [selectedEmailListId, setSelectedEmailListId] = useState("");
+  const [addingToEmailList, setAddingToEmailList] = useState(false);
 
   const selectedList = Array.isArray(lists) ? (lists.find((l) => l.id === listId) ?? null) : null;
   const creators = Array.isArray(selectedList?.creators) ? selectedList.creators : [];
@@ -741,6 +765,103 @@ export const BrandListDetail = () => {
     setTimeout(() => handleExportCsv(), 300);
   };
 
+  /* ── CSV Import handlers ─────────────────────────────────── */
+
+  const handleCSVFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      const result = parseICCSV(text);
+      if (result.rows.length === 0) {
+        toast.error("No valid creator rows found in CSV. Check that the file has 'username' or 'full_name' columns.");
+        return;
+      }
+      setCsvImportRows(result.rows);
+      setCsvSkippedRows(result.skippedRows);
+      setCsvImportOpen(true);
+    };
+    reader.onerror = () => toast.error("Failed to read CSV file.");
+    reader.readAsText(file, "UTF-8");
+    e.target.value = "";
+  };
+
+  const handleCSVImportConfirm = async () => {
+    if (!selectedList || !listId || csvImportRows.length === 0) return;
+    setCsvImporting(true);
+    setCsvImportProgress(0);
+
+    // Deduplicate against existing list members by username
+    const existingUsernames = new Set(
+      creators.map((c) => c.username?.toLowerCase()).filter(Boolean)
+    );
+    const newRows = csvImportRows.filter((row) => {
+      if (!row.handle) return true;
+      return !existingUsernames.has(row.handle.toLowerCase());
+    });
+    const duplicateCount = csvImportRows.length - newRows.length;
+
+    // Add to ListContext in batch
+    const listCreators = newRows.map(importRowToListCreator);
+    addCreatorsToList(listId, listCreators);
+    setCsvImportProgress(40);
+
+    // Upsert into Supabase influencer_list_items
+    const supabaseRows = newRows.map((row) => importRowToSupabaseItem(row, listId));
+    if (supabaseRows.length > 0) {
+      const sb = supabase as any;
+      const { error } = await sb
+        .from("influencer_list_items")
+        .upsert(supabaseRows, { onConflict: "list_id,handle", ignoreDuplicates: true });
+      if (error) {
+        console.error("[CSVImport] Supabase upsert error:", error);
+      }
+    }
+    setCsvImportProgress(100);
+
+    // Summary toast
+    const withEmails = newRows.filter((r) => r.contact_email).length;
+    const parts = [`Imported ${newRows.length} creator${newRows.length !== 1 ? "s" : ""}`];
+    if (withEmails > 0) parts.push(`${withEmails} with emails`);
+    if (duplicateCount > 0) parts.push(`${duplicateCount} duplicate${duplicateCount !== 1 ? "s" : ""} skipped`);
+    toast.success(parts.join(" \u00b7 "));
+
+    setCsvImporting(false);
+    setCsvImportOpen(false);
+    setCsvImportRows([]);
+    setCsvSkippedRows(0);
+  };
+
+  /* ── Add All to Email List handlers ──────────────────────── */
+
+  const handleOpenAddToEmailList = async () => {
+    const lists = await getEmailLists();
+    setEmailLists(lists);
+    setSelectedEmailListId("");
+    setAddToEmailOpen(true);
+  };
+
+  const handleAddAllToEmailList = async () => {
+    if (!selectedEmailListId) return;
+    setAddingToEmailList(true);
+    const withEmails = creators.filter((c) => c.email);
+    const contacts = withEmails.map((c) => {
+      const nameParts = c.name.split(" ");
+      return {
+        email: c.email!,
+        first_name: nameParts[0] || undefined,
+        last_name: nameParts.slice(1).join(" ") || undefined,
+        source: "import" as const,
+      };
+    });
+    const result = await syncBulkContacts(selectedEmailListId, contacts);
+    const elName = emailLists.find((l) => l.id === selectedEmailListId)?.name ?? "list";
+    toast.success(`Added ${result.inserted} contact${result.inserted !== 1 ? "s" : ""} to ${elName}${result.duplicates > 0 ? ` (${result.duplicates} already existed)` : ""}`);
+    setAddingToEmailList(false);
+    setAddToEmailOpen(false);
+  };
+
   if (!selectedList) {
     return (
       <div className="text-center py-12">
@@ -761,6 +882,53 @@ export const BrandListDetail = () => {
         onOpenChange={setProfileModalOpen}
         creator={profileCreator}
       />
+      {/* CSV Import modal */}
+      <CSVImportModal
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
+        listName={selectedList?.name ?? ""}
+        rows={csvImportRows}
+        skippedRows={csvSkippedRows}
+        importing={csvImporting}
+        importProgress={csvImportProgress}
+        onConfirm={handleCSVImportConfirm}
+      />
+      {/* Add All to Email List dialog */}
+      <Dialog open={addToEmailOpen} onOpenChange={setAddToEmailOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" /> Add Creators to Email List
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {creators.filter((c) => c.email).length} of {creators.length} creators have emails.
+              Select a list to add them to:
+            </p>
+            <Select value={selectedEmailListId} onValueChange={setSelectedEmailListId}>
+              <SelectTrigger><SelectValue placeholder="Select an email list" /></SelectTrigger>
+              <SelectContent>
+                {emailLists.length === 0 ? (
+                  <SelectItem value="__none" disabled>No email lists found</SelectItem>
+                ) : (
+                  emailLists.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={handleAddAllToEmailList}
+              disabled={!selectedEmailListId || addingToEmailList}
+              className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]"
+            >
+              {addingToEmailList && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Add {creators.filter((c) => c.email).length} Contacts
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Export with Emails confirmation dialog */}
       <Dialog open={enrichConfirmOpen} onOpenChange={setEnrichConfirmOpen}>
         <DialogContent className="max-w-sm">
@@ -889,6 +1057,23 @@ export const BrandListDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Hidden CSV file input */}
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleCSVFilePick}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg"
+              onClick={() => csvInputRef.current?.click()}
+            >
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              Import CSV
+            </Button>
             {creators.length > 0 && (
               <Button
                 variant="outline"
@@ -932,6 +1117,17 @@ export const BrandListDetail = () => {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+            )}
+            {creators.some((c) => c.email) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg text-green-700 border-green-400 hover:bg-green-50 dark:text-green-500 dark:border-green-800 dark:hover:bg-green-950/30"
+                onClick={handleOpenAddToEmailList}
+              >
+                <Mail className="h-3.5 w-3.5 mr-1.5" />
+                Add All to Email List
+              </Button>
             )}
             {creators.length > 0 && (
               <div className="flex items-center gap-2">
@@ -985,6 +1181,14 @@ export const BrandListDetail = () => {
                     )}
                     {creator.enrichmentStatus === "pending" && (
                       <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin shrink-0" />
+                    )}
+                    {creator.importSource === "influencers_club" && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 shrink-0"
+                      >
+                        IC Import
+                      </Badge>
                     )}
                   </div>
                   {creator.username && (
