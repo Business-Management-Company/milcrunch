@@ -406,13 +406,42 @@ export default function FloatingAdminChat() {
           return undefined;
         };
         const mediaCount = pickNum("media_count", "number_of_posts", "post_count", "posts_count");
-        const avgLikes = pickNum("avg_likes", "average_likes", "avg_like_count");
-        const avgComments = pickNum("avg_comments", "average_comments", "avg_comment_count");
-        const avgViews = pickNum("avg_views", "average_views", "avg_video_views", "avg_reels_plays", "avg_view_count");
+        let avgLikes = pickNum("avg_likes", "average_likes", "avg_like_count");
+        let avgComments = pickNum("avg_comments", "average_comments", "avg_comment_count");
+        let avgViews = pickNum("avg_views", "average_views", "avg_video_views", "avg_reels_plays", "avg_view_count");
         const avgReelLikes = pickNum("avg_reel_likes", "average_reel_likes");
-        const postsPerMonth = pickNum("posts_per_month", "posting_frequency");
+        let postsPerMonth = pickNum("posts_per_month", "posting_frequency");
         const followers = pickNum("follower_count", "followers", "number_of_followers");
-        const engagementRate = pickNum("engagement_percent", "engagement_rate", "er");
+        let engagementRate = pickNum("engagement_percent", "engagement_rate", "er");
+
+        // RAW endpoint doesn't have direct analytics — compute from post_data
+        const postData = (ig as Record<string, unknown>).post_data;
+        if (Array.isArray(postData) && postData.length > 0 && (!avgLikes || !avgComments)) {
+          let tLikes = 0, tComments = 0, tViews = 0, vCount = 0;
+          const dates: number[] = [];
+          for (const p of postData as Record<string, unknown>[]) {
+            const eng = (p.engagement && typeof p.engagement === "object") ? p.engagement as Record<string, unknown> : p;
+            tLikes += Number(eng.likes ?? eng.like_count ?? 0) || 0;
+            tComments += Number(eng.comments ?? eng.comment_count ?? 0) || 0;
+            const vc = Number(eng.view_count ?? eng.views ?? 0) || 0;
+            if (vc > 0) { tViews += vc; vCount++; }
+            const d = new Date(p.created_at as string);
+            if (!isNaN(d.getTime())) dates.push(d.getTime());
+          }
+          const n = postData.length;
+          if (!avgLikes && tLikes > 0) avgLikes = Math.round(tLikes / n);
+          if (!avgComments && tComments > 0) avgComments = Math.round(tComments / n);
+          if (!avgViews && vCount > 0) avgViews = Math.round(tViews / vCount);
+          if (!postsPerMonth && dates.length >= 2) {
+            dates.sort((a, b) => a - b);
+            const daySpan = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
+            if (daySpan > 0) postsPerMonth = Math.round((dates.length / daySpan) * 30 * 10) / 10;
+          }
+          const fc = followers ?? 0;
+          if (!engagementRate && fc > 0) {
+            engagementRate = Number((((tLikes / n + tComments / n) / fc) * 100).toFixed(2));
+          }
+        }
         console.log("[Drawer enrich]", handle, { mediaCount, avgLikes, avgComments, avgViews, avgReelLikes, postsPerMonth });
         if (mediaCount || avgLikes || avgComments || avgViews || avgReelLikes || postsPerMonth) {
           setSelectedCreator((prev) => prev ? {

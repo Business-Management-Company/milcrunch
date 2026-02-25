@@ -96,10 +96,18 @@ const PLATFORM_PILL_STYLES: Record<string, { active: string; inactive: string; i
  * The RAW endpoint (0.03 credits) returns post_data with per-post engagement
  * but no computed averages — those are only in the FULL endpoint (1.03 credits).
  */
-function computeFromPostData(igRecord: Record<string, unknown> | undefined, followerCount: number) {
-  const posts = Array.isArray(igRecord?.post_data) ? (igRecord.post_data as Record<string, unknown>[]) : [];
-  console.log("[DEBUG-computeFromPostData] posts.length:", posts.length, "followerCount:", followerCount, "post_data type:", typeof igRecord?.post_data, "isArray:", Array.isArray(igRecord?.post_data));
-  if (posts.length === 0) return { avgLikes: 0, avgComments: 0, avgViews: 0, engagement: 0, postsPerMonth: 0 };
+function computeFromPostData(rec: Record<string, unknown> | undefined, followerCount: number) {
+  const raw = rec?.post_data;
+  const posts: Record<string, unknown>[] = [];
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (item && typeof item === "object") posts.push(item as Record<string, unknown>);
+    }
+  }
+  if (posts.length === 0) {
+    console.log("[computeFromPostData] No posts found. post_data type:", typeof raw, "isArray:", Array.isArray(raw));
+    return { avgLikes: 0, avgComments: 0, avgViews: 0, engagement: 0, postsPerMonth: 0 };
+  }
 
   let totalLikes = 0;
   let totalComments = 0;
@@ -108,15 +116,16 @@ function computeFromPostData(igRecord: Record<string, unknown> | undefined, foll
   const dates: number[] = [];
 
   for (const p of posts) {
-    const eng = p.engagement as Record<string, unknown> | undefined;
-    if (eng) {
-      totalLikes += Number(eng.likes ?? 0);
-      totalComments += Number(eng.comments ?? 0);
-      const vc = Number(eng.view_count ?? 0);
-      if (vc > 0) {
-        totalViews += vc;
-        videoCount++;
-      }
+    // Support both nested engagement object and flat fields
+    const eng = (p.engagement && typeof p.engagement === "object") ? p.engagement as Record<string, unknown> : p;
+    const likes = Number(eng.likes ?? eng.like_count ?? 0) || 0;
+    const comments = Number(eng.comments ?? eng.comment_count ?? 0) || 0;
+    totalLikes += likes;
+    totalComments += comments;
+    const vc = Number(eng.view_count ?? eng.views ?? eng.play_count ?? 0) || 0;
+    if (vc > 0) {
+      totalViews += vc;
+      videoCount++;
     }
     const d = new Date(p.created_at as string);
     if (!isNaN(d.getTime())) dates.push(d.getTime());
@@ -134,6 +143,7 @@ function computeFromPostData(igRecord: Record<string, unknown> | undefined, foll
     if (daySpan > 0) postsPerMonth = (dates.length / daySpan) * 30;
   }
 
+  console.log("[computeFromPostData]", posts.length, "posts → avgLikes:", Math.round(avgLikes), "avgComments:", Math.round(avgComments), "avgViews:", Math.round(avgViews), "postsPerMonth:", postsPerMonth.toFixed(1), "engagement:", engagement.toFixed(2));
   return { avgLikes, avgComments, avgViews, engagement, postsPerMonth };
 }
 
@@ -471,29 +481,16 @@ export default function CreatorProfileModal({
   const igRecord = ig && typeof ig === "object" ? (ig as Record<string, unknown>) : undefined;
   const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
 
-  // === DEBUG: Log enrichment data shape ===
+  // Log enrichment data shape for debugging
   useEffect(() => {
     if (!enriched) return;
-    console.log("[DEBUG-ENRICH] enriched object keys:", Object.keys(enriched));
-    console.log("[DEBUG-ENRICH] resultTop keys:", Object.keys(resultTop));
-    console.log("[DEBUG-ENRICH] igRecord keys:", igRecord ? Object.keys(igRecord) : "NO igRecord");
-    if (igRecord) {
-      console.log("[DEBUG-ENRICH] igRecord.post_data:", Array.isArray(igRecord.post_data) ? `Array(${(igRecord.post_data as unknown[]).length})` : typeof igRecord.post_data, igRecord.post_data);
-      console.log("[DEBUG-ENRICH] igRecord analytics fields:", {
-        avg_likes: igRecord.avg_likes, avg_like_count: igRecord.avg_like_count, average_likes: igRecord.average_likes,
-        avg_comments: igRecord.avg_comments, avg_comment_count: igRecord.avg_comment_count,
-        avg_views: igRecord.avg_views, avg_view_count: igRecord.avg_view_count, avg_reels_plays: igRecord.avg_reels_plays,
-        media_count: igRecord.media_count, number_of_posts: igRecord.number_of_posts,
-        posting_frequency_recent_months: igRecord.posting_frequency_recent_months, posts_per_month: igRecord.posts_per_month,
-        follower_count: igRecord.follower_count, engagement_percent: igRecord.engagement_percent,
-        reels: igRecord.reels,
-      });
-      // Log first post_data item if present
-      if (Array.isArray(igRecord.post_data) && (igRecord.post_data as unknown[]).length > 0) {
-        console.log("[DEBUG-ENRICH] post_data[0]:", JSON.stringify((igRecord.post_data as unknown[])[0]).substring(0, 500));
-      }
-    }
-  }, [enriched, resultTop, igRecord]);
+    console.log("[Enrich] Data loaded:", {
+      keys: igRecord ? Object.keys(igRecord).length : 0,
+      media_count: igRecord?.media_count,
+      post_data: Array.isArray(igRecord?.post_data) ? (igRecord!.post_data as unknown[]).length + " posts" : "none",
+      follower_count: igRecord?.follower_count,
+    });
+  }, [enriched, igRecord]);
   const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
   const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
   const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
@@ -895,18 +892,31 @@ export default function CreatorProfileModal({
     }
     // RAW endpoint: compute from post_data. FULL endpoint: use direct fields.
     const fc = Number(igRecord?.follower_count ?? creator?.followers ?? 0);
+
+    // Try to compute analytics from post_data (RAW endpoint), then check direct fields (FULL endpoint), then creator card fallbacks
     const computed = computeFromPostData(igRecord, fc);
-    console.log("[DEBUG-STATS] Instagram default — fc:", fc, "computed:", computed, "igRecord?.media_count:", igRecord?.media_count, "igRecord?.number_of_posts:", igRecord?.number_of_posts);
-    return {
-      followers: fc,
-      engagement: Number(igRecord?.engagement_percent ?? igRecord?.engagement_rate ?? 0) || computed.engagement || Number(creator?.engagementRate ?? 0),
-      mediaCount: Number(igRecord?.media_count ?? igRecord?.number_of_posts ?? 0),
-      postsPerMonth: Number(igRecord?.posting_frequency_recent_months ?? igRecord?.posts_per_month ?? igRecord?.posting_frequency ?? 0) || computed.postsPerMonth,
-      avgLikes: Number(igRecord?.avg_likes ?? igRecord?.avg_like_count ?? igRecord?.average_likes ?? 0) || computed.avgLikes,
-      avgComments: Number(igRecord?.avg_comments ?? igRecord?.avg_comment_count ?? igRecord?.average_comments ?? 0) || computed.avgComments,
-      avgSpecial: Number(reelsObj?.avg_like_count ?? reelsObj?.avg_likes ?? igRecord?.avg_reel_likes ?? 0),
-      avgViews: Number(reelsObj?.avg_view_count ?? igRecord?.avg_reels_plays ?? igRecord?.average_reels_plays ?? igRecord?.avg_views ?? igRecord?.avg_view_count ?? 0) || computed.avgViews,
+
+    // Helper: pick first non-zero value
+    const pick = (...vals: (number | undefined | null)[]): number => {
+      for (const v of vals) {
+        const n = Number(v);
+        if (n && isFinite(n) && n > 0) return n;
+      }
+      return 0;
     };
+
+    const result = {
+      followers: fc,
+      engagement: pick(igRecord?.engagement_percent as number, igRecord?.engagement_rate as number, computed.engagement, creator?.engagementRate),
+      mediaCount: pick(igRecord?.media_count as number, igRecord?.number_of_posts as number, creator?.mediaCount),
+      postsPerMonth: pick(igRecord?.posting_frequency_recent_months as number, igRecord?.posts_per_month as number, igRecord?.posting_frequency as number, computed.postsPerMonth, creator?.postsPerMonth),
+      avgLikes: pick(igRecord?.avg_likes as number, igRecord?.avg_like_count as number, igRecord?.average_likes as number, computed.avgLikes, creator?.avgLikes),
+      avgComments: pick(igRecord?.avg_comments as number, igRecord?.avg_comment_count as number, igRecord?.average_comments as number, computed.avgComments, creator?.avgComments),
+      avgSpecial: pick(reelsObj?.avg_like_count as number, reelsObj?.avg_likes as number, igRecord?.avg_reel_likes as number, creator?.avgReelLikes),
+      avgViews: pick(reelsObj?.avg_view_count as number, igRecord?.avg_reels_plays as number, igRecord?.average_reels_plays as number, igRecord?.avg_views as number, igRecord?.avg_view_count as number, computed.avgViews, creator?.avgViews),
+    };
+    console.log("[PlatformStats] IG result:", result, "enriched:", !!igRecord, "post_data:", Array.isArray(igRecord?.post_data) ? (igRecord!.post_data as unknown[]).length : "none");
+    return result;
   }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, reelsObj, creator]);
 
   const statLabels = useMemo(() => {
@@ -1152,7 +1162,7 @@ export default function CreatorProfileModal({
               )}
               {/* DEBUG: remove after fixing analytics */}
               <span className="text-[9px] text-gray-400 font-mono">
-                enriched={enriched ? "YES" : "NO"} ig={igRecord ? `YES(${Object.keys(igRecord).length}keys)` : "NO"} src={enrichmentSource ?? "none"} loading={String(enrichmentLoading)} timedOut={String(enrichmentTimedOut)} mediaCount={String(igRecord?.media_count ?? "undef")} postData={Array.isArray(igRecord?.post_data) ? String((igRecord.post_data as unknown[]).length) : "none"}
+                src={enrichmentSource ?? "none"} ig={igRecord ? Object.keys(igRecord).length + "keys" : "none"} posts={Array.isArray(igRecord?.post_data) ? String((igRecord.post_data as unknown[]).length) : "0"} mc={String(mediaCount)} aL={String(Math.round(avgLikes))} aC={String(Math.round(avgComments))}
               </span>
             </div>
             {detectedBranch && (
