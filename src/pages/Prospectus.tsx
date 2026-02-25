@@ -80,17 +80,94 @@ function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4"; embe
   return null;
 }
 
+/** Returns "video", "image", or "none" for a given tab's media */
+function getMediaType(videoUrl?: string, imageUrl?: string): "video" | "image" | "none" {
+  if (videoUrl && parseVideoEmbed(videoUrl)) return "video";
+  if (imageUrl) return "image";
+  return "none";
+}
+
 function ProspectusMedia({
   videoUrl,
   imageUrl,
   dark,
   isSuperAdmin,
+  onVideoEnded,
 }: {
   videoUrl?: string;
   imageUrl?: string;
   dark: boolean;
   isSuperAdmin: boolean;
+  onVideoEnded?: () => void;
 }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // MP4 ended event
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !onVideoEnded) return;
+    const handler = () => onVideoEnded();
+    el.addEventListener("ended", handler);
+    return () => el.removeEventListener("ended", handler);
+  }, [onVideoEnded]);
+
+  // YouTube postMessage API — listen for state change "ended" (state === 0)
+  useEffect(() => {
+    if (!onVideoEnded || !videoUrl) return;
+    const parsed = parseVideoEmbed(videoUrl);
+    if (!parsed || parsed.type === "mp4") return;
+
+    const handler = (e: MessageEvent) => {
+      try {
+        // YouTube sends JSON with event "onStateChange", info.playerState 0 = ended
+        if (typeof e.data === "string") {
+          const msg = JSON.parse(e.data);
+          if (msg.event === "onStateChange" && msg.info === 0) {
+            onVideoEnded();
+          }
+        }
+        // Vimeo sends JSON with event "ended"
+        if (typeof e.data === "string") {
+          const msg = JSON.parse(e.data);
+          if (msg.event === "ended" || msg.method === "ended") {
+            onVideoEnded();
+          }
+        }
+      } catch {
+        // Not a JSON message, ignore
+      }
+    };
+    window.addEventListener("message", handler);
+
+    // Enable YouTube JS API and Vimeo event listening once iframe loads
+    const iframe = iframeRef.current;
+    if (iframe) {
+      const onLoad = () => {
+        try {
+          if (parsed.type === "youtube") {
+            iframe.contentWindow?.postMessage(
+              JSON.stringify({ event: "listening", id: 1 }),
+              "*"
+            );
+          }
+          if (parsed.type === "vimeo") {
+            iframe.contentWindow?.postMessage(
+              JSON.stringify({ method: "addEventListener", value: "ended" }),
+              "*"
+            );
+          }
+        } catch { /* cross-origin, ignored */ }
+      };
+      iframe.addEventListener("load", onLoad);
+      return () => {
+        window.removeEventListener("message", handler);
+        iframe.removeEventListener("load", onLoad);
+      };
+    }
+    return () => window.removeEventListener("message", handler);
+  }, [onVideoEnded, videoUrl]);
+
   // Priority 1: Video
   if (videoUrl) {
     const parsed = parseVideoEmbed(videoUrl);
@@ -98,6 +175,7 @@ function ProspectusMedia({
       if (parsed.type === "mp4") {
         return (
           <video
+            ref={videoRef}
             src={parsed.embedUrl}
             controls
             className="w-full aspect-video rounded-xl bg-black"
@@ -105,9 +183,18 @@ function ProspectusMedia({
           />
         );
       }
+      // For YouTube, enable JS API; for Vimeo, enable API
+      let embedSrc = parsed.embedUrl;
+      if (parsed.type === "youtube") {
+        embedSrc += (embedSrc.includes("?") ? "&" : "?") + "enablejsapi=1&origin=" + window.location.origin;
+      }
+      if (parsed.type === "vimeo") {
+        embedSrc += (embedSrc.includes("?") ? "&" : "?") + "api=1";
+      }
       return (
         <iframe
-          src={parsed.embedUrl}
+          ref={iframeRef}
+          src={embedSrc}
           title="Video"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -876,7 +963,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean }) {
+function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean; onVideoEnded?: () => void }) {
   const saasTotal = SAAS_ROWS.reduce((s, r) => s + r.cost, 0);
 
   return (
@@ -905,7 +992,7 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin }: { dark: boolean
       </section>
 
       <div className="max-w-3xl mx-auto" style={{ margin: "24px auto" }}>
-        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={isSuperAdmin} />
+        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={isSuperAdmin} onVideoEnded={onVideoEnded} />
       </div>
 
       {/* Origin Story */}
@@ -1985,6 +2072,12 @@ export default function Prospectus() {
   const [tabContent, setTabContent] = useState<Record<string, TabContent>>({});
   const [manageOpen, setManageOpen] = useState(false);
 
+  // Tab gating: track which tabs are unlocked (by index). Index 0 always unlocked.
+  const [unlockedUpTo, setUnlockedUpTo] = useState(0);
+  const [justUnlocked, setJustUnlocked] = useState<number | null>(null);
+  const [lockedTooltip, setLockedTooltip] = useState<string | null>(null);
+  const imageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { isSuperAdmin } = useAuth();
 
   const darkMode =
@@ -2054,6 +2147,59 @@ export default function Prospectus() {
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  // Super admin bypasses gating — unlock all tabs
+  useEffect(() => {
+    if (isSuperAdmin) setUnlockedUpTo(TABS.length - 1);
+  }, [isSuperAdmin]);
+
+  /** Unlock the next tab after the current one */
+  const unlockNextTab = () => {
+    const currentIdx = TABS.indexOf(activeTab);
+    if (currentIdx >= 0 && currentIdx === unlockedUpTo && currentIdx < TABS.length - 1) {
+      const next = currentIdx + 1;
+      setUnlockedUpTo(next);
+      setJustUnlocked(next);
+      setTimeout(() => setJustUnlocked(null), 2000);
+    }
+  };
+
+  // Image fallback: start a 10-second timer when viewing a tab with only an image
+  // No-media: unlock immediately when navigating to a tab with no media
+  useEffect(() => {
+    // Clear previous timer
+    if (imageTimerRef.current) {
+      clearTimeout(imageTimerRef.current);
+      imageTimerRef.current = null;
+    }
+
+    // Super admin already unlocked
+    if (isSuperAdmin) return;
+
+    const currentIdx = TABS.indexOf(activeTab);
+    // Only run gating logic if this tab is the frontier (the one we need to watch to unlock next)
+    if (currentIdx !== unlockedUpTo || currentIdx >= TABS.length - 1) return;
+
+    const mediaType = getMediaType(videoUrls[activeTab], imageUrls[activeTab]);
+
+    if (mediaType === "none") {
+      // No media at all — unlock next tab immediately
+      unlockNextTab();
+    } else if (mediaType === "image") {
+      // Image only — unlock after 10 seconds
+      imageTimerRef.current = setTimeout(() => {
+        unlockNextTab();
+      }, 10_000);
+    }
+    // If video, user must watch to the end (handled by onVideoEnded callback)
+
+    return () => {
+      if (imageTimerRef.current) {
+        clearTimeout(imageTimerRef.current);
+        imageTimerRef.current = null;
+      }
+    };
+  }, [activeTab, unlockedUpTo, videoUrls, imageUrls, isSuperAdmin]);
 
   if (!hasAccess) {
     return <AccessGate onAccess={() => setHasAccess(true)} />;
@@ -2198,29 +2344,73 @@ export default function Prospectus() {
         {/* Tab navigation */}
         <div className="max-w-6xl mx-auto px-4 md:px-8 pb-3 overflow-x-auto">
           <div className="flex items-center gap-1.5 min-w-max">
-            {TABS.map((tab) => {
+            {TABS.map((tab, idx) => {
               const isFinancials = tab === "Financial Model";
+              const isLocked = idx > unlockedUpTo;
+              const isJustUnlocked = idx === justUnlocked;
+              const isActive = activeTab === tab;
+
               return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300",
-                    isFinancials
-                      ? activeTab === tab
-                        ? "bg-[#1e3a5f] text-white shadow-lg shadow-[#1e3a5f]/30"
-                        : "bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-md shadow-[#1e3a5f]/20"
-                      : activeTab === tab
-                        ? "bg-[#1e3a5f] text-white"
-                        : darkMode
-                          ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
-                          : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
+                <div key={tab} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isLocked) {
+                        setLockedTooltip(tab);
+                        setTimeout(() => setLockedTooltip(null), 2000);
+                        return;
+                      }
+                      setActiveTab(tab);
+                    }}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center gap-1.5",
+                      isLocked
+                        ? "opacity-40 cursor-not-allowed"
+                        : isJustUnlocked
+                          ? "animate-[unlockPulse_0.6s_ease-out]"
+                          : "",
+                      !isLocked && (
+                        isFinancials
+                          ? isActive
+                            ? "bg-[#1e3a5f] text-white shadow-lg shadow-[#1e3a5f]/30"
+                            : "bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-md shadow-[#1e3a5f]/20"
+                          : isActive
+                            ? "bg-[#1e3a5f] text-white"
+                            : darkMode
+                              ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
+                              : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
+                      ),
+                      isLocked && (
+                        darkMode
+                          ? "text-gray-600"
+                          : "text-gray-400"
+                      )
+                    )}
+                  >
+                    {isFinancials && !isLocked && <DollarSign className="h-3.5 w-3.5 -mt-0.5" />}
+                    {isLocked && <Lock className="h-3 w-3" />}
+                    {TAB_LABELS[tab]}
+                  </button>
+                  {/* Locked tooltip */}
+                  {lockedTooltip === tab && (
+                    <div
+                      className={cn(
+                        "absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap z-50 shadow-lg",
+                        darkMode
+                          ? "bg-white/10 text-gray-300 border border-white/10"
+                          : "bg-gray-800 text-white"
+                      )}
+                    >
+                      Watch the current video to unlock
+                      <div
+                        className={cn(
+                          "absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45",
+                          darkMode ? "bg-white/10 border-l border-t border-white/10" : "bg-gray-800"
+                        )}
+                      />
+                    </div>
                   )}
-                >
-                  {isFinancials && <DollarSign className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />}
-                  {TAB_LABELS[tab]}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -2232,11 +2422,17 @@ export default function Prospectus() {
         {/* Tab media — rendered above content for non-Overview tabs */}
         {activeTab !== "Overview" && (videoUrls[activeTab] || imageUrls[activeTab] || isSuperAdmin) && (
           <div className="mb-8">
-            <ProspectusMedia videoUrl={videoUrls[activeTab]} imageUrl={imageUrls[activeTab]} dark={darkMode} isSuperAdmin={!!isSuperAdmin} />
+            <ProspectusMedia
+              videoUrl={videoUrls[activeTab]}
+              imageUrl={imageUrls[activeTab]}
+              dark={darkMode}
+              isSuperAdmin={!!isSuperAdmin}
+              onVideoEnded={unlockNextTab}
+            />
           </div>
         )}
 
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} onVideoEnded={unlockNextTab} />}
         {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} />}
         {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} />}
         {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} />}
@@ -2279,6 +2475,15 @@ export default function Prospectus() {
           dark={darkMode}
         />
       )}
+
+      {/* Unlock pulse animation */}
+      <style>{`
+        @keyframes unlockPulse {
+          0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); transform: scale(1); }
+          50% { box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.3); transform: scale(1.05); }
+          100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
