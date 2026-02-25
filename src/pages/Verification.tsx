@@ -81,6 +81,7 @@ import {
   filterCriminalResults,
   detectBranch,
   generateDossierNarrative,
+  runVerificationAnalysis,
   extractCareerTimeline,
   extractCareerFromAIAnalysis,
   searchYouTube,
@@ -3008,6 +3009,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [regenSocial, setRegenSocial] = useState(false);
   const [regenMedia, setRegenMedia] = useState(false);
   const [regenBackground, setRegenBackground] = useState(false);
+  const [regenAI, setRegenAI] = useState(false);
 
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
   const redFlags = (record.red_flags ?? []) as RedFlag[];
@@ -3212,6 +3214,40 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
       console.error("[RegenBackground]", err);
     } finally {
       setRegenBackground(false);
+    }
+  };
+
+  // Retry AI Analysis — re-runs the main Claude analysis with retry logic
+  const handleRetryAIAnalysis = async () => {
+    setRegenAI(true);
+    try {
+      const sources = (record.evidence_sources ?? []) as EvidenceSource[];
+      const firecrawlData = (record.firecrawl_data ?? []) as { url: string; markdown?: string }[];
+      const mc = ((record as any).manual_checks ?? {}) as Record<string, unknown>;
+      const result = await runVerificationAnalysis({
+        personName: record.person_name,
+        claimedStatus: record.claimed_status ?? "Veteran",
+        claimedBranch: record.claimed_branch ?? "Unknown",
+        claimedType: record.claimed_type ?? "",
+        pdlData: record.pdl_data,
+        serpResults: sources,
+        firecrawlExtractions: firecrawlData,
+        mediaAppearances: mc.youtube_media ?? undefined,
+        careerData: mc.career_track ?? undefined,
+        socialProfiles: mc.social_profiles ?? undefined,
+      });
+      if (result && result !== "pending_retry") {
+        await supabase.from("verifications").update({ ai_analysis: result }).eq("id", record.id);
+        toast.success("AI analysis completed successfully");
+        onRefresh?.();
+      } else {
+        toast.error("AI analysis still failing — Anthropic may be overloaded. Try again in a few minutes.");
+      }
+    } catch (err) {
+      toast.error("AI analysis retry failed");
+      console.error("[RetryAIAnalysis]", err);
+    } finally {
+      setRegenAI(false);
     }
   };
 
@@ -3637,9 +3673,19 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
-          <StatusDot status={record.ai_analysis ? 'green' : 'red'} />
+          <StatusDot status={record.ai_analysis && record.ai_analysis !== "pending_retry" && !record.ai_analysis.startsWith("Analysis failed") ? 'green' : 'red'} />
+          {(!record.ai_analysis || record.ai_analysis === "pending_retry" || record.ai_analysis.startsWith("Analysis failed")) && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleRetryAIAnalysis(); }}
+              disabled={regenAI}
+              className="ml-auto flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 disabled:opacity-50"
+            >
+              {regenAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Retry AI Analysis
+            </button>
+          )}
         </button>
-        {summaryOpen && <div className="ml-6 mt-4 mb-2"><IntelligenceSummary record={record} /></div>}
+        {summaryOpen && <div className="ml-6 mt-4 mb-2"><IntelligenceSummary record={record} onRetryAI={handleRetryAIAnalysis} retryingAI={regenAI} /></div>}
       </section>
 
       {/* ── 3. EVIDENCE SOURCES — accordion ── */}
@@ -3852,7 +3898,7 @@ function EvidenceAccordionGroup({ category, sources }: { category: string; sourc
 }
 
 /** AI Intelligence Summary — auto-generates a unified narrative dossier from all evidence */
-function IntelligenceSummary({ record }: { record: VerificationRecord }) {
+function IntelligenceSummary({ record, onRetryAI, retryingAI }: { record: VerificationRecord; onRetryAI?: () => void; retryingAI?: boolean }) {
   const { user } = useAuth();
   const [narrative, setNarrative] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -3952,8 +3998,28 @@ function IntelligenceSummary({ record }: { record: VerificationRecord }) {
     );
   }
 
+  const aiFailed = !record.ai_analysis || record.ai_analysis === "pending_retry" || record.ai_analysis.startsWith("Analysis failed");
+
   if (!narrative) {
-    // Show AI analysis fallback or prompt to generate
+    // AI analysis failed or pending — show retry prompt
+    if (aiFailed) {
+      return (
+        <Card className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 pl-6 pr-10">
+          <CardContent className="py-6 text-center">
+            <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">AI analysis failed — Anthropic API was overloaded</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+              {record.verification_score ? `Score: ${record.verification_score}% with ${((record.evidence_sources ?? []) as unknown[]).length} sources collected` : "Evidence was collected but AI couldn't process it"}.
+              Click retry to re-run the analysis.
+            </p>
+            <Button onClick={onRetryAI} disabled={retryingAI} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {retryingAI ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Retrying...</> : <><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Retry AI Analysis</>}
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    // Has ai_analysis text — show it as fallback
     if (record.ai_analysis) {
       return (
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">

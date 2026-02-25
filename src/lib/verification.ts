@@ -273,24 +273,18 @@ Provide:
 Remember: Most veterans are telling the truth. Give them the benefit of the doubt.`;
 
   try {
-    const res = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: anthropicHeaders(),
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: [{ role: "user", content: "Please perform the verification analysis and provide your assessment." }],
-      }),
+    const { json: data } = await fetchAnthropicWithRetry({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [{ role: "user", content: "Please perform the verification analysis and provide your assessment." }],
     });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
-    const data = await res.json();
-    const text = data.content?.[0]?.text ?? "";
+    const text = (data as any).content?.[0]?.text ?? "";
     const out = (text ?? "").trim();
     return out ? out : "No analysis generated.";
   } catch (e) {
-    console.error("[Verification] Claude error:", e);
-    return `Analysis failed: ${(e as Error).message}`;
+    console.error("[Verification] Claude error after all retries:", e);
+    return "pending_retry";
   }
 }
 
@@ -342,18 +336,12 @@ Be CONSERVATIVE with flagging — if you can't confirm it's the same person, mar
 Return ONLY the JSON object, no markdown formatting.`;
 
   try {
-    const res = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: anthropicHeaders(),
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const { json: data } = await fetchAnthropicWithRetry({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
     });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
-    const data = await res.json();
-    const text = (data.content?.[0]?.text ?? "").trim();
+    const text = ((data as any).content?.[0]?.text ?? "").trim();
     // Strip markdown code fences if present
     const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
     const parsed = JSON.parse(jsonStr);
@@ -934,18 +922,12 @@ AI Analysis:
 ${params.aiAnalysis.slice(0, 2000)}`;
 
   try {
-    const res = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: anthropicHeaders(),
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const { json: data } = await fetchAnthropicWithRetry({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
     });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
-    const data = await res.json();
-    const raw = (data.content?.[0]?.text ?? "").trim();
+    const raw = ((data as any).content?.[0]?.text ?? "").trim();
 
     const DOSSIER_HEADERS = [
       "Executive Summary",
@@ -1074,8 +1056,9 @@ function parseCareerJson(text: string): EnhancedCareerResult {
   };
 }
 
-// Helper: call Anthropic with retry logic (3 attempts, exponential backoff)
-async function fetchAnthropicWithRetry(body: Record<string, unknown>, maxAttempts = 3): Promise<{ ok: boolean; status: number; json: unknown }> {
+// Helper: call Anthropic with aggressive retry logic (4 attempts: immediate, 5s, 15s, 30s)
+const ANTHROPIC_RETRY_DELAYS = [0, 5000, 15000, 30000]; // ms before each attempt
+async function fetchAnthropicWithRetry(body: Record<string, unknown>, maxAttempts = 4): Promise<{ ok: boolean; status: number; json: unknown }> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const res = await fetch(ANTHROPIC_URL, {
@@ -1089,16 +1072,16 @@ async function fetchAnthropicWithRetry(body: Record<string, unknown>, maxAttempt
       }
       // Retry on 429 (rate limit) and 529 (overloaded)
       if ((res.status === 429 || res.status === 529) && attempt < maxAttempts) {
-        const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
-        console.warn(`[Anthropic] ${res.status} on attempt ${attempt}/${maxAttempts}, retrying in ${delay}ms...`);
+        const delay = ANTHROPIC_RETRY_DELAYS[attempt] ?? 30000;
+        console.warn(`[Anthropic] ${res.status} on attempt ${attempt}/${maxAttempts}, retrying in ${delay / 1000}s...`);
         await new Promise((r) => setTimeout(r, delay));
         continue;
       }
       throw new Error(`Anthropic ${res.status}`);
     } catch (err) {
       if (attempt >= maxAttempts) throw err;
-      const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
-      console.warn(`[Anthropic] Error on attempt ${attempt}/${maxAttempts}:`, err, `retrying in ${delay}ms...`);
+      const delay = ANTHROPIC_RETRY_DELAYS[attempt] ?? 30000;
+      console.warn(`[Anthropic] Error on attempt ${attempt}/${maxAttempts}:`, err, `retrying in ${delay / 1000}s...`);
       await new Promise((r) => setTimeout(r, delay));
     }
   }
