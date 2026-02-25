@@ -36,6 +36,8 @@ import {
   X,
   Facebook,
   Music,
+  Check,
+  Mail,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import {
@@ -159,6 +161,44 @@ function formatNum(n: number): string {
   return formatNumber(n);
 }
 
+/* ── Enrichment cache (Supabase) ── */
+const ENRICH_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function getEnrichCache(handle: string, platform: string): Promise<EnrichedProfileResponse | null> {
+  try {
+    const { data } = await supabase
+      .from("creator_enrichment_cache")
+      .select("enrichment_data, cached_at")
+      .eq("username", handle.toLowerCase())
+      .eq("platform", platform)
+      .single();
+    if (!data) return null;
+    const cachedAt = new Date(data.cached_at).getTime();
+    if (Date.now() - cachedAt > ENRICH_CACHE_TTL_MS) return null;
+    return data.enrichment_data as EnrichedProfileResponse;
+  } catch {
+    return null;
+  }
+}
+
+async function setEnrichCache(handle: string, platform: string, enrichment: EnrichedProfileResponse): Promise<void> {
+  try {
+    await supabase
+      .from("creator_enrichment_cache")
+      .upsert(
+        {
+          username: handle.toLowerCase(),
+          platform,
+          enrichment_data: enrichment,
+          cached_at: new Date().toISOString(),
+        },
+        { onConflict: "username" },
+      );
+  } catch (err) {
+    console.warn("[Enrich] Cache write failed:", err);
+  }
+}
+
 interface CreatorProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -209,6 +249,7 @@ export default function CreatorProfileModal({
   const [enriched, setEnriched] = useState<EnrichedProfileResponse | null>(null);
   const [enrichmentLoading, setEnrichmentLoading] = useState(false);
   const [enrichmentTimedOut, setEnrichmentTimedOut] = useState(false);
+  const [enrichmentSource, setEnrichmentSource] = useState<"cache" | "api" | "prop" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
@@ -326,6 +367,7 @@ export default function CreatorProfileModal({
       setEnrichmentTimedOut(false);
       setSelectedPlatform("instagram");
       setEnrichmentLoading(false);
+      setEnrichmentSource(null);
       return;
     }
     const rawHandle = creator.username || username;
@@ -339,10 +381,11 @@ export default function CreatorProfileModal({
 
     // Use cached enrichment from background enrichment if available
     if (cachedEnrichment) {
-      console.log("[Enrich] Using cached enrichment for:", handle);
+      console.log("[Enrich] Using prop-cached enrichment for:", handle);
       setEnriched(cachedEnrichment);
       setEnrichmentLoading(false);
       setError(null);
+      setEnrichmentSource("prop");
       return;
     }
 
@@ -360,30 +403,47 @@ export default function CreatorProfileModal({
     setEnrichmentTimedOut(false);
     setEnrichmentLoading(true);
 
-    const timeoutId = setTimeout(() => {
-      console.log("[Enrich] TIMEOUT: Aborting after 45 seconds");
-      controller.abort();
-    }, 45000);
+    const platform = "instagram";
 
-    enrichCreatorProfile(handle, controller.signal)
-      .then((payload) => {
+    // Check Supabase cache first, then fall back to IC API
+    (async () => {
+      // 1. Check Supabase cache
+      const cached = await getEnrichCache(handle, platform);
+      if (cancelledRef.current || generationRef.current !== gen) return;
+
+      if (cached) {
+        console.log("[Enrich] Supabase cache hit for:", handle);
+        setEnriched(cached);
+        setEnrichmentLoading(false);
+        setEnrichmentSource("cache");
+        return;
+      }
+
+      // 2. Cache miss — call IC API (0.03 credits)
+      console.log("[Enrich] Cache miss, calling IC API for:", handle);
+      const timeoutId = setTimeout(() => {
+        console.log("[Enrich] TIMEOUT: Aborting after 45 seconds");
+        controller.abort();
+      }, 45000);
+
+      try {
+        const payload = await enrichCreatorProfile(handle, controller.signal);
         clearTimeout(timeoutId);
-        if (cancelledRef.current || generationRef.current !== gen) {
-          console.log("[Enrich] SKIPPED state update — cancelled or superseded", { cancelled: cancelledRef.current, gen, current: generationRef.current });
-          return;
-        }
+        if (cancelledRef.current || generationRef.current !== gen) return;
         setEnrichmentLoading(false);
         setEnriched(payload);
         setError(null);
-      })
-      .catch((err) => {
-        clearTimeout(timeoutId);
-        if (cancelledRef.current || generationRef.current !== gen) {
-          console.log("[Enrich] SKIPPED catch — cancelled or superseded");
-          return;
+        setEnrichmentSource("api");
+
+        // 3. Save to Supabase cache for future lookups
+        if (payload) {
+          setEnrichCache(handle, platform, payload);
         }
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (cancelledRef.current || generationRef.current !== gen) return;
         setEnrichmentLoading(false);
-        if (err?.name === "AbortError") {
+        if ((err as Error)?.name === "AbortError") {
           setEnriched(null);
           setEnrichmentTimedOut(true);
           console.log("[Enrich] Request aborted (timeout or modal closed)");
@@ -392,11 +452,11 @@ export default function CreatorProfileModal({
           setEnriched(null);
           setEnrichmentTimedOut(true);
         }
-      });
+      }
+    })();
 
     return () => {
       cancelledRef.current = true;
-      clearTimeout(timeoutId);
       controllerRef.current?.abort();
       controllerRef.current = null;
       // Do NOT set generationRef.current = 0 — it causes the winning request's .then to see gen !== ref and skip setEnriched (e.g. after Strict Mode first cleanup)
@@ -756,6 +816,16 @@ export default function CreatorProfileModal({
     "";
   const languageCode = Array.isArray(igRecord?.language_code) && igRecord.language_code?.length ? String(igRecord.language_code[0]) : (resultTop.speaking_language as string) ?? "";
   const language = languageCode === "en" ? "English" : languageCode || "";
+  const enrichedEmail = useMemo(() => {
+    const e = resultTop.email as string | undefined;
+    if (e) return e;
+    const emails = resultTop.emails as string[] | undefined;
+    if (Array.isArray(emails) && emails.length > 0) return emails[0];
+    const igEmail = igRecord?.public_email as string | undefined;
+    if (igEmail) return igEmail;
+    return null;
+  }, [resultTop.email, resultTop.emails, igRecord?.public_email]);
+
   const nicheClass = igRecord?.niche_class as string[] | undefined;
   const category =
     (igRecord?.category as string) ?? (Array.isArray(nicheClass) && nicheClass.length ? nicheClass.join(", ") : "") ?? "";
@@ -1042,6 +1112,19 @@ export default function CreatorProfileModal({
                 @{displayUsername}
               </a>
             )}
+            {/* Enrichment status badge */}
+            <div className="flex justify-center mb-2">
+              {showEnrichmentLoading && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Enriching… (0.03 credits)
+                </span>
+              )}
+              {enrichmentSource === "cache" && !showEnrichmentLoading && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                  <Check className="h-3 w-3" /> Cached
+                </span>
+              )}
+            </div>
             {detectedBranch && (
               <div className="flex flex-wrap gap-1.5 mb-4">
                 <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold", BRANCH_STYLES[detectedBranch] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400")}>
@@ -1294,9 +1377,9 @@ export default function CreatorProfileModal({
                 <div key={label} className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">{label}</span>
                   {showEnrichmentLoading && !value ? (
-                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-16 animate-pulse" />
                   ) : (
-                    <span className="font-semibold text-gray-900 dark:text-white">{value ?? "—"}</span>
+                    <span className={cn("font-semibold text-gray-900 dark:text-white transition-opacity duration-500", value ? "opacity-100" : "opacity-60")}>{value ?? "—"}</span>
                   )}
                 </div>
               ))}
@@ -1415,7 +1498,18 @@ export default function CreatorProfileModal({
                         <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{category || "—"}</p>
                       )}
                     </div>
-                    <div />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Email</p>
+                      {showEnrichmentLoading && !enrichedEmail ? (
+                        <Skeleton className="h-4 w-32 mt-1" />
+                      ) : enrichedEmail ? (
+                        <a href={`mailto:${enrichedEmail}`} className="text-sm text-[#1e3a5f] hover:underline mt-1 flex items-center gap-1">
+                          <Mail className="h-3.5 w-3.5 shrink-0" /> {enrichedEmail}
+                        </a>
+                      ) : (
+                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">—</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
