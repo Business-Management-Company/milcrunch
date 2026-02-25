@@ -306,16 +306,25 @@ export async function filterCriminalResults(params: {
 }): Promise<{
   filtered: AIFilteredCriminalResult[];
   summary: string;
+  ai_failed?: boolean;
 }> {
-  const prompt = `You are filtering criminal/background search results for a specific person. The subject is: ${params.personName}, claimed military branch: ${params.claimedBranch}, location context: ${params.locationContext || "unknown"}.
+  const prompt = `You are filtering criminal/background search results for a specific person.
+Subject: "${params.personName}", claimed military branch: ${params.claimedBranch}, location context: ${params.locationContext || "unknown"}.
 
 Here are the search results to analyze:
 ${JSON.stringify(params.results, null, 2)}
 
-For each search result, determine:
-- RELEVANCE: Is this result likely about the SAME person, or a different person with a similar name? Consider location, age, context clues.
-- CONCERN_LEVEL: none, low, medium, high
-- REASONING: Brief explanation
+For EACH result, determine:
+1. NAME MATCH: Is this result about the SAME "${params.personName}", or a DIFFERENT person who happens to share a similar name? Compare the full name carefully. If the result mentions a different first name, middle name, age, or location that doesn't match, it is likely a different person — mark relevance_score below 20.
+2. CONCERN_LEVEL: none, low, medium, high
+3. REASONING: Brief explanation
+
+IMPORTANT RULES:
+- Generic mentions of military documents (DD-214, VA benefits, GI Bill, military records) are NOT red flags unless they specifically indicate fraud or falsification by this person.
+- Educational or informational content about military processes is NOT a red flag.
+- Results about a DIFFERENT person with a similar name must get relevance_score below 20 and concern_level "none".
+- Only mark concern_level "high" if you are confident the result is about THIS specific person AND indicates stolen valor, fraud, or criminal activity.
+- Be CONSERVATIVE: when in doubt, mark relevance as low and concern as none.
 
 Return a JSON object with this exact structure:
 {
@@ -332,7 +341,6 @@ Return a JSON object with this exact structure:
   "summary": "Based on analysis, X of Y results appear to be about a different person. Recommended confidence in criminal findings: Z%"
 }
 
-Be CONSERVATIVE with flagging — if you can't confirm it's the same person, mark relevance as low.
 Return ONLY the JSON object, no markdown formatting.`;
 
   try {
@@ -358,14 +366,11 @@ Return ONLY the JSON object, no markdown formatting.`;
     };
   } catch (e) {
     console.error("[Verification] Criminal filter AI error:", e);
+    // Do NOT return unfiltered results as concerns — return empty with failure flag
     return {
-      filtered: params.results.map((r) => ({
-        ...r,
-        relevance_score: 50,
-        concern_level: "low" as const,
-        reasoning: "AI filtering failed",
-      })),
-      summary: "AI filtering failed — showing unfiltered results.",
+      filtered: [],
+      summary: "Background review incomplete — AI analysis unavailable.",
+      ai_failed: true,
     };
   }
 }

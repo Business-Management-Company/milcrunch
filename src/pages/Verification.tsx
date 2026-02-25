@@ -1872,6 +1872,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
   const [aiFiltering, setAiFiltering] = useState(false);
   const [aiResults, setAiResults] = useState<AIFilteredCriminalResult[]>([]);
   const [aiSummary, setAiSummary] = useState("");
+  const [aiFailed, setAiFailed] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [lastReviewedAt, setLastReviewedAt] = useState<string | null>(null);
   const VISIBLE_COUNT = 5;
@@ -1884,23 +1885,24 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     (async () => {
       const { data } = await supabase.from("verifications").select("manual_checks").eq("id", recordId).single();
       const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
-      const saved = checks.background_review as { results?: AIFilteredCriminalResult[]; summary?: string; reviewed_at?: string } | undefined;
+      const saved = checks.background_review as { results?: AIFilteredCriminalResult[]; summary?: string; reviewed_at?: string; ai_failed?: boolean } | undefined;
       if (saved?.results?.length || saved?.summary) {
         setAiResults((saved.results ?? []) as AIFilteredCriminalResult[]);
         setAiSummary((saved.summary ?? "") as string);
         setLastReviewedAt((saved.reviewed_at ?? null) as string | null);
+        setAiFailed(!!saved.ai_failed);
         setHasSearched(true);
       }
       setDbLoaded(true);
     })();
   }, [recordId]);
 
-  const saveResults = async (results: AIFilteredCriminalResult[], summary: string) => {
+  const saveResults = async (results: AIFilteredCriminalResult[], summary: string, failed = false) => {
     const { data } = await supabase.from("verifications").select("manual_checks").eq("id", recordId).single();
     const existing = (data?.manual_checks ?? {}) as Record<string, unknown>;
     const now = new Date().toISOString();
     const { error: bgSaveError } = await supabase.from("verifications").update({
-      manual_checks: { ...existing, background_review: { results, summary, reviewed_at: now } },
+      manual_checks: { ...existing, background_review: { results, summary, reviewed_at: now, ai_failed: failed } },
     }).eq("id", recordId);
     if (bgSaveError) console.error('BACKGROUND REVIEW SAVE FAILED:', bgSaveError);
     else console.log('BACKGROUND REVIEW SAVED OK —', recordId, '|', results.length, 'results');
@@ -1911,6 +1913,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     setSearching(true);
     setAiResults([]);
     setAiSummary("");
+    setAiFailed(false);
     setShowAll(false);
     try {
       const locSuffix = locationContext ? ` ${locationContext}` : "";
@@ -1947,7 +1950,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
       // AI filtering
       setAiFiltering(true);
       try {
-        const { filtered, summary } = await filterCriminalResults({
+        const { filtered, summary, ai_failed } = await filterCriminalResults({
           personName,
           claimedBranch: claimedBranch ?? "Unknown",
           locationContext: locationContext ?? "",
@@ -1955,7 +1958,8 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
         });
         setAiResults(filtered);
         setAiSummary(summary);
-        await saveResults(filtered, summary);
+        setAiFailed(!!ai_failed);
+        await saveResults(filtered, summary, !!ai_failed);
       } finally {
         setAiFiltering(false);
       }
@@ -2018,6 +2022,12 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
           )}
 
           {!aiFiltering && !searching && hasSearched && (() => {
+            if (aiFailed) return (
+              <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Background review incomplete — AI analysis unavailable. Click Re-run Background Review to retry.</p>
+              </div>
+            );
             const status = getSummaryStatus();
             if (status === "clear") return (
               <div className="flex items-center gap-2.5 py-3 px-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-800">
@@ -2039,7 +2049,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
             );
           })()}
 
-          {!aiFiltering && !searching && visibleResults.length > 0 && (
+          {!aiFiltering && !searching && !aiFailed && visibleResults.length > 0 && (
             <div className="space-y-2.5">
               {visibleResults.map((r, i) => (
                 <Card key={i} className="rounded-xl border border-gray-200 dark:border-gray-800 pl-6 pr-10">
