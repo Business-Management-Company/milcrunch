@@ -261,6 +261,18 @@ const CONTENT_TABS = TABS.filter(
   (t) => t !== "Overview" && t !== "Financial Model"
 );
 
+const DEMO_LINK_PRESETS = [
+  { label: "Discovery", url: "/brand/discover" },
+  { label: "Verification", url: "/verification" },
+  { label: "Speakers", url: "/speakers" },
+  { label: "Email Campaigns", url: "/campaigns" },
+  { label: "Dashboard", url: "/summary" },
+  { label: "Lists", url: "/lists" },
+  { label: "Events", url: "/events" },
+] as const;
+
+const PRESET_URLS = new Set(DEMO_LINK_PRESETS.map((p) => p.url));
+
 function ManageContentPanel({
   open,
   onClose,
@@ -298,6 +310,7 @@ function ManageContentPanel({
   // --- Content state ---
   const [contentDraft, setContentDraft] = useState<Record<string, TabContent>>({});
   const [contentSaving, setContentSaving] = useState(false);
+  const [customDemoSections, setCustomDemoSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
@@ -999,14 +1012,51 @@ function ManageContentPanel({
                       )}
 
                       {/* Demo link */}
-                      <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Demo Link (opens in modal)</label>
-                      <input
-                        type="text"
-                        placeholder="/events/mil-con-2026?tab=gtm-planner"
-                        value={section.demo_url || ""}
-                        onChange={(e) => updateSection(tab, idx, "demo_url", e.target.value)}
-                        className={cn(inputCls, "text-xs")}
-                      />
+                      {(() => {
+                        const sectionKey = `${tab}-${idx}`;
+                        const isPreset = !!section.demo_url && PRESET_URLS.has(section.demo_url);
+                        const isCustom = customDemoSections.has(sectionKey) || (!!section.demo_url && !isPreset);
+                        const selectValue = !section.demo_url && !isCustom ? "" : isPreset ? section.demo_url : "__custom__";
+                        return (
+                          <>
+                            <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Demo Link (opens in modal)</label>
+                            <select
+                              value={selectValue}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "__custom__") {
+                                  setCustomDemoSections((prev) => new Set(prev).add(sectionKey));
+                                  updateSection(tab, idx, "demo_url", "");
+                                } else {
+                                  setCustomDemoSections((prev) => { const next = new Set(prev); next.delete(sectionKey); return next; });
+                                  updateSection(tab, idx, "demo_url", val);
+                                }
+                              }}
+                              className={cn(inputCls, "text-xs")}
+                            >
+                              <option value="">— None —</option>
+                              {DEMO_LINK_PRESETS.map((p) => (
+                                <option key={p.url} value={p.url}>{p.label}</option>
+                              ))}
+                              <option value="__custom__">(Custom URL)</option>
+                            </select>
+                            {isCustom && (
+                              <input
+                                type="text"
+                                placeholder="/events/mil-con-2026?tab=gtm-planner"
+                                value={section.demo_url || ""}
+                                onChange={(e) => updateSection(tab, idx, "demo_url", e.target.value)}
+                                className={cn(inputCls, "text-xs mt-1")}
+                              />
+                            )}
+                            {section.demo_url && (
+                              <p className={cn("text-[10px] mt-0.5", dark ? "text-gray-600" : "text-gray-400")}>
+                                Opens: {section.demo_url}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
