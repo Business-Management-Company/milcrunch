@@ -52,7 +52,7 @@ export const KB_CATEGORIES: KbCategory[] = [
   },
   {
     slug: "streaming-media",
-    label: "Streaming & Media",
+    label: "Streaming/Media",
     emoji: "\uD83D\uDCE1",
     description:
       "Multi-platform streaming, AI clip generation, and content repurposing.",

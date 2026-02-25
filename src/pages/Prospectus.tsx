@@ -24,7 +24,7 @@ const TABS = [
   "Discovery",
   "Verification",
   "365 Insights",
-  "Streaming & Media",
+  "Streaming/Media",
   "Partnership Model",
   "Financial Model",
 ] as const;
@@ -39,7 +39,7 @@ const TAB_LABELS: Record<TabId, string> = {
   "Discovery": "Discovery",
   "Verification": "Verification",
   "365 Insights": "365 Insights",
-  "Streaming & Media": "Streaming",
+  "Streaming/Media": "Streaming",
   "Partnership Model": "Partnership",
   "Financial Model": "Financials",
 };
@@ -60,7 +60,7 @@ const TAB_KB_CATEGORY: Record<string, string> = {
   "MilCrunch Experience": "events-pdx",
   "Discovery": "creator-network",
   "365 Insights": "365-insights",
-  "Streaming & Media": "streaming-media",
+  "Streaming/Media": "streaming-media",
   "Partnership Model": "sponsorship-revenue",
 };
 
@@ -1579,6 +1579,7 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
 interface TabContent {
   headline: string;
   headlineAccent?: string;
+  heroImage?: string;
   description: string;
   sections: { heading: string; items: string[] }[];
   bottomNote?: { heading: string; text: string };
@@ -1704,9 +1705,10 @@ const TAB_CONTENT: Record<string, TabContent> = {
       text: "Know which creators are trending, which niches are growing, and where to invest your marketing budget before competitors do.",
     },
   },
-  "Streaming & Media": {
+  "Streaming/Media": {
     headline: "The Living Room is",
     headlineAccent: "the New Feed",
+    heroImage: "https://github.com/user-attachments/assets/c9dfc6b0-9e45-42f5-9704-41cf697f42c7",
     description:
       "YouTube, Instagram, and TikTok are no longer just phone apps. All three have launched dedicated Apple TV, Fire TV, and Roku applications — moving creator content from the palm of your hand to the biggest screen in the house. This isn't a trend. It's a platform shift.",
     sections: [
@@ -1732,10 +1734,39 @@ const TAB_CONTENT: Record<string, TabContent> = {
           "MilCrunch already has the live streaming infrastructure, creator content pipeline, and event production experience from three years running the Parade Deck Experience at MIC. The platform provides the content engine — the app provides the distribution.",
         ],
       },
+      {
+        heading: "The Podcast Distribution Gap",
+        items: [
+          "The military and veteran podcast space is exploding. Shows like Zero Blog Thirty, Jocko Podcast, The Veteran Podcast, and dozens of smaller creators are building loyal audiences — but they're stuck on Apple Podcasts and Spotify with zero visual distribution.",
+        ],
+      },
+      {
+        heading: "These Creators Are Screaming for a Platform That Gives Them",
+        items: [
+          "Video podcast distribution — most military podcasts already record video but have no CTV outlet",
+          "Cross-promotion — discovery across other military shows instead of competing in a sea of 4 million podcasts",
+          "Sponsor visibility — brands sponsoring military podcasts get audio mentions but no visual placement on the biggest screen in the house",
+          "Event integration — podcast recordings at MilCon and MilSpouseFest become on-demand CTV content, extending the event lifecycle",
+        ],
+      },
+      {
+        heading: "The Data Backs It Up",
+        items: [
+          "Connected TV is the fastest-growing ad channel in digital media. CTV ad spend is projected to exceed $30B by 2026. Meanwhile, podcast advertising continues to grow at 20%+ annually. A Recurrent streaming app sits at the intersection of both — combining the loyalty of podcast audiences with the premium CPMs of CTV advertising.",
+        ],
+      },
+      {
+        heading: "One App, Three Revenue Streams",
+        items: [
+          "Advertising — CTV pre-roll and mid-roll at $25–40 CPMs (vs $5–10 on social)",
+          "Subscriptions — Premium access to exclusive military content, early event access, ad-free viewing",
+          "Syndication — License military creator content to other platforms and media partners",
+        ],
+      },
     ],
     bottomNote: {
       heading: "The Bottom Line",
-      text: "Social platforms figured out that the living room is where attention lives. Recurrent should too. A streaming app turns Recurrent from a digital media company into a military media network.",
+      text: "A Recurrent streaming app doesn't just distribute content. It creates an entirely new revenue engine built on the military community's most engaged creators. Social platforms figured out that the living room is where attention lives. Recurrent should too.",
     },
   },
   "Partnership Model": {
@@ -1861,6 +1892,13 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
             <span className="text-[#1e3a5f]">{content.headlineAccent}</span>
           )}
         </h2>
+        {content.heroImage && (
+          <img
+            src={content.heroImage}
+            alt=""
+            className="w-full max-w-3xl mx-auto rounded-xl shadow-md my-6 object-cover"
+          />
+        )}
         <p
           className={cn(
             "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
@@ -2211,7 +2249,7 @@ export default function Prospectus() {
         {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} />}
         {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} />}
         {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} />}
-        {activeTab === "Streaming & Media" && <ContentTab dark={darkMode} tab="Streaming & Media" dbContent={tabContent["Streaming & Media"]} />}
+        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} />}
         {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} />}
         {activeTab === "Financial Model" && <FinancialModelTab dark={darkMode} />}
       </main>
