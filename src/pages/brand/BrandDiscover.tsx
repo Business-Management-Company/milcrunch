@@ -1358,10 +1358,13 @@ const BrandDiscover = () => {
           setExactMatchRaw(null);
         }
 
-        // Set related creators
+        // Set related creators (sorted by highest followers when exact match exists)
         if (result.relatedCreators.length > 0 || result.exactMatch) {
+          const sorted = result.exactMatch
+            ? [...result.relatedCreators].sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0))
+            : result.relatedCreators;
           setApiResults({
-            creators: result.relatedCreators,
+            creators: sorted,
             total: result.relatedTotal,
             rawResponse: result.exactMatchRaw,
           });
