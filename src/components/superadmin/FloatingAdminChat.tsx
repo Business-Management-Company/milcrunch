@@ -31,7 +31,90 @@ interface ChatMessage {
   loading?: boolean;
   chips?: string[];
   hidden?: boolean;
+  /** Context from the search that produced these creators */
+  searchContext?: { query: string; location?: string; gender?: string; branch?: string; keywords?: string[] };
 }
+
+/* ------------------------------------------------------------------ */
+/* Evidence tag helpers — show WHY a creator matched                    */
+/* ------------------------------------------------------------------ */
+
+interface EvidenceTag {
+  label: string;
+  type: "location" | "keyword" | "hashtag";
+}
+
+function getEvidenceTags(
+  creator: CreatorCard,
+  ctx?: ChatMessage["searchContext"],
+): EvidenceTag[] {
+  const tags: EvidenceTag[] = [];
+  const seen = new Set<string>();
+  const add = (label: string, type: EvidenceTag["type"]) => {
+    const key = label.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    tags.push({ label, type });
+  };
+
+  // Build a set of search terms to match against
+  const searchTerms = new Set<string>();
+  if (ctx) {
+    const words = (ctx.query || "").toLowerCase().split(/\s+/).filter(Boolean);
+    words.forEach((w) => searchTerms.add(w));
+    ctx.keywords?.forEach((k) => searchTerms.add(k.toLowerCase()));
+    if (ctx.branch) searchTerms.add(ctx.branch.toLowerCase());
+    if (ctx.location) ctx.location.toLowerCase().split(/[,\s]+/).filter(Boolean).forEach((w) => searchTerms.add(w));
+  }
+
+  // 1. Location match
+  if (creator.location) {
+    const locLower = creator.location.toLowerCase();
+    const locationTerms = ctx?.location?.toLowerCase().split(/[,\s]+/).filter(Boolean) ?? [];
+    const matched = locationTerms.some((t) => locLower.includes(t));
+    if (matched || (searchTerms.size > 0 && [...searchTerms].some((t) => locLower.includes(t) && t.length > 2))) {
+      add(`📍 ${creator.location}`, "location");
+    }
+  }
+
+  // 2. Bio keyword matches
+  const bio = (creator.bio || "").toLowerCase();
+  const bioMatchTerms = ["veteran", "military", "army", "navy", "marines", "marine", "air force", "coast guard",
+    "milspouse", "military spouse", "service member", "active duty", "national guard", "combat",
+    "entrepreneur", "fitness", "podcast", "speaker", "author", "coach"];
+  for (const term of bioMatchTerms) {
+    if (bio.includes(term) && (searchTerms.size === 0 || searchTerms.has(term) || [...searchTerms].some((s) => term.includes(s) || s.includes(term)))) {
+      add(term.charAt(0).toUpperCase() + term.slice(1), "keyword");
+    }
+  }
+  // Also check creator specialties/category
+  if (creator.specialties) {
+    for (const s of creator.specialties) {
+      const sl = s.toLowerCase();
+      if (searchTerms.size === 0 || [...searchTerms].some((t) => sl.includes(t) || t.includes(sl))) {
+        add(s, "keyword");
+      }
+    }
+  }
+
+  // 3. Hashtag matches
+  if (creator.hashtags) {
+    for (const h of creator.hashtags) {
+      const hl = h.toLowerCase().replace(/^#/, "");
+      if (searchTerms.size === 0 || [...searchTerms].some((t) => hl.includes(t) || t.includes(hl))) {
+        add(`#${hl}`, "hashtag");
+      }
+    }
+  }
+
+  return tags.slice(0, 5);
+}
+
+const EVIDENCE_STYLES: Record<EvidenceTag["type"], string> = {
+  location: "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  keyword: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  hashtag: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+};
 
 const DEFAULT_CHIPS = [
   "🎖️ Find Army veteran creators",
@@ -742,6 +825,7 @@ For all other questions, respond naturally and concisely.`;
                   text: friendlyText,
                   loading: false,
                   creators: searchResults.slice(0, displayCount),
+                  searchContext: { query: searchQuery, location: locationFilter || undefined, gender: genderFilter || undefined, branch: branchLabel || undefined, keywords: extraKeywords.length > 0 ? extraKeywords : undefined },
                   cta: { label: "See more in Discovery →", link: `/brand/discover?${discoverParams.toString()}` },
                 }
               : msg
@@ -975,28 +1059,27 @@ For all other questions, respond naturally and concisely.`;
                                     )}
                                   </div>
                                   {c.followers > 0 && (
-                                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                                      {formatFollowers(c.followers)} followers
+                                    <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                                      <span>{formatFollowers(c.followers)} followers</span>
+                                      {getTierBadge(c.followers) && (
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 font-medium">
+                                          {getTierBadge(c.followers)}
+                                        </span>
+                                      )}
                                     </p>
                                   )}
                                   {(() => {
-                                    const pills = getRelevancePills(c);
-                                    const tier = getTierBadge(c.followers || 0);
-                                    return (pills.length > 0 || tier) ? (
+                                    const tags = getEvidenceTags(c, m.searchContext);
+                                    return tags.length > 0 ? (
                                       <div className="flex flex-wrap items-center gap-1 mt-1">
-                                        {pills.map((pill, pi) => (
+                                        {tags.map((tag, ti) => (
                                           <span
-                                            key={pi}
-                                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${pill.color}`}
+                                            key={ti}
+                                            className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${EVIDENCE_STYLES[tag.type]}`}
                                           >
-                                            {pill.label}
+                                            {tag.label}
                                           </span>
                                         ))}
-                                        {tier && (
-                                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                                            {tier}
-                                          </span>
-                                        )}
                                       </div>
                                     ) : null;
                                   })()}
