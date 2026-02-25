@@ -4,6 +4,7 @@ import { scoreMilitaryRelevance, isMilitaryQuery } from "@/lib/military-scoring"
 // Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
 // (Vercel does not inject headers), so we always send Authorization in every fetch.
 const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
+const SIMILAR_CREATORS_URL = "/api/influencers/public/v1/discovery/creators/similar/";
 const RAW_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/raw/";
 const FULL_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
 const LOCATIONS_URL = "/api/ic-locations";
@@ -800,6 +801,55 @@ export async function searchLookalike(
   });
 
   return { creators, total: creators.length, rawResponse };
+}
+
+/**
+ * Find creators similar to a given handle using the Discovery Similar Creators API.
+ * POST /public/v1/discovery/creators/similar/
+ * Cost: 0.01 per creator returned
+ */
+export async function searchSimilarCreators(
+  username: string,
+  platform: string = "instagram",
+  limit: number = 10
+): Promise<SearchCreatorsResult> {
+  const handle = username.replace(/^@/, "").trim().toLowerCase();
+  if (!handle) throw new Error("Username is required");
+
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
+
+  const body = {
+    platform: platform.toLowerCase(),
+    handle,
+    paging: { limit, page: 0 },
+  };
+
+  console.log("[SimilarCreators] POST", SIMILAR_CREATORS_URL);
+  console.log("[SimilarCreators] Body:", JSON.stringify(body, null, 2));
+
+  const res = await fetch(SIMILAR_CREATORS_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const rawResponse = await res.json();
+  console.log("[SimilarCreators] Response status:", res.status);
+
+  if (!res.ok) {
+    throw new Error(`Similar Creators API ${res.status}: ${res.statusText}`, { cause: rawResponse });
+  }
+
+  const accounts = (rawResponse as { accounts?: ApiAccount[] }).accounts ?? [];
+  const list = Array.isArray(accounts) ? accounts : [];
+  const total = Number((rawResponse as { total?: number }).total ?? list.length);
+  const creators = list.map((acc, i) => mapAccountToCard(acc, i));
+
+  return { creators, total, rawResponse };
 }
 
 /**

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn, goodAvatarCache } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { searchCreators, searchByUsername, searchLookalike, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, searchLocations, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
+import { searchCreators, searchByUsername, searchLookalike, searchSimilarCreators, enrichCreatorProfile, fullEnrichCreatorProfile, fetchCredits, logCreditUsage, searchLocations, type CreatorCard, type EnrichedProfileResponse, type CreditBalance } from "@/lib/influencers-club";
+import { smartSearch, classifyQuery, type SmartSearchResult, type ClassifiedQuery } from "@/lib/search-router";
 import { upsertCreator } from "@/lib/creators-db";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import CreateListModal from "@/components/CreateListModal";
@@ -668,6 +669,13 @@ const BrandDiscover = () => {
     foundOnPlatformResults: CreatorCard[] | null;
   } | null>(null);
 
+  // Smart search state
+  const [exactMatch, setExactMatch] = useState<CreatorCard | null>(null);
+  const [exactMatchRaw, setExactMatchRaw] = useState<unknown>(null);
+  const [searchHint, setSearchHint] = useState<string>("");
+  const [similarCreators, setSimilarCreators] = useState<CreatorCard[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+
   const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
   const { user, effectiveUserId, isSuperAdmin } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
@@ -1239,37 +1247,45 @@ const BrandDiscover = () => {
   }, [searchQuery, searchMode, platform, user, refreshCredits]);
 
   const handleSmartSearch = useCallback(() => {
-    // Route to username/lookalike handler when not in keyword mode
-    if (searchMode !== "keyword") {
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    // Route to lookalike handler when explicitly in lookalike mode
+    if (searchMode === "lookalike") {
       runModeSearch();
       return;
     }
 
-    const parsed = parseSmartQuery(searchQuery);
-    if (parsed.appliedLabels.length === 0) {
+    // Parse natural language filters first
+    const parsed = parseSmartQuery(q);
+    if (parsed.appliedLabels.length > 0) {
+      if (parsed.platform) setPlatform([parsed.platform]);
+      if (parsed.followersRange) setFollowersRange(parsed.followersRange);
+      if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
+      if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
+      if (parsed.location) { setLocationFilter(parsed.location); setLocationInput(parsed.location); }
+      setSmartFiltersApplied(parsed.appliedLabels);
+    } else {
       setSmartFiltersApplied([]);
-      runSearch();
-      return;
     }
-    // Apply parsed filters to UI state (updates dropdowns)
-    if (parsed.platform) setPlatform([parsed.platform]);
-    if (parsed.followersRange) setFollowersRange(parsed.followersRange);
-    if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
-    if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
-    if (parsed.location) { setLocationFilter(parsed.location); setLocationInput(parsed.location); }
-    // Default to "military" when all text was parsed into filters
-    const effectiveQuery = parsed.remainingQuery.trim() || "military";
-    setSearchQuery(effectiveQuery);
-    searchQueryRef.current = effectiveQuery;
-    setSmartFiltersApplied(parsed.appliedLabels);
-    // Execute search directly with parsed values (don't rely on effect timing)
+
+    const effectiveQuery = parsed.appliedLabels.length > 0
+      ? (parsed.remainingQuery.trim() || "military")
+      : q;
+
+    // Reset state
     setApiLoading(true);
     setCurrentPage(1);
+    setUsernameNotFound(null);
+    setExactMatch(null);
+    setExactMatchRaw(null);
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
     setEnrichRawCache({});
     setEnrichingIds(new Set());
+
+    // Build search options from current filters
     const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
     const effPlatforms = parsed.platform ? [parsed.platform] : platform;
     const searchPlatforms = resolveSearchPlatforms(effPlatforms, ctConfig?.platformOverride ?? null);
@@ -1291,33 +1307,89 @@ const BrandDiscover = () => {
       location: effLocation?.trim() || undefined,
       gender: gender !== "any" ? gender : undefined,
       language: language !== "any" ? language : undefined,
+      platform: searchPlatforms[0],
     };
-    persistLastSearch({
-      searchQuery: effectiveQuery, platform: effPlatforms, followersRange: effFollowers,
-      engagementMin: effEngagement, locationFilter: effLocation || "", niche, gender, language,
-      keywordsInBio, sortBy, selectedBranches: effBranches,
-    });
-    Promise.all(
-      searchPlatforms.map((plat) =>
-        searchCreators(effectiveQuery, { ...baseOptions, platform: plat })
-          .catch(() => null)
-      )
-    )
-      .then((results) => {
-        if (searchQueryRef.current !== effectiveQuery) return;
-        const valid = results.filter((r): r is NonNullable<typeof r> => r !== null);
-        if (valid.length === 0) { setApiResults(null); return; }
-        const allCreators = deduplicateCreators(valid.flatMap((r) => r.creators));
-        setApiResults({ creators: allCreators, total: Math.max(...valid.map((r) => r.total)), rawResponse: valid[0].rawResponse });
+
+    if (parsed.appliedLabels.length > 0) {
+      persistLastSearch({
+        searchQuery: effectiveQuery, platform: effPlatforms, followersRange: effFollowers,
+        engagementMin: effEngagement, locationFilter: effLocation || "", niche, gender, language,
+        keywordsInBio, sortBy, selectedBranches: effBranches,
+      });
+      if (effectiveQuery !== q) {
+        setSearchQuery(effectiveQuery);
+        searchQueryRef.current = effectiveQuery;
+      }
+    } else {
+      persistLastSearch(getCurrentFilters());
+    }
+
+    // Use the smart search router for automatic query classification
+    smartSearch(effectiveQuery, baseOptions)
+      .then((result: SmartSearchResult) => {
+        if (searchQueryRef.current.trim().replace(/^@/, "") !== effectiveQuery.replace(/^@/, "")) return;
+
+        // Handle exact match
+        if (result.exactMatch) {
+          setExactMatch(result.exactMatch);
+          setExactMatchRaw(result.exactMatchRaw);
+
+          // Pre-populate enrichment cache from the raw response if available
+          if (result.exactMatchRaw) {
+            const raw = result.exactMatchRaw as Record<string, unknown>;
+            const apiResult = raw?.result as Record<string, unknown> | undefined;
+            const platKey = searchPlatforms[0] === "all" ? "instagram" : searchPlatforms[0];
+            const platData = (apiResult?.[platKey] as Record<string, unknown>) ??
+              (platKey !== "instagram" ? (apiResult?.instagram as Record<string, unknown>) : undefined);
+
+            if (apiResult && platData) {
+              const enrichResponse: EnrichedProfileResponse = { result: apiResult, instagram: platData };
+              const partial = extractFromEnrichment(enrichResponse);
+              Object.assign(result.exactMatch, partial);
+              enrichedSetRef.current.add(result.exactMatch.id);
+              setEnrichCache((prev) => ({ ...prev, [result.exactMatch!.id]: partial }));
+              setEnrichRawCache((prev) => ({ ...prev, [result.exactMatch!.id]: enrichResponse }));
+              if (result.exactMatch.username) setCachedEnrichment(result.exactMatch.username, enrichResponse);
+              maybeUpdateFeaturedAvatar(result.exactMatch.username ?? "", enrichResponse);
+            }
+          }
+        } else {
+          setExactMatch(null);
+          setExactMatchRaw(null);
+        }
+
+        // Set related creators
+        if (result.relatedCreators.length > 0 || result.exactMatch) {
+          setApiResults({
+            creators: result.relatedCreators,
+            total: result.relatedTotal,
+            rawResponse: result.exactMatchRaw,
+          });
+        } else {
+          setApiResults(null);
+        }
+
+        if (effectiveUserId) {
+          const creditCost = result.exactMatch ? 0.03 : 0;
+          logCreditUsage(effectiveUserId, "discovery_search", creditCost + 0.15, {
+            query: effectiveQuery, smartType: result.classification.type, results: result.relatedTotal,
+          });
+        }
+        refreshCredits();
       })
       .catch((err) => {
-        if (searchQueryRef.current === effectiveQuery) setApiResults(null);
         console.warn("[BrandDiscover] Smart search failed:", err);
+        if (searchQueryRef.current.trim().replace(/^@/, "") === effectiveQuery.replace(/^@/, "")) {
+          setApiResults(null);
+          setExactMatch(null);
+        }
       })
       .finally(() => {
-        if (searchQueryRef.current === effectiveQuery) setApiLoading(false);
+        if (searchQueryRef.current.trim().replace(/^@/, "") === effectiveQuery.replace(/^@/, "")) {
+          setApiLoading(false);
+        }
       });
-  }, [searchQuery, searchMode, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, gender, language, niche, persistLastSearch, runSearch, runModeSearch]);
+  }, [searchQuery, searchMode, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, gender, language, niche, persistLastSearch, getCurrentFilters, runModeSearch, effectiveUserId, refreshCredits]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -2097,8 +2169,22 @@ const BrandDiscover = () => {
                 onChange={(e) => {
                   const v = e.target.value;
                   setSearchQuery(v);
-                  if (v.startsWith("@") && searchMode === "keyword") {
-                    setSearchMode("username");
+                  // Smart auto-detection replaces manual mode switching
+                  if (v.trim()) {
+                    const classified = classifyQuery(v);
+                    setSearchHint(classified.hint);
+                    // Auto-switch mode based on detection
+                    if (classified.type === "handle" || classified.type === "username") {
+                      setSearchMode("username");
+                    } else {
+                      setSearchMode("keyword");
+                    }
+                    // Auto-detect platform from URL
+                    if (classified.detectedPlatform) {
+                      setPlatform([classified.detectedPlatform]);
+                    }
+                  } else {
+                    setSearchHint("");
                   }
                 }}
                 onKeyDown={handleSearchKeyDown}
@@ -2109,6 +2195,42 @@ const BrandDiscover = () => {
               Search
             </Button>
           </div>
+
+          {/* Search hint */}
+          {searchHint && searchQuery.trim() && (
+            <div className="flex items-center gap-1.5 text-xs text-[#1e3a5f]/70 mb-2 ml-1">
+              <Sparkles className="h-3 w-3" />
+              {searchHint}
+            </div>
+          )}
+
+          {/* Smart suggestions — shown when no search is active */}
+          {!apiResults && !apiLoading && !searchQuery.trim() && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[
+                { label: "Find military spouse creators on Instagram", icon: "🎖️" },
+                { label: "Search Army veterans with 10k+ followers", icon: "💪" },
+                { label: "TikTok creators who post about military fitness", icon: "🎵" },
+                { label: "Navy veteran podcasters", icon: "🎙️" },
+              ].map((suggestion) => (
+                <button
+                  key={suggestion.label}
+                  onClick={() => {
+                    setSearchQuery(suggestion.label);
+                    searchQueryRef.current = suggestion.label;
+                    const classified = classifyQuery(suggestion.label);
+                    setSearchHint(classified.hint);
+                    // Trigger search after a tick so state updates
+                    setTimeout(() => handleSmartSearch(), 50);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border border-[#1e3a5f]/15 bg-[#1e3a5f]/5 text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors"
+                >
+                  <span>{suggestion.icon}</span>
+                  {suggestion.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Active creator type pill + smart search applied filters */}
           {(creatorType !== "all" || smartFiltersApplied.length > 0) && (
@@ -2484,6 +2606,124 @@ const BrandDiscover = () => {
                   </Button>
                 </div>
               </div>
+
+              {/* Exact Match Card */}
+              {exactMatch && (
+                <div className="mb-6">
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
+                    <BadgeCheck className="h-4 w-4" />
+                    Exact Match
+                  </p>
+                  <Card
+                    className="relative rounded-2xl border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 p-6 cursor-pointer hover:shadow-md transition-all"
+                    onClick={() => { setProfileCreator(getMergedCreator(exactMatch)); setProfileModalOpen(true); }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <DiscoverAvatar url={exactMatch.avatar} name={exactMatch.name} username={exactMatch.username} size="w-16 h-16" borderClass="border-2 border-emerald-200 dark:border-emerald-800 shadow-md" verified={exactMatch.isVerified} badgeClass="h-5 w-5 text-emerald-600" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate flex items-center gap-2">
+                          {exactMatch.name}
+                          {exactMatch.isVerified && <BadgeCheck className="h-4 w-4 text-[#6C5CE7] shrink-0" />}
+                          {isInAnyDirectory(exactMatch.username) && (
+                            <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
+                          )}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">@{exactMatch.username}</p>
+                        {exactMatch.bio && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{exactMatch.bio}</p>}
+                      </div>
+                      <div className="flex items-center gap-6 shrink-0">
+                        <div className="text-center">
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Followers</span>
+                          <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatFollowers(exactMatch.followers)}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Engagement</span>
+                          <span className="font-bold text-emerald-500 tabular-nums">{typeof getMergedCreator(exactMatch).engagementRate === "number" ? getMergedCreator(exactMatch).engagementRate!.toFixed(2) : "—"}%</span>
+                        </div>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              setSimilarLoading(true);
+                              searchSimilarCreators(exactMatch.username ?? "", platform[0] || "instagram")
+                                .then((res) => setSimilarCreators(res.creators))
+                                .catch(() => toast.error("Failed to find similar creators"))
+                                .finally(() => setSimilarLoading(false));
+                            }}
+                            disabled={similarLoading}
+                          >
+                            {similarLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
+                            Find Similar
+                          </Button>
+                          {isCreatorInList(exactMatch.id) ? (
+                            <span className="text-xs text-gray-400">Added</span>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" className="text-xs bg-[#000741] hover:bg-[#2d5282] text-white">
+                                  <ListPlus className="h-3 w-3 mr-1" /> Add to List
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {lists.map((list) => (
+                                  <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, exactMatch)}>
+                                    {list.name}
+                                  </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(exactMatch)}>
+                                  <Plus className="mr-2 h-4 w-4" /> Create New List
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Similar Creators from "Find Similar" */}
+              {similarCreators.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <Users className="h-4 w-4 text-[#6C5CE7]" />
+                      Similar Creators
+                    </p>
+                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setSimilarCreators([])}>
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                    {similarCreators.slice(0, 8).map((sc) => (
+                      <Card
+                        key={sc.id}
+                        className="p-3 cursor-pointer hover:shadow-md transition-all border-[#6C5CE7]/20"
+                        onClick={() => { setProfileCreator(sc); setProfileModalOpen(true); }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <DiscoverAvatar url={sc.avatar} name={sc.name} username={sc.username} size="w-10 h-10" verified={sc.isVerified} />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm truncate">{sc.name}</p>
+                            <p className="text-xs text-gray-400 truncate">@{sc.username} &middot; {formatFollowers(sc.followers)}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Related Creators header when exact match exists */}
+              {exactMatch && creators.length > 0 && (
+                <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1.5">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  Related Creators
+                </p>
+              )}
 
               {creators.length > 0 ? (
                 <>
@@ -2916,6 +3156,22 @@ const BrandDiscover = () => {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="rounded-lg h-9 w-9 shrink-0"
+                              title="Find similar creators"
+                              disabled={similarLoading}
+                              onClick={() => {
+                                setSimilarLoading(true);
+                                searchSimilarCreators(creator.username ?? "", platform[0] || "instagram")
+                                  .then((res) => { setSimilarCreators(res.creators); window.scrollTo({ top: 0, behavior: "smooth" }); })
+                                  .catch(() => toast.error("Failed to find similar creators"))
+                                  .finally(() => setSimilarLoading(false));
+                              }}
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
                             {instagramUrl ? (
                               <Button
                                 variant="outline"
