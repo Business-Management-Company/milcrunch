@@ -268,18 +268,26 @@ export default function Speakers() {
     if (error || !data) return;
 
     const rows = data as Speaker[];
+    const allNames = rows.map((s) => s.name);
 
-    // Batch-fetch verification statuses + photos for speakers that have a verification_id
+    // ── 1. Batch-fetch verifications for speakers with verification_id ──
     const withVid = rows.filter((s) => s.verification_id);
     const withoutVid = rows.filter((s) => !s.verification_id);
 
-    let verificationMap = new Map<string, { status: string; score: number | null; photo: string | null; handle: string | null }>();
+    interface VerificationMeta {
+      status: string;
+      score: number | null;
+      photo: string | null;
+      handle: string | null;
+      bio: string | null;
+    }
+    const verificationMap = new Map<string, VerificationMeta>();
 
     if (withVid.length > 0) {
       const vids = withVid.map((s) => s.verification_id!);
       const { data: vRows } = await supabase
         .from("verifications")
-        .select("id, status, verification_score, profile_photo_url, source_username")
+        .select("id, status, verification_score, profile_photo_url, source_username, notes")
         .in("id", vids);
       if (vRows) {
         for (const v of vRows) {
@@ -288,17 +296,18 @@ export default function Speakers() {
             score: v.verification_score,
             photo: v.profile_photo_url ?? null,
             handle: v.source_username ?? null,
+            bio: v.notes ?? null,
           });
         }
       }
     }
 
-    // For speakers WITHOUT a verification_id, try matching by name
+    // ── 2. Auto-link speakers WITHOUT verification_id by name match ──
     if (withoutVid.length > 0) {
       const names = withoutVid.map((s) => s.name);
       const { data: nameMatches } = await supabase
         .from("verifications")
-        .select("id, person_name, status, verification_score, profile_photo_url, source_username")
+        .select("id, person_name, status, verification_score, profile_photo_url, source_username, notes")
         .in("person_name", names);
 
       if (nameMatches && nameMatches.length > 0) {
@@ -321,6 +330,7 @@ export default function Speakers() {
               score: match.verification_score,
               photo: match.profile_photo_url ?? null,
               handle: match.source_username ?? null,
+              bio: match.notes ?? null,
             });
 
             supabase
@@ -335,39 +345,140 @@ export default function Speakers() {
       }
     }
 
-    // Batch-fetch directory_members avatars by source_username handles
+    // ── 3. Batch-fetch directory_members by handle AND by name ──
+    // This catches speakers whose directory entry uses creator_name rather than a handle
     const handles = [...verificationMap.values()].map((v) => v.handle).filter(Boolean) as string[];
-    const dmAvatarMap = new Map<string, string>(); // handle → avatar URL
+    // keyed by handle or name → { avatar, bio }
+    const dmMap = new Map<string, { avatar: string | null; bio: string | null }>();
+
+    // Fetch by handle
     if (handles.length > 0) {
       const { data: dmRows } = await supabase
         .from("directory_members")
-        .select("creator_handle, ic_avatar_url, avatar_url")
+        .select("creator_handle, creator_name, ic_avatar_url, avatar_url, enrichment_data")
         .in("creator_handle", handles);
       if (dmRows) {
         for (const dm of dmRows) {
           const url = dm.ic_avatar_url || dm.avatar_url;
-          if (url && typeof url === "string" && url.startsWith("https://")) {
-            dmAvatarMap.set(dm.creator_handle, url);
-          }
+          const avatar = url && typeof url === "string" && url.startsWith("https://") ? url : null;
+          // Extract bio from enrichment_data if available
+          const ed = dm.enrichment_data as Record<string, unknown> | null;
+          const igData = (ed?.result as Record<string, unknown>)?.instagram as Record<string, unknown> | undefined ?? ed?.instagram as Record<string, unknown> | undefined;
+          const bio = (igData?.biography ?? igData?.bio) as string | undefined;
+          dmMap.set(dm.creator_handle, { avatar, bio: bio || null });
+          if (dm.creator_name) dmMap.set(dm.creator_name, { avatar, bio: bio || null });
         }
       }
     }
 
-    // Merge verification_status + best avatar into speaker data
-    const enriched = rows.map((s) => {
-      if (!s.verification_id || !verificationMap.has(s.verification_id)) return s;
-      const v = verificationMap.get(s.verification_id)!;
-      const updated = { ...s, verification_status: v.status };
+    // Also fetch by name for speakers not found by handle
+    const unmatchedNames = allNames.filter((n) => !dmMap.has(n));
+    if (unmatchedNames.length > 0) {
+      const { data: dmByName } = await supabase
+        .from("directory_members")
+        .select("creator_handle, creator_name, ic_avatar_url, avatar_url, enrichment_data")
+        .in("creator_name", unmatchedNames);
+      if (dmByName) {
+        for (const dm of dmByName) {
+          const url = dm.ic_avatar_url || dm.avatar_url;
+          const avatar = url && typeof url === "string" && url.startsWith("https://") ? url : null;
+          const ed = dm.enrichment_data as Record<string, unknown> | null;
+          const igData = (ed?.result as Record<string, unknown>)?.instagram as Record<string, unknown> | undefined ?? ed?.instagram as Record<string, unknown> | undefined;
+          const bio = (igData?.biography ?? igData?.bio) as string | undefined;
+          if (dm.creator_name) dmMap.set(dm.creator_name, { avatar, bio: bio || null });
+          if (dm.creator_handle) dmMap.set(dm.creator_handle, { avatar, bio: bio || null });
+        }
+      }
+    }
 
-      // Resolve best photo: directory_members > verification photo > existing speaker photo
-      if (!getCreatorAvatar(updated)) {
-        const dmPhoto = v.handle ? dmAvatarMap.get(v.handle) : null;
-        const bestPhoto = dmPhoto || v.photo;
-        if (bestPhoto) updated.photo_url = bestPhoto;
+    // ── 4. Merge everything into speaker rows ──
+    const enriched = rows.map((s) => {
+      const updated = { ...s };
+
+      // Merge verification status
+      if (updated.verification_id && verificationMap.has(updated.verification_id)) {
+        const v = verificationMap.get(updated.verification_id)!;
+        updated.verification_status = v.status;
+
+        // Best photo: directory_members (by handle) > directory_members (by name) > verification photo > existing
+        if (!getCreatorAvatar(updated)) {
+          const dmByHandle = v.handle ? dmMap.get(v.handle) : null;
+          const dmByName = dmMap.get(updated.name);
+          const bestPhoto = dmByHandle?.avatar || dmByName?.avatar || v.photo;
+          if (bestPhoto) updated.photo_url = bestPhoto;
+        }
+
+        // Backfill bio from verification notes or directory_members
+        if (!updated.bio || updated.bio.trim() === "") {
+          const vBio = v.bio && !/failed|error|skipped/i.test(v.bio) ? v.bio : null;
+          const dmByHandle = v.handle ? dmMap.get(v.handle) : null;
+          const dmByName = dmMap.get(updated.name);
+          updated.bio = vBio || dmByHandle?.bio || dmByName?.bio || null;
+        }
+      } else {
+        // No verification — still try directory_members by name
+        const dm = dmMap.get(updated.name);
+        if (dm) {
+          if (!getCreatorAvatar(updated) && dm.avatar) updated.photo_url = dm.avatar;
+          if ((!updated.bio || updated.bio.trim() === "") && dm.bio) updated.bio = dm.bio;
+        }
       }
 
       return updated;
     });
+
+    // ── 5. For speakers STILL missing a photo, try IC enrichment in background ──
+    const missingPhoto = enriched.filter((s) => !getCreatorAvatar(s));
+    if (missingPhoto.length > 0) {
+      // Find handles we can try from verifications
+      const enrichTargets: { speakerId: string; handle: string }[] = [];
+      for (const s of missingPhoto) {
+        if (s.verification_id && verificationMap.has(s.verification_id)) {
+          const handle = verificationMap.get(s.verification_id)!.handle;
+          if (handle) enrichTargets.push({ speakerId: s.id, handle });
+        }
+      }
+
+      if (enrichTargets.length > 0) {
+        console.log(`[Speakers] Attempting IC enrichment for ${enrichTargets.length} speakers missing photos`);
+        // Fire-and-forget: enrich in background, update state when results arrive
+        for (const { speakerId, handle } of enrichTargets) {
+          enrichCreatorProfile(handle).then((result) => {
+            if (!result) return;
+            const ig = result.instagram as Record<string, unknown>;
+            const avatar = (ig?.picture ?? ig?.profile_picture_hd ?? ig?.profile_picture ?? ig?.profile_pic_url) as string | undefined;
+            const bio = (ig?.biography ?? ig?.bio) as string | undefined;
+            if (!avatar) return;
+
+            const photoUrl = avatar.replace(/^http:\/\//i, "https://");
+            console.log(`[Speakers] IC enrichment found photo for "${handle}": ${photoUrl.substring(0, 80)}`);
+
+            // Update local state
+            setSpeakers((prev) =>
+              prev.map((s) => {
+                if (s.id !== speakerId) return s;
+                const patched = { ...s };
+                if (!getCreatorAvatar(patched)) patched.photo_url = photoUrl;
+                if ((!patched.bio || patched.bio.trim() === "") && bio) patched.bio = bio;
+                return patched;
+              })
+            );
+
+            // Persist photo to speakers table
+            supabase
+              .from("speakers")
+              .update({ photo_url: photoUrl, ...(bio ? { bio } : {}) } as Record<string, unknown>)
+              .eq("id", speakerId)
+              .then(({ error: e }) => {
+                if (e) console.warn(`[Speakers] Failed to persist IC photo for ${handle}:`, e.message);
+                else console.log(`[Speakers] Persisted IC photo for ${handle}`);
+              });
+          }).catch((err) => {
+            console.warn(`[Speakers] IC enrichment failed for ${handle}:`, (err as Error).message);
+          });
+        }
+      }
+    }
 
     setSpeakers(enriched);
   };

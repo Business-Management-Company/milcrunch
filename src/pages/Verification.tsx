@@ -357,7 +357,7 @@ export default function Verification() {
   const [showCreatorDropdown, setShowCreatorDropdown] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [addSpeakerOpen, setAddSpeakerOpen] = useState(false);
-  const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "", verification_status: "" });
+  const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "", verification_status: "", photo_url: "" });
   const [inviteEventOpen, setInviteEventOpen] = useState(false);
   const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
@@ -630,6 +630,24 @@ export default function Verification() {
   const expanded = expandedId ? list.find((r) => r.id === expandedId) : null;
 
   const handleAddAsSpeaker = (row: VerificationRecord) => {
+    // Resolve best photo: enrichment avatar > verification profile_photo_url
+    const handle = row.source_username;
+    let bestPhoto = row.profile_photo_url || "";
+    // Try to extract avatar from IC enrichment data cached in dirEnrichmentMap
+    if (handle && dirEnrichmentMap[handle]) {
+      const ed = dirEnrichmentMap[handle] as Record<string, unknown>;
+      const result = (ed.result ?? ed) as Record<string, unknown>;
+      const ig = (result.instagram ?? result) as Record<string, unknown>;
+      const enrichAvatar = (ig.picture ?? ig.profile_picture_hd ?? ig.profile_picture ?? ig.profile_pic_url) as string | undefined;
+      if (enrichAvatar && enrichAvatar.startsWith("http")) bestPhoto = enrichAvatar;
+    }
+    // Also check dirMembers list if available
+    const dmMatch = handle ? dirMembers.find((m) => m.creator_handle === handle) : null;
+    if (dmMatch) {
+      const dmAvatar = dmMatch.ic_avatar_url || dmMatch.avatar_url;
+      if (dmAvatar) bestPhoto = dmAvatar;
+    }
+
     setSpeakerForm({
       name: row.person_name,
       branch: row.claimed_branch ?? "",
@@ -647,6 +665,7 @@ export default function Verification() {
       })(),
       verification_id: row.id,
       verification_status: row.status ?? "pending",
+      photo_url: bestPhoto,
     });
     setAddSpeakerOpen(true);
   };
@@ -657,6 +676,7 @@ export default function Verification() {
       branch: speakerForm.branch || null,
       rank: speakerForm.rank || null,
       bio: speakerForm.bio || null,
+      photo_url: speakerForm.photo_url || null,
       verification_id: speakerForm.verification_id || null,
       verification_status: speakerForm.verification_status || null,
     } as Record<string, unknown>);
