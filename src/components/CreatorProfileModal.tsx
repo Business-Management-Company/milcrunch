@@ -1139,7 +1139,7 @@ export default function CreatorProfileModal({
               </a>
             )}
             {/* Enrichment status badge */}
-            <div className="flex justify-center mb-2">
+            <div className="flex justify-center mb-2 flex-col items-center gap-1">
               {showEnrichmentLoading && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400 animate-pulse">
                   <Loader2 className="h-3 w-3 animate-spin" /> Enriching… (0.03 credits)
@@ -1150,6 +1150,10 @@ export default function CreatorProfileModal({
                   <Check className="h-3 w-3" /> Cached
                 </span>
               )}
+              {/* DEBUG: remove after fixing analytics */}
+              <span className="text-[9px] text-gray-400 font-mono">
+                enriched={enriched ? "YES" : "NO"} ig={igRecord ? `YES(${Object.keys(igRecord).length}keys)` : "NO"} src={enrichmentSource ?? "none"} loading={String(enrichmentLoading)} timedOut={String(enrichmentTimedOut)} mediaCount={String(igRecord?.media_count ?? "undef")} postData={Array.isArray(igRecord?.post_data) ? String((igRecord.post_data as unknown[]).length) : "none"}
+              </span>
             </div>
             {detectedBranch && (
               <div className="flex flex-wrap gap-1.5 mb-4">
