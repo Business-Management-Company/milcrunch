@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCreatorAvatar, getAvatarFallback } from "@/lib/avatar";
+import { getCreatorAvatar } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
+import { MarkdownResponse } from "@/components/MarkdownResponse";
+import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
+import { enrichCreatorProfile } from "@/lib/influencers-club";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +58,16 @@ import {
   Pencil,
   Eye,
   Plus,
+  FileText,
+  Briefcase,
+  Globe,
+  Mail,
+  Phone,
+  MapPin,
+  RefreshCw,
+  ExternalLink,
+  ClipboardList,
+  Save,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TYPE_OPTIONS } from "@/types/verification";
@@ -74,6 +87,10 @@ interface Speaker {
   verification_id: string | null;
   verification_status: string | null;
   created_at: string | null;
+  review_status: string | null;
+  review_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
 }
 
 interface EventInfo {
@@ -82,28 +99,58 @@ interface EventInfo {
   start_date: string | null;
 }
 
-interface VerificationInfo {
+interface FullVerification {
   id: string;
+  person_name: string;
   verification_score: number | null;
   status: string | null;
   claimed_branch: string | null;
   claimed_type: string | null;
   claimed_status: string | null;
   ai_analysis: string | null;
+  manual_checks: Record<string, unknown> | null;
+  evidence_sources: unknown[] | null;
+  notes: string | null;
+  verified_by: string | null;
+  last_verified_at: string | null;
+  source_username: string | null;
+  profile_photo_url: string | null;
+  city: string | null;
+  state: string | null;
+  pdl_data: Record<string, unknown> | null;
+  linkedin_url: string | null;
+  website_url: string | null;
+  created_at: string | null;
 }
 
-function MiniGauge({ score }: { score: number }) {
+interface EnrichmentData {
+  enrichment_data: Record<string, unknown> | null;
+  creator_handle: string | null;
+  avatar_url: string | null;
+  ic_avatar_url: string | null;
+}
+
+// Review status options for the speaker review dropdown
+const REVIEW_STATUSES = [
+  { value: "pending_review", label: "Pending Review" },
+  { value: "approved", label: "Approved" },
+  { value: "flagged", label: "Flagged" },
+  { value: "declined", label: "Declined" },
+];
+
+function MiniGauge({ score, size = 80 }: { score: number; size?: number }) {
   const color = score >= 70 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
-  const circumference = 2 * Math.PI * 36;
+  const r = size * 0.45;
+  const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;
   return (
-    <div className="relative w-20 h-20">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
-        <circle cx="40" cy="40" r="36" fill="none" stroke="#e5e7eb" strokeWidth="6" />
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg className="w-full h-full -rotate-90" viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e5e7eb" strokeWidth="6" />
         <circle
-          cx="40"
-          cy="40"
-          r="36"
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
           fill="none"
           stroke={color}
           strokeWidth="6"
@@ -135,17 +182,67 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function ReviewStatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    pending_review: { label: "Pending Review", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
+    approved: { label: "Approved", className: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" },
+    flagged: { label: "Flagged", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
+    declined: { label: "Declined", className: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" },
+  };
+  const s = map[status] ?? map.pending_review;
+  return <Badge className={s.className} variant="secondary">{s.label}</Badge>;
+}
+
+/** Collapsible section used in the verified speaker expanded row */
+function CollapsibleSection({
+  title,
+  icon,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus:outline-none"
+      >
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        {icon}
+        <span className="font-semibold text-sm text-[#000741] dark:text-white">{title}</span>
+      </button>
+      {open && <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-800">{children}</div>}
+    </div>
+  );
+}
+
 export default function Speakers() {
   const navigate = useNavigate();
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // Expanded row
+  // Expanded row state
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedVerification, setExpandedVerification] = useState<VerificationInfo | null>(null);
+  const [expandedVerification, setExpandedVerification] = useState<FullVerification | null>(null);
   const [expandedEvents, setExpandedEvents] = useState<EventInfo[]>([]);
+  const [expandedEnrichment, setExpandedEnrichment] = useState<EnrichmentData | null>(null);
   const [expandLoading, setExpandLoading] = useState(false);
+  const [reverifying, setReverifying] = useState(false);
+
+  // Contact info state
+  const [contactFetching, setContactFetching] = useState(false);
+  const [contactData, setContactData] = useState<{ email?: string; phone?: string; city?: string } | null>(null);
+
+  // Review state
+  const [reviewStatus, setReviewStatus] = useState("");
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewSaving, setReviewSaving] = useState(false);
 
   // Edit modal
   const [editOpen, setEditOpen] = useState(false);
@@ -195,6 +292,8 @@ export default function Speakers() {
     setExpandLoading(true);
     setExpandedVerification(null);
     setExpandedEvents([]);
+    setExpandedEnrichment(null);
+    setContactData(null);
 
     const speaker = speakers.find((s) => s.id === speakerId);
     if (!speaker) {
@@ -202,14 +301,31 @@ export default function Speakers() {
       return;
     }
 
-    // Fetch verification data
+    // Initialize review state from speaker data
+    setReviewStatus(speaker.review_status ?? "");
+    setReviewNotes(speaker.review_notes ?? "");
+
+    // Fetch full verification data
     if (speaker.verification_id) {
       const { data } = await supabase
         .from("verifications")
-        .select("id, verification_score, status, claimed_branch, claimed_type, claimed_status, ai_analysis")
+        .select("id, person_name, verification_score, status, claimed_branch, claimed_type, claimed_status, ai_analysis, manual_checks, evidence_sources, notes, verified_by, last_verified_at, source_username, profile_photo_url, city, state, pdl_data, linkedin_url, website_url, created_at")
         .eq("id", speaker.verification_id)
         .single();
-      setExpandedVerification(data as VerificationInfo | null);
+      if (data) {
+        setExpandedVerification(data as FullVerification);
+
+        // Try to fetch IC enrichment from directory_members by source_username
+        const handle = (data as FullVerification).source_username;
+        if (handle) {
+          const { data: dm } = await supabase
+            .from("directory_members")
+            .select("enrichment_data, creator_handle, avatar_url, ic_avatar_url")
+            .eq("creator_handle", handle)
+            .maybeSingle();
+          if (dm) setExpandedEnrichment(dm as EnrichmentData);
+        }
+      }
     }
 
     // Fetch events this speaker is assigned to via event_speakers
@@ -228,6 +344,84 @@ export default function Speakers() {
     }
 
     setExpandLoading(false);
+  };
+
+  const handleReverify = (speaker: Speaker) => {
+    setReverifying(true);
+    navigate("/verification", {
+      state: {
+        prefill: {
+          fullName: speaker.name,
+          claimedBranch: speaker.branch ?? "",
+          claimedType: speaker.rank ?? "",
+          claimedStatus: "veteran",
+          linkedinUrl: speaker.linkedin_url ?? "",
+          websiteUrl: speaker.website_url ?? "",
+          notes: speaker.bio ?? "",
+        },
+      },
+    });
+  };
+
+  const handleFetchContact = async () => {
+    if (!expandedVerification?.source_username) {
+      toast.error("No social handle available to look up contact info");
+      return;
+    }
+    setContactFetching(true);
+    try {
+      const result = await enrichCreatorProfile(expandedVerification.source_username);
+      if (result) {
+        const r = result.result as Record<string, unknown>;
+        const email = (r.email ?? r.emails?.[0]) as string | undefined;
+        const phone = (r.phone ?? r.phone_number) as string | undefined;
+        const city = (r.city ?? result.instagram?.city) as string | undefined;
+        setContactData({
+          email: email || undefined,
+          phone: phone || undefined,
+          city: city || undefined,
+        });
+        if (!email && !phone) {
+          toast.info("No contact info found for this creator (0.03 credits used)");
+        } else {
+          toast.success("Contact info fetched (0.03 credits)");
+        }
+      } else {
+        toast.error("Could not enrich this handle");
+      }
+    } catch (err) {
+      toast.error("Failed to fetch contact info: " + (err as Error).message);
+    } finally {
+      setContactFetching(false);
+    }
+  };
+
+  const handleSaveReview = async (speakerId: string) => {
+    setReviewSaving(true);
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("speakers")
+      .update({
+        review_status: reviewStatus || null,
+        review_notes: reviewNotes.trim() || null,
+        reviewed_by: "admin",
+        reviewed_at: now,
+      } as Record<string, unknown>)
+      .eq("id", speakerId);
+    if (error) {
+      toast.error("Failed to save review: " + error.message);
+    } else {
+      toast.success("Review saved");
+      // Update local state
+      setSpeakers((prev) =>
+        prev.map((s) =>
+          s.id === speakerId
+            ? { ...s, review_status: reviewStatus || null, review_notes: reviewNotes.trim() || null, reviewed_by: "admin", reviewed_at: now }
+            : s
+        )
+      );
+    }
+    setReviewSaving(false);
   };
 
   const handleEdit = (speaker: Speaker) => {
@@ -286,7 +480,6 @@ export default function Speakers() {
       .limit(100);
     setAllEvents((events ?? []) as EventInfo[]);
 
-    // Find events this speaker is already linked to via event_speakers
     const { data: existing } = await supabase
       .from("event_speakers")
       .select("event_id")
@@ -300,7 +493,6 @@ export default function Speakers() {
     if (!inviteSpeaker || !selectedEventId) return;
     setInviteSaving(true);
 
-    // Get current speaker count for sort_order
     const { data: existingSpeakers } = await supabase
       .from("event_speakers")
       .select("id")
@@ -324,7 +516,6 @@ export default function Speakers() {
       const eventTitle = allEvents.find((e) => e.id === selectedEventId)?.title ?? "event";
       toast.success(`Added ${inviteSpeaker.name} to ${eventTitle}`);
       setInviteOpen(false);
-      // Refresh expanded events if this speaker is expanded
       if (expandedId === inviteSpeaker.id) {
         const { data: links } = await supabase
           .from("event_speakers")
@@ -361,6 +552,452 @@ export default function Speakers() {
       },
     });
   };
+
+  // Extract career data from manual_checks
+  const getCareerData = (v: FullVerification) => {
+    const mc = v.manual_checks;
+    if (!mc) return null;
+    const ct = mc.career_track as { result?: Record<string, unknown> } | undefined;
+    return ct?.result ?? null;
+  };
+
+  // Extract social platforms from enrichment data
+  const getSocialPlatforms = () => {
+    if (!expandedEnrichment?.enrichment_data) return [];
+    return getPlatformsFromEnrichmentData(expandedEnrichment.enrichment_data);
+  };
+
+  // Get the best photo for a speaker (directory_members avatar > verification photo > speaker photo)
+  const getSpeakerPhoto = (speaker: Speaker) => {
+    if (expandedEnrichment?.ic_avatar_url) return expandedEnrichment.ic_avatar_url;
+    if (expandedEnrichment?.avatar_url) return expandedEnrichment.avatar_url;
+    if (expandedVerification?.profile_photo_url) return expandedVerification.profile_photo_url;
+    return getCreatorAvatar(speaker);
+  };
+
+  /** Render the expanded row for a VERIFIED speaker */
+  const renderVerifiedExpanded = (speaker: Speaker, v: FullVerification) => {
+    const careerData = getCareerData(v);
+    const platforms = getSocialPlatforms();
+    const photo = getSpeakerPhoto(speaker);
+    const pdl = v.pdl_data as Record<string, unknown> | null;
+
+    return (
+      <div className="space-y-4">
+        {/* Row 1: Header bar */}
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* Photo */}
+          {photo ? (
+            <img src={photo} alt="" className="h-16 w-16 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" />
+          ) : (
+            <div className="h-16 w-16 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center">
+              <Mic className="h-8 w-8 text-[#1e3a5f]" />
+            </div>
+          )}
+
+          {/* Name + badges */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-lg font-bold text-[#000741] dark:text-white">{speaker.name}</h3>
+              <StatusBadge status={v.status ?? "pending"} />
+              {v.claimed_branch && <Badge variant="secondary" className="text-xs">{v.claimed_branch}</Badge>}
+              {v.claimed_type && <Badge variant="secondary" className="text-xs">{v.claimed_type}</Badge>}
+            </div>
+            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+              {v.last_verified_at && (
+                <span>Last verified: {new Date(v.last_verified_at).toLocaleDateString()} {new Date(v.last_verified_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              )}
+              {v.verified_by && <span>by {v.verified_by}</span>}
+            </div>
+          </div>
+
+          {/* Confidence gauge */}
+          <MiniGauge score={v.verification_score ?? 0} size={64} />
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleReverify(speaker)}
+              disabled={reverifying}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", reverifying && "animate-spin")} /> Re-verify
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleViewVerification(speaker)}
+            >
+              <Eye className="h-3.5 w-3.5 mr-1.5" /> Full Report
+            </Button>
+          </div>
+        </div>
+
+        {/* Row 2: Collapsible sections */}
+        <div className="space-y-2">
+          {/* Intelligence Summary */}
+          <CollapsibleSection
+            title="Intelligence Summary"
+            icon={<FileText className="h-4 w-4 text-[#1e3a5f]" />}
+            defaultOpen={true}
+          >
+            <div className="mt-3">
+              {v.ai_analysis ? (
+                <MarkdownResponse content={v.ai_analysis} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No intelligence summary available. Run verification to generate.</p>
+              )}
+            </div>
+          </CollapsibleSection>
+
+          {/* Military / Civilian Career */}
+          <CollapsibleSection
+            title="Military / Civilian Career"
+            icon={<Briefcase className="h-4 w-4 text-[#1e3a5f]" />}
+          >
+            <div className="mt-3 space-y-3">
+              {careerData ? (
+                <>
+                  {/* Military Summary */}
+                  {(careerData as Record<string, unknown>).military_summary && (() => {
+                    const ms = (careerData as Record<string, unknown>).military_summary as Record<string, unknown>;
+                    return (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                        <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-300 mb-1">Military Service</h4>
+                        <div className="text-sm space-y-0.5">
+                          {ms.branch && <p><span className="text-muted-foreground">Branch:</span> {ms.branch as string}</p>}
+                          {ms.rank && <p><span className="text-muted-foreground">Rank:</span> {ms.rank as string}</p>}
+                          {ms.mos && <p><span className="text-muted-foreground">MOS:</span> {ms.mos as string}</p>}
+                          {ms.years_of_service && <p><span className="text-muted-foreground">Service:</span> {ms.years_of_service as string}</p>}
+                          {ms.service_dates && <p><span className="text-muted-foreground">Dates:</span> {ms.service_dates as string}</p>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Career entries */}
+                  {Array.isArray((careerData as Record<string, unknown>).career) && ((careerData as Record<string, unknown>).career as Array<Record<string, unknown>>).length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-2">Career History</h4>
+                      <div className="space-y-2">
+                        {((careerData as Record<string, unknown>).career as Array<Record<string, unknown>>).slice(0, 5).map((entry, i) => (
+                          <div key={i} className="flex items-start gap-2 text-sm">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f] mt-2 shrink-0" />
+                            <div>
+                              <span className="font-medium">{entry.title as string || entry.role as string}</span>
+                              {entry.company && <span className="text-muted-foreground"> at {entry.company as string}</span>}
+                              {entry.dates && <span className="text-xs text-muted-foreground ml-2">({entry.dates as string})</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Awards */}
+                  {Array.isArray((careerData as Record<string, unknown>).awards) && ((careerData as Record<string, unknown>).awards as unknown[]).length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Awards & Decorations</h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {((careerData as Record<string, unknown>).awards as Array<Record<string, unknown>>).map((award, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">
+                            {(award.name ?? award.title ?? award) as string}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : pdl ? (
+                <div className="text-sm">
+                  {/* PDL employment fallback */}
+                  {Array.isArray(pdl.employment) && (pdl.employment as Array<Record<string, unknown>>).length > 0 && (
+                    <div className="space-y-2">
+                      {(pdl.employment as Array<Record<string, unknown>>).slice(0, 5).map((job, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f] mt-2 shrink-0" />
+                          <div>
+                            <span className="font-medium">{job.title as string}</span>
+                            {job.company && <span className="text-muted-foreground"> at {(job.company as Record<string, unknown>)?.name as string ?? job.company as string}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No career data available. Run verification to extract career timeline.</p>
+              )}
+            </div>
+          </CollapsibleSection>
+
+          {/* Contact Information */}
+          <CollapsibleSection
+            title="Contact Information"
+            icon={<Mail className="h-4 w-4 text-[#1e3a5f]" />}
+          >
+            <div className="mt-3 space-y-3">
+              {/* Social platforms from IC enrichment */}
+              {platforms.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-2">Social Profiles</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {platforms.map((p) => (
+                      <a
+                        key={p.platform}
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors", p.pillClass)}
+                      >
+                        {p.label}: @{p.username}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* LinkedIn / Website from verification */}
+              {(v.linkedin_url || v.website_url || speaker.linkedin_url || speaker.website_url) && (
+                <div className="flex flex-wrap gap-2">
+                  {(v.linkedin_url || speaker.linkedin_url) && (
+                    <a
+                      href={v.linkedin_url || speaker.linkedin_url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                    >
+                      LinkedIn <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {(v.website_url || speaker.website_url) && (
+                    <a
+                      href={v.website_url || speaker.website_url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                    >
+                      Website <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Location from verification */}
+              {(v.city || v.state) && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>{[v.city, v.state].filter(Boolean).join(", ")}</span>
+                </div>
+              )}
+
+              {/* Contact data (email/phone) */}
+              {contactData && (
+                <div className="space-y-1.5">
+                  {contactData.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a href={`mailto:${contactData.email}`} className="text-blue-600 hover:underline">{contactData.email}</a>
+                    </div>
+                  )}
+                  {contactData.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{contactData.phone}</span>
+                    </div>
+                  )}
+                  {contactData.city && !v.city && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{contactData.city}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Fetch Contact Info button */}
+              {!contactData && v.source_username && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFetchContact}
+                  disabled={contactFetching}
+                >
+                  {contactFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Globe className="h-3.5 w-3.5 mr-1.5" />}
+                  Fetch Contact Info (0.03 credits)
+                </Button>
+              )}
+
+              {!contactData && !v.source_username && platforms.length === 0 && !v.linkedin_url && !v.website_url && !speaker.linkedin_url && !speaker.website_url && !v.city && (
+                <p className="text-sm text-muted-foreground">No contact information available.</p>
+              )}
+            </div>
+          </CollapsibleSection>
+
+          {/* Speaker Review (separate from verification) */}
+          <CollapsibleSection
+            title="Speaker Review"
+            icon={<ClipboardList className="h-4 w-4 text-[#1e3a5f]" />}
+          >
+            <div className="mt-3 space-y-3">
+              {/* Existing review info */}
+              {speaker.reviewed_at && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Reviewed by: {speaker.reviewed_by ?? "—"}</span>
+                  <span>on {new Date(speaker.reviewed_at).toLocaleDateString()} {new Date(speaker.reviewed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  {speaker.review_status && <ReviewStatusBadge status={speaker.review_status} />}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">Review Status</Label>
+                  <Select value={reviewStatus} onValueChange={setReviewStatus}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Select status" /></SelectTrigger>
+                    <SelectContent>
+                      {REVIEW_STATUSES.map((rs) => (
+                        <SelectItem key={rs.value} value={rs.value}>{rs.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Review Notes</Label>
+                  <Textarea
+                    value={reviewNotes}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Add review notes about this speaker..."
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleSaveReview(speaker.id)}
+                  disabled={reviewSaving}
+                  className="bg-[#1e3a5f] hover:bg-[#2d5282]"
+                >
+                  {reviewSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                  Save Review
+                </Button>
+              </div>
+            </div>
+          </CollapsibleSection>
+        </div>
+
+        {/* Row 3: Events */}
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Assigned Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {expandedEvents.length > 0 ? (
+              <ul className="space-y-2">
+                {expandedEvents.map((ev) => (
+                  <li key={ev.id} className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="font-medium">{ev.title}</span>
+                    {ev.start_date && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(ev.start_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No events assigned yet.</p>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-3"
+              onClick={() => handleOpenInvite(speaker)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Add to Event
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  /** Render the expanded row for an UNVERIFIED speaker */
+  const renderUnverifiedExpanded = (speaker: Speaker) => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Verification Card */}
+      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4" /> Verification
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground mb-3">Not yet verified</p>
+            <Button
+              size="sm"
+              className="bg-[#1e3a5f] hover:bg-[#2d5282]"
+              onClick={() => handleStartVerification(speaker)}
+            >
+              <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Start Verification
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bio Card */}
+      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Bio</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {speaker.bio || "No bio available."}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Events Card */}
+      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calendar className="h-4 w-4" /> Events
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {expandedEvents.length > 0 ? (
+            <ul className="space-y-2">
+              {expandedEvents.map((ev) => (
+                <li key={ev.id} className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="font-medium">{ev.title}</span>
+                  {ev.start_date && (
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(ev.start_date).toLocaleDateString()}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No events assigned yet.</p>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-3"
+            onClick={() => handleOpenInvite(speaker)}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Add to Event
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -553,109 +1190,10 @@ export default function Speakers() {
                             <div className="flex items-center justify-center py-8">
                               <Loader2 className="h-6 w-6 animate-spin text-[#1e3a5f]" />
                             </div>
+                          ) : expandedVerification ? (
+                            renderVerifiedExpanded(speaker, expandedVerification)
                           ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                              {/* Verification Card */}
-                              <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-base flex items-center gap-2">
-                                    <ShieldCheck className="h-4 w-4" /> Verification
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  {expandedVerification ? (
-                                    <div className="flex flex-col items-center gap-3">
-                                      <MiniGauge score={expandedVerification.verification_score ?? 0} />
-                                      <StatusBadge status={expandedVerification.status ?? "pending"} />
-                                      <div className="flex flex-wrap gap-1.5 justify-center">
-                                        {expandedVerification.claimed_branch && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            {expandedVerification.claimed_branch}
-                                          </Badge>
-                                        )}
-                                        {expandedVerification.claimed_type && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            {expandedVerification.claimed_type}
-                                          </Badge>
-                                        )}
-                                        {expandedVerification.claimed_status && (
-                                          <Badge variant="secondary" className="text-xs capitalize">
-                                            {expandedVerification.claimed_status}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full mt-2"
-                                        onClick={() => handleViewVerification(speaker)}
-                                      >
-                                        <Eye className="h-3.5 w-3.5 mr-1.5" /> View Full Verification
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <div className="text-center py-4">
-                                      <p className="text-sm text-muted-foreground mb-3">Not yet verified</p>
-                                      <Button
-                                        size="sm"
-                                        className="bg-[#1e3a5f] hover:bg-[#2d5282]"
-                                        onClick={() => handleStartVerification(speaker)}
-                                      >
-                                        <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Start Verification
-                                      </Button>
-                                    </div>
-                                  )}
-                                </CardContent>
-                              </Card>
-
-                              {/* Bio Card */}
-                              <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-base">Bio</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                    {speaker.bio || "No bio available."}
-                                  </p>
-                                </CardContent>
-                              </Card>
-
-                              {/* Events Card */}
-                              <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="text-base flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" /> Events
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  {expandedEvents.length > 0 ? (
-                                    <ul className="space-y-2">
-                                      {expandedEvents.map((ev) => (
-                                        <li key={ev.id} className="flex items-center gap-2 text-sm">
-                                          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                          <span className="font-medium">{ev.title}</span>
-                                          {ev.start_date && (
-                                            <span className="text-xs text-muted-foreground">
-                                              {new Date(ev.start_date).toLocaleDateString()}
-                                            </span>
-                                          )}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  ) : (
-                                    <p className="text-sm text-muted-foreground">No events assigned yet.</p>
-                                  )}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full mt-3"
-                                    onClick={() => handleOpenInvite(speaker)}
-                                  >
-                                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Add to Event
-                                  </Button>
-                                </CardContent>
-                              </Card>
-                            </div>
+                            renderUnverifiedExpanded(speaker)
                           )}
                         </div>
                       </TableCell>
