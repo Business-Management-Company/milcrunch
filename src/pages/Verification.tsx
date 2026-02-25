@@ -83,6 +83,7 @@ import {
   generateDossierNarrative,
   extractCareerTimeline,
   extractCareerFromAIAnalysis,
+  searchYouTube,
   type PipelinePhase,
   type PDLResponse,
   type AIFilteredCriminalResult,
@@ -2758,7 +2759,10 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
     return (
       <div className="text-center py-12">
         <Briefcase className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground">No career data found. Re-verify to refresh.</p>
+        <p className="text-sm text-muted-foreground mb-3">No career data extracted yet.</p>
+        <Button variant="outline" size="sm" onClick={handleExtract}>
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Extract Career Data
+        </Button>
       </div>
     );
   }
@@ -2773,8 +2777,8 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
             <span className="text-xs text-muted-foreground">Last generated: {new Date(lastGenerated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
           )}
         </div>
-        <button onClick={handleRegenerate} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-          <RefreshCw className="h-3 w-3" /> Regenerate
+        <button onClick={handleRegenerate} disabled={extracting} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
+          {extracting ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
         </button>
       </div>
 
@@ -2981,6 +2985,8 @@ function StatusDot({ status }: { status: 'red' | 'yellow' | 'green' }) {
 
 function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
   const [reverifying, setReverifying] = useState(false);
+  const [reverifyPhase, setReverifyPhase] = useState("");
+  const [reverifyProgress, setReverifyProgress] = useState(0);
   const [notesOpen, setNotesOpen] = useState(false);
   const [editNotes, setEditNotes] = useState(record.notes ?? "");
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -2997,14 +3003,31 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
   const [additionalSearching, setAdditionalSearching] = useState(false);
+  // Per-section regenerating states
+  const [regenEvidence, setRegenEvidence] = useState(false);
+  const [regenSocial, setRegenSocial] = useState(false);
+  const [regenMedia, setRegenMedia] = useState(false);
+  const [regenBackground, setRegenBackground] = useState(false);
 
   const sources = (record.evidence_sources ?? []) as EvidenceSource[];
   const redFlags = (record.red_flags ?? []) as RedFlag[];
   const pdlData = record.pdl_data as PDLResponse | null;
 
+  // Phase labels for progress display
+  const PHASE_LABELS: Record<number, { label: string; pct: number }> = {
+    1: { label: "Enriching profile (PDL)...", pct: 10 },
+    2: { label: "Searching the web...", pct: 25 },
+    5: { label: "Finding media appearances...", pct: 40 },
+    7: { label: "Validating social profiles...", pct: 55 },
+    3: { label: "Deep-extracting web pages...", pct: 65 },
+    6: { label: "Extracting career timeline...", pct: 80 },
+    4: { label: "Generating intelligence summary...", pct: 92 },
+  };
+
   const handleQuickReverify = async () => {
     setReverifying(true);
-    toast.info(`Re-verifying ${record.person_name}...`);
+    setReverifyPhase("Starting verification...");
+    setReverifyProgress(2);
     try {
       const result = await runVerificationPipeline(
         {
@@ -3014,10 +3037,34 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           claimedStatus: record.claimed_status ?? "veteran",
           linkedinUrl: record.linkedin_url ?? undefined,
           websiteUrl: record.website_url ?? undefined,
+          notes: record.notes ?? undefined,
           socialHandle: record.source_username?.replace(/^@/, "") || undefined,
         },
-        () => {}
+        (phase) => {
+          const info = PHASE_LABELS[phase.phase];
+          if (info && phase.status === "running") {
+            setReverifyPhase(info.label);
+            setReverifyProgress(info.pct);
+          } else if (phase.status === "done" || phase.status === "empty" || phase.status === "error") {
+            const nextPct = (info?.pct ?? 0) + 5;
+            setReverifyProgress(Math.min(nextPct, 95));
+          }
+        }
       );
+      setReverifyPhase("Saving results...");
+      setReverifyProgress(96);
+
+      // Merge manual_checks to preserve existing data
+      const { data: existingRow } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const existingMc = ((existingRow?.manual_checks ?? {}) as Record<string, unknown>);
+      const mergedChecks = {
+        ...existingMc,
+        youtube_results: result.youtubeResults ?? [],
+        youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
+        career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
+        social_profiles: result.socialVerification?.profiles ?? [],
+      };
+
       await supabase.from("verifications").update({
         verification_score: result.verificationScore,
         status: result.status,
@@ -3029,14 +3076,142 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         red_flags: result.redFlags,
         linkedin_url: result.linkedinUrl || record.linkedin_url || null,
         last_verified_at: new Date().toISOString(),
-        ...(result.youtubeResults?.length ? { manual_checks: { youtube_results: result.youtubeResults } } : {}),
+        manual_checks: mergedChecks,
       }).eq("id", record.id);
+      setReverifyProgress(100);
       toast.success("Re-verification complete");
       await onRefresh?.();
     } catch {
       toast.error("Re-verification failed");
     } finally {
       setReverifying(false);
+      setReverifyPhase("");
+      setReverifyProgress(0);
+    }
+  };
+
+  // Per-section regenerate: Evidence (SERP + Firecrawl)
+  const handleRegenEvidence = async () => {
+    setRegenEvidence(true);
+    try {
+      const queries = [
+        `${record.person_name} military veteran`,
+        `${record.person_name} ${record.claimed_branch ?? ""}`,
+        `${record.person_name} site:linkedin.com military`,
+      ].filter(Boolean);
+      const allResults: EvidenceSource[] = [];
+      const seen = new Set<string>();
+      for (const q of queries) {
+        const results = await searchSerp(q);
+        for (const r of results) {
+          const url = r.link ?? "";
+          if (seen.has(url)) continue;
+          seen.add(url);
+          const { category, relevance, isRedFlag } = categorizeAndScoreSnippet(r.snippet ?? "", r.title ?? "");
+          allResults.push({ title: r.title ?? "No title", url, snippet: r.snippet ?? "", relevanceScore: relevance, category, isRedFlag });
+        }
+      }
+      allResults.sort((a, b) => (b.relevanceScore ?? 0) - (a.relevanceScore ?? 0));
+      await supabase.from("verifications").update({
+        evidence_sources: allResults,
+        serp_results: allResults,
+      }).eq("id", record.id);
+      toast.success(`Found ${allResults.length} evidence sources`);
+      onRefresh?.();
+    } catch (err) {
+      toast.error("Evidence search failed");
+      console.error("[RegenEvidence]", err);
+    } finally {
+      setRegenEvidence(false);
+    }
+  };
+
+  // Per-section regenerate: Social profiles
+  const handleRegenSocial = async () => {
+    setRegenSocial(true);
+    try {
+      // Re-run social verification with a fresh pipeline call for just social
+      // Since social extraction uses PDL + evidence, reparse from existing data
+      const existingPdl = record.pdl_data as PDLResponse | null;
+      const existingSources = (record.evidence_sources ?? []) as EvidenceSource[];
+      const profiles: { network: string; url: string; verified: boolean }[] = [];
+      if (existingPdl?.profiles?.length) {
+        for (const p of existingPdl.profiles) {
+          profiles.push({ network: p.network ?? "unknown", url: p.url ?? "", verified: true });
+        }
+      }
+      const SOCIAL_PATTERNS: { network: string; pattern: RegExp }[] = [
+        { network: "instagram", pattern: /instagram\.com\/([a-zA-Z0-9_.]+)/i },
+        { network: "linkedin", pattern: /linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i },
+        { network: "twitter", pattern: /(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)/i },
+        { network: "youtube", pattern: /youtube\.com\/(?:@|channel\/|c\/)([a-zA-Z0-9_-]+)/i },
+        { network: "tiktok", pattern: /tiktok\.com\/@([a-zA-Z0-9_.]+)/i },
+      ];
+      const seenNetworks = new Set(profiles.map((p) => p.network));
+      for (const es of existingSources) {
+        for (const { network, pattern } of SOCIAL_PATTERNS) {
+          if (!seenNetworks.has(network) && pattern.test(es.url ?? "")) {
+            profiles.push({ network, url: es.url ?? "", verified: false });
+            seenNetworks.add(network);
+          }
+        }
+      }
+      const { data: row } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const mc = ((row?.manual_checks ?? {}) as Record<string, unknown>);
+      await supabase.from("verifications").update({
+        manual_checks: { ...mc, social_profiles: profiles },
+      }).eq("id", record.id);
+      toast.success(`Found ${profiles.length} social profiles`);
+      onRefresh?.();
+    } catch (err) {
+      toast.error("Social verification failed");
+      console.error("[RegenSocial]", err);
+    } finally {
+      setRegenSocial(false);
+    }
+  };
+
+  // Per-section regenerate: Media & Appearances
+  const handleRegenMedia = async () => {
+    setRegenMedia(true);
+    try {
+      const results = await searchYouTube(record.person_name, record.claimed_branch ?? undefined, record.source_username?.replace(/^@/, "") || undefined);
+      const { data: row } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const mc = ((row?.manual_checks ?? {}) as Record<string, unknown>);
+      await supabase.from("verifications").update({
+        manual_checks: { ...mc, youtube_media: { videos: results, searched_at: new Date().toISOString() } },
+      }).eq("id", record.id);
+      toast.success(`Found ${results.length} media appearances`);
+      onRefresh?.();
+    } catch (err) {
+      toast.error("Media search failed");
+      console.error("[RegenMedia]", err);
+    } finally {
+      setRegenMedia(false);
+    }
+  };
+
+  // Per-section regenerate: Background Review
+  const handleRegenBackground = async () => {
+    setRegenBackground(true);
+    try {
+      const results = await filterCriminalResults(
+        record.person_name,
+        record.claimed_branch ?? undefined,
+        ((record.pdl_data as any)?.location ?? []).map((l: { name: string }) => l.name).join(", ") || undefined
+      );
+      const { data: row } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const mc = ((row?.manual_checks ?? {}) as Record<string, unknown>);
+      await supabase.from("verifications").update({
+        manual_checks: { ...mc, background_review: { results, summary: results.length > 0 ? `${results.length} potential concerns found` : "No concerns identified", reviewed_at: new Date().toISOString() } },
+      }).eq("id", record.id);
+      toast.success("Background review complete");
+      onRefresh?.();
+    } catch (err) {
+      toast.error("Background review failed");
+      console.error("[RegenBackground]", err);
+    } finally {
+      setRegenBackground(false);
     }
   };
 
@@ -3170,6 +3345,22 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
   return (
     <div className={`border-l-4 ${expandedBranchColor} bg-white dark:bg-gray-950 rounded-r-xl shadow-sm mx-2 mb-4`}>
     <div className="w-full py-6 pl-3 pr-8 max-w-full overflow-hidden">
+      {/* Re-verify progress bar */}
+      {reverifying && (
+        <div className="mb-4 rounded-lg bg-[#1e3a5f]/5 border border-[#1e3a5f]/20 p-3">
+          <div className="flex items-center gap-3 mb-2">
+            <Loader2 className="h-4 w-4 animate-spin text-[#1e3a5f]" />
+            <span className="text-sm font-medium text-[#1e3a5f]">{reverifyPhase || "Re-verifying..."}</span>
+            <span className="text-xs text-muted-foreground ml-auto">{reverifyProgress}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#1e3a5f] rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${reverifyProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
       {/* ── 1. HERO ── */}
       <div className="flex items-start gap-4 w-full max-w-full overflow-hidden mb-6">
         {/* LEFT column */}
@@ -3354,6 +3545,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               {shareLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5 mr-1.5" />}
               Share Report
             </Button>
+            <Button variant="outline" size="sm" onClick={handleQuickReverify} disabled={reverifying}>
+              {reverifying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+              Re-Verify
+            </Button>
           </div>
           {notesOpen && (
             <div className="mt-3 space-y-2 max-w-md">
@@ -3461,7 +3656,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </button>
         {evidenceOpen && (
           <div className="ml-6 mt-4 mb-2 space-y-4">
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end gap-2">
+              <button onClick={handleRegenEvidence} disabled={regenEvidence} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
+                {regenEvidence ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
+              </button>
               <Dialog open={additionalSearchOpen} onOpenChange={setAdditionalSearchOpen}>
                 <Button variant="outline" size="sm" onClick={() => setAdditionalSearchOpen(true)}>
                   <Plus className="h-3.5 w-3.5 mr-1.5" /> Run Additional Search
@@ -3526,7 +3724,16 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             return hasSocial ? 'green' : 'red';
           })()} />
         </button>
-        {socialOpen && <div className="ml-6 mt-4 mb-2"><SocialVerificationSection record={record} /></div>}
+        {socialOpen && (
+          <div className="ml-6 mt-4 mb-2">
+            <div className="flex justify-end mb-2">
+              <button onClick={handleRegenSocial} disabled={regenSocial} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
+                {regenSocial ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
+              </button>
+            </div>
+            <SocialVerificationSection record={record} />
+          </div>
+        )}
       </section>
 
       {/* ── 6. MEDIA — collapsible ── */}
@@ -3549,6 +3756,11 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </button>
         {mediaOpen && (
           <div className="ml-6 mt-4 mb-2">
+            <div className="flex justify-end mb-2">
+              <button onClick={handleRegenMedia} disabled={regenMedia} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
+                {regenMedia ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
+              </button>
+            </div>
             <MediaTab record={record} />
           </div>
         )}
@@ -3583,6 +3795,11 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
         </button>
         {backgroundOpen && (
           <div className="ml-6 mt-4 mb-2">
+            <div className="flex justify-end mb-2">
+              <button onClick={handleRegenBackground} disabled={regenBackground} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
+                {regenBackground ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
+              </button>
+            </div>
             <BackgroundReviewTab
               personName={record.person_name}
               recordId={record.id}
