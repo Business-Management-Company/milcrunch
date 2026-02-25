@@ -562,7 +562,7 @@ function ManageContentPanel({
     }));
   };
 
-  const updateSection = (tab: string, idx: number, field: "heading" | "items" | "image_url", value: string | string[]) => {
+  const updateSection = (tab: string, idx: number, field: "heading" | "description" | "items" | "image_url", value: string | string[]) => {
     setContentDraft((prev) => {
       const sections = [...(prev[tab]?.sections || [])];
       sections[idx] = { ...sections[idx], [field]: value };
@@ -625,7 +625,7 @@ function ManageContentPanel({
       }
       setUploadProgress(100);
       const { data: { publicUrl } } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
-      updateSection(tab, idx, "image_url" as any, publicUrl);
+      updateSection(tab, idx, "image_url", publicUrl);
       setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
     } catch (err) {
       clearInterval(progressTimer);
@@ -645,7 +645,7 @@ function ManageContentPanel({
         if (error) console.error("[ManageContent] section image delete error:", JSON.stringify(error, null, 2));
       }
     }
-    updateSection(tab, idx, "image_url" as any, "");
+    updateSection(tab, idx, "image_url", "");
   };
 
   if (!open) return null;
@@ -877,6 +877,14 @@ function ManageContentPanel({
                           </button>
                         )}
                       </div>
+                      <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Description (optional paragraph)</label>
+                      <textarea
+                        value={section.description || ""}
+                        onChange={(e) => updateSection(tab, idx, "description", e.target.value)}
+                        rows={2}
+                        placeholder="Optional paragraph text above the bullet items"
+                        className={cn(inputCls, "text-xs")}
+                      />
                       <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Items (one per line)</label>
                       <textarea
                         value={section.items.join("\n")}
@@ -1179,31 +1187,64 @@ interface TabContent {
   headlineAccent?: string;
   heroImage?: string;
   description: string;
-  sections: { heading: string; items: string[]; image_url?: string }[];
+  sections: { heading: string; description?: string; items: string[]; image_url?: string }[];
   bottomNote?: { heading: string; text: string };
 }
 
 const TAB_CONTENT: Record<string, TabContent> = {
   "Events & Attendee App": {
-    headline: "Mobile-First Event Management",
-    headlineAccent: "Built for Military Communities",
+    headline: "One Event. Every Channel. Year-Round Revenue.",
+    headlineAccent: "",
     description:
-      "MilCrunch replaces platforms like Whova with a military-native PWA that works before, during, and after every event \u2014 no App Store required. Attendees get instant QR check-in, live schedules, and year-round community access.",
+      "Military events shouldn\u2019t be three-day transactions. MilCrunch transforms them into always-on communities \u2014 fueled by the creator economy, powered by AI, and built to give sponsors and media partners reach across social, email, streaming, and CTV.",
     sections: [
       {
         heading: "Key Features",
         items: [
-          "PWA Technology \u2014 Works on any device, zero downloads",
-          "QR Code Check-In \u2014 Instant registration and badge printing",
-          "Live Event Feed \u2014 Real-time updates, announcements, schedule changes",
-          "Sponsor Integration \u2014 Booth locations, branded content, ROI tracking",
-          "Post-Event Engagement \u2014 Community continues beyond event day",
+          "Progressive Web App (PWA) \u2014 Attendees scan a QR code and instantly access schedules, speaker bios, maps, and networking. Works on any device, zero downloads",
+          "QR Code Check-In \u2014 Instant registration and badge printing at the door. No lines, no paper lists",
+          "Live Event Feed \u2014 Real-time announcements, schedule changes, photo sharing, and attendee interaction",
+          "Sponsor Integration \u2014 Booth locations, branded content, lead retrieval, and impression tracking with real-time ROI dashboards",
+          "Speaker Management \u2014 Verified speaker profiles linked from the MilCrunch verification pipeline. Bio, photo, social links, and session assignments in one place",
+          "Run of Show Builder \u2014 Drag-and-drop agenda creation with conflict detection across stages and time slots",
+          "Post-Event Engagement \u2014 Attendees stay connected 365 days a year, turning one-time events into year-round ecosystems",
         ],
+      },
+      {
+        heading: "Conflicts & Collabs",
+        description:
+          "MilCrunch automatically scans the military event landscape and flags scheduling conflicts before you commit to a date. Planning a veteran business expo in Tampa in March? MilCrunch shows you every military event in that region and timeframe \u2014 so you can avoid competing for the same audience or find collaboration opportunities. Joint marketing, shared audiences, co-sponsorship \u2014 what used to require hours of manual research happens in seconds.",
+        items: [],
+      },
+      {
+        heading: "AI-Powered Go-to-Market",
+        description:
+          "Describe your event in plain English \u2014 \u2018500-person veteran entrepreneur summit in San Diego targeting transitioning service members\u2019 \u2014 and the platform generates a full go-to-market strategy: target creator lists, email campaign sequences, social content calendars, sponsor outreach templates, and timeline milestones. What used to take a marketing team two weeks to plan takes MilCrunch two minutes.",
+        items: [],
+      },
+      {
+        heading: "The Cost Savings Are Real",
+        description:
+          "Running military events today means juggling subscriptions that don\u2019t talk to each other:",
+        items: [
+          "Event platform (Whova/Bizzabo): $5,000\u2013$15,000/year",
+          "Email marketing (Mailchimp/HubSpot): $1,200\u2013$6,000/year",
+          "Creator discovery (manual research or agencies): $10,000\u2013$50,000/year",
+          "Streaming setup (OBS + encoders + crew): $3,000\u2013$8,000/event",
+          "Sponsor reporting (custom dashboards or agencies): $5,000\u2013$20,000/year",
+          "Verification (manual or third-party): $2,000\u2013$10,000/year",
+        ],
+      },
+      {
+        heading: "Battle-Tested",
+        description:
+          "MilCrunch was born from three years of running the Parade Deck Experience \u2014 a contracted live streaming stage at the Military Influencer Conference. That hands-on experience building real events for real military audiences shaped every feature in this platform. This isn\u2019t theoretical. It\u2019s battle-tested.",
+        items: [],
       },
     ],
     bottomNote: {
-      heading: "Why It Matters",
-      text: "Traditional event apps die when the conference ends. MilCrunch keeps attendees connected 365 days a year, solving the \u201Cone-and-done\u201D problem that plagues military events.",
+      heading: "That\u2019s $26,000\u2013$109,000/year in fragmented tools",
+      text: "None of which share data, none of which understand the military community, and none of which give you a unified picture of ROI. MilCrunch replaces all of it. One login, one platform, one source of truth.",
     },
   },
   "MilCrunch Experience": {
@@ -1525,21 +1566,33 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
               className="w-full rounded-xl shadow-md mb-5 object-cover"
             />
           )}
-          <div className="space-y-3">
-            {section.items.map((item) => (
-              <div key={item} className="flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                <p
-                  className={cn(
-                    "text-sm leading-relaxed transition-colors duration-300",
-                    dark ? "text-gray-300" : "text-[#374151]"
-                  )}
-                >
-                  {item}
-                </p>
-              </div>
-            ))}
-          </div>
+          {section.description && (
+            <p
+              className={cn(
+                "text-sm leading-relaxed mb-4 transition-colors duration-300",
+                dark ? "text-gray-300" : "text-[#374151]"
+              )}
+            >
+              {section.description}
+            </p>
+          )}
+          {section.items.length > 0 && section.items.some((i) => i.trim()) && (
+            <div className="space-y-3">
+              {section.items.filter((i) => i.trim()).map((item) => (
+                <div key={item} className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <p
+                    className={cn(
+                      "text-sm leading-relaxed transition-colors duration-300",
+                      dark ? "text-gray-300" : "text-[#374151]"
+                    )}
+                  >
+                    {item}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       ))}
 
