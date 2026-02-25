@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles, Send, Trash2, ArrowRight, MapPin, AlertTriangle, CalendarPlus } from "lucide-react";
 import { parseISO, differenceInDays } from "date-fns";
-import { MarkdownResponse } from "@/components/MarkdownResponse";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
+import { AICTAButtons } from "@/components/ui/ai-cta-buttons";
+import { getAgentContext } from "@/lib/ai-agent-context";
 import { supabase } from "@/integrations/supabase/client";
 
 /* ---------- types ---------- */
@@ -147,9 +149,15 @@ export default function EventAIAssistant({
   const totalSold = tickets.reduce((sum, t) => sum + t.sold, 0);
   const totalAvailable = tickets.reduce((sum, t) => sum + t.quantity, 0);
 
-  const systemPrompt = `You are an expert event planning assistant for MilCrunch, a military creator & experience platform. You have full context about this event and should answer questions with specific, actionable advice.
+  // Build system prompt with shared context (fetched once and cached per render cycle)
+  const [platformContext, setPlatformContext] = useState("");
+  useEffect(() => {
+    getAgentContext().then(setPlatformContext);
+  }, []);
 
-EVENT CONTEXT:
+  const systemPrompt = `You are an expert event planning assistant for MilCrunch, a military creator & experience platform. You have FULL access to all platform data AND full context about this specific event. Answer with specific numbers and names — NEVER say "I don't have access."
+
+THIS EVENT:
 - Name: ${eventTitle}
 - Type: ${eventType || "General"}
 - Status: ${status}
@@ -172,7 +180,9 @@ AGENDA: ${agendaSessionCount} session${agendaSessionCount !== 1 ? "s" : ""} sche
 
 ${eventDescription ? `DESCRIPTION: ${eventDescription}` : ""}
 
-Keep answers concise but thorough. Use bullet points and headers for readability. Focus on military/veteran community best practices.`;
+${platformContext ? `\n--- PLATFORM-WIDE DATA ---\n${platformContext}` : ""}
+
+Keep answers concise but thorough. Use markdown formatting (bold, bullets, headers) for readability. Focus on military/veteran community best practices. Always answer first, then offer to go deeper.`;
 
   /* ---- Send message ---- */
   const sendMessage = async (text: string) => {
@@ -282,7 +292,8 @@ Keep answers concise but thorough. Use bullet points and headers for readability
             ) : (
               <div key={i} className="flex flex-col items-start gap-2">
                 <div className="max-w-[90%] rounded-xl px-5 py-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                  <MarkdownResponse content={m.content} />
+                  <MarkdownRenderer content={m.content} />
+                  <AICTAButtons text={m.content} />
                 </div>
                 {/* Smart CTAs */}
                 {(() => {

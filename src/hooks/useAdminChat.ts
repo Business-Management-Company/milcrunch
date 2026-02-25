@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminChatContext, executeAdminTool, ADMIN_CHAT_TOOLS } from "@/lib/admin-chat-tools";
 import { getRoleChatConfig, type ChatRole } from "@/lib/ai-chat-roles";
+import { getAgentContext } from "@/lib/ai-agent-context";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-4-20250514";
@@ -159,8 +160,11 @@ export function useAdminChat(userRole: ChatRole = "super_admin") {
 
       await saveMessage("user", userContent.trim());
 
-      const context = await getAdminChatContext();
-      const systemWithContext = `${roleConfig.systemPromptAdditions}\n\n${context}`;
+      const [adminContext, platformContext] = await Promise.all([
+        getAdminChatContext(),
+        getAgentContext(),
+      ]);
+      const systemWithContext = `${roleConfig.systemPromptAdditions}\n\n${adminContext}\n\n${platformContext}`;
 
       const apiMessages: { role: string; content: unknown[] }[] = [
         ...messages.map((m) => ({ role: m.role, content: [{ type: "text", text: m.content }] })),

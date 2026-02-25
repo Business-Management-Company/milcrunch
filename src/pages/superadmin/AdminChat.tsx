@@ -6,6 +6,7 @@ import { MessageSquare, Send, Loader2, Shield, Calendar, Eye, Building2 } from "
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
+import { AICTAButtons } from "@/components/ui/ai-cta-buttons";
 
 const ROLE_ICONS = {
   shield: Shield,
@@ -104,7 +105,10 @@ export default function AdminChat() {
                   >
                     <p className="text-xs font-medium opacity-80 mb-1">{m.role === "user" ? "You" : "Assistant"}</p>
                     {m.role === "assistant" ? (
-                      <MarkdownRenderer content={m.content} />
+                      <>
+                        <MarkdownRenderer content={m.content} />
+                        <AICTAButtons text={m.content} />
+                      </>
                     ) : (
                       <p className="whitespace-pre-wrap text-sm">{m.content}</p>
                     )}
@@ -127,6 +131,7 @@ export default function AdminChat() {
                   <div className="rounded-lg px-3 py-2 bg-muted/60 max-w-[85%]">
                     <p className="text-xs font-medium opacity-80 mb-1">Assistant</p>
                     <MarkdownRenderer content={streamingContent} />
+                    <AICTAButtons text={streamingContent} />
                   </div>
                 )}
                 {loading && !streamingContent && (

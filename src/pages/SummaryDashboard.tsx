@@ -24,7 +24,9 @@ import {
 import { cn } from "@/lib/utils";
 import { fetchDirectoriesWithCounts, type Directory } from "@/lib/directories";
 import { classifyIntent, type ClassificationResult } from "@/lib/intent-classifier";
-import { MarkdownResponse } from "@/components/MarkdownResponse";
+import MarkdownRenderer from "@/components/ui/markdown-renderer";
+import { AICTAButtons } from "@/components/ui/ai-cta-buttons";
+import { getAgentContext } from "@/lib/ai-agent-context";
 
 /* ------------------------------------------------------------------ */
 /* Quick-action card definitions                                       */
@@ -144,14 +146,19 @@ export default function SummaryDashboard() {
     setAiLoading(true);
     setAiResponse("");
     try {
+      const context = await getAgentContext();
       const res = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          model: "claude-sonnet-4-20250514",
           max_tokens: 1024,
           temperature: 0.4,
-          system: `You are the MilCrunch AI assistant — a military creator & event management platform. Answer the user's question helpfully and concisely. Use markdown formatting (bold, bullets, etc.) for readability. If the question relates to a specific feature, mention how to access it in MilCrunch (e.g. "Head to **Discover** to search creators"). Keep answers under 200 words.`,
+          system: `You are the MilCrunch AI assistant — a military creator & event management platform. You have FULL access to real-time platform data. Answer with specific numbers and names from the data below.
+
+${context}
+
+Use markdown formatting (bold, bullets, etc.) for readability. Keep answers concise and direct — answer first, then offer to go deeper. Never say "I don't have access" or tell the user to "go check manually." Always reference specific data when available.`,
           messages: [{ role: "user", content: query }],
         }),
       });
@@ -395,7 +402,10 @@ export default function SummaryDashboard() {
                   Thinking...
                 </div>
               ) : (
-                <MarkdownResponse content={aiResponse} />
+                <>
+                  <MarkdownRenderer content={aiResponse} />
+                  <AICTAButtons text={aiResponse} />
+                </>
               )}
             </div>
           </div>

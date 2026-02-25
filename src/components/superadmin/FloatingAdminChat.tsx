@@ -18,6 +18,8 @@ import CreateListModal from "@/components/CreateListModal";
 import { detectBranch } from "@/lib/featured-creators";
 import { fetchDirectoriesWithCounts, addToDirectory, type Directory } from "@/lib/directories";
 import { toast } from "sonner";
+import { getAgentContext } from "@/lib/ai-agent-context";
+import { AICTAButtons } from "@/components/ui/ai-cta-buttons";
 
 interface ChatMessage {
   id: string;
@@ -576,53 +578,22 @@ export default function FloatingAdminChat() {
     lastQueryRef.current = input;
 
     try {
-      // Fetch upcoming events and creators for context
-      const [{ data: events }, { data: creators }] = await Promise.all([
-        supabase
-          .from("events")
-          .select("title, start_date, end_date, location, description, event_type, photo_url, slug, id")
-          .gte("start_date", new Date().toISOString())
-          .order("start_date", { ascending: true })
-          .limit(20),
-        supabase
-          .from("directory_members")
-          .select("creator_name, creator_handle, platform, branch")
-          .limit(50),
-      ]);
+      // Fetch shared platform context
+      const platformContext = await getAgentContext();
 
-      const eventsBlock = events?.length
-        ? events.map(e => {
-            const date = e.start_date ? new Date(e.start_date).toLocaleDateString() : "TBD";
-            const loc = e.location || "Location TBD";
-            const url = e.slug ? `/brand/events/${e.slug}` : `/brand/events`;
-            const photo = e.photo_url ? ` | Photo: ${e.photo_url}` : "";
-            return `- ${e.title} | ${date} | ${loc} | Link: ${url}${photo}`;
-          }).join("\n")
-        : "No upcoming events found.";
+      const systemPrompt = `You are the MilCrunch AI assistant for a military creator and event management platform. You have FULL access to real-time platform data.
 
-      const creatorsBlock = creators?.length
-        ? creators.map(c => `${c.creator_name} (@${c.creator_handle}, ${c.branch || "branch unknown"})`).join(", ")
-        : "No creators found.";
+${platformContext}
 
-      const systemPrompt = `You are the MilCrunch AI assistant for a military creator and event management platform. You have access to the following upcoming events in the platform database:
-
-${eventsBlock}
-
-Creators in the platform: ${creatorsBlock}
-
-Answer questions about these events and creators directly from this data. Do not say you lack access to the database. Never output raw JSON. Always respond in natural language.
+Answer questions about events, creators, campaigns, lists, and directories directly from this data. NEVER say you lack access to the database or real-time data. Never output raw JSON. Always respond in natural language with specific numbers and names.
 
 Be action-oriented. When the user's intent is clear, act immediately and confirm afterward. Only ask ONE clarifying question maximum, and only when the intent is genuinely ambiguous. Never ask multiple clarifying questions in the same response. If asked to create something, create it first then offer to refine.
 
 When showing events, always format each event as:
-**[Event Name](event_url or #)** - Date | Location
-Include the event photo if available. Always end event listings with a direct link. Format responses with clear sections and emojis for scannability.
+**Event Name** - Date | Location | Registrations
+Format responses with clear sections using markdown (bold, bullets, headers) for readability.
 
-Never ask more than one question in a single response. If the user has already answered one question, proceed immediately to showing results — do not ask another question. Format creator results as:
-
-**[Name]** (@handle) — [branch] | [followers] followers | [engagement]% engagement
-
-Show at least 5 results when displaying creators. Lead with: "Here are [X] creators matching your criteria:" then list them. After results, offer one follow-up like "Want me to filter by follower count or content type?"
+Never ask more than one question in a single response. If the user has already answered one question, proceed immediately to showing results — do not ask another question.
 
 When you ask a clarifying question, always end your message with a line like:
 CHIPS: Option A | Option B | Option C
@@ -880,7 +851,11 @@ For all other questions, respond naturally and concisely.`;
                       <span className="text-sm text-gray-500 italic">{m.text || "MilCrunch AI is thinking..."}</span>
                     </div>
                   ) : m.role === "assistant" ? (
-                    <MarkdownRenderer content={m.text} />
+                    <>
+                      <MarkdownRenderer content={m.text} />
+                      {/* CTA buttons — only for text responses without creator cards */}
+                      {!m.creators?.length && <AICTAButtons text={m.text} onNavigate={() => setOpen(false)} />}
+                    </>
                   ) : (
                     <p className="whitespace-pre-wrap break-words">{m.text}</p>
                   )}
