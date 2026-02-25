@@ -270,55 +270,60 @@ export default function Speakers() {
 
     const rows = data as Speaker[];
 
-    // Batch-fetch verification statuses for speakers that have a verification_id
+    // Batch-fetch verification statuses + photos for speakers that have a verification_id
     const withVid = rows.filter((s) => s.verification_id);
     const withoutVid = rows.filter((s) => !s.verification_id);
 
-    let verificationMap = new Map<string, { status: string; score: number | null }>();
+    let verificationMap = new Map<string, { status: string; score: number | null; photo: string | null; handle: string | null }>();
 
     if (withVid.length > 0) {
       const vids = withVid.map((s) => s.verification_id!);
       const { data: vRows } = await supabase
         .from("verifications")
-        .select("id, status, verification_score")
+        .select("id, status, verification_score, profile_photo_url, source_username")
         .in("id", vids);
       if (vRows) {
         for (const v of vRows) {
-          verificationMap.set(v.id, { status: v.status ?? "pending", score: v.verification_score });
+          verificationMap.set(v.id, {
+            status: v.status ?? "pending",
+            score: v.verification_score,
+            photo: v.profile_photo_url ?? null,
+            handle: v.source_username ?? null,
+          });
         }
       }
     }
 
     // For speakers WITHOUT a verification_id, try matching by name
-    // This handles cases where a speaker was added manually but a verification exists
     if (withoutVid.length > 0) {
       const names = withoutVid.map((s) => s.name);
       const { data: nameMatches } = await supabase
         .from("verifications")
-        .select("id, person_name, status, verification_score")
+        .select("id, person_name, status, verification_score, profile_photo_url, source_username")
         .in("person_name", names);
 
       if (nameMatches && nameMatches.length > 0) {
-        // Build name -> verification mapping
         const nameMap = new Map<string, typeof nameMatches[0]>();
         for (const v of nameMatches) {
-          // If multiple verifications for same name, pick the highest score
           const existing = nameMap.get(v.person_name);
           if (!existing || (v.verification_score ?? 0) > (existing.verification_score ?? 0)) {
             nameMap.set(v.person_name, v);
           }
         }
 
-        // Auto-link speakers to their verifications
         for (const speaker of withoutVid) {
           const match = nameMap.get(speaker.name);
           if (match) {
             console.log(`[Speakers] Auto-linking "${speaker.name}" to verification ${match.id} (score: ${match.verification_score})`);
             speaker.verification_id = match.id;
             speaker.verification_status = match.status ?? "pending";
-            verificationMap.set(match.id, { status: match.status ?? "pending", score: match.verification_score });
+            verificationMap.set(match.id, {
+              status: match.status ?? "pending",
+              score: match.verification_score,
+              photo: match.profile_photo_url ?? null,
+              handle: match.source_username ?? null,
+            });
 
-            // Persist the link to the database so it sticks
             supabase
               .from("speakers")
               .update({ verification_id: match.id, verification_status: match.status } as Record<string, unknown>)
@@ -331,12 +336,38 @@ export default function Speakers() {
       }
     }
 
-    // Merge verification_status from verifications table into speaker data
-    const enriched = rows.map((s) => {
-      if (s.verification_id && verificationMap.has(s.verification_id)) {
-        return { ...s, verification_status: verificationMap.get(s.verification_id)!.status };
+    // Batch-fetch directory_members avatars by source_username handles
+    const handles = [...verificationMap.values()].map((v) => v.handle).filter(Boolean) as string[];
+    const dmAvatarMap = new Map<string, string>(); // handle → avatar URL
+    if (handles.length > 0) {
+      const { data: dmRows } = await supabase
+        .from("directory_members")
+        .select("creator_handle, ic_avatar_url, avatar_url")
+        .in("creator_handle", handles);
+      if (dmRows) {
+        for (const dm of dmRows) {
+          const url = dm.ic_avatar_url || dm.avatar_url;
+          if (url && typeof url === "string" && url.startsWith("https://")) {
+            dmAvatarMap.set(dm.creator_handle, url);
+          }
+        }
       }
-      return s;
+    }
+
+    // Merge verification_status + best avatar into speaker data
+    const enriched = rows.map((s) => {
+      if (!s.verification_id || !verificationMap.has(s.verification_id)) return s;
+      const v = verificationMap.get(s.verification_id)!;
+      const updated = { ...s, verification_status: v.status };
+
+      // Resolve best photo: directory_members > verification photo > existing speaker photo
+      if (!getCreatorAvatar(updated)) {
+        const dmPhoto = v.handle ? dmAvatarMap.get(v.handle) : null;
+        const bestPhoto = dmPhoto || v.photo;
+        if (bestPhoto) updated.photo_url = bestPhoto;
+      }
+
+      return updated;
     });
 
     setSpeakers(enriched);
