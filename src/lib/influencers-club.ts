@@ -822,9 +822,19 @@ export async function searchSimilarCreators(
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
 
+  const plat = platform.toLowerCase();
+  const platformUrlMap: Record<string, string> = {
+    instagram: `https://www.instagram.com/${handle}`,
+    tiktok: `https://www.tiktok.com/@${handle}`,
+    youtube: `https://www.youtube.com/@${handle}`,
+    twitter: `https://twitter.com/${handle}`,
+    twitch: `https://www.twitch.tv/${handle}`,
+  };
+  const url = platformUrlMap[plat] || `https://www.instagram.com/${handle}`;
+
   const body = {
-    platform: platform.toLowerCase(),
-    handle,
+    platform: plat,
+    url,
     paging: { limit, page: 0 },
   };
 
@@ -842,6 +852,7 @@ export async function searchSimilarCreators(
 
   const rawResponse = await res.json();
   console.log("[SimilarCreators] Response status:", res.status);
+  console.log("[SimilarCreators] Response body:", JSON.stringify(rawResponse, null, 2));
 
   if (!res.ok) {
     throw new Error(`Similar Creators API ${res.status}: ${res.statusText}`, { cause: rawResponse });
