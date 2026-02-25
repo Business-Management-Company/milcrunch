@@ -256,8 +256,9 @@ function ManageContentPanel({
 
   // --- Video upload ---
   const handleVideoUpload = async (tab: string, file: File) => {
+    console.log(`[ManageContent] Video upload: ${file.name}, ${(file.size / 1024 / 1024).toFixed(1)} MB, type: ${file.type}`);
     if (file.size > MAX_VIDEO_SIZE) {
-      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 100 MB.`);
+      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 500 MB.`);
       return;
     }
     if (!(await ensureSession())) return;
@@ -875,7 +876,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl?: string; isSuperAdmin: boolean }) {
+function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean }) {
   const saasTotal = SAAS_ROWS.reduce((s, r) => s + r.cost, 0);
 
   return (
@@ -893,14 +894,6 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
         </h2>
         <p
           className={cn(
-            "text-lg md:text-xl font-semibold mb-4 transition-colors duration-300",
-            dark ? "text-gray-300" : "text-[#374151]"
-          )}
-        >
-          And where Recurrent turns that community into a permanent revenue engine.
-        </p>
-        <p
-          className={cn(
             "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
             dark ? "text-gray-400" : "text-[#6B7280]"
           )}
@@ -910,6 +903,10 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
           into a year-round community that sponsors want to fund again and again.
         </p>
       </section>
+
+      <div className="max-w-3xl mx-auto" style={{ margin: "24px auto" }}>
+        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={isSuperAdmin} />
+      </div>
 
       {/* Origin Story */}
       <section className="text-center max-w-[760px] mx-auto pt-4">
@@ -952,10 +949,6 @@ function OverviewTab({ dark, videoUrl, isSuperAdmin }: { dark: boolean; videoUrl
             That directory became a network. That network became a platform. And that platform
             became MilCrunch.
           </p>
-
-          <div style={{ margin: "24px 0" }}>
-            <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={isSuperAdmin} />
-          </div>
         </div>
       </section>
 
@@ -2243,7 +2236,7 @@ export default function Prospectus() {
           </div>
         )}
 
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} />}
         {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} />}
         {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} />}
         {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} />}
