@@ -258,7 +258,7 @@ function tabSlug(tab: string): string {
 }
 
 const CONTENT_TABS = TABS.filter(
-  (t) => t !== "Overview" && t !== "Financial Model"
+  (t) => t !== "Financial Model"
 );
 
 const DEMO_LINK_PRESETS = [
@@ -707,7 +707,7 @@ function ManageContentPanel({
       <div className="fixed inset-0 z-[60] bg-black/40" onClick={onClose} />
       <div
         className={cn(
-          "fixed top-0 right-0 z-[61] h-full w-full max-w-md shadow-2xl flex flex-col transition-colors duration-300",
+          "fixed top-0 right-0 z-[61] h-full w-full max-w-2xl shadow-2xl flex flex-col transition-colors duration-300",
           dark ? "bg-[#111827] text-white" : "bg-white text-[#111827]"
         )}
       >
@@ -1231,65 +1231,94 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean; onVideoEnded?: () => void }) {
+function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded, dbContent }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean; onVideoEnded?: () => void; dbContent?: TabContent }) {
+  const content = dbContent || TAB_CONTENT["Overview"];
   return (
     <div className="space-y-16">
       {/* Hero */}
       <section className="text-center max-w-3xl mx-auto pt-4">
-        <h2
-          className={cn(
-            "text-3xl md:text-4xl font-extrabold leading-tight mb-2 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          Where the military and veteran community comes to be{" "}
-          <span className="text-[#1e3a5f]">seen, heard, and understood.</span>
-        </h2>
-        <p
-          className={cn(
-            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
-          )}
-        >
-          MilCrunch is the operating system military events and communities have been
-          missing — built by a veteran, proven at MIC, and designed to turn every event
-          into a year-round community that sponsors want to fund again and again.
-        </p>
+        {content.headlineVisible !== false && (
+          <h2
+            className={cn(
+              "text-3xl md:text-4xl font-extrabold leading-tight mb-2 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            {content.headline}{" "}
+            {content.headlineAccentVisible !== false && content.headlineAccent && (
+              <span className="text-[#1e3a5f]">{content.headlineAccent}</span>
+            )}
+          </h2>
+        )}
+        {content.descriptionVisible !== false && (
+          <p
+            className={cn(
+              "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-400" : "text-[#6B7280]"
+            )}
+          >
+            {content.description}
+          </p>
+        )}
       </section>
 
       <div className="max-w-3xl mx-auto" style={{ margin: "24px auto" }}>
         <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={isSuperAdmin} onVideoEnded={onVideoEnded} />
       </div>
 
-      {/* Body text */}
-      <section className="max-w-[760px] mx-auto text-left space-y-5">
-        <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-          It started with a problem a veteran couldn&rsquo;t let go of: the military and veteran community needed a place to be heard, seen, and understood&mdash;in one home.
-        </p>
-        <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-          That home was the Parade Deck experience&mdash;where every military or veteran influencer, spouse-owned business, creator, and podcaster could show up, build a real presence, and be discovered.
-        </p>
-        <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-          Now, Parade Deck&rsquo;s name and infrastructure are being rebranded as{" "}
-          <strong className={dark ? "text-white" : "text-[#111827]"}>MilCrunch</strong>&mdash;with a meaningful upgrade in AI technology that makes the platform faster to use, easier to grow on, and built for scale.
-        </p>
-        <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-          <strong className={dark ? "text-white" : "text-[#111827]"}>MilCrunch is the essential infrastructure for media companies and brands that want to authentically engage the military and veteran community.</strong>{" "}
-          At the core is a powerful network directory and creator-to-brand toolkit&mdash;helping you discover the right voices with precision through Discovery toproprietary Military Match Scores, including filters by branch and location.
-        </p>
-        <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-          <strong className={dark ? "text-white" : "text-[#111827]"}>Trust is built in.</strong>{" "}
-          MilCrunch uses multi-phase AI verification&mdash;web intelligence and confidence scoring&mdash;to help eliminate stolen valor and protect credibility.
-        </p>
-        <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-          <strong className={dark ? "text-white" : "text-[#111827]"}>And it goes beyond discovery.</strong>{" "}
-          MilCrunch also replaces fragmented event stacks by bringing event creation, registration, and attendee experience into one system&mdash;complete with a high-performance Progressive Web App for schedules, speaker bios, and networking (no downloads). From there, teams can plan and execute faster with AI-assisted go-to-market strategy, automated campaign building, one-click streaming integrations, and real-time analytics/ROI tracking.
-        </p>
-        <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-          <strong className={dark ? "text-white" : "text-[#111827]"}>In short:</strong>{" "}
-          MilCrunch is one platform for military creator discovery, verification, event management, email and campaign automation, live streaming, and performance insights&mdash;built by veterans, for the community.
-        </p>
-      </section>
+      {/* Sections */}
+      {content.sections.filter((s) => s.visible !== false).length > 0 && (
+        <section className="max-w-[760px] mx-auto text-left space-y-8">
+          {content.sections.filter((s) => s.visible !== false).map((section) => (
+            <div key={section.heading} className="space-y-3">
+              <h3
+                className={cn(
+                  "text-lg font-bold transition-colors duration-300",
+                  dark ? "text-white" : "text-[#111827]"
+                )}
+              >
+                {section.heading}
+              </h3>
+              {section.description && (
+                <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                  {section.description}
+                </p>
+              )}
+              {section.items.length > 0 && section.items.some((i) => i.trim()) && (
+                <div className="space-y-3">
+                  {section.items.filter((i) => i.trim()).map((item) => (
+                    <div key={item} className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                        {item}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* Bottom note */}
+      {content.bottomNote && (
+        <section
+          className={cn(
+            "max-w-3xl mx-auto rounded-xl p-6 transition-colors duration-300",
+            dark
+              ? "bg-white/[0.04] border border-white/[0.08]"
+              : "bg-white border border-[#E5E7EB]"
+          )}
+        >
+          <h3 className={cn("text-base font-bold mb-2 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+            {content.bottomNote.heading}
+          </h3>
+          <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+            {content.bottomNote.text}
+          </p>
+        </section>
+      )}
     </div>
   );
 }
@@ -1297,7 +1326,7 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: {
 /* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
 
 /* ------------------------------------------------------------------ */
-/* Tab content data for all non-Overview, non-Financial tabs            */
+/* Tab content data for all non-Financial tabs                          */
 /* ------------------------------------------------------------------ */
 
 interface TabContent {
@@ -1313,6 +1342,40 @@ interface TabContent {
 }
 
 const TAB_CONTENT: Record<string, TabContent> = {
+  "Overview": {
+    headline: "Where the military and veteran community comes to be",
+    headlineAccent: "seen, heard, and understood.",
+    description:
+      "MilCrunch is the operating system military events and communities have been missing \u2014 built by a veteran, proven at MIC, and designed to turn every event into a year-round community that sponsors want to fund again and again.",
+    sections: [
+      {
+        heading: "The Origin Story",
+        description:
+          "It started with a problem a veteran couldn\u2019t let go of: the military and veteran community needed a place to be heard, seen, and understood\u2014in one home. That home was the Parade Deck experience\u2014where every military or veteran influencer, spouse-owned business, creator, and podcaster could show up, build a real presence, and be discovered.",
+        items: [],
+      },
+      {
+        heading: "The Evolution to MilCrunch",
+        description:
+          "Now, Parade Deck\u2019s name and infrastructure are being rebranded as MilCrunch\u2014with a meaningful upgrade in AI technology that makes the platform faster to use, easier to grow on, and built for scale.",
+        items: [],
+      },
+      {
+        heading: "Essential Infrastructure",
+        description:
+          "MilCrunch is the essential infrastructure for media companies and brands that want to authentically engage the military and veteran community. At the core is a powerful network directory and creator-to-brand toolkit\u2014helping you discover the right voices with precision through Discovery\u2019s proprietary Military Match Scores, including filters by branch and location.",
+        items: [
+          "Trust is built in \u2014 MilCrunch uses multi-phase AI verification\u2014web intelligence and confidence scoring\u2014to help eliminate stolen valor and protect credibility",
+          "Goes beyond discovery \u2014 Replaces fragmented event stacks by bringing event creation, registration, and attendee experience into one system\u2014complete with a high-performance Progressive Web App for schedules, speaker bios, and networking (no downloads)",
+          "AI-assisted execution \u2014 Teams can plan and execute faster with AI-assisted go-to-market strategy, automated campaign building, one-click streaming integrations, and real-time analytics/ROI tracking",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "In Short",
+      text: "MilCrunch is one platform for military creator discovery, verification, event management, email and campaign automation, live streaming, and performance insights\u2014built by veterans, for the community.",
+    },
+  },
   "Events & Attendee App": {
     headline: "One Event. Every Channel. Year-Round Revenue.",
     headlineAccent: "",
@@ -2199,7 +2262,7 @@ export default function Prospectus() {
           </div>
         )}
 
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} onVideoEnded={unlockNextTab} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} onVideoEnded={unlockNextTab} dbContent={tabContent["Overview"]} />}
         {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} />}
         {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} />}
         {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} />}
