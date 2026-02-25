@@ -1919,33 +1919,47 @@ export default function Prospectus() {
   // Fetch saved tab content
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("prospectus_tab_content")
         .select("*");
-      if (data) {
-        const map: Record<string, TabContent> = {};
-        for (const row of data as {
-          tab_name: string;
-          headline: string | null;
-          headline_accent: string | null;
-          description: string | null;
-          sections: { heading: string; items: string[]; visible?: boolean }[] | null;
-          bottom_note: { heading: string; text: string } | null;
-          visibility?: { headline?: boolean; headlineAccent?: boolean; description?: boolean } | null;
-        }[]) {
-          map[row.tab_name] = {
-            headline: row.headline || "",
-            headlineVisible: row.visibility?.headline === false ? false : undefined,
-            headlineAccent: row.headline_accent || undefined,
-            headlineAccentVisible: row.visibility?.headlineAccent === false ? false : undefined,
-            description: row.description || "",
-            descriptionVisible: row.visibility?.description === false ? false : undefined,
-            sections: row.sections || [],
-            bottomNote: row.bottom_note || undefined,
-          };
-        }
-        setTabContent(map);
+      if (error) {
+        console.error("[Prospectus] Failed to fetch tab content:", error.message, error);
+        return;
       }
+      if (!data || data.length === 0) {
+        console.warn("[Prospectus] No rows in prospectus_tab_content");
+        return;
+      }
+      const map: Record<string, TabContent> = {};
+      for (const row of data as {
+        tab_name: string;
+        headline: string | null;
+        headline_accent: string | null;
+        description: string | null;
+        sections: unknown;
+        bottom_note: { heading: string; text: string } | null;
+        visibility?: { headline?: boolean; headlineAccent?: boolean; description?: boolean } | null;
+      }[]) {
+        // Parse sections — handle both JSON object and JSON-encoded string
+        let sections: TabContent["sections"] = [];
+        if (Array.isArray(row.sections)) {
+          sections = row.sections;
+        } else if (typeof row.sections === "string") {
+          try { sections = JSON.parse(row.sections); } catch { /* keep empty */ }
+        }
+        map[row.tab_name] = {
+          headline: row.headline || "",
+          headlineVisible: row.visibility?.headline === false ? false : undefined,
+          headlineAccent: row.headline_accent || undefined,
+          headlineAccentVisible: row.visibility?.headlineAccent === false ? false : undefined,
+          description: row.description || "",
+          descriptionVisible: row.visibility?.description === false ? false : undefined,
+          sections,
+          bottomNote: row.bottom_note || undefined,
+        };
+      }
+      console.log("[Prospectus] Loaded tab content for:", Object.keys(map).join(", "));
+      setTabContent(map);
     })();
   }, []);
 
