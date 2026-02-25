@@ -1,6 +1,10 @@
-import { ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { ReactNode, useEffect, useRef } from "react";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { DEMO_EMAIL } from "@/hooks/useDemoMode";
+
+const DEMO_PASSWORD = "MIC2026demo";
 
 /** Requires auth; redirects unauthenticated to /login. Does not enforce role. */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -59,8 +63,27 @@ export function CreatorRoute({ children }: { children: ReactNode }) {
 export function BrandRoute({ children }: { children: ReactNode }) {
   const { user, loading, role, profileLoaded } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isDemoQuery = searchParams.get("demo") === "true";
+  const demoTriggered = useRef(false);
+
+  // Auto-sign-in as demo user when ?demo=true and not authenticated
+  useEffect(() => {
+    if (!loading && !user && isDemoQuery && !demoTriggered.current) {
+      demoTriggered.current = true;
+      supabase.auth.signInWithPassword({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+    }
+  }, [loading, user, isDemoQuery]);
 
   if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+  // Show spinner while auto-authenticating for ?demo=true
+  if (!user && isDemoQuery) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -70,7 +93,7 @@ export function BrandRoute({ children }: { children: ReactNode }) {
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  if (user.email === "demo@recurrentx.com") return <>{children}</>;
+  if (user.email === DEMO_EMAIL) return <>{children}</>;
   // Wait for user_roles to resolve before making a routing decision
   if (!profileLoaded) {
     return (

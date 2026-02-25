@@ -4,10 +4,12 @@ import {
   ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
   CheckCircle2, Smartphone, BookOpen,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
+  Eye, EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
+import DemoIframeModal from "@/components/demo/DemoIframeModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -311,7 +313,7 @@ function ManageContentPanel({
             headlineAccent: src.headlineAccent || "",
             description: src.description,
             sections: src.sections.map((s) => ({
-              heading: s.heading,
+              ...s,
               items: [...s.items],
             })),
             bottomNote: src.bottomNote
@@ -524,6 +526,11 @@ function ManageContentPanel({
         description: c.description || null,
         sections: c.sections,
         bottom_note: c.bottomNote || null,
+        visibility: {
+          headline: c.headlineVisible !== false,
+          headlineAccent: c.headlineAccentVisible !== false,
+          description: c.descriptionVisible !== false,
+        },
         updated_at: new Date().toISOString(),
       };
     });
@@ -555,14 +562,14 @@ function ManageContentPanel({
   };
 
   // --- Content editor helpers ---
-  const updateContent = (tab: string, field: string, value: string) => {
+  const updateContent = (tab: string, field: string, value: string | boolean) => {
     setContentDraft((prev) => ({
       ...prev,
       [tab]: { ...prev[tab], [field]: value },
     }));
   };
 
-  const updateSection = (tab: string, idx: number, field: "heading" | "description" | "items" | "image_url", value: string | string[]) => {
+  const updateSection = (tab: string, idx: number, field: "heading" | "description" | "items" | "image_url" | "demo_url", value: string | string[]) => {
     setContentDraft((prev) => {
       const sections = [...(prev[tab]?.sections || [])];
       sections[idx] = { ...sections[idx], [field]: value };
@@ -580,6 +587,15 @@ function ManageContentPanel({
   const removeSection = (tab: string, idx: number) => {
     setContentDraft((prev) => {
       const sections = (prev[tab]?.sections || []).filter((_, i) => i !== idx);
+      return { ...prev, [tab]: { ...prev[tab], sections } };
+    });
+  };
+
+  const toggleSectionVisibility = (tab: string, idx: number) => {
+    setContentDraft((prev) => {
+      const sections = [...(prev[tab]?.sections || [])];
+      const current = sections[idx]?.visible !== false; // default true
+      sections[idx] = { ...sections[idx], visible: !current };
       return { ...prev, [tab]: { ...prev[tab], sections } };
     });
   };
@@ -840,16 +856,37 @@ function ManageContentPanel({
                 <label className="text-sm font-semibold block mb-2">{TAB_LABELS[tab]}</label>
 
                 {/* Headline */}
-                <label className={cn("text-xs block mb-0.5", dark ? "text-gray-400" : "text-gray-500")}>Headline</label>
-                <input type="text" value={c.headline} onChange={(e) => updateContent(tab, "headline", e.target.value)} className={inputCls} />
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <label className={cn("text-xs", dark ? "text-gray-400" : "text-gray-500")}>Headline</label>
+                  <button type="button" onClick={() => updateContent(tab, "headlineVisible", c.headlineVisible === false ? true : false)}
+                    className={cn("p-0.5 rounded transition-colors", c.headlineVisible === false ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
+                    {c.headlineVisible === false ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  </button>
+                </div>
+                <input type="text" value={c.headline} onChange={(e) => updateContent(tab, "headline", e.target.value)}
+                  className={cn(inputCls, c.headlineVisible === false && "opacity-40")} />
 
                 {/* Headline accent */}
-                <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-400" : "text-gray-500")}>Headline Accent</label>
-                <input type="text" value={c.headlineAccent || ""} onChange={(e) => updateContent(tab, "headlineAccent", e.target.value)} className={inputCls} />
+                <div className="flex items-center gap-1.5 mt-2 mb-0.5">
+                  <label className={cn("text-xs", dark ? "text-gray-400" : "text-gray-500")}>Headline Accent</label>
+                  <button type="button" onClick={() => updateContent(tab, "headlineAccentVisible", c.headlineAccentVisible === false ? true : false)}
+                    className={cn("p-0.5 rounded transition-colors", c.headlineAccentVisible === false ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
+                    {c.headlineAccentVisible === false ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  </button>
+                </div>
+                <input type="text" value={c.headlineAccent || ""} onChange={(e) => updateContent(tab, "headlineAccent", e.target.value)}
+                  className={cn(inputCls, c.headlineAccentVisible === false && "opacity-40")} />
 
                 {/* Description */}
-                <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-400" : "text-gray-500")}>Description</label>
-                <textarea value={c.description} onChange={(e) => updateContent(tab, "description", e.target.value)} rows={3} className={inputCls} />
+                <div className="flex items-center gap-1.5 mt-2 mb-0.5">
+                  <label className={cn("text-xs", dark ? "text-gray-400" : "text-gray-500")}>Description</label>
+                  <button type="button" onClick={() => updateContent(tab, "descriptionVisible", c.descriptionVisible === false ? true : false)}
+                    className={cn("p-0.5 rounded transition-colors", c.descriptionVisible === false ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
+                    {c.descriptionVisible === false ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  </button>
+                </div>
+                <textarea value={c.description} onChange={(e) => updateContent(tab, "description", e.target.value)} rows={3}
+                  className={cn(inputCls, c.descriptionVisible === false && "opacity-40")} />
 
                 {/* Sections */}
                 <div className="mt-3">
@@ -861,7 +898,7 @@ function ManageContentPanel({
                     </button>
                   </div>
                   {c.sections.map((section, idx) => (
-                    <div key={idx} className={cn("p-3 rounded-lg mb-2", dark ? "bg-white/5" : "bg-gray-50")}>
+                    <div key={idx} className={cn("p-3 rounded-lg mb-2", dark ? "bg-white/5" : "bg-gray-50", section.visible === false && "opacity-40")}>
                       <div className="flex items-center justify-between mb-1">
                         <input
                           type="text"
@@ -870,12 +907,18 @@ function ManageContentPanel({
                           placeholder="Section heading"
                           className={cn(inputCls, "text-xs font-medium")}
                         />
-                        {c.sections.length > 1 && (
-                          <button type="button" onClick={() => removeSection(tab, idx)}
-                            className="ml-2 p-1 text-red-500 hover:text-red-700 flex-shrink-0">
-                            <Minus className="h-3.5 w-3.5" />
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <button type="button" onClick={() => toggleSectionVisibility(tab, idx)}
+                            className={cn("ml-2 p-1 transition-colors", section.visible === false ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
+                            {section.visible === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                           </button>
-                        )}
+                          {c.sections.length > 1 && (
+                            <button type="button" onClick={() => removeSection(tab, idx)}
+                              className="p-1 text-red-500 hover:text-red-700 flex-shrink-0">
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Description (optional paragraph)</label>
                       <textarea
@@ -939,6 +982,16 @@ function ManageContentPanel({
                           <img src={section.image_url} alt="Section image" className="w-full max-h-32 object-cover" />
                         </div>
                       )}
+
+                      {/* Demo link */}
+                      <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Demo Link (opens in modal)</label>
+                      <input
+                        type="text"
+                        placeholder="/events/mil-con-2026?tab=gtm-planner"
+                        value={section.demo_url || ""}
+                        onChange={(e) => updateSection(tab, idx, "demo_url", e.target.value)}
+                        className={cn(inputCls, "text-xs")}
+                      />
                     </div>
                   ))}
                 </div>
@@ -1184,10 +1237,13 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: {
 
 interface TabContent {
   headline: string;
+  headlineVisible?: boolean;
   headlineAccent?: string;
+  headlineAccentVisible?: boolean;
   heroImage?: string;
   description: string;
-  sections: { heading: string; description?: string; items: string[]; image_url?: string }[];
+  descriptionVisible?: boolean;
+  sections: { heading: string; description?: string; items: string[]; image_url?: string; demo_url?: string; visible?: boolean }[];
   bottomNote?: { heading: string; text: string };
 }
 
@@ -1485,6 +1541,7 @@ const TAB_CONTENT: Record<string, TabContent> = {
 };
 
 function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbContent?: TabContent }) {
+  const [demoModal, setDemoModal] = useState<{ open: boolean; url: string }>({ open: false, url: "" });
   const content = dbContent || TAB_CONTENT[tab];
   const kbSlug = TAB_KB_CATEGORY[tab];
 
@@ -1520,17 +1577,19 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
 
       {/* Hero */}
       <section className="text-center max-w-3xl mx-auto pt-4">
-        <h2
-          className={cn(
-            "text-3xl md:text-4xl font-extrabold leading-tight mb-4 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          {content.headline}{" "}
-          {content.headlineAccent && (
-            <span className="text-[#1e3a5f]">{content.headlineAccent}</span>
-          )}
-        </h2>
+        {content.headlineVisible !== false && (
+          <h2
+            className={cn(
+              "text-3xl md:text-4xl font-extrabold leading-tight mb-4 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            {content.headline}{" "}
+            {content.headlineAccentVisible !== false && content.headlineAccent && (
+              <span className="text-[#1e3a5f]">{content.headlineAccent}</span>
+            )}
+          </h2>
+        )}
         {content.heroImage && (
           <img
             src={content.heroImage}
@@ -1538,18 +1597,20 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
             className="w-full max-w-3xl mx-auto rounded-xl shadow-md my-6 object-cover"
           />
         )}
-        <p
-          className={cn(
-            "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
-            dark ? "text-gray-400" : "text-[#6B7280]"
-          )}
-        >
-          {content.description}
-        </p>
+        {content.descriptionVisible !== false && (
+          <p
+            className={cn(
+              "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
+              dark ? "text-gray-400" : "text-[#6B7280]"
+            )}
+          >
+            {content.description}
+          </p>
+        )}
       </section>
 
       {/* Sections */}
-      {content.sections.map((section) => (
+      {content.sections.filter((s) => s.visible !== false).map((section) => (
         <section key={section.heading} className="max-w-3xl mx-auto">
           <h3
             className={cn(
@@ -1560,11 +1621,23 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
             {section.heading}
           </h3>
           {section.image_url && (
-            <img
-              src={section.image_url}
-              alt=""
-              className="w-full rounded-xl shadow-md mb-5 object-cover"
-            />
+            <div
+              className={cn("relative mb-5", section.demo_url && "group cursor-pointer")}
+              onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
+            >
+              <img
+                src={section.image_url}
+                alt=""
+                className="w-full rounded-xl shadow-md object-cover"
+              />
+              {section.demo_url && (
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm flex items-center gap-2">
+                    <Play className="h-5 w-5" /> Explore Live Demo
+                  </span>
+                </div>
+              )}
+            </div>
           )}
           {section.description && (
             <p
@@ -1624,6 +1697,12 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
           </p>
         </section>
       )}
+
+      <DemoIframeModal
+        open={demoModal.open}
+        onOpenChange={(v) => setDemoModal((prev) => ({ ...prev, open: v }))}
+        url={demoModal.url}
+      />
     </div>
   );
 }
@@ -1649,6 +1728,7 @@ export default function Prospectus() {
   const [imageUrls, setImageUrls] = useState<ImageUrls>({});
   const [tabContent, setTabContent] = useState<Record<string, TabContent>>({});
   const [manageOpen, setManageOpen] = useState(false);
+  const [exploreDemoOpen, setExploreDemoOpen] = useState(false);
 
   // Tab gating: track which tabs are unlocked (by index). Index 0 always unlocked.
   const [unlockedUpTo, setUnlockedUpTo] = useState(0);
@@ -1710,13 +1790,17 @@ export default function Prospectus() {
           headline: string | null;
           headline_accent: string | null;
           description: string | null;
-          sections: { heading: string; items: string[] }[] | null;
+          sections: { heading: string; items: string[]; visible?: boolean }[] | null;
           bottom_note: { heading: string; text: string } | null;
+          visibility?: { headline?: boolean; headlineAccent?: boolean; description?: boolean } | null;
         }[]) {
           map[row.tab_name] = {
             headline: row.headline || "",
+            headlineVisible: row.visibility?.headline === false ? false : undefined,
             headlineAccent: row.headline_accent || undefined,
+            headlineAccentVisible: row.visibility?.headlineAccent === false ? false : undefined,
             description: row.description || "",
+            descriptionVisible: row.visibility?.description === false ? false : undefined,
             sections: row.sections || [],
             bottomNote: row.bottom_note || undefined,
           };
@@ -1914,12 +1998,13 @@ export default function Prospectus() {
             </div>
 
             {/* Explore Demo */}
-            <a
-              href="/login?demo=true"
+            <button
+              type="button"
+              onClick={() => setExploreDemoOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e3a5f] hover:bg-[#2d5282] text-white transition-all duration-300"
             >
               🎯 Explore Demo
-            </a>
+            </button>
 
             {/* Share button */}
             <button
@@ -2094,6 +2179,14 @@ export default function Prospectus() {
           onToggleGating={handleToggleGating}
         />
       )}
+
+      {/* Explore Demo iframe modal */}
+      <DemoIframeModal
+        open={exploreDemoOpen}
+        onOpenChange={setExploreDemoOpen}
+        url="/summary?demo=true&embed=true"
+        title="MilCrunch Demo"
+      />
 
       {/* Unlock pulse animation */}
       <style>{`
