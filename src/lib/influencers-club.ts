@@ -319,6 +319,8 @@ export interface SearchCreatorsOptions {
   language?: string;
   /** Hashtag terms to filter by (sent as `hashtags` filter to IC API) */
   hashtags?: string[];
+  /** Account type: "regular" for personal accounts, "business" for brand accounts */
+  account_type?: "regular" | "business";
 }
 
 /** Result of a discovery search: mapped cards, total count, raw response. */
@@ -383,6 +385,7 @@ export async function searchCreators(
       ...(hashtagTerms.length > 0 ? { hashtags: hashtagTerms } : {}),
       ...(options.gender ? { gender: options.gender } : {}),
       ...(options.language ? { language: { code: options.language } } : {}),
+      ...(options.account_type ? { account_type: options.account_type } : {}),
     },
   };
 

@@ -57,53 +57,76 @@ function getEvidenceTags(
     tags.push({ label, type });
   };
 
-  // Build a set of search terms to match against
-  const searchTerms = new Set<string>();
-  if (ctx) {
-    const words = (ctx.query || "").toLowerCase().split(/\s+/).filter(Boolean);
-    words.forEach((w) => searchTerms.add(w));
-    ctx.keywords?.forEach((k) => searchTerms.add(k.toLowerCase()));
-    if (ctx.branch) searchTerms.add(ctx.branch.toLowerCase());
-    if (ctx.location) ctx.location.toLowerCase().split(/[,\s]+/).filter(Boolean).forEach((w) => searchTerms.add(w));
-  }
-
-  // 1. Location match
+  // 1. Location — from creator data or search context
   if (creator.location) {
-    const locLower = creator.location.toLowerCase();
-    const locationTerms = ctx?.location?.toLowerCase().split(/[,\s]+/).filter(Boolean) ?? [];
-    const matched = locationTerms.some((t) => locLower.includes(t));
-    if (matched || (searchTerms.size > 0 && [...searchTerms].some((t) => locLower.includes(t) && t.length > 2))) {
-      add(`📍 ${creator.location}`, "location");
-    }
+    add(`📍 ${creator.location}`, "location");
+  } else if (ctx?.location) {
+    add(`📍 ${ctx.location}`, "location");
   }
 
-  // 2. Bio keyword matches
-  const bio = (creator.bio || "").toLowerCase();
-  const bioMatchTerms = ["veteran", "military", "army", "navy", "marines", "marine", "air force", "coast guard",
-    "milspouse", "military spouse", "service member", "active duty", "national guard", "combat",
-    "entrepreneur", "fitness", "podcast", "speaker", "author", "coach"];
-  for (const term of bioMatchTerms) {
-    if (bio.includes(term) && (searchTerms.size === 0 || searchTerms.has(term) || [...searchTerms].some((s) => term.includes(s) || s.includes(term)))) {
-      add(term.charAt(0).toUpperCase() + term.slice(1), "keyword");
-    }
-  }
-  // Also check creator specialties/category
-  if (creator.specialties) {
-    for (const s of creator.specialties) {
-      const sl = s.toLowerCase();
-      if (searchTerms.size === 0 || [...searchTerms].some((t) => sl.includes(t) || t.includes(sl))) {
-        add(s, "keyword");
+  // 2. Parse militaryEvidence strings from scoring system
+  if (creator.militaryEvidence && creator.militaryEvidence.length > 0) {
+    for (const ev of creator.militaryEvidence) {
+      const lower = ev.toLowerCase();
+      // "Uses #veteran, #military hashtags" → extract hashtags
+      if (lower.startsWith("uses ")) {
+        const hashMatches = ev.match(/#[\w]+/g);
+        if (hashMatches) {
+          for (const h of hashMatches.slice(0, 3)) add(h, "hashtag");
+        }
+      }
+      // 'Mentions "veteran" in bio' → extract quoted keywords
+      else if (lower.includes("in bio")) {
+        const quotedMatches = ev.match(/"([^"]+)"/g);
+        if (quotedMatches) {
+          for (const q of quotedMatches.slice(0, 3)) {
+            const word = q.replace(/"/g, "");
+            add(word.charAt(0).toUpperCase() + word.slice(1), "keyword");
+          }
+        }
+      }
+      // "Located near Fort Liberty" → location
+      else if (lower.startsWith("located near")) {
+        const place = ev.replace(/^Located near\s*/i, "").trim();
+        if (place) add(`📍 ${place}`, "location");
+      }
+      // "Niche: Military, Fitness" → keywords
+      else if (lower.startsWith("niche:")) {
+        const niches = ev.replace(/^Niche:\s*/i, "").split(",").map((s) => s.trim()).filter(Boolean);
+        for (const n of niches.slice(0, 2)) add(n, "keyword");
+      }
+      // "Name/username contains ..." → keyword
+      else if (lower.includes("name") && lower.includes("contains")) {
+        const quotedMatches = ev.match(/"([^"]+)"/g);
+        if (quotedMatches) {
+          for (const q of quotedMatches.slice(0, 2)) {
+            const word = q.replace(/"/g, "");
+            add(word.charAt(0).toUpperCase() + word.slice(1), "keyword");
+          }
+        }
       }
     }
   }
 
-  // 3. Hashtag matches
-  if (creator.hashtags) {
-    for (const h of creator.hashtags) {
-      const hl = h.toLowerCase().replace(/^#/, "");
-      if (searchTerms.size === 0 || [...searchTerms].some((t) => hl.includes(t) || t.includes(hl))) {
-        add(`#${hl}`, "hashtag");
+  // 3. Fallback: if no evidence from scoring, use search context
+  if (tags.length <= 1 && ctx) {
+    if (ctx.branch) add(ctx.branch, "keyword");
+    if (ctx.keywords) {
+      for (const kw of ctx.keywords.slice(0, 3)) {
+        add(kw.charAt(0).toUpperCase() + kw.slice(1), "keyword");
       }
+    }
+    if (ctx.gender) add(ctx.gender === "female" ? "👩 Female" : ctx.gender === "male" ? "👨 Male" : ctx.gender, "keyword");
+  }
+
+  // 4. Pull from bio if we still have room
+  if (tags.length < 3 && creator.bio) {
+    const bio = creator.bio.toLowerCase();
+    const milTerms = ["veteran", "military", "army", "navy", "marines", "air force", "coast guard",
+      "milspouse", "military spouse", "active duty", "national guard"];
+    for (const term of milTerms) {
+      if (bio.includes(term)) add(term.charAt(0).toUpperCase() + term.slice(1), "keyword");
+      if (tags.length >= 5) break;
     }
   }
 
@@ -787,6 +810,7 @@ For all other questions, respond naturally and concisely.`;
 
         const searchOptions: Parameters<typeof searchCreators>[1] = {
           page: 1,
+          account_type: "regular",
           ...(keywords_in_bio.length > 0 && { keywords_in_bio }),
           ...(locationFilter && { location: locationFilter }),
           ...(genderFilter && { gender: genderFilter }),
