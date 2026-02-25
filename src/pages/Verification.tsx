@@ -362,6 +362,8 @@ export default function Verification() {
   const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
+  const [backfillRunning, setBackfillRunning] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState({ done: 0, total: 0 });
   // Batch-fetched IC enrichment data from directory_members, keyed by creator_handle
   const [dirEnrichmentMap, setDirEnrichmentMap] = useState<Record<string, unknown>>({});
 
@@ -459,6 +461,92 @@ export default function Verification() {
     verified: list.filter((r) => r.status === "verified").length,
     pending: list.filter((r) => r.status === "pending").length,
     flagged: list.filter((r) => r.status === "flagged" || r.status === "denied").length,
+  };
+
+  // Backfill career data for all verifications that have ai_analysis but no career_track
+  const handleBackfillCareerData = async () => {
+    setBackfillRunning(true);
+    setBackfillProgress({ done: 0, total: 0 });
+    try {
+      // Fetch all verifications that have ai_analysis
+      const { data: rows, error } = await supabase
+        .from("verifications")
+        .select("id, person_name, claimed_branch, notes, pdl_data, serp_results, evidence_sources, firecrawl_data, manual_checks")
+        .not("ai_analysis", "is", null);
+      if (error || !rows) {
+        toast.error("Failed to fetch verifications: " + (error?.message ?? "Unknown error"));
+        return;
+      }
+
+      // Filter to those missing career_track data
+      const needsBackfill = rows.filter((r) => {
+        const mc = (r.manual_checks ?? {}) as Record<string, unknown>;
+        const ct = mc.career_track as { result?: unknown } | undefined;
+        const result = ct?.result as Record<string, unknown> | null | undefined;
+        // No career_track at all, or empty result
+        if (!result) return true;
+        // Has result but it's an empty skeleton
+        const career = (result.career ?? []) as unknown[];
+        const education = (result.education ?? []) as unknown[];
+        const awards = (result.awards ?? []) as unknown[];
+        const ms = result.military_summary as Record<string, unknown> | undefined;
+        return career.length === 0 && education.length === 0 && awards.length === 0 && !ms?.branch;
+      });
+
+      if (needsBackfill.length === 0) {
+        toast.success("All verifications already have career data!");
+        return;
+      }
+
+      setBackfillProgress({ done: 0, total: needsBackfill.length });
+      console.log(`[Backfill] Processing ${needsBackfill.length} verifications`);
+
+      for (let i = 0; i < needsBackfill.length; i++) {
+        const r = needsBackfill[i];
+        try {
+          const pdlData = r.pdl_data as PDLResponse | null;
+          const sources = (r.evidence_sources ?? []) as EvidenceSource[];
+          const firecrawlRaw = (r.firecrawl_data ?? []) as { url: string; markdown?: string }[];
+
+          const serpSnippets = sources.map((s) => `${s.title}: ${s.snippet}`).join("\n");
+          const firecrawlContent = firecrawlRaw.map((f) => f.markdown ?? "").filter(Boolean).join("\n\n---\n\n");
+          const pdlSummary = pdlData ? JSON.stringify({
+            employment: pdlData.employment,
+            education: pdlData.education,
+            job_title: pdlData.job_title,
+            skills: (pdlData as any)?.skills,
+          }) : undefined;
+
+          const result = await extractCareerTimeline({
+            personName: r.person_name,
+            firecrawlContent,
+            serpSnippets,
+            claimedBranch: r.claimed_branch ?? undefined,
+            notesField: r.notes ?? undefined,
+            pdlSummary: pdlSummary || undefined,
+          });
+
+          // Save to manual_checks.career_track
+          const existingMc = (r.manual_checks ?? {}) as Record<string, unknown>;
+          await supabase.from("verifications").update({
+            manual_checks: { ...existingMc, career_track: { result, generated_at: new Date().toISOString() } },
+          }).eq("id", r.id);
+
+          console.log(`[Backfill] ${i + 1}/${needsBackfill.length} — ${r.person_name}: branch=${result.military_summary?.branch || "none"}, career=${result.career?.length ?? 0}`);
+        } catch (err) {
+          console.warn(`[Backfill] Failed for ${r.person_name}:`, err);
+        }
+        setBackfillProgress({ done: i + 1, total: needsBackfill.length });
+      }
+
+      toast.success(`Career data backfilled for ${needsBackfill.length} verifications`);
+      window.location.reload();
+    } catch (err) {
+      console.error("[Backfill] Error:", err);
+      toast.error("Backfill failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setBackfillRunning(false);
+    }
   };
 
   const handleStartVerification = async () => {
@@ -933,6 +1021,25 @@ export default function Verification() {
               className="max-w-xs"
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBackfillCareerData}
+            disabled={backfillRunning}
+            className="text-xs"
+          >
+            {backfillRunning ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                {backfillProgress.done}/{backfillProgress.total}
+              </>
+            ) : (
+              <>
+                <Briefcase className="h-3 w-3 mr-1.5" />
+                Backfill Career Data
+              </>
+            )}
+          </Button>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button className="bg-[#1e3a5f] hover:bg-[#2d5282]">

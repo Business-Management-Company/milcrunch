@@ -60,14 +60,16 @@ export async function enrichPersonPDL(params: PDLEnrichParams): Promise<PDLRespo
     const res = await fetch(url, {
       headers: { "Content-Type": "application/json" },
     });
+    const text = await res.text();
+    console.log("[Verification] PDL response status:", res.status, "body length:", text.length, "preview:", text.slice(0, 300));
     if (!res.ok) {
-      const text = await res.text();
-      console.warn("[Verification] PDL response:", res.status, text.slice(0, 200));
-      throw new Error(`PDL ${res.status}`);
+      console.warn("[Verification] PDL FAILED:", res.status, text.slice(0, 500));
+      throw new Error(`PDL ${res.status}: ${text.slice(0, 200)}`);
     }
-    const json = await res.json();
-    console.log("[Verification] PDL data keys:", Object.keys(json.data ?? json));
-    return (json.data ?? json) as PDLResponse;
+    const json = JSON.parse(text);
+    const result = (json.data ?? json) as PDLResponse;
+    console.log("[Verification] PDL SUCCESS — keys:", Object.keys(result), "employment:", (result.employment ?? []).length, "profiles:", (result.profiles ?? []).length);
+    return result;
   } catch (e) {
     console.error("[Verification] PDL error:", e);
     return null;
@@ -646,37 +648,9 @@ export async function runVerificationPipeline(
     data: { count: mediaAppearances.length, mediaComplete, mediaAppearances },
   });
 
-  // Phase 6: Career Extraction — AI-powered career timeline from PDL + web search data
-  onPhase({ phase: 6, name: "Career Extraction", status: "running" });
+  // Phase 6 (Career) moved after Phase 3 (Firecrawl) so it has web content
   let careerData: EnhancedCareerResult | null = null;
   let careerComplete = false;
-  try {
-    const serpSnippets = evidenceSources.map((s) => `${s.title}: ${s.snippet}`).join("\n");
-    const pdlSummary = pdlData ? JSON.stringify({
-      employment: pdlData.employment,
-      education: pdlData.education,
-      job_title: pdlData.job_title,
-      skills: (pdlData as any)?.skills,
-    }) : undefined;
-    careerData = await extractCareerTimeline({
-      personName: input.fullName,
-      firecrawlContent: "", // firecrawl not yet available at this stage
-      serpSnippets,
-      claimedBranch: input.claimedBranch,
-      notesField: input.notes,
-      pdlSummary,
-    });
-    careerComplete = true;
-  } catch (err) {
-    console.warn("[Verify] Phase 6 (Career) failed:", err);
-  }
-  const careerHasData = !!(careerData && (careerData.career.length > 0 || careerData.education.length > 0 || careerData.awards.length > 0 || careerData.military_summary?.branch));
-  onPhase({
-    phase: 6,
-    name: "Career Extraction",
-    status: careerComplete ? (careerHasData ? "done" : "empty") : "error",
-    data: { careerComplete, careerData },
-  });
 
   // Phase 7: Social Verification — validate social handles from PDL + evidence
   onPhase({ phase: 7, name: "Social Verification", status: "running" });
@@ -792,6 +766,43 @@ export async function runVerificationPipeline(
     firecrawlData = [];
   }
   onPhase({ phase: 3, name: "Deep Extraction", status: "done", data: firecrawlData });
+
+  // Phase 6: Career Extraction — AI-powered career timeline from PDL + web + firecrawl data
+  onPhase({ phase: 6, name: "Career Extraction", status: "running" });
+  try {
+    const serpSnippets = evidenceSources.map((s) => `${s.title}: ${s.snippet}`).join("\n");
+    const pdlSummary = pdlData ? JSON.stringify({
+      employment: pdlData.employment,
+      education: pdlData.education,
+      job_title: pdlData.job_title,
+      skills: (pdlData as any)?.skills,
+    }) : undefined;
+    const firecrawlContent = firecrawlData.map((d) => d.markdown ?? "").filter(Boolean).join("\n\n---\n\n");
+    careerData = await extractCareerTimeline({
+      personName: input.fullName,
+      firecrawlContent,
+      serpSnippets,
+      claimedBranch: input.claimedBranch,
+      notesField: input.notes,
+      pdlSummary,
+    });
+    careerComplete = true;
+    console.log("[Verify] Phase 6 career result:", JSON.stringify({
+      branch: careerData.military_summary?.branch,
+      careerEntries: careerData.career?.length ?? 0,
+      educationEntries: careerData.education?.length ?? 0,
+      awards: careerData.awards?.length ?? 0,
+    }));
+  } catch (err) {
+    console.warn("[Verify] Phase 6 (Career) failed:", err);
+  }
+  const careerHasData = !!(careerData && (careerData.career.length > 0 || careerData.education.length > 0 || careerData.awards.length > 0 || careerData.military_summary?.branch));
+  onPhase({
+    phase: 6,
+    name: "Career Extraction",
+    status: careerComplete ? (careerHasData ? "done" : "empty") : "error",
+    data: { careerComplete, careerData },
+  });
 
   // Phase 4: AI Analysis — runs after all other phases so it can incorporate everything
   onPhase({ phase: 4, name: "AI Analysis", status: "running" });
