@@ -82,6 +82,7 @@ import {
   detectBranch,
   generateDossierNarrative,
   extractCareerTimeline,
+  extractCareerFromAIAnalysis,
   type PipelinePhase,
   type PDLResponse,
   type AIFilteredCriminalResult,
@@ -471,7 +472,7 @@ export default function Verification() {
       // Fetch all verifications that have ai_analysis
       const { data: rows, error } = await supabase
         .from("verifications")
-        .select("id, person_name, claimed_branch, notes, pdl_data, serp_results, evidence_sources, firecrawl_data, manual_checks")
+        .select("id, person_name, claimed_branch, notes, pdl_data, serp_results, evidence_sources, firecrawl_data, ai_analysis, manual_checks")
         .not("ai_analysis", "is", null);
       if (error || !rows) {
         toast.error("Failed to fetch verifications: " + (error?.message ?? "Unknown error"));
@@ -517,14 +518,42 @@ export default function Verification() {
             skills: (pdlData as any)?.skills,
           }) : undefined;
 
-          const result = await extractCareerTimeline({
-            personName: r.person_name,
-            firecrawlContent,
-            serpSnippets,
-            claimedBranch: r.claimed_branch ?? undefined,
-            notesField: r.notes ?? undefined,
-            pdlSummary: pdlSummary || undefined,
-          });
+          let result: EnhancedCareerResult;
+          const aiAnalysis = (r as any).ai_analysis as string | null;
+
+          // Try primary extraction first (from firecrawl + serp + pdl)
+          const hasSources = firecrawlContent.length > 50 || serpSnippets.length > 50 || (pdlSummary && pdlSummary.length > 10);
+          if (hasSources) {
+            result = await extractCareerTimeline({
+              personName: r.person_name,
+              firecrawlContent,
+              serpSnippets,
+              claimedBranch: r.claimed_branch ?? undefined,
+              notesField: r.notes ?? undefined,
+              pdlSummary: pdlSummary || undefined,
+            });
+            const hasData = result.career.length > 0 || result.education.length > 0 || result.awards.length > 0 || !!result.military_summary?.branch;
+            // If primary returned empty, fallback to ai_analysis
+            if (!hasData && aiAnalysis && aiAnalysis.length > 100) {
+              console.log(`[Backfill] Primary empty for ${r.person_name}, trying ai_analysis fallback...`);
+              result = await extractCareerFromAIAnalysis({
+                personName: r.person_name,
+                aiAnalysis,
+                claimedBranch: r.claimed_branch ?? undefined,
+              });
+            }
+          } else if (aiAnalysis && aiAnalysis.length > 100) {
+            // No source data at all — go straight to ai_analysis
+            result = await extractCareerFromAIAnalysis({
+              personName: r.person_name,
+              aiAnalysis,
+              claimedBranch: r.claimed_branch ?? undefined,
+            });
+          } else {
+            console.log(`[Backfill] Skipping ${r.person_name}: no sources and no ai_analysis`);
+            setBackfillProgress({ done: i + 1, total: needsBackfill.length });
+            continue;
+          }
 
           // Save to manual_checks.career_track
           const existingMc = (r.manual_checks ?? {}) as Record<string, unknown>;
@@ -532,7 +561,7 @@ export default function Verification() {
             manual_checks: { ...existingMc, career_track: { result, generated_at: new Date().toISOString() } },
           }).eq("id", r.id);
 
-          console.log(`[Backfill] ${i + 1}/${needsBackfill.length} — ${r.person_name}: branch=${result.military_summary?.branch || "none"}, career=${result.career?.length ?? 0}`);
+          console.log(`[Backfill] ${i + 1}/${needsBackfill.length} — ${r.person_name}: branch=${result.military_summary?.branch || "none"}, career=${result.career?.length ?? 0}, postService=${result.post_service?.length ?? 0}`);
         } catch (err) {
           console.warn(`[Backfill] Failed for ${r.person_name}:`, err);
         }
@@ -2544,16 +2573,51 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
 
   const hasWebSources = firecrawlData.length > 0 || sources.length > 0;
 
-  // Load cached results on mount
+  // Load cached results on mount — if empty but ai_analysis exists, auto-extract from it
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
+      const { data } = await supabase.from("verifications").select("manual_checks, ai_analysis").eq("id", record.id).single();
       const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
       const saved = checks.career_track as { result?: EnhancedCareerResult; generated_at?: string } | undefined;
-      if (saved?.result) {
-        setCareerResult(saved.result);
-        setLastGenerated(saved.generated_at ?? null);
+      const result = saved?.result;
+      const hasData = result && (
+        (result.career?.length ?? 0) > 0 ||
+        (result.education?.length ?? 0) > 0 ||
+        (result.awards?.length ?? 0) > 0 ||
+        !!result.military_summary?.branch
+      );
+      if (hasData) {
+        setCareerResult(result!);
+        setLastGenerated(saved?.generated_at ?? null);
         setExtracted(true);
+        return;
+      }
+
+      // Fallback: extract career from ai_analysis if available
+      const aiAnalysis = data?.ai_analysis as string | null;
+      if (aiAnalysis && aiAnalysis.length > 100) {
+        console.log("[CareerTrack] No career data found, auto-extracting from ai_analysis...");
+        setExtracting(true);
+        try {
+          const extracted = await extractCareerFromAIAnalysis({
+            personName: record.person_name,
+            aiAnalysis,
+            claimedBranch: record.claimed_branch ?? undefined,
+          });
+          setCareerResult(extracted);
+          setExtracted(true);
+          await saveResults(extracted);
+          console.log("[CareerTrack] Auto-extracted from ai_analysis:", {
+            branch: extracted.military_summary?.branch,
+            career: extracted.career?.length,
+            postService: extracted.post_service?.length,
+          });
+        } catch (err) {
+          console.warn("[CareerTrack] AI analysis fallback failed:", err);
+          setExtracted(true);
+        } finally {
+          setExtracting(false);
+        }
       }
     })();
   }, [record.id]);
@@ -2601,11 +2665,51 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
         notesField: record.notes ?? undefined,
         pdlSummary: buildPdlSummary() || undefined,
       });
+      // Check if extraction returned useful data
+      const hasData = result.career.length > 0 || result.education.length > 0 || result.awards.length > 0 || !!result.military_summary?.branch;
+      if (hasData) {
+        setCareerResult(result);
+        setExtracted(true);
+        await saveResults(result);
+        return;
+      }
+      // Primary extraction returned empty — fallback to ai_analysis
+      const aiAnalysis = record.ai_analysis;
+      if (aiAnalysis && aiAnalysis.length > 100) {
+        console.log("[CareerTrack] Primary extraction empty, falling back to ai_analysis...");
+        const fallback = await extractCareerFromAIAnalysis({
+          personName: record.person_name,
+          aiAnalysis,
+          claimedBranch: record.claimed_branch ?? undefined,
+        });
+        setCareerResult(fallback);
+        setExtracted(true);
+        await saveResults(fallback);
+        return;
+      }
       setCareerResult(result);
       setExtracted(true);
       await saveResults(result);
     } catch (err) {
       console.error("[CareerTrack] Extraction failed:", err);
+      // Try ai_analysis fallback on error
+      try {
+        const aiAnalysis = record.ai_analysis;
+        if (aiAnalysis && aiAnalysis.length > 100) {
+          console.log("[CareerTrack] Primary failed, trying ai_analysis fallback...");
+          const fallback = await extractCareerFromAIAnalysis({
+            personName: record.person_name,
+            aiAnalysis,
+            claimedBranch: record.claimed_branch ?? undefined,
+          });
+          setCareerResult(fallback);
+          setExtracted(true);
+          await saveResults(fallback);
+          return;
+        }
+      } catch (fallbackErr) {
+        console.warn("[CareerTrack] AI analysis fallback also failed:", fallbackErr);
+      }
       setExtractError(err instanceof Error ? err.message : "Extraction failed");
       setExtracted(true);
     } finally {

@@ -1030,15 +1030,82 @@ export interface EnhancedCareerResult {
   post_service: PostServiceEntry[];
 }
 
-export async function extractCareerTimeline(params: {
-  personName: string;
-  firecrawlContent: string;
-  serpSnippets: string;
-  claimedBranch?: string;
-  notesField?: string;
-  pdlSummary?: string;
-}): Promise<EnhancedCareerResult> {
-  const prompt = `Extract comprehensive military and civilian career data for ${params.personName}${params.claimedBranch ? ` (claimed branch: ${params.claimedBranch})` : ""} from ALL provided sources. Be thorough — look for rank, MOS/Rate/AFSC, units, deployments, awards, military schools, and post-service career.
+// Helper: parse a Claude career-extraction JSON response into EnhancedCareerResult
+function parseCareerJson(text: string): EnhancedCareerResult {
+  const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+  const parsed = JSON.parse(jsonStr);
+  const ms = parsed.military_summary ?? {};
+  return {
+    military_summary: {
+      branch: String(ms.branch ?? ""),
+      service_dates: String(ms.service_dates ?? ""),
+      rank: String(ms.rank ?? ""),
+      mos: String(ms.mos ?? ""),
+      units: Array.isArray(ms.units) ? ms.units.map(String) : [],
+      deployments: Array.isArray(ms.deployments) ? ms.deployments.map(String) : [],
+      transition_year: String(ms.transition_year ?? ""),
+    },
+    career: (parsed.career ?? []).map((c: Record<string, unknown>) => ({
+      org: String(c.org ?? ""),
+      title: String(c.title ?? ""),
+      dates: String(c.dates ?? ""),
+      location: String(c.location ?? ""),
+      is_military: !!c.is_military,
+      rank: c.rank ? String(c.rank) : undefined,
+      mos: c.mos ? String(c.mos) : undefined,
+      units: Array.isArray(c.units) ? c.units.map(String) : undefined,
+      deployments: Array.isArray(c.deployments) ? c.deployments.map(String) : undefined,
+    })),
+    education: (parsed.education ?? []).map((e: Record<string, unknown>) => ({
+      school: String(e.school ?? ""),
+      degree: String(e.degree ?? ""),
+      dates: String(e.dates ?? ""),
+      is_military: !!e.is_military,
+    })),
+    awards: (parsed.awards ?? []).map((a: Record<string, unknown>) => ({
+      name: String(a.name ?? ""),
+      context: String(a.context ?? ""),
+    })),
+    post_service: (parsed.post_service ?? []).map((p: Record<string, unknown>) => ({
+      role: String(p.role ?? ""),
+      org: p.org ? String(p.org) : undefined,
+      dates: p.dates ? String(p.dates) : undefined,
+    })),
+  };
+}
+
+// Helper: call Anthropic with retry logic (3 attempts, exponential backoff)
+async function fetchAnthropicWithRetry(body: Record<string, unknown>, maxAttempts = 3): Promise<{ ok: boolean; status: number; json: unknown }> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(ANTHROPIC_URL, {
+        method: "POST",
+        headers: anthropicHeaders(),
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return { ok: true, status: res.status, json };
+      }
+      // Retry on 429 (rate limit) and 529 (overloaded)
+      if ((res.status === 429 || res.status === 529) && attempt < maxAttempts) {
+        const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+        console.warn(`[Anthropic] ${res.status} on attempt ${attempt}/${maxAttempts}, retrying in ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw new Error(`Anthropic ${res.status}`);
+    } catch (err) {
+      if (attempt >= maxAttempts) throw err;
+      const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+      console.warn(`[Anthropic] Error on attempt ${attempt}/${maxAttempts}:`, err, `retrying in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw new Error("Anthropic: max retries exceeded");
+}
+
+const CAREER_EXTRACTION_PROMPT = `Extract comprehensive military and civilian career data from ALL provided sources. Be thorough — look for rank, MOS/Rate/AFSC, units, deployments, awards, military schools, and post-service career.
 
 Return ONLY a JSON object with this exact structure:
 {
@@ -1074,7 +1141,19 @@ Rules:
 - post_service = civilian career AFTER military service (content creator, speaker, author, consultant, etc.)
 - If a specific data point is not mentioned in any source, use "" for strings and [] for arrays — do NOT guess
 - military_summary aggregates the best data across all sources
-- Return ONLY the JSON object, no markdown formatting, no explanation
+- Return ONLY the JSON object, no markdown formatting, no explanation`;
+
+export async function extractCareerTimeline(params: {
+  personName: string;
+  firecrawlContent: string;
+  serpSnippets: string;
+  claimedBranch?: string;
+  notesField?: string;
+  pdlSummary?: string;
+}): Promise<EnhancedCareerResult> {
+  const prompt = `${CAREER_EXTRACTION_PROMPT}
+
+Person: ${params.personName}${params.claimedBranch ? ` (claimed branch: ${params.claimedBranch})` : ""}
 
 WEB CONTENT:
 ${params.firecrawlContent.slice(0, 8000)}
@@ -1083,58 +1162,13 @@ SEARCH SNIPPETS:
 ${params.serpSnippets.slice(0, 3000)}${params.notesField ? `\n\nADDITIONAL NOTES/BIO:\n${params.notesField.slice(0, 2000)}` : ""}${params.pdlSummary ? `\n\nPDL PROFILE DATA:\n${params.pdlSummary.slice(0, 2000)}` : ""}`;
 
   try {
-    const res = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: anthropicHeaders(),
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 3000,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const { json: data } = await fetchAnthropicWithRetry({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 3000,
+      messages: [{ role: "user", content: prompt }],
     });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}`);
-    const data = await res.json();
-    const text = (data.content?.[0]?.text ?? "").trim();
-    const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-    const parsed = JSON.parse(jsonStr);
-    const ms = parsed.military_summary ?? {};
-    return {
-      military_summary: {
-        branch: String(ms.branch ?? ""),
-        service_dates: String(ms.service_dates ?? ""),
-        rank: String(ms.rank ?? ""),
-        mos: String(ms.mos ?? ""),
-        units: Array.isArray(ms.units) ? ms.units.map(String) : [],
-        deployments: Array.isArray(ms.deployments) ? ms.deployments.map(String) : [],
-        transition_year: String(ms.transition_year ?? ""),
-      },
-      career: (parsed.career ?? []).map((c: Record<string, unknown>) => ({
-        org: String(c.org ?? ""),
-        title: String(c.title ?? ""),
-        dates: String(c.dates ?? ""),
-        location: String(c.location ?? ""),
-        is_military: !!c.is_military,
-        rank: c.rank ? String(c.rank) : undefined,
-        mos: c.mos ? String(c.mos) : undefined,
-        units: Array.isArray(c.units) ? c.units.map(String) : undefined,
-        deployments: Array.isArray(c.deployments) ? c.deployments.map(String) : undefined,
-      })),
-      education: (parsed.education ?? []).map((e: Record<string, unknown>) => ({
-        school: String(e.school ?? ""),
-        degree: String(e.degree ?? ""),
-        dates: String(e.dates ?? ""),
-        is_military: !!e.is_military,
-      })),
-      awards: (parsed.awards ?? []).map((a: Record<string, unknown>) => ({
-        name: String(a.name ?? ""),
-        context: String(a.context ?? ""),
-      })),
-      post_service: (parsed.post_service ?? []).map((p: Record<string, unknown>) => ({
-        role: String(p.role ?? ""),
-        org: p.org ? String(p.org) : undefined,
-        dates: p.dates ? String(p.dates) : undefined,
-      })),
-    };
+    const text = ((data as any).content?.[0]?.text ?? "").trim();
+    return parseCareerJson(text);
   } catch (e) {
     console.error("[Verification] Career extraction error:", e);
     return {
@@ -1145,4 +1179,32 @@ ${params.serpSnippets.slice(0, 3000)}${params.notesField ? `\n\nADDITIONAL NOTES
       post_service: [],
     };
   }
+}
+
+/**
+ * Fallback: Extract career data from an existing ai_analysis text.
+ * Used when the dedicated career extraction failed (529, timeout, etc.)
+ * but the main AI analysis completed successfully and contains career info.
+ */
+export async function extractCareerFromAIAnalysis(params: {
+  personName: string;
+  aiAnalysis: string;
+  claimedBranch?: string;
+}): Promise<EnhancedCareerResult> {
+  const prompt = `${CAREER_EXTRACTION_PROMPT}
+
+Person: ${params.personName}${params.claimedBranch ? ` (claimed branch: ${params.claimedBranch})` : ""}
+
+The following is a verification analysis that was already completed. Extract ALL career information from it — military service details, post-service career, education, and awards. Do NOT say "not identified" if the text contains the information.
+
+VERIFICATION ANALYSIS:
+${params.aiAnalysis.slice(0, 6000)}`;
+
+  const { json: data } = await fetchAnthropicWithRetry({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 3000,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const text = ((data as any).content?.[0]?.text ?? "").trim();
+  return parseCareerJson(text);
 }
