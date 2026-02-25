@@ -140,7 +140,7 @@ const EVIDENCE_STYLES: Record<EvidenceTag["type"], string> = {
 };
 
 const DEFAULT_CHIPS = [
-  "🎖️ Find Army veteran creators",
+  "🎖️ Find Army veteran influencers and keynote speakers",
   "💼 Find Military Spouse businesses",
   "🔍 Find creators with 50K+ followers",
   "📋 Build a list of Marine veterans",
