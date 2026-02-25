@@ -242,7 +242,7 @@ export default function FloatingAdminChat() {
       const msg = detail?.message;
       if (msg) {
         setOpen(true);
-        setTimeout(() => addResponse(msg, { hidden: true }), 150);
+        setTimeout(() => addResponse(msg), 150);
       } else {
         setOpen(true);
       }
@@ -589,9 +589,21 @@ Answer questions about events, creators, campaigns, lists, and directories direc
 
 Be action-oriented. When the user's intent is clear, act immediately and confirm afterward. Only ask ONE clarifying question maximum, and only when the intent is genuinely ambiguous. Never ask multiple clarifying questions in the same response. If asked to create something, create it first then offer to refine.
 
-When showing events, always format each event as:
-**Event Name** - Date | Location | Registrations
-Format responses with clear sections using markdown (bold, bullets, headers) for readability.
+## Formatting Rules
+
+Use rich markdown for all responses:
+- **Bold** for section headers, event names, key labels, and important numbers
+- Use markdown tables when listing multiple items with comparable fields (events, creators, stats)
+- Use bullet points for short lists or summaries
+- Keep responses concise — lead with the answer, add detail after
+
+When showing events, use a markdown table:
+
+| Event | Date | Location | Registrations |
+|-------|------|----------|---------------|
+| **Event Name** | Mar 15 | City, ST | 42 |
+
+When showing stats or summaries, bold the numbers: **4,300** total capacity, **12** creators added.
 
 Never ask more than one question in a single response. If the user has already answered one question, proceed immediately to showing results — do not ask another question.
 

@@ -1,7 +1,7 @@
 /**
- * Shared CTA button detection and rendering for AI chat responses.
- * Detects mentions of platform features in AI response text and renders
- * pill-shaped navigation buttons.
+ * Smart CTA button detection for AI chat responses.
+ * Generates contextual "next step" buttons based on what the AI just said,
+ * not generic category matches.
  */
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,6 +13,8 @@ import {
   FolderOpen,
   Users,
   ArrowRight,
+  BarChart3,
+  ClipboardList,
 } from "lucide-react";
 
 interface CTAButton {
@@ -21,50 +23,74 @@ interface CTAButton {
   icon: typeof Calendar;
 }
 
-const CTA_RULES: { pattern: RegExp; cta: CTAButton }[] = [
-  {
-    pattern: /\b(event|events|upcoming event|event calendar|schedule)\b/i,
-    cta: { label: "View Events", path: "/brand/events", icon: Calendar },
-  },
-  {
-    pattern: /\b(creator|creators|discover|discovery|influencer|find creators|search creators)\b/i,
-    cta: { label: "Browse Creators", path: "/brand/discover", icon: Search },
-  },
-  {
-    pattern: /\b(campaign|campaigns|email campaign|email marketing|outreach)\b/i,
-    cta: { label: "View Campaigns", path: "/brand/campaigns", icon: Mail },
-  },
-  {
-    pattern: /\b(verif|verification|verify creator|background check)\b/i,
-    cta: { label: "Run Verification", path: "/brand/verification", icon: Shield },
-  },
-  {
-    pattern: /\b(list|lists|saved list|creator list|build a list)\b/i,
-    cta: { label: "View Lists", path: "/brand/lists", icon: ListChecks },
-  },
-  {
-    pattern: /\b(director|directories|directory)\b/i,
-    cta: { label: "View Directories", path: "/brand/directories", icon: FolderOpen },
-  },
-  {
-    pattern: /\b(sponsor|sponsors|sponsorship|partnership)\b/i,
-    cta: { label: "View Sponsors", path: "/admin/sponsors", icon: Users },
-  },
-];
-
+/**
+ * Extract contextual CTAs from AI response text.
+ * Prioritizes specific, actionable next steps over generic navigation.
+ * Returns max 2 CTAs.
+ */
 export function detectCTAs(text: string): CTAButton[] {
-  const seen = new Set<string>();
-  const result: CTAButton[] = [];
+  const ctas: CTAButton[] = [];
+  const lower = text.toLowerCase();
 
-  for (const rule of CTA_RULES) {
-    if (rule.pattern.test(text) && !seen.has(rule.cta.path)) {
-      seen.add(rule.cta.path);
-      result.push(rule.cta);
+  // --- Event-specific CTAs ---
+  // Registration / RSVP context → detailed registrations
+  if (/\b(registration|registrations|rsvp|sign.?up|attendee|ticket)/i.test(text)) {
+    ctas.push({ label: "View Registrations", path: "/brand/events", icon: ClipboardList });
+  }
+  // Event analytics / stats / capacity
+  else if (/\b(capacity|analytics|attendance|event stats|total events)/i.test(text)) {
+    ctas.push({ label: "View Event Analytics", path: "/brand/events", icon: BarChart3 });
+  }
+  // General event mentions (upcoming, schedule, plan)
+  else if (/\b(upcoming event|event calendar|schedule|plan.{0,10}event)/i.test(text)) {
+    ctas.push({ label: "View All Events", path: "/brand/events", icon: Calendar });
+  }
+  // Specific event name mentioned — link to events page
+  else if (/\b(milspousefest|milcrunch at|fort liberty|mic 2026|veteran podcast|awards)/i.test(text)) {
+    ctas.push({ label: "Open Event Details", path: "/brand/events", icon: Calendar });
+  }
+
+  // --- Creator-specific CTAs ---
+  if (/\b(find.{0,10}creator|search.{0,10}creator|discover.{0,10}creator|creator.{0,10}search|browse.{0,10}creator)/i.test(text)) {
+    ctas.push({ label: "Search Creators", path: "/brand/discover", icon: Search });
+  } else if (/\b(creator director|directory.{0,10}member|in the director)/i.test(text)) {
+    ctas.push({ label: "Browse Directory", path: "/brand/directories", icon: FolderOpen });
+  } else if (/\b(creator|influencer|profile)/i.test(text) && !/\b(list|campaign|event|verif)/i.test(text)) {
+    ctas.push({ label: "Discover Creators", path: "/brand/discover", icon: Search });
+  }
+
+  // --- Campaign CTAs ---
+  if (/\b(campaign|email.{0,5}campaign|outreach|send.{0,10}email)/i.test(text)) {
+    ctas.push({ label: "View Campaigns", path: "/brand/campaigns", icon: Mail });
+  }
+
+  // --- Verification CTAs ---
+  if (/\b(verif|verification|verify|background check|confirm.{0,10}status)/i.test(text)) {
+    ctas.push({ label: "Run Verification", path: "/brand/verification", icon: Shield });
+  }
+
+  // --- List CTAs ---
+  if (/\b(list created|saved list|creator list|build.{0,5}list|your lists)/i.test(text)) {
+    ctas.push({ label: "View Lists", path: "/brand/lists", icon: ListChecks });
+  }
+
+  // --- Sponsor CTAs ---
+  if (/\b(sponsor|sponsorship|partnership|partner)/i.test(text)) {
+    ctas.push({ label: "View Sponsors", path: "/admin/sponsors", icon: Users });
+  }
+
+  // Deduplicate by path
+  const seen = new Set<string>();
+  const unique: CTAButton[] = [];
+  for (const cta of ctas) {
+    if (!seen.has(cta.path)) {
+      seen.add(cta.path);
+      unique.push(cta);
     }
   }
 
-  // Max 3 CTAs to avoid clutter
-  return result.slice(0, 3);
+  // Max 2 CTAs for focused next steps
+  return unique.slice(0, 2);
 }
 
 export function AICTAButtons({ text, onNavigate }: { text: string; onNavigate?: () => void }) {
