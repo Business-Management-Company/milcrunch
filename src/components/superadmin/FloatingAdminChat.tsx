@@ -611,8 +611,9 @@ When you ask a clarifying question, always end your message with a line like:
 CHIPS: Option A | Option B | Option C
 These will be shown as quick-reply buttons. Keep each option under 30 characters. Always provide 2-4 chip options.
 
-When the user provides enough context to search for creators/influencers/speakers, respond ONLY with valid JSON like:
-{"action":"search","query":"[search terms]","branch":"[branch if specified or empty]","count":[number requested or 10]}
+When the user provides enough context to search for creators/influencers/speakers, respond ONLY with a single valid JSON object (no other text before or after):
+{"action":"search","query":"[search terms for ai_search]","branch":"[military branch or empty]","count":[number requested or 10],"location":"[city, state or empty]","gender":"[male|female or empty]","keywords":["keyword1","keyword2"]}
+Include location, gender, and keywords fields when the user specifies them. The query field should contain the semantic search terms. IMPORTANT: Output ONLY the JSON object with no surrounding text, no markdown, no explanation.
 For all other questions, respond naturally and concisely.`;
 
       // Build conversation history so follow-up chips have context
@@ -648,72 +649,125 @@ For all other questions, respond naturally and concisely.`;
       const data = await response.json();
       const text = data.content?.[0]?.text ?? "";
 
-      // Check if Claude wants to search for creators
+      // Detect search action — try full JSON parse first, then regex extraction
+      let actionObj: { action: string; query: string; branch?: string; count?: number; location?: string; gender?: string; keywords?: string[] } | null = null;
+      let textWithoutAction = text;
       try {
-        const parsed = JSON.parse(text);
-        if (parsed.action === "search") {
-          // Update loading message text
-          setMessages((m) => m.map((msg) =>
-            msg.id === loadingMsgId
-              ? { ...msg, text: `Searching for ${parsed.count ?? 10} ${parsed.branch ?? "military"} creators...` }
-              : msg
-          ));
-          const { creators: rawResults } = await searchCreators(parsed.query, { page: 1 });
-          const searchResults = shuffleArray(rawResults);
-
-          const displayCount = Math.min(searchResults.length, parsed.count ?? 10);
-
-          if (searchResults.length > 0) {
-            const actualCount = displayCount;
-            const creatorSummary = searchResults.slice(0, displayCount).map(r => r.full_name || r.name || r.username).join(', ');
-
-            const contextMsg = `The user asked: "${input}". The search returned exactly ${actualCount} creators: ${creatorSummary}. Write a natural 1-2 sentence response acknowledging this exact number. Do not invent or assume a different count. Ask a relevant follow-up question to refine the search. Use authentic military culture naturally — not forced catchphrases. Vary your tone.`;
-
-            const responseRes = await fetch("/api/anthropic", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 200,
-                messages: [{ role: "user", content: contextMsg }],
-              }),
-            });
-            const responseData = await responseRes.json();
-            const friendlyText = responseData.content?.[0]?.text ?? `Found ${actualCount} creators matching your request.`;
-            // Replace loading message with real response
-            setMessages((m) => m.map((msg) =>
-              msg.id === loadingMsgId
-                ? {
-                    ...msg,
-                    text: friendlyText,
-                    loading: false,
-                    creators: searchResults.slice(0, displayCount),
-                    cta: { label: "See more in Discovery →", link: `/brand/discover?q=${encodeURIComponent(parsed.query)}` },
-                  }
-                : msg
-            ));
-          } else {
-            setMessages((m) => m.map((msg) =>
-              msg.id === loadingMsgId
-                ? {
-                    ...msg,
-                    text: "I couldn't find results for that search. Try different keywords or open Creator Discovery for advanced filters.",
-                    loading: false,
-                    cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
-                  }
-                : msg
-            ));
-          }
-          setLoading(false);
-          return;
+        const parsed = JSON.parse(text.trim());
+        if (parsed && parsed.action === "search") {
+          actionObj = parsed;
+          textWithoutAction = "";
         }
       } catch {
-        // Not JSON — treat as regular text response
+        // Not pure JSON — try to extract embedded JSON
+        const jsonMatch = text.match(/\{[^{}]*"action"\s*:\s*"search"[^{}]*\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.action === "search") {
+              actionObj = parsed;
+              textWithoutAction = text.replace(jsonMatch[0], "").trim();
+            }
+          } catch { /* ignore parse error */ }
+        }
       }
 
-      // Regular text response — extract CHIPS: line if present
-      const chipsMatch = text.match(/\nCHIPS:\s*(.+)$/m);
-      const displayText = chipsMatch ? text.replace(chipsMatch[0], "").trim() : text;
+      if (actionObj) {
+        // Execute the search action
+        const searchQuery = actionObj.query || input;
+        const branchLabel = actionObj.branch || "";
+        const requestedCount = actionObj.count ?? 10;
+        const locationFilter = actionObj.location || "";
+        const genderFilter = actionObj.gender || "";
+        const extraKeywords = actionObj.keywords ?? [];
+
+        // Build search description for loading state
+        const parts: string[] = [];
+        if (requestedCount) parts.push(`${requestedCount}`);
+        if (genderFilter) parts.push(genderFilter);
+        if (branchLabel) parts.push(branchLabel);
+        parts.push("creators");
+        if (locationFilter) parts.push(`in ${locationFilter}`);
+        const searchDesc = parts.join(" ");
+
+        setMessages((m) => m.map((msg) =>
+          msg.id === loadingMsgId
+            ? { ...msg, text: `Searching for ${searchDesc}...` }
+            : msg
+        ));
+
+        // Build filters for the API
+        const keywords_in_bio = [...new Set([
+          ...extraKeywords,
+          ...(branchLabel ? [branchLabel] : []),
+        ])].filter(Boolean);
+
+        const searchOptions: Parameters<typeof searchCreators>[1] = {
+          page: 1,
+          ...(keywords_in_bio.length > 0 && { keywords_in_bio }),
+          ...(locationFilter && { location: locationFilter }),
+          ...(genderFilter && { gender: genderFilter }),
+        };
+
+        const { creators: rawResults } = await searchCreators(searchQuery, searchOptions);
+        const searchResults = shuffleArray(rawResults);
+        const displayCount = Math.min(searchResults.length, requestedCount);
+
+        if (searchResults.length > 0) {
+          const creatorSummary = searchResults.slice(0, displayCount).map(r => r.full_name || r.name || r.username).join(", ");
+
+          const contextMsg = `The user asked: "${input}". The search returned exactly ${displayCount} creators: ${creatorSummary}. Write a natural 1-2 sentence response acknowledging this exact number and what was searched for. Do not invent or assume a different count. Ask a relevant follow-up question to refine the search. Vary your tone.`;
+
+          const responseRes = await fetch("/api/anthropic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 200,
+              messages: [{ role: "user", content: contextMsg }],
+            }),
+          });
+          const responseData = await responseRes.json();
+          const friendlyText = responseData.content?.[0]?.text ?? `Found ${displayCount} creators matching your request.`;
+
+          // Build discovery URL with filters
+          const discoverParams = new URLSearchParams({ q: searchQuery });
+          if (locationFilter) discoverParams.set("location", locationFilter);
+          if (genderFilter) discoverParams.set("gender", genderFilter);
+
+          setMessages((m) => m.map((msg) =>
+            msg.id === loadingMsgId
+              ? {
+                  ...msg,
+                  text: friendlyText,
+                  loading: false,
+                  creators: searchResults.slice(0, displayCount),
+                  cta: { label: "See more in Discovery →", link: `/brand/discover?${discoverParams.toString()}` },
+                }
+              : msg
+          ));
+        } else {
+          setMessages((m) => m.map((msg) =>
+            msg.id === loadingMsgId
+              ? {
+                  ...msg,
+                  text: "I couldn't find results for that search. Try different keywords or open Creator Discovery for advanced filters.",
+                  loading: false,
+                  cta: { label: "Open Creator Discovery →", link: "/brand/discover" },
+                }
+              : msg
+          ));
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Regular text response — strip any stray JSON action blocks and CHIPS: lines
+      let cleanText = textWithoutAction;
+      // Safety net: remove any remaining JSON action blocks the AI may have emitted
+      cleanText = cleanText.replace(/\{[^{}]*"action"\s*:\s*"search"[^{}]*\}/g, "").trim();
+      const chipsMatch = cleanText.match(/\nCHIPS:\s*(.+)$/m);
+      const displayText = chipsMatch ? cleanText.replace(chipsMatch[0], "").trim() : cleanText;
       const chips = chipsMatch
         ? chipsMatch[1].split("|").map((s: string) => s.trim()).filter(Boolean)
         : undefined;
