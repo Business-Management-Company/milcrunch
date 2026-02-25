@@ -4,7 +4,7 @@ import {
   ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
   CheckCircle2, Smartphone, BookOpen,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
-  Eye, EyeOff,
+  Eye, EyeOff, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -1011,7 +1011,7 @@ function ManageContentPanel({
                         </div>
                       )}
 
-                      {/* Demo link */}
+                      {/* Demo link dropdown + custom URL */}
                       {(() => {
                         const sectionKey = `${tab}-${idx}`;
                         const isPreset = !!section.demo_url && PRESET_URLS.has(section.demo_url);
@@ -1020,26 +1020,37 @@ function ManageContentPanel({
                         return (
                           <>
                             <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Demo Link (opens in modal)</label>
-                            <select
-                              value={selectValue}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === "__custom__") {
-                                  setCustomDemoSections((prev) => new Set(prev).add(sectionKey));
-                                  updateSection(tab, idx, "demo_url", "");
-                                } else {
-                                  setCustomDemoSections((prev) => { const next = new Set(prev); next.delete(sectionKey); return next; });
-                                  updateSection(tab, idx, "demo_url", val);
-                                }
-                              }}
-                              className={cn(inputCls, "text-xs")}
-                            >
-                              <option value="">— None —</option>
-                              {DEMO_LINK_PRESETS.map((p) => (
-                                <option key={p.url} value={p.url}>{p.label}</option>
-                              ))}
-                              <option value="__custom__">(Custom URL)</option>
-                            </select>
+                            <div className="relative">
+                              <select
+                                value={selectValue}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === "__custom__") {
+                                    setCustomDemoSections((prev) => new Set(prev).add(sectionKey));
+                                    updateSection(tab, idx, "demo_url", "");
+                                  } else {
+                                    setCustomDemoSections((prev) => { const next = new Set(prev); next.delete(sectionKey); return next; });
+                                    updateSection(tab, idx, "demo_url", val);
+                                  }
+                                }}
+                                className={cn(
+                                  "w-full appearance-none rounded-lg pl-3 pr-8 py-2 text-xs border transition-colors cursor-pointer",
+                                  dark
+                                    ? "bg-white/10 border-white/20 text-white focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
+                                    : "bg-gray-50 border-gray-300 text-[#111827] focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
+                                )}
+                              >
+                                <option value="">— None —</option>
+                                {DEMO_LINK_PRESETS.map((p) => (
+                                  <option key={p.url} value={p.url}>{p.label}</option>
+                                ))}
+                                <option value="__custom__">(Custom URL)</option>
+                              </select>
+                              <ChevronDown className={cn(
+                                "absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none",
+                                dark ? "text-gray-400" : "text-gray-500"
+                              )} />
+                            </div>
                             {isCustom && (
                               <input
                                 type="text"
