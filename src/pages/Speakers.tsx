@@ -67,7 +67,12 @@ import {
   ExternalLink,
   ClipboardList,
   Save,
+  UserPlus,
+  ListPlus,
+  Sparkles,
 } from "lucide-react";
+import { getEmailLists, addFullContact } from "@/lib/email-db";
+import type { EmailList } from "@/lib/email-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TYPE_OPTIONS } from "@/types/verification";
 import { SPEAKER_TYPES } from "@/components/brand/AddSpeakerModal";
@@ -90,7 +95,44 @@ interface Speaker {
   review_notes: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  website: string | null;
+  contact_notes: string | null;
 }
+
+interface ContactForm {
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  website: string;
+  contact_notes: string;
+}
+
+const EMPTY_CONTACT_FORM: ContactForm = {
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  state: "",
+  zip: "",
+  website: "",
+  contact_notes: "",
+};
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN",
+  "IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH",
+  "NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT",
+  "VT","VA","WA","WV","WI","WY",
+] as const;
 
 interface EventInfo {
   id: string;
@@ -259,6 +301,17 @@ export default function Speakers() {
   // Contact info state
   const [contactFetching, setContactFetching] = useState(false);
   const [contactData, setContactData] = useState<{ email?: string; phone?: string; city?: string } | null>(null);
+  const [contactForm, setContactForm] = useState<ContactForm>(EMPTY_CONTACT_FORM);
+  const [contactEditing, setContactEditing] = useState(false);
+  const [contactSaving, setContactSaving] = useState(false);
+  const [icFilledFields, setIcFilledFields] = useState<Set<string>>(new Set());
+
+  // Email list integration
+  const [emailLists, setEmailLists] = useState<EmailList[]>([]);
+  const [addToListOpen, setAddToListOpen] = useState(false);
+  const [selectedListId, setSelectedListId] = useState("");
+  const [addingToContacts, setAddingToContacts] = useState(false);
+  const [addingToList, setAddingToList] = useState(false);
 
   // Review state
   const [reviewStatus, setReviewStatus] = useState("");
@@ -530,12 +583,26 @@ export default function Speakers() {
     setExpandedEvents([]);
     setExpandedEnrichment(null);
     setContactData(null);
+    setContactEditing(false);
+    setIcFilledFields(new Set());
 
     const speaker = speakers.find((s) => s.id === speakerId);
     if (!speaker) {
       setExpandLoading(false);
       return;
     }
+
+    // Initialize contact form from speaker's saved data
+    setContactForm({
+      email: speaker.email ?? "",
+      phone: speaker.phone ?? "",
+      address: speaker.address ?? "",
+      city: speaker.city ?? "",
+      state: speaker.state ?? "",
+      zip: speaker.zip ?? "",
+      website: speaker.website ?? "",
+      contact_notes: speaker.contact_notes ?? "",
+    });
 
     // Initialize review state from speaker data
     setReviewStatus(speaker.review_status ?? "");
@@ -630,24 +697,52 @@ export default function Speakers() {
     });
   };
 
-  const handleFetchContact = async () => {
-    if (!expandedVerification?.source_username) {
+  const handleFetchContact = async (speakerId: string, handle?: string) => {
+    const targetHandle = handle || expandedVerification?.source_username;
+    if (!targetHandle) {
       toast.error("No social handle available to look up contact info");
       return;
     }
     setContactFetching(true);
     try {
-      const result = await enrichCreatorProfile(expandedVerification.source_username);
+      const result = await enrichCreatorProfile(targetHandle);
       if (result) {
-        const r = result.result as Record<string, unknown>;
-        const email = (r.email ?? r.emails?.[0]) as string | undefined;
-        const phone = (r.phone ?? r.phone_number) as string | undefined;
-        const city = (r.city ?? result.instagram?.city) as string | undefined;
-        setContactData({
-          email: email || undefined,
-          phone: phone || undefined,
-          city: city || undefined,
-        });
+        const r = (result as Record<string, unknown>).result as Record<string, unknown> | undefined;
+        const ig = (result as Record<string, unknown>).instagram as Record<string, unknown> | undefined;
+        const email = (r?.email ?? (r?.emails as string[])?.[0] ?? ig?.email) as string | undefined;
+        const phone = (r?.phone ?? r?.phone_number ?? ig?.phone) as string | undefined;
+        const city = (r?.city ?? ig?.city) as string | undefined;
+        const state = (r?.state ?? ig?.state) as string | undefined;
+
+        const filled = new Set<string>();
+        const updates: Partial<ContactForm> = {};
+        if (email && !contactForm.email) { updates.email = email; filled.add("email"); }
+        if (phone && !contactForm.phone) { updates.phone = phone; filled.add("phone"); }
+        if (city && !contactForm.city) { updates.city = city; filled.add("city"); }
+        if (state && !contactForm.state) {
+          const st = state.toUpperCase().trim();
+          if (US_STATES.includes(st as typeof US_STATES[number])) {
+            updates.state = st;
+            filled.add("state");
+          }
+        }
+
+        setContactForm((prev) => ({ ...prev, ...updates }));
+        setIcFilledFields(filled);
+
+        // Save to speakers table
+        const dbUpdates: Record<string, unknown> = {};
+        if (updates.email) dbUpdates.email = updates.email;
+        if (updates.phone) dbUpdates.phone = updates.phone;
+        if (updates.city) dbUpdates.city = updates.city;
+        if (updates.state) dbUpdates.state = updates.state;
+        if (Object.keys(dbUpdates).length > 0) {
+          await supabase.from("speakers").update(dbUpdates).eq("id", speakerId);
+          setSpeakers((prev) => prev.map((s) => s.id === speakerId ? { ...s, ...dbUpdates } as Speaker : s));
+        }
+
+        setContactData({ email: email || undefined, phone: phone || undefined, city: city || undefined });
+
         if (!email && !phone) {
           toast.info("No contact info found for this creator (0.03 credits used)");
         } else {
@@ -661,6 +756,123 @@ export default function Speakers() {
     } finally {
       setContactFetching(false);
     }
+  };
+
+  const handleSaveContact = async (speakerId: string) => {
+    setContactSaving(true);
+    const { error } = await supabase
+      .from("speakers")
+      .update({
+        email: contactForm.email.trim() || null,
+        phone: contactForm.phone.trim() || null,
+        address: contactForm.address.trim() || null,
+        city: contactForm.city.trim() || null,
+        state: contactForm.state || null,
+        zip: contactForm.zip.trim() || null,
+        website: contactForm.website.trim() || null,
+        contact_notes: contactForm.contact_notes.trim() || null,
+      } as Record<string, unknown>)
+      .eq("id", speakerId);
+    if (error) {
+      toast.error("Failed to save contact info: " + error.message);
+    } else {
+      toast.success("Contact information saved");
+      setSpeakers((prev) =>
+        prev.map((s) =>
+          s.id === speakerId
+            ? {
+                ...s,
+                email: contactForm.email.trim() || null,
+                phone: contactForm.phone.trim() || null,
+                address: contactForm.address.trim() || null,
+                city: contactForm.city.trim() || null,
+                state: contactForm.state || null,
+                zip: contactForm.zip.trim() || null,
+                website: contactForm.website.trim() || null,
+                contact_notes: contactForm.contact_notes.trim() || null,
+              }
+            : s
+        )
+      );
+      setContactEditing(false);
+    }
+    setContactSaving(false);
+  };
+
+  const handleAddToContacts = async (speaker: Speaker) => {
+    if (!contactForm.email.trim()) {
+      toast.error("Email is required to add to contacts");
+      return;
+    }
+    setAddingToContacts(true);
+    // Get or use a default list
+    let lists = emailLists;
+    if (lists.length === 0) {
+      lists = await getEmailLists();
+      setEmailLists(lists);
+    }
+    const defaultList = lists[0];
+    if (!defaultList) {
+      toast.error("No email lists found. Create one first in the Email section.");
+      setAddingToContacts(false);
+      return;
+    }
+    const nameParts = speaker.name.split(" ");
+    const result = await addFullContact({
+      list_id: defaultList.id,
+      email: contactForm.email.trim(),
+      first_name: nameParts[0] || undefined,
+      last_name: nameParts.slice(1).join(" ") || undefined,
+      phone: contactForm.phone.trim() || undefined,
+      source: "creator",
+      metadata: { speaker_id: speaker.id, branch: speaker.branch },
+    });
+    if (result) {
+      toast.success(`Added ${speaker.name} to contacts (${defaultList.name})`);
+    } else {
+      toast.error("Failed to add to contacts (may already exist)");
+    }
+    setAddingToContacts(false);
+  };
+
+  const handleAddToEmailList = async (speaker: Speaker) => {
+    if (!contactForm.email.trim()) {
+      toast.error("Email is required to add to a list");
+      return;
+    }
+    if (!selectedListId) {
+      toast.error("Select an email list");
+      return;
+    }
+    setAddingToList(true);
+    const nameParts = speaker.name.split(" ");
+    const result = await addFullContact({
+      list_id: selectedListId,
+      email: contactForm.email.trim(),
+      first_name: nameParts[0] || undefined,
+      last_name: nameParts.slice(1).join(" ") || undefined,
+      phone: contactForm.phone.trim() || undefined,
+      source: "creator",
+      metadata: { speaker_id: speaker.id, branch: speaker.branch },
+    });
+    if (result) {
+      const listName = emailLists.find((l) => l.id === selectedListId)?.name ?? "list";
+      toast.success(`Added ${speaker.name} to ${listName}`);
+      setAddToListOpen(false);
+    } else {
+      toast.error("Failed to add to list (may already exist)");
+    }
+    setAddingToList(false);
+  };
+
+  const openAddToList = async () => {
+    let lists = emailLists;
+    if (lists.length === 0) {
+      lists = await getEmailLists();
+      setEmailLists(lists);
+    }
+    setSelectedListId("");
+    setAddToListOpen(true);
   };
 
   const handleSaveReview = async (speakerId: string) => {
@@ -897,6 +1109,16 @@ export default function Speakers() {
           <CollapsibleSection
             title="Contact Information"
             icon={<Mail className="h-4 w-4 text-[#1e3a5f]" />}
+            defaultOpen
+            extra={
+              <button
+                onClick={(e) => { e.stopPropagation(); setContactEditing(!contactEditing); }}
+                className="ml-auto p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title={contactEditing ? "Cancel editing" : "Edit contact info"}
+              >
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            }
           >
             <div className="mt-3 space-y-3">
               {/* Social platforms from IC enrichment */}
@@ -946,53 +1168,215 @@ export default function Speakers() {
                 </div>
               )}
 
-              {/* Location from verification */}
-              {(v.city || v.state) && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{[v.city, v.state].filter(Boolean).join(", ")}</span>
+              {/* Editable Contact Form */}
+              {contactEditing ? (
+                <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50/50 dark:bg-gray-900/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs flex items-center gap-1">
+                        Email
+                        {icFilledFields.has("email") && <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700"><Sparkles className="h-2.5 w-2.5 mr-0.5" />IC</Badge>}
+                      </Label>
+                      <Input
+                        type="email"
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))}
+                        placeholder="email@example.com"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1">
+                        Phone
+                        {icFilledFields.has("phone") && <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700"><Sparkles className="h-2.5 w-2.5 mr-0.5" />IC</Badge>}
+                      </Label>
+                      <Input
+                        value={contactForm.phone}
+                        onChange={(e) => setContactForm((f) => ({ ...f, phone: e.target.value }))}
+                        placeholder="(555) 123-4567"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Address</Label>
+                    <Input
+                      value={contactForm.address}
+                      onChange={(e) => setContactForm((f) => ({ ...f, address: e.target.value }))}
+                      placeholder="123 Main St"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs flex items-center gap-1">
+                        City
+                        {icFilledFields.has("city") && <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700"><Sparkles className="h-2.5 w-2.5 mr-0.5" />IC</Badge>}
+                      </Label>
+                      <Input
+                        value={contactForm.city}
+                        onChange={(e) => setContactForm((f) => ({ ...f, city: e.target.value }))}
+                        placeholder="City"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1">
+                        State
+                        {icFilledFields.has("state") && <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700"><Sparkles className="h-2.5 w-2.5 mr-0.5" />IC</Badge>}
+                      </Label>
+                      <Select value={contactForm.state} onValueChange={(v) => setContactForm((f) => ({ ...f, state: v }))}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="State" /></SelectTrigger>
+                        <SelectContent>
+                          {US_STATES.map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Zip</Label>
+                      <Input
+                        value={contactForm.zip}
+                        onChange={(e) => setContactForm((f) => ({ ...f, zip: e.target.value }))}
+                        placeholder="12345"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Website</Label>
+                    <Input
+                      value={contactForm.website}
+                      onChange={(e) => setContactForm((f) => ({ ...f, website: e.target.value }))}
+                      placeholder="https://example.com"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Notes</Label>
+                    <Textarea
+                      value={contactForm.contact_notes}
+                      onChange={(e) => setContactForm((f) => ({ ...f, contact_notes: e.target.value }))}
+                      rows={2}
+                      placeholder="Contact notes..."
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveContact(speaker.id)}
+                      disabled={contactSaving}
+                      className="bg-[#1e3a5f] hover:bg-[#2d5282]"
+                    >
+                      {contactSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                      Save Contact Info
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setContactEditing(false)}
+                    >
+                      Cancel
+                    </Button>
+                    {v.source_username && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFetchContact(speaker.id)}
+                        disabled={contactFetching}
+                        className="ml-auto"
+                      >
+                        {contactFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+                        Fetch from IC (0.03 credits)
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Read-only contact display */}
+                  {contactForm.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={`mailto:${contactForm.email}`} className="text-blue-600 hover:underline">{contactForm.email}</a>
+                      {icFilledFields.has("email") && <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700"><Sparkles className="h-2.5 w-2.5 mr-0.5" />IC</Badge>}
+                    </div>
+                  )}
+                  {contactForm.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span>{contactForm.phone}</span>
+                      {icFilledFields.has("phone") && <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700"><Sparkles className="h-2.5 w-2.5 mr-0.5" />IC</Badge>}
+                    </div>
+                  )}
+                  {(contactForm.address || contactForm.city || contactForm.state || contactForm.zip) && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span>
+                        {[contactForm.address, contactForm.city, contactForm.state, contactForm.zip].filter(Boolean).join(", ")}
+                      </span>
+                    </div>
+                  )}
+                  {!contactForm.city && !contactForm.state && (v.city || v.state) && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span>{[v.city, v.state].filter(Boolean).join(", ")}</span>
+                    </div>
+                  )}
+                  {contactForm.website && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <a href={contactForm.website.startsWith("http") ? contactForm.website : `https://${contactForm.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{contactForm.website}</a>
+                    </div>
+                  )}
+                  {contactForm.contact_notes && (
+                    <p className="text-sm text-muted-foreground italic">{contactForm.contact_notes}</p>
+                  )}
+
+                  {/* No info message + fetch button */}
+                  {!contactForm.email && !contactForm.phone && !contactForm.city && !contactForm.address && !v.city && platforms.length === 0 && !v.linkedin_url && !v.website_url && !speaker.linkedin_url && !speaker.website_url && (
+                    <p className="text-sm text-muted-foreground">No contact information available.</p>
+                  )}
+
+                  {/* Fetch Contact Info button (when no contact data and handle available) */}
+                  {!contactForm.email && !contactForm.phone && v.source_username && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleFetchContact(speaker.id)}
+                      disabled={contactFetching}
+                    >
+                      {contactFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+                      Fetch Contact Info (0.03 credits)
+                    </Button>
+                  )}
                 </div>
               )}
 
-              {/* Contact data (email/phone) */}
-              {contactData && (
-                <div className="space-y-1.5">
-                  {contactData.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <a href={`mailto:${contactData.email}`} className="text-blue-600 hover:underline">{contactData.email}</a>
-                    </div>
-                  )}
-                  {contactData.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{contactData.phone}</span>
-                    </div>
-                  )}
-                  {contactData.city && !v.city && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>{contactData.city}</span>
-                    </div>
-                  )}
+              {/* Add to Contacts / Add to Email List buttons */}
+              {contactForm.email && (
+                <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddToContacts(speaker)}
+                    disabled={addingToContacts}
+                  >
+                    {addingToContacts ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <UserPlus className="h-3.5 w-3.5 mr-1.5" />}
+                    Add to Contacts
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openAddToList}
+                    disabled={addingToList}
+                  >
+                    <ListPlus className="h-3.5 w-3.5 mr-1.5" />
+                    Add to Email List
+                  </Button>
                 </div>
-              )}
-
-              {/* Fetch Contact Info button */}
-              {!contactData && v.source_username && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFetchContact}
-                  disabled={contactFetching}
-                >
-                  {contactFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Globe className="h-3.5 w-3.5 mr-1.5" />}
-                  Fetch Contact Info (0.03 credits)
-                </Button>
-              )}
-
-              {!contactData && !v.source_username && platforms.length === 0 && !v.linkedin_url && !v.website_url && !speaker.linkedin_url && !speaker.website_url && !v.city && (
-                <p className="text-sm text-muted-foreground">No contact information available.</p>
               )}
             </div>
           </CollapsibleSection>
@@ -1108,75 +1492,248 @@ export default function Speakers() {
 
   /** Render the expanded row for an UNVERIFIED speaker */
   const renderUnverifiedExpanded = (speaker: Speaker) => (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Verification Card */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4" /> Verification
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-3">Not yet verified</p>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Verification Card */}
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4" /> Verification
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground mb-3">Not yet verified</p>
+              <Button
+                size="sm"
+                className="bg-[#1e3a5f] hover:bg-[#2d5282]"
+                onClick={() => handleStartVerification(speaker)}
+              >
+                <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Start Verification
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bio Card */}
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Bio</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              {speaker.bio || "No bio available."}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Events Card */}
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {expandedEvents.length > 0 ? (
+              <ul className="space-y-2">
+                {expandedEvents.map((ev) => (
+                  <li key={ev.id} className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="font-medium">{ev.title}</span>
+                    {ev.start_date && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(ev.start_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No events assigned yet.</p>
+            )}
             <Button
+              variant="outline"
               size="sm"
-              className="bg-[#1e3a5f] hover:bg-[#2d5282]"
-              onClick={() => handleStartVerification(speaker)}
+              className="w-full mt-3"
+              onClick={() => handleOpenInvite(speaker)}
             >
-              <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Start Verification
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Add to Event
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Bio Card */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Bio</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {speaker.bio || "No bio available."}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Events Card */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Calendar className="h-4 w-4" /> Events
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {expandedEvents.length > 0 ? (
-            <ul className="space-y-2">
-              {expandedEvents.map((ev) => (
-                <li key={ev.id} className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="font-medium">{ev.title}</span>
-                  {ev.start_date && (
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(ev.start_date).toLocaleDateString()}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">No events assigned yet.</p>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full mt-3"
-            onClick={() => handleOpenInvite(speaker)}
+      {/* Contact Information (for unverified speakers too) */}
+      <CollapsibleSection
+        title="Contact Information"
+        icon={<Mail className="h-4 w-4 text-[#1e3a5f]" />}
+        extra={
+          <button
+            onClick={(e) => { e.stopPropagation(); setContactEditing(!contactEditing); }}
+            className="ml-auto p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title={contactEditing ? "Cancel editing" : "Edit contact info"}
           >
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> Add to Event
-          </Button>
-        </CardContent>
-      </Card>
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        }
+      >
+        <div className="mt-3 space-y-3">
+          {contactEditing ? (
+            <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50/50 dark:bg-gray-900/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Email</Label>
+                  <Input
+                    type="email"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm((f) => ({ ...f, email: e.target.value }))}
+                    placeholder="email@example.com"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Phone</Label>
+                  <Input
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm((f) => ({ ...f, phone: e.target.value }))}
+                    placeholder="(555) 123-4567"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Address</Label>
+                <Input
+                  value={contactForm.address}
+                  onChange={(e) => setContactForm((f) => ({ ...f, address: e.target.value }))}
+                  placeholder="123 Main St"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">City</Label>
+                  <Input
+                    value={contactForm.city}
+                    onChange={(e) => setContactForm((f) => ({ ...f, city: e.target.value }))}
+                    placeholder="City"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">State</Label>
+                  <Select value={contactForm.state} onValueChange={(v) => setContactForm((f) => ({ ...f, state: v }))}>
+                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="State" /></SelectTrigger>
+                    <SelectContent>
+                      {US_STATES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Zip</Label>
+                  <Input
+                    value={contactForm.zip}
+                    onChange={(e) => setContactForm((f) => ({ ...f, zip: e.target.value }))}
+                    placeholder="12345"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Website</Label>
+                <Input
+                  value={contactForm.website}
+                  onChange={(e) => setContactForm((f) => ({ ...f, website: e.target.value }))}
+                  placeholder="https://example.com"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Notes</Label>
+                <Textarea
+                  value={contactForm.contact_notes}
+                  onChange={(e) => setContactForm((f) => ({ ...f, contact_notes: e.target.value }))}
+                  rows={2}
+                  placeholder="Contact notes..."
+                  className="text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => handleSaveContact(speaker.id)}
+                  disabled={contactSaving}
+                  className="bg-[#1e3a5f] hover:bg-[#2d5282]"
+                >
+                  {contactSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
+                  Save Contact Info
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setContactEditing(false)}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {contactForm.email && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <a href={`mailto:${contactForm.email}`} className="text-blue-600 hover:underline">{contactForm.email}</a>
+                </div>
+              )}
+              {contactForm.phone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{contactForm.phone}</span>
+                </div>
+              )}
+              {(contactForm.address || contactForm.city || contactForm.state || contactForm.zip) && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{[contactForm.address, contactForm.city, contactForm.state, contactForm.zip].filter(Boolean).join(", ")}</span>
+                </div>
+              )}
+              {contactForm.website && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <a href={contactForm.website.startsWith("http") ? contactForm.website : `https://${contactForm.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{contactForm.website}</a>
+                </div>
+              )}
+              {contactForm.contact_notes && (
+                <p className="text-sm text-muted-foreground italic">{contactForm.contact_notes}</p>
+              )}
+              {!contactForm.email && !contactForm.phone && !contactForm.city && !contactForm.address && (
+                <p className="text-sm text-muted-foreground">No contact information available. Click the pencil icon to add.</p>
+              )}
+            </div>
+          )}
+
+          {/* Add to Contacts / Add to Email List buttons */}
+          {contactForm.email && (
+            <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAddToContacts(speaker)}
+                disabled={addingToContacts}
+              >
+                {addingToContacts ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <UserPlus className="h-3.5 w-3.5 mr-1.5" />}
+                Add to Contacts
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openAddToList}
+                disabled={addingToList}
+              >
+                <ListPlus className="h-3.5 w-3.5 mr-1.5" />
+                Add to Email List
+              </Button>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 
@@ -1534,6 +2091,47 @@ export default function Speakers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add to Email List Dialog */}
+      <Dialog open={addToListOpen} onOpenChange={setAddToListOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListPlus className="h-5 w-5" /> Add to Email List
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Email List</Label>
+              <Select value={selectedListId} onValueChange={setSelectedListId}>
+                <SelectTrigger><SelectValue placeholder="Select a list" /></SelectTrigger>
+                <SelectContent>
+                  {emailLists.length === 0 ? (
+                    <SelectItem value="__none" disabled>No lists found</SelectItem>
+                  ) : (
+                    emailLists.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            {expandedId && (
+              <Button
+                onClick={() => {
+                  const sp = speakers.find((s) => s.id === expandedId);
+                  if (sp) handleAddToEmailList(sp);
+                }}
+                disabled={!selectedListId || addingToList}
+                className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]"
+              >
+                {addingToList && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Add to List
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

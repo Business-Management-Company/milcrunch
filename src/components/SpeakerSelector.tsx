@@ -371,7 +371,7 @@ function InviteModal({
     setSaving(true);
     const { data, error } = await supabase
       .from("speakers")
-      .insert({ name: name.trim(), bio: topic.trim() || null })
+      .insert({ name: name.trim(), bio: topic.trim() || null, review_status: "pending_review" } as Record<string, unknown>)
       .select("id")
       .single();
     setSaving(false);

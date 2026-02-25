@@ -798,6 +798,7 @@ export default function Verification() {
       photo_url: speakerForm.photo_url || null,
       verification_id: speakerForm.verification_id || null,
       verification_status: speakerForm.verification_status || null,
+      review_status: "pending_review",
     } as Record<string, unknown>);
     if (error) {
       toast.error("Failed to save speaker: " + error.message);
