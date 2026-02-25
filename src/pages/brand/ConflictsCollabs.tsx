@@ -799,6 +799,7 @@ export default function ConflictsCollabs() {
       : "";
 
     // AI scan: multi-source event discovery
+    console.log("[C&C] AI scan location:", locationStr, "| parsed:", JSON.stringify(parsedLoc), "| radius:", radius, "| bases:", nearbyBases.slice(0, 3).map((b) => b.name));
     const aiScanPromise = callAnthropic(
         `You are an event intelligence tool for military community event planners. Given a planned event's location, date range, and target audience, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) as if you searched Eventbrite, Facebook Events, military installation calendars, local and regional Chamber of Commerce event calendars, and military community groups.
 
@@ -814,12 +815,18 @@ Return ONLY a valid JSON array of event objects. Each event:
   "suggestion": "Actionable recommendation for the event planner"
 }
 
+CRITICAL GEOGRAPHIC CONSTRAINT:
+- ALL events MUST be located within ${radius} miles of ${locationStr}.
+- The planned event is in ${parsedLoc.city || "the specified city"}, ${parsedLoc.state || "the specified state"}.
+- Do NOT include events from other states or regions outside the search radius.
+- Every event's "location" field must be a city within ${radius} miles of ${locationStr}.
+
 Guidelines:
 - Generate 8-15 realistic events, mix of conflicts and collabs
 - For conflicts: events competing for the same audience in the same timeframe and area
 - For collabs: complementary events good for cross-promotion, shared speakers, or joint marketing
 - Include events from at least 3 different sources
-- Military installation events should reference real bases near the location
+- Military installation events should reference real bases near the location (listed below)
 - Severity: high = same week and nearby, medium = same month or overlapping audience, low = tangential
 - Make events realistic with specific names, real-sounding dates within the timeframe, and plausible venues
 - Include both military-specific and civilian events that could attract a military audience
@@ -829,8 +836,11 @@ Guidelines:
         `Planned event details:
 - Date: ${dateRangeStr}
 - Location: ${locationStr}
+- State: ${parsedLoc.state || "Unknown"}
 - Search Radius: ${radius} miles
 - Target Audience: ${audienceTypes.join(", ") || "General Military"}${baseContext}
+
+IMPORTANT: Only return events located within ${radius} miles of ${locationStr}. Do not include events from other states or distant regions.
 
 Generate realistic competing events and collaboration opportunities.`,
       4096,
