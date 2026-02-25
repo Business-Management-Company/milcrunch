@@ -131,11 +131,30 @@ interface EnrichmentData {
 
 // Review status options for the speaker review dropdown
 const REVIEW_STATUSES = [
-  { value: "pending_review", label: "Pending Review" },
-  { value: "approved", label: "Approved" },
-  { value: "flagged", label: "Flagged" },
-  { value: "declined", label: "Declined" },
+  { value: "pending_review", label: "Pending Review", color: "#eab308" },
+  { value: "approved", label: "Approved", color: "#22c55e" },
+  { value: "flagged", label: "Flagged", color: "#f97316" },
+  { value: "declined", label: "Declined", color: "#ef4444" },
 ];
+
+const REVIEW_COLOR_MAP: Record<string, string> = {
+  pending_review: "#eab308",
+  approved: "#22c55e",
+  flagged: "#f97316",
+  declined: "#ef4444",
+};
+
+function ReviewDot({ status, size = 8 }: { status: string | null; size?: number }) {
+  if (!status) return null;
+  const color = REVIEW_COLOR_MAP[status] ?? "#9ca3af";
+  return (
+    <span
+      className="inline-block rounded-full shrink-0"
+      style={{ width: size, height: size, backgroundColor: color }}
+      title={REVIEW_STATUSES.find((r) => r.value === status)?.label ?? status}
+    />
+  );
+}
 
 function MiniGauge({ score, size = 80 }: { score: number; size?: number }) {
   const color = score >= 70 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
@@ -197,11 +216,13 @@ function CollapsibleSection({
   title,
   icon,
   defaultOpen = false,
+  extra,
   children,
 }: {
   title: string;
   icon: React.ReactNode;
   defaultOpen?: boolean;
+  extra?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -214,6 +235,7 @@ function CollapsibleSection({
         {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         {icon}
         <span className="font-semibold text-sm text-[#000741] dark:text-white">{title}</span>
+        {extra}
       </button>
       {open && <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-800">{children}</div>}
     </div>
@@ -979,6 +1001,7 @@ export default function Speakers() {
           <CollapsibleSection
             title="Speaker Review"
             icon={<ClipboardList className="h-4 w-4 text-[#1e3a5f]" />}
+            extra={<ReviewDot status={reviewStatus || speaker.review_status} size={10} />}
           >
             <div className="mt-3 space-y-3">
               {/* Existing review info */}
@@ -997,7 +1020,12 @@ export default function Speakers() {
                     <SelectTrigger className="h-9"><SelectValue placeholder="Select status" /></SelectTrigger>
                     <SelectContent>
                       {REVIEW_STATUSES.map((rs) => (
-                        <SelectItem key={rs.value} value={rs.value}>{rs.label}</SelectItem>
+                        <SelectItem key={rs.value} value={rs.value}>
+                          <span className="flex items-center gap-2">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: rs.color }} />
+                            {rs.label}
+                          </span>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1258,15 +1286,18 @@ export default function Speakers() {
                       <p className="text-sm text-muted-foreground line-clamp-2">{speaker.bio ?? "—"}</p>
                     </TableCell>
                     <TableCell>
-                      {speaker.verification_id ? (
-                        speaker.verification_status === "verified"
-                          ? <ShieldCheck className="h-4 w-4 text-blue-700" />
-                          : speaker.verification_status === "flagged"
-                            ? <AlertTriangle className="h-4 w-4 text-red-500" />
-                            : <Clock className="h-4 w-4 text-amber-500" />
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {speaker.verification_id ? (
+                          speaker.verification_status === "verified"
+                            ? <ShieldCheck className="h-4 w-4 text-blue-700" />
+                            : speaker.verification_status === "flagged"
+                              ? <AlertTriangle className="h-4 w-4 text-red-500" />
+                              : <Clock className="h-4 w-4 text-amber-500" />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                        <ReviewDot status={speaker.review_status} />
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {speaker.created_at ? new Date(speaker.created_at).toLocaleDateString() : "—"}
