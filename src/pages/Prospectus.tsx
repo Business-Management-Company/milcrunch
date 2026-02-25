@@ -354,8 +354,16 @@ function ManageContentPanel({
       return;
     }
     if (!(await ensureSession())) return;
+    // Delete old file first if it exists in storage
+    const oldUrl = videoDraft[tab];
+    if (oldUrl && oldUrl.includes(VIDEO_BUCKET)) {
+      const oldPath = oldUrl.split(`${VIDEO_BUCKET}/`)[1]?.split("?")[0];
+      if (oldPath) {
+        await supabase.storage.from(VIDEO_BUCKET).remove([oldPath]);
+      }
+    }
     const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-    const path = `${tabSlug(tab)}-video.${ext}`;
+    const path = `${tabSlug(tab)}-video-${Date.now()}.${ext}`;
     setUploading(`video-${tab}`);
     setUploadProgress(0);
     const progressTimer = setInterval(() => {
@@ -406,8 +414,16 @@ function ManageContentPanel({
       return;
     }
     if (!(await ensureSession())) return;
+    // Delete old file first if it exists in storage
+    const oldUrl = imageDraft[tab];
+    if (oldUrl && oldUrl.includes(IMAGE_BUCKET)) {
+      const oldPath = oldUrl.split(`${IMAGE_BUCKET}/`)[1]?.split("?")[0];
+      if (oldPath) {
+        await supabase.storage.from(IMAGE_BUCKET).remove([oldPath]);
+      }
+    }
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${tabSlug(tab)}-image.${ext}`;
+    const path = `${tabSlug(tab)}-image-${Date.now()}.${ext}`;
     setUploading(`image-${tab}`);
     setUploadProgress(0);
     const progressTimer = setInterval(() => {
@@ -455,17 +471,24 @@ function ManageContentPanel({
   const handleSaveMedia = async () => {
     if (!(await ensureSession())) return;
     setSaving(true);
-    const upserts = TABS.map((tab) => ({
+    const rows = TABS.map((tab) => ({
       tab_name: tab,
       video_url: videoDraft[tab]?.trim() || null,
       image_url: imageDraft[tab]?.trim() || null,
       updated_at: new Date().toISOString(),
     }));
     try {
-      console.log("[ManageContent] Saving media upserts:", JSON.stringify(upserts, null, 2));
+      console.log("[ManageContent] Saving media rows:", JSON.stringify(rows, null, 2));
+      // Strategy: delete all existing rows then insert fresh ones.
+      // This avoids issues with missing unique constraints on tab_name
+      // and prevents duplicate rows from accumulating over time.
+      await supabase.from("prospectus_videos").delete().in(
+        "tab_name",
+        TABS as unknown as string[]
+      );
       const { data, error } = await supabase
         .from("prospectus_videos")
-        .upsert(upserts, { onConflict: "tab_name" })
+        .insert(rows)
         .select();
       setSaving(false);
       if (error) {
@@ -1579,15 +1602,22 @@ export default function Prospectus() {
   }, []);
 
   // Fetch saved media URLs (video + image)
+  // Order by updated_at DESC so the latest row per tab wins, and use a
+  // "first-wins" map to handle any duplicate tab_name rows.
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("prospectus_videos")
-        .select("tab_name, video_url, image_url");
+        .select("tab_name, video_url, image_url")
+        .order("updated_at", { ascending: false });
       if (data) {
         const vMap: VideoUrls = {};
         const iMap: ImageUrls = {};
+        const seen = new Set<string>();
         for (const row of data as { tab_name: string; video_url: string | null; image_url: string | null }[]) {
+          // First (most recent) row per tab wins — skip older duplicates
+          if (seen.has(row.tab_name)) continue;
+          seen.add(row.tab_name);
           if (row.video_url) vMap[row.tab_name] = row.video_url;
           if (row.image_url) iMap[row.tab_name] = row.image_url;
         }
