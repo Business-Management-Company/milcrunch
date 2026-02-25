@@ -2230,7 +2230,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
           {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Mic className="h-5 w-5" /> Speaker Readiness Assessment
           {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-          <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} />
+          <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} tooltip={checkedCount >= 5 ? "Complete \u2713" : checkedCount >= 3 ? "Moderate readiness — review remaining items" : "Low readiness score — review requirements"} />
         </CardTitle>
       </CardHeader>
       {open && <CardContent className="space-y-3">
@@ -2336,7 +2336,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
         <Mic className="h-5 w-5 text-[#1e3a5f]" />
         <h3 className="text-base font-semibold text-[#000741] dark:text-white">Speaker Readiness Assessment</h3>
         {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-        <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} />
+        <StatusDot status={checkedCount >= 5 ? 'green' : checkedCount >= 3 ? 'yellow' : 'red'} tooltip={checkedCount >= 5 ? "Complete \u2713" : checkedCount >= 3 ? "Moderate readiness — review remaining items" : "Low readiness score — review requirements"} />
       </button>
       {isOpen && (
         <div className="ml-6 mt-4 mb-2">
@@ -2978,9 +2978,16 @@ function CareerTrackTab({ record }: { record: VerificationRecord }) {
   );
 }
 
-function StatusDot({ status }: { status: 'red' | 'yellow' | 'green' }) {
+function StatusDot({ status, tooltip }: { status: 'red' | 'yellow' | 'green'; tooltip?: string }) {
+  const dot = <span className={`inline-block w-2.5 h-2.5 rounded-full ml-2 flex-shrink-0 ${status === 'green' ? 'bg-green-500' : status === 'yellow' ? 'bg-amber-400' : 'bg-red-400'}`} />;
+  if (!tooltip) return dot;
   return (
-    <span className={`inline-block w-2.5 h-2.5 rounded-full ml-2 flex-shrink-0 ${status === 'green' ? 'bg-green-500' : status === 'yellow' ? 'bg-amber-400' : 'bg-red-400'}`} />
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{dot}</TooltipTrigger>
+        <TooltipContent side="top" className="text-xs max-w-[220px]">{tooltip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -3673,11 +3680,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
-          <StatusDot status={(() => {
+          {(() => {
             const a = record.ai_analysis;
-            if (!a || a === "pending_retry" || /failed|error/i.test(a)) return 'red';
-            return 'green';
-          })()} />
+            const s = (!a || a === "pending_retry" || /failed|error/i.test(a)) ? 'red' : 'green';
+            const tip = s === 'red' ? "Analysis incomplete — click 'Retry AI Analysis' to generate" : "Complete \u2713";
+            return <StatusDot status={s} tooltip={tip} />;
+          })()}
           {(!record.ai_analysis || record.ai_analysis === "pending_retry" || /failed|error/i.test(record.ai_analysis)) && (
             <button
               onClick={(e) => { e.stopPropagation(); handleRetryAIAnalysis(); }}
@@ -3702,7 +3710,7 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <Search className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Evidence Sources</h3>
           <Badge variant="secondary" className="text-xs ml-1">{sources.length}</Badge>
-          <StatusDot status={sources.length >= 10 ? 'green' : sources.length > 0 ? 'yellow' : 'red'} />
+          <StatusDot status={sources.length >= 10 ? 'green' : sources.length > 0 ? 'yellow' : 'red'} tooltip={sources.length >= 10 ? "Complete \u2713" : sources.length > 0 ? "Limited evidence — re-verify for more sources" : "No evidence found — re-verify to search"} />
         </button>
         {evidenceOpen && (
           <div className="ml-6 mt-4 mb-2 space-y-4">
@@ -3745,22 +3753,25 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Briefcase className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
-          <StatusDot status={(() => {
+          {(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
             const career = (mc as any)?.career_track?.result;
             const pdl = record.pdl_data as any;
-            if (!career && !pdl) return 'red';
-            // Green: has branch OR rank OR any career/post_service entry
-            if (career) {
-              const hasBranch = !!career.military_summary?.branch;
-              const hasRank = !!career.military_summary?.rank;
-              const hasEntries = (career.career?.length > 0 || career.post_service?.length > 0 || career.education?.length > 0 || career.awards?.length > 0);
-              if (hasBranch || hasRank || hasEntries) return 'green';
+            let s: 'red' | 'yellow' | 'green' = 'red';
+            if (!career && !pdl) { s = 'red'; }
+            else {
+              s = 'yellow';
+              if (career) {
+                const hasBranch = !!career.military_summary?.branch;
+                const hasRank = !!career.military_summary?.rank;
+                const hasEntries = (career.career?.length > 0 || career.post_service?.length > 0 || career.education?.length > 0 || career.awards?.length > 0);
+                if (hasBranch || hasRank || hasEntries) s = 'green';
+              }
+              if (s !== 'green' && pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) s = 'green';
             }
-            if (pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) return 'green';
-            // Yellow: data exists but mostly empty / "Not identified"
-            return 'yellow';
-          })()} />
+            const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Some career data missing — click 'Regenerate' to improve" : "No career data — click 'Regenerate' to extract";
+            return <StatusDot status={s} tooltip={tip} />;
+          })()}
         </button>
         {careerOpen && <div className="ml-6 mt-4 mb-2"><CareerTrackTab record={record} /></div>}
       </section>
@@ -3771,16 +3782,16 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Globe className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
-          <StatusDot status={(() => {
+          {(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
             const savedProfiles = (mc?.social_profiles ?? []) as unknown[];
             let count = Array.isArray(savedProfiles) ? savedProfiles.length : 0;
             if (record.source_username) count++;
             if (record.linkedin_url) count++;
-            if (count >= 2) return 'green';
-            if (count === 1) return 'yellow';
-            return 'red';
-          })()} />
+            const s = count >= 2 ? 'green' : count === 1 ? 'yellow' : 'red';
+            const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Only 1 profile confirmed" : "No social profiles verified";
+            return <StatusDot status={s} tooltip={tip} />;
+          })()}
         </button>
         {socialOpen && (
           <div className="ml-6 mt-4 mb-2">
@@ -3800,16 +3811,19 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <Video className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
-          <StatusDot status={(() => {
+          {(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
-            if (!mc) return 'red';
-            const ytMedia = (mc as any)?.youtube_media;
-            if (!ytMedia) return 'red';
-            const videos = ytMedia.videos as unknown[] | undefined;
-            if (Array.isArray(videos) && videos.length > 0) return 'green';
-            // Search ran but found nothing
-            return 'yellow';
-          })()} />
+            let s: 'red' | 'yellow' | 'green' = 'red';
+            if (mc) {
+              const ytMedia = (mc as any)?.youtube_media;
+              if (ytMedia) {
+                const videos = ytMedia.videos as unknown[] | undefined;
+                s = (Array.isArray(videos) && videos.length > 0) ? 'green' : 'yellow';
+              }
+            }
+            const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Search completed but no results found" : "No media found — re-verify to search";
+            return <StatusDot status={s} tooltip={tip} />;
+          })()}
         </button>
         {mediaOpen && (
           <div className="ml-6 mt-4 mb-2">
@@ -3844,9 +3858,10 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
               }).eq('id', record.id);
               onRefresh?.();
             };
+            const bgTip = bgStatus === 'green' ? "Complete \u2713" : bgStatus === 'yellow' ? "Review completed with warnings" : "Not yet reviewed — re-verify to run";
             return (
-              <span onClick={handleBgDotClick} className="cursor-pointer" title="Click to update status">
-                <StatusDot status={bgStatus as 'red' | 'yellow' | 'green'} />
+              <span onClick={handleBgDotClick} className="cursor-pointer" title="Click to cycle status">
+                <StatusDot status={bgStatus as 'red' | 'yellow' | 'green'} tooltip={bgTip} />
               </span>
             );
           })()}
