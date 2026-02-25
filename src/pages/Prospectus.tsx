@@ -1705,25 +1705,37 @@ const TAB_CONTENT: Record<string, TabContent> = {
     },
   },
   "Streaming & Media": {
-    headline: "Professional Live",
-    headlineAccent: "Production Infrastructure",
+    headline: "The Living Room is",
+    headlineAccent: "the New Feed",
     description:
-      "Built from our experience producing 100+ live interviews at Military Influencer Conference, MilCrunch provides enterprise-grade streaming capabilities for military events.",
+      "YouTube, Instagram, and TikTok are no longer just phone apps. All three have launched dedicated Apple TV, Fire TV, and Roku applications — moving creator content from the palm of your hand to the biggest screen in the house. This isn't a trend. It's a platform shift.",
     sections: [
       {
-        heading: "Capabilities",
+        heading: "Why This Matters for Recurrent",
         items: [
-          "Multi-Platform Streaming \u2014 Simultaneous broadcast to YouTube, Facebook, Instagram, LinkedIn",
-          "Professional Production \u2014 Multi-camera switching, graphics overlays, sponsor integration",
-          "VOD Archive \u2014 Automatic recording and post-event content library",
-          "Sponsor Showcases \u2014 Branded segments, booth tours, product demos",
-          "Creator Interviews \u2014 Structured format for authentic conversations",
+          "Every major content platform is racing to own living room distribution. Recurrent's military media portfolio — We Are The Mighty, Task & Purpose, Military.com content partnerships — currently lives on websites and social feeds. That's yesterday's distribution model.",
+        ],
+      },
+      {
+        heading: "The Opportunity: A Recurrent Streaming App",
+        items: [
+          "A new distribution channel — not dependent on social algorithms or search rankings, but a direct presence on every connected TV",
+          "Direct audience access — push notifications, featured content, curated playlists on the viewer's terms",
+          "Advertising inventory — pre-roll, mid-roll, and sponsored content blocks with premium CPMs that OTT/CTV commands",
+          "Partner content distribution — existing advertising and media partners get immediate access to a new channel, not just event coverage but year-round branded content",
+          "Event amplification — MilCon keynotes, panels, and live streams delivered directly to living rooms, expanding reach beyond attendees",
+        ],
+      },
+      {
+        heading: "MilCrunch Makes This Possible",
+        items: [
+          "MilCrunch already has the live streaming infrastructure, creator content pipeline, and event production experience from three years running the Parade Deck Experience at MIC. The platform provides the content engine — the app provides the distribution.",
         ],
       },
     ],
     bottomNote: {
-      heading: "Production Quality",
-      text: "Broadcast-quality streaming without broadcast-level costs. Perfect for military conferences, expos, and virtual events.",
+      heading: "The Bottom Line",
+      text: "Social platforms figured out that the living room is where attention lives. Recurrent should too. A streaming app turns Recurrent from a digital media company into a military media network.",
     },
   },
   "Partnership Model": {
