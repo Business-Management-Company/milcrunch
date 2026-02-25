@@ -964,8 +964,6 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* ------------------------------------------------------------------ */
 
 function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean; onVideoEnded?: () => void }) {
-  const saasTotal = SAAS_ROWS.reduce((s, r) => s + r.cost, 0);
-
   return (
     <div className="space-y-16">
       {/* Hero */}
@@ -1003,7 +1001,7 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: {
             dark ? "text-white" : "text-[#111827]"
           )}
         >
-          MilCrunch didn&rsquo;t start in a boardroom.
+          MilCrunch didn&rsquo;t start in a pitch deck or a conference room.
         </h2>
         <div className="text-left space-y-4">
           <p
@@ -1012,8 +1010,8 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: {
               dark ? "text-gray-300" : "text-[#374151]"
             )}
           >
-            It started with a problem a veteran couldn&rsquo;t stop thinking about: the military
-            and veteran community had no place to be seen, heard, and understood. So he built one.
+            It started with a problem a veteran couldn&rsquo;t let go of: the military and veteran
+            community needed a place to be heard, seen, and understood &mdash; in one home.
           </p>
           <p
             className={cn(
@@ -1021,11 +1019,9 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: {
               dark ? "text-gray-300" : "text-[#374151]"
             )}
           >
-            MilCrunch started as a creator directory — a place where a veteran podcaster with
-            500 followers could build a profile, connect their social channels, and finally have
-            a home for their content alongside authors, musicians, milspouses, and social media
-            creators who were all trying to build something meaningful, with no support and no
-            spotlight.
+            That home was the Parade Deck Experience &mdash; where every military influencer,
+            veteran creator, spouse-owned business, and podcaster could show up, build a real
+            presence, and be discovered.
           </p>
           <p
             className={cn(
@@ -1033,14 +1029,15 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: {
               dark ? "text-gray-300" : "text-[#374151]"
             )}
           >
-            That directory became a network. That network became a platform. And that platform
-            became MilCrunch.
+            Now, Parade Deck&rsquo;s name and infrastructure are being rebranded as{" "}
+            <strong className={dark ? "text-white" : "text-[#111827]"}>MilCrunch</strong> &mdash;
+            with a meaningful upgrade in AI technology that makes the platform faster, easier to
+            grow on, and built for scale.
           </p>
         </div>
       </section>
 
-
-      {/* Platform Capabilities */}
+      {/* Core Platform */}
       <section className="max-w-[760px] mx-auto">
         <div
           className={cn(
@@ -1050,602 +1047,72 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded }: {
         >
           <p
             className={cn(
-              "text-[11px] font-semibold tracking-[0.15em] uppercase mb-8 transition-colors duration-300",
+              "text-base leading-relaxed font-semibold mb-6 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
+            )}
+          >
+            MilCrunch is the essential infrastructure for media companies and brands that want to
+            authentically engage the military community.
+          </p>
+          <p
+            className={cn(
+              "text-[11px] font-semibold tracking-[0.15em] uppercase mb-6 transition-colors duration-300",
               dark ? "text-gray-500" : "text-[#9CA3AF]"
             )}
           >
-            WHAT THE PLATFORM DOES
+            AT ITS CORE
           </p>
-
-          <div className="space-y-8">
-            <div>
-              <h4
-                className={cn(
-                  "text-base font-bold mb-2 transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Creator &amp; Influencer Discovery
-              </h4>
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#374151]"
-                )}
-              >
-                MilCrunch connects organizers and brands to a searchable database of millions of
-                creator profiles — filterable by niche, platform, follower range, engagement rate,
-                location, and military affiliation. Vetted military and veteran creators can build
-                full media profiles, link their social channels, and be discovered for brand
-                partnerships, speaking opportunities, podcast appearances, and event activations.
-                Campaign managers can build targeted creator lists, sign deliverables, and track
-                performance — all inside the platform.
-              </p>
-            </div>
-
-            <div>
-              <h4
-                className={cn(
-                  "text-base font-bold mb-2 transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Event Management &amp; Attendee Experience
-              </h4>
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#374151]"
-                )}
-              >
-                MilCrunch goes far beyond what a ticketing platform can offer. Event organizers
-                get a full suite of tools: event creation and registration, session scheduling
-                with conflict detection, speaker and sponsor management, QR-based attendee
-                check-in, and a mobile-first attendee web app that requires no download. Attendees
-                can build a personal agenda, connect with other attendees via QR networking, and
-                participate in a real-time community feed — all from their phone browser.
-              </p>
-            </div>
-
-            <div>
-              <h4
-                className={cn(
-                  "text-base font-bold mb-2 transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Live Streaming &amp; Production
-              </h4>
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#374151]"
-                )}
-              >
-                The platform includes integrated live streaming management for multi-destination
-                broadcasting. Production teams can manage run-of-show schedules, stream
-                destinations, and day-of checklists from a single dashboard — built around the
-                MilCrunch Experience model that has delivered 3M+ YouTube impressions at
-                Military Influencer Conference.
-              </p>
-            </div>
-
-            <div>
-              <h4
-                className={cn(
-                  "text-base font-bold mb-2 transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Podcast Network
-              </h4>
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#374151]"
-                )}
-              >
-                MilCrunch hosts a dedicated military and veteran podcast network. Creators can
-                publish episodes, build subscriber audiences, and connect their podcast presence
-                directly to their creator profile — making their content discoverable to sponsors
-                and event organizers looking for authentic voices.
-              </p>
-            </div>
-
-            <div>
-              <h4
-                className={cn(
-                  "text-base font-bold mb-2 transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Email Marketing
-              </h4>
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#374151]"
-                )}
-              >
-                A full email marketing suite — contacts database, list segmentation, drag-and-drop
-                campaign builder, pre-built templates, and embeddable signup forms — built directly
-                into the platform. Organizers can email attendees, creators, and sponsors from the
-                same system they use to manage everything else, with send infrastructure powered
-                by verified sending domains.
-              </p>
-            </div>
-
-            <div>
-              <h4
-                className={cn(
-                  "text-base font-bold mb-2 transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Sponsor &amp; Revenue Infrastructure
-              </h4>
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#374151]"
-                )}
-              >
-                Sponsors get more than a logo placement. MilCrunch tracks impressions, lead
-                retrieval, content activations, and audience reach across the full event
-                lifecycle — attributed to individual sponsorship packages. The 365 Insights
-                dashboard shows sponsors quantifiable ROI week over week and month over month,
-                so renewals are data-driven, not relationship-dependent.
-              </p>
-            </div>
-
-            <div>
-              <h4
-                className={cn(
-                  "text-base font-bold mb-2 transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                Advertising &amp; Media Sales
-              </h4>
-              <p
-                className={cn(
-                  "text-sm leading-relaxed transition-colors duration-300",
-                  dark ? "text-gray-400" : "text-[#374151]"
-                )}
-              >
-                An integrated ad management system gives media teams a rate desk, CPM pricing
-                controls, campaign management by advertiser, inventory tracking with profit
-                margins, and a sales lead pipeline — purpose-built for military media
-                organizations monetizing their audience through display and branded content
-                placements.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Events in Your Pocket */}
-      <section className="max-w-4xl mx-auto">
-        <div
-          className={cn(
-            "rounded-2xl p-8 md:p-10 transition-colors duration-300",
-            dark
-              ? "bg-[#111827] border border-white/[0.08]"
-              : "bg-[#F9FAFB] border border-[#E5E7EB]"
-          )}
-        >
-          <div className="text-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[#1e3a5f]/15 flex items-center justify-center mx-auto mb-4">
-              <Smartphone className="h-6 w-6 text-[#1e3a5f]" />
-            </div>
-            <h3
-              className={cn(
-                "text-xl md:text-2xl font-extrabold mb-2 transition-colors duration-300",
-                dark ? "text-white" : "text-[#111827]"
-              )}
-            >
-              Events in Your Pocket
-            </h3>
-            <p
-              className={cn(
-                "text-sm max-w-xl mx-auto transition-colors duration-300",
-                dark ? "text-gray-400" : "text-[#6B7280]"
-              )}
-            >
-              The first mobile-first attendee app built specifically for military events — no App Store required.
-            </p>
-          </div>
-
-          {/* 3-Phone Display */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-            {/* Phone 1 — Registration & Check-In */}
-            <div className="flex flex-col items-center">
-              <div
-                className={cn(
-                  "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
-                  dark
-                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
-                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
-                )}
-              >
-                {/* Notch */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
-                {/* Screen content */}
-                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
-                  {/* Status bar spacer */}
-                  <div className="h-[28px] bg-[#1e3a5f]" />
-                  {/* Purple header */}
-                  <div className="bg-[#1e3a5f] px-4 py-3 text-center">
-                    <p className="text-white text-[10px] font-bold leading-tight">Military Influencer</p>
-                    <p className="text-white text-[10px] font-bold leading-tight">Conference 2026</p>
-                  </div>
-                  {/* QR Code area */}
-                  <div className="flex-1 flex flex-col items-center justify-center px-6 bg-[#111827]">
-                    {/* QR Code pattern */}
-                    <div className="w-[130px] h-[130px] bg-white rounded-xl p-2.5 mb-4">
-                      <div className="w-full h-full grid grid-cols-9 grid-rows-9 gap-[2px]">
-                        {[
-                          [1,1,1,1,1,0,1,0,1],
-                          [1,0,0,0,1,0,0,1,1],
-                          [1,0,1,0,1,0,1,0,1],
-                          [1,0,0,0,1,0,0,1,0],
-                          [1,1,1,1,1,0,1,0,1],
-                          [0,0,0,0,0,0,1,1,0],
-                          [1,1,0,1,1,1,0,0,1],
-                          [0,1,0,0,1,0,1,0,1],
-                          [1,0,1,1,0,1,0,1,0],
-                        ].map((row, ri) =>
-                          row.map((v, ci) => (
-                            <div
-                              key={`qr-${ri}-${ci}`}
-                              className={cn(
-                                "rounded-[1px]",
-                                v ? (ri === 6 ? "bg-[#1e3a5f]" : "bg-[#111827]") : "bg-white"
-                              )}
-                            />
-                          ))
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-white text-sm font-bold">Curtez Riggs</p>
-                    <span className="mt-1.5 px-3 py-0.5 rounded-full bg-[#10B981] text-white text-[10px] font-semibold">
-                      Attendee
-                    </span>
-                    <p className="text-gray-500 text-[9px] mt-3">Scan at registration desk</p>
-                  </div>
-                  {/* Bottom nav */}
-                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
-                    <div className="w-5 h-5 rounded bg-[#1e3a5f]/30" />
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                  </div>
+          <ul className="space-y-5">
+            {[
+              {
+                title: "Creator Discovery & Network Directory",
+                desc: "Find the right voices with precision using proprietary Military Match Scores, branch and location filters, and AI-powered search",
+              },
+              {
+                title: "Multi-Phase AI Verification",
+                desc: "Web intelligence and confidence scoring that eliminates stolen valor and protects credibility",
+              },
+              {
+                title: "Event Management",
+                desc: "Event creation, registration, and attendee experience in one system \u2014 complete with a high-performance Progressive Web App for schedules, speaker bios, and networking (no downloads required)",
+              },
+              {
+                title: "AI-Powered Go-to-Market",
+                desc: "Automated campaign building, one-click streaming integrations, and real-time ROI tracking",
+              },
+              {
+                title: "Email & Campaign Automation",
+                desc: "Targeted outreach to verified military creators and communities",
+              },
+            ].map((item) => (
+              <li key={item.title} className="flex gap-3">
+                <span className="text-[#1e3a5f] mt-1 shrink-0">&#x2022;</span>
+                <div>
+                  <strong className={cn("transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                    {item.title}
+                  </strong>
+                  {" \u2014 "}
+                  <span className={cn("text-sm transition-colors duration-300", dark ? "text-gray-400" : "text-[#374151]")}>
+                    {item.desc}
+                  </span>
                 </div>
-              </div>
-              {/* Label */}
-              <div className="mt-4 flex items-start gap-2 max-w-[240px]">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                <span className={cn("text-sm font-medium transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                  Instant QR check-in — no printed tickets
-                </span>
-              </div>
-            </div>
-
-            {/* Phone 2 — Live Agenda */}
-            <div className="flex flex-col items-center">
-              <div
-                className={cn(
-                  "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
-                  dark
-                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
-                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
-                )}
-              >
-                {/* Notch */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
-                {/* Screen content */}
-                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
-                  {/* Status bar spacer */}
-                  <div className="h-[28px] bg-[#1e3a5f]" />
-                  {/* Purple header */}
-                  <div className="bg-[#1e3a5f] px-4 py-3">
-                    <p className="text-white text-xs font-bold text-center">Schedule</p>
-                  </div>
-                  {/* Day pills */}
-                  <div className="bg-[#111827] px-4 py-2.5 flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full bg-[#1e3a5f] text-white text-[10px] font-semibold">
-                      Day 1 &middot; Sep 23
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-white/10 text-gray-400 text-[10px] font-medium">
-                      Day 2
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-white/10 text-gray-400 text-[10px] font-medium">
-                      Day 3
-                    </span>
-                  </div>
-                  {/* Session cards */}
-                  <div className="flex-1 bg-[#111827] px-3 py-2 space-y-2.5 overflow-hidden">
-                    {/* Card 1 */}
-                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#1e3a5f] flex justify-between items-start">
-                      <div>
-                        <p className="text-gray-500 text-[9px] font-medium">9:00 AM</p>
-                        <p className="text-white text-[11px] font-semibold mt-0.5">Opening Keynote</p>
-                        <p className="text-gray-500 text-[9px] mt-1">Main Stage</p>
-                      </div>
-                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
-                    </div>
-                    {/* Card 2 */}
-                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#10B981] flex justify-between items-start">
-                      <div>
-                        <p className="text-gray-500 text-[9px] font-medium">10:30 AM</p>
-                        <p className="text-white text-[11px] font-semibold mt-0.5">Military Spouse Creator Panel</p>
-                        <p className="text-gray-500 text-[9px] mt-1">Experience Stage</p>
-                      </div>
-                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
-                    </div>
-                    {/* Card 3 */}
-                    <div className="bg-[#1a1f2e] rounded-lg p-3 border-l-[3px] border-[#3B82F6] flex justify-between items-start">
-                      <div>
-                        <p className="text-gray-500 text-[9px] font-medium">1:00 PM</p>
-                        <p className="text-white text-[11px] font-semibold mt-0.5">Brand Partnerships Workshop</p>
-                        <p className="text-gray-500 text-[9px] mt-1">Room 204</p>
-                      </div>
-                      <div className="text-gray-600 text-[10px] mt-0.5">&#9734;</div>
-                    </div>
-                  </div>
-                  {/* Bottom nav */}
-                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-[#1e3a5f]/30" />
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                  </div>
-                </div>
-              </div>
-              {/* Label */}
-              <div className="mt-4 flex items-start gap-2 max-w-[240px]">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                <span className={cn("text-sm font-medium transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                  Live schedule with personal agenda builder
-                </span>
-              </div>
-            </div>
-
-            {/* Phone 3 — Community Connections */}
-            <div className="flex flex-col items-center">
-              <div
-                className={cn(
-                  "relative w-[240px] h-[480px] rounded-[2.2rem] border-[5px] overflow-hidden shadow-2xl transition-colors duration-300",
-                  dark
-                    ? "border-gray-700 bg-[#0f0f1a] shadow-black/40"
-                    : "border-gray-800 bg-[#0f0f1a] shadow-gray-400/30"
-                )}
-              >
-                {/* Notch */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[100px] h-[24px] bg-black rounded-b-2xl z-10" />
-                {/* Screen content */}
-                <div className="w-full h-full flex flex-col bg-[#0f0f1a]">
-                  {/* Status bar spacer */}
-                  <div className="h-[28px] bg-[#1e3a5f]" />
-                  {/* Purple header */}
-                  <div className="bg-[#1e3a5f] px-4 py-3">
-                    <p className="text-white text-xs font-bold text-center">Community</p>
-                  </div>
-                  {/* Feed */}
-                  <div className="flex-1 bg-[#111827] px-3 py-3 space-y-3 overflow-hidden">
-                    {/* Post 1 */}
-                    <div className="bg-[#1a1f2e] rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-7 h-7 rounded-full bg-[#1e3a5f]/30 flex items-center justify-center">
-                          <span className="text-[9px] font-bold text-[#1e3a5f]">JM</span>
-                        </div>
-                        <div>
-                          <p className="text-white text-[10px] font-semibold">Jake Morrison</p>
-                          <p className="text-gray-600 text-[8px]">2h ago</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-300 text-[10px] leading-relaxed">
-                        Just landed in Tampa! Who&rsquo;s heading to the Experience stage tomorrow? &#127908;
-                      </p>
-                      <div className="mt-2 flex items-center gap-1 text-gray-500">
-                        <span className="text-[9px]">&#10084;</span>
-                        <span className="text-[9px]">12</span>
-                      </div>
-                    </div>
-                    {/* Post 2 */}
-                    <div className="bg-[#1a1f2e] rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-7 h-7 rounded-full bg-[#10B981]/30 flex items-center justify-center">
-                          <span className="text-[9px] font-bold text-[#10B981]">SR</span>
-                        </div>
-                        <div>
-                          <p className="text-white text-[10px] font-semibold">Sarah Rodriguez</p>
-                          <p className="text-gray-600 text-[8px]">4h ago</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-300 text-[10px] leading-relaxed">
-                        Can&rsquo;t wait for the keynote. First time at MIC! &#127482;&#127480;
-                      </p>
-                      <div className="mt-2 flex items-center gap-1 text-gray-500">
-                        <span className="text-[9px]">&#10084;</span>
-                        <span className="text-[9px]">8</span>
-                      </div>
-                    </div>
-                    {/* Connect section */}
-                    <div className="bg-[#1a1f2e] rounded-lg p-3">
-                      <p className="text-white text-[10px] font-semibold mb-2">Connect</p>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <div className="w-6 h-6 rounded-full bg-[#1e3a5f]/40 border-2 border-[#1a1f2e]" />
-                        <div className="w-6 h-6 rounded-full bg-[#3B82F6]/40 border-2 border-[#1a1f2e] -ml-2.5" />
-                        <div className="w-6 h-6 rounded-full bg-[#10B981]/40 border-2 border-[#1a1f2e] -ml-2.5" />
-                        <span className="text-gray-500 text-[9px] ml-1">47 attendees near you</span>
-                      </div>
-                      <div className="w-full py-1.5 rounded-lg bg-[#10B981] text-white text-[10px] font-semibold text-center">
-                        &#128241; Share My Profile
-                      </div>
-                    </div>
-                  </div>
-                  {/* Bottom nav */}
-                  <div className="h-[44px] bg-[#1a1f2e] border-t border-white/10 flex items-center justify-around px-4">
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                    <div className="w-5 h-5 rounded bg-[#1e3a5f]/30" />
-                    <div className="w-5 h-5 rounded bg-white/10" />
-                  </div>
-                </div>
-              </div>
-              {/* Label */}
-              <div className="mt-4 flex items-start gap-2 max-w-[240px]">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                <span className={cn("text-sm font-medium transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                  QR networking and real-time community feed
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SaaS Replacement Calculator */}
-      <section className="max-w-3xl mx-auto">
-        <h3
-          className={cn(
-            "text-xl font-bold text-center mb-1 transition-colors duration-300",
-            dark ? "text-white" : "text-[#111827]"
-          )}
-        >
-          One Platform. One Bill. Serious Savings.
-        </h3>
-        <p
-          className={cn(
-            "text-center text-sm mb-6 transition-colors duration-300",
-            dark ? "text-gray-500" : "text-[#6B7280]"
-          )}
-        >
-          Stop paying for 7 tools that don&rsquo;t talk to each other.
-        </p>
-
-        <div
-          className={cn(
-            "rounded-2xl overflow-hidden transition-colors duration-300",
-            dark
-              ? "bg-white/[0.04] border border-white/[0.08]"
-              : "bg-white border border-[#E5E7EB]"
-          )}
-        >
-          <table className="w-full text-sm">
-            <thead>
-              <tr
-                className={cn(
-                  "transition-colors duration-300",
-                  dark ? "border-b border-white/[0.08]" : "border-b border-[#E5E7EB]"
-                )}
-              >
-                <th
-                  className={cn(
-                    "text-left font-medium px-5 py-3 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#6B7280]"
-                  )}
-                >
-                  Tool
-                </th>
-                <th
-                  className={cn(
-                    "text-left font-medium px-5 py-3 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#6B7280]"
-                  )}
-                >
-                  Replaces
-                </th>
-                <th
-                  className={cn(
-                    "text-right font-medium px-5 py-3 transition-colors duration-300",
-                    dark ? "text-gray-500" : "text-[#6B7280]"
-                  )}
-                >
-                  Cost/mo
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {SAAS_ROWS.map((row, i) => (
-                <tr
-                  key={row.tool}
-                  className={cn(
-                    "transition-colors duration-300",
-                    dark
-                      ? "border-b border-white/[0.05]"
-                      : cn("border-b border-[#E5E7EB]/60", i % 2 === 1 && "bg-[#F9FAFB]")
-                  )}
-                >
-                  <td
-                    className={cn(
-                      "px-5 py-3 font-medium transition-colors duration-300",
-                      dark ? "text-white" : "text-[#111827]"
-                    )}
-                  >
-                    {row.tool}
-                  </td>
-                  <td
-                    className={cn(
-                      "px-5 py-3 transition-colors duration-300",
-                      dark ? "text-gray-400" : "text-[#6B7280]"
-                    )}
-                  >
-                    {row.replaces}
-                  </td>
-                  <td
-                    className={cn(
-                      "px-5 py-3 text-right font-mono transition-colors duration-300",
-                      dark ? "text-gray-300" : "text-[#374151]"
-                    )}
-                  >
-                    ${row.cost.toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-[#1e3a5f]/10">
-                <td
-                  colSpan={2}
-                  className={cn(
-                    "px-5 py-3 font-bold transition-colors duration-300",
-                    dark ? "text-white" : "text-[#111827]"
-                  )}
-                >
-                  Total you&rsquo;re replacing
-                </td>
-                <td className="px-5 py-3 text-right text-[#1e3a5f] font-bold font-mono text-base">
-                  ${saasTotal.toLocaleString()}/mo
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div
-          className={cn(
-            "text-center mt-4 rounded-xl py-4 px-6 transition-colors duration-300",
-            dark
-              ? "bg-white/[0.04] border border-white/[0.08]"
-              : "bg-white border border-[#E5E7EB]"
-          )}
-        >
+              </li>
+            ))}
+          </ul>
           <p
             className={cn(
-              "text-sm transition-colors duration-300",
-              dark ? "text-gray-400" : "text-[#6B7280]"
+              "text-base leading-relaxed font-semibold mt-8 transition-colors duration-300",
+              dark ? "text-white" : "text-[#111827]"
             )}
           >
-            MilCrunch consolidates{" "}
-            <span className="text-[#1e3a5f] font-bold">${saasTotal.toLocaleString()}+/mo</span>{" "}
-            in fragmented tools into one military-focused platform — saving organizations
-            thousands every month.
+            One platform.{" "}
+            <span className={cn("font-normal transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+              Military creator discovery, verification, event management, email automation, live
+              streaming, and performance insights &mdash; built by veterans, for the community.
+            </span>
           </p>
         </div>
       </section>
-
     </div>
   );
 }
