@@ -117,7 +117,7 @@ export default function SponsorPageEditor() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/brand/sponsors/pages")}><ArrowLeft className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/brand/sponsors/pages")} data-back-nav><ArrowLeft className="h-4 w-4" /></Button>
           <h1 className="text-xl font-bold text-gray-900">{isNew ? "New Sponsor Page" : "Edit Sponsor Page"}</h1>
         </div>
         <div className="flex items-center gap-2">

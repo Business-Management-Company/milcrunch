@@ -339,7 +339,7 @@ const EmailTemplates = () => {
         </Dialog>
 
         <div className="mb-6">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4">
+          <Button variant="ghost" size="sm" onClick={handleBack} className="mb-4" data-back-nav>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back to Templates
           </Button>
           <div className="flex items-center justify-between">

@@ -640,7 +640,7 @@ const BrandPageEdit = () => {
         {/* Top Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/brand/pages")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/brand/pages")} data-back-nav>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>

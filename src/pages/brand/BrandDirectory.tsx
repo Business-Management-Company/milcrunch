@@ -1129,7 +1129,7 @@ const BrandDirectory = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Button variant="ghost" size="sm" className="mb-4 text-muted-foreground" onClick={goBack}>
+          <Button variant="ghost" size="sm" className="mb-4 text-muted-foreground" onClick={goBack} data-back-nav>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Directories
           </Button>

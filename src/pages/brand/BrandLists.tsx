@@ -866,7 +866,7 @@ export const BrandListDetail = () => {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground mb-4">List not found.</p>
-        <Button variant="outline" onClick={() => navigate('/lists')}>
+        <Button variant="outline" onClick={() => navigate('/lists')} data-back-nav>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Lists
         </Button>
       </div>
@@ -989,6 +989,7 @@ export const BrandListDetail = () => {
           size="sm"
           className="mb-4 text-muted-foreground hover:text-foreground"
           onClick={() => navigate('/lists')}
+          data-back-nav
         >
           <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Lists
         </Button>

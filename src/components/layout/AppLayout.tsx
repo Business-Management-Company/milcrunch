@@ -54,7 +54,7 @@ export default function AppLayout() {
   if (isEmbed) {
     const embedOffset = embedBannerDismissed ? 0 : EMBED_BANNER_HEIGHT;
     return (
-      <div className="min-h-screen bg-background dark:bg-[#0F1117]">
+      <div className="min-h-screen bg-background dark:bg-[#0F1117]" data-embed-mode>
         {!embedBannerDismissed && (
           <div
             className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center gap-3 text-white text-xs font-medium"

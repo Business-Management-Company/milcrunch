@@ -629,7 +629,7 @@ const EmailCampaigns = () => {
         </Dialog>
 
         <div className="mb-6">
-          <Button variant="ghost" size="sm" onClick={resetBuilder} className="mb-4">
+          <Button variant="ghost" size="sm" onClick={resetBuilder} className="mb-4" data-back-nav>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back to Campaigns
           </Button>
           <h1 className="text-3xl font-bold text-pd-navy dark:text-white">{editingCampaign ? "Edit Campaign" : "New Campaign"}</h1>
@@ -664,7 +664,7 @@ const EmailCampaigns = () => {
         {/* Navigation */}
         {currentStep < 3 && !sending && (
           <div className="flex justify-between mt-8 pt-4 border-t">
-            <Button variant="outline" onClick={() => currentStep > 0 ? setCurrentStep(s => s - 1) : resetBuilder()}>
+            <Button variant="outline" onClick={() => currentStep > 0 ? setCurrentStep(s => s - 1) : resetBuilder()} data-back-nav>
               <ArrowLeft className="h-4 w-4 mr-1" /> {currentStep === 0 ? "Cancel" : "Back"}
             </Button>
             <div className="flex gap-2">

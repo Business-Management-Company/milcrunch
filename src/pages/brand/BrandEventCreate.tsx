@@ -702,7 +702,7 @@ const BrandEventCreate = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/brand/events")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/brand/events")} data-back-nav>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -1706,7 +1706,7 @@ const BrandEventCreate = () => {
         {/* Navigation buttons */}
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleBack} disabled={step === 0}>
+            <Button variant="outline" onClick={handleBack} disabled={step === 0} data-back-nav>
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
             {step > 0 && step < STEPS.length - 1 && (

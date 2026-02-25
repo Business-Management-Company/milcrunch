@@ -226,7 +226,7 @@ export default function SponsorFormBuilder() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setMode("list")}><ArrowLeft className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setMode("list")} data-back-nav><ArrowLeft className="h-4 w-4" /></Button>
           <div>
             <h1 className="text-xl font-bold text-gray-900">{editFormId ? "Edit Form" : "New Sponsor Form"}</h1>
             <p className="text-gray-500 text-xs">Build your form, save, and share the link.</p>
