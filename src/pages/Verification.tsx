@@ -3673,8 +3673,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
           <FileText className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
-          <StatusDot status={record.ai_analysis && record.ai_analysis !== "pending_retry" && !record.ai_analysis.startsWith("Analysis failed") ? 'green' : 'red'} />
-          {(!record.ai_analysis || record.ai_analysis === "pending_retry" || record.ai_analysis.startsWith("Analysis failed")) && (
+          <StatusDot status={(() => {
+            const a = record.ai_analysis;
+            if (!a || a === "pending_retry" || /failed|error/i.test(a)) return 'red';
+            return 'green';
+          })()} />
+          {(!record.ai_analysis || record.ai_analysis === "pending_retry" || /failed|error/i.test(record.ai_analysis)) && (
             <button
               onClick={(e) => { e.stopPropagation(); handleRetryAIAnalysis(); }}
               disabled={regenAI}
@@ -3745,13 +3749,17 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
             const mc = record.manual_checks as Record<string, unknown> | null;
             const career = (mc as any)?.career_track?.result;
             const pdl = record.pdl_data as any;
-            // Green: career extraction found data OR PDL has employment
-            if (career && (career.career?.length > 0 || career.education?.length > 0 || career.awards?.length > 0 || career.military_summary?.branch)) return 'green';
+            if (!career && !pdl) return 'red';
+            // Green: has branch OR rank OR any career/post_service entry
+            if (career) {
+              const hasBranch = !!career.military_summary?.branch;
+              const hasRank = !!career.military_summary?.rank;
+              const hasEntries = (career.career?.length > 0 || career.post_service?.length > 0 || career.education?.length > 0 || career.awards?.length > 0);
+              if (hasBranch || hasRank || hasEntries) return 'green';
+            }
             if (pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) return 'green';
-            // Yellow: phase ran but returned empty results
-            if (career || pdl) return 'yellow';
-            // Red: not yet run or actual failure
-            return 'red';
+            // Yellow: data exists but mostly empty / "Not identified"
+            return 'yellow';
           })()} />
         </button>
         {careerOpen && <div className="ml-6 mt-4 mb-2"><CareerTrackTab record={record} /></div>}
@@ -3765,9 +3773,13 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
           <StatusDot status={(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
-            const savedProfiles = mc?.social_profiles as unknown[] | undefined;
-            const hasSocial = !!(record.source_username || record.linkedin_url || (Array.isArray(savedProfiles) && savedProfiles.length > 0));
-            return hasSocial ? 'green' : 'red';
+            const savedProfiles = (mc?.social_profiles ?? []) as unknown[];
+            let count = Array.isArray(savedProfiles) ? savedProfiles.length : 0;
+            if (record.source_username) count++;
+            if (record.linkedin_url) count++;
+            if (count >= 2) return 'green';
+            if (count === 1) return 'yellow';
+            return 'red';
           })()} />
         </button>
         {socialOpen && (
@@ -3790,13 +3802,12 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
           <StatusDot status={(() => {
             const mc = record.manual_checks as Record<string, unknown> | null;
-            if (!mc) return 'yellow';
-            const videos = (mc as any)?.youtube_media?.videos as unknown[] | undefined;
-            // Green: media search found results
+            if (!mc) return 'red';
+            const ytMedia = (mc as any)?.youtube_media;
+            if (!ytMedia) return 'red';
+            const videos = ytMedia.videos as unknown[] | undefined;
             if (Array.isArray(videos) && videos.length > 0) return 'green';
-            // Red: actual fetch failure only
-            if ((mc as any)?.media_error) return 'red';
-            // Yellow: search ran but found nothing, or hasn't run yet (will auto-run)
+            // Search ran but found nothing
             return 'yellow';
           })()} />
         </button>
@@ -3822,8 +3833,9 @@ function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefr
           <ShieldAlert className="h-5 w-5 text-[#1e3a5f]" />
           <h3 className="text-base font-semibold text-[#000741] dark:text-white">Background Review</h3>
           {(() => {
-            const bgStatus = (record.manual_checks as any)?.background_dot_override ||
-              (redFlags.length > 0 ? 'red' : (record.ai_analysis || record.pdl_data) ? 'green' : 'yellow');
+            const bgOverride = (record.manual_checks as any)?.background_dot_override;
+            const bgRan = !!(record.ai_analysis || record.pdl_data);
+            const bgStatus = bgOverride || (!bgRan ? 'red' : redFlags.length > 0 ? 'red' : ((record.manual_checks as any)?.background_warnings) ? 'yellow' : 'green');
             const handleBgDotClick = async (e: React.MouseEvent) => {
               e.stopPropagation();
               const next = bgStatus === 'red' ? 'yellow' : bgStatus === 'yellow' ? 'green' : 'red';
