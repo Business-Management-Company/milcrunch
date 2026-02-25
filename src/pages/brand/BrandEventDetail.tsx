@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { getCreatorAvatar } from "@/lib/avatar";
 import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
@@ -270,7 +270,10 @@ const BrandEventDetail = () => {
   const [checkInMode, setCheckInMode] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
   const [eventStreams, setEventStreams] = useState<StreamRow[]>([]);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const VALID_TABS = new Set(["overview","agenda","speakers","sponsors","tickets","public-page","media","settings","registrations","attendee-app","community","insights","gtm-planner"]);
+  const initialTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(initialTab && VALID_TABS.has(initialTab) ? initialTab : "overview");
   const [showAddSpeaker, setShowAddSpeaker] = useState(false);
   const [editingSpeaker, setEditingSpeaker] = useState<SpeakerRow | null>(null);
 
