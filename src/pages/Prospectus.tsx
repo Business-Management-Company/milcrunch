@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   Lock, Play, Share2, Check, Calendar, Users, Video,
   ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
-  CheckCircle2, Smartphone, DollarSign, BookOpen,
+  CheckCircle2, Smartphone, BookOpen,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -268,6 +268,8 @@ function ManageContentPanel({
   onSaveMedia,
   onSaveContent,
   dark,
+  gatingEnabled,
+  onToggleGating,
 }: {
   open: boolean;
   onClose: () => void;
@@ -277,6 +279,8 @@ function ManageContentPanel({
   onSaveMedia: (v: VideoUrls, i: ImageUrls) => void;
   onSaveContent: (c: Record<string, TabContent>) => void;
   dark: boolean;
+  gatingEnabled: boolean;
+  onToggleGating: (enabled: boolean) => void;
 }) {
   const [panelTab, setPanelTab] = useState<"media" | "content">("media");
 
@@ -592,6 +596,19 @@ function ManageContentPanel({
           <button type="button" onClick={onClose} className="p-1 hover:opacity-70">
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        {/* Sequential Viewing toggle */}
+        <div className={cn("flex items-center justify-between px-5 py-3 border-b", dark ? "border-white/10" : "border-gray-200")}>
+          <div>
+            <label htmlFor="gating-toggle" className={cn("text-sm font-medium cursor-pointer select-none", dark ? "text-gray-200" : "text-gray-700")}>
+              Require Sequential Viewing
+            </label>
+            <p className={cn("text-xs mt-0.5", dark ? "text-gray-500" : "text-gray-400")}>
+              Require viewers to watch each video before unlocking the next tab
+            </p>
+          </div>
+          <Switch id="gating-toggle" checked={gatingEnabled} onCheckedChange={onToggleGating} />
         </div>
 
         {/* Sub-tabs */}
@@ -1828,34 +1845,6 @@ export default function Prospectus() {
               )}
             </button>
 
-            {/* Gating toggle — super_admin only */}
-            {isSuperAdmin && (
-              <div
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors duration-300",
-                  darkMode
-                    ? "bg-white/[0.06] border-white/10"
-                    : "bg-white border-[#E5E7EB]"
-                )}
-              >
-                <label
-                  htmlFor="gating-toggle"
-                  className={cn(
-                    "text-[11px] font-medium whitespace-nowrap cursor-pointer select-none transition-colors duration-300",
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                  )}
-                >
-                  Sequential Viewing
-                </label>
-                <Switch
-                  id="gating-toggle"
-                  checked={gatingEnabled}
-                  onCheckedChange={handleToggleGating}
-                  className="scale-75 origin-right"
-                />
-              </div>
-            )}
-
             {/* Manage Tab Videos — super_admin only */}
             {isSuperAdmin && (
               <button
@@ -1879,7 +1868,6 @@ export default function Prospectus() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 pb-3 overflow-x-auto">
           <div className="flex items-center gap-1.5 min-w-max">
             {TABS.map((tab, idx) => {
-              const isFinancials = tab === "Financial Model";
               const isLocked = idx > unlockedUpTo;
               const isJustUnlocked = idx === justUnlocked;
               const isActive = activeTab === tab;
@@ -1904,15 +1892,11 @@ export default function Prospectus() {
                           ? "animate-[unlockPulse_0.6s_ease-out]"
                           : "",
                       !isLocked && (
-                        isFinancials
-                          ? isActive
-                            ? "bg-[#1e3a5f] text-white shadow-lg shadow-[#1e3a5f]/30"
-                            : "bg-[#1e3a5f]/90 text-white hover:bg-[#1e3a5f] shadow-md shadow-[#1e3a5f]/20"
-                          : isActive
-                            ? "bg-[#1e3a5f] text-white"
-                            : darkMode
-                              ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
-                              : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
+                        isActive
+                          ? "bg-[#1e3a5f] text-white"
+                          : darkMode
+                            ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
+                            : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
                       ),
                       isLocked && (
                         darkMode
@@ -1921,7 +1905,6 @@ export default function Prospectus() {
                       )
                     )}
                   >
-                    {isFinancials && !isLocked && <DollarSign className="h-3.5 w-3.5 -mt-0.5" />}
                     {isLocked && <Lock className="h-3 w-3" />}
                     {TAB_LABELS[tab]}
                   </button>
@@ -2007,6 +1990,8 @@ export default function Prospectus() {
           onSaveMedia={(v, i) => { setVideoUrls(v); setImageUrls(i); }}
           onSaveContent={(c) => setTabContent(c)}
           dark={darkMode}
+          gatingEnabled={gatingEnabled}
+          onToggleGating={handleToggleGating}
         />
       )}
 
