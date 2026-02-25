@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_SIZE = 25 * 1024 * 1024; // 25 MB
 
 interface ImageUploadProps {
   value: string;
@@ -40,7 +40,7 @@ export default function ImageUpload({
         return;
       }
       if (file.size > MAX_SIZE) {
-        setError("File must be under 5 MB.");
+        setError("File must be under 25 MB.");
         return;
       }
       setUploading(true);

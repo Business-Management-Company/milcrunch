@@ -155,11 +155,11 @@ function ProspectusMedia({
 
 const VIDEO_BUCKET = "prospectus-videos";
 const ACCEPTED_VIDEO_TYPES = ".mp4,.mov,.webm,.avi";
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB
 
 const IMAGE_BUCKET = "prospectus-images";
 const ACCEPTED_IMAGE_TYPES = ".jpg,.jpeg,.png,.webp";
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_IMAGE_SIZE = 25 * 1024 * 1024; // 25 MB
 
 type ImageUrls = Record<string, string>;
 
@@ -309,7 +309,7 @@ function ManageContentPanel({
   // --- Image upload ---
   const handleImageUpload = async (tab: string, file: File) => {
     if (file.size > MAX_IMAGE_SIZE) {
-      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 5 MB.`);
+      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 25 MB.`);
       return;
     }
     if (!(await ensureSession())) return;
