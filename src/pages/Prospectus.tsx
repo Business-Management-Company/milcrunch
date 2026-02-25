@@ -562,7 +562,7 @@ function ManageContentPanel({
     }));
   };
 
-  const updateSection = (tab: string, idx: number, field: "heading" | "items", value: string | string[]) => {
+  const updateSection = (tab: string, idx: number, field: "heading" | "items" | "image_url", value: string | string[]) => {
     setContentDraft((prev) => {
       const sections = [...(prev[tab]?.sections || [])];
       sections[idx] = { ...sections[idx], [field]: value };
@@ -572,7 +572,7 @@ function ManageContentPanel({
 
   const addSection = (tab: string) => {
     setContentDraft((prev) => {
-      const sections = [...(prev[tab]?.sections || []), { heading: "", items: [""] }];
+      const sections = [...(prev[tab]?.sections || []), { heading: "", items: [""], image_url: "" }];
       return { ...prev, [tab]: { ...prev[tab], sections } };
     });
   };
@@ -592,6 +592,60 @@ function ManageContentPanel({
         [tab]: { ...prev[tab], bottomNote: { ...existing, [field]: value } },
       };
     });
+  };
+
+  // --- Section image upload/delete ---
+  const sectionImageRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const handleSectionImageUpload = async (tab: string, idx: number, file: File) => {
+    if (file.size > MAX_IMAGE_SIZE) {
+      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 25 MB.`);
+      return;
+    }
+    if (!(await ensureSession())) return;
+    const oldUrl = contentDraft[tab]?.sections?.[idx]?.image_url;
+    if (oldUrl && oldUrl.includes(IMAGE_BUCKET)) {
+      const oldPath = oldUrl.split(`${IMAGE_BUCKET}/`)[1]?.split("?")[0];
+      if (oldPath) await supabase.storage.from(IMAGE_BUCKET).remove([oldPath]);
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${tabSlug(tab)}/section-${idx}-${Date.now()}.${ext}`;
+    const refKey = `section-${tab}-${idx}`;
+    setUploading(refKey);
+    setUploadProgress(0);
+    const progressTimer = setInterval(() => { setUploadProgress((p) => Math.min(p + 10, 90)); }, 150);
+    try {
+      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, file, { upsert: true, contentType: file.type });
+      clearInterval(progressTimer);
+      if (error) {
+        console.error("[ManageContent] section image upload error:", JSON.stringify(error, null, 2));
+        alert(`Upload failed: ${error.message}`);
+        setUploading(null); setUploadProgress(0);
+        return;
+      }
+      setUploadProgress(100);
+      const { data: { publicUrl } } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      updateSection(tab, idx, "image_url" as any, publicUrl);
+      setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
+    } catch (err) {
+      clearInterval(progressTimer);
+      console.error("[ManageContent] section image upload exception:", err);
+      alert(`Upload failed unexpectedly — check console`);
+      setUploading(null); setUploadProgress(0);
+    }
+  };
+
+  const handleSectionImageDelete = async (tab: string, idx: number) => {
+    const url = contentDraft[tab]?.sections?.[idx]?.image_url;
+    if (!url) return;
+    if (url.includes(IMAGE_BUCKET)) {
+      const pathMatch = url.split(`${IMAGE_BUCKET}/`)[1]?.split("?")[0];
+      if (pathMatch) {
+        const { error } = await supabase.storage.from(IMAGE_BUCKET).remove([pathMatch]);
+        if (error) console.error("[ManageContent] section image delete error:", JSON.stringify(error, null, 2));
+      }
+    }
+    updateSection(tab, idx, "image_url" as any, "");
   };
 
   if (!open) return null;
@@ -830,6 +884,53 @@ function ManageContentPanel({
                         rows={Math.max(3, section.items.length + 1)}
                         className={cn(inputCls, "text-xs")}
                       />
+
+                      {/* Section image */}
+                      <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Section Image</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Paste image URL or upload…"
+                          value={section.image_url || ""}
+                          onChange={(e) => updateSection(tab, idx, "image_url", e.target.value)}
+                          className={cn(inputCls, "text-xs flex-1")}
+                        />
+                        <input
+                          ref={(el) => { sectionImageRefs.current[`${tab}-${idx}`] = el; }}
+                          type="file"
+                          accept={ACCEPTED_IMAGE_TYPES}
+                          className="hidden"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSectionImageUpload(tab, idx, f); e.target.value = ""; }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => sectionImageRefs.current[`${tab}-${idx}`]?.click()}
+                          disabled={!!uploading}
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border transition-colors disabled:opacity-50 shrink-0",
+                            dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50"
+                          )}
+                        >
+                          <Upload className="h-3 w-3" />
+                          {section.image_url ? "Replace" : "Upload"}
+                        </button>
+                        {section.image_url && (
+                          <button type="button" onClick={() => handleSectionImageDelete(tab, idx)} disabled={!!uploading}
+                            className="flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 shrink-0">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      {uploading === `section-${tab}-${idx}` && (
+                        <div className={cn("mt-1 h-1.5 rounded-full overflow-hidden", dark ? "bg-white/10" : "bg-gray-200")}>
+                          <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                        </div>
+                      )}
+                      {section.image_url && (
+                        <div className={cn("mt-1.5 rounded overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
+                          <img src={section.image_url} alt="Section image" className="w-full max-h-32 object-cover" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1078,7 +1179,7 @@ interface TabContent {
   headlineAccent?: string;
   heroImage?: string;
   description: string;
-  sections: { heading: string; items: string[] }[];
+  sections: { heading: string; items: string[]; image_url?: string }[];
   bottomNote?: { heading: string; text: string };
 }
 
@@ -1417,6 +1518,13 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
           >
             {section.heading}
           </h3>
+          {section.image_url && (
+            <img
+              src={section.image_url}
+              alt=""
+              className="w-full rounded-xl shadow-md mb-5 object-cover"
+            />
+          )}
           <div className="space-y-3">
             {section.items.map((item) => (
               <div key={item} className="flex items-start gap-3">
