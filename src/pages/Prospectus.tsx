@@ -6,6 +6,7 @@ import {
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1545,6 +1546,10 @@ export default function Prospectus() {
   const [lockedTooltip, setLockedTooltip] = useState<string | null>(null);
   const imageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Admin gating toggle
+  const [gatingEnabled, setGatingEnabled] = useState(true);
+  const [gatingLoaded, setGatingLoaded] = useState(false);
+
   const { isSuperAdmin } = useAuth();
 
   const darkMode =
@@ -1615,10 +1620,31 @@ export default function Prospectus() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Super admin bypasses gating — unlock all tabs
+  // Fetch gating setting from Supabase (falls back to enabled if table missing)
   useEffect(() => {
-    if (isSuperAdmin) setUnlockedUpTo(TABS.length - 1);
-  }, [isSuperAdmin]);
+    (async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("app_settings")
+          .select("value")
+          .eq("key", "prospectus_tab_gating")
+          .maybeSingle();
+        if (!error && data?.value != null) {
+          const enabled = typeof data.value === "object" ? data.value.enabled !== false : true;
+          setGatingEnabled(enabled);
+        }
+      } catch {
+        // Table may not exist yet — default to enabled
+      }
+      setGatingLoaded(true);
+    })();
+  }, []);
+
+  // Super admin bypasses gating — unlock all tabs; also unlock all when gating disabled
+  useEffect(() => {
+    if (isSuperAdmin || !gatingEnabled) setUnlockedUpTo(TABS.length - 1);
+    else if (gatingLoaded && gatingEnabled && !isSuperAdmin) setUnlockedUpTo(0);
+  }, [isSuperAdmin, gatingEnabled, gatingLoaded]);
 
   /** Unlock the next tab after the current one */
   const unlockNextTab = () => {
@@ -1640,8 +1666,8 @@ export default function Prospectus() {
       imageTimerRef.current = null;
     }
 
-    // Super admin already unlocked
-    if (isSuperAdmin) return;
+    // Super admin already unlocked, or gating disabled
+    if (isSuperAdmin || !gatingEnabled) return;
 
     const currentIdx = TABS.indexOf(activeTab);
     // Only run gating logic if this tab is the frontier (the one we need to watch to unlock next)
@@ -1666,7 +1692,7 @@ export default function Prospectus() {
         imageTimerRef.current = null;
       }
     };
-  }, [activeTab, unlockedUpTo, videoUrls, imageUrls, isSuperAdmin]);
+  }, [activeTab, unlockedUpTo, videoUrls, imageUrls, isSuperAdmin, gatingEnabled]);
 
   if (!hasAccess) {
     return <AccessGate onAccess={() => setHasAccess(true)} />;
@@ -1679,6 +1705,19 @@ export default function Prospectus() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* fallback: do nothing */
+    }
+  };
+
+  const handleToggleGating = async (enabled: boolean) => {
+    setGatingEnabled(enabled);
+    if (!enabled) setUnlockedUpTo(TABS.length - 1);
+    else if (!isSuperAdmin) setUnlockedUpTo(0);
+    try {
+      await (supabase as any)
+        .from("app_settings")
+        .upsert({ key: "prospectus_tab_gating", value: { enabled }, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    } catch {
+      // Table may not exist — setting only persists locally this session
     }
   };
 
@@ -1788,6 +1827,34 @@ export default function Prospectus() {
                 </>
               )}
             </button>
+
+            {/* Gating toggle — super_admin only */}
+            {isSuperAdmin && (
+              <div
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors duration-300",
+                  darkMode
+                    ? "bg-white/[0.06] border-white/10"
+                    : "bg-white border-[#E5E7EB]"
+                )}
+              >
+                <label
+                  htmlFor="gating-toggle"
+                  className={cn(
+                    "text-[11px] font-medium whitespace-nowrap cursor-pointer select-none transition-colors duration-300",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  )}
+                >
+                  Sequential Viewing
+                </label>
+                <Switch
+                  id="gating-toggle"
+                  checked={gatingEnabled}
+                  onCheckedChange={handleToggleGating}
+                  className="scale-75 origin-right"
+                />
+              </div>
+            )}
 
             {/* Manage Tab Videos — super_admin only */}
             {isSuperAdmin && (
