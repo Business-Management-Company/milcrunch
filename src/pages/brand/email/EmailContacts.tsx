@@ -49,12 +49,24 @@ function initials(first?: string | null, last?: string | null, email?: string): 
 
 const FEMALE_NAMES = new Set(['sarah','jennifer','ashley','emily','jessica','amanda','brittany','alexis','amber','morgan','rachel','taylor','madison','hannah','samantha','stephanie','melissa','elizabeth','lauren','megan','kayla','nicole','crystal','tiffany','brittney','vanessa','natalie','danielle','heather','kelly','katie','holly','jackie','lexi','jade','victoria','olivia','sophia','emma','isabella','ava','mia','grace','anna','maria','lisa','michelle']);
 
-function avatarUrl(email?: string, firstName?: string | null): string {
+function avatarUrl(email?: string, firstName?: string | null, metadataAvatar?: string | null): string {
+  // Prefer the real avatar stored in metadata from enrichment
+  if (metadataAvatar && typeof metadataAvatar === "string" && metadataAvatar.trim()) {
+    return metadataAvatar.replace(/^http:\/\//i, "https://");
+  }
   let hash = 0;
   if (email) for (let i = 0; i < email.length; i++) hash += email.charCodeAt(i);
   const num = hash % 50;
   const gender = firstName && FEMALE_NAMES.has(firstName.toLowerCase()) ? "women" : "men";
   return `https://randomuser.me/api/portraits/${gender}/${num}.jpg`;
+}
+
+function formatFollowerCount(n: unknown): string {
+  const num = Number(n);
+  if (!num || isNaN(num)) return "—";
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return String(num);
 }
 
 const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
@@ -150,7 +162,7 @@ function ContactDrawer({ contact, open, onClose, lists, contactLists, onEdit, on
             <div className="relative h-16 w-16 rounded-full bg-white/20 flex items-center justify-center text-white text-xl font-bold overflow-hidden shrink-0 ring-2 ring-white/30">
               <span>{initials(contact.first_name, contact.last_name, contact.email)}</span>
               <img
-                src={avatarUrl(contact.email, contact.first_name)}
+                src={avatarUrl(contact.email, contact.first_name, contact.metadata?.avatar as string)}
                 alt=""
                 className="absolute inset-0 w-16 h-16 rounded-full object-cover"
                 onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -205,6 +217,39 @@ function ContactDrawer({ contact, open, onClose, lists, contactLists, onEdit, on
               </div>
             )}
           </div>
+
+          {/* Creator Stats (from Discovery enrichment) */}
+          {(contact.metadata?.followers || contact.metadata?.engagement_rate || contact.metadata?.location || contact.metadata?.bio) && (
+            <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Creator Stats</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {contact.metadata?.followers && (
+                  <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Followers</p>
+                    <p className="text-lg font-bold text-blue-700 dark:text-blue-300">{formatFollowerCount(contact.metadata.followers)}</p>
+                  </div>
+                )}
+                {contact.metadata?.engagement_rate && (
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Engagement</p>
+                    <p className="text-lg font-bold text-green-700 dark:text-green-300">{Number(contact.metadata.engagement_rate).toFixed(2)}%</p>
+                  </div>
+                )}
+              </div>
+              {contact.metadata?.platform && contact.metadata?.username && (
+                <div className="flex items-center gap-2 mt-3 text-sm text-gray-600 dark:text-gray-300">
+                  <span className="capitalize font-medium">{String(contact.metadata.platform)}</span>
+                  <span className="text-gray-400">@{String(contact.metadata.username).replace(/^@/, "")}</span>
+                </div>
+              )}
+              {contact.metadata?.location && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{String(contact.metadata.location)}</p>
+              )}
+              {contact.metadata?.bio && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-3">{String(contact.metadata.bio)}</p>
+              )}
+            </div>
+          )}
 
           {/* Social Media */}
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
@@ -562,11 +607,20 @@ const EmailContacts = () => {
   const handleExport = () => {
     const filtered = getFilteredContacts();
     const csv = [
-      ["Email", "First Name", "Last Name", "Phone", "Company", "Title", "Status", "Source", "Tags", "Date Added"].join(","),
-      ...filtered.map(c => [
-        c.email, c.first_name || "", c.last_name || "", c.phone || "", c.company || "", c.title || "",
-        c.status, c.source || "manual", (c.tags || []).join(";"), c.created_at,
-      ].map(v => `"${v}"`).join(",")),
+      ["Email", "First Name", "Last Name", "Phone", "Company", "Title", "Status", "Source", "Tags", "Handle", "Platform", "Followers", "Engagement Rate", "Location", "Date Added"].join(","),
+      ...filtered.map(c => {
+        const m = c.metadata ?? {};
+        return [
+          c.email, c.first_name || "", c.last_name || "", c.phone || "", c.company || "", c.title || "",
+          c.status, c.source || "manual", (c.tags || []).join(";"),
+          m.username ? `@${String(m.username).replace(/^@/, "")}` : "",
+          m.platform ? String(m.platform) : "",
+          m.followers ? String(m.followers) : "",
+          m.engagement_rate ? String(m.engagement_rate) : "",
+          m.location ? String(m.location) : "",
+          c.created_at,
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+      }),
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -736,7 +790,7 @@ const EmailContacts = () => {
               <div className="relative h-14 w-14 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-xl font-bold overflow-hidden shrink-0">
                 <span>{initials(detail.first_name, detail.last_name, detail.email)}</span>
                 <img
-                  src={avatarUrl(detail.email, detail.first_name)}
+                  src={avatarUrl(detail.email, detail.first_name, detail.metadata?.avatar as string)}
                   alt=""
                   className="absolute inset-0 w-14 h-14 rounded-full object-cover"
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -1192,7 +1246,7 @@ const EmailContacts = () => {
                       <div className="relative h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold overflow-hidden">
                         <span>{initials(c.first_name, c.last_name, c.email)}</span>
                         <img
-                          src={avatarUrl(c.email, c.first_name)}
+                          src={avatarUrl(c.email, c.first_name, c.metadata?.avatar as string)}
                           alt=""
                           className="absolute inset-0 w-8 h-8 rounded-full object-cover"
                           onError={(e) => { e.currentTarget.style.display = "none"; }}

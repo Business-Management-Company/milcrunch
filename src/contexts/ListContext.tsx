@@ -46,6 +46,7 @@ type ListContextValue = {
   updateListAvatar: (listId: string, avatarUrl: string) => void;
   updateCreatorInList: (listId: string, creatorId: string, updates: Partial<ListCreator>) => void;
   isCreatorInList: (creatorId: string, listId?: string) => boolean;
+  getCreatorListNames: (creatorId: string) => string[];
 };
 
 const ListContext = createContext<ListContextValue | null>(null);
@@ -199,6 +200,12 @@ export function ListProvider({ children }: { children: ReactNode }) {
     [lists]
   );
 
+  const getCreatorListNames = useCallback(
+    (creatorId: string): string[] =>
+      lists.filter((l) => l.creators.some((c) => c.id === creatorId)).map((l) => l.name),
+    [lists]
+  );
+
   const value = useMemo(
     () => ({
       lists,
@@ -211,8 +218,9 @@ export function ListProvider({ children }: { children: ReactNode }) {
       updateListAvatar,
       updateCreatorInList,
       isCreatorInList,
+      getCreatorListNames,
     }),
-    [lists, addCreatorToList, addCreatorsToList, removeCreatorFromList, createList, deleteList, renameList, updateListAvatar, updateCreatorInList, isCreatorInList]
+    [lists, addCreatorToList, addCreatorsToList, removeCreatorFromList, createList, deleteList, renameList, updateListAvatar, updateCreatorInList, isCreatorInList, getCreatorListNames]
   );
 
   return (

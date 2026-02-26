@@ -10,13 +10,62 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ArrowLeft, Upload, Loader2, Trash2, UserMinus, Mail } from "lucide-react";
+import {
+  Plus, ArrowLeft, Upload, Download, Loader2, Trash2, UserMinus, Mail,
+  Instagram, Youtube, Twitter, Linkedin, Globe, MapPin, Search,
+} from "lucide-react";
 import {
   getEmailLists, upsertEmailList, deleteEmailList,
   getContacts, getContactCount, addContact, addContactsBulk, deleteContact, unsubscribeContact,
 } from "@/lib/email-db";
 import { CONTACT_STATUS_COLORS } from "@/lib/email-types";
 import type { EmailList, EmailContact } from "@/lib/email-types";
+
+const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
+  </svg>
+);
+
+const PLATFORM_ICONS: Record<string, React.ReactNode> = {
+  instagram: <Instagram className="h-3.5 w-3.5" />,
+  tiktok: <TikTokIcon className="h-3.5 w-3.5" />,
+  youtube: <Youtube className="h-3.5 w-3.5" />,
+  twitter: <Twitter className="h-3.5 w-3.5" />,
+  linkedin: <Linkedin className="h-3.5 w-3.5" />,
+};
+
+const SOURCE_COLORS: Record<string, string> = {
+  manual: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+  event: "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-400",
+  creator: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
+  import: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
+  sponsor: "bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300",
+  form: "bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300",
+};
+
+function initials(first?: string | null, last?: string | null, email?: string): string {
+  if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+  if (first) return first[0].toUpperCase();
+  if (email) return email[0].toUpperCase();
+  return "?";
+}
+
+function formatFollowerCount(n: unknown): string {
+  const num = Number(n);
+  if (!num || isNaN(num)) return "";
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return String(num);
+}
+
+function contactAvatarUrl(contact: EmailContact): string | null {
+  const avatar = contact.metadata?.avatar;
+  if (avatar && typeof avatar === "string" && avatar.trim()) {
+    return avatar.replace(/^http:\/\//i, "https://");
+  }
+  return null;
+}
 
 const EmailLists = () => {
   const { listId } = useParams();
@@ -247,12 +296,43 @@ const EmailLists = () => {
               <Button variant="outline" size="sm" onClick={() => csvRef.current?.click()}>
                 <Upload className="h-4 w-4 mr-1" /> Import CSV
               </Button>
+              <Button variant="outline" size="sm" onClick={() => {
+                const csv = [
+                  ["Email", "First Name", "Last Name", "Handle", "Platform", "Followers", "Engagement Rate", "Location", "Bio", "Source", "Status", "Date Added"].join(","),
+                  ...filteredContacts.map(c => {
+                    const m = c.metadata ?? {};
+                    return [
+                      c.email, c.first_name || "", c.last_name || "",
+                      m.username ? `@${String(m.username).replace(/^@/, "")}` : "",
+                      m.platform ? String(m.platform) : "",
+                      m.followers ? String(m.followers) : "",
+                      m.engagement_rate ? String(m.engagement_rate) : "",
+                      m.location ? String(m.location) : "",
+                      m.bio ? String(m.bio).replace(/"/g, '""').substring(0, 200) : "",
+                      c.source || "manual", c.status, c.created_at,
+                    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+                  }),
+                ].join("\n");
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${selectedList.name.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success("CSV exported");
+              }}>
+                <Download className="h-4 w-4 mr-1" /> Export CSV
+              </Button>
             </div>
           </div>
         </div>
 
         <div className="mb-4">
-          <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="max-w-sm" />
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
+          </div>
         </div>
 
         {loadingContacts ? (
@@ -266,13 +346,19 @@ const EmailLists = () => {
             <p className="text-sm mt-1">Add contacts manually, import a CSV, or sync from events.</p>
           </div>
         ) : (
-          <div className="rounded-lg border">
+          <div className="rounded-lg border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>First Name</TableHead>
-                  <TableHead>Last Name</TableHead>
+                  <TableHead>Handle</TableHead>
+                  <TableHead>Followers</TableHead>
+                  <TableHead>Eng. Rate</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Platforms</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Added</TableHead>
                   <TableHead className="w-[100px]">Actions</TableHead>
@@ -281,13 +367,81 @@ const EmailLists = () => {
               <TableBody>
                 {filteredContacts.map(c => {
                   const sc = CONTACT_STATUS_COLORS[c.status] || CONTACT_STATUS_COLORS.subscribed;
+                  const m = c.metadata ?? {};
+                  const avatar = contactAvatarUrl(c);
+                  const handle = m.username ? `@${String(m.username).replace(/^@/, "")}` : null;
+                  const followers = m.followers ? formatFollowerCount(m.followers) : null;
+                  const engRate = m.engagement_rate ? `${Number(m.engagement_rate).toFixed(2)}%` : null;
+                  const location = m.location ? String(m.location) : null;
+                  const platforms = (m.social_platforms as string[] | undefined) ?? [];
+                  const src = c.source || "manual";
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.email}</TableCell>
-                      <TableCell>{c.first_name || "—"}</TableCell>
-                      <TableCell>{c.last_name || "—"}</TableCell>
-                      <TableCell><Badge className={`${sc.bg} ${sc.text}`}>{c.status}</Badge></TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{new Date(c.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="relative h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
+                          <span>{initials(c.first_name, c.last_name, c.email)}</span>
+                          {avatar && (
+                            <img
+                              src={avatar}
+                              alt=""
+                              className="absolute inset-0 w-8 h-8 rounded-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium whitespace-nowrap">
+                          {c.first_name || c.last_name ? `${c.first_name || ""} ${c.last_name || ""}`.trim() : "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{c.email}</TableCell>
+                      <TableCell>
+                        {handle ? (
+                          <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">{handle}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {followers ? (
+                          <span className="text-sm font-medium">{followers}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {engRate ? (
+                          <span className="text-sm font-medium">{engRate}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {location ? (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground max-w-[140px]">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{location}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {platforms.slice(0, 4).map(p => (
+                            <span key={p} className="text-gray-500 dark:text-gray-400" title={p}>
+                              {PLATFORM_ICONS[p] || <Globe className="h-3.5 w-3.5" />}
+                            </span>
+                          ))}
+                          {platforms.length === 0 && <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${SOURCE_COLORS[src] || SOURCE_COLORS.manual} text-xs capitalize`}>{src}</Badge>
+                      </TableCell>
+                      <TableCell><Badge className={`${sc.bg} ${sc.text} text-xs`}>{c.status}</Badge></TableCell>
+                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           {c.status === "subscribed" && (

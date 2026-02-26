@@ -1291,22 +1291,43 @@ const BrandDiscover = () => {
   const creatorToEmailContact = (creator: CreatorCard, email: string) => {
     const nameParts = (creator.name || "").split(" ");
     const enriched = enrichCache[creator.id] ?? {};
+    const raw = enrichRawCache[creator.id];
+    const creatorHas = raw?.result?.creator_has as Record<string, boolean> | undefined;
+    const platforms = creator.socialPlatforms ?? enriched.socialPlatforms ?? [];
+
+    // Build per-platform handle map for getSocials() in ContactDrawer
+    const platformHandles: Record<string, string> = {};
+    const handle = creator.username?.replace(/^@/, "");
+    if (handle) {
+      // Save the handle under its primary platform key
+      platformHandles[enrichPlatform] = handle;
+      // For other platforms in creator_has, save the handle too (same creator)
+      if (creatorHas) {
+        for (const p of ["instagram", "tiktok", "youtube", "twitter", "linkedin"]) {
+          if (creatorHas[p] && !platformHandles[p]) platformHandles[p] = handle;
+        }
+      }
+    }
+
+    const enrichedAvatar = enriched.avatar || (raw ? extractAvatarFromEnrichment(raw) : null);
+
     return {
       email,
       first_name: nameParts[0] || undefined,
       last_name: nameParts.slice(1).join(" ") || undefined,
       source: "creator" as const,
       metadata: {
+        ...platformHandles,
         username: creator.username,
         platform: enrichPlatform,
         followers: creator.followers,
         engagement_rate: creator.engagementRate,
-        avatar: creator.avatar,
+        avatar: enrichedAvatar || creator.avatar,
         location: creator.location ?? enriched.location,
         bio: creator.bio,
         hashtags: creator.hashtags ?? enriched.hashtags,
         external_links: creator.externalLinks ?? enriched.externalLinks,
-        social_platforms: creator.socialPlatforms ?? enriched.socialPlatforms,
+        social_platforms: platforms,
       },
     };
   };
