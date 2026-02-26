@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Loader2, ShieldAlert, CalendarCheck, Copy, Printer, Sparkles, Search,
   AlertTriangle, CheckCircle2, FileText, Shield, Info, MapPin, Link2, Save,
-  Handshake, Send, Filter, Users, Radar, Landmark,
+  Handshake, Send, Filter, Users, Radar, Landmark, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
@@ -311,6 +311,55 @@ function sourceIcon(source: string) {
   if (s.includes("facebook") || s.includes("community")) return <Users className="h-3 w-3" />;
   if (s.includes("milcrunch")) return <CalendarCheck className="h-3 w-3" />;
   return <Radar className="h-3 w-3" />;
+}
+
+/* ── Collapsible section wrapper ── */
+function CollapsibleSection({
+  title,
+  count,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 group w-full text-left"
+      >
+        <ChevronRight
+          className={cn(
+            "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+            open && "rotate-90",
+          )}
+        />
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground group-hover:text-foreground transition-colors">
+          {title}
+          {count != null && count > 0 && (
+            <span className="ml-1.5 text-[10px] font-semibold normal-case tracking-normal">({count})</span>
+          )}
+        </p>
+      </button>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-in-out",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-2">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ======================================== */
@@ -833,8 +882,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
           <div className="space-y-4">
             {/* Holiday conflicts */}
             {conflicts.holidays.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Federal Holiday Conflicts</p>
+              <CollapsibleSection title="Federal Holiday Conflicts" count={conflicts.holidays.length}>
                 {conflicts.holidays.map((h, i) => (
                   <div
                     key={i}
@@ -860,13 +908,12 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                     </Badge>
                   </div>
                 ))}
-              </div>
+              </CollapsibleSection>
             )}
 
             {/* Military Observance Conflicts */}
             {conflicts.observances.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Military Observance Conflicts</p>
+              <CollapsibleSection title="Military Observance Conflicts" count={conflicts.observances.length}>
                 {conflicts.observances.map((obs, i) => {
                   const isSameDay = obs.direction === "same-day";
                   const isLeverage = obs.suggestion === "leverage";
@@ -906,15 +953,15 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                     </div>
                   );
                 })}
-              </div>
+              </CollapsibleSection>
             )}
 
             {/* AI-Scanned Events (Conflicts & Collabs) */}
             {filteredAIEvents.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {filterMode === "conflicts" ? "Competing Events" : filterMode === "collabs" ? "Collaboration Opportunities" : "Events & Opportunities"}
-                </p>
+              <CollapsibleSection
+                title={filterMode === "conflicts" ? "Competing Events" : filterMode === "collabs" ? "Collaboration Opportunities" : "Events & Opportunities"}
+                count={filteredAIEvents.length}
+              >
                 {filteredAIEvents.map((ev, i) => {
                   const isConflict = ev.type === "conflict";
                   const isChamber = ev.source.toLowerCase().includes("chamber");
@@ -1002,7 +1049,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                     </div>
                   );
                 })}
-              </div>
+              </CollapsibleSection>
             )}
 
             {/* All clear */}
@@ -1121,9 +1168,11 @@ Keep it concise — this should fit on one printed page. Use bullet points where
         </p>
 
         {gtmPlan && (
-          <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
-            <MarkdownRenderer content={gtmPlan} />
-          </div>
+          <CollapsibleSection title="Generated GTM Plan">
+            <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
+              <MarkdownRenderer content={gtmPlan} />
+            </div>
+          </CollapsibleSection>
         )}
 
       </Card>
@@ -1165,9 +1214,11 @@ Keep it concise — this should fit on one printed page. Use bullet points where
         </p>
 
         {summary && (
-          <div ref={summaryRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30">
-            <MarkdownRenderer content={summary} />
-          </div>
+          <CollapsibleSection title="Generated Executive Brief">
+            <div ref={summaryRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30">
+              <MarkdownRenderer content={summary} />
+            </div>
+          </CollapsibleSection>
         )}
       </Card>
     </div>
