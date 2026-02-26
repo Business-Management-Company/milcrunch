@@ -1502,7 +1502,7 @@ export default function CreatorProfileModal({
                   </p>
                 )}
 
-                {hasDataForPlatform && (
+                {hasDataForPlatform ? (
                   <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30 dark:bg-[#0F1117] p-4">
                     <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">{PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}</p>
                     <div className="flex flex-wrap gap-6">
@@ -1528,7 +1528,19 @@ export default function CreatorProfileModal({
                       )}
                     </div>
                   </div>
-                )}
+                ) : showEnrichmentLoading ? (
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30 dark:bg-[#0F1117] p-4">
+                    <Skeleton className="h-3 w-20 mb-3 animate-pulse" />
+                    <div className="flex flex-wrap gap-6">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i}>
+                          <Skeleton className="h-3 w-14 mb-1.5 animate-pulse" />
+                          <Skeleton className="h-6 w-20 animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Info grid - 3 columns in light gray/blue-50 card */}
                 <div className="rounded-xl bg-blue-50/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4">
@@ -1720,7 +1732,7 @@ export default function CreatorProfileModal({
                       ) : null}
 
                       {/* Engagement Per Post */}
-                      {postEngagementData.length > 0 && (
+                      {postEngagementData.length > 0 ? (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
                           <p className="text-xs text-muted-foreground mb-3">Engagement rate for recent posts (likes + comments / followers)</p>
@@ -1735,23 +1747,37 @@ export default function CreatorProfileModal({
                             </ResponsiveContainer>
                           </div>
                         </div>
-                      )}
+                      ) : showEnrichmentLoading ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
+                          <Skeleton className="h-36 w-full animate-pulse" />
+                        </div>
+                      ) : null}
 
                       {/* Key Metrics Grid */}
                       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                         <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Key Metrics</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {[
-                            { label: "Avg Likes", value: avgLikes, fmt: formatNumber },
-                            { label: "Avg Comments", value: avgComments, fmt: formatNumber },
-                            { label: "Avg Views", value: avgViews, fmt: formatNumber },
-                            { label: statLabels.postsPerMonth, value: postsPerMonth, fmt: (v: number) => `${formatNumber(v)}/mo` },
-                          ].filter(({ value }) => value > 0).map(({ label, value, fmt }) => (
-                            <div key={label} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
-                              <p className="text-lg font-bold text-[#000741] dark:text-white">{fmt(value)}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                            </div>
-                          ))}
+                          {showEnrichmentLoading && avgLikes === 0 && avgComments === 0 && avgViews === 0 ? (
+                            [1, 2, 3, 4].map((i) => (
+                              <div key={i} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
+                                <Skeleton className="h-6 w-12 mx-auto mb-1 animate-pulse" />
+                                <Skeleton className="h-3 w-16 mx-auto animate-pulse" />
+                              </div>
+                            ))
+                          ) : (
+                            [
+                              { label: "Avg Likes", value: avgLikes, fmt: formatNumber },
+                              { label: "Avg Comments", value: avgComments, fmt: formatNumber },
+                              { label: "Avg Views", value: avgViews, fmt: formatNumber },
+                              { label: statLabels.postsPerMonth, value: postsPerMonth, fmt: (v: number) => `${formatNumber(v)}/mo` },
+                            ].filter(({ value }) => value > 0).map(({ label, value, fmt }) => (
+                              <div key={label} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
+                                <p className="text-lg font-bold text-[#000741] dark:text-white">{fmt(value)}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+                              </div>
+                            ))
+                          )}
                         </div>
                         {selectedPlatform === "instagram" && reelsPct > 0 && (
                           <p className="text-xs text-muted-foreground mt-3">Reels make up {reelsPct}% of last 12 posts</p>
@@ -1776,6 +1802,16 @@ export default function CreatorProfileModal({
                       ) : null}
 
                       {/* Hashtag Cloud */}
+                      {showEnrichmentLoading && platformHashtags.length === 0 && (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Hashtags</p>
+                          <div className="flex flex-wrap gap-2">
+                            {[80, 64, 72, 56, 48, 60].map((w, i) => (
+                              <Skeleton key={i} className="h-8 animate-pulse rounded-lg" style={{ width: w }} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {platformHashtags.length > 0 && (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Hashtags</p>
@@ -1801,7 +1837,19 @@ export default function CreatorProfileModal({
                       )}
                     </TabsContent>
                     <TabsContent value="posts" className="mt-4">
-                      {recentPosts.length === 0 ? (
+                      {recentPosts.length === 0 && showEnrichmentLoading ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-muted/30 dark:bg-[#0F1117]">
+                              <Skeleton className="w-full aspect-square animate-pulse" />
+                              <div className="p-2 space-y-1.5">
+                                <Skeleton className="h-3 w-full animate-pulse" />
+                                <Skeleton className="h-3 w-2/3 animate-pulse" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : recentPosts.length === 0 ? (
                         <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border dark:border-gray-700 bg-muted/20 dark:bg-[#0F1117] p-4">
                           No post data available.
                         </p>
@@ -1836,7 +1884,19 @@ export default function CreatorProfileModal({
                       )}
                     </TabsContent>
                     <TabsContent value="similar" className="mt-4">
-                      {similarAccounts.length === 0 ? (
+                      {similarAccounts.length === 0 && showEnrichmentLoading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
+                              <Skeleton className="h-12 w-12 rounded-full shrink-0 animate-pulse" />
+                              <div className="flex-1 space-y-1.5">
+                                <Skeleton className="h-4 w-24 animate-pulse" />
+                                <Skeleton className="h-3 w-32 animate-pulse" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : similarAccounts.length === 0 ? (
                         <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border dark:border-gray-700 bg-muted/20 dark:bg-[#0F1117] p-4">
                           No similar creators found.
                         </p>
@@ -1871,6 +1931,14 @@ export default function CreatorProfileModal({
                       )}
                     </TabsContent>
                   </Tabs>
+
+                  {/* Loading indicator at bottom of content */}
+                  {showEnrichmentLoading && (
+                    <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading creator insights...
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
           </div>
