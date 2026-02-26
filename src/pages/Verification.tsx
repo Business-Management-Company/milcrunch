@@ -364,6 +364,28 @@ export default function Verification() {
   const [creatorSearch, setCreatorSearch] = useState("");
   const [showCreatorDropdown, setShowCreatorDropdown] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editCreatorOpen, setEditCreatorOpen] = useState(false);
+  const [editCreatorSaving, setEditCreatorSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    id: "",
+    name: "",
+    branch: "",
+    category: "",
+    confidenceScore: null as number | null,
+    confidenceOverride: false,
+    verificationStatus: "pending" as string,
+    bio: "",
+    photoUrl: "",
+    instagram: "",
+    tiktok: "",
+    youtube: "",
+    linkedin: "",
+    email: "",
+    phone: "",
+    website: "",
+    notes: "",
+    sourceUsername: "",
+  });
   const [addSpeakerOpen, setAddSpeakerOpen] = useState(false);
   const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "", verification_status: "", photo_url: "" });
   const [inviteEventOpen, setInviteEventOpen] = useState(false);
@@ -860,6 +882,105 @@ export default function Verification() {
       photo_url: bestPhoto,
     });
     setAddSpeakerOpen(true);
+  };
+
+  const handleEditCreator = (row: VerificationRecord) => {
+    const handle = row.source_username;
+    let bestPhoto = row.profile_photo_url || "";
+    if (handle && dirEnrichmentMap[handle]) {
+      const ed = dirEnrichmentMap[handle] as Record<string, unknown>;
+      const result = (ed.result ?? ed) as Record<string, unknown>;
+      const ig = (result.instagram ?? result) as Record<string, unknown>;
+      const enrichAvatar = (ig.picture ?? ig.profile_picture_hd ?? ig.profile_picture ?? ig.profile_pic_url) as string | undefined;
+      if (enrichAvatar && enrichAvatar.startsWith("http")) bestPhoto = enrichAvatar;
+    }
+    const dmMatch = handle ? dirMembers.find((m) => m.creator_handle === handle) : null;
+    if (dmMatch) {
+      const dmAvatar = dmMatch.ic_avatar_url || dmMatch.avatar_url;
+      if (dmAvatar) bestPhoto = dmAvatar;
+    }
+    setEditForm({
+      id: row.id,
+      name: row.person_name,
+      branch: row.claimed_branch ?? "",
+      category: row.claimed_status ?? "",
+      confidenceScore: row.verification_score,
+      confidenceOverride: !!(row.manual_checks as Record<string, unknown> | null)?.confidence_override,
+      verificationStatus: row.status ?? "pending",
+      bio: row.notes ?? "",
+      photoUrl: bestPhoto,
+      instagram: row.source_username ?? "",
+      tiktok: "",
+      youtube: "",
+      linkedin: row.linkedin_url ?? "",
+      email: "",
+      phone: "",
+      website: row.website_url ?? "",
+      notes: row.notes ?? "",
+      sourceUsername: row.source_username ?? "",
+    });
+    setEditCreatorOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setEditCreatorSaving(true);
+    try {
+      // 1. Update verifications table
+      const vPayload: Record<string, unknown> = {
+        person_name: editForm.name,
+        claimed_branch: editForm.branch || null,
+        claimed_status: editForm.category || null,
+        status: editForm.verificationStatus,
+        linkedin_url: editForm.linkedin || null,
+        website_url: editForm.website || null,
+        profile_photo_url: editForm.photoUrl || null,
+        notes: editForm.notes || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (editForm.confidenceOverride && editForm.confidenceScore != null) {
+        vPayload.verification_score = editForm.confidenceScore;
+        vPayload.manual_checks = {
+          ...((list.find((r) => r.id === editForm.id)?.manual_checks as Record<string, unknown>) || {}),
+          confidence_override: true,
+          manual_score: editForm.confidenceScore,
+        };
+      }
+      const { error: vErr } = await supabase.from("verifications").update(vPayload).eq("id", editForm.id);
+      if (vErr) throw vErr;
+
+      // 2. Update speakers table if linked
+      const { data: speakerRows } = await supabase.from("speakers")
+        .select("id")
+        .eq("verification_id", editForm.id)
+        .limit(1);
+      if (speakerRows && speakerRows.length > 0) {
+        await supabase.from("speakers").update({
+          name: editForm.name,
+          branch: editForm.branch || null,
+          bio: editForm.notes || null,
+          photo_url: editForm.photoUrl || null,
+          verification_status: editForm.verificationStatus,
+        } as Record<string, unknown>).eq("verification_id", editForm.id);
+      }
+
+      // 3. Update directory_members if linked by handle
+      if (editForm.sourceUsername) {
+        await supabase.from("directory_members").update({
+          creator_name: editForm.name,
+          bio: editForm.notes || null,
+          ic_avatar_url: editForm.photoUrl || null,
+          status: editForm.verificationStatus,
+        } as Record<string, unknown>).eq("creator_handle", editForm.sourceUsername);
+      }
+
+      toast.success("Creator updated successfully");
+      setEditCreatorOpen(false);
+      fetchVerifications();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update creator");
+    } finally {
+      setEditCreatorSaving(false);
+    }
   };
 
   const handleSaveSpeaker = async () => {
@@ -1471,6 +1592,9 @@ export default function Verification() {
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAddAsSpeaker(row); }}>
                               <UserPlus className="h-4 w-4 mr-2" /> Add as Speaker
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditCreator(row); }}>
+                              <Pencil className="h-4 w-4 mr-2" /> Edit Creator
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate("/lists"); }}>
                               <List className="h-4 w-4 mr-2" /> Add to List
                             </DropdownMenuItem>
@@ -1560,6 +1684,135 @@ export default function Verification() {
             </div>
             <Button onClick={handleSaveSpeaker} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
               <UserPlus className="h-4 w-4 mr-2" /> Save Speaker
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Creator Modal */}
+      <Dialog open={editCreatorOpen} onOpenChange={setEditCreatorOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Pencil className="h-5 w-5" /> Edit Creator</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label>Name</Label>
+                <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Branch</Label>
+                <Select value={editForm.branch} onValueChange={(v) => setEditForm((f) => ({ ...f, branch: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                  <SelectContent>
+                    {BRANCHES.map((b) => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Status / Category</Label>
+                <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {["Veteran", "Active Duty", "Military Spouse", "Military Family", "Gold Star Family", "Reserve", "National Guard"].map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="flex items-center gap-2">
+                  Confidence Score
+                  {editForm.confidenceOverride && <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">Manual Override</Badge>}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input type="number" min={0} max={100} value={editForm.confidenceScore ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, confidenceScore: e.target.value === "" ? null : Number(e.target.value), confidenceOverride: true }))} placeholder="0-100" />
+                </div>
+              </div>
+              <div>
+                <Label>Verification Status</Label>
+                <Select value={editForm.verificationStatus} onValueChange={(v) => setEditForm((f) => ({ ...f, verificationStatus: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="verified">Verified</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="flagged">Flagged</SelectItem>
+                    <SelectItem value="denied">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Bio</Label>
+              <Textarea value={editForm.bio} onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Creator bio..." />
+            </div>
+
+            <div>
+              <Label>Photo URL</Label>
+              <Input value={editForm.photoUrl} onChange={(e) => setEditForm((f) => ({ ...f, photoUrl: e.target.value }))} placeholder="https://..." />
+              {editForm.photoUrl && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <img src={editForm.photoUrl} alt="" className="h-10 w-10 rounded-full object-cover border" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  <span className="text-xs text-muted-foreground truncate">{editForm.photoUrl}</span>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Social Profiles</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Instagram</Label>
+                  <Input value={editForm.instagram} onChange={(e) => setEditForm((f) => ({ ...f, instagram: e.target.value }))} placeholder="@handle" className="text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">TikTok</Label>
+                  <Input value={editForm.tiktok} onChange={(e) => setEditForm((f) => ({ ...f, tiktok: e.target.value }))} placeholder="@handle" className="text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">YouTube</Label>
+                  <Input value={editForm.youtube} onChange={(e) => setEditForm((f) => ({ ...f, youtube: e.target.value }))} placeholder="Channel URL" className="text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">LinkedIn</Label>
+                  <Input value={editForm.linkedin} onChange={(e) => setEditForm((f) => ({ ...f, linkedin: e.target.value }))} placeholder="Profile URL" className="text-sm" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Contact</Label>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">Email</Label>
+                  <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@..." className="text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">Phone</Label>
+                  <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 123-4567" className="text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">Website</Label>
+                  <Input value={editForm.website} onChange={(e) => setEditForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://..." className="text-sm" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label>Internal Notes</Label>
+              <Textarea value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Internal notes..." />
+            </div>
+
+            <Button onClick={handleSaveEdit} disabled={editCreatorSaving || !editForm.name.trim()} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
+              {editCreatorSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Changes
             </Button>
           </div>
         </DialogContent>
