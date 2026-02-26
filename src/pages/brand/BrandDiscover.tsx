@@ -2195,7 +2195,7 @@ const BrandDiscover = () => {
                       ? "Enter exact username (e.g. tonitrucks)"
                       : searchMode === "lookalike"
                       ? "Find creators similar to (e.g. tonitrucks)"
-                      : "Search military creators, fitness, lifestyle..."
+                      : "Search by name, handle, or keyword..."
                   }
                   className="pl-12 h-12 text-base rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#0F1117] shadow-sm focus-visible:ring-2 focus-visible:ring-[#1e3a5f]/30 transition-shadow hover:shadow-md"
                   value={searchQuery}
