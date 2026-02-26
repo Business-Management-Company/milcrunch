@@ -349,7 +349,7 @@ const BrandEventDetail = () => {
       setEditCapacity(ev.capacity ? String(ev.capacity) : "");
       setEditRideshare(!!(ev as Record<string, unknown>).rideshare_enabled);
       setAgenda((agRes.data || []) as AgendaRow[]);
-      setSpeakers((spkRes.data || []) as SpeakerRow[]);
+      setSpeakers((spkRes.data || []) as SpeakerRow[]); // initial set; enrichSpeakerAvatars patches missing photos
       setSponsors((spsRes.data || []) as SponsorRow[]);
       setRegistrations((regRes.data || []) as RegistrationRow[]);
       setEventTickets((tkRes.data || []) as TicketRow[]);
@@ -370,7 +370,7 @@ const BrandEventDetail = () => {
     }
   }, [eventId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchAll().then(() => refreshSpeakers()); }, [fetchAll]);
 
   /* ---- registration edit / delete ---- */
   const openEditReg = (r: RegistrationRow) => {
@@ -632,7 +632,66 @@ const BrandEventDetail = () => {
       .select("*")
       .eq("event_id", eventId)
       .order("sort_order");
-    setSpeakers((data || []) as SpeakerRow[]);
+    const rows = (data || []) as SpeakerRow[];
+    // Enrich missing avatars from directory_members + speakers table
+    const missing = rows.filter((s) => !getCreatorAvatar(s) && s.creator_name);
+    if (missing.length > 0) {
+      const names = missing.map((s) => s.creator_name!);
+      const [dmRes, spkRes] = await Promise.all([
+        supabase.from("directory_members")
+          .select("creator_name, ic_avatar_url, avatar_url")
+          .in("creator_name", names),
+        supabase.from("speakers")
+          .select("name, photo_url, verification_id")
+          .in("name", names),
+      ]);
+      // Build name → avatar map from directory_members
+      const avatarMap = new Map<string, string>();
+      for (const dm of (dmRes.data || []) as { creator_name: string; ic_avatar_url: string | null; avatar_url: string | null }[]) {
+        const url = dm.ic_avatar_url || dm.avatar_url;
+        if (url && typeof url === "string" && url.startsWith("https://")) {
+          avatarMap.set(dm.creator_name, url);
+        }
+      }
+      // Fallback: speakers table photo_url or verification photo
+      const spkRows = (spkRes.data || []) as { name: string; photo_url: string | null; verification_id: string | null }[];
+      const needVerification: string[] = [];
+      for (const sp of spkRows) {
+        if (!avatarMap.has(sp.name)) {
+          if (sp.photo_url && sp.photo_url.startsWith("https://")) {
+            avatarMap.set(sp.name, sp.photo_url);
+          } else if (sp.verification_id) {
+            needVerification.push(sp.verification_id);
+          }
+        }
+      }
+      // Fetch verification photos
+      if (needVerification.length > 0) {
+        const { data: vRows } = await supabase
+          .from("verifications")
+          .select("id, profile_photo_url")
+          .in("id", needVerification);
+        const vMap = new Map((vRows || []).map((v: { id: string; profile_photo_url: string | null }) => [v.id, v.profile_photo_url]));
+        for (const sp of spkRows) {
+          if (!avatarMap.has(sp.name) && sp.verification_id && vMap.has(sp.verification_id)) {
+            const url = vMap.get(sp.verification_id);
+            if (url && url.startsWith("https://")) avatarMap.set(sp.name, url);
+          }
+        }
+      }
+      // Patch rows and persist avatar_url for future loads
+      for (const row of rows) {
+        if (!getCreatorAvatar(row) && row.creator_name && avatarMap.has(row.creator_name)) {
+          row.avatar_url = avatarMap.get(row.creator_name)!;
+          // Persist so we don't re-fetch every time
+          supabase.from("event_speakers")
+            .update({ avatar_url: row.avatar_url } as Record<string, unknown>)
+            .eq("id", row.id)
+            .then(({ error }) => { if (error) console.warn("Failed to persist speaker avatar:", error.message); });
+        }
+      }
+    }
+    setSpeakers(rows);
   };
 
   /* ---- add sponsor ---- */

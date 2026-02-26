@@ -109,29 +109,58 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
       speakersQuery = speakersQuery.limit(20);
       const { data: speakersData } = await speakersQuery;
 
-      // Get verification statuses for speakers with verification_id
-      const verificationIds = (speakersData || [])
+      const rows = (speakersData || []) as { id: string; name: string; branch: string | null; bio: string | null; photo_url: string | null; verification_id: string | null }[];
+
+      // Get verification statuses + profile photos for speakers with verification_id
+      const verificationIds = rows
         .map((s) => s.verification_id)
         .filter(Boolean) as string[];
 
-      let verifiedSet = new Set<string>();
+      const verifiedSet = new Set<string>();
+      const verificationPhotoMap = new Map<string, string>();
       if (verificationIds.length > 0) {
         const { data: verifications } = await supabase
           .from("verifications")
-          .select("id, status")
-          .in("id", verificationIds)
-          .eq("status", "verified");
-        verifiedSet = new Set((verifications || []).map((v) => v.id));
+          .select("id, status, profile_photo_url")
+          .in("id", verificationIds);
+        for (const v of (verifications || []) as { id: string; status: string; profile_photo_url: string | null }[]) {
+          if (v.status === "verified") verifiedSet.add(v.id);
+          if (v.profile_photo_url && v.profile_photo_url.startsWith("https://")) {
+            verificationPhotoMap.set(v.id, v.profile_photo_url);
+          }
+        }
       }
 
-      const results: DirectoryPerson[] = (speakersData || []).map((s) => ({
-        id: s.id,
-        name: s.name,
-        branch: s.branch,
-        bio: s.bio,
-        photo_url: s.photo_url,
-        verified: s.verification_id ? verifiedSet.has(s.verification_id) : false,
-      }));
+      // Enrich avatars from directory_members for speakers missing photos
+      const names = rows.map((s) => s.name);
+      const dmAvatarMap = new Map<string, string>();
+      if (names.length > 0) {
+        const { data: dmRows } = await supabase
+          .from("directory_members")
+          .select("creator_name, ic_avatar_url, avatar_url")
+          .in("creator_name", names);
+        for (const dm of (dmRows || []) as { creator_name: string; ic_avatar_url: string | null; avatar_url: string | null }[]) {
+          const url = dm.ic_avatar_url || dm.avatar_url;
+          if (url && typeof url === "string" && url.startsWith("https://")) {
+            dmAvatarMap.set(dm.creator_name, url);
+          }
+        }
+      }
+
+      const results: DirectoryPerson[] = rows.map((s) => {
+        // Best photo: directory_members > verification photo > speakers.photo_url
+        const dmPhoto = dmAvatarMap.get(s.name);
+        const vPhoto = s.verification_id ? verificationPhotoMap.get(s.verification_id) : null;
+        const bestPhoto = dmPhoto || vPhoto || s.photo_url;
+        return {
+          id: s.id,
+          name: s.name,
+          branch: s.branch,
+          bio: s.bio,
+          photo_url: bestPhoto && bestPhoto.startsWith("https://") ? bestPhoto : null,
+          verified: s.verification_id ? verifiedSet.has(s.verification_id) : false,
+        };
+      });
 
       setDirectoryResults(results);
     } catch (err) {
