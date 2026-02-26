@@ -1624,23 +1624,25 @@ const BrandEventDetail = () => {
               return (
                 <div className="space-y-4">
                   {/* Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
-                      <p className="text-2xl font-bold text-pd-blue">{registrations.length}</p>
-                      <p className="text-xs text-muted-foreground">Total Registered</p>
+                  <div className={`grid grid-cols-2 gap-2 ${eventTickets.length > 0 ? `md:grid-cols-${Math.min(2 + eventTickets.length, 6)}` : "md:grid-cols-2"}`} style={{ gridTemplateColumns: `repeat(${Math.min(2 + eventTickets.length, 6)}, minmax(0, 1fr))` }}>
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] px-3 py-2.5 text-center">
+                      <p className="text-lg font-bold text-pd-blue">{registrations.length}</p>
+                      <p className="text-[11px] text-muted-foreground">Total</p>
                     </Card>
-                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
-                      <p className="text-2xl font-bold text-blue-700">{checkedInCount}</p>
-                      <p className="text-xs text-muted-foreground">Checked In</p>
+                    <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] px-3 py-2.5 text-center">
+                      <p className="text-lg font-bold text-blue-700">{checkedInCount}</p>
+                      <p className="text-[11px] text-muted-foreground">Checked In</p>
                     </Card>
-                    {eventTickets.slice(0, 2).map((t) => (
-                      <Card key={t.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 text-center">
-                        <p className="text-2xl font-bold text-foreground">
-                          {registrations.filter((r) => r.ticket_id === t.id).length}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{t.name}</p>
-                      </Card>
-                    ))}
+                    {eventTickets.map((t) => {
+                      const count = registrations.filter((r) => r.ticket_id === t.id).length
+                        + (eventTickets.indexOf(t) === 0 ? registrations.filter((r) => !r.ticket_id).length : 0);
+                      return (
+                        <Card key={t.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] px-3 py-2.5 text-center" title={t.name}>
+                          <p className="text-lg font-bold text-foreground">{count}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{abbreviateTicket(t.name)}</p>
+                        </Card>
+                      );
+                    })}
                   </div>
 
                   {/* Search + Actions */}
