@@ -199,7 +199,7 @@ function ReviewDot({ status, size = 8 }: { status: string | null; size?: number 
 }
 
 function MiniGauge({ score, size = 80 }: { score: number; size?: number }) {
-  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
+  const color = score >= 80 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
   const r = size * 0.45;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;

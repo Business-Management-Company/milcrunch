@@ -160,19 +160,33 @@ export async function scrapeFirecrawl(url: string): Promise<{ markdown?: string 
 }
 
 // --- Scoring ---
+// CONFIDENCE SCORE = identity verification + background check ONLY.
+// "Is this person who they say they are, and is there anything concerning?"
 // Generous scoring: absence of evidence is NOT evidence of fraud.
-// Only deduct for actual negative evidence (stolen valor, criminal record, factual impossibility).
+// Speaker Readiness is a SEPARATE checklist and does NOT affect this score.
+
+const NON_SERVICE_TYPES = new Set(["military_spouse", "military_family", "gold_star"]);
+
 export function computeVerificationScore(
   pdlScore: number,
   evidenceSources: EvidenceSource[],
   contentSignals: { hasUnitOrMOS: boolean; hasDates: boolean; hasAwards: boolean },
-  extra?: { claimedBranch?: string; linkedinUrl?: string; pdlData?: unknown }
+  extra?: { claimedBranch?: string; claimedType?: string; linkedinUrl?: string; pdlData?: unknown }
 ): number {
   let score = 0;
+  const claimedType = (extra?.claimedType ?? "").toLowerCase();
+  const isNonService = NON_SERVICE_TYPES.has(claimedType);
 
-  // Branch confirmed (+20)
-  const claimedBranch = extra?.claimedBranch;
-  if (claimedBranch && claimedBranch !== "Unknown") score += 20;
+  // --- Identity baseline (+20) ---
+  // Non-service categories (spouse, family, gold star) get this automatically — they
+  // aren't claiming military service so we don't require branch/service verification.
+  // Service members get it when a branch is confirmed.
+  if (isNonService) {
+    score += 20;
+  } else {
+    const claimedBranch = extra?.claimedBranch;
+    if (claimedBranch && claimedBranch !== "Unknown") score += 20;
+  }
 
   // Clean background check — no red flags (+20)
   const redFlags = evidenceSources.filter((s) => s.isRedFlag);
@@ -200,9 +214,13 @@ export function computeVerificationScore(
   );
   if (socialFound) score += 10;
 
-  // Location confirmed (+5)
-  const locationConfirmed = contentSignals.hasDates || contentSignals.hasUnitOrMOS;
-  if (locationConfirmed) score += 5;
+  // Content signals (+5) — for service members: dates/MOS; for non-service: any content presence
+  if (isNonService) {
+    // Non-service types get content credit if any content signals found (community involvement, etc.)
+    if (contentSignals.hasDates || contentSignals.hasUnitOrMOS || contentSignals.hasAwards) score += 5;
+  } else {
+    if (contentSignals.hasDates || contentSignals.hasUnitOrMOS) score += 5;
+  }
 
   // Bonus: Instagram handle present (+5)
   const hasInstagram = evidenceSources.some((s) => /instagram\.com/i.test(s.url ?? ""));
@@ -218,9 +236,43 @@ export function computeVerificationScore(
 export function recommendStatus(score: number, hasCriminalFlags: boolean): "verified" | "pending" | "flagged" | "denied" {
   // Only flag if there's actual negative evidence AND score is low
   if (hasCriminalFlags && score < 40) return "flagged";
-  if (score >= 70) return "verified";
+  if (score >= 80) return "verified";
   if (score >= 40) return "pending";
   return "flagged";
+}
+
+/** Re-compute score from an existing DB record without API calls. */
+export function recomputeScoreFromRecord(record: {
+  pdl_data?: unknown;
+  evidence_sources?: unknown;
+  claimed_branch?: string | null;
+  claimed_type?: string | null;
+  linkedin_url?: string | null;
+  firecrawl_data?: unknown;
+}): { score: number; status: "verified" | "pending" | "flagged" | "denied" } {
+  const pdlData = record.pdl_data as PDLResponse | null;
+  const pdlScore = scorePDL(pdlData);
+  const evidenceSources = Array.isArray(record.evidence_sources)
+    ? (record.evidence_sources as EvidenceSource[])
+    : [];
+  const firecrawlData = Array.isArray(record.firecrawl_data)
+    ? (record.firecrawl_data as { url: string; markdown?: string }[])
+    : [];
+  const contentSignals = { hasUnitOrMOS: false, hasDates: false, hasAwards: false };
+  for (const fc of firecrawlData) {
+    const md = (fc.markdown ?? "").toLowerCase();
+    if (MILITARY_KEYWORDS.test(md)) contentSignals.hasUnitOrMOS = true;
+    if (/\d{4}\s*[-–]\s*\d{4}|served from|deployment|active duty|enlisted|commissioned/i.test(md)) contentSignals.hasDates = true;
+    if (/medal|decoration|award|ribbon|badge|purple heart|bronze star|silver star/i.test(md)) contentSignals.hasAwards = true;
+  }
+  const score = computeVerificationScore(pdlScore, evidenceSources, contentSignals, {
+    claimedBranch: record.claimed_branch ?? undefined,
+    claimedType: record.claimed_type ?? undefined,
+    linkedinUrl: record.linkedin_url ?? undefined,
+    pdlData,
+  });
+  const hasCriminalFlags = evidenceSources.some((s) => s.isRedFlag);
+  return { score, status: recommendStatus(score, hasCriminalFlags) };
 }
 
 // --- AI Analysis (Claude) ---
@@ -814,7 +866,7 @@ export async function runVerificationPipeline(
   onPhase({ phase: 4, name: "AI Analysis", status: "done", data: aiAnalysis });
 
   const hasCriminalFlags = evidenceSources.some((s) => s.isRedFlag);
-  const verificationScore = computeVerificationScore(pdlScore, evidenceSources, contentSignals, { claimedBranch: input.claimedBranch, linkedinUrl: input.linkedinUrl, pdlData });
+  const verificationScore = computeVerificationScore(pdlScore, evidenceSources, contentSignals, { claimedBranch: input.claimedBranch, claimedType: input.claimedType, linkedinUrl: input.linkedinUrl, pdlData });
   const status = recommendStatus(verificationScore, hasCriminalFlags);
 
   return {

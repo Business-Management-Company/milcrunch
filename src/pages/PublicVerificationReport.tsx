@@ -29,7 +29,7 @@ interface ReportRecord {
 }
 
 function ConfidenceRing({ score }: { score: number }) {
-  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
+  const color = score >= 80 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (score / 100) * circumference;
   return (

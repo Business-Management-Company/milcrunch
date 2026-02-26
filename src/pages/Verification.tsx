@@ -94,6 +94,7 @@ import {
   type PostServiceEntry,
   type MilitaryServiceSummary,
   type EnhancedCareerResult,
+  recomputeScoreFromRecord,
 } from "@/lib/verification";
 import {
   DropdownMenu,
@@ -160,7 +161,7 @@ function stripMarkdown(md: string): string {
 }
 
 function ConfidenceGauge({ score }: { score: number }) {
-  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
+  const color = score >= 80 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (score / 100) * circumference;
   return (
@@ -224,13 +225,13 @@ function StatusIcon({ status }: { status: string }) {
 }
 
 function NameStatusIcon({ score }: { score: number }) {
-  const icon = score >= 70
+  const icon = score >= 80
     ? <ShieldCheck className="h-4 w-4 text-blue-700 shrink-0" />
     : score >= 40
       ? <Clock className="h-4 w-4 text-amber-500 shrink-0" />
       : <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />;
-  const tip = score >= 70
-    ? "Verified — Military service confirmed"
+  const tip = score >= 80
+    ? "Verified — Identity confirmed"
     : score >= 40
       ? "Pending — Verification in progress"
       : "Needs Review — Low confidence score";
@@ -577,6 +578,35 @@ export default function Verification() {
       toast.error("Backfill failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setBackfillRunning(false);
+    }
+  };
+
+  const [rescoring, setRescoring] = useState(false);
+  const [rescoreProgress, setRescoreProgress] = useState({ done: 0, total: 0 });
+  const handleReScoreAll = async () => {
+    setRescoring(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from("verifications")
+        .select("id, pdl_data, evidence_sources, claimed_branch, claimed_type, linkedin_url, firecrawl_data, verification_score, status");
+      if (error || !rows) { toast.error("Failed to load records"); return; }
+      setRescoreProgress({ done: 0, total: rows.length });
+      let updated = 0;
+      for (const row of rows) {
+        const { score, status } = recomputeScoreFromRecord(row);
+        if (score !== row.verification_score || status !== row.status) {
+          await supabase.from("verifications").update({ verification_score: score, status }).eq("id", row.id);
+          updated++;
+        }
+        setRescoreProgress((p) => ({ ...p, done: p.done + 1 }));
+      }
+      toast.success(`Re-scored ${rows.length} records (${updated} changed)`);
+      fetchVerifications();
+    } catch (e) {
+      console.error("[ReScore]", e);
+      toast.error("Re-score failed");
+    } finally {
+      setRescoring(false);
     }
   };
 
@@ -1069,6 +1099,25 @@ export default function Verification() {
               <>
                 <Briefcase className="h-3 w-3 mr-1.5" />
                 Backfill Career Data
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReScoreAll}
+            disabled={rescoring}
+            className="text-xs"
+          >
+            {rescoring ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                {rescoreProgress.done}/{rescoreProgress.total}
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-3 w-3 mr-1.5" />
+                Re-Score All
               </>
             )}
           </Button>
@@ -2128,7 +2177,7 @@ function CompactSpeakerReadiness({ record, onRefresh }: { record: VerificationRe
   const bookingNotes = (rawChecks.booking_notes as string) ?? "";
 
   const autoChecks: Record<string, boolean> = {
-    military_verified: (record.verification_score ?? 0) >= 70,
+    military_verified: (record.verification_score ?? 0) >= 80,
     no_criminal: !((record.red_flags as RedFlag[] | null)?.length),
   };
 
@@ -2204,7 +2253,7 @@ function SpeakerReadinessAssessment({ record, onRefresh }: { record: Verificatio
   const [saving, setSaving] = useState(false);
 
   const autoChecks: Record<string, boolean> = {
-    military_verified: (record.verification_score ?? 0) >= 70,
+    military_verified: (record.verification_score ?? 0) >= 80,
     no_criminal: !((record.red_flags as RedFlag[] | null)?.length),
   };
 
@@ -2303,7 +2352,7 @@ function SpeakerReadinessInline({ record, onRefresh, isOpen, onToggle }: { recor
   const [saving, setSaving] = useState(false);
 
   const autoChecks: Record<string, boolean> = {
-    military_verified: (record.verification_score ?? 0) >= 70,
+    military_verified: (record.verification_score ?? 0) >= 80,
     no_criminal: !((record.red_flags as RedFlag[] | null)?.length),
   };
 
