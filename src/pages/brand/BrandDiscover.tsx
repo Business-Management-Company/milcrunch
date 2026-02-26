@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy, Filter, CircleCheck } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy, Filter, CircleCheck, Copy, UserPlus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,8 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { PlatformIcons } from "@/components/PlatformIcons";
+import { addFullContact, getEmailLists } from "@/lib/email-db";
+import type { EmailList } from "@/lib/email-types";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
 
@@ -795,6 +797,11 @@ const BrandDiscover = () => {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactEmails, setContactEmails] = useState<Record<string, string>>({}); // creatorId → email
 
+  // Post-enrichment actions dialog
+  const [postEnrichCreator, setPostEnrichCreator] = useState<CreatorCard | null>(null);
+  const [postEnrichEmail, setPostEnrichEmail] = useState("");
+  const [contactListsForDialog, setContactListsForDialog] = useState<EmailList[]>([]);
+
   // Username search fallback state
   const [usernameNotFound, setUsernameNotFound] = useState<{
     handle: string;
@@ -1131,9 +1138,13 @@ const BrandDiscover = () => {
     setContactLoading(true);
     try {
       const data = await fullEnrichCreatorProfile(creator.username, undefined, enrichPlatform);
-      if (data?.result?.email) {
-        setContactEmails((prev) => ({ ...prev, [creator.id]: String(data.result.email) }));
-        toast.success(`Email found for ${creator.name}`);
+      const foundEmail = data?.result?.email ? String(data.result.email) : null;
+      if (foundEmail) {
+        setContactEmails((prev) => ({ ...prev, [creator.id]: foundEmail }));
+        // Open post-enrichment actions dialog instead of just a toast
+        setPostEnrichCreator(creator);
+        setPostEnrichEmail(foundEmail);
+        getEmailLists().then(setContactListsForDialog).catch(() => {});
       } else {
         toast.info(`No email found for ${creator.name}`);
       }
@@ -1153,6 +1164,32 @@ const BrandDiscover = () => {
     } finally {
       setContactLoading(false);
       setContactConfirmCreator(null);
+    }
+  };
+
+  // Post-enrichment: add creator to email_contacts
+  const handleAddToContacts = async (creator: CreatorCard, email: string, listId: string) => {
+    const nameParts = (creator.name || "").split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    try {
+      await addFullContact({
+        list_id: listId,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        source: "enrichment" as any,
+        metadata: {
+          username: creator.username,
+          platform: enrichPlatform,
+          followers: creator.followers,
+          avatar: creator.avatar,
+        },
+      });
+      toast.success(`${creator.name} added to contacts`);
+      setPostEnrichCreator(null);
+    } catch (err) {
+      toast.error(`Failed to add contact: ${(err as Error).message}`);
     }
   };
 
@@ -1795,7 +1832,7 @@ const BrandDiscover = () => {
   const creators = ((apiResults?.creators ?? []).length > 0
     ? (apiResults?.creators ?? [])
     : (usernameNotFound?.fallbackResults ?? [])
-  ).filter((c) => (c.followers ?? 0) > 0);
+  ).filter((c) => (c.followers ?? 0) >= 100);
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
   // IMPORTANT: checks directory_members for permanent avatar URLs FIRST to avoid
@@ -2375,6 +2412,89 @@ const BrandDiscover = () => {
               Get Contact Info (1.03 cr)
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Post-Enrichment Actions Dialog */}
+      <Dialog open={!!postEnrichCreator} onOpenChange={(open) => { if (!open) setPostEnrichCreator(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CircleCheck className="h-5 w-5 text-green-500" />
+              Email Found!
+            </DialogTitle>
+          </DialogHeader>
+          {postEnrichCreator && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                <DiscoverAvatar url={postEnrichCreator.avatar} name={postEnrichCreator.name} username={postEnrichCreator.username} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm">{postEnrichCreator.name}</p>
+                  <p className="text-xs text-muted-foreground">@{postEnrichCreator.username}</p>
+                  <p className="text-xs font-medium text-green-600 dark:text-green-400 mt-0.5 truncate">{postEnrichEmail}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">What would you like to do next?</p>
+              <div className="space-y-2">
+                {/* Add to List */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start gap-2">
+                      <ListPlus className="h-4 w-4" />
+                      Add to List
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    {lists.map((list) => (
+                      <DropdownMenuItem key={list.id} onClick={() => { handleAddToList(list.id, list.name, postEnrichCreator); setPostEnrichCreator(null); }}>
+                        {list.name}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuItem onClick={() => { handleOpenCreateListForCreator(postEnrichCreator); setPostEnrichCreator(null); }}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> New List
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {/* Add to Contacts */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      Add to Contacts
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    {contactListsForDialog.map((el) => (
+                      <DropdownMenuItem key={el.id} onClick={() => handleAddToContacts(postEnrichCreator, postEnrichEmail, el.id)}>
+                        {el.name}
+                      </DropdownMenuItem>
+                    ))}
+                    {contactListsForDialog.length === 0 && (
+                      <DropdownMenuItem disabled className="text-xs text-muted-foreground">No email lists yet</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {/* Copy Email */}
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  onClick={() => { navigator.clipboard.writeText(postEnrichEmail); toast.success("Email copied!"); setPostEnrichCreator(null); }}
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy Email
+                </Button>
+                {/* Close */}
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-muted-foreground"
+                  onClick={() => setPostEnrichCreator(null)}
+                >
+                  <X className="h-4 w-4" />
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -3382,14 +3502,27 @@ const BrandDiscover = () => {
                             {/* Email */}
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               {contactEmails[creator.id] ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <a href={`mailto:${contactEmails[creator.id]}`} className="inline-flex items-center justify-center">
-                                      <Mail className="h-4 w-4 text-green-500 hover:text-green-600" />
-                                    </a>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="text-xs">{contactEmails[creator.id]}</TooltipContent>
-                                </Tooltip>
+                                <div className="inline-flex items-center gap-1.5">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center justify-center cursor-default">
+                                        <Mail className="h-4 w-4 text-green-500" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">{contactEmails[creator.id]}</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => { navigator.clipboard.writeText(contactEmails[creator.id]); toast.success("Email copied!"); }}
+                                        className="inline-flex items-center justify-center rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                      >
+                                        <Copy className="h-3 w-3" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">Copy email</TooltipContent>
+                                  </Tooltip>
+                                </div>
                               ) : creator.username ? (
                                 <button
                                   onClick={() => setContactConfirmCreator(creator)}
@@ -3677,14 +3810,23 @@ const BrandDiscover = () => {
                           <div className="flex items-center gap-2 mb-4 flex-wrap">
                             <PlatformIcons platforms={socialPlatforms} username={creator.username} max={8} size="h-[18px] w-[18px]" />
                             {contactEmails[creator.id] ? (
-                              <a
-                                href={`mailto:${contactEmails[creator.id]}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 rounded-md bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-semibold text-green-600 dark:text-green-400 hover:underline"
-                                title={contactEmails[creator.id]}
-                              >
-                                <Mail className="h-3 w-3" />{contactEmails[creator.id]}
-                              </a>
+                              <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex items-center gap-1 rounded-md bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-semibold text-green-600 dark:text-green-400 cursor-default">
+                                      <Mail className="h-3 w-3" />{contactEmails[creator.id]}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">{contactEmails[creator.id]}</TooltipContent>
+                                </Tooltip>
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(contactEmails[creator.id]); toast.success("Email copied!"); }}
+                                  className="inline-flex items-center justify-center rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                  title="Copy email"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
                             ) : creator.username ? (
                               <button
                                 onClick={(e) => { e.stopPropagation(); setContactConfirmCreator(creator); }}
