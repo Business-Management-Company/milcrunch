@@ -1670,7 +1670,7 @@ interface TabContent {
 
 /** Infer block type from existing section data for backward compat */
 function inferBlockType(s: SectionBlock): BlockType {
-  if (s.type) return s.type;
+  if (s.type) return s.type.toLowerCase() as BlockType;
   if (s.video_url) return "video";
   if (s.items?.length > 0 && s.items.some((i) => i.trim())) return "features";
   if (s.image_url && !s.description && (!s.items || !s.items.some((i) => i.trim()))) return "image";
@@ -1810,28 +1810,6 @@ const TAB_CONTENT: Record<string, TabContent> = {
     bottomNote: {
       heading: "From Experience to Platform",
       text: "We took everything we learned from producing live events and built it into software. MilCrunch is the event platform we wish existed when we were running PDX.",
-    },
-  },
-  "Discovery": {
-    headline: "Military Creator",
-    headlineAccent: "Intelligence Engine",
-    description:
-      "MilCrunch integrates with Influencers.club\u2019s 310M+ creator database to provide military-specific discovery powered by proprietary relevance scoring. Find verified military creators, veterans, and military spouses with confidence.",
-    sections: [
-      {
-        heading: "Key Features",
-        items: [
-          "Military Match Scoring \u2014 AI-powered relevance algorithm using 95+ military terms, 27 base locations, and branch identification",
-          "Advanced Filtering \u2014 Search by branch, location, follower count, engagement rate, niche",
-          "Platform Coverage \u2014 Instagram, TikTok, YouTube, Twitter/X, Twitch",
-          "Real-Time Data \u2014 Live follower counts, engagement metrics, content analysis",
-          "Evidence-Based Results \u2014 See exactly why each creator matched (hashtags, bio, location proximity)",
-        ],
-      },
-    ],
-    bottomNote: {
-      heading: "Competitive Advantage",
-      text: "Generic influencer platforms return gyms and businesses when you search \u201Cmilitary Norfolk.\u201D MilCrunch returns actual military spouses and veterans because we understand the domain.",
     },
   },
   "Verification": {
@@ -2229,6 +2207,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
 
         /* ---- IMAGE block ---- */
         if (blockType === "image") {
+          if (!section.image_url?.trim()) return null;
           return (
             <section key={`block-${i}`} className="max-w-3xl mx-auto">
               {section.heading && (
