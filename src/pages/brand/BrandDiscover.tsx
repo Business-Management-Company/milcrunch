@@ -603,6 +603,33 @@ async function setCachedEnrichment(username: string, enrichment: EnrichedProfile
   }
 }
 
+/** Batch-fetch cached enrichments for multiple usernames. Returns a Map of username → email. */
+async function getBatchCachedEmails(usernames: string[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (usernames.length === 0) return result;
+  try {
+    const lowerNames = usernames.map((u) => u.toLowerCase());
+    const { data, error } = await supabase
+      .from("creator_enrichment_cache")
+      .select("username, enrichment_data, cached_at")
+      .in("username", lowerNames);
+    if (error || !data) return result;
+    const now = Date.now();
+    for (const row of data) {
+      const cachedAt = new Date(row.cached_at).getTime();
+      if (now - cachedAt > CACHE_TTL_MS) continue;
+      const enrichment = row.enrichment_data as EnrichedProfileResponse | null;
+      const email = enrichment?.result?.email;
+      if (email && typeof email === "string") {
+        result.set(row.username, email);
+      }
+    }
+  } catch {
+    // Silently fail — cache is optional
+  }
+  return result;
+}
+
 const PLATFORMS = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
@@ -1152,11 +1179,27 @@ const BrandDiscover = () => {
     if (!creator.username) return;
     setContactLoading(true);
     try {
+      // Check Supabase cache first to avoid double-charging
+      const cached = await getCachedEnrichment(creator.username);
+      const cachedEmail = cached?.result?.email ? String(cached.result.email) : null;
+      if (cachedEmail) {
+        setContactEmails((prev) => ({ ...prev, [creator.id]: cachedEmail }));
+        const partial = extractFromEnrichment(cached!);
+        setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+        setEnrichRawCache((prev) => ({ ...prev, [creator.id]: cached! }));
+        setPostEnrichCreator(creator);
+        setPostEnrichEmail(cachedEmail);
+        getEmailLists().then(setContactListsForDialog).catch(() => {});
+        toast.success(`Email found for ${creator.name} (cached)`);
+        setContactLoading(false);
+        setContactConfirmCreator(null);
+        return;
+      }
+
       const data = await fullEnrichCreatorProfile(creator.username, undefined, enrichPlatform);
       const foundEmail = data?.result?.email ? String(data.result.email) : null;
       if (foundEmail) {
         setContactEmails((prev) => ({ ...prev, [creator.id]: foundEmail }));
-        // Open post-enrichment actions dialog instead of just a toast
         setPostEnrichCreator(creator);
         setPostEnrichEmail(foundEmail);
         getEmailLists().then(setContactListsForDialog).catch(() => {});
@@ -1168,6 +1211,8 @@ const BrandDiscover = () => {
         const partial = extractFromEnrichment(data);
         setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
         setEnrichRawCache((prev) => ({ ...prev, [creator.id]: data }));
+        // Persist to Supabase cache so future lookups skip the API
+        setCachedEnrichment(creator.username, data);
       }
       // Log credit usage
       if (effectiveUserId) {
@@ -1273,7 +1318,20 @@ const BrandDiscover = () => {
     const creator = emailListModalCreator;
     let email = emailListModalEmail || contactEmails[creator.id] || null;
 
-    // Enrich if no email
+    // Enrich if no email — check cache first to avoid double-charging
+    if (!email && creator.username) {
+      const cached = await getCachedEnrichment(creator.username);
+      const cachedEmail = cached?.result?.email ? String(cached.result.email) : null;
+      if (cachedEmail) {
+        email = cachedEmail;
+        setContactEmails((prev) => ({ ...prev, [creator.id]: cachedEmail }));
+        if (cached) {
+          const partial = extractFromEnrichment(cached);
+          setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+          setEnrichRawCache((prev) => ({ ...prev, [creator.id]: cached }));
+        }
+      }
+    }
     if (!email) {
       if (!creator.username) { toast.error("No username available to look up email"); setAddingToEmailList(false); return; }
       try {
@@ -1287,6 +1345,7 @@ const BrandDiscover = () => {
           const partial = extractFromEnrichment(data);
           setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
           setEnrichRawCache((prev) => ({ ...prev, [creator.id]: data }));
+          setCachedEnrichment(creator.username, data);
         }
         if (effectiveUserId) logCreditUsage(effectiveUserId, "full_enrichment", 1.03, { handle: creator.username });
         refreshCredits();
@@ -1326,7 +1385,24 @@ const BrandDiscover = () => {
       else if (c.username) { needEnrich.push(c); }
     }
 
-    // Enrich those that need it
+    // Check cache first to avoid unnecessary API calls
+    if (needEnrich.length > 0) {
+      const cachedEmails = await getBatchCachedEmails(needEnrich.map((c) => c.username!));
+      const stillNeed: CreatorCard[] = [];
+      for (const c of needEnrich) {
+        const cachedEmail = cachedEmails.get(c.username!.toLowerCase());
+        if (cachedEmail) {
+          withEmail.push({ creator: c, email: cachedEmail });
+          setContactEmails((prev) => ({ ...prev, [c.id]: cachedEmail }));
+        } else {
+          stillNeed.push(c);
+        }
+      }
+      needEnrich.length = 0;
+      needEnrich.push(...stillNeed);
+    }
+
+    // Enrich those that still need it
     if (needEnrich.length > 0) {
       setBulkEnrichProgress({ current: 0, total: needEnrich.length, found: 0, notFound: 0 });
       let found = 0, notFound = 0;
@@ -1343,6 +1419,7 @@ const BrandDiscover = () => {
               const partial = extractFromEnrichment(data);
               setEnrichCache((prev) => ({ ...prev, [c.id]: partial }));
               setEnrichRawCache((prev) => ({ ...prev, [c.id]: data }));
+              setCachedEnrichment(c.username!, data);
             }
           } else { notFound++; }
           if (effectiveUserId) logCreditUsage(effectiveUserId, "full_enrichment", 1.03, { handle: c.username });
@@ -2010,6 +2087,29 @@ const BrandDiscover = () => {
     ? (apiResults?.creators ?? [])
     : (usernameNotFound?.fallbackResults ?? [])
   ).filter((c) => (c.followers ?? 0) >= 100);
+
+  // Pre-populate contactEmails from Supabase enrichment cache (batch query).
+  // Creators enriched in a previous session get the green email icon immediately.
+  useEffect(() => {
+    const usernames = creators
+      .filter((c) => c.username && !contactEmails[c.id])
+      .map((c) => c.username!);
+    if (usernames.length === 0) return;
+    getBatchCachedEmails(usernames).then((emailMap) => {
+      if (emailMap.size === 0) return;
+      const updates: Record<string, string> = {};
+      for (const c of creators) {
+        if (c.username && !contactEmails[c.id]) {
+          const email = emailMap.get(c.username.toLowerCase());
+          if (email) updates[c.id] = email;
+        }
+      }
+      if (Object.keys(updates).length > 0) {
+        setContactEmails((prev) => ({ ...prev, ...updates }));
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiResults]);
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
   // IMPORTANT: checks directory_members for permanent avatar URLs FIRST to avoid
