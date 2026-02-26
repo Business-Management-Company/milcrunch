@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  Lock, Play, Share2, Check, Calendar, Users, Video,
-  ArrowRight, Mail, Loader2, Sun, Moon, Monitor,
-  CheckCircle2, Smartphone, BookOpen,
+  Lock, Play, Share2, Check, Video,
+  Loader2, Sun, Moon, Monitor,
+  CheckCircle2, BookOpen,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
-  Eye, EyeOff, ChevronDown,
+  Eye, EyeOff, ChevronDown, GripVertical, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -314,6 +314,9 @@ function ManageContentPanel({
   const [contentDraft, setContentDraft] = useState<Record<string, TabContent>>({});
   const [contentSaving, setContentSaving] = useState(false);
   const [customDemoSections, setCustomDemoSections] = useState<Set<string>>(new Set());
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+  const [dragIdx, setDragIdx] = useState<{ tab: string; idx: number } | null>(null);
+  const [addBlockOpen, setAddBlockOpen] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -604,7 +607,7 @@ function ManageContentPanel({
     }));
   };
 
-  const updateSection = (tab: string, idx: number, field: "heading" | "description" | "items" | "image_url" | "demo_url", value: string | string[]) => {
+  const updateSection = (tab: string, idx: number, field: keyof SectionBlock, value: string | string[] | undefined) => {
     setContentDraft((prev) => {
       const sections = [...(prev[tab]?.sections || [])];
       sections[idx] = { ...sections[idx], [field]: value };
@@ -612,9 +615,18 @@ function ManageContentPanel({
     });
   };
 
-  const addSection = (tab: string) => {
+  const addSection = (tab: string, type: BlockType = "text") => {
     setContentDraft((prev) => {
-      const sections = [...(prev[tab]?.sections || []), { heading: "", items: [""], image_url: "" }];
+      const sections = [...(prev[tab]?.sections || []), newBlockDefaults(type)];
+      return { ...prev, [tab]: { ...prev[tab], sections } };
+    });
+  };
+
+  const moveSection = (tab: string, from: number, to: number) => {
+    setContentDraft((prev) => {
+      const sections = [...(prev[tab]?.sections || [])];
+      const [moved] = sections.splice(from, 1);
+      sections.splice(to, 0, moved);
       return { ...prev, [tab]: { ...prev[tab], sections } };
     });
   };
@@ -697,6 +709,68 @@ function ManageContentPanel({
       }
     }
     updateSection(tab, idx, "image_url", "");
+  };
+
+  // --- Section video upload/delete ---
+  const sectionVideoRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const handleSectionVideoUpload = async (tab: string, idx: number, file: File) => {
+    if (file.size > MAX_VIDEO_SIZE) {
+      alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 500 MB.`);
+      return;
+    }
+    if (!(await ensureSession())) return;
+    const oldUrl = contentDraft[tab]?.sections?.[idx]?.video_url;
+    if (oldUrl && oldUrl.includes(VIDEO_BUCKET)) {
+      const oldPath = oldUrl.split(`${VIDEO_BUCKET}/`)[1]?.split("?")[0];
+      if (oldPath) await supabase.storage.from(VIDEO_BUCKET).remove([oldPath]);
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
+    const path = `${tabSlug(tab)}/section-video-${idx}-${Date.now()}.${ext}`;
+    const refKey = `section-video-${tab}-${idx}`;
+    setUploading(refKey);
+    setUploadProgress(0);
+    const progressTimer = setInterval(() => { setUploadProgress((p) => Math.min(p + 8, 90)); }, 200);
+    try {
+      const { error } = await supabase.storage.from(VIDEO_BUCKET).upload(path, file, { upsert: true, contentType: file.type });
+      clearInterval(progressTimer);
+      if (error) {
+        console.error("[ManageContent] section video upload error:", JSON.stringify(error, null, 2));
+        alert(`Upload failed: ${error.message}`);
+        setUploading(null); setUploadProgress(0);
+        return;
+      }
+      setUploadProgress(100);
+      const { data: { publicUrl } } = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path);
+      updateSection(tab, idx, "video_url", publicUrl);
+      setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
+    } catch (err) {
+      clearInterval(progressTimer);
+      console.error("[ManageContent] section video upload exception:", err);
+      alert(`Upload failed unexpectedly — check console`);
+      setUploading(null); setUploadProgress(0);
+    }
+  };
+
+  const handleSectionVideoDelete = async (tab: string, idx: number) => {
+    const url = contentDraft[tab]?.sections?.[idx]?.video_url;
+    if (!url) return;
+    if (url.includes(VIDEO_BUCKET)) {
+      const pathMatch = url.split(`${VIDEO_BUCKET}/`)[1]?.split("?")[0];
+      if (pathMatch) {
+        const { error } = await supabase.storage.from(VIDEO_BUCKET).remove([pathMatch]);
+        if (error) console.error("[ManageContent] section video delete error:", JSON.stringify(error, null, 2));
+      }
+    }
+    updateSection(tab, idx, "video_url", "");
+  };
+
+  const toggleBlockCollapse = (key: string) => {
+    setCollapsedBlocks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
   };
 
   if (!open) return null;
@@ -958,160 +1032,310 @@ function ManageContentPanel({
                 <textarea value={c.description} onChange={(e) => updateContent(tab, "description", e.target.value)} rows={3}
                   className={cn(inputCls, c.descriptionVisible === false && "opacity-40")} />
 
-                {/* Sections */}
+                {/* Blocks */}
                 <div className="mt-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className={cn("text-xs font-medium", dark ? "text-gray-400" : "text-gray-500")}>Sections</label>
-                    <button type="button" onClick={() => addSection(tab)}
-                      className="flex items-center gap-1 text-xs text-[#1e3a5f] hover:underline">
-                      <Plus className="h-3 w-3" /> Add
-                    </button>
-                  </div>
-                  {c.sections.map((section, idx) => (
-                    <div key={idx} className={cn("p-3 rounded-lg mb-2", dark ? "bg-white/5" : "bg-gray-50", section.visible === false && "opacity-40")}>
-                      <div className="flex items-center justify-between mb-1">
-                        <input
-                          type="text"
-                          value={section.heading}
-                          onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
-                          placeholder="Section heading"
-                          className={cn(inputCls, "text-xs font-medium")}
-                        />
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <button type="button" onClick={() => toggleSectionVisibility(tab, idx)}
-                            className={cn("ml-2 p-1 transition-colors", section.visible === false ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
-                            {section.visible === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </button>
-                          {c.sections.length > 1 && (
-                            <button type="button" onClick={() => removeSection(tab, idx)}
-                              className="p-1 text-red-500 hover:text-red-700 flex-shrink-0">
-                              <Minus className="h-3.5 w-3.5" />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className={cn("text-xs font-medium", dark ? "text-gray-400" : "text-gray-500")}>Blocks</label>
+                    <div className="relative">
+                      <button type="button" onClick={() => setAddBlockOpen(addBlockOpen === tab ? null : tab)}
+                        className="flex items-center gap-1 text-xs text-[#1e3a5f] hover:underline font-medium">
+                        <Plus className="h-3 w-3" /> Add Block
+                      </button>
+                      {addBlockOpen === tab && (
+                        <div className={cn("absolute right-0 top-full mt-1 z-50 rounded-lg border shadow-lg py-1 min-w-[160px]",
+                          dark ? "bg-[#1f2937] border-white/10" : "bg-white border-gray-200")}>
+                          {BLOCK_TYPES.map((bt) => (
+                            <button key={bt.type} type="button"
+                              onClick={() => { addSection(tab, bt.type); setAddBlockOpen(null); }}
+                              className={cn("w-full text-left px-3 py-1.5 text-xs flex items-center gap-2",
+                                dark ? "hover:bg-white/10" : "hover:bg-gray-100")}>
+                              <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold uppercase", bt.color)}>{bt.label}</span>
                             </button>
-                          )}
+                          ))}
                         </div>
-                      </div>
-                      <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Description (optional paragraph)</label>
-                      <textarea
-                        value={section.description || ""}
-                        onChange={(e) => updateSection(tab, idx, "description", e.target.value)}
-                        rows={2}
-                        placeholder="Optional paragraph text above the bullet items"
-                        className={cn(inputCls, "text-xs")}
-                      />
-                      <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Items (one per line)</label>
-                      <textarea
-                        value={section.items.join("\n")}
-                        onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
-                        rows={Math.max(3, section.items.length + 1)}
-                        className={cn(inputCls, "text-xs")}
-                      />
+                      )}
+                    </div>
+                  </div>
 
-                      {/* Section image */}
-                      <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Section Image</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          placeholder="Paste image URL or upload…"
-                          value={section.image_url || ""}
-                          onChange={(e) => updateSection(tab, idx, "image_url", e.target.value)}
-                          className={cn(inputCls, "text-xs flex-1")}
-                        />
-                        <input
-                          ref={(el) => { sectionImageRefs.current[`${tab}-${idx}`] = el; }}
-                          type="file"
-                          accept={ACCEPTED_IMAGE_TYPES}
-                          className="hidden"
-                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSectionImageUpload(tab, idx, f); e.target.value = ""; }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => sectionImageRefs.current[`${tab}-${idx}`]?.click()}
-                          disabled={!!uploading}
-                          className={cn(
-                            "flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border transition-colors disabled:opacity-50 shrink-0",
-                            dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50"
-                          )}
-                        >
-                          <Upload className="h-3 w-3" />
-                          {section.image_url ? "Replace" : "Upload"}
-                        </button>
-                        {section.image_url && (
-                          <button type="button" onClick={() => handleSectionImageDelete(tab, idx)} disabled={!!uploading}
-                            className="flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 shrink-0">
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                  {c.sections.map((section, idx) => {
+                    const blockType = inferBlockType(section);
+                    const blockKey = `${tab}-${idx}`;
+                    const isCollapsed = collapsedBlocks.has(blockKey);
+                    const isDragging = dragIdx?.tab === tab && dragIdx?.idx === idx;
+
+                    return (
+                      <div
+                        key={idx}
+                        draggable
+                        onDragStart={(e) => { setDragIdx({ tab, idx }); e.dataTransfer.effectAllowed = "move"; }}
+                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragIdx && dragIdx.tab === tab && dragIdx.idx !== idx) {
+                            moveSection(tab, dragIdx.idx, idx);
+                          }
+                          setDragIdx(null);
+                        }}
+                        onDragEnd={() => setDragIdx(null)}
+                        className={cn(
+                          "rounded-lg mb-2 transition-all",
+                          dark ? "bg-white/5" : "bg-gray-50",
+                          section.visible === false && "opacity-40",
+                          isDragging && "opacity-50 ring-2 ring-[#1e3a5f]"
+                        )}
+                      >
+                        {/* Block header bar */}
+                        <div className="flex items-center gap-1.5 px-3 py-2 cursor-grab">
+                          <GripVertical className={cn("h-4 w-4 flex-shrink-0", dark ? "text-gray-600" : "text-gray-400")} />
+                          <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0", blockTypeColor(blockType))}>
+                            {blockType}
+                          </span>
+                          <span className={cn("text-xs truncate flex-1 min-w-0", dark ? "text-gray-300" : "text-gray-700")}>
+                            {section.heading || (blockType === "image" ? "Image" : blockType === "video" ? "Video" : blockType === "stats" ? "Stats" : "Untitled")}
+                          </span>
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <button type="button" onClick={() => toggleSectionVisibility(tab, idx)}
+                              className={cn("p-1 transition-colors", section.visible === false ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
+                              {section.visible === false ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                            {c.sections.length > 1 && (
+                              <button type="button" onClick={() => removeSection(tab, idx)}
+                                className="p-1 text-red-500 hover:text-red-700 flex-shrink-0">
+                                <Minus className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <button type="button" onClick={() => toggleBlockCollapse(blockKey)}
+                              className={cn("p-1 transition-colors", dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700")}>
+                              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", !isCollapsed && "rotate-90")} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Block body — type-specific editors */}
+                        {!isCollapsed && (
+                          <div className="px-3 pb-3 space-y-2">
+
+                            {/* HERO block editor */}
+                            {blockType === "hero" && (
+                              <>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Heading</label>
+                                  <input type="text" value={section.heading || ""} onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
+                                    placeholder="Hero heading" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Subheading</label>
+                                  <input type="text" value={section.subheading || ""} onChange={(e) => updateSection(tab, idx, "subheading", e.target.value)}
+                                    placeholder="Optional subheading" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Background Image/Video URL</label>
+                                  <input type="text" value={section.media_url || ""} onChange={(e) => updateSection(tab, idx, "media_url", e.target.value)}
+                                    placeholder="Paste URL or leave empty" className={cn(inputCls, "text-xs")} />
+                                </div>
+                              </>
+                            )}
+
+                            {/* TEXT block editor */}
+                            {blockType === "text" && (
+                              <>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Heading (optional)</label>
+                                  <input type="text" value={section.heading || ""} onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
+                                    placeholder="Section heading" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Text</label>
+                                  <textarea value={section.description || ""} onChange={(e) => updateSection(tab, idx, "description", e.target.value)}
+                                    rows={4} placeholder="Paragraph text" className={cn(inputCls, "text-xs")} />
+                                </div>
+                              </>
+                            )}
+
+                            {/* FEATURES block editor */}
+                            {blockType === "features" && (
+                              <>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Heading</label>
+                                  <input type="text" value={section.heading || ""} onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
+                                    placeholder="Section heading" className={cn(inputCls, "text-xs font-medium")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Description (optional intro)</label>
+                                  <textarea value={section.description || ""} onChange={(e) => updateSection(tab, idx, "description", e.target.value)}
+                                    rows={2} placeholder="Optional intro paragraph" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Items (one per line)</label>
+                                  <textarea value={section.items.join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
+                                    rows={Math.max(3, section.items.length + 1)} className={cn(inputCls, "text-xs")} />
+                                </div>
+                              </>
+                            )}
+
+                            {/* IMAGE block editor */}
+                            {blockType === "image" && (
+                              <>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Heading (optional)</label>
+                                  <input type="text" value={section.heading || ""} onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
+                                    placeholder="Optional heading" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Image</label>
+                                  <div className="flex items-center gap-2">
+                                    <input type="text" placeholder="Paste image URL or upload…" value={section.image_url || ""}
+                                      onChange={(e) => updateSection(tab, idx, "image_url", e.target.value)}
+                                      className={cn(inputCls, "text-xs flex-1")} />
+                                    <input ref={(el) => { sectionImageRefs.current[`${tab}-${idx}`] = el; }}
+                                      type="file" accept={ACCEPTED_IMAGE_TYPES} className="hidden"
+                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSectionImageUpload(tab, idx, f); e.target.value = ""; }} />
+                                    <button type="button" onClick={() => sectionImageRefs.current[`${tab}-${idx}`]?.click()} disabled={!!uploading}
+                                      className={cn("flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border transition-colors disabled:opacity-50 shrink-0",
+                                        dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50")}>
+                                      <Upload className="h-3 w-3" /> {section.image_url ? "Replace" : "Upload"}
+                                    </button>
+                                    {section.image_url && (
+                                      <button type="button" onClick={() => handleSectionImageDelete(tab, idx)} disabled={!!uploading}
+                                        className="flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 shrink-0">
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {uploading === `section-${tab}-${idx}` && (
+                                    <div className={cn("mt-1 h-1.5 rounded-full overflow-hidden", dark ? "bg-white/10" : "bg-gray-200")}>
+                                      <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                    </div>
+                                  )}
+                                  {section.image_url && (
+                                    <div className={cn("mt-1.5 rounded overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
+                                      <img src={section.image_url} alt="Section image" className="w-full max-h-32 object-cover" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Caption (optional)</label>
+                                  <input type="text" value={section.caption || ""} onChange={(e) => updateSection(tab, idx, "caption", e.target.value)}
+                                    placeholder="Image caption" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                {/* Demo link dropdown */}
+                                {(() => {
+                                  const sectionKey = `${tab}-${idx}`;
+                                  const isPreset = !!section.demo_url && PRESET_URLS.has(section.demo_url);
+                                  const isCustom = customDemoSections.has(sectionKey) || (!!section.demo_url && !isPreset);
+                                  const selectValue = !section.demo_url && !isCustom ? "" : isPreset ? section.demo_url : "__custom__";
+                                  return (
+                                    <>
+                                      <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Demo Link (opens in modal)</label>
+                                      <div className="relative">
+                                        <select value={selectValue}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === "__custom__") {
+                                              setCustomDemoSections((prev) => new Set(prev).add(sectionKey));
+                                              updateSection(tab, idx, "demo_url", "");
+                                            } else {
+                                              setCustomDemoSections((prev) => { const next = new Set(prev); next.delete(sectionKey); return next; });
+                                              updateSection(tab, idx, "demo_url", val);
+                                            }
+                                          }}
+                                          className={cn("w-full appearance-none rounded-lg pl-3 pr-8 py-2 text-xs border transition-colors cursor-pointer",
+                                            dark ? "bg-white/10 border-white/20 text-white focus:border-[#1e3a5f]" : "bg-gray-50 border-gray-300 text-[#111827] focus:border-[#1e3a5f]")}>
+                                          <option value="">- None -</option>
+                                          {DEMO_LINK_PRESETS.map((p) => (<option key={p.url} value={p.url}>{p.label}</option>))}
+                                          <option value="__custom__">(Custom URL)</option>
+                                        </select>
+                                        <ChevronDown className={cn("absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none", dark ? "text-gray-400" : "text-gray-500")} />
+                                      </div>
+                                      {isCustom && (
+                                        <input type="text" placeholder="/events/mil-con-2026?tab=gtm-planner" value={section.demo_url || ""}
+                                          onChange={(e) => updateSection(tab, idx, "demo_url", e.target.value)} className={cn(inputCls, "text-xs mt-1")} />
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </>
+                            )}
+
+                            {/* VIDEO block editor */}
+                            {blockType === "video" && (
+                              <>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Heading (optional)</label>
+                                  <input type="text" value={section.heading || ""} onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
+                                    placeholder="Optional heading" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Video</label>
+                                  <input type="text" value={section.video_url || ""} onChange={(e) => updateSection(tab, idx, "video_url", e.target.value)}
+                                    placeholder="Paste YouTube/Vimeo URL or upload" className={inputCls} />
+                                  {section.video_url && !uploading?.startsWith(`section-video-${tab}-${idx}`) && (
+                                    <p className={cn("text-xs mt-1", parseVideoEmbed(section.video_url) ? "text-emerald-500" : "text-amber-500")}>
+                                      {parseVideoEmbed(section.video_url) ? `${parseVideoEmbed(section.video_url)!.type.toUpperCase()} detected` : "Unrecognized URL format"}
+                                    </p>
+                                  )}
+                                  {uploading === `section-video-${tab}-${idx}` && (
+                                    <div className="mt-2">
+                                      <div className={cn("h-1.5 rounded-full overflow-hidden", dark ? "bg-white/10" : "bg-gray-200")}>
+                                        <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                      </div>
+                                      <p className="text-xs text-[#1e3a5f] mt-1">Uploading... {uploadProgress}%</p>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <input ref={(el) => { sectionVideoRefs.current[`${tab}-${idx}`] = el; }}
+                                      type="file" accept={ACCEPTED_VIDEO_TYPES} className="hidden"
+                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSectionVideoUpload(tab, idx, f); e.target.value = ""; }} />
+                                    <button type="button" onClick={() => sectionVideoRefs.current[`${tab}-${idx}`]?.click()} disabled={!!uploading}
+                                      className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
+                                        dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50")}>
+                                      <Upload className="h-3.5 w-3.5" /> {section.video_url ? "Replace" : "Upload"}
+                                    </button>
+                                    {section.video_url && (
+                                      <button type="button" onClick={() => handleSectionVideoDelete(tab, idx)} disabled={!!uploading}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50">
+                                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                                      </button>
+                                    )}
+                                  </div>
+                                  {section.video_url && parseVideoEmbed(section.video_url) && (
+                                    <div className={cn("mt-2 rounded-lg overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
+                                      {parseVideoEmbed(section.video_url)!.type === "mp4" ? (
+                                        <video src={parseVideoEmbed(section.video_url)!.embedUrl} controls className="w-full aspect-video bg-black" preload="metadata" />
+                                      ) : (
+                                        <iframe src={parseVideoEmbed(section.video_url)!.embedUrl} title="Video preview" className="w-full aspect-video" style={{ border: 0 }}
+                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+
+                            {/* STATS block editor */}
+                            {blockType === "stats" && (
+                              <>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Heading (optional)</label>
+                                  <input type="text" value={section.heading || ""} onChange={(e) => updateSection(tab, idx, "heading", e.target.value)}
+                                    placeholder="Optional heading" className={cn(inputCls, "text-xs")} />
+                                </div>
+                                <div>
+                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>
+                                    Items (one per line, format: <span className="font-mono">number | label</span>)
+                                  </label>
+                                  <textarea value={section.items.join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
+                                    rows={Math.max(3, section.items.length + 1)} placeholder={"310M+ | Creator Database\n85-95% | Verification Accuracy"}
+                                    className={cn(inputCls, "text-xs font-mono")} />
+                                </div>
+                              </>
+                            )}
+
+                          </div>
                         )}
                       </div>
-                      {uploading === `section-${tab}-${idx}` && (
-                        <div className={cn("mt-1 h-1.5 rounded-full overflow-hidden", dark ? "bg-white/10" : "bg-gray-200")}>
-                          <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                        </div>
-                      )}
-                      {section.image_url && (
-                        <div className={cn("mt-1.5 rounded overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
-                          <img src={section.image_url} alt="Section image" className="w-full max-h-32 object-cover" />
-                        </div>
-                      )}
-
-                      {/* Demo link dropdown + custom URL */}
-                      {(() => {
-                        const sectionKey = `${tab}-${idx}`;
-                        const isPreset = !!section.demo_url && PRESET_URLS.has(section.demo_url);
-                        const isCustom = customDemoSections.has(sectionKey) || (!!section.demo_url && !isPreset);
-                        const selectValue = !section.demo_url && !isCustom ? "" : isPreset ? section.demo_url : "__custom__";
-                        return (
-                          <>
-                            <label className={cn("text-xs block mt-2 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Demo Link (opens in modal)</label>
-                            <div className="relative">
-                              <select
-                                value={selectValue}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val === "__custom__") {
-                                    setCustomDemoSections((prev) => new Set(prev).add(sectionKey));
-                                    updateSection(tab, idx, "demo_url", "");
-                                  } else {
-                                    setCustomDemoSections((prev) => { const next = new Set(prev); next.delete(sectionKey); return next; });
-                                    updateSection(tab, idx, "demo_url", val);
-                                  }
-                                }}
-                                className={cn(
-                                  "w-full appearance-none rounded-lg pl-3 pr-8 py-2 text-xs border transition-colors cursor-pointer",
-                                  dark
-                                    ? "bg-white/10 border-white/20 text-white focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
-                                    : "bg-gray-50 border-gray-300 text-[#111827] focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]"
-                                )}
-                              >
-                                <option value="">— None —</option>
-                                {DEMO_LINK_PRESETS.map((p) => (
-                                  <option key={p.url} value={p.url}>{p.label}</option>
-                                ))}
-                                <option value="__custom__">(Custom URL)</option>
-                              </select>
-                              <ChevronDown className={cn(
-                                "absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none",
-                                dark ? "text-gray-400" : "text-gray-500"
-                              )} />
-                            </div>
-                            {isCustom && (
-                              <input
-                                type="text"
-                                placeholder="/events/mil-con-2026?tab=gtm-planner"
-                                value={section.demo_url || ""}
-                                onChange={(e) => updateSection(tab, idx, "demo_url", e.target.value)}
-                                className={cn(inputCls, "text-xs mt-1")}
-                              />
-                            )}
-                            {section.demo_url && (
-                              <p className={cn("text-[10px] mt-0.5", dark ? "text-gray-600" : "text-gray-400")}>
-                                Opens: {section.demo_url}
-                              </p>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Bottom note */}
@@ -1284,122 +1508,8 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded, dbContent }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean; onVideoEnded?: () => void; dbContent?: TabContent }) {
-  const content = dbContent || TAB_CONTENT["Overview"];
-  const [demoModal, setDemoModal] = useState<{ open: boolean; url: string }>({ open: false, url: "" });
-  return (
-    <div className="space-y-16">
-      {/* Hero */}
-      <section className="text-center max-w-3xl mx-auto pt-4">
-        {content.headlineVisible !== false && (
-          <h2
-            className={cn(
-              "text-3xl md:text-4xl font-extrabold leading-tight mb-2 transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
-            )}
-          >
-            {content.headline}{" "}
-            {content.headlineAccentVisible !== false && content.headlineAccent && (
-              <span className="text-[#1e3a5f]">{content.headlineAccent}</span>
-            )}
-          </h2>
-        )}
-        {content.descriptionVisible !== false && (
-          <p
-            className={cn(
-              "text-base max-w-2xl mx-auto leading-relaxed transition-colors duration-300",
-              dark ? "text-gray-400" : "text-[#6B7280]"
-            )}
-          >
-            {content.description}
-          </p>
-        )}
-      </section>
-
-      <div className="max-w-3xl mx-auto" style={{ margin: "24px auto" }}>
-        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={isSuperAdmin} onVideoEnded={onVideoEnded} />
-      </div>
-
-      {/* Sections */}
-      {content.sections.filter((s) => s.visible !== false).length > 0 && (
-        <section className="max-w-[760px] mx-auto text-left space-y-8">
-          {content.sections.filter((s) => s.visible !== false).map((section) => (
-            <div key={section.heading} className="space-y-3">
-              <h3
-                className={cn(
-                  "text-lg font-bold transition-colors duration-300",
-                  dark ? "text-white" : "text-[#111827]"
-                )}
-              >
-                {section.heading}
-              </h3>
-              {section.description && (
-                <p className={cn("text-base leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                  {section.description}
-                </p>
-              )}
-              {section.items.length > 0 && section.items.some((i) => i.trim()) && (
-                <div className="space-y-3">
-                  {section.items.filter((i) => i.trim()).map((item) => (
-                    <div key={item} className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                      <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                        {item}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {section.image_url && (
-                <div
-                  className={cn("relative mt-4", section.demo_url && "group cursor-pointer")}
-                  onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
-                >
-                  <img
-                    src={section.image_url}
-                    alt=""
-                    className="w-full rounded-xl shadow-md object-cover"
-                  />
-                  {section.demo_url && (
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm flex items-center gap-2">
-                        <Play className="h-5 w-5" /> Explore Live Demo
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </section>
-      )}
-
-      {/* Bottom note */}
-      {content.bottomNote && (
-        <section
-          className={cn(
-            "max-w-3xl mx-auto rounded-xl p-6 transition-colors duration-300",
-            dark
-              ? "bg-white/[0.04] border border-white/[0.08]"
-              : "bg-white border border-[#E5E7EB]"
-          )}
-        >
-          <h3 className={cn("text-base font-bold mb-2 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
-            {content.bottomNote.heading}
-          </h3>
-          <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-            {content.bottomNote.text}
-          </p>
-        </section>
-      )}
-
-      <DemoIframeModal
-        open={demoModal.open}
-        onOpenChange={(v) => setDemoModal((prev) => ({ ...prev, open: v }))}
-        url={demoModal.url}
-      />
-    </div>
-  );
+function OverviewTab({ dark, dbContent }: { dark: boolean; dbContent?: TabContent }) {
+  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} />;
 }
 
 /* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
@@ -1407,6 +1517,23 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded, dbC
 /* ------------------------------------------------------------------ */
 /* Tab content data for all non-Financial tabs                          */
 /* ------------------------------------------------------------------ */
+
+type BlockType = "hero" | "text" | "features" | "image" | "video" | "stats";
+
+interface SectionBlock {
+  type?: BlockType;
+  heading?: string;
+  subheading?: string;
+  description?: string;
+  items: string[];
+  image_url?: string;
+  video_url?: string;
+  media_url?: string;
+  media_type?: "video" | "image";
+  caption?: string;
+  demo_url?: string;
+  visible?: boolean;
+}
 
 interface TabContent {
   headline: string;
@@ -1416,8 +1543,41 @@ interface TabContent {
   heroImage?: string;
   description: string;
   descriptionVisible?: boolean;
-  sections: { heading: string; description?: string; items: string[]; image_url?: string; demo_url?: string; visible?: boolean }[];
+  sections: SectionBlock[];
   bottomNote?: { heading: string; text: string };
+}
+
+/** Infer block type from existing section data for backward compat */
+function inferBlockType(s: SectionBlock): BlockType {
+  if (s.type) return s.type;
+  if (s.video_url) return "video";
+  if (s.items?.length > 0 && s.items.some((i) => i.trim())) return "features";
+  if (s.image_url && !s.description && (!s.items || !s.items.some((i) => i.trim()))) return "image";
+  return "text";
+}
+
+const BLOCK_TYPES: { type: BlockType; label: string; color: string }[] = [
+  { type: "hero", label: "Hero", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300" },
+  { type: "text", label: "Text", color: "bg-gray-100 text-gray-700 dark:bg-gray-700/40 dark:text-gray-300" },
+  { type: "features", label: "Features", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
+  { type: "image", label: "Image", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
+  { type: "video", label: "Video", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300" },
+  { type: "stats", label: "Stats", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
+];
+
+function blockTypeColor(t: BlockType): string {
+  return BLOCK_TYPES.find((b) => b.type === t)?.color || BLOCK_TYPES[1].color;
+}
+
+function newBlockDefaults(type: BlockType): SectionBlock {
+  const base: SectionBlock = { type, heading: "", items: [] };
+  if (type === "hero") return { ...base, subheading: "" };
+  if (type === "text") return { ...base, description: "" };
+  if (type === "features") return { ...base, description: "", items: [""] };
+  if (type === "image") return { ...base, image_url: "", caption: "" };
+  if (type === "video") return { ...base, video_url: "" };
+  if (type === "stats") return { ...base, items: [""] };
+  return base;
 }
 
 const TAB_CONTENT: Record<string, TabContent> = {
@@ -1760,6 +1920,8 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
     );
   }
 
+  const visibleBlocks = content.sections.filter((s) => s.visible !== false);
+
   return (
     <div className="space-y-12">
       {/* Deep Dive link */}
@@ -1782,7 +1944,7 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
         </div>
       )}
 
-      {/* Hero */}
+      {/* Tab-level hero headline */}
       <section className="text-center max-w-3xl mx-auto pt-4">
         {content.headlineVisible !== false && (
           <h2
@@ -1816,65 +1978,227 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
         )}
       </section>
 
-      {/* Sections */}
-      {content.sections.filter((s) => s.visible !== false).map((section) => (
-        <section key={section.heading} className="max-w-3xl mx-auto">
-          <h3
-            className={cn(
-              "text-lg font-bold mb-4 transition-colors duration-300",
-              dark ? "text-white" : "text-[#111827]"
+      {/* Block-aware section rendering */}
+      {visibleBlocks.map((section, i) => {
+        const blockType = inferBlockType(section);
+
+        /* ---- HERO block ---- */
+        if (blockType === "hero") {
+          const hasBg = !!section.media_url;
+          const bgParsed = section.media_url ? parseVideoEmbed(section.media_url) : null;
+          return (
+            <section key={`block-${i}`} className="max-w-4xl mx-auto">
+              {hasBg ? (
+                <div className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden bg-black">
+                  {bgParsed?.type === "mp4" ? (
+                    <video src={bgParsed.embedUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
+                  ) : section.media_url ? (
+                    <img src={section.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : null}
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="text-center px-6">
+                      {section.heading && <h2 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">{section.heading}</h2>}
+                      {section.subheading && <p className="text-lg text-white/80 mt-2">{section.subheading}</p>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  {section.heading && (
+                    <h2 className={cn("text-3xl md:text-4xl font-extrabold leading-tight transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                      {section.heading}
+                    </h2>
+                  )}
+                  {section.subheading && (
+                    <p className={cn("text-lg mt-2 transition-colors duration-300", dark ? "text-gray-400" : "text-[#6B7280]")}>{section.subheading}</p>
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        }
+
+        /* ---- TEXT block ---- */
+        if (blockType === "text") {
+          return (
+            <section key={`block-${i}`} className="max-w-3xl mx-auto">
+              {section.heading && (
+                <h3 className={cn("text-lg font-bold mb-3 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                  {section.heading}
+                </h3>
+              )}
+              {section.description && (
+                <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                  {section.description}
+                </p>
+              )}
+            </section>
+          );
+        }
+
+        /* ---- FEATURES block ---- */
+        if (blockType === "features") {
+          return (
+            <section key={`block-${i}`} className="max-w-3xl mx-auto">
+              {section.heading && (
+                <h3 className={cn("text-lg font-bold mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                  {section.heading}
+                </h3>
+              )}
+              {section.description && (
+                <p className={cn("text-sm leading-relaxed mb-4 transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                  {section.description}
+                </p>
+              )}
+              {section.items.length > 0 && section.items.some((it) => it.trim()) && (
+                <div className="space-y-3">
+                  {section.items.filter((it) => it.trim()).map((item, j) => (
+                    <div key={j} className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                        {item}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Features can also have an image with demo overlay (backward compat) */}
+              {section.image_url && (
+                <div
+                  className={cn("relative mt-5", section.demo_url && "group cursor-pointer")}
+                  onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
+                >
+                  <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" />
+                  {section.demo_url && (
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                      <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        }
+
+        /* ---- IMAGE block ---- */
+        if (blockType === "image") {
+          return (
+            <section key={`block-${i}`} className="max-w-3xl mx-auto">
+              {section.heading && (
+                <h3 className={cn("text-lg font-bold mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                  {section.heading}
+                </h3>
+              )}
+              {section.image_url && (
+                <div
+                  className={cn("relative", section.demo_url && "group cursor-pointer")}
+                  onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
+                >
+                  <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" />
+                  {section.demo_url && (
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                      <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {section.caption && (
+                <p className={cn("text-xs mt-2 text-center transition-colors duration-300", dark ? "text-gray-500" : "text-gray-400")}>{section.caption}</p>
+              )}
+            </section>
+          );
+        }
+
+        /* ---- VIDEO block ---- */
+        if (blockType === "video") {
+          return (
+            <section key={`block-${i}`} className="max-w-3xl mx-auto">
+              {section.heading && (
+                <h3 className={cn("text-lg font-bold mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                  {section.heading}
+                </h3>
+              )}
+              {section.video_url && (
+                <ProspectusMedia videoUrl={section.video_url} dark={dark} isSuperAdmin={false} />
+              )}
+            </section>
+          );
+        }
+
+        /* ---- STATS block ---- */
+        if (blockType === "stats") {
+          const statItems = section.items.filter((it) => it.includes("|")).map((it) => {
+            const [num, ...rest] = it.split("|");
+            return { num: num.trim(), label: rest.join("|").trim() };
+          });
+          return (
+            <section key={`block-${i}`} className="max-w-3xl mx-auto">
+              {section.heading && (
+                <h3 className={cn("text-lg font-bold mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                  {section.heading}
+                </h3>
+              )}
+              {statItems.length > 0 && (
+                <div className={cn("grid gap-4", statItems.length <= 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2 md:grid-cols-4")}>
+                  {statItems.map((si, j) => (
+                    <div
+                      key={j}
+                      className={cn(
+                        "rounded-xl border p-5 text-center transition-colors duration-300",
+                        dark ? "border-white/[0.08] bg-white/[0.03]" : "border-[#E5E7EB] bg-white"
+                      )}
+                    >
+                      <p className="text-2xl font-bold text-[#1e3a5f]">{si.num}</p>
+                      <p className={cn("text-xs mt-1 transition-colors duration-300", dark ? "text-gray-400" : "text-gray-500")}>{si.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        }
+
+        /* ---- Fallback (unknown type): render as legacy section ---- */
+        return (
+          <section key={`block-${i}`} className="max-w-3xl mx-auto">
+            {section.heading && (
+              <h3 className={cn("text-lg font-bold mb-4 transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
+                {section.heading}
+              </h3>
             )}
-          >
-            {section.heading}
-          </h3>
-          {section.image_url && (
-            <div
-              className={cn("relative mb-5", section.demo_url && "group cursor-pointer")}
-              onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
-            >
-              <img
-                src={section.image_url}
-                alt=""
-                className="w-full rounded-xl shadow-md object-cover"
-              />
-              {section.demo_url && (
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm flex items-center gap-2">
-                    <Play className="h-5 w-5" /> Explore Live Demo
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-          {section.description && (
-            <p
-              className={cn(
-                "text-sm leading-relaxed mb-4 transition-colors duration-300",
-                dark ? "text-gray-300" : "text-[#374151]"
-              )}
-            >
-              {section.description}
-            </p>
-          )}
-          {section.items.length > 0 && section.items.some((i) => i.trim()) && (
-            <div className="space-y-3">
-              {section.items.filter((i) => i.trim()).map((item) => (
-                <div key={item} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <p
-                    className={cn(
-                      "text-sm leading-relaxed transition-colors duration-300",
-                      dark ? "text-gray-300" : "text-[#374151]"
-                    )}
-                  >
-                    {item}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      ))}
+            {section.image_url && (
+              <div
+                className={cn("relative mb-5", section.demo_url && "group cursor-pointer")}
+                onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
+              >
+                <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" />
+                {section.demo_url && (
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                    <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {section.description && (
+              <p className={cn("text-sm leading-relaxed mb-4 transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                {section.description}
+              </p>
+            )}
+            {section.items.length > 0 && section.items.some((it) => it.trim()) && (
+              <div className="space-y-3">
+                {section.items.filter((it) => it.trim()).map((item, j) => (
+                  <div key={j} className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                      {item}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })}
 
       {/* Bottom note */}
       {content.bottomNote && (
@@ -2385,20 +2709,7 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {/* Tab media — rendered above content for non-Overview tabs */}
-        {activeTab !== "Overview" && (videoUrls[activeTab] || imageUrls[activeTab] || isSuperAdmin) && (
-          <div className="mb-8">
-            <ProspectusMedia
-              videoUrl={videoUrls[activeTab]}
-              imageUrl={imageUrls[activeTab]}
-              dark={darkMode}
-              isSuperAdmin={!!isSuperAdmin}
-              onVideoEnded={unlockNextTab}
-            />
-          </div>
-        )}
-
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} isSuperAdmin={!!isSuperAdmin} onVideoEnded={unlockNextTab} dbContent={tabContent["Overview"]} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} />}
         {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} />}
         {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} />}
         {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} />}
