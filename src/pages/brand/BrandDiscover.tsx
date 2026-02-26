@@ -428,6 +428,7 @@ const SEARCH_STATUS_TEXTS = [
 /** 4×2 grid of cycling creator avatars shown while search loads. */
 function SearchShowcase({ avatars }: { avatars: { url: string; name: string }[] }) {
   const GRID_SIZE = 8;
+  const INITIAL_KEY_MAX = GRID_SIZE; // keys 0..7 are the initial seed (no glow)
   const [grid, setGrid] = useState<{ url: string; name: string; key: number }[]>([]);
   const [statusIdx, setStatusIdx] = useState(0);
   const nextKey = useRef(GRID_SIZE);
@@ -484,21 +485,27 @@ function SearchShowcase({ avatars }: { avatars: { url: string; name: string }[] 
   return (
     <div className="flex flex-col items-center gap-5 py-8">
       <div className="grid grid-cols-4 gap-4">
-        {grid.map((item) => (
-          <div
-            key={item.key}
-            className="animate-in fade-in zoom-in-90 duration-500"
-          >
-            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 shadow-sm bg-gradient-to-br from-[#1e3a5f] to-[#2d5282]">
-              <img
-                src={safeImgUrl(item.url)}
-                alt={item.name}
-                className="w-full h-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
+        {grid.map((item) => {
+          const isFresh = item.key >= INITIAL_KEY_MAX;
+          return (
+            <div
+              key={item.key}
+              className={cn(
+                "relative animate-in fade-in zoom-in-90 duration-500",
+                isFresh && "avatar-ring-pulse"
+              )}
+            >
+              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 shadow-sm bg-gradient-to-br from-[#1e3a5f] to-[#2d5282]">
+                <img
+                  src={safeImgUrl(item.url)}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="flex items-center gap-2 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -1314,12 +1321,16 @@ const BrandDiscover = () => {
   }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, updateUrlWithSearch, user, refreshCredits]);
 
   // Fire search after auto-load applies filters (runs once after state updates)
+  // Guard: only consume the flag when searchQuery is non-empty so the effect
+  // doesn't fire with a stale empty-string closure on the initial render
+  // (the URL-params effect sets pendingAutoSearch=true in the same render cycle
+  // before React has committed the searchQuery state update).
   useEffect(() => {
-    if (pendingAutoSearch.current) {
+    if (pendingAutoSearch.current && searchQuery.trim()) {
       pendingAutoSearch.current = false;
       const timer = setTimeout(() => {
         runSearch();
-      }, 600);
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [searchQuery, runSearch]);

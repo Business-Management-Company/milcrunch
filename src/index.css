@@ -182,6 +182,20 @@
     50% { filter: drop-shadow(0 0 40px hsla(247, 74%, 63%, 0.9)); }
   }
 
+  @keyframes avatar-ring-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.45); opacity: 0; }
+  }
+  .avatar-ring-pulse::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    border: 2px solid rgba(96, 165, 250, 0.8);
+    animation: avatar-ring-pulse 1s ease-out forwards;
+    pointer-events: none;
+  }
+
   .bg-stars {
     background-image: 
       radial-gradient(2px 2px at 20px 30px, hsl(45 100% 70%), transparent),
