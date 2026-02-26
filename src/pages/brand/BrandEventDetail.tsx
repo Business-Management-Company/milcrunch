@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom"
 import { getCreatorAvatar } from "@/lib/avatar";
 import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
-  Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye,
+  Save, Loader2, ExternalLink, Settings, Clock, LayoutList, Eye, ChevronDown, Info,
   Search, Download, CheckCircle2, XCircle, Ticket, Globe, Copy, Code, QrCode,
   MessageCircle, ScanLine, Printer, DollarSign, BarChart3, Video, Radio, Play,
   Film, Sparkles, Target, Type, Clapperboard, Palette, Captions, Scissors,
@@ -43,6 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -786,31 +787,110 @@ const BrandEventDetail = () => {
           </TabsList>
 
           {/* ===== OVERVIEW ===== */}
-          <TabsContent value="overview">
-            {/* Event AI Assistant — top of overview */}
-            {event && (
-              <div className="mb-6">
-                <EventAIAssistant
-                  eventTitle={event.title}
-                  eventDescription={event.description}
-                  eventType={event.event_type}
-                  startDate={event.start_date}
-                  endDate={event.end_date}
-                  venue={event.venue}
-                  city={event.city}
-                  state={event.state}
-                  capacity={event.capacity}
-                  status={event.is_published ? "published" : "draft"}
-                  sponsors={sponsors.map(s => ({ sponsor_name: s.sponsor_name, tier: s.tier }))}
-                  speakers={speakers.map(s => ({ creator_name: s.creator_name, role: s.role, confirmed: s.confirmed }))}
-                  tickets={eventTickets.map(t => ({ name: t.name, price: t.price, quantity: t.quantity, sold: t.sold }))}
-                  registrationCount={registrations.length}
-                  agendaSessionCount={agenda.length}
-                />
+          <TabsContent value="overview" className="space-y-5">
+
+            {/* ── Hero Header Card ── */}
+            <Card className="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-[#000741]/[0.03] via-white to-blue-50/40 dark:from-[#000741]/20 dark:via-[#1A1D27] dark:to-[#1A1D27]">
+              {/* Decorative accent stripe */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pd-blue via-[#6C5CE7] to-pd-blue" />
+
+              <div className="p-6 md:p-8">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{editTitle || event?.title || "Untitled Event"}</h2>
+                      <Badge className={STATUS_STYLES[statusKey] + " text-xs font-medium capitalize shrink-0"}>{statusKey}</Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
+                      {(editStart || editEnd) && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                          {editStart ? format(new Date(editStart + "T00:00"), "MMM d, yyyy") : "TBD"}
+                          {editEnd ? ` \u2013 ${format(new Date(editEnd + "T00:00"), "MMM d, yyyy")}` : ""}
+                        </span>
+                      )}
+                      {editVenue && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                          {[editVenue, editCity, editState].filter(Boolean).join(", ")}
+                        </span>
+                      )}
+                      {editCapacity && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Users className="h-3.5 w-3.5 text-gray-400" />
+                          {Number(editCapacity).toLocaleString()} max
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {statusKey === "draft" && (
+                      <Button size="sm" onClick={() => changeStatus("published")} disabled={saving} className="bg-pd-blue hover:bg-pd-darkblue text-white">
+                        <Eye className="h-4 w-4 mr-1" /> Publish
+                      </Button>
+                    )}
+                    {statusKey === "published" && (
+                      <Button size="sm" onClick={() => changeStatus("active")} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white">
+                        Mark Active
+                      </Button>
+                    )}
+                    {statusKey === "active" && (
+                      <Button size="sm" variant="outline" onClick={() => changeStatus("completed")} disabled={saving}>
+                        Mark Completed
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
+            </Card>
+
+            {/* ── AI Event Assistant (collapsible) ── */}
+            {event && (
+              <Collapsible>
+                <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
+                  <CollapsibleTrigger className="w-full flex items-center justify-between p-5 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">AI Event Assistant</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">Ask about your event, get suggestions, draft outreach</span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-gray-400 transition-transform group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-800">
+                      <EventAIAssistant
+                        eventTitle={event.title}
+                        eventDescription={event.description}
+                        eventType={event.event_type}
+                        startDate={event.start_date}
+                        endDate={event.end_date}
+                        venue={event.venue}
+                        city={event.city}
+                        state={event.state}
+                        capacity={event.capacity}
+                        status={event.is_published ? "published" : "draft"}
+                        sponsors={sponsors.map(s => ({ sponsor_name: s.sponsor_name, tier: s.tier }))}
+                        speakers={speakers.map(s => ({ creator_name: s.creator_name, role: s.role, confirmed: s.confirmed }))}
+                        tickets={eventTickets.map(t => ({ name: t.name, price: t.price, quantity: t.quantity, sold: t.sold }))}
+                        registrationCount={registrations.length}
+                        agendaSessionCount={agenda.length}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
             )}
 
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6 space-y-5">
+            {/* ── Event Details Card ── */}
+            <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide mb-5 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <Info className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                </div>
+                Event Details
+              </h3>
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <Label>Event Name</Label>
@@ -833,6 +913,18 @@ const BrandEventDetail = () => {
                   <Label>Max Attendees</Label>
                   <Input type="number" value={editCapacity} onChange={(e) => setEditCapacity(e.target.value)} className="mt-1" />
                 </div>
+              </div>
+            </Card>
+
+            {/* ── Schedule Card ── */}
+            <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide mb-5 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                  <Calendar className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                </div>
+                Schedule
+              </h3>
+              <div className="grid gap-5 md:grid-cols-2">
                 <div>
                   <Label>Start Date</Label>
                   <Input type="date" value={editStart} onChange={(e) => setEditStart(e.target.value)} className="mt-1" />
@@ -841,114 +933,136 @@ const BrandEventDetail = () => {
                   <Label>End Date</Label>
                   <Input type="date" value={editEnd} onChange={(e) => setEditEnd(e.target.value)} className="mt-1" />
                 </div>
-                <div>
+              </div>
+            </Card>
+
+            {/* ── Location Card ── */}
+            <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide mb-5 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                Location
+              </h3>
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="md:col-span-2">
                   <Label>Venue</Label>
                   <Input value={editVenue} onChange={(e) => setEditVenue(e.target.value)} className="mt-1" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>City</Label>
-                    <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label>State</Label>
-                    <Input value={editState} onChange={(e) => setEditState(e.target.value)} className="mt-1" />
-                  </div>
+                <div>
+                  <Label>City</Label>
+                  <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} className="mt-1" />
                 </div>
-                <div className="md:col-span-2">
-                  <Label className="mb-2 block">Cover Image</Label>
-                  {editCover && (
-                    <div className="relative mb-3 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                      <img
-                        src={editCover}
-                        alt="Event cover preview"
-                        className="w-full h-48 object-cover"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full"
-                        onClick={() => setEditCover("")}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="button"
-                      onClick={() => setShowAIBanner(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate with AI
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => bannerFileRef.current?.click()}
-                      disabled={uploadingBanner}
-                    >
-                      {uploadingBanner ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Upload className="h-4 w-4 mr-2" />
-                      )}
-                      Upload Image
-                    </Button>
-                    <input
-                      ref={bannerFileRef}
-                      type="file"
-                      accept=".png,.jpg,.jpeg,.webp"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleBannerUpload(file);
-                        e.target.value = "";
-                      }}
-                    />
-                  </div>
-                  <AIBannerModal
-                    open={showAIBanner}
-                    onOpenChange={setShowAIBanner}
-                    eventName={editTitle}
-                    eventLocation={[editVenue, editCity, editState].filter(Boolean).join(", ")}
-                    eventDate={editStart}
-                    onSelectImage={(url) => setEditCover(url)}
-                  />
+                <div>
+                  <Label>State</Label>
+                  <Input value={editState} onChange={(e) => setEditState(e.target.value)} className="mt-1" />
                 </div>
-              </div>
-              {/* Event Settings */}
-              <div className="md:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-gray-400" /> Event Settings
-                </h3>
-                <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                      <Car className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Enable Ride Share</p>
-                      <p className="text-xs text-muted-foreground">Allow attendees to offer and request rides to this event.</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={editRideshare}
-                    onCheckedChange={setEditRideshare}
-                    aria-label="Toggle ride share"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <Button onClick={saveOverview} disabled={saving} className="bg-pd-blue hover:bg-pd-darkblue text-white">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Save Changes
-                </Button>
               </div>
             </Card>
+
+            {/* ── Cover Image Card ── */}
+            <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide mb-5 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center">
+                  <Film className="h-3.5 w-3.5 text-pink-600 dark:text-pink-400" />
+                </div>
+                Cover Image
+              </h3>
+              {editCover && (
+                <div className="relative mb-4 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                  <img
+                    src={editCover}
+                    alt="Event cover preview"
+                    className="w-full h-48 object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                    onClick={() => setEditCover("")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setShowAIBanner(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate with AI
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => bannerFileRef.current?.click()}
+                  disabled={uploadingBanner}
+                >
+                  {uploadingBanner ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Upload Image
+                </Button>
+                <input
+                  ref={bannerFileRef}
+                  type="file"
+                  accept=".png,.jpg,.jpeg,.webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleBannerUpload(file);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+              <AIBannerModal
+                open={showAIBanner}
+                onOpenChange={setShowAIBanner}
+                eventName={editTitle}
+                eventLocation={[editVenue, editCity, editState].filter(Boolean).join(", ")}
+                eventDate={editStart}
+                onSelectImage={(url) => setEditCover(url)}
+              />
+            </Card>
+
+            {/* ── Event Settings Card ── */}
+            <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide mb-5 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <Settings className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                </div>
+                Event Settings
+              </h3>
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                    <Car className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Enable Ride Share</p>
+                    <p className="text-xs text-muted-foreground">Allow attendees to offer and request rides to this event.</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={editRideshare}
+                  onCheckedChange={setEditRideshare}
+                  aria-label="Toggle ride share"
+                />
+              </div>
+            </Card>
+
+            {/* ── Save Button ── */}
+            <div className="flex justify-end">
+              <Button onClick={saveOverview} disabled={saving} className="bg-pd-blue hover:bg-pd-darkblue text-white">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Changes
+              </Button>
+            </div>
 
           </TabsContent>
 
