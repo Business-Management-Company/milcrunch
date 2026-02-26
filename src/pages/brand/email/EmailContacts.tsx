@@ -867,6 +867,7 @@ const EmailContacts = () => {
       phone: c.phone || null,
       company: c.company || null,
       title: c.title || null,
+      military_branch: (c.metadata as Record<string, unknown>)?.military_branch as string || null,
       registration_code: generateRegCode(),
       status: "confirmed",
       checked_in: false,

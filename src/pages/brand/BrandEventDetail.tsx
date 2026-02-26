@@ -1470,6 +1470,11 @@ const BrandEventDetail = () => {
           <TabsContent value="registrations">
             {(() => {
               const ticketMap = Object.fromEntries(eventTickets.map((t) => [t.id, t]));
+              const defaultTicketName = eventTickets.length > 0 ? eventTickets[0].name : "General Admission";
+              const resolveTicketName = (r: RegistrationRow) => {
+                if (r.ticket_id && ticketMap[r.ticket_id]) return ticketMap[r.ticket_id].name;
+                return defaultTicketName;
+              };
               const filteredRegs = registrations.filter((r) => {
                 const q = regSearch.toLowerCase();
                 if (!q) return true;
@@ -1481,6 +1486,24 @@ const BrandEventDetail = () => {
                 );
               });
               const checkedInCount = registrations.filter((r) => r.checked_in).length;
+              const allFilteredSelected = filteredRegs.length > 0 && filteredRegs.every((r) => selectedRegIds.has(r.id));
+              const someFilteredSelected = filteredRegs.some((r) => selectedRegIds.has(r.id));
+
+              const toggleSelectAllFiltered = () => {
+                if (allFilteredSelected) {
+                  setSelectedRegIds((prev) => {
+                    const next = new Set(prev);
+                    filteredRegs.forEach((r) => next.delete(r.id));
+                    return next;
+                  });
+                } else {
+                  setSelectedRegIds((prev) => {
+                    const next = new Set(prev);
+                    filteredRegs.forEach((r) => next.add(r.id));
+                    return next;
+                  });
+                }
+              };
 
               const toggleCheckIn = async (reg: RegistrationRow) => {
                 const newVal = !reg.checked_in;
@@ -1498,7 +1521,7 @@ const BrandEventDetail = () => {
                 const headers = ["First Name", "Last Name", "Email", "Phone", "Ticket", "Branch", "Status", "Registered", "Checked In"];
                 const rows = registrations.map((r) => [
                   r.first_name, r.last_name, r.email, r.phone || "",
-                  ticketMap[r.ticket_id || ""]?.name || "\u2014",
+                  resolveTicketName(r),
                   r.military_branch || "", r.status || "",
                   r.created_at ? new Date(r.created_at).toLocaleDateString() : "",
                   r.checked_in ? "Yes" : "No",
@@ -1573,6 +1596,12 @@ const BrandEventDetail = () => {
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50 dark:bg-[#151821] text-left">
                             <tr>
+                              <th className="pl-4 pr-2 py-3 w-10">
+                                <Checkbox
+                                  checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
+                                  onCheckedChange={toggleSelectAllFiltered}
+                                />
+                              </th>
                               <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
                               <th className="px-4 py-3 font-medium text-muted-foreground">Email</th>
                               <th className="px-4 py-3 font-medium text-muted-foreground">Ticket</th>
@@ -1585,14 +1614,20 @@ const BrandEventDetail = () => {
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {filteredRegs.map((r) => (
-                              <tr key={r.id} className="hover:bg-gray-50/50 dark:hover:bg-[#1E2130]">
+                              <tr key={r.id} className={`hover:bg-gray-50/50 dark:hover:bg-[#1E2130] ${selectedRegIds.has(r.id) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
+                                <td className="pl-4 pr-2 py-3">
+                                  <Checkbox
+                                    checked={selectedRegIds.has(r.id)}
+                                    onCheckedChange={() => toggleRegSelect(r.id)}
+                                  />
+                                </td>
                                 <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
                                   {r.first_name} {r.last_name}
                                 </td>
                                 <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
                                 <td className="px-4 py-3">
                                   <Badge variant="outline" className="text-xs">
-                                    {ticketMap[r.ticket_id || ""]?.name || "\u2014"}
+                                    {resolveTicketName(r)}
                                   </Badge>
                                 </td>
                                 <td className="px-4 py-3 text-muted-foreground">{r.military_branch || "\u2014"}</td>
@@ -1640,6 +1675,29 @@ const BrandEventDetail = () => {
                         </table>
                       </div>
                     </Card>
+                  )}
+
+                  {/* Floating bulk action bar */}
+                  {selectedRegIds.size > 0 && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border bg-background">
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {selectedRegIds.size} registration{selectedRegIds.size !== 1 ? "s" : ""} selected
+                      </span>
+                      <div className="h-4 w-px bg-border" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setBulkDeleteOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1.5" />
+                        Delete Selected
+                      </Button>
+                      <Button variant="ghost" size="sm" className="rounded-lg" onClick={() => setSelectedRegIds(new Set())}>
+                        <XCircle className="h-4 w-4 mr-1.5" />
+                        Clear
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
@@ -2412,6 +2470,24 @@ const BrandEventDetail = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteReg} className="bg-red-600 hover:bg-red-700 text-white">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ---- Bulk Delete Registrations Confirm ---- */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(open) => !open && setBulkDeleteOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {selectedRegIds.size} Registration{selectedRegIds.size !== 1 ? "s" : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove {selectedRegIds.size} registration{selectedRegIds.size !== 1 ? "s" : ""} from this event? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBulkDeleteRegs} disabled={bulkDeleting} className="bg-red-600 hover:bg-red-700 text-white">
+              {bulkDeleting ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Deleting...</> : `Delete ${selectedRegIds.size}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
