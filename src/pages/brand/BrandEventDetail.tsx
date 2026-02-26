@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { getCreatorAvatar } from "@/lib/avatar";
 import {
   ArrowLeft, Calendar, MapPin, Users, Mic, Handshake, Plus, Trash2,
