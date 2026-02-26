@@ -2787,6 +2787,40 @@ const BrandDiscover = () => {
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">@{topCreator.username}</p>
                         {topCreator.bio && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{topCreator.bio}</p>}
+                        {(() => {
+                          const tags = getMergedCreator(topCreator).hashtags ?? [];
+                          if (tags.length === 0) return null;
+                          const queryWords = searchQuery.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+                          const isMatch = (tag: string) => {
+                            const t = tag.toLowerCase();
+                            return queryWords.some((w) => t.includes(w) || w.includes(t));
+                          };
+                          const sorted = [...tags].sort((a, b) => (isMatch(b) ? 1 : 0) - (isMatch(a) ? 1 : 0));
+                          const shown = sorted.slice(0, 5);
+                          const extra = tags.length - 5;
+                          return (
+                            <div className="flex items-center gap-1 flex-wrap mt-1.5">
+                              {shown.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className={cn(
+                                    "inline-flex items-center rounded-full text-[11px] px-2 py-0.5",
+                                    isMatch(tag)
+                                      ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400"
+                                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                                  )}
+                                >
+                                  #{tag.length > 14 ? `${tag.slice(0, 14)}…` : tag}
+                                </span>
+                              ))}
+                              {extra > 0 && (
+                                <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 text-[11px] px-2 py-0.5">
+                                  +{extra}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-6 shrink-0">
                         <div className="text-center">
