@@ -2115,7 +2115,7 @@ const BrandDiscover = () => {
           </div>
 
           {/* Hero Search Card */}
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-b from-gray-50/80 to-white dark:from-[#1A1D27] dark:to-[#1A1D27] p-5 mb-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-b from-gray-50/80 to-white dark:from-[#1A1D27] dark:to-[#1A1D27] p-5 mb-2 shadow-sm">
             {/* Primary search row */}
             <div className="flex flex-wrap items-center gap-2">
               <Popover>
@@ -2230,7 +2230,7 @@ const BrandDiscover = () => {
               </Button>
             </div>
 
-            {/* Secondary row: Creator type + hint */}
+            {/* Secondary row: Creator type + hint + Save/Saved */}
             <div className="flex items-center gap-3 mt-3">
               <Select value={creatorType} onValueChange={setCreatorType}>
                 <SelectTrigger className="w-[170px] h-9 rounded-lg bg-white dark:bg-[#0F1117] dark:border-gray-600 border-gray-200 text-sm">
@@ -2252,6 +2252,41 @@ const BrandDiscover = () => {
                   <Sparkles className="h-3 w-3" />
                   {searchHint}
                 </div>
+              )}
+              <div className="flex-1" />
+              {searchQuery.trim() && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2" onClick={() => { setSaveSearchName(""); setSaveSearchOpen(true); }}>
+                  <Save className="h-3 w-3 mr-1" />
+                  Save
+                </Button>
+              )}
+              {(savedSearches ?? []).length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
+                      <Bookmark className="h-3 w-3 mr-1" />
+                      Saved
+                      <ChevronDown className="h-2.5 w-2.5 ml-1 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    {savedSearches.map((s) => (
+                      <DropdownMenuItem key={s.id} onClick={() => handleLoadSavedSearch(s)} className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium text-sm">{s.name}</p>
+                          <p className="truncate text-xs text-muted-foreground">{s.search_query}</p>
+                        </div>
+                        <button
+                          className="ml-2 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 shrink-0"
+                          onClick={(e) => handleDeleteSavedSearch(s.id, e)}
+                          aria-label={`Delete ${s.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
 
@@ -2288,67 +2323,8 @@ const BrandDiscover = () => {
             )}
           </div>
 
-          {/* Active filters + Save/Saved row */}
-          <div className="flex items-center gap-2 text-sm mb-3 flex-wrap">
-            {creatorType !== "all" && (() => {
-              const ct = CREATOR_TYPES.find((t) => t.value === creatorType);
-              return ct ? (
-                <Badge variant="secondary" className="bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20 text-xs font-medium gap-1.5 pr-1">
-                  {ct.icon && <span>{ct.icon}</span>}
-                  {ct.label}
-                  <button
-                    onClick={() => setCreatorType("all")}
-                    className="ml-1 hover:bg-[#1e3a5f]/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold"
-                  >
-                    ✕
-                  </button>
-                </Badge>
-              ) : null;
-            })()}
-            {smartFiltersApplied.length > 0 && smartFiltersApplied.map((label) => (
-              <Badge key={label} variant="secondary" className="bg-pd-blue/10 text-pd-blue border-pd-blue/20 text-xs font-medium">
-                {label}
-              </Badge>
-            ))}
-            <div className="flex-1" />
-            {searchQuery.trim() && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2" onClick={() => { setSaveSearchName(""); setSaveSearchOpen(true); }}>
-                <Save className="h-3 w-3 mr-1" />
-                Save
-              </Button>
-            )}
-            {(savedSearches ?? []).length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
-                    <Bookmark className="h-3 w-3 mr-1" />
-                    Saved
-                    <ChevronDown className="h-2.5 w-2.5 ml-1 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  {savedSearches.map((s) => (
-                    <DropdownMenuItem key={s.id} onClick={() => handleLoadSavedSearch(s)} className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-sm">{s.name}</p>
-                        <p className="truncate text-xs text-muted-foreground">{s.search_query}</p>
-                      </div>
-                      <button
-                        className="ml-2 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 shrink-0"
-                        onClick={(e) => handleDeleteSavedSearch(s.id, e)}
-                        aria-label={`Delete ${s.name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-
-          {/* Compact filters toggle */}
-          <div className="flex items-center gap-2 mb-3">
+          {/* Filters toggle + active filter badges + branch pills — tight row */}
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -2372,11 +2348,31 @@ const BrandDiscover = () => {
                 Clear all
               </Button>
             )}
+            {creatorType !== "all" && (() => {
+              const ct = CREATOR_TYPES.find((t) => t.value === creatorType);
+              return ct ? (
+                <Badge variant="secondary" className="bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20 text-xs font-medium gap-1.5 pr-1">
+                  {ct.icon && <span>{ct.icon}</span>}
+                  {ct.label}
+                  <button
+                    onClick={() => setCreatorType("all")}
+                    className="ml-1 hover:bg-[#1e3a5f]/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold"
+                  >
+                    ✕
+                  </button>
+                </Badge>
+              ) : null;
+            })()}
+            {smartFiltersApplied.length > 0 && smartFiltersApplied.map((label) => (
+              <Badge key={label} variant="secondary" className="bg-pd-blue/10 text-pd-blue border-pd-blue/20 text-xs font-medium">
+                {label}
+              </Badge>
+            ))}
           </div>
 
           {/* Collapsible filter panel */}
           {showMoreFilters && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#1A1D27]/50 p-4 mb-4 animate-in slide-in-from-top-2 duration-200">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#1A1D27]/50 p-4 mb-2 animate-in slide-in-from-top-2 duration-200">
               <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Location</label>
@@ -2493,7 +2489,7 @@ const BrandDiscover = () => {
           )}
 
           {/* Military Branch Pills */}
-          <div className="flex items-center gap-2 mb-5 flex-wrap">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">Branch</span>
             {BRANCHES.map((branch) => {
               const selected = selectedBranches.has(branch);
