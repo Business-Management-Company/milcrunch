@@ -2019,6 +2019,8 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
 
   const visibleBlocks = content.sections.filter((s) => s.visible !== false);
   const hasVideoBlock = visibleBlocks.some((s) => inferBlockType(s) === "video");
+  // Also skip backward-compat media if an IMAGE block exists (even if hidden/empty)
+  const hasImageBlock = content.sections.some((s) => inferBlockType(s) === "image");
 
   return (
     <div className="space-y-12">
@@ -2069,8 +2071,8 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
         )}
       </section>
 
-      {/* Backward compat: show prospectus_videos media below headline if no VIDEO block exists */}
-      {!hasVideoBlock && (videoUrl || imageUrl) && (
+      {/* Backward compat: show prospectus_videos media below headline if no VIDEO/IMAGE block exists */}
+      {!hasVideoBlock && !hasImageBlock && (videoUrl || imageUrl) && (
         <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
       )}
 
