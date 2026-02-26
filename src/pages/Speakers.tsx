@@ -1818,8 +1818,8 @@ export default function Speakers() {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        {getCreatorAvatar(speaker) ? (
-                          <img src={getCreatorAvatar(speaker)!} alt="" className="h-8 w-8 rounded-full object-cover" />
+                        {(getCreatorAvatar(speaker) || speaker.photo_url) ? (
+                          <img src={(getCreatorAvatar(speaker) || speaker.photo_url)!} alt="" className="h-8 w-8 rounded-full object-cover" />
                         ) : (
                           <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center">
                             <Mic className="h-4 w-4 text-[#1e3a5f]" />

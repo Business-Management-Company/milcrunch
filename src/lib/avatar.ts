@@ -15,6 +15,8 @@ export function getCreatorAvatar(creator: any): string | null {
   );
   if (!url) return null;
   if (typeof url === 'string' && url.startsWith('https://')) return url;
+  // Accept http:// URLs too (e.g. CloudFront) — upgrade to https
+  if (typeof url === 'string' && url.startsWith('http://')) return url.replace('http://', 'https://');
   return null;
 }
 
