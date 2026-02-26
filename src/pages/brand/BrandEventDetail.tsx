@@ -1544,6 +1544,17 @@ const BrandEventDetail = () => {
                 if (r.ticket_id && ticketMap[r.ticket_id]) return ticketMap[r.ticket_id].name;
                 return defaultTicketName;
               };
+              const abbreviateTicket = (name: string) => {
+                const lower = name.toLowerCase();
+                if (lower.includes("general") && lower.includes("admission")) return "GA";
+                if (lower.includes("vip")) return "VIP";
+                if (lower.includes("creator")) return "Creator";
+                if (lower.includes("press")) return "Press";
+                if (lower.includes("sponsor")) return "Sponsor";
+                // Fall back: first word, max 8 chars
+                const first = name.split(/\s+/)[0];
+                return first.length > 8 ? first.slice(0, 7) + "\u2026" : first;
+              };
               const filteredRegs = registrations.filter((r) => {
                 const q = regSearch.toLowerCase();
                 if (!q) return true;
@@ -1672,7 +1683,7 @@ const BrandEventDetail = () => {
                             </th>
                             <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Name</th>
                             <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Email</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[100px]">Ticket</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[60px]">Ticket</th>
                             <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[90px]">Branch</th>
                             <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[80px]">Status</th>
                             <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[85px]">Registered</th>
@@ -1696,8 +1707,8 @@ const BrandEventDetail = () => {
                               </td>
                               <td className="px-2 py-2 text-muted-foreground truncate text-xs" title={r.email}>{r.email}</td>
                               <td className="px-2 py-2">
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                  {resolveTicketName(r)}
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 cursor-default" title={resolveTicketName(r)}>
+                                  {abbreviateTicket(resolveTicketName(r))}
                                 </Badge>
                               </td>
                               <td className="px-2 py-2 text-muted-foreground text-xs truncate">{r.military_branch || "\u2014"}</td>
