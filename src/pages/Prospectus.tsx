@@ -2046,10 +2046,6 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
 
   return (
     <div className="space-y-12">
-      {/* Backward compat: show prospectus_videos media at top if no VIDEO block exists */}
-      {!hasVideoBlock && (videoUrl || imageUrl) && (
-        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
-      )}
       {/* Deep Dive link */}
       {kbSlug && (
         <div className="flex justify-end -mb-8">
@@ -2070,7 +2066,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
         </div>
       )}
 
-      {/* Tab-level hero headline */}
+      {/* Tab-level hero headline — shown ABOVE video so visitors read value prop first */}
       <section className="text-center max-w-3xl mx-auto pt-4">
         {content.headlineVisible !== false && (
           <h2
@@ -2104,6 +2100,11 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
         )}
       </section>
 
+      {/* Backward compat: show prospectus_videos media below headline if no VIDEO block exists */}
+      {!hasVideoBlock && (videoUrl || imageUrl) && (
+        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
+      )}
+
       {/* Block-aware section rendering */}
       {visibleBlocks.map((section, i) => {
         const blockType = inferBlockType(section);
@@ -2113,6 +2114,9 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
           const hasBg = !!section.media_url;
           const bgParsed = section.media_url ? parseVideoEmbed(section.media_url) : null;
           const heroClickable = !!section.demo_url;
+          // Skip hero heading if it duplicates the tab-level headline already shown above
+          const headlineFull = `${content.headline || ""} ${content.headlineAccent || ""}`.trim();
+          const heroHeadingDuplicatesTab = section.heading && headlineFull && headlineFull.includes(section.heading.trim());
           return (
             <section key={`block-${i}`} className="max-w-4xl mx-auto">
               {hasBg ? (
@@ -2127,7 +2131,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
                   ) : null}
                   <div className={cn("absolute inset-0 flex items-center justify-center", heroClickable ? "bg-black/40 group-hover:bg-black/60 transition-colors duration-200" : "bg-black/50")}>
                     <div className="text-center px-6">
-                      {section.heading && <h2 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">{section.heading}</h2>}
+                      {section.heading && !heroHeadingDuplicatesTab && <h2 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">{section.heading}</h2>}
                       {section.subheading && <p className="text-lg text-white/80 mt-2">{section.subheading}</p>}
                       {heroClickable && (
                         <span className="inline-flex items-center gap-2 mt-4 text-white font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -2142,7 +2146,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
                   className={cn("text-center py-8", heroClickable && "group cursor-pointer")}
                   onClick={() => heroClickable && setDemoModal({ open: true, url: section.demo_url! })}
                 >
-                  {section.heading && (
+                  {section.heading && !heroHeadingDuplicatesTab && (
                     <h2 className={cn("text-3xl md:text-4xl font-extrabold leading-tight transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
                       {section.heading}
                     </h2>
