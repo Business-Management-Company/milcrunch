@@ -1673,9 +1673,20 @@ const BrandEventDetail = () => {
                   ) : (
                     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
                       <table className="w-full text-sm table-fixed">
+                        <colgroup>
+                          <col className="w-10" />
+                          <col style={{ width: "160px" }} />
+                          <col style={{ width: "200px" }} />
+                          <col className="w-16" />
+                          <col className="w-24" />
+                          <col className="w-20" />
+                          <col className="w-20" />
+                          <col className="w-10" />
+                          <col className="w-20" />
+                        </colgroup>
                         <thead className="bg-gray-50 dark:bg-[#151821] text-left">
                           <tr>
-                            <th className="pl-3 pr-1 py-2.5 w-9">
+                            <th className="pl-3 pr-1 py-2.5">
                               <Checkbox
                                 checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
                                 onCheckedChange={toggleSelectAllFiltered}
@@ -1683,14 +1694,14 @@ const BrandEventDetail = () => {
                             </th>
                             <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Name</th>
                             <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Email</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[60px]">Ticket</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[90px]">Branch</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[80px]">Status</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[85px]">Registered</th>
-                            <th className="px-1 py-2.5 font-medium text-muted-foreground text-xs text-center w-10">
-                              <CheckCircle2 className="h-3.5 w-3.5 mx-auto" />
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Ticket</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Branch</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Status</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Registered</th>
+                            <th className="px-1 py-2.5 text-center">
+                              <CheckCircle2 className="h-3.5 w-3.5 mx-auto text-muted-foreground" />
                             </th>
-                            <th className="px-1 py-2.5 w-[68px]" />
+                            <th className="px-1 py-2.5" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1702,22 +1713,22 @@ const BrandEventDetail = () => {
                                   onCheckedChange={() => toggleRegSelect(r.id)}
                                 />
                               </td>
-                              <td className="px-2 py-2 font-medium text-foreground truncate text-xs">
+                              <td className="px-2 py-2 font-medium text-foreground text-xs overflow-hidden text-ellipsis whitespace-nowrap" title={`${r.first_name} ${r.last_name}`}>
                                 {r.first_name} {r.last_name}
                               </td>
-                              <td className="px-2 py-2 text-muted-foreground truncate text-xs" title={r.email}>{r.email}</td>
+                              <td className="px-2 py-2 text-muted-foreground text-xs overflow-hidden text-ellipsis whitespace-nowrap" title={r.email}>{r.email}</td>
                               <td className="px-2 py-2">
                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 cursor-default" title={resolveTicketName(r)}>
                                   {abbreviateTicket(resolveTicketName(r))}
                                 </Badge>
                               </td>
-                              <td className="px-2 py-2 text-muted-foreground text-xs truncate">{r.military_branch || "\u2014"}</td>
+                              <td className="px-2 py-2 text-muted-foreground text-xs overflow-hidden text-ellipsis whitespace-nowrap">{r.military_branch || "\u2014"}</td>
                               <td className="px-2 py-2">
                                 <Badge className={`text-[10px] px-1.5 py-0 ${r.status === "confirmed" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}`}>
                                   {r.status}
                                 </Badge>
                               </td>
-                              <td className="px-2 py-2 text-muted-foreground text-xs">
+                              <td className="px-2 py-2 text-muted-foreground text-xs whitespace-nowrap">
                                 {r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "\u2014"}
                               </td>
                               <td className="px-1 py-2 text-center">
