@@ -892,6 +892,41 @@ const BrandDiscover = () => {
     try { localStorage.setItem(LAST_SEARCH_KEY, JSON.stringify(filters)); } catch { /* quota */ }
   }, []);
 
+  // Build a shareable URL from current filter state
+  const buildSearchUrl = useCallback(() => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) params.set("q", searchQuery.trim());
+    if (platform.length > 0 && platform[0]) params.set("platform", platform[0]);
+    if (selectedBranches.size > 0) params.set("branch", Array.from(selectedBranches).join(","));
+    if (locationFilter.trim()) params.set("location", locationFilter.trim());
+    if (followersRange !== "any") params.set("followers", followersRange);
+    if (engagementMin !== "any") params.set("engagement", engagementMin);
+    if (gender !== "any") params.set("gender", gender);
+    if (sortBy !== "confidence") params.set("sort", sortBy);
+    if (viewMode !== "list") params.set("view", viewMode);
+    if (niche !== "All niches") params.set("niche", niche);
+    if (language !== "any") params.set("language", language);
+    if (keywordsInBio.trim()) params.set("keywords", keywordsInBio.trim());
+    const qs = params.toString();
+    return `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+  }, [searchQuery, platform, selectedBranches, locationFilter, followersRange, engagementMin, gender, sortBy, viewMode, niche, language, keywordsInBio]);
+
+  // Update browser URL with current search (replaceState to avoid history spam)
+  const updateUrlWithSearch = useCallback(() => {
+    const url = buildSearchUrl();
+    window.history.replaceState(null, "", url);
+  }, [buildSearchUrl]);
+
+  // Copy shareable search link to clipboard
+  const handleCopySearchLink = useCallback(() => {
+    const url = `${window.location.origin}${buildSearchUrl()}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success("Link copied!");
+    }).catch(() => {
+      toast.error("Failed to copy link");
+    });
+  }, [buildSearchUrl]);
+
   // Load saved searches from Supabase
   const loadSavedSearches = useCallback(async () => {
     if (!user) return;
@@ -1022,24 +1057,39 @@ const BrandDiscover = () => {
       setSearchQuery(query);
       const urlPlatform = params.get("platform");
       if (urlPlatform) setPlatform([urlPlatform]);
-      const minF = params.get("min_followers");
-      const maxF = params.get("max_followers");
-      if (minF || maxF) {
-        const minVal = minF ? Number(minF) : null;
-        const maxVal = maxF ? Number(maxF) : null;
-        const match = FOLLOWER_OPTIONS.find((o) =>
-          o.min === minVal && o.max === maxVal
-        ) ?? FOLLOWER_OPTIONS.find((o) =>
-          o.min != null && minVal != null && o.min <= minVal && (o.max == null || (maxVal != null && o.max >= maxVal))
-        );
+      // Followers — accept "followers=nano" (value key) or legacy "min_followers=1000"
+      const urlFollowers = params.get("followers");
+      if (urlFollowers) {
+        const match = FOLLOWER_OPTIONS.find((o) => o.value === urlFollowers);
         if (match) setFollowersRange(match.value);
+      } else {
+        const minF = params.get("min_followers");
+        const maxF = params.get("max_followers");
+        if (minF || maxF) {
+          const minVal = minF ? Number(minF) : null;
+          const maxVal = maxF ? Number(maxF) : null;
+          const match = FOLLOWER_OPTIONS.find((o) =>
+            o.min === minVal && o.max === maxVal
+          ) ?? FOLLOWER_OPTIONS.find((o) =>
+            o.min != null && minVal != null && o.min <= minVal && (o.max == null || (maxVal != null && o.max >= maxVal))
+          );
+          if (match) setFollowersRange(match.value);
+        }
       }
-      const minE = params.get("min_engagement");
-      if (minE) {
-        const engVal = Number(minE);
-        const match = ENGAGEMENT_OPTIONS.find((o) => o.min === engVal);
+      // Engagement — accept "engagement=3" (value key) or legacy "min_engagement=3"
+      const urlEngagement = params.get("engagement");
+      if (urlEngagement) {
+        const match = ENGAGEMENT_OPTIONS.find((o) => o.value === urlEngagement);
         if (match) setEngagementMin(match.value);
+      } else {
+        const minE = params.get("min_engagement");
+        if (minE) {
+          const engVal = Number(minE);
+          const match = ENGAGEMENT_OPTIONS.find((o) => o.min === engVal);
+          if (match) setEngagementMin(match.value);
+        }
       }
+      // Branch
       const urlBranch = params.get("branch");
       if (urlBranch) {
         const branches = urlBranch.split(",").filter((b) =>
@@ -1047,11 +1097,34 @@ const BrandDiscover = () => {
         ) as Branch[];
         if (branches.length > 0) setSelectedBranches(new Set(branches));
       }
+      // Category
       const urlCategory = params.get("category");
       if (urlCategory) {
         const match = CREATOR_TYPES.find((ct) => ct.value === urlCategory);
         if (match) setCreatorType(match.value);
       }
+      // Location
+      const urlLocation = params.get("location");
+      if (urlLocation) { setLocationFilter(urlLocation); setLocationInput(urlLocation); }
+      // Gender
+      const urlGender = params.get("gender");
+      if (urlGender) setGender(urlGender);
+      // Sort
+      const urlSort = params.get("sort");
+      if (urlSort) setSortBy(urlSort);
+      // View mode
+      const urlView = params.get("view");
+      if (urlView === "grid" || urlView === "list") setViewMode(urlView);
+      // Niche
+      const urlNiche = params.get("niche");
+      if (urlNiche) setNiche(urlNiche);
+      // Language
+      const urlLang = params.get("language");
+      if (urlLang) setLanguage(urlLang);
+      // Keywords in bio
+      const urlKeywords = params.get("keywords");
+      if (urlKeywords) setKeywordsInBio(urlKeywords);
+
       pendingAutoSearch.current = true;
       return;
     }
@@ -1112,6 +1185,7 @@ const BrandDiscover = () => {
       language: language !== "any" ? language : undefined,
     };
     persistLastSearch(getCurrentFilters());
+    updateUrlWithSearch();
     // Run parallel searches for each selected platform, merge & deduplicate
     Promise.all(
       searchPlatforms.map((plat) =>
@@ -1132,7 +1206,7 @@ const BrandDiscover = () => {
       .finally(() => {
         if (searchQueryRef.current.trim().replace(/^@/, "") === q) setApiLoading(false);
       });
-  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, user, refreshCredits]);
+  }, [searchQuery, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, persistLastSearch, getCurrentFilters, updateUrlWithSearch, user, refreshCredits]);
 
   // Fire search after auto-load applies filters (runs once after state updates)
   useEffect(() => {
@@ -1351,6 +1425,24 @@ const BrandDiscover = () => {
       engagementMin: effEngagement, locationFilter: effLocation || "", niche, gender: effGender, language,
       keywordsInBio, sortBy, selectedBranches: effBranches,
     });
+    // Update URL with search params (build directly from overrides to avoid stale state)
+    {
+      const p = new URLSearchParams();
+      if (effectiveQuery) p.set("q", effectiveQuery);
+      if (effPlatforms.length > 0 && effPlatforms[0]) p.set("platform", effPlatforms[0]);
+      if (effBranches.length > 0) p.set("branch", effBranches.join(","));
+      if (effLocation?.trim()) p.set("location", effLocation.trim());
+      if (effFollowers !== "any") p.set("followers", effFollowers);
+      if (effEngagement !== "any") p.set("engagement", effEngagement);
+      if (effGender !== "any") p.set("gender", effGender);
+      if (sortBy !== "confidence") p.set("sort", sortBy);
+      if (viewMode !== "list") p.set("view", viewMode);
+      if (niche !== "All niches") p.set("niche", niche);
+      if (language !== "any") p.set("language", language);
+      if (keywordsInBio.trim()) p.set("keywords", keywordsInBio.trim());
+      const qs = p.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    }
 
     smartSearch(effectiveQuery, baseOptions)
       .then((result: SmartSearchResult) => {
@@ -2361,10 +2453,18 @@ const BrandDiscover = () => {
               )}
               <div className="flex-1" />
               {searchQuery.trim() && (
-                <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2" onClick={() => { setSaveSearchName(""); setSaveSearchOpen(true); }}>
-                  <Save className="h-3 w-3 mr-1" />
-                  Save
-                </Button>
+                <>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2" onClick={() => { setSaveSearchName(""); setSaveSearchOpen(true); }}>
+                    <Save className="h-3 w-3 mr-1" />
+                    Save
+                  </Button>
+                  {apiResults && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2" onClick={handleCopySearchLink}>
+                      <LinkIcon className="h-3 w-3 mr-1" />
+                      Copy Link
+                    </Button>
+                  )}
+                </>
               )}
               {(savedSearches ?? []).length > 0 && (
                 <DropdownMenu>
