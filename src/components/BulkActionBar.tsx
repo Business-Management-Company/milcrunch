@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ListPlus, Star, Download, Trash2, X, ChevronDown, ShieldCheck } from "lucide-react";
+import { ListPlus, Star, Download, Trash2, X, ChevronDown, ShieldCheck, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface BulkActionBarProps {
@@ -25,6 +25,8 @@ export interface BulkActionBarProps {
   onCreateListForImport?: () => void;
   /** Remove from List: bulk remove (List view) */
   onRemoveFromList?: () => void;
+  /** Add to Email List: single button, opens modal (Discovery) */
+  onAddToEmailList?: () => void;
   /** Add to Directory: dropdown of directories */
   onAddToDirectory?: (directoryId: string) => void;
   directoryOptions?: { id: string; name: string }[];
@@ -44,6 +46,7 @@ export default function BulkActionBar({
   onImportAndAddToList,
   onCreateListForImport,
   onRemoveFromList,
+  onAddToEmailList,
   onAddToDirectory,
   directoryOptions = [],
   mode,
@@ -51,7 +54,8 @@ export default function BulkActionBar({
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
 
-  const showAddToList = (mode === "directory" || mode === "discovery") && (onAddToList || onCreateList);
+  const showAddToEmailList = mode === "discovery" && onAddToEmailList;
+  const showAddToList = (mode === "directory" || mode === "discovery") && (onAddToList || onCreateList) && !showAddToEmailList;
   const showAddToDir = (mode === "directory" || mode === "discovery") && onAddToDirectory && directoryOptions.length > 0;
   const showFeature = (mode === "directory" || mode === "discovery") && onFeatureHomepage;
   const showImport = mode === "discovery" && onImportAll;
@@ -69,6 +73,12 @@ export default function BulkActionBar({
         {selectedCount} creator{selectedCount !== 1 ? "s" : ""} selected
       </span>
       <div className="h-4 w-px bg-border" />
+      {showAddToEmailList && (
+        <Button variant="outline" size="sm" className="rounded-lg" onClick={onAddToEmailList}>
+          <Mail className="h-4 w-4 mr-1.5" />
+          Add to Email List
+        </Button>
+      )}
       {showAddToList && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

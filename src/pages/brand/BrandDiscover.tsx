@@ -47,7 +47,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { PlatformIcons } from "@/components/PlatformIcons";
-import { addFullContact, getEmailLists } from "@/lib/email-db";
+import { addFullContact, getEmailLists, upsertEmailList, syncBulkContacts } from "@/lib/email-db";
 import type { EmailList } from "@/lib/email-types";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
@@ -802,6 +802,21 @@ const BrandDiscover = () => {
   const [postEnrichEmail, setPostEnrichEmail] = useState("");
   const [contactListsForDialog, setContactListsForDialog] = useState<EmailList[]>([]);
 
+  // Email List Modal state
+  const [emailListModalOpen, setEmailListModalOpen] = useState(false);
+  const [emailListModalMode, setEmailListModalMode] = useState<"single" | "bulk">("single");
+  const [emailListModalCreator, setEmailListModalCreator] = useState<CreatorCard | null>(null);
+  const [emailListModalEmail, setEmailListModalEmail] = useState<string | null>(null);
+  const [emailLists, setEmailLists] = useState<EmailList[]>([]);
+  const [emailListsLoading, setEmailListsLoading] = useState(false);
+  const [selectedEmailListId, setSelectedEmailListId] = useState("");
+  const [newEmailListName, setNewEmailListName] = useState("");
+  const [creatingEmailList, setCreatingEmailList] = useState(false);
+  const [addingToEmailList, setAddingToEmailList] = useState(false);
+  const [bulkEnrichProgress, setBulkEnrichProgress] = useState<{
+    current: number; total: number; found: number; notFound: number;
+  } | null>(null);
+
   // Username search fallback state
   const [usernameNotFound, setUsernameNotFound] = useState<{
     handle: string;
@@ -1191,6 +1206,168 @@ const BrandDiscover = () => {
     } catch (err) {
       toast.error(`Failed to add contact: ${(err as Error).message}`);
     }
+  };
+
+  // ── Email List Modal handlers ──
+
+  const handleOpenEmailListModal = async (creator?: CreatorCard, preknownEmail?: string) => {
+    setEmailListModalMode(creator ? "single" : "bulk");
+    setEmailListModalCreator(creator ?? null);
+    setEmailListModalEmail(preknownEmail ?? (creator ? contactEmails[creator.id] ?? null : null));
+    setSelectedEmailListId("");
+    setNewEmailListName("");
+    setBulkEnrichProgress(null);
+    setAddingToEmailList(false);
+    setEmailListModalOpen(true);
+    setEmailListsLoading(true);
+    try {
+      const lists = await getEmailLists();
+      setEmailLists(lists);
+    } catch { setEmailLists([]); }
+    finally { setEmailListsLoading(false); }
+  };
+
+  const handleCreateEmailList = async () => {
+    const name = newEmailListName.trim();
+    if (!name) return;
+    setCreatingEmailList(true);
+    const result = await upsertEmailList({ name });
+    if (result) {
+      setEmailLists((prev) => [result, ...prev]);
+      setSelectedEmailListId(result.id);
+      setNewEmailListName("");
+      toast.success(`Created "${name}"`);
+    } else {
+      toast.error("Failed to create email list");
+    }
+    setCreatingEmailList(false);
+  };
+
+  const creatorToEmailContact = (creator: CreatorCard, email: string) => {
+    const nameParts = (creator.name || "").split(" ");
+    const enriched = enrichCache[creator.id] ?? {};
+    return {
+      email,
+      first_name: nameParts[0] || undefined,
+      last_name: nameParts.slice(1).join(" ") || undefined,
+      source: "creator" as const,
+      metadata: {
+        username: creator.username,
+        platform: enrichPlatform,
+        followers: creator.followers,
+        engagement_rate: creator.engagementRate,
+        avatar: creator.avatar,
+        location: creator.location ?? enriched.location,
+        bio: creator.bio,
+        hashtags: creator.hashtags ?? enriched.hashtags,
+        external_links: creator.externalLinks ?? enriched.externalLinks,
+        social_platforms: creator.socialPlatforms ?? enriched.socialPlatforms,
+      },
+    };
+  };
+
+  const handleAddSingleToEmailList = async () => {
+    if (!selectedEmailListId) { toast.error("Select an email list first"); return; }
+    if (!emailListModalCreator) return;
+    setAddingToEmailList(true);
+    const creator = emailListModalCreator;
+    let email = emailListModalEmail || contactEmails[creator.id] || null;
+
+    // Enrich if no email
+    if (!email) {
+      if (!creator.username) { toast.error("No username available to look up email"); setAddingToEmailList(false); return; }
+      try {
+        const data = await fullEnrichCreatorProfile(creator.username, undefined, enrichPlatform);
+        const foundEmail = data?.result?.email ? String(data.result.email) : null;
+        if (foundEmail) {
+          email = foundEmail;
+          setContactEmails((prev) => ({ ...prev, [creator.id]: foundEmail }));
+        }
+        if (data) {
+          const partial = extractFromEnrichment(data);
+          setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
+          setEnrichRawCache((prev) => ({ ...prev, [creator.id]: data }));
+        }
+        if (effectiveUserId) logCreditUsage(effectiveUserId, "full_enrichment", 1.03, { handle: creator.username });
+        refreshCredits();
+      } catch (err) {
+        toast.error(`Failed to enrich: ${(err as Error).message}`);
+        setAddingToEmailList(false);
+        return;
+      }
+    }
+
+    if (!email) { toast.error(`No email found for ${creator.name}`); setAddingToEmailList(false); return; }
+
+    try {
+      const payload = creatorToEmailContact(creator, email);
+      await addFullContact({ list_id: selectedEmailListId, ...payload });
+      const listName = emailLists.find((l) => l.id === selectedEmailListId)?.name ?? "list";
+      toast.success(`Added ${creator.name} to ${listName} and Contacts`);
+      setEmailListModalOpen(false);
+    } catch (err) {
+      toast.error(`Failed to add contact: ${(err as Error).message}`);
+    } finally {
+      setAddingToEmailList(false);
+    }
+  };
+
+  const handleBulkAddToEmailList = async () => {
+    if (!selectedEmailListId) { toast.error("Select an email list first"); return; }
+    const selected = creators.filter((c) => selectedIds.has(c.id));
+    if (selected.length === 0) return;
+    setAddingToEmailList(true);
+
+    const withEmail: { creator: CreatorCard; email: string }[] = [];
+    const needEnrich: CreatorCard[] = [];
+    for (const c of selected) {
+      const existing = contactEmails[c.id];
+      if (existing) { withEmail.push({ creator: c, email: existing }); }
+      else if (c.username) { needEnrich.push(c); }
+    }
+
+    // Enrich those that need it
+    if (needEnrich.length > 0) {
+      setBulkEnrichProgress({ current: 0, total: needEnrich.length, found: 0, notFound: 0 });
+      let found = 0, notFound = 0;
+      for (let i = 0; i < needEnrich.length; i++) {
+        const c = needEnrich[i];
+        try {
+          const data = await fullEnrichCreatorProfile(c.username!, undefined, enrichPlatform);
+          const foundEmail = data?.result?.email ? String(data.result.email) : null;
+          if (foundEmail) {
+            withEmail.push({ creator: c, email: foundEmail });
+            setContactEmails((prev) => ({ ...prev, [c.id]: foundEmail }));
+            found++;
+            if (data) {
+              const partial = extractFromEnrichment(data);
+              setEnrichCache((prev) => ({ ...prev, [c.id]: partial }));
+              setEnrichRawCache((prev) => ({ ...prev, [c.id]: data }));
+            }
+          } else { notFound++; }
+          if (effectiveUserId) logCreditUsage(effectiveUserId, "full_enrichment", 1.03, { handle: c.username });
+        } catch { notFound++; }
+        setBulkEnrichProgress({ current: i + 1, total: needEnrich.length, found, notFound });
+      }
+      refreshCredits();
+    }
+
+    if (withEmail.length > 0) {
+      const contacts = withEmail.map(({ creator, email }) => creatorToEmailContact(creator, email));
+      const result = await syncBulkContacts(selectedEmailListId, contacts);
+      const listName = emailLists.find((l) => l.id === selectedEmailListId)?.name ?? "list";
+      toast.success(
+        `Added ${result.inserted} contact${result.inserted !== 1 ? "s" : ""} to ${listName}` +
+        (result.duplicates > 0 ? ` (${result.duplicates} already existed)` : "")
+      );
+    } else {
+      toast.warning("No emails found for any selected creators");
+    }
+
+    setBulkEnrichProgress(null);
+    setAddingToEmailList(false);
+    setEmailListModalOpen(false);
+    setSelectedIds(new Set());
   };
 
   // Auto-load from URL query params (AI handoff) or localStorage on mount
@@ -2436,44 +2613,15 @@ const BrandDiscover = () => {
               </div>
               <p className="text-xs text-muted-foreground">What would you like to do next?</p>
               <div className="space-y-2">
-                {/* Add to List */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start gap-2">
-                      <ListPlus className="h-4 w-4" />
-                      Add to List
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    {lists.map((list) => (
-                      <DropdownMenuItem key={list.id} onClick={() => { handleAddToList(list.id, list.name, postEnrichCreator); setPostEnrichCreator(null); }}>
-                        {list.name}
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuItem onClick={() => { handleOpenCreateListForCreator(postEnrichCreator); setPostEnrichCreator(null); }}>
-                      <Plus className="h-3.5 w-3.5 mr-1" /> New List
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {/* Add to Contacts */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start gap-2">
-                      <UserPlus className="h-4 w-4" />
-                      Add to Contacts
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    {contactListsForDialog.map((el) => (
-                      <DropdownMenuItem key={el.id} onClick={() => handleAddToContacts(postEnrichCreator, postEnrichEmail, el.id)}>
-                        {el.name}
-                      </DropdownMenuItem>
-                    ))}
-                    {contactListsForDialog.length === 0 && (
-                      <DropdownMenuItem disabled className="text-xs text-muted-foreground">No email lists yet</DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Add to Email List */}
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  onClick={() => { handleOpenEmailListModal(postEnrichCreator, postEnrichEmail); setPostEnrichCreator(null); }}
+                >
+                  <ListPlus className="h-4 w-4" />
+                  Add to Email List
+                </Button>
                 {/* Copy Email */}
                 <Button
                   variant="outline"
@@ -2495,6 +2643,134 @@ const BrandDiscover = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email List Modal */}
+      <Dialog open={emailListModalOpen} onOpenChange={(open) => { if (!open && !addingToEmailList) setEmailListModalOpen(false); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              Add to Email List
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Single mode: creator preview */}
+            {emailListModalMode === "single" && emailListModalCreator && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <DiscoverAvatar url={emailListModalCreator.avatar} name={emailListModalCreator.name} username={emailListModalCreator.username} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm">{emailListModalCreator.name}</p>
+                    <p className="text-xs text-muted-foreground">@{emailListModalCreator.username}</p>
+                  </div>
+                </div>
+                {(emailListModalEmail || contactEmails[emailListModalCreator.id]) ? (
+                  <div className="flex items-center gap-2 text-xs">
+                    <Mail className="h-3 w-3 text-green-500" />
+                    <span className="text-green-600 dark:text-green-400 font-medium">{emailListModalEmail || contactEmails[emailListModalCreator.id]}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="text-xs text-amber-700 dark:text-amber-400">No email on file. Will enrich for 1.03 credits.</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Bulk mode: summary */}
+            {emailListModalMode === "bulk" && (() => {
+              const bulkWithEmail = selectedCreators.filter((c) => !!contactEmails[c.id]).length;
+              const bulkNeedEnrich = selectedCreators.filter((c) => !contactEmails[c.id] && !!c.username).length;
+              const bulkCost = (bulkNeedEnrich * 1.03).toFixed(2);
+              return (
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 space-y-1.5">
+                  <p className="text-sm font-medium">{selectedCreators.length} creator{selectedCreators.length !== 1 ? "s" : ""} selected</p>
+                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Mail className="h-3 w-3 text-green-500" /> {bulkWithEmail} have emails</span>
+                    {bulkNeedEnrich > 0 && (
+                      <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-500" /> {bulkNeedEnrich} need enrichment ({bulkCost} credits)</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Bulk enrichment progress */}
+            {bulkEnrichProgress && (
+              <div className="space-y-2">
+                <Progress value={(bulkEnrichProgress.current / bulkEnrichProgress.total) * 100} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  Enriching {bulkEnrichProgress.current} of {bulkEnrichProgress.total}…
+                  {bulkEnrichProgress.found > 0 && <span className="text-green-600"> {bulkEnrichProgress.found} found</span>}
+                  {bulkEnrichProgress.notFound > 0 && <span className="text-amber-600">, {bulkEnrichProgress.notFound} not found</span>}
+                </p>
+              </div>
+            )}
+
+            {/* Email list picker */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Email List</Label>
+              {emailListsLoading ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading lists…
+                </div>
+              ) : (
+                <Select value={selectedEmailListId} onValueChange={setSelectedEmailListId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select an email list…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {emailLists.length === 0 && (
+                      <SelectItem value="__none" disabled>No email lists — create one below</SelectItem>
+                    )}
+                    {emailLists.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Create new list inline */}
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="New list name…"
+                value={newEmailListName}
+                onChange={(e) => setNewEmailListName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleCreateEmailList(); }}
+                className="flex-1 h-9"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCreateEmailList}
+                disabled={!newEmailListName.trim() || creatingEmailList}
+                className="shrink-0"
+              >
+                {creatingEmailList ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setEmailListModalOpen(false)} disabled={addingToEmailList}>Cancel</Button>
+            <Button
+              onClick={emailListModalMode === "single" ? handleAddSingleToEmailList : handleBulkAddToEmailList}
+              disabled={addingToEmailList || !selectedEmailListId}
+              className="bg-blue-700 hover:bg-blue-800 text-white"
+            >
+              {addingToEmailList ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Mail className="h-4 w-4 mr-1" />}
+              {emailListModalMode === "single"
+                ? (emailListModalEmail || (emailListModalCreator && contactEmails[emailListModalCreator.id]))
+                  ? "Add to List"
+                  : "Enrich & Add (1.03 cr)"
+                : `Add ${selectedCreators.length} Creator${selectedCreators.length !== 1 ? "s" : ""}`
+              }
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -3332,34 +3608,9 @@ const BrandDiscover = () => {
                             {similarLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
                             Find Similar
                           </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              {isCreatorInList(topCreator.id) ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button size="sm" variant="outline" className="text-xs border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400">
-                                      <CircleCheck className="h-3 w-3 mr-1" /> Added
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom" className="text-xs">In: {getCreatorListNames(topCreator.id).join(", ")}</TooltipContent>
-                                </Tooltip>
-                              ) : (
-                                <Button size="sm" className="text-xs bg-[#000741] hover:bg-[#2d5282] text-white">
-                                  <ListPlus className="h-3 w-3 mr-1" /> Add to List
-                                </Button>
-                              )}
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {lists.map((list) => (
-                                <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, topCreator)}>
-                                  {list.name}
-                                </DropdownMenuItem>
-                              ))}
-                              <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(topCreator)}>
-                                <Plus className="mr-2 h-4 w-4" /> Create New List
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button size="sm" className="text-xs bg-[#000741] hover:bg-[#2d5282] text-white" onClick={() => handleOpenEmailListModal(topCreator)}>
+                            <ListPlus className="h-3 w-3 mr-1" /> Add to List
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -3581,34 +3832,9 @@ const BrandDiscover = () => {
                             {/* Actions */}
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    {isCreatorInList(creator.id) ? (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button size="sm" variant="outline" className="h-7 text-xs rounded-md border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400">
-                                            <CircleCheck className="h-3 w-3 mr-1" /> Added
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="bottom" className="text-xs">In: {getCreatorListNames(creator.id).join(", ")}</TooltipContent>
-                                      </Tooltip>
-                                    ) : (
-                                      <Button size="sm" variant="outline" className="h-7 text-xs rounded-md">
-                                        <ListPlus className="h-3 w-3 mr-1" /> Add
-                                      </Button>
-                                    )}
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {lists.map((list) => (
-                                      <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
-                                        {list.name}
-                                      </DropdownMenuItem>
-                                    ))}
-                                    <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
-                                      <Plus className="mr-2 h-4 w-4" /> Create New List
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                <Button size="sm" variant="outline" className="h-7 text-xs rounded-md" onClick={() => handleOpenEmailListModal(creator)}>
+                                  <ListPlus className="h-3 w-3 mr-1" /> Add
+                                </Button>
                                 {directoriesList.length > 0 && (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -3841,37 +4067,14 @@ const BrandDiscover = () => {
 
                         {/* Actions */}
                         <div className="mt-auto space-y-2" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              {isCreatorInList(creator.id) ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50">
-                                      <CircleCheck className="h-4 w-4" />
-                                      Added
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom" className="text-xs">In: {getCreatorListNames(creator.id).join(", ")}</TooltipContent>
-                                </Tooltip>
-                              ) : (
-                                <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-[#000741] hover:bg-[#2d5282] text-white dark:bg-[#000741] dark:hover:bg-[#2d5282]">
-                                  <ListPlus className="h-4 w-4" />
-                                  Add to List
-                                </Button>
-                              )}
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                              {lists.map((list) => (
-                                <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
-                                  {list.name}
-                                </DropdownMenuItem>
-                              ))}
-                              <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create New List
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button
+                            size="sm"
+                            className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-[#000741] hover:bg-[#2d5282] text-white dark:bg-[#000741] dark:hover:bg-[#2d5282]"
+                            onClick={() => handleOpenEmailListModal(creator)}
+                          >
+                            <ListPlus className="h-4 w-4" />
+                            Add to List
+                          </Button>
                           <div className="flex gap-2 items-center">
                             {directoriesList.length > 0 && (
                               <DropdownMenu>
@@ -3962,11 +4165,10 @@ const BrandDiscover = () => {
         mode="discovery"
         selectedCount={selectedIds.size}
         onClearSelection={() => setSelectedIds(new Set())}
-        onAddToList={handleBulkAddToList}
-        listOptions={lists.map((l) => ({ id: l.id, name: l.name }))}
-        onCreateList={() => setCreateListForBulkAddOpen(true)}
+        onAddToEmailList={() => handleOpenEmailListModal()}
         onImportAll={handleImportAll}
         onImportAndAddToList={handleImportAndAddToList}
+        listOptions={lists.map((l) => ({ id: l.id, name: l.name }))}
         onCreateListForImport={() => setCreateListForBulkImportOpen(true)}
         onAddToDirectory={handleBulkAddToDirectory}
         directoryOptions={directoriesList}
