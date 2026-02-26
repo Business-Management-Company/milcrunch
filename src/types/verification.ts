@@ -1,4 +1,4 @@
-export type VerificationStatus = "verified" | "pending" | "flagged" | "denied";
+export type VerificationStatus = "verified" | "pending" | "flagged" | "rejected";
 export type ClaimedStatus = "veteran" | "active_duty" | "reserve" | "guard" | "spouse";
 
 export interface EvidenceSource {

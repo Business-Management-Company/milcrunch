@@ -233,7 +233,7 @@ export function computeVerificationScore(
   return Math.min(100, Math.max(0, score));
 }
 
-export function recommendStatus(score: number, hasCriminalFlags: boolean): "verified" | "pending" | "flagged" | "denied" {
+export function recommendStatus(score: number, hasCriminalFlags: boolean): "verified" | "pending" | "flagged" | "rejected" {
   // Only flag if there's actual negative evidence AND score is low
   if (hasCriminalFlags && score < 40) return "flagged";
   if (score >= 80) return "verified";
@@ -249,7 +249,7 @@ export function recomputeScoreFromRecord(record: {
   claimed_type?: string | null;
   linkedin_url?: string | null;
   firecrawl_data?: unknown;
-}): { score: number; status: "verified" | "pending" | "flagged" | "denied" } {
+}): { score: number; status: "verified" | "pending" | "flagged" | "rejected" } {
   const pdlData = record.pdl_data as PDLResponse | null;
   const pdlScore = scorePDL(pdlData);
   const evidenceSources = Array.isArray(record.evidence_sources)
@@ -550,7 +550,7 @@ export async function runVerificationPipeline(
   onPhase: (phase: PipelinePhase) => void
 ): Promise<{
   verificationScore: number;
-  status: "verified" | "pending" | "flagged" | "denied";
+  status: "verified" | "pending" | "flagged" | "rejected";
   pdlData: PDLResponse | null;
   serpResults: SerpResult[];
   evidenceSources: EvidenceSource[];

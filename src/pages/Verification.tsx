@@ -605,7 +605,7 @@ export default function Verification() {
     total: list.length,
     verified: list.filter((r) => r.status === "verified").length,
     pending: list.filter((r) => r.status === "pending" && !isSyntheticRow(r)).length,
-    flagged: list.filter((r) => r.status === "flagged" || r.status === "denied").length,
+    flagged: list.filter((r) => r.status === "flagged" || r.status === "rejected").length,
     notVerified: list.filter((r) => isSyntheticRow(r)).length,
   };
 
@@ -1091,6 +1091,7 @@ export default function Verification() {
           bio: editForm.notes || null,
           ic_avatar_url: editForm.photoUrl || null,
           category: editForm.category || null,
+          verification_status: editForm.verificationStatus,
         } as Record<string, unknown>).eq("creator_handle", editForm.sourceUsername);
       }
 
@@ -1101,6 +1102,7 @@ export default function Verification() {
           branch: editForm.branch || null,
           bio: editForm.notes || null,
           photo_url: editForm.photoUrl || null,
+          verification_status: editForm.verificationStatus,
         } as Record<string, unknown>).eq("name", list.find((r) => r.id === editForm.id)?.person_name ?? editForm.name);
       }
 
@@ -1789,8 +1791,8 @@ export default function Verification() {
                                           <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "flagged" }).eq("id", row.id); toast.success("Status changed to flagged"); fetchVerifications(); }}>
                                             <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
                                           </DropdownMenuItem>
-                                          <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "denied" }).eq("id", row.id); toast.success("Status changed to denied"); fetchVerifications(); }}>
-                                            <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
+                                          <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "rejected" }).eq("id", row.id); toast.success("Status changed to rejected"); fetchVerifications(); }}>
+                                            <XCircle className="h-4 w-4 mr-2 text-red-600" /> Rejected
                                           </DropdownMenuItem>
                                         </DropdownMenuSubContent>
                                       </DropdownMenuSub>
@@ -1921,13 +1923,27 @@ export default function Verification() {
               </div>
               <div>
                 <Label>Verification Status</Label>
-                <Select value={editForm.verificationStatus} onValueChange={(v) => setEditForm((f) => ({ ...f, verificationStatus: v }))}>
+                <Select value={editForm.verificationStatus} onValueChange={(v) => {
+                  setEditForm((f) => {
+                    let score = f.confidenceScore;
+                    let override = f.confidenceOverride;
+                    // Auto-adjust confidence score to match status threshold
+                    if (v === "verified" && (score == null || score < 80)) {
+                      score = 80;
+                      override = true;
+                    } else if (v === "flagged" && (score == null || score >= 40)) {
+                      score = 39;
+                      override = true;
+                    }
+                    return { ...f, verificationStatus: v, confidenceScore: score, confidenceOverride: override };
+                  });
+                }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="verified">Verified</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="flagged">Flagged</SelectItem>
-                    <SelectItem value="denied">Rejected</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -4099,7 +4115,7 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[160px]">
-                {(["verified", "pending", "flagged", "denied"] as const).map((s) => (
+                {(["verified", "pending", "flagged", "rejected"] as const).map((s) => (
                   <DropdownMenuItem
                     key={s}
                     onClick={() => handleStatusChange(s, true)}
@@ -4108,7 +4124,7 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
                     {s === "verified" && <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />}
                     {s === "pending" && <Clock className="h-3.5 w-3.5 text-amber-600" />}
                     {s === "flagged" && <AlertTriangle className="h-3.5 w-3.5 text-red-500" />}
-                    {s === "denied" && <XCircle className="h-3.5 w-3.5 text-red-700" />}
+                    {s === "rejected" && <XCircle className="h-3.5 w-3.5 text-red-700" />}
                     {s.charAt(0).toUpperCase() + s.slice(1)}
                     {record.status === s && <Check className="h-3.5 w-3.5 ml-auto" />}
                   </DropdownMenuItem>
