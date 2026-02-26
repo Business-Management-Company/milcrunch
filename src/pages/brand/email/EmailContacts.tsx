@@ -18,7 +18,7 @@ import {
   Plus, ArrowLeft, Upload, Download, Loader2, Trash2, Search,
   Users, UserCheck, UserX, AlertTriangle, Mail, Send,
   RefreshCw, Calendar, FolderOpen, Handshake, Edit2, X,
-  Clock, Eye, MousePointer, CheckCircle2,
+  Clock, Eye, MousePointer, CheckCircle2, ShieldCheck, Ticket,
   Instagram, Youtube, Twitter, Linkedin, Globe, Phone, Building2, Briefcase, Tag, ListPlus,
 } from "lucide-react";
 import {
@@ -27,7 +27,7 @@ import {
   syncBulkContacts,
 } from "@/lib/email-db";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchDirectories, fetchDirectoryMembers, type DirectoryMember } from "@/lib/directories";
+import { fetchDirectories, fetchDirectoryMembers, addToDirectory, type DirectoryMember, type Directory } from "@/lib/directories";
 import { CONTACT_STATUS_COLORS } from "@/lib/email-types";
 import type { EmailContact, EmailList, ContactSource, ContactActivity } from "@/lib/email-types";
 
@@ -412,6 +412,26 @@ const EmailContacts = () => {
   const [drawerLists, setDrawerLists] = useState<Array<{ list_id: string; list_name: string; status: string }>>([]);
   const [drawerIndex, setDrawerIndex] = useState(0);
 
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Bulk action modals
+  const [bulkListOpen, setBulkListOpen] = useState(false);
+  const [bulkListId, setBulkListId] = useState("");
+  const [bulkListLoading, setBulkListLoading] = useState(false);
+
+  const [bulkEventOpen, setBulkEventOpen] = useState(false);
+  const [bulkEventId, setBulkEventId] = useState("");
+  const [bulkTicketId, setBulkTicketId] = useState("");
+  const [bulkEventLoading, setBulkEventLoading] = useState(false);
+  const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
+  const [eventTickets, setEventTickets] = useState<{ id: string; name: string }[]>([]);
+
+  const [bulkDirOpen, setBulkDirOpen] = useState(false);
+  const [bulkDirId, setBulkDirId] = useState("");
+  const [bulkDirLoading, setBulkDirLoading] = useState(false);
+  const [directories, setDirectories] = useState<Directory[]>([]);
+
   const openDrawer = async (contact: EmailContact, idx: number) => {
     setDrawerContact(contact);
     setDrawerIndex(idx);
@@ -736,6 +756,171 @@ const EmailContacts = () => {
     loadData();
   };
 
+  // ── Bulk Selection Helpers ─────────────────────────────────────
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (filteredIds: string[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = filteredIds.every((id) => prev.has(id));
+      if (allSelected) return new Set();
+      return new Set(filteredIds);
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const getSelectedContacts = (): EmailContact[] =>
+    contacts.filter((c) => selectedIds.has(c.id));
+
+  // ── Bulk: Add to List ──────────────────────────────────────────
+
+  const handleBulkAddToList = async () => {
+    if (!bulkListId) { toast.error("Select a list"); return; }
+    setBulkListLoading(true);
+    const selected = getSelectedContacts();
+    const result = await syncBulkContacts(
+      bulkListId,
+      selected.map((c) => ({
+        email: c.email,
+        first_name: c.first_name || undefined,
+        last_name: c.last_name || undefined,
+        phone: c.phone || undefined,
+        company: c.company || undefined,
+        title: c.title || undefined,
+        source: c.source,
+        metadata: c.metadata,
+      }))
+    );
+    toast.success(`Added ${result.inserted} contacts to list (${result.duplicates} already existed)`);
+    setBulkListLoading(false);
+    setBulkListOpen(false);
+    setBulkListId("");
+    clearSelection();
+    loadData();
+  };
+
+  // ── Bulk: Add to Event ─────────────────────────────────────────
+
+  const generateRegCode = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "MIC2026-";
+    for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  };
+
+  const openBulkEventModal = async () => {
+    setBulkEventOpen(true);
+    setBulkEventId("");
+    setBulkTicketId("");
+    setEventTickets([]);
+    const { data } = await supabase
+      .from("events")
+      .select("id, title")
+      .order("start_date", { ascending: false });
+    setEvents((data as { id: string; title: string }[]) || []);
+  };
+
+  const loadTicketsForEvent = async (eventId: string) => {
+    setBulkEventId(eventId);
+    setBulkTicketId("");
+    const { data } = await supabase
+      .from("event_tickets")
+      .select("id, name")
+      .eq("event_id", eventId)
+      .eq("is_active", true)
+      .order("sort_order");
+    setEventTickets((data as { id: string; name: string }[]) || []);
+  };
+
+  const handleBulkAddToEvent = async () => {
+    if (!bulkEventId) { toast.error("Select an event"); return; }
+    setBulkEventLoading(true);
+    const selected = getSelectedContacts();
+
+    // Fetch existing registrations for this event to skip duplicates
+    const { data: existing } = await supabase
+      .from("event_registrations")
+      .select("email")
+      .eq("event_id", bulkEventId);
+    const existingEmails = new Set((existing || []).map((r: any) => r.email?.toLowerCase()));
+
+    const toInsert = selected.filter((c) => !existingEmails.has(c.email.toLowerCase()));
+    if (toInsert.length === 0) {
+      toast.info("All selected contacts are already registered");
+      setBulkEventLoading(false);
+      return;
+    }
+
+    const rows = toInsert.map((c) => ({
+      event_id: bulkEventId,
+      ticket_id: bulkTicketId || null,
+      first_name: c.first_name || c.email.split("@")[0],
+      last_name: c.last_name || "",
+      email: c.email,
+      phone: c.phone || null,
+      company: c.company || null,
+      title: c.title || null,
+      registration_code: generateRegCode(),
+      status: "confirmed",
+      checked_in: false,
+    }));
+
+    const { error } = await supabase.from("event_registrations").insert(rows);
+    if (error) {
+      console.error("Bulk event registration error:", error);
+      toast.error(`Failed: ${error.message}`);
+    } else {
+      const skipped = selected.length - toInsert.length;
+      toast.success(`Registered ${toInsert.length} contacts${skipped > 0 ? ` (${skipped} already registered)` : ""}`);
+    }
+    setBulkEventLoading(false);
+    setBulkEventOpen(false);
+    clearSelection();
+  };
+
+  // ── Bulk: Add to Directory ─────────────────────────────────────
+
+  const openBulkDirModal = async () => {
+    setBulkDirOpen(true);
+    setBulkDirId("");
+    const dirs = await fetchDirectories();
+    setDirectories(dirs);
+  };
+
+  const handleBulkAddToDir = async () => {
+    if (!bulkDirId) { toast.error("Select a directory"); return; }
+    setBulkDirLoading(true);
+    const selected = getSelectedContacts();
+    let added = 0;
+    let failed = 0;
+    for (const c of selected) {
+      const handle = (c.metadata?.username as string) || c.email.split("@")[0];
+      const name = [c.first_name, c.last_name].filter(Boolean).join(" ") || handle;
+      const { error } = await addToDirectory(bulkDirId, {
+        handle,
+        display_name: name,
+        platform: (c.metadata?.platform as string) || "instagram",
+        avatar_url: (c.metadata?.avatar as string) || null,
+        follower_count: c.metadata?.followers ? Number(c.metadata.followers) : null,
+        engagement_rate: c.metadata?.engagement_rate ? Number(c.metadata.engagement_rate) : null,
+        bio: (c.metadata?.bio as string) || null,
+        enrichment_data: c.metadata || {},
+      });
+      if (error) failed++; else added++;
+    }
+    toast.success(`Added ${added} to directory${failed > 0 ? ` (${failed} failed/duplicates)` : ""}`);
+    setBulkDirLoading(false);
+    setBulkDirOpen(false);
+    clearSelection();
+  };
+
   // ── Filtering ───────────────────────────────────────────────────
 
   const getFilteredContacts = () => {
@@ -756,6 +941,7 @@ const EmailContacts = () => {
   };
 
   const filtered = getFilteredContacts();
+  const visibleIds = filtered.slice(0, 100).map((c) => c.id);
 
   // Deduplicate by email for unique count display
   const uniqueEmails = new Set(contacts.map(c => c.email.toLowerCase()));
@@ -1226,6 +1412,12 @@ const EmailContacts = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10 px-3">
+                  <Checkbox
+                    checked={visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))}
+                    onCheckedChange={() => toggleSelectAll(visibleIds)}
+                  />
+                </TableHead>
                 <TableHead className="w-10"></TableHead>
                 <TableHead>First Name</TableHead>
                 <TableHead>Last Name</TableHead>
@@ -1240,8 +1432,12 @@ const EmailContacts = () => {
               {filtered.slice(0, 100).map((c, idx) => {
                 const sc = CONTACT_STATUS_COLORS[c.status] || CONTACT_STATUS_COLORS.subscribed;
                 const src = c.source || "manual";
+                const isSelected = selectedIds.has(c.id);
                 return (
-                  <TableRow key={c.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30" onClick={() => openDrawer(c, idx)}>
+                  <TableRow key={c.id} className={cn("cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30", isSelected && "bg-blue-50/50 dark:bg-blue-900/10")} onClick={() => openDrawer(c, idx)}>
+                    <TableCell className="px-3" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(c.id)} />
+                    </TableCell>
                     <TableCell>
                       <div className="relative h-8 w-8 rounded-full bg-[#1e3a5f]/20 text-[#1e3a5f] flex items-center justify-center text-xs font-bold overflow-hidden">
                         <span>{initials(c.first_name, c.last_name, c.email)}</span>
@@ -1280,6 +1476,141 @@ const EmailContacts = () => {
           )}
         </div>
       )}
+      {/* ── Floating Bulk Action Bar ──────────────────────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border bg-background">
+          <span className="text-sm font-medium whitespace-nowrap">
+            {selectedIds.size} contact{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="h-4 w-px bg-border" />
+          <Button variant="outline" size="sm" className="rounded-lg" onClick={() => { setBulkListId(""); setBulkListOpen(true); }}>
+            <ListPlus className="h-4 w-4 mr-1.5" />
+            Add to List
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-lg" onClick={openBulkEventModal}>
+            <Ticket className="h-4 w-4 mr-1.5" />
+            Add to Event
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-lg text-blue-800 border-blue-400 hover:bg-blue-50 dark:text-blue-500 dark:border-blue-800 dark:hover:bg-blue-950/30" onClick={openBulkDirModal}>
+            <ShieldCheck className="h-4 w-4 mr-1.5" />
+            Add to Directory
+          </Button>
+          <Button variant="ghost" size="sm" className="rounded-lg" onClick={clearSelection}>
+            <X className="h-4 w-4 mr-1.5" />
+            Clear
+          </Button>
+        </div>
+      )}
+
+      {/* ── Bulk: Add to List Modal ────────────────────────────────── */}
+      <Dialog open={bulkListOpen} onOpenChange={setBulkListOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add {selectedIds.size} Contacts to Email List</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select List</Label>
+              <Select value={bulkListId} onValueChange={setBulkListId}>
+                <SelectTrigger><SelectValue placeholder="Choose a list..." /></SelectTrigger>
+                <SelectContent>
+                  {lists.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">Duplicates will be skipped automatically.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkListOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkAddToList} disabled={bulkListLoading || !bulkListId}>
+              {bulkListLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Add to List
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk: Add to Event Modal ───────────────────────────────── */}
+      <Dialog open={bulkEventOpen} onOpenChange={setBulkEventOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register {selectedIds.size} Contacts to Event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Event</Label>
+              <Select value={bulkEventId} onValueChange={loadTicketsForEvent}>
+                <SelectTrigger><SelectValue placeholder="Choose an event..." /></SelectTrigger>
+                <SelectContent>
+                  {events.map((ev) => (
+                    <SelectItem key={ev.id} value={ev.id}>{ev.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {bulkEventId && eventTickets.length > 0 && (
+              <div className="space-y-2">
+                <Label>Ticket Type (optional)</Label>
+                <Select value={bulkTicketId} onValueChange={setBulkTicketId}>
+                  <SelectTrigger><SelectValue placeholder="General Admission" /></SelectTrigger>
+                  <SelectContent>
+                    {eventTickets.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Each contact will get a unique registration code (MIC2026-XXXX).
+              Contacts already registered for this event will be skipped.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEventOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkAddToEvent} disabled={bulkEventLoading || !bulkEventId}>
+              {bulkEventLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Register Contacts
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk: Add to Directory Modal ───────────────────────────── */}
+      <Dialog open={bulkDirOpen} onOpenChange={setBulkDirOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add {selectedIds.size} Contacts to Directory</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Directory</Label>
+              <Select value={bulkDirId} onValueChange={setBulkDirId}>
+                <SelectTrigger><SelectValue placeholder="Choose a directory..." /></SelectTrigger>
+                <SelectContent>
+                  {directories.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Contacts will be added as directory members with their enrichment data.
+              Duplicates (same handle) will be skipped.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDirOpen(false)}>Cancel</Button>
+            <Button onClick={handleBulkAddToDir} disabled={bulkDirLoading || !bulkDirId}>
+              {bulkDirLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Add to Directory
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Contact Drawer */}
       <ContactDrawer
         contact={drawerContact}
