@@ -2069,9 +2069,9 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
         )}
       </section>
 
-      {/* Backward compat: show prospectus_videos media below headline if no VIDEO/IMAGE block exists */}
-      {!hasVideoBlock && (videoUrl || imageUrl) && (
-        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
+      {/* Backward compat: show prospectus_videos video below headline if no VIDEO block exists */}
+      {!hasVideoBlock && videoUrl && (
+        <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={false} />
       )}
 
       {/* Block-aware section rendering */}
