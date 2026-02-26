@@ -2916,6 +2916,20 @@ const BrandDiscover = () => {
                         <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate flex items-center gap-2">
                           {topCreator.name}
                           {topCreator.isVerified && <BadgeCheck className="h-4 w-4 text-[#6C5CE7] shrink-0" />}
+                          {(() => {
+                            const v = getVerification(topCreator.username);
+                            if (!v) return null;
+                            const color = v.score >= 80 ? "text-emerald-600" : v.score >= 40 ? "text-amber-500" : "text-red-500";
+                            const label = v.score >= 80 ? "Verified" : v.score >= 40 ? "Pending" : "Flagged";
+                            return (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`inline-flex items-center gap-0.5 shrink-0 ${color}`}><ShieldCheck className="h-4 w-4" /></span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">{label} {v.score}%</TooltipContent>
+                              </Tooltip>
+                            );
+                          })()}
                           {isInAnyDirectory(topCreator.username) && (
                             <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
                           )}
@@ -3110,6 +3124,20 @@ const BrandDiscover = () => {
                                   <p className="font-semibold text-[#000741] dark:text-white truncate flex items-center gap-1">
                                     {creator.name}
                                     {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
+                                    {(() => {
+                                      const v = getVerification(creator.username);
+                                      if (!v) return null;
+                                      const color = v.score >= 80 ? "text-emerald-600" : v.score >= 40 ? "text-amber-500" : "text-red-500";
+                                      const label = v.score >= 80 ? "Verified" : v.score >= 40 ? "Pending" : "Flagged";
+                                      return (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className={`inline-flex items-center shrink-0 ${color}`}><ShieldCheck className="h-3 w-3" /></span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="text-xs">{label} {v.score}%</TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    })()}
                                     {isInAnyDirectory(creator.username) && (
                                       <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 text-[9px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-2.5 w-2.5" /></span>
                                     )}
@@ -3346,6 +3374,20 @@ const BrandDiscover = () => {
                               {(creator.hasEmail || contactEmails[creator.id]) && !contactEmails[creator.id] && (
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available"><Mail className="h-3 w-3" /></span>
                               )}
+                              {(() => {
+                                const v = getVerification(creator.username);
+                                if (!v) return null;
+                                const color = v.score >= 80 ? "text-emerald-600" : v.score >= 40 ? "text-amber-500" : "text-red-500";
+                                const label = v.score >= 80 ? "Verified" : v.score >= 40 ? "Pending" : "Flagged";
+                                return (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className={`inline-flex items-center shrink-0 ml-1 ${color}`}><ShieldCheck className="h-3.5 w-3.5" /></span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">{label} {v.score}%</TooltipContent>
+                                  </Tooltip>
+                                );
+                              })()}
                               {isInAnyDirectory(creator.username) && (
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500 ml-1" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
                               )}
@@ -3441,31 +3483,37 @@ const BrandDiscover = () => {
 
                         {/* Actions */}
                         <div className="mt-auto space-y-2" onClick={(e) => e.stopPropagation()}>
-                          {isCreatorInList(creator.id) ? (
-                            <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" disabled>
-                              Added
-                            </Button>
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              {isCreatorInList(creator.id) ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50">
+                                      <CircleCheck className="h-4 w-4" />
+                                      Added
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="text-xs">In: {getCreatorListNames(creator.id).join(", ")}</TooltipContent>
+                                </Tooltip>
+                              ) : (
                                 <Button size="sm" className="flex items-center justify-center gap-2 w-full text-center rounded-lg bg-[#000741] hover:bg-[#2d5282] text-white dark:bg-[#000741] dark:hover:bg-[#2d5282]">
                                   <ListPlus className="h-4 w-4" />
                                   Add to List
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-                                {lists.map((list) => (
-                                  <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
-                                    {list.name}
-                                  </DropdownMenuItem>
-                                ))}
-                                <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Create New List
+                              )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                              {lists.map((list) => (
+                                <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
+                                  {list.name}
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                              ))}
+                              <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create New List
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <div className="flex gap-2 items-center">
                             {directoriesList.length > 0 && (
                               <DropdownMenu>
