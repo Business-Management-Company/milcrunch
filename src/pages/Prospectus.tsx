@@ -1286,6 +1286,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 
 function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded, dbContent }: { dark: boolean; videoUrl?: string; imageUrl?: string; isSuperAdmin: boolean; onVideoEnded?: () => void; dbContent?: TabContent }) {
   const content = dbContent || TAB_CONTENT["Overview"];
+  const [demoModal, setDemoModal] = useState<{ open: boolean; url: string }>({ open: false, url: "" });
   return (
     <div className="space-y-16">
       {/* Hero */}
@@ -1349,6 +1350,25 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded, dbC
                   ))}
                 </div>
               )}
+              {section.image_url && (
+                <div
+                  className={cn("relative mt-4", section.demo_url && "group cursor-pointer")}
+                  onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
+                >
+                  <img
+                    src={section.image_url}
+                    alt=""
+                    className="w-full rounded-xl shadow-md object-cover"
+                  />
+                  {section.demo_url && (
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                      <span className="text-white font-semibold text-sm flex items-center gap-2">
+                        <Play className="h-5 w-5" /> Explore Live Demo
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </section>
@@ -1372,6 +1392,12 @@ function OverviewTab({ dark, videoUrl, imageUrl, isSuperAdmin, onVideoEnded, dbC
           </p>
         </section>
       )}
+
+      <DemoIframeModal
+        open={demoModal.open}
+        onOpenChange={(v) => setDemoModal((prev) => ({ ...prev, open: v }))}
+        url={demoModal.url}
+      />
     </div>
   );
 }
