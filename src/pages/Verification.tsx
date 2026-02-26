@@ -1412,7 +1412,7 @@ export default function Verification() {
                     {expandedId === row.id && expanded && (
                       <TableRow key={`${row.id}-exp`} className="border-none hover:bg-transparent">
                         <TableCell colSpan={8} className="p-0 border-none">
-                          <ExpandedRow record={expanded} onRefresh={fetchVerifications} />
+                          <ExpandedRow record={expanded} onRefresh={fetchVerifications} dirEnrichmentMap={dirEnrichmentMap} />
                         </TableCell>
                       </TableRow>
                     )}
@@ -3002,7 +3002,7 @@ function StatusDot({ status, tooltip }: { status: 'red' | 'yellow' | 'green'; to
   );
 }
 
-function ExpandedRow({ record, onRefresh }: { record: VerificationRecord; onRefresh?: () => void }) {
+function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: VerificationRecord; onRefresh?: () => void; dirEnrichmentMap: Record<string, unknown> }) {
   const [reverifying, setReverifying] = useState(false);
   const [reverifyPhase, setReverifyPhase] = useState("");
   const [reverifyProgress, setReverifyProgress] = useState(0);
