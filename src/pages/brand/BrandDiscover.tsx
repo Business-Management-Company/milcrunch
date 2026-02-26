@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -1597,6 +1597,16 @@ const BrandDiscover = () => {
     return [...creators].sort((a, b) => getConfidence(b).score - getConfidence(a).score);
   }, [creators, sortBy, getConfidence]);
 
+  // Top Creator — highest follower count from results, skip if same as exact match
+  const topCreator = useMemo(() => {
+    if (creators.length === 0) return null;
+    const best = creators.reduce((top, c) => ((c.followers ?? 0) > (top.followers ?? 0) ? c : top), creators[0]);
+    if (!best || (best.followers ?? 0) === 0) return null;
+    // Don't duplicate if exact match is already the top creator
+    if (exactMatch && best.id === exactMatch.id) return null;
+    return best;
+  }, [creators, exactMatch]);
+
   const totalFromApi = apiResults?.total ?? 0;
   const resultsLabel =
     hasSearched && !apiLoading
@@ -2676,6 +2686,84 @@ const BrandDiscover = () => {
                                   </DropdownMenuItem>
                                 ))}
                                 <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(exactMatch)}>
+                                  <Plus className="mr-2 h-4 w-4" /> Create New List
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Top Creator Card */}
+              {topCreator && (
+                <div className="mb-6">
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-1.5">
+                    <Trophy className="h-4 w-4" />
+                    Top Creator
+                  </p>
+                  <Card
+                    className="relative rounded-2xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 p-6 cursor-pointer hover:shadow-md transition-all"
+                    onClick={() => { setProfileCreator(getMergedCreator(topCreator)); setProfileModalOpen(true); }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <DiscoverAvatar url={topCreator.avatar} name={topCreator.name} username={topCreator.username} size="w-16 h-16" borderClass="border-2 border-amber-200 dark:border-amber-800 shadow-md" verified={topCreator.isVerified} badgeClass="h-5 w-5 text-amber-600" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate flex items-center gap-2">
+                          {topCreator.name}
+                          {topCreator.isVerified && <BadgeCheck className="h-4 w-4 text-[#6C5CE7] shrink-0" />}
+                          {isInAnyDirectory(topCreator.username) && (
+                            <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
+                          )}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">@{topCreator.username}</p>
+                        {topCreator.bio && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{topCreator.bio}</p>}
+                      </div>
+                      <div className="flex items-center gap-6 shrink-0">
+                        <div className="text-center">
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Followers</span>
+                          <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatFollowers(topCreator.followers)}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Engagement</span>
+                          <span className="font-bold text-amber-500 tabular-nums">{typeof getMergedCreator(topCreator).engagementRate === "number" ? getMergedCreator(topCreator).engagementRate!.toFixed(2) : "—"}%</span>
+                        </div>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              setSimilarLoading(true);
+                              searchSimilarCreators(topCreator.username ?? "", platform[0] || "instagram")
+                                .then((res) => setSimilarCreators(res.creators))
+                                .catch(() => toast.error("Failed to find similar creators"))
+                                .finally(() => setSimilarLoading(false));
+                            }}
+                            disabled={similarLoading}
+                          >
+                            {similarLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
+                            Find Similar
+                          </Button>
+                          {isCreatorInList(topCreator.id) ? (
+                            <span className="text-xs text-gray-400">Added</span>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" className="text-xs bg-[#000741] hover:bg-[#2d5282] text-white">
+                                  <ListPlus className="h-3 w-3 mr-1" /> Add to List
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {lists.map((list) => (
+                                  <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, topCreator)}>
+                                    {list.name}
+                                  </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(topCreator)}>
                                   <Plus className="mr-2 h-4 w-4" /> Create New List
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
