@@ -1553,9 +1553,10 @@ const BrandDiscover = () => {
   }, [locationFilter, followersRange, engagementMin, gender, niche, language, keywordsInBio, selectedBranches]);
 
   // Show fallback keyword results when username search returned 0 direct results
-  const creators = (apiResults?.creators ?? []).length > 0
+  const creators = ((apiResults?.creators ?? []).length > 0
     ? (apiResults?.creators ?? [])
-    : (usernameNotFound?.fallbackResults ?? []);
+    : (usernameNotFound?.fallbackResults ?? [])
+  ).filter((c) => (c.followers ?? 0) > 0);
 
   // Background enrichment: enrich creators in parallel batches of 10 with Supabase caching
   // IMPORTANT: checks directory_members for permanent avatar URLs FIRST to avoid
@@ -2143,10 +2144,10 @@ const BrandDiscover = () => {
           <div className="flex items-center justify-between gap-4 mb-5">
             <div>
               <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
-                Discover Creators
+                Discover Influencers, Content Creators, Speakers & More!
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Find and connect with military and veteran creators
+                Find and connect with military and veteran influencers, creators, and speakers
               </p>
             </div>
             {/* Credits Pill */}
