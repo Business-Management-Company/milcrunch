@@ -1629,8 +1629,8 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, dbContent }: { dark: boolean; dbContent?: TabContent }) {
-  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} />;
+function OverviewTab({ dark, dbContent, videoUrl, imageUrl }: { dark: boolean; dbContent?: TabContent; videoUrl?: string; imageUrl?: string }) {
+  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} />;
 }
 
 /* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
@@ -2028,7 +2028,7 @@ const TAB_CONTENT: Record<string, TabContent> = {
   },
 };
 
-function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbContent?: TabContent }) {
+function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolean; tab: string; dbContent?: TabContent; videoUrl?: string; imageUrl?: string }) {
   const [demoModal, setDemoModal] = useState<{ open: boolean; url: string }>({ open: false, url: "" });
   const content = dbContent || TAB_CONTENT[tab];
   const kbSlug = TAB_KB_CATEGORY[tab];
@@ -2042,9 +2042,14 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
   }
 
   const visibleBlocks = content.sections.filter((s) => s.visible !== false);
+  const hasVideoBlock = visibleBlocks.some((s) => inferBlockType(s) === "video");
 
   return (
     <div className="space-y-12">
+      {/* Backward compat: show prospectus_videos media at top if no VIDEO block exists */}
+      {!hasVideoBlock && (videoUrl || imageUrl) && (
+        <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
+      )}
       {/* Deep Dive link */}
       {kbSlug && (
         <div className="flex justify-end -mb-8">
@@ -2847,17 +2852,17 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} />}
-        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} />}
-        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} />}
-        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} />}
-        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} />}
-        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} />}
-        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} />}
-        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} />}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} />}
+        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} videoUrl={videoUrls["MilCrunch Experience"]} imageUrl={imageUrls["MilCrunch Experience"]} />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} />}
+        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} />}
         {activeTab === "Financial Model" && (
           <>
-            <ContentTab dark={darkMode} tab="Financial Model" dbContent={tabContent["Financial Model"]} />
+            <ContentTab dark={darkMode} tab="Financial Model" dbContent={tabContent["Financial Model"]} videoUrl={videoUrls["Financial Model"]} imageUrl={imageUrls["Financial Model"]} />
             <FinancialModelTab dark={darkMode} />
           </>
         )}
