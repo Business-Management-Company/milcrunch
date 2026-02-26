@@ -1395,42 +1395,51 @@ export default function Verification() {
                       </TableCell>
                       <TableCell className="text-base font-semibold text-gray-900 dark:text-gray-100">
                         <div className="flex items-center gap-2">
-                          {getCreatorAvatar(row) ? (
+                          {row.profile_photo_url ? (
                             <img
-                              src={getCreatorAvatar(row)!}
+                              src={row.profile_photo_url}
                               alt={row.person_name}
                               className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                              referrerPolicy="no-referrer"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.removeAttribute('style');
                               }}
                             />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-semibold text-blue-700">
-                                {getAvatarFallback(row.person_name || '')}
-                              </span>
-                            </div>
-                          )}
+                          ) : null}
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0" style={row.profile_photo_url ? { display: 'none' } : undefined}>
+                            <span className="text-xs font-semibold text-blue-700">
+                              {getAvatarFallback(row.person_name || '')}
+                            </span>
+                          </div>
                           <NameStatusIcon score={row.verification_score ?? 0} />
                           <InlineNameEdit id={row.id} name={row.person_name} onSave={fetchVerifications} />
                         </div>
                       </TableCell>
                       <TableCell>{row.claimed_branch ?? "—"}</TableCell>
                       <TableCell>
-                        {row.claimed_status ? (() => {
-                          const isSpouse = row.claimed_status?.toLowerCase().includes('spouse') ||
-                            row.person_name?.toLowerCase().includes('spouse') ||
-                            (row.ai_analysis as string)?.toLowerCase().includes('milspouse');
-                          return isSpouse ? (
+                        {(() => {
+                          const displayType = (row as any).claimed_type || row.claimed_status;
+                          if (!displayType) return <span className="text-gray-400">—</span>;
+                          const lower = displayType.toLowerCase();
+                          const isSpouse = lower.includes('spouse');
+                          const isGoldStar = lower.includes('gold') && lower.includes('star');
+                          const isFamily = lower.includes('family') && !isGoldStar;
+                          if (isGoldStar) return (
+                            <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">Gold Star</span>
+                          );
+                          if (isSpouse) return (
                             <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800">Military Spouse</span>
-                          ) : (
+                          );
+                          if (isFamily) return (
+                            <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800">Military Family</span>
+                          );
+                          return (
                             <span className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
-                              {row.claimed_status.replace(/_/g, " ")}
+                              {displayType.replace(/_/g, " ")}
                             </span>
                           );
-                        })() : (
-                          <span className="text-gray-400">—</span>
-                        )}
+                        })()}
                       </TableCell>
                       <TableCell>
                         <TooltipProvider delayDuration={200}>
@@ -3681,15 +3690,25 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
                 {record.claimed_branch}
               </Badge>
             )}
-            {record.claimed_status && (() => {
-              const isSpouse = record.claimed_status?.toLowerCase().includes('spouse') ||
-                record.person_name?.toLowerCase().includes('spouse') ||
-                (record.ai_analysis as string)?.toLowerCase().includes('milspouse');
-              return isSpouse ? (
+            {(() => {
+              const displayType = (record as any).claimed_type || record.claimed_status;
+              if (!displayType) return null;
+              const lower = displayType.toLowerCase();
+              const isSpouse = lower.includes('spouse');
+              const isGoldStar = lower.includes('gold') && lower.includes('star');
+              const isFamily = lower.includes('family') && !isGoldStar;
+              if (isGoldStar) return (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800">Gold Star</span>
+              );
+              if (isSpouse) return (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800">Military Spouse</span>
-              ) : (
+              );
+              if (isFamily) return (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800">Military Family</span>
+              );
+              return (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800 capitalize">
-                  {record.claimed_status.replace(/_/g, " ")}
+                  {displayType.replace(/_/g, " ")}
                 </span>
               );
             })()}
