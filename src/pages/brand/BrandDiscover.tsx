@@ -31,6 +31,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage, fetchShowcaseCreators, type ShowcaseCreator } from "@/lib/featured-creators";
 import { saveCreatorAvatar } from "@/lib/directories";
 import { parseSmartQuery } from "@/lib/smart-search-parser";
+import { isNaturalLanguageQuery, parseNaturalLanguageSearch, followersToRange, engagementToOption } from "@/lib/nl-search-parser";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -657,6 +658,8 @@ const BrandDiscover = () => {
   const [sortBy, setSortBy] = useState<string>("confidence");
   const [selectedBranches, setSelectedBranches] = useState<Set<Branch>>(new Set());
   const [smartFiltersApplied, setSmartFiltersApplied] = useState<string[]>([]);
+  const [aiParsing, setAiParsing] = useState(false);
+  const [nlBanner, setNlBanner] = useState<string | null>(null);
   const [trendingCreators, setTrendingCreators] = useState<ShowcaseCreator[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [apiResults, setApiResults] = useState<{ creators: CreatorCard[]; total: number; rawResponse: unknown } | null>(null);
@@ -1282,51 +1285,19 @@ const BrandDiscover = () => {
       });
   }, [searchQuery, searchMode, platform, user, refreshCredits]);
 
-  const handleSmartSearch = useCallback(() => {
-    const q = searchQuery.trim();
-    if (!q) return;
-
-    // Route to lookalike handler when explicitly in lookalike mode
-    if (searchMode === "lookalike") {
-      runModeSearch();
-      return;
-    }
-
-    // Parse natural language filters first
-    const parsed = parseSmartQuery(q);
-    if (parsed.appliedLabels.length > 0) {
-      if (parsed.platform) setPlatform([parsed.platform]);
-      if (parsed.followersRange) setFollowersRange(parsed.followersRange);
-      if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
-      if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
-      if (parsed.location) { setLocationFilter(parsed.location); setLocationInput(parsed.location); }
-      setSmartFiltersApplied(parsed.appliedLabels);
-    } else {
-      setSmartFiltersApplied([]);
-    }
-
-    const effectiveQuery = parsed.appliedLabels.length > 0
-      ? (parsed.remainingQuery.trim() || "military")
-      : q;
-
-    // Reset state
-    setApiLoading(true);
-    setCurrentPage(1);
-    setUsernameNotFound(null);
-    enrichAbortRef.current?.abort();
-    enrichedSetRef.current = new Set();
-    setEnrichCache({});
-    setEnrichRawCache({});
-    setEnrichingIds(new Set());
-
-    // Build search options from current filters
+  // Core search executor — shared by both NL and regex paths
+  const executeSearch = useCallback((effectiveQuery: string, overrides: {
+    effPlatforms?: string[]; effFollowers?: string; effEngagement?: string;
+    effBranches?: string[]; effLocation?: string; effGender?: string;
+  } = {}) => {
     const ctConfig = CREATOR_TYPES.find((ct) => ct.value === creatorType);
-    const effPlatforms = parsed.platform ? [parsed.platform] : platform;
+    const effPlatforms = overrides.effPlatforms ?? platform;
     const searchPlatforms = resolveSearchPlatforms(effPlatforms, ctConfig?.platformOverride ?? null);
-    const effFollowers = parsed.followersRange || followersRange;
-    const effEngagement = parsed.engagementMin || engagementMin;
-    const effBranches = parsed.branches.length > 0 ? parsed.branches : Array.from(selectedBranches);
-    const effLocation = parsed.location || locationFilter;
+    const effFollowers = overrides.effFollowers ?? followersRange;
+    const effEngagement = overrides.effEngagement ?? engagementMin;
+    const effBranches = overrides.effBranches ?? Array.from(selectedBranches);
+    const effLocation = overrides.effLocation ?? locationFilter;
+    const effGender = overrides.effGender ?? gender;
     const followerOpt = FOLLOWER_OPTIONS.find((o) => o.value === effFollowers);
     const engagementOpt = ENGAGEMENT_OPTIONS.find((o) => o.value === effEngagement);
     const bioKeys = keywordsInBio.trim() ? keywordsInBio.split(",").map((k) => k.trim()).filter(Boolean) : [];
@@ -1339,26 +1310,17 @@ const BrandDiscover = () => {
       keywords_in_bio,
       sort_by: (sortBy === "confidence" ? "relevancy" : sortBy) as "relevancy" | "followers" | "engagement",
       location: effLocation?.trim() || undefined,
-      gender: gender !== "any" ? gender : undefined,
+      gender: effGender !== "any" ? effGender : undefined,
       language: language !== "any" ? language : undefined,
       platform: searchPlatforms[0],
     };
 
-    if (parsed.appliedLabels.length > 0) {
-      persistLastSearch({
-        searchQuery: effectiveQuery, platform: effPlatforms, followersRange: effFollowers,
-        engagementMin: effEngagement, locationFilter: effLocation || "", niche, gender, language,
-        keywordsInBio, sortBy, selectedBranches: effBranches,
-      });
-      if (effectiveQuery !== q) {
-        setSearchQuery(effectiveQuery);
-        searchQueryRef.current = effectiveQuery;
-      }
-    } else {
-      persistLastSearch(getCurrentFilters());
-    }
+    persistLastSearch({
+      searchQuery: effectiveQuery, platform: effPlatforms, followersRange: effFollowers,
+      engagementMin: effEngagement, locationFilter: effLocation || "", niche, gender: effGender, language,
+      keywordsInBio, sortBy, selectedBranches: effBranches,
+    });
 
-    // Use the smart search router for automatic query classification
     smartSearch(effectiveQuery, baseOptions)
       .then((result: SmartSearchResult) => {
         if (searchQueryRef.current.trim().replace(/^@/, "") !== effectiveQuery.replace(/^@/, "")) return;
@@ -1383,7 +1345,6 @@ const BrandDiscover = () => {
           }
         }
 
-        // Merge exact match into results list (at front) so Top Creator can pick it up
         const allCreators = result.exactMatch
           ? [result.exactMatch, ...result.relatedCreators.filter((c) => c.id !== result.exactMatch!.id)]
           : result.relatedCreators;
@@ -1417,7 +1378,123 @@ const BrandDiscover = () => {
           setApiLoading(false);
         }
       });
-  }, [searchQuery, searchMode, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, gender, language, niche, persistLastSearch, getCurrentFilters, runModeSearch, effectiveUserId, refreshCredits]);
+  }, [platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, gender, language, niche, persistLastSearch, effectiveUserId, refreshCredits]);
+
+  const handleSmartSearch = useCallback(() => {
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    // Route to lookalike handler when explicitly in lookalike mode
+    if (searchMode === "lookalike") {
+      runModeSearch();
+      return;
+    }
+
+    // Clear previous NL banner
+    setNlBanner(null);
+
+    // Reset common state
+    setCurrentPage(1);
+    setUsernameNotFound(null);
+    enrichAbortRef.current?.abort();
+    enrichedSetRef.current = new Set();
+    setEnrichCache({});
+    setEnrichRawCache({});
+    setEnrichingIds(new Set());
+
+    // ── AI Natural Language path ──────────────────────────────────
+    if (isNaturalLanguageQuery(q)) {
+      setAiParsing(true);
+      setApiLoading(true);
+      parseNaturalLanguageSearch(q)
+        .then((nlResult) => {
+          setAiParsing(false);
+          if (nlResult.success) {
+            const f = nlResult.filters;
+            // Apply parsed filters to UI state
+            const labels: string[] = [];
+            if (f.branch) { setSelectedBranches(new Set([f.branch] as Branch[])); labels.push(f.branch); }
+            if (f.location) { setLocationFilter(f.location); setLocationInput(f.location); labels.push(f.location); }
+            if (f.platform) { setPlatform([f.platform]); labels.push(f.platform.charAt(0).toUpperCase() + f.platform.slice(1)); }
+            if (f.gender) { setGender(f.gender); labels.push(f.gender.charAt(0).toUpperCase() + f.gender.slice(1)); }
+            if (f.category) { setCreatorType(f.category); labels.push(f.category); }
+
+            let effFollowers = followersRange;
+            if (f.min_followers) {
+              effFollowers = followersToRange(f.min_followers);
+              setFollowersRange(effFollowers);
+              labels.push(`${f.min_followers >= 1000 ? `${(f.min_followers / 1000).toFixed(0)}K` : f.min_followers}+ followers`);
+            }
+            let effEngagement = engagementMin;
+            if (f.engagement_min) {
+              effEngagement = engagementToOption(f.engagement_min);
+              setEngagementMin(effEngagement);
+              labels.push(`>${f.engagement_min}% engagement`);
+            }
+
+            setSmartFiltersApplied(labels);
+            setNlBanner(nlResult.summary);
+
+            const effectiveQuery = f.keyword || "military";
+            searchQueryRef.current = effectiveQuery;
+
+            executeSearch(effectiveQuery, {
+              effPlatforms: f.platform ? [f.platform] : platform,
+              effFollowers,
+              effEngagement,
+              effBranches: f.branch ? [f.branch] : Array.from(selectedBranches),
+              effLocation: f.location || locationFilter,
+              effGender: f.gender || gender,
+            });
+          } else {
+            // AI failed → fall back to regex path
+            runRegexSearch(q);
+          }
+        })
+        .catch(() => {
+          setAiParsing(false);
+          // AI failed → fall back to regex path
+          runRegexSearch(q);
+        });
+      return;
+    }
+
+    // ── Standard regex path ──────────────────────────────────────
+    setApiLoading(true);
+    runRegexSearch(q);
+  }, [searchQuery, searchMode, platform, followersRange, engagementMin, sortBy, selectedBranches, locationFilter, keywordsInBio, creatorType, gender, language, niche, persistLastSearch, getCurrentFilters, runModeSearch, effectiveUserId, refreshCredits, executeSearch]);
+
+  // Regex-based filter parsing + search (original flow)
+  const runRegexSearch = useCallback((q: string) => {
+    const parsed = parseSmartQuery(q);
+    if (parsed.appliedLabels.length > 0) {
+      if (parsed.platform) setPlatform([parsed.platform]);
+      if (parsed.followersRange) setFollowersRange(parsed.followersRange);
+      if (parsed.engagementMin) setEngagementMin(parsed.engagementMin);
+      if (parsed.branches.length > 0) setSelectedBranches(new Set(parsed.branches as Branch[]));
+      if (parsed.location) { setLocationFilter(parsed.location); setLocationInput(parsed.location); }
+      setSmartFiltersApplied(parsed.appliedLabels);
+    } else {
+      setSmartFiltersApplied([]);
+    }
+
+    const effectiveQuery = parsed.appliedLabels.length > 0
+      ? (parsed.remainingQuery.trim() || "military")
+      : q;
+
+    if (effectiveQuery !== q) {
+      searchQueryRef.current = effectiveQuery;
+    }
+
+    setApiLoading(true);
+    executeSearch(effectiveQuery, {
+      effPlatforms: parsed.platform ? [parsed.platform] : undefined,
+      effFollowers: parsed.followersRange || undefined,
+      effEngagement: parsed.engagementMin || undefined,
+      effBranches: parsed.branches.length > 0 ? parsed.branches : undefined,
+      effLocation: parsed.location || undefined,
+    });
+  }, [executeSearch]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -1443,6 +1520,7 @@ const BrandDiscover = () => {
     setLanguage("any");
     setKeywordsInBio("");
     setSmartFiltersApplied([]);
+    setNlBanner(null);
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
@@ -2509,8 +2587,33 @@ const BrandDiscover = () => {
 
           {apiLoading && (
             <div className="flex items-center gap-2 text-muted-foreground mb-4">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-sm">Searching creators…</span>
+              {aiParsing ? (
+                <>
+                  <Sparkles className="h-4 w-4 animate-pulse text-[#1e3a5f]" />
+                  <span className="text-sm text-[#1e3a5f]">AI parsing your search…</span>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm">Searching creators…</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* NL search banner — shows what AI interpreted */}
+          {nlBanner && !apiLoading && (
+            <div className="flex items-center justify-between rounded-lg bg-[#1e3a5f]/5 border border-[#1e3a5f]/15 px-4 py-2 mb-4">
+              <div className="flex items-center gap-2 text-sm text-[#1e3a5f] dark:text-blue-300">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                <span>{nlBanner}</span>
+              </div>
+              <button
+                onClick={() => setNlBanner(null)}
+                className="text-[#1e3a5f]/40 hover:text-[#1e3a5f] dark:text-blue-300/40 dark:hover:text-blue-300 text-sm ml-3 shrink-0"
+              >
+                ✕
+              </button>
             </div>
           )}
 
