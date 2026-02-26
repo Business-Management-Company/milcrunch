@@ -3104,15 +3104,16 @@ const BrandDiscover = () => {
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               {contactEmails[creator.id] ? (
                                 <a href={`mailto:${contactEmails[creator.id]}`} title={contactEmails[creator.id]} className="inline-flex items-center justify-center">
-                                  <Mail className="h-4 w-4 text-blue-500 hover:text-blue-600" />
+                                  <Mail className="h-4 w-4 text-green-500 hover:text-green-600" />
                                 </a>
                               ) : creator.hasEmail ? (
                                 <button
                                   onClick={() => setContactConfirmCreator(creator)}
-                                  className="inline-flex items-center justify-center"
+                                  className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
                                   title="Get email (1.03 credits)"
                                 >
-                                  <Mail className="h-4 w-4 text-blue-600 hover:text-blue-700" />
+                                  <Mail className="h-3.5 w-3.5" />
+                                  Get
                                 </button>
                               ) : pending ? (
                                 <div className="mx-auto"><EnrichShimmer /></div>
