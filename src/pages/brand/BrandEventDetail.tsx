@@ -279,6 +279,7 @@ const BrandEventDetail = () => {
   const VALID_TABS = new Set(["overview","agenda","speakers","sponsors","tickets","public-page","media","settings","registrations","attendee-app","community","insights","gtm-planner"]);
   const initialTab = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(initialTab && VALID_TABS.has(initialTab) ? initialTab : "overview");
+  const isEmbed = searchParams.get("embed") === "true";
   const [showAddSpeaker, setShowAddSpeaker] = useState(false);
   const [editingSpeaker, setEditingSpeaker] = useState<SpeakerRow | null>(null);
 
@@ -863,9 +864,10 @@ const BrandEventDetail = () => {
   }
 
   return (
-    <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
+    <div className={cn("min-h-full text-foreground transition-colors", isEmbed ? "bg-transparent" : "bg-pd-page-light dark:bg-[#0F1117]")}>
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
+        {/* Header — hidden in embed mode */}
+        {!isEmbed && (
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate("/brand/events")} data-back-nav>
@@ -901,9 +903,11 @@ const BrandEventDetail = () => {
             )}
           </div>
         </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
+          {!isEmbed && (
           <TabsList className="bg-white dark:bg-[#1A1D27] border border-gray-200 dark:border-gray-800 rounded-lg mb-6 h-auto p-1 flex flex-col items-stretch gap-0">
             {/* Row 1 — Build */}
             <div className="flex flex-wrap justify-center gap-1">
@@ -931,6 +935,7 @@ const BrandEventDetail = () => {
               <TabsTrigger value="gtm-planner"><Target className="h-4 w-4 mr-1.5" />GTM Planner</TabsTrigger>
             </div>
           </TabsList>
+          )}
 
           {/* ===== OVERVIEW ===== */}
           <TabsContent value="overview" className="space-y-5">
@@ -1832,6 +1837,7 @@ const BrandEventDetail = () => {
                 speakerCount={speakers.length}
                 sponsorCount={sponsors.length}
                 registrationCount={registrations.length}
+                scrollToSection={searchParams.get("section")}
               />
             )}
           </TabsContent>

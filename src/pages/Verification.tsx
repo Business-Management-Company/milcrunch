@@ -122,6 +122,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
+import { getEmailLists, upsertEmailList, addFullContact } from "@/lib/email-db";
 
 const MILITARY_KEYWORDS = /military|veteran|army|navy|marine|air force|coast guard|served|deployment|dd-214|rank|sergeant|lieutenant|captain|medal|decorated|combat|reserve|guard|usmc|dod|veterans affairs/gi;
 
@@ -3374,10 +3375,82 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    await supabase.from("verifications").update({ status: newStatus }).eq("id", record.id);
-    toast.success(`Status changed to ${newStatus}`);
+  const handleStatusChange = async (newStatus: string, manual = false) => {
+    // 1. Update the verifications table (mark manual_override if user-driven)
+    const updates: Record<string, unknown> = { status: newStatus };
+    if (manual) updates.manual_status_override = true;
+    await supabase.from("verifications").update(updates).eq("id", record.id);
+
+    // 2. Propagate to speakers table if linked
+    if (record.id) {
+      await supabase
+        .from("speakers")
+        .update({ verification_status: newStatus } as Record<string, unknown>)
+        .eq("verification_id", record.id);
+    }
+
+    // 3. Propagate to directory_members by matching creator_handle
+    if (record.source_username) {
+      await supabase
+        .from("directory_members")
+        .update({ status: newStatus } as Record<string, unknown>)
+        .eq("creator_handle", record.source_username);
+    }
+
+    // 4. Auto-add to Email Contacts when verified
+    if (newStatus === "verified") {
+      autoAddVerifiedToContacts(record);
+    }
+
+    toast.success(`Status ${manual ? "manually " : ""}changed to ${newStatus}`);
     onRefresh?.();
+  };
+
+  const autoAddVerifiedToContacts = async (rec: VerificationRecord) => {
+    // Find an email from PDL data or evidence
+    const pdl = rec.pdl_data as Record<string, unknown> | null;
+    const email = (pdl?.work_email as string) || (pdl?.personal_emails as string[])?.[0] || null;
+    if (!email) return; // No email available, skip silently
+
+    // Check if already exists in any email list
+    const { data: existing } = await supabase
+      .from("email_contacts")
+      .select("id")
+      .eq("email", email.toLowerCase().trim())
+      .limit(1);
+    if (existing && existing.length > 0) return; // Already in contacts
+
+    // Find or create a "Verified Creators" list
+    const lists = await getEmailLists();
+    let targetList = lists.find((l) => l.name === "Verified Creators");
+    if (!targetList) {
+      targetList = await upsertEmailList({ name: "Verified Creators", description: "Auto-populated from verification pipeline" });
+    }
+    if (!targetList) return;
+
+    const nameParts = rec.person_name.trim().split(/\s+/);
+    const tags: string[] = [];
+    if (rec.claimed_branch) tags.push(rec.claimed_branch);
+    if (rec.claimed_status) tags.push(rec.claimed_status);
+
+    await addFullContact({
+      list_id: targetList.id,
+      email: email.toLowerCase().trim(),
+      first_name: nameParts[0] || undefined,
+      last_name: nameParts.slice(1).join(" ") || undefined,
+      source: "verification" as any,
+      tags,
+      metadata: {
+        verification_id: rec.id,
+        photo_url: rec.profile_photo_url,
+        branch: rec.claimed_branch,
+        claimed_status: rec.claimed_status,
+        verification_score: rec.verification_score,
+        city: rec.city,
+        state: rec.state,
+        source_username: rec.source_username,
+      },
+    });
   };
 
   const handleSaveNotes = async () => {
@@ -3572,7 +3645,35 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">{record.person_name}</h2>
-            <StatusBadge status={record.status ?? "pending"} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity">
+                  <StatusBadge status={record.status ?? "pending"} />
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[160px]">
+                {(["verified", "pending", "flagged", "denied"] as const).map((s) => (
+                  <DropdownMenuItem
+                    key={s}
+                    onClick={() => handleStatusChange(s, true)}
+                    className={cn("gap-2 capitalize", record.status === s && "font-semibold")}
+                  >
+                    {s === "verified" && <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />}
+                    {s === "pending" && <Clock className="h-3.5 w-3.5 text-amber-600" />}
+                    {s === "flagged" && <AlertTriangle className="h-3.5 w-3.5 text-red-500" />}
+                    {s === "denied" && <XCircle className="h-3.5 w-3.5 text-red-700" />}
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                    {record.status === s && <Check className="h-3.5 w-3.5 ml-auto" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {(record as any).manual_status_override && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground border-muted-foreground/30">
+                Manual
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             {record.claimed_branch && (

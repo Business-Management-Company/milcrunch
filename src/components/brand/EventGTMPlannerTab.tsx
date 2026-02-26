@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { format, parseISO, isWithinInterval, addDays, subDays } from "date-fns";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -35,6 +36,7 @@ interface Props {
   speakerCount: number;
   sponsorCount: number;
   registrationCount: number;
+  scrollToSection?: string | null;
 }
 
 interface HolidayConflict {
@@ -377,6 +379,7 @@ export default function EventGTMPlannerTab({
   speakerCount,
   sponsorCount,
   registrationCount,
+  scrollToSection,
 }: Props) {
   /* Conflict Scanner */
   const [scanning, setScanning] = useState(false);
@@ -399,36 +402,94 @@ export default function EventGTMPlannerTab({
   const summaryRef = useRef<HTMLDivElement>(null);
   const gtmRef = useRef<HTMLDivElement>(null);
 
+  /* Section refs for scroll-to */
+  const conflictsCardRef = useRef<HTMLDivElement>(null);
+  const gtmCardRef = useRef<HTMLDivElement>(null);
+  const summaryCardRef = useRef<HTMLDivElement>(null);
+
   /* Share state */
   const [sharing, setSharing] = useState(false);
 
-  /* Super admin demo persistence */
+  /* Demo persistence: load saved results from DB for all users */
   const { isSuperAdmin } = useAuth();
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
-    try {
-      const savedConflicts = localStorage.getItem("demo_conflicts");
-      const savedGtm = localStorage.getItem("demo_gtm");
-      const savedSummary = localStorage.getItem("demo_summary");
-      if (savedConflicts) {
-        const parsed = JSON.parse(savedConflicts);
-        setConflicts({
-          holidays: parsed.holidays ?? [],
-          observances: parsed.observances ?? [],
-          aiEvents: parsed.aiEvents ?? [],
-          aiFailed: parsed.aiFailed ?? false,
-        });
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("gtm_demo_results")
+          .select("conflicts, gtm_plan, summary")
+          .eq("event_id", eventId)
+          .maybeSingle();
+        if (data) {
+          if (data.conflicts) {
+            const c = data.conflicts as Record<string, unknown>;
+            setConflicts({
+              holidays: (c.holidays as HolidayConflict[]) ?? [],
+              observances: (c.observances as ObservanceConflict[]) ?? [],
+              aiEvents: (c.aiEvents as AIEvent[]) ?? [],
+              aiFailed: (c.aiFailed as boolean) ?? false,
+            });
+          }
+          if (data.gtm_plan) setGtmPlan(data.gtm_plan as string);
+          if (data.summary) setSummary(data.summary as string);
+        }
+      } catch {
+        // Table may not exist yet — fall back to localStorage
+        try {
+          const savedConflicts = localStorage.getItem("demo_conflicts");
+          const savedGtm = localStorage.getItem("demo_gtm");
+          const savedSummary = localStorage.getItem("demo_summary");
+          if (savedConflicts) {
+            const parsed = JSON.parse(savedConflicts);
+            setConflicts({
+              holidays: parsed.holidays ?? [],
+              observances: parsed.observances ?? [],
+              aiEvents: parsed.aiEvents ?? [],
+              aiFailed: parsed.aiFailed ?? false,
+            });
+          }
+          if (savedGtm) setGtmPlan(savedGtm);
+          if (savedSummary) setSummary(savedSummary);
+        } catch { /* ignore */ }
       }
-      if (savedGtm) setGtmPlan(savedGtm);
-      if (savedSummary) setSummary(savedSummary);
-    } catch { /* ignore parse errors */ }
-  }, [isSuperAdmin]);
+    })();
+  }, [eventId]);
 
-  const saveDemoState = (key: string, value: unknown) => {
-    const serialized = typeof value === "string" ? value : JSON.stringify(value);
-    localStorage.setItem(key, serialized);
-    toast.success("Saved as demo state");
+  /* Scroll to section when specified via URL param */
+  useEffect(() => {
+    if (!scrollToSection) return;
+    const timer = setTimeout(() => {
+      const refMap: Record<string, React.RefObject<HTMLDivElement | null>> = {
+        conflicts: conflictsCardRef,
+        gtm: gtmCardRef,
+        strategy: gtmCardRef,
+        summary: summaryCardRef,
+      };
+      const ref = refMap[scrollToSection.toLowerCase()];
+      ref?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [scrollToSection]);
+
+  const saveDemoState = async (field: "conflicts" | "gtm_plan" | "summary", value: unknown) => {
+    const serialized = field === "conflicts" ? value : value;
+    try {
+      const { error } = await supabase
+        .from("gtm_demo_results")
+        .upsert(
+          { event_id: eventId, [field]: serialized, updated_at: new Date().toISOString() } as Record<string, unknown>,
+          { onConflict: "event_id" },
+        );
+      if (error) throw error;
+      toast.success("Saved to demo — any visitor to this URL will see these results");
+    } catch {
+      // Fallback to localStorage if table doesn't exist
+      const key = field === "conflicts" ? "demo_conflicts" : field === "gtm_plan" ? "demo_gtm" : "demo_summary";
+      const str = typeof value === "string" ? value : JSON.stringify(value);
+      localStorage.setItem(key, str);
+      toast.success("Saved as demo state (local)");
+    }
   };
 
   const location = [city, state].filter(Boolean).join(", ");
@@ -797,7 +858,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
   return (
     <div className="space-y-6">
       {/* Section A — Conflicts & Collabs */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+      <Card ref={conflictsCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="font-semibold flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-amber-500" /> Conflicts & Collabs
@@ -817,7 +878,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
 
             {isSuperAdmin && conflicts && (
               <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                onClick={() => saveDemoState("demo_conflicts", conflicts)}>
+                onClick={() => saveDemoState("conflicts", conflicts)}>
                 <Save className="h-4 w-4 mr-1.5" /> Save as Demo
               </Button>
             )}
@@ -1131,7 +1192,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
       )}
 
       {/* Section B — AI GTM Strategy */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+      <Card ref={gtmCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-blue-600" /> AI GTM Strategy
@@ -1150,7 +1211,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                 </Button>
                 {isSuperAdmin && (
                   <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                    onClick={() => saveDemoState("demo_gtm", gtmPlan)}>
+                    onClick={() => saveDemoState("gtm_plan", gtmPlan)}>
                     <Save className="h-4 w-4 mr-1.5" /> Save as Demo
                   </Button>
                 )}
@@ -1178,7 +1239,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
       </Card>
 
       {/* Section C — Supervisor Summary */}
-      <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+      <Card ref={summaryCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-500" /> Supervisor Summary
@@ -1197,7 +1258,7 @@ Keep it concise — this should fit on one printed page. Use bullet points where
                 </Button>
                 {isSuperAdmin && (
                   <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                    onClick={() => saveDemoState("demo_summary", summary)}>
+                    onClick={() => saveDemoState("summary", summary)}>
                     <Save className="h-4 w-4 mr-1.5" /> Save as Demo
                   </Button>
                 )}
