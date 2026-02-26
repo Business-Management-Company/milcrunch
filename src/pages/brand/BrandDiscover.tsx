@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy, Filter } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy, Filter, CircleCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -681,7 +681,10 @@ const BrandDiscover = () => {
   const enrichedSetRef = useRef<Set<string>>(new Set());
   const enrichAbortRef = useRef<AbortController | null>(null);
   const searchQueryRef = useRef(searchQuery);
-  searchQueryRef.current = searchQuery;
+  // Only sync ref when searchQuery state actually changes — NOT on every render.
+  // Rendering from filter-state updates (location, gender, etc.) must not overwrite
+  // the ref that executeSearch set to the effective/simplified query.
+  useEffect(() => { searchQueryRef.current = searchQuery; }, [searchQuery]);
 
   // Credit balance state
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
@@ -706,7 +709,7 @@ const BrandDiscover = () => {
   const [similarCreators, setSimilarCreators] = useState<CreatorCard[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
 
-  const { lists, addCreatorToList, createList, isCreatorInList } = useLists();
+  const { lists, addCreatorToList, createList, isCreatorInList, getCreatorListNames } = useLists();
   const { user, effectiveUserId, isSuperAdmin } = useAuth();
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
@@ -753,6 +756,34 @@ const BrandDiscover = () => {
       if (handles.has(h)) return true;
     }
     return false;
+  };
+
+  // Batch-load verifications for badge display (handle → { score, status })
+  const [verificationMap, setVerificationMap] = useState<Map<string, { score: number; status: string }>>(new Map());
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("verifications")
+        .select("source_username, verification_score, status");
+      if (!data) return;
+      const map = new Map<string, { score: number; status: string }>();
+      for (const v of data) {
+        const handle = (v as { source_username?: string }).source_username;
+        if (handle) {
+          map.set(handle.toLowerCase(), {
+            score: (v as { verification_score?: number }).verification_score ?? 0,
+            status: (v as { status?: string }).status ?? "pending",
+          });
+        }
+      }
+      setVerificationMap(map);
+    })();
+  }, [user]);
+
+  const getVerification = (handle: string | undefined): { score: number; status: string } | null => {
+    if (!handle) return null;
+    return verificationMap.get(handle.replace(/^@/, "").toLowerCase()) ?? null;
   };
 
   // --- Location autocomplete ---
@@ -2412,7 +2443,7 @@ const BrandDiscover = () => {
               <Filter className="h-3.5 w-3.5" />
               More Filters
               {activeFilterCount > 0 && (
-                <span className="ml-0.5 inline-flex items-center justify-center w-4.5 h-4.5 text-[10px] font-bold rounded-full bg-[#1e3a5f] text-white">
+                <span className="relative -top-0.5 ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 text-[11px] font-bold rounded-full bg-red-500 text-white shadow-sm">
                   {activeFilterCount}
                 </span>
               )}
@@ -2954,27 +2985,34 @@ const BrandDiscover = () => {
                             {similarLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
                             Find Similar
                           </Button>
-                          {isCreatorInList(topCreator.id) ? (
-                            <span className="text-xs text-gray-400">Added</span>
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              {isCreatorInList(topCreator.id) ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="outline" className="text-xs border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400">
+                                      <CircleCheck className="h-3 w-3 mr-1" /> Added
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="text-xs">In: {getCreatorListNames(topCreator.id).join(", ")}</TooltipContent>
+                                </Tooltip>
+                              ) : (
                                 <Button size="sm" className="text-xs bg-[#000741] hover:bg-[#2d5282] text-white">
                                   <ListPlus className="h-3 w-3 mr-1" /> Add to List
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {lists.map((list) => (
-                                  <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, topCreator)}>
-                                    {list.name}
-                                  </DropdownMenuItem>
-                                ))}
-                                <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(topCreator)}>
-                                  <Plus className="mr-2 h-4 w-4" /> Create New List
+                              )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {lists.map((list) => (
+                                <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, topCreator)}>
+                                  {list.name}
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                              ))}
+                              <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(topCreator)}>
+                                <Plus className="mr-2 h-4 w-4" /> Create New List
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>
@@ -3166,27 +3204,34 @@ const BrandDiscover = () => {
                             {/* Actions */}
                             <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1">
-                                {isCreatorInList(creator.id) ? (
-                                  <span className="text-xs text-gray-400">Added</span>
-                                ) : (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    {isCreatorInList(creator.id) ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button size="sm" variant="outline" className="h-7 text-xs rounded-md border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400">
+                                            <CircleCheck className="h-3 w-3 mr-1" /> Added
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="text-xs">In: {getCreatorListNames(creator.id).join(", ")}</TooltipContent>
+                                      </Tooltip>
+                                    ) : (
                                       <Button size="sm" variant="outline" className="h-7 text-xs rounded-md">
                                         <ListPlus className="h-3 w-3 mr-1" /> Add
                                       </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      {lists.map((list) => (
-                                        <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
-                                          {list.name}
-                                        </DropdownMenuItem>
-                                      ))}
-                                      <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
-                                        <Plus className="mr-2 h-4 w-4" /> Create New List
+                                    )}
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {lists.map((list) => (
+                                      <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, creator)}>
+                                        {list.name}
                                       </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
+                                    ))}
+                                    <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(creator)}>
+                                      <Plus className="mr-2 h-4 w-4" /> Create New List
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 {directoriesList.length > 0 && (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
