@@ -282,6 +282,8 @@ function ManageContentPanel({
   dark,
   gatingEnabled,
   onToggleGating,
+  hiddenTabs,
+  onToggleTabVisible,
 }: {
   open: boolean;
   onClose: () => void;
@@ -293,6 +295,8 @@ function ManageContentPanel({
   dark: boolean;
   gatingEnabled: boolean;
   onToggleGating: (enabled: boolean) => void;
+  hiddenTabs: Set<string>;
+  onToggleTabVisible: (tab: string) => void;
 }) {
   const [panelTab, setPanelTab] = useState<"media" | "content">("media");
 
@@ -544,14 +548,15 @@ function ManageContentPanel({
         updated_at: new Date().toISOString(),
       };
     });
-    // Build visibility data per tab
-    const visibilityMap: Record<string, { headline: boolean; headlineAccent: boolean; description: boolean }> = {};
+    // Build visibility data per tab (includes field-level + tab-level)
+    const visibilityMap: Record<string, { headline: boolean; headlineAccent: boolean; description: boolean; tab: boolean }> = {};
     CONTENT_TABS.filter((tab) => contentDraft[tab]).forEach((tab) => {
       const c = contentDraft[tab];
       visibilityMap[tab] = {
         headline: c.headlineVisible !== false,
         headlineAccent: c.headlineAccentVisible !== false,
         description: c.descriptionVisible !== false,
+        tab: !hiddenTabs.has(tab),
       };
     });
     // Try saving with visibility column first, fall back without it
@@ -788,10 +793,14 @@ function ManageContentPanel({
             const isImageUploading = uploading === `image-${tab}`;
 
             return (
-              <div key={tab} id={`panel-media-${tabSlug(tab)}`} className={cn("pb-4 border-b", dark ? "border-white/10" : "border-gray-100")}>
-                <label className="text-sm font-semibold block mb-1.5">
-                  {TAB_LABELS[tab]}
-                </label>
+              <div key={tab} id={`panel-media-${tabSlug(tab)}`} className={cn("pb-4 border-b", dark ? "border-white/10" : "border-gray-100", hiddenTabs.has(tab) && "opacity-40")}>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <label className="text-sm font-semibold">{TAB_LABELS[tab]}</label>
+                  <button type="button" onClick={() => onToggleTabVisible(tab)}
+                    className={cn("p-0.5 rounded transition-colors", hiddenTabs.has(tab) ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
+                    {hiddenTabs.has(tab) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
 
                 {/* --- Video section --- */}
                 <p className={cn("text-xs font-medium mb-1 flex items-center gap-1", dark ? "text-gray-400" : "text-gray-500")}>
@@ -907,8 +916,14 @@ function ManageContentPanel({
             const c = contentDraft[tab];
             if (!c) return null;
             return (
-              <div key={tab} id={`panel-content-${tabSlug(tab)}`} className={cn("pb-5 border-b", dark ? "border-white/10" : "border-gray-100")}>
-                <label className="text-sm font-semibold block mb-2">{TAB_LABELS[tab]}</label>
+              <div key={tab} id={`panel-content-${tabSlug(tab)}`} className={cn("pb-5 border-b", dark ? "border-white/10" : "border-gray-100", hiddenTabs.has(tab) && "opacity-40")}>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <label className="text-sm font-semibold">{TAB_LABELS[tab]}</label>
+                  <button type="button" onClick={() => onToggleTabVisible(tab)}
+                    className={cn("p-0.5 rounded transition-colors", hiddenTabs.has(tab) ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
+                    {hiddenTabs.has(tab) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
 
                 {/* Headline */}
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -1893,6 +1908,8 @@ export default function Prospectus() {
   const [videoUrls, setVideoUrls] = useState<VideoUrls>({});
   const [imageUrls, setImageUrls] = useState<ImageUrls>({});
   const [tabContent, setTabContent] = useState<Record<string, TabContent>>({});
+  const [hiddenTabs, setHiddenTabs] = useState<Set<string>>(new Set());
+  const visibleTabs = TABS.filter((t) => !hiddenTabs.has(t));
   const [manageOpen, setManageOpen] = useState(false);
   const [exploreDemoOpen, setExploreDemoOpen] = useState(false);
 
@@ -1958,6 +1975,7 @@ export default function Prospectus() {
         return;
       }
       const map: Record<string, TabContent> = {};
+      const hidden = new Set<string>();
       for (const row of data as {
         tab_name: string;
         headline: string | null;
@@ -1965,7 +1983,8 @@ export default function Prospectus() {
         description: string | null;
         sections: unknown;
         bottom_note: { heading: string; text: string } | null;
-        visibility?: { headline?: boolean; headlineAccent?: boolean; description?: boolean } | null;
+        visibility?: { headline?: boolean; headlineAccent?: boolean; description?: boolean; tab?: boolean } | null;
+        tab_visible?: boolean | null;
       }[]) {
         // Parse sections — handle both JSON object and JSON-encoded string
         let sections: TabContent["sections"] = [];
@@ -1974,6 +1993,11 @@ export default function Prospectus() {
         } else if (typeof row.sections === "string") {
           try { sections = JSON.parse(row.sections); } catch { /* keep empty */ }
         }
+        // Tab-level visibility: check tab_visible column first, then visibility.tab
+        const tabVis = row.tab_visible !== undefined && row.tab_visible !== null
+          ? row.tab_visible
+          : row.visibility?.tab;
+        if (tabVis === false) hidden.add(row.tab_name);
         map[row.tab_name] = {
           headline: row.headline || "",
           headlineVisible: row.visibility?.headline === false ? false : undefined,
@@ -1987,6 +2011,7 @@ export default function Prospectus() {
       }
       console.log("[Prospectus] Loaded tab content for:", Object.keys(map).join(", "));
       setTabContent(map);
+      setHiddenTabs(hidden);
     })();
   }, []);
 
@@ -2023,14 +2048,14 @@ export default function Prospectus() {
 
   // Super admin bypasses gating — unlock all tabs; also unlock all when gating disabled
   useEffect(() => {
-    if (isSuperAdmin || !gatingEnabled) setUnlockedUpTo(TABS.length - 1);
+    if (isSuperAdmin || !gatingEnabled) setUnlockedUpTo(visibleTabs.length - 1);
     else if (gatingLoaded && gatingEnabled && !isSuperAdmin) setUnlockedUpTo(0);
-  }, [isSuperAdmin, gatingEnabled, gatingLoaded]);
+  }, [isSuperAdmin, gatingEnabled, gatingLoaded, visibleTabs.length]);
 
   /** Unlock the next tab after the current one */
   const unlockNextTab = () => {
-    const currentIdx = TABS.indexOf(activeTab);
-    if (currentIdx >= 0 && currentIdx === unlockedUpTo && currentIdx < TABS.length - 1) {
+    const currentIdx = visibleTabs.indexOf(activeTab);
+    if (currentIdx >= 0 && currentIdx === unlockedUpTo && currentIdx < visibleTabs.length - 1) {
       const next = currentIdx + 1;
       setUnlockedUpTo(next);
       setJustUnlocked(next);
@@ -2050,9 +2075,9 @@ export default function Prospectus() {
     // Super admin already unlocked, or gating disabled
     if (isSuperAdmin || !gatingEnabled) return;
 
-    const currentIdx = TABS.indexOf(activeTab);
+    const currentIdx = visibleTabs.indexOf(activeTab);
     // Only run gating logic if this tab is the frontier (the one we need to watch to unlock next)
-    if (currentIdx !== unlockedUpTo || currentIdx >= TABS.length - 1) return;
+    if (currentIdx !== unlockedUpTo || currentIdx >= visibleTabs.length - 1) return;
 
     const mediaType = getMediaType(videoUrls[activeTab], imageUrls[activeTab]);
 
@@ -2075,6 +2100,13 @@ export default function Prospectus() {
     };
   }, [activeTab, unlockedUpTo, videoUrls, imageUrls, isSuperAdmin, gatingEnabled]);
 
+  // If active tab is hidden (and not super admin), redirect to first visible tab
+  useEffect(() => {
+    if (!isSuperAdmin && hiddenTabs.has(activeTab) && visibleTabs.length > 0) {
+      setActiveTab(visibleTabs[0]);
+    }
+  }, [activeTab, hiddenTabs, visibleTabs, isSuperAdmin]);
+
   if (!hasAccess) {
     return <AccessGate onAccess={() => setHasAccess(true)} />;
   }
@@ -2091,7 +2123,7 @@ export default function Prospectus() {
 
   const handleToggleGating = async (enabled: boolean) => {
     setGatingEnabled(enabled);
-    if (!enabled) setUnlockedUpTo(TABS.length - 1);
+    if (!enabled) setUnlockedUpTo(visibleTabs.length - 1);
     else if (!isSuperAdmin) setUnlockedUpTo(0);
     try {
       await (supabase as any)
@@ -2099,6 +2131,31 @@ export default function Prospectus() {
         .upsert({ key: "prospectus_tab_gating", value: { enabled }, updated_at: new Date().toISOString() }, { onConflict: "key" });
     } catch {
       // Table may not exist — setting only persists locally this session
+    }
+  };
+
+  const handleToggleTabVisible = async (tab: string) => {
+    const nowHidden = !hiddenTabs.has(tab);
+    setHiddenTabs((prev) => {
+      const next = new Set(prev);
+      if (next.has(tab)) next.delete(tab); else next.add(tab);
+      return next;
+    });
+    // Persist to Supabase — update the visibility JSON for this tab
+    try {
+      // Fetch current row to merge visibility
+      const { data: existing } = await supabase
+        .from("prospectus_tab_content")
+        .select("visibility")
+        .eq("tab_name", tab)
+        .maybeSingle();
+      const vis = (existing?.visibility as Record<string, unknown>) || {};
+      vis.tab = !nowHidden;
+      await supabase
+        .from("prospectus_tab_content")
+        .upsert({ tab_name: tab, visibility: vis, updated_at: new Date().toISOString() }, { onConflict: "tab_name" });
+    } catch {
+      // visibility column may not exist yet — persists locally this session
     }
   };
 
@@ -2232,9 +2289,10 @@ export default function Prospectus() {
         {/* Tab navigation */}
         <div className="max-w-6xl mx-auto px-4 md:px-8 pb-3 overflow-x-auto">
           <div className="flex items-center gap-1.5 min-w-max">
-            {TABS.map((tab, idx) => {
-              const isLocked = idx > unlockedUpTo;
-              const isJustUnlocked = idx === justUnlocked;
+            {(isSuperAdmin ? TABS : visibleTabs).map((tab) => {
+              const visIdx = visibleTabs.indexOf(tab);
+              const isLocked = !isSuperAdmin && visIdx > unlockedUpTo;
+              const isJustUnlocked = visIdx === justUnlocked;
               const isActive = activeTab === tab;
 
               return (
@@ -2362,6 +2420,8 @@ export default function Prospectus() {
           dark={darkMode}
           gatingEnabled={gatingEnabled}
           onToggleGating={handleToggleGating}
+          hiddenTabs={hiddenTabs}
+          onToggleTabVisible={handleToggleTabVisible}
         />
       )}
 
