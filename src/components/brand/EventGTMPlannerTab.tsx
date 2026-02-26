@@ -410,6 +410,9 @@ export default function EventGTMPlannerTab({
   /* Share state */
   const [sharing, setSharing] = useState(false);
 
+  /* Save All as Demo state */
+  const [savingAllDemo, setSavingAllDemo] = useState(false);
+
   /* Demo persistence: load saved results from DB for all users */
   const { isSuperAdmin } = useAuth();
 
@@ -464,6 +467,8 @@ export default function EventGTMPlannerTab({
         conflicts: conflictsCardRef,
         gtm: gtmCardRef,
         strategy: gtmCardRef,
+        venues: gtmCardRef,
+        campaigns: gtmCardRef,
         summary: summaryCardRef,
       };
       const ref = refMap[scrollToSection.toLowerCase()];
@@ -510,36 +515,24 @@ export default function EventGTMPlannerTab({
   const aiConflictCount = conflicts?.aiEvents?.filter((e) => e.type === "conflict").length ?? 0;
   const aiCollabCount = conflicts?.aiEvents?.filter((e) => e.type === "collab").length ?? 0;
 
-  /* ---- Conflicts & Collabs Scanner ---- */
-  const runConflictScan = async () => {
-    if (!startDate) {
-      toast.error("Set an event date to enable conflict scanning");
-      return;
-    }
+  /* ---- Core generation helpers (no state/toast side-effects) ---- */
+  const doConflictScan = async (): Promise<ConflictResults> => {
+    const holidays = findHolidayConflicts(startDate, endDate);
+    const observances = findObservanceConflicts(startDate, endDate);
 
-    setScanning(true);
-    setConflicts(null);
-    setFilterMode("all");
+    let aiEvents: AIEvent[] = [];
+    let aiFailed = false;
+
+    const nearbyBases = getNearbyBases(state);
+    const baseContext = nearbyBases.length > 0
+      ? `\nNearby military installations: ${nearbyBases.slice(0, 5).map((b) => `${b.name} (${b.city})`).join(", ")}.`
+      : "";
+
+    const windowDays = Number(dateWindow);
 
     try {
-      // 1. Local checks (instant)
-      const holidays = findHolidayConflicts(startDate, endDate);
-      const observances = findObservanceConflicts(startDate, endDate);
-
-      // 2. AI-powered multi-source scan
-      let aiEvents: AIEvent[] = [];
-      let aiFailed = false;
-
-      const nearbyBases = getNearbyBases(state);
-      const baseContext = nearbyBases.length > 0
-        ? `\nNearby military installations: ${nearbyBases.slice(0, 5).map((b) => `${b.name} (${b.city})`).join(", ")}.`
-        : "";
-
-      const windowDays = Number(dateWindow);
-
-      try {
-        const aiResp = await callAnthropic(
-          `You are an event intelligence tool for military community event planners. Given a planned event's details, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) within a specified date window, as if you searched Eventbrite, Facebook Events, military installation calendars, local Chamber of Commerce event calendars, MilSpouse Network groups, and the MilCrunch Calendar.
+      const aiResp = await callAnthropic(
+        `You are an event intelligence tool for military community event planners. Given a planned event's details, generate realistic competing events (conflicts) and potential collaboration opportunities (collabs) within a specified date window, as if you searched Eventbrite, Facebook Events, military installation calendars, local Chamber of Commerce event calendars, MilSpouse Network groups, and the MilCrunch Calendar.
 
 Return ONLY a valid JSON array of event objects. Each event:
 {
@@ -566,7 +559,7 @@ Guidelines:
 - Include 1-3 Chamber of Commerce events (networking mixers, business expos, small business workshops)
 - Chamber of Commerce events should be COLLAB when they serve overlapping audiences (veteran business owners, military spouse entrepreneurs)
 - Chamber of Commerce events should be CONFLICT only when they directly compete for the same date, location, and audience`,
-          `Planned event details:
+        `Planned event details:
 - Name: "${eventTitle}"
 - Type: ${eventType || "General"}
 - Date: ${dateRange}
@@ -576,30 +569,135 @@ Guidelines:
 - Date Window: ${windowDays} days before to 7 days after event date${baseContext}
 
 Generate realistic competing events and collaboration opportunities within the date window.`,
-          4096,
-        );
+        4096,
+      );
 
-        const cleaned = aiResp.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-        const parsed = JSON.parse(cleaned);
-        aiEvents = (Array.isArray(parsed) ? parsed : parsed.events || []).filter(
-          (e: any) => e.name && e.type && (e.type === "conflict" || e.type === "collab"),
-        );
-      } catch (e) {
-        console.warn("[GTM] AI scan failed:", e);
-        aiFailed = true;
-      }
+      const cleaned = aiResp.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+      const parsed = JSON.parse(cleaned);
+      aiEvents = (Array.isArray(parsed) ? parsed : parsed.events || []).filter(
+        (e: any) => e.name && e.type && (e.type === "conflict" || e.type === "collab"),
+      );
+    } catch (e) {
+      console.warn("[GTM] AI scan failed:", e);
+      aiFailed = true;
+    }
 
-      setConflicts({ holidays, observances, aiEvents, aiFailed });
+    return { holidays, observances, aiEvents, aiFailed };
+  };
 
-      const total = holidays.length + observances.length + aiEvents.length;
+  const doGenerateGTM = async (conflictData: ConflictResults | null): Promise<string> => {
+    const conflictContext = conflictData
+      ? `\n\nKnown scheduling conflicts:\n${
+          conflictData.holidays.map((h) => `- Holiday: ${h.name} (${format(h.date, "MMM d, yyyy")}, ${h.proximity})`).join("\n")
+        }${
+          conflictData.aiEvents.filter((e) => e.type === "conflict").length > 0
+            ? "\n" + conflictData.aiEvents
+                .filter((e) => e.type === "conflict")
+                .map((e) => `- Competing event: ${e.name} on ${e.date} in ${e.location} (${e.severity} severity, source: ${e.source})`).join("\n")
+            : ""
+        }${
+          conflictData.aiEvents.filter((e) => e.type === "collab").length > 0
+            ? "\n\nPotential collaboration opportunities:\n" + conflictData.aiEvents
+                .filter((e) => e.type === "collab")
+                .map((e) => `- Collab: ${e.name} on ${e.date} in ${e.location} (${e.reason})`).join("\n")
+            : ""
+        }${
+          conflictData.observances.length > 0
+            ? "\n" + conflictData.observances.map((o) => `- Military observance: ${o.name} on ${format(o.date, "MMM d, yyyy")} (${o.daysAway === 0 ? "during event" : `${o.daysAway} days ${o.direction}`}, suggestion: ${o.suggestion})`).join("\n")
+            : ""
+        }`
+      : "";
+
+    return await callAnthropic(
+      `You are a Go-To-Market strategist specializing in military and veteran community events. You create detailed, actionable GTM plans tuned for military/veteran audiences — referencing VSOs (Veterans Service Organizations), base MWR offices, mil-specific media outlets, military influencer networks, and DoD community channels.`,
+      `Create a comprehensive Go-To-Market plan for this event:
+
+**Event:** ${eventTitle}
+**Type:** ${eventType || "General"}
+**Date:** ${dateRange}
+**Location:** ${venue ? `${venue}, ` : ""}${location || "TBD"}
+**Capacity:** ${capacity || "TBD"}
+**Description:** ${eventDescription || "N/A"}
+
+Current status:
+- ${speakerCount} speaker(s) confirmed
+- ${sponsorCount} sponsor(s) secured
+- ${registrationCount} registration(s) received
+${conflictContext}
+
+Structure the plan with these 10 sections:
+1. **Executive Summary** — 2-3 sentence overview of the GTM approach
+2. **Target Segments** — Primary and secondary audience segments with estimated reach
+3. **Timeline** — Week-by-week marketing timeline leading up to the event
+4. **Channels** — Specific marketing channels ranked by expected ROI (include mil-specific channels)
+5. **Content Strategy** — Content calendar with specific post types, themes, and messaging
+6. **Partnerships** — VSOs, base MWR offices, mil influencers, and organizations to partner with
+7. **Registration Tactics** — Strategies to drive registrations (early bird, group discounts, unit referrals)
+8. **Risk Mitigation** — Potential risks and contingency plans (including any detected conflicts)
+9. **Budget Allocation** — Suggested budget breakdown by channel (percentages)
+10. **KPIs & Success Metrics** — Measurable targets for each phase
+
+Be specific, actionable, and realistic. Reference actual military/veteran organizations and channels where appropriate.`,
+      4096,
+    );
+  };
+
+  const doGenerateSummary = async (): Promise<string> => {
+    return await callAnthropic(
+      `You write military-style executive briefings. Use clear, concise language. Structure information for rapid consumption by senior leadership. Use the standard military briefing format.`,
+      `Generate a supervisor-ready executive summary for this event:
+
+**Event:** ${eventTitle}
+**Type:** ${eventType || "General"}
+**Date:** ${dateRange}
+**Location:** ${venue ? `${venue}, ` : ""}${location || "TBD"}
+**Capacity:** ${capacity || "TBD"}
+**Description:** ${eventDescription || "N/A"}
+
+Current readiness metrics:
+- Speakers confirmed: ${speakerCount}
+- Sponsors secured: ${sponsorCount}
+- Registrations received: ${registrationCount}
+- Capacity utilization: ${capacity ? `${Math.round((registrationCount / capacity) * 100)}%` : "N/A"}
+
+Format as a military-style executive brief with these sections:
+1. **BLUF (Bottom Line Up Front)** — One sentence summary of event readiness
+2. **Overview** — Event purpose, scope, and target audience (3-4 sentences)
+3. **Readiness Assessment** — Current status across key areas (speakers, sponsors, registrations, logistics)
+4. **Risk Assessment** — Top 3 risks with likelihood and impact ratings (High/Medium/Low)
+5. **Key Decisions Needed** — Action items requiring leadership approval
+6. **Resource Requirements** — Outstanding needs (budget, personnel, equipment)
+7. **Recommendation** — Clear recommendation with next steps and timeline
+
+Keep it concise — this should fit on one printed page. Use bullet points where appropriate.`,
+      2048,
+    );
+  };
+
+  /* ---- Conflicts & Collabs Scanner (button handler) ---- */
+  const runConflictScan = async () => {
+    if (!startDate) {
+      toast.error("Set an event date to enable conflict scanning");
+      return;
+    }
+
+    setScanning(true);
+    setConflicts(null);
+    setFilterMode("all");
+
+    try {
+      const result = await doConflictScan();
+      setConflicts(result);
+
+      const total = result.holidays.length + result.observances.length + result.aiEvents.length;
       if (total === 0) {
         toast.success("No conflicts or collabs detected!");
       } else {
         const parts: string[] = [];
-        if (holidays.length) parts.push(`${holidays.length} holiday conflict${holidays.length > 1 ? "s" : ""}`);
-        if (observances.length) parts.push(`${observances.length} observance${observances.length > 1 ? "s" : ""}`);
-        const extConflicts = aiEvents.filter((e) => e.type === "conflict").length;
-        const extCollabs = aiEvents.filter((e) => e.type === "collab").length;
+        if (result.holidays.length) parts.push(`${result.holidays.length} holiday conflict${result.holidays.length > 1 ? "s" : ""}`);
+        if (result.observances.length) parts.push(`${result.observances.length} observance${result.observances.length > 1 ? "s" : ""}`);
+        const extConflicts = result.aiEvents.filter((e) => e.type === "conflict").length;
+        const extCollabs = result.aiEvents.filter((e) => e.type === "collab").length;
         if (extConflicts) parts.push(`${extConflicts} competing event${extConflicts > 1 ? "s" : ""}`);
         if (extCollabs) parts.push(`${extCollabs} collab opportunit${extCollabs > 1 ? "ies" : "y"}`);
         toast.info(`Found ${parts.join(", ")}`);
@@ -648,65 +746,12 @@ Both events serve overlapping military audiences. Write the email.`,
     }
   };
 
-  /* ---- GTM Strategy ---- */
+  /* ---- GTM Strategy (button handler) ---- */
   const generateGTM = async () => {
     setGeneratingGTM(true);
     setGtmPlan(null);
     try {
-      const conflictContext = conflicts
-        ? `\n\nKnown scheduling conflicts:\n${
-            conflicts.holidays.map((h) => `- Holiday: ${h.name} (${format(h.date, "MMM d, yyyy")}, ${h.proximity})`).join("\n")
-          }${
-            conflicts.aiEvents.filter((e) => e.type === "conflict").length > 0
-              ? "\n" + conflicts.aiEvents
-                  .filter((e) => e.type === "conflict")
-                  .map((e) => `- Competing event: ${e.name} on ${e.date} in ${e.location} (${e.severity} severity, source: ${e.source})`).join("\n")
-              : ""
-          }${
-            conflicts.aiEvents.filter((e) => e.type === "collab").length > 0
-              ? "\n\nPotential collaboration opportunities:\n" + conflicts.aiEvents
-                  .filter((e) => e.type === "collab")
-                  .map((e) => `- Collab: ${e.name} on ${e.date} in ${e.location} (${e.reason})`).join("\n")
-              : ""
-          }${
-            conflicts.observances.length > 0
-              ? "\n" + conflicts.observances.map((o) => `- Military observance: ${o.name} on ${format(o.date, "MMM d, yyyy")} (${o.daysAway === 0 ? "during event" : `${o.daysAway} days ${o.direction}`}, suggestion: ${o.suggestion})`).join("\n")
-              : ""
-          }`
-        : "";
-
-      const plan = await callAnthropic(
-        `You are a Go-To-Market strategist specializing in military and veteran community events. You create detailed, actionable GTM plans tuned for military/veteran audiences — referencing VSOs (Veterans Service Organizations), base MWR offices, mil-specific media outlets, military influencer networks, and DoD community channels.`,
-        `Create a comprehensive Go-To-Market plan for this event:
-
-**Event:** ${eventTitle}
-**Type:** ${eventType || "General"}
-**Date:** ${dateRange}
-**Location:** ${venue ? `${venue}, ` : ""}${location || "TBD"}
-**Capacity:** ${capacity || "TBD"}
-**Description:** ${eventDescription || "N/A"}
-
-Current status:
-- ${speakerCount} speaker(s) confirmed
-- ${sponsorCount} sponsor(s) secured
-- ${registrationCount} registration(s) received
-${conflictContext}
-
-Structure the plan with these 10 sections:
-1. **Executive Summary** — 2-3 sentence overview of the GTM approach
-2. **Target Segments** — Primary and secondary audience segments with estimated reach
-3. **Timeline** — Week-by-week marketing timeline leading up to the event
-4. **Channels** — Specific marketing channels ranked by expected ROI (include mil-specific channels)
-5. **Content Strategy** — Content calendar with specific post types, themes, and messaging
-6. **Partnerships** — VSOs, base MWR offices, mil influencers, and organizations to partner with
-7. **Registration Tactics** — Strategies to drive registrations (early bird, group discounts, unit referrals)
-8. **Risk Mitigation** — Potential risks and contingency plans (including any detected conflicts)
-9. **Budget Allocation** — Suggested budget breakdown by channel (percentages)
-10. **KPIs & Success Metrics** — Measurable targets for each phase
-
-Be specific, actionable, and realistic. Reference actual military/veteran organizations and channels where appropriate.`,
-        4096
-      );
+      const plan = await doGenerateGTM(conflicts);
       setGtmPlan(plan);
       toast.success("GTM plan generated");
     } catch (e) {
@@ -717,40 +762,12 @@ Be specific, actionable, and realistic. Reference actual military/veteran organi
     }
   };
 
-  /* ---- Supervisor Summary ---- */
+  /* ---- Supervisor Summary (button handler) ---- */
   const generateSummary = async () => {
     setGeneratingSummary(true);
     setSummary(null);
     try {
-      const brief = await callAnthropic(
-        `You write military-style executive briefings. Use clear, concise language. Structure information for rapid consumption by senior leadership. Use the standard military briefing format.`,
-        `Generate a supervisor-ready executive summary for this event:
-
-**Event:** ${eventTitle}
-**Type:** ${eventType || "General"}
-**Date:** ${dateRange}
-**Location:** ${venue ? `${venue}, ` : ""}${location || "TBD"}
-**Capacity:** ${capacity || "TBD"}
-**Description:** ${eventDescription || "N/A"}
-
-Current readiness metrics:
-- Speakers confirmed: ${speakerCount}
-- Sponsors secured: ${sponsorCount}
-- Registrations received: ${registrationCount}
-- Capacity utilization: ${capacity ? `${Math.round((registrationCount / capacity) * 100)}%` : "N/A"}
-
-Format as a military-style executive brief with these sections:
-1. **BLUF (Bottom Line Up Front)** — One sentence summary of event readiness
-2. **Overview** — Event purpose, scope, and target audience (3-4 sentences)
-3. **Readiness Assessment** — Current status across key areas (speakers, sponsors, registrations, logistics)
-4. **Risk Assessment** — Top 3 risks with likelihood and impact ratings (High/Medium/Low)
-5. **Key Decisions Needed** — Action items requiring leadership approval
-6. **Resource Requirements** — Outstanding needs (budget, personnel, equipment)
-7. **Recommendation** — Clear recommendation with next steps and timeline
-
-Keep it concise — this should fit on one printed page. Use bullet points where appropriate.`,
-        2048
-      );
+      const brief = await doGenerateSummary();
       setSummary(brief);
       toast.success("Executive summary generated");
     } catch (e) {
@@ -758,6 +775,60 @@ Keep it concise — this should fit on one printed page. Use bullet points where
       toast.error("Failed to generate summary");
     } finally {
       setGeneratingSummary(false);
+    }
+  };
+
+  /* ---- Save All as Demo (generate any missing sections + save all) ---- */
+  const saveAllAsDemo = async () => {
+    if (!startDate) {
+      toast.error("Set an event date first");
+      return;
+    }
+    setSavingAllDemo(true);
+    toast.info("Generating all sections\u2026");
+
+    try {
+      // Generate any missing sections, reuse existing ones
+      const conflictResults = conflicts ?? await doConflictScan();
+      if (!conflicts) {
+        setConflicts(conflictResults);
+        setFilterMode("all");
+      }
+
+      const gtmResult = gtmPlan ?? await doGenerateGTM(conflictResults);
+      if (!gtmPlan) setGtmPlan(gtmResult);
+
+      const summaryResult = summary ?? await doGenerateSummary();
+      if (!summary) setSummary(summaryResult);
+
+      // Single upsert with all three fields
+      try {
+        const { error } = await supabase
+          .from("gtm_demo_results")
+          .upsert(
+            {
+              event_id: eventId,
+              conflicts: conflictResults,
+              gtm_plan: gtmResult,
+              summary: summaryResult,
+              updated_at: new Date().toISOString(),
+            } as Record<string, unknown>,
+            { onConflict: "event_id" },
+          );
+        if (error) throw error;
+        toast.success("All sections saved as demo!");
+      } catch {
+        // Fallback to localStorage
+        localStorage.setItem("demo_conflicts", JSON.stringify(conflictResults));
+        localStorage.setItem("demo_gtm", gtmResult);
+        localStorage.setItem("demo_summary", summaryResult);
+        toast.success("All sections saved as demo (local)");
+      }
+    } catch (e) {
+      console.error("[GTM] Save All as Demo error:", e);
+      toast.error("Failed to generate/save all sections");
+    } finally {
+      setSavingAllDemo(false);
     }
   };
 
@@ -857,6 +928,27 @@ Keep it concise — this should fit on one printed page. Use bullet points where
   /* ======================================== */
   return (
     <div className="space-y-6">
+      {/* Save All as Demo — super_admin only */}
+      {isSuperAdmin && (
+        <div className="flex items-center justify-between rounded-xl border border-[#1e3a5f]/30 bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10 p-4">
+          <div>
+            <p className="text-sm font-medium text-[#1e3a5f] dark:text-blue-300">Demo Persistence</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Generate any missing sections and save all three to the database for instant demo rendering.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={saveAllAsDemo}
+            disabled={savingAllDemo || !startDate}
+            className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"
+          >
+            {savingAllDemo ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+            {savingAllDemo ? "Generating & Saving\u2026" : "Save All as Demo"}
+          </Button>
+        </div>
+      )}
+
       {/* Section A — Conflicts & Collabs */}
       <Card ref={conflictsCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
