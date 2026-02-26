@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus, Upload, Download, Mail, MailX, UserSearch, FileSpreadsheet } from "lucide-react";
+import { List, Trash2, ChevronRight, Plus, User, Globe, Loader2, ArrowLeft, Camera, Pencil, FolderPlus, ListPlus, Upload, Download, Mail, MailX, UserSearch, FileSpreadsheet, UserPlus, UserCheck } from "lucide-react";
 import { cn, safeImageUrl } from "@/lib/utils";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import BulkActionBar from "@/components/BulkActionBar";
@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select";
 import { parseICCSV, importRowToListCreator, importRowToSupabaseItem, type ICImportRow } from "@/lib/csv-import";
 import CSVImportModal from "@/components/brand/CSVImportModal";
-import { syncBulkContacts, getEmailLists } from "@/lib/email-db";
+import { syncBulkContacts, getEmailLists, addFullContact, upsertEmailList, getAllContacts } from "@/lib/email-db";
 import type { EmailList } from "@/lib/email-types";
 
 function formatFollowers(count: number): string {
@@ -626,6 +626,16 @@ export const BrandListDetail = () => {
   const [emailLists, setEmailLists] = useState<EmailList[]>([]);
   const [selectedEmailListId, setSelectedEmailListId] = useState("");
   const [addingToEmailList, setAddingToEmailList] = useState(false);
+  // Add to Contacts state
+  const [contactEmailSet, setContactEmailSet] = useState<Set<string>>(new Set());
+  const [addToContactsOpen, setAddToContactsOpen] = useState(false);
+  const [addToContactsMode, setAddToContactsMode] = useState<"single" | "bulk">("bulk");
+  const [singleContactCreator, setSingleContactCreator] = useState<ListCreator | null>(null);
+  const [contactEmailLists, setContactEmailLists] = useState<EmailList[]>([]);
+  const [selectedContactListId, setSelectedContactListId] = useState("");
+  const [newContactListName, setNewContactListName] = useState("");
+  const [creatingList, setCreatingList] = useState(false);
+  const [addingContacts, setAddingContacts] = useState(false);
 
   const selectedList = Array.isArray(lists) ? (lists.find((l) => l.id === listId) ?? null) : null;
   const creators = Array.isArray(selectedList?.creators) ? selectedList.creators : [];
@@ -643,6 +653,13 @@ export const BrandListDetail = () => {
 
   useEffect(() => {
     fetchDirectoriesWithCounts().then(setDirectories);
+  }, []);
+
+  // Load contact status to show badges
+  useEffect(() => {
+    getAllContacts().then((contacts) => {
+      setContactEmailSet(new Set(contacts.map((c) => c.email.toLowerCase())));
+    }).catch(() => {});
   }, []);
 
   const handleBulkAddToDirectory = async (dirId: string) => {
@@ -858,8 +875,124 @@ export const BrandListDetail = () => {
     const result = await syncBulkContacts(selectedEmailListId, contacts);
     const elName = emailLists.find((l) => l.id === selectedEmailListId)?.name ?? "list";
     toast.success(`Added ${result.inserted} contact${result.inserted !== 1 ? "s" : ""} to ${elName}${result.duplicates > 0 ? ` (${result.duplicates} already existed)` : ""}`);
+    // Update contact status badges
+    setContactEmailSet((prev) => {
+      const next = new Set(prev);
+      withEmails.forEach((c) => next.add(c.email!.toLowerCase()));
+      return next;
+    });
     setAddingToEmailList(false);
     setAddToEmailOpen(false);
+  };
+
+  /* ── Add to Contacts handlers ────────────────────────────── */
+
+  const creatorToContactPayload = (c: ListCreator) => {
+    const nameParts = (c.name || "").split(" ");
+    return {
+      email: c.email!,
+      first_name: nameParts[0] || undefined,
+      last_name: nameParts.slice(1).join(" ") || undefined,
+      source: "creator" as const,
+      metadata: {
+        username: c.username,
+        platform: c.platforms?.[0] ?? "instagram",
+        followers: c.followers,
+        engagement_rate: c.engagementRate,
+        avatar: c.avatar,
+        location: c.location,
+        bio: c.bio,
+        imported_from_list: selectedList?.name,
+      },
+    };
+  };
+
+  const handleOpenSingleAddToContacts = async (creator: ListCreator) => {
+    if (!creator.email) {
+      toast.error("No email available — enrich this creator first");
+      return;
+    }
+    if (contactEmailSet.has(creator.email.toLowerCase())) {
+      toast("Already a contact", { description: `${creator.email} is already in your contacts` });
+      return;
+    }
+    setSingleContactCreator(creator);
+    setAddToContactsMode("single");
+    const lists = await getEmailLists();
+    setContactEmailLists(lists);
+    setSelectedContactListId("");
+    setNewContactListName("");
+    setAddToContactsOpen(true);
+  };
+
+  const handleOpenBulkAddToContacts = async () => {
+    const withEmails = creators.filter((c) => c.email);
+    if (withEmails.length === 0) {
+      toast.error("No creators have emails — enrich first");
+      return;
+    }
+    setSingleContactCreator(null);
+    setAddToContactsMode("bulk");
+    const lists = await getEmailLists();
+    setContactEmailLists(lists);
+    setSelectedContactListId("");
+    setNewContactListName("");
+    setAddToContactsOpen(true);
+  };
+
+  const handleCreateContactList = async () => {
+    const name = newContactListName.trim();
+    if (!name) return;
+    setCreatingList(true);
+    const result = await upsertEmailList({ name });
+    if (result) {
+      setContactEmailLists((prev) => [result, ...prev]);
+      setSelectedContactListId(result.id);
+      setNewContactListName("");
+      toast.success(`Created list "${name}"`);
+    } else {
+      toast.error("Failed to create list");
+    }
+    setCreatingList(false);
+  };
+
+  const handleConfirmAddToContacts = async () => {
+    if (!selectedContactListId) {
+      toast.error("Select an email list first");
+      return;
+    }
+    setAddingContacts(true);
+
+    if (addToContactsMode === "single" && singleContactCreator) {
+      const payload = creatorToContactPayload(singleContactCreator);
+      const result = await addFullContact({ list_id: selectedContactListId, ...payload });
+      if (result) {
+        setContactEmailSet((prev) => new Set([...prev, singleContactCreator.email!.toLowerCase()]));
+        const listName = contactEmailLists.find((l) => l.id === selectedContactListId)?.name ?? "list";
+        toast.success(`${singleContactCreator.name} added to ${listName}`);
+      } else {
+        toast.error("Failed to add contact — may already exist in this list");
+      }
+    } else {
+      const withEmails = creators.filter((c) => c.email);
+      const noEmail = creators.length - withEmails.length;
+      const contacts = withEmails.map(creatorToContactPayload);
+      const result = await syncBulkContacts(selectedContactListId, contacts);
+      const listName = contactEmailLists.find((l) => l.id === selectedContactListId)?.name ?? "list";
+      toast.success(
+        `Added ${result.inserted} of ${creators.length} creators as contacts to ${listName}` +
+        (noEmail > 0 ? ` (${noEmail} skipped — no email)` : "") +
+        (result.duplicates > 0 ? ` (${result.duplicates} already existed)` : "")
+      );
+      setContactEmailSet((prev) => {
+        const next = new Set(prev);
+        withEmails.forEach((c) => next.add(c.email!.toLowerCase()));
+        return next;
+      });
+    }
+
+    setAddingContacts(false);
+    setAddToContactsOpen(false);
   };
 
   if (!selectedList) {
@@ -925,6 +1058,69 @@ export const BrandListDetail = () => {
             >
               {addingToEmailList && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Add {creators.filter((c) => c.email).length} Contacts
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Add to Contacts dialog */}
+      <Dialog open={addToContactsOpen} onOpenChange={setAddToContactsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              {addToContactsMode === "single"
+                ? `Add ${singleContactCreator?.name ?? "Creator"} to Contacts`
+                : "Add All to Contacts"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {addToContactsMode === "bulk" && (
+              <p className="text-sm text-muted-foreground">
+                {creators.filter((c) => c.email).length} of {creators.length} creators have emails
+                and will be added as contacts.
+              </p>
+            )}
+            <div className="space-y-2">
+              <Label>Email List</Label>
+              <Select value={selectedContactListId} onValueChange={setSelectedContactListId}>
+                <SelectTrigger><SelectValue placeholder="Select an email list" /></SelectTrigger>
+                <SelectContent>
+                  {contactEmailLists.length === 0 ? (
+                    <SelectItem value="__none" disabled>No email lists yet — create one below</SelectItem>
+                  ) : (
+                    contactEmailLists.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="New list name..."
+                value={newContactListName}
+                onChange={(e) => setNewContactListName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateContactList(); } }}
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!newContactListName.trim() || creatingList}
+                onClick={handleCreateContactList}
+              >
+                {creatingList ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
+            <Button
+              onClick={handleConfirmAddToContacts}
+              disabled={!selectedContactListId || addingContacts}
+              className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]"
+            >
+              {addingContacts && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {addToContactsMode === "single"
+                ? "Add Contact"
+                : `Add ${creators.filter((c) => c.email).length} Contacts`}
             </Button>
           </div>
         </DialogContent>
@@ -1131,6 +1327,17 @@ export const BrandListDetail = () => {
               </Button>
             )}
             {creators.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg text-emerald-700 border-emerald-400 hover:bg-emerald-50 dark:text-emerald-500 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+                onClick={handleOpenBulkAddToContacts}
+              >
+                <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                Add All to Contacts
+              </Button>
+            )}
+            {creators.length > 0 && (
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={selectedIds.size === creators.length}
@@ -1189,6 +1396,15 @@ export const BrandListDetail = () => {
                         className="text-[10px] px-1.5 py-0 bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 shrink-0"
                       >
                         IC Import
+                      </Badge>
+                    )}
+                    {creator.email && contactEmailSet.has(creator.email.toLowerCase()) && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 shrink-0"
+                      >
+                        <UserCheck className="h-2.5 w-2.5 mr-0.5" />
+                        Contact
                       </Badge>
                     )}
                   </div>
@@ -1293,6 +1509,35 @@ export const BrandListDetail = () => {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {/* Add to Contacts */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "rounded-lg",
+                    creator.email && contactEmailSet.has(creator.email.toLowerCase())
+                      ? "text-emerald-600 border-emerald-300 cursor-default opacity-70"
+                      : "text-emerald-700 border-emerald-400 hover:bg-emerald-50 dark:text-emerald-500 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+                  )}
+                  disabled={!!(creator.email && contactEmailSet.has(creator.email.toLowerCase()))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenSingleAddToContacts(creator);
+                  }}
+                  title={
+                    !creator.email
+                      ? "No email — enrich first"
+                      : contactEmailSet.has(creator.email.toLowerCase())
+                        ? "Already a contact"
+                        : "Add to email contacts"
+                  }
+                >
+                  {creator.email && contactEmailSet.has(creator.email.toLowerCase()) ? (
+                    <><UserCheck className="h-3.5 w-3.5 mr-1" /> Contact</>
+                  ) : (
+                    <><UserPlus className="h-3.5 w-3.5 mr-1" /> Add to Contacts</>
+                  )}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
