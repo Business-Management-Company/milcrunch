@@ -699,8 +699,7 @@ const BrandDiscover = () => {
   } | null>(null);
 
   // Smart search state
-  const [exactMatch, setExactMatch] = useState<CreatorCard | null>(null);
-  const [exactMatchRaw, setExactMatchRaw] = useState<unknown>(null);
+  // exactMatch state removed — Top Creator card replaces it
   const [searchHint, setSearchHint] = useState<string>("");
   const [similarCreators, setSimilarCreators] = useState<CreatorCard[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
@@ -1367,43 +1366,35 @@ const BrandDiscover = () => {
       .then((result: SmartSearchResult) => {
         if (searchQueryRef.current.trim().replace(/^@/, "") !== effectiveQuery.replace(/^@/, "")) return;
 
-        // Handle exact match
-        if (result.exactMatch) {
-          setExactMatch(result.exactMatch);
-          setExactMatchRaw(result.exactMatchRaw);
+        // Pre-populate enrichment cache from exact match raw response if available
+        if (result.exactMatch && result.exactMatchRaw) {
+          const raw = result.exactMatchRaw as Record<string, unknown>;
+          const apiResult = raw?.result as Record<string, unknown> | undefined;
+          const platKey = searchPlatforms[0] === "all" ? "instagram" : searchPlatforms[0];
+          const platData = (apiResult?.[platKey] as Record<string, unknown>) ??
+            (platKey !== "instagram" ? (apiResult?.instagram as Record<string, unknown>) : undefined);
 
-          // Pre-populate enrichment cache from the raw response if available
-          if (result.exactMatchRaw) {
-            const raw = result.exactMatchRaw as Record<string, unknown>;
-            const apiResult = raw?.result as Record<string, unknown> | undefined;
-            const platKey = searchPlatforms[0] === "all" ? "instagram" : searchPlatforms[0];
-            const platData = (apiResult?.[platKey] as Record<string, unknown>) ??
-              (platKey !== "instagram" ? (apiResult?.instagram as Record<string, unknown>) : undefined);
-
-            if (apiResult && platData) {
-              const enrichResponse: EnrichedProfileResponse = { result: apiResult, instagram: platData };
-              const partial = extractFromEnrichment(enrichResponse);
-              Object.assign(result.exactMatch, partial);
-              enrichedSetRef.current.add(result.exactMatch.id);
-              setEnrichCache((prev) => ({ ...prev, [result.exactMatch!.id]: partial }));
-              setEnrichRawCache((prev) => ({ ...prev, [result.exactMatch!.id]: enrichResponse }));
-              if (result.exactMatch.username) setCachedEnrichment(result.exactMatch.username, enrichResponse);
-              maybeUpdateFeaturedAvatar(result.exactMatch.username ?? "", enrichResponse);
-            }
+          if (apiResult && platData) {
+            const enrichResponse: EnrichedProfileResponse = { result: apiResult, instagram: platData };
+            const partial = extractFromEnrichment(enrichResponse);
+            Object.assign(result.exactMatch, partial);
+            enrichedSetRef.current.add(result.exactMatch.id);
+            setEnrichCache((prev) => ({ ...prev, [result.exactMatch!.id]: partial }));
+            setEnrichRawCache((prev) => ({ ...prev, [result.exactMatch!.id]: enrichResponse }));
+            if (result.exactMatch.username) setCachedEnrichment(result.exactMatch.username, enrichResponse);
+            maybeUpdateFeaturedAvatar(result.exactMatch.username ?? "", enrichResponse);
           }
-        } else {
-          setExactMatch(null);
-          setExactMatchRaw(null);
         }
 
-        // Set related creators (sorted by highest followers when exact match exists)
-        if (result.relatedCreators.length > 0 || result.exactMatch) {
-          const sorted = result.exactMatch
-            ? [...result.relatedCreators].sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0))
-            : result.relatedCreators;
+        // Merge exact match into results list (at front) so Top Creator can pick it up
+        const allCreators = result.exactMatch
+          ? [result.exactMatch, ...result.relatedCreators.filter((c) => c.id !== result.exactMatch!.id)]
+          : result.relatedCreators;
+
+        if (allCreators.length > 0) {
           setApiResults({
-            creators: sorted,
-            total: result.relatedTotal,
+            creators: allCreators.sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0)),
+            total: result.relatedTotal + (result.exactMatch ? 1 : 0),
             rawResponse: result.exactMatchRaw,
           });
         } else {
@@ -1649,15 +1640,13 @@ const BrandDiscover = () => {
     return [...creators].sort((a, b) => getConfidence(b).score - getConfidence(a).score);
   }, [creators, sortBy, getConfidence]);
 
-  // Top Creator — highest follower count from results, skip if same as exact match
+  // Top Creator — highest follower count from results
   const topCreator = useMemo(() => {
     if (creators.length === 0) return null;
     const best = creators.reduce((top, c) => ((c.followers ?? 0) > (top.followers ?? 0) ? c : top), creators[0]);
     if (!best || (best.followers ?? 0) === 0) return null;
-    // Don't duplicate if exact match is already the top creator
-    if (exactMatch && best.id === exactMatch.id) return null;
     return best;
-  }, [creators, exactMatch]);
+  }, [creators]);
 
   const totalFromApi = apiResults?.total ?? 0;
   const resultsLabel =
@@ -2783,85 +2772,6 @@ const BrandDiscover = () => {
               </div>
 
               {/* Exact Match Card */}
-              {exactMatch && (
-                <div className="mb-6">
-                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
-                    <BadgeCheck className="h-4 w-4" />
-                    Exact Match
-                  </p>
-                  <Card
-                    className="relative rounded-2xl border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/20 p-6 cursor-pointer hover:shadow-md transition-all"
-                    onClick={() => { setProfileCreator(getMergedCreator(exactMatch)); setProfileModalOpen(true); }}
-                  >
-                    <div className="flex items-center gap-4">
-                      <DiscoverAvatar url={exactMatch.avatar} name={exactMatch.name} username={exactMatch.username} size="w-16 h-16" borderClass="border-2 border-emerald-200 dark:border-emerald-800 shadow-md" verified={exactMatch.isVerified} badgeClass="h-5 w-5 text-emerald-600" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate flex items-center gap-2">
-                          {exactMatch.name}
-                          {exactMatch.isVerified && <BadgeCheck className="h-4 w-4 text-[#6C5CE7] shrink-0" />}
-                          {isInAnyDirectory(exactMatch.username) && (
-                            <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
-                          )}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">@{exactMatch.username}</p>
-                        {exactMatch.bio && <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{exactMatch.bio}</p>}
-                      </div>
-                      <div className="flex items-center gap-6 shrink-0">
-                        <div className="text-center">
-                          <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Followers</span>
-                          <span className="font-bold text-gray-900 dark:text-white tabular-nums">{formatFollowers(exactMatch.followers)}</span>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Engagement</span>
-                          <span className="font-bold text-emerald-500 tabular-nums">{typeof getMergedCreator(exactMatch).engagementRate === "number" ? getMergedCreator(exactMatch).engagementRate!.toFixed(2) : "—"}%</span>
-                        </div>
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs"
-                            onClick={() => {
-                              const profileUrl = getCreatorProfileUrl(exactMatch, platform[0] || "instagram");
-                              if (!profileUrl) { toast.error("No handle available to find similar creators"); return; }
-                              setSimilarLoading(true);
-                              searchSimilarCreators(exactMatch.username ?? "", platform[0] || "instagram", 10, profileUrl)
-                                .then((res) => setSimilarCreators(res.creators))
-                                .catch((err) => toast.error(err?.message || "Failed to find similar creators"))
-                                .finally(() => setSimilarLoading(false));
-                            }}
-                            disabled={similarLoading}
-                          >
-                            {similarLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
-                            Find Similar
-                          </Button>
-                          {isCreatorInList(exactMatch.id) ? (
-                            <span className="text-xs text-gray-400">Added</span>
-                          ) : (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button size="sm" className="text-xs bg-[#000741] hover:bg-[#2d5282] text-white">
-                                  <ListPlus className="h-3 w-3 mr-1" /> Add to List
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {lists.map((list) => (
-                                  <DropdownMenuItem key={list.id} onClick={() => handleAddToList(list.id, list.name, exactMatch)}>
-                                    {list.name}
-                                  </DropdownMenuItem>
-                                ))}
-                                <DropdownMenuItem onClick={() => handleOpenCreateListForCreator(exactMatch)}>
-                                  <Plus className="mr-2 h-4 w-4" /> Create New List
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              )}
-
               {/* Top Creator Card */}
               {topCreator && (
                 <div className="mb-6">
@@ -2972,14 +2882,6 @@ const BrandDiscover = () => {
                     ))}
                   </div>
                 </div>
-              )}
-
-              {/* Related Creators header when exact match exists */}
-              {exactMatch && creators.length > 0 && (
-                <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1.5">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  Related Creators
-                </p>
               )}
 
               {creators.length > 0 ? (
