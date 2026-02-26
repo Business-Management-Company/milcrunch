@@ -2019,8 +2019,6 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
 
   const visibleBlocks = content.sections.filter((s) => s.visible !== false);
   const hasVideoBlock = visibleBlocks.some((s) => inferBlockType(s) === "video");
-  // Also skip backward-compat media if an IMAGE block exists (even if hidden/empty)
-  const hasImageBlock = content.sections.some((s) => inferBlockType(s) === "image");
 
   return (
     <div className="space-y-12">
@@ -2072,7 +2070,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
       </section>
 
       {/* Backward compat: show prospectus_videos media below headline if no VIDEO/IMAGE block exists */}
-      {!hasVideoBlock && !hasImageBlock && (videoUrl || imageUrl) && (
+      {!hasVideoBlock && (videoUrl || imageUrl) && (
         <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
       )}
 
@@ -2181,7 +2179,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
                 </div>
               )}
               {/* Features can also have an image with demo overlay (backward compat) */}
-              {section.image_url && (
+              {section.image_url?.trim() && (
                 <div
                   className={cn("relative mt-5", section.demo_url && "group cursor-pointer")}
                   onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
