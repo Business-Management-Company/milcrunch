@@ -1,7 +1,7 @@
 import React from "react";
 
 interface Block {
-  type: "h1" | "subtitle" | "h2" | "key-facts" | "bullets" | "blockquote" | "note" | "paragraph";
+  type: "h1" | "subtitle" | "h2" | "h3" | "key-facts" | "bullets" | "blockquote" | "note" | "paragraph";
   text?: string;
   items?: string[];
   facts?: { label: string; value: string }[];
@@ -38,10 +38,18 @@ function parse(content: string): Block[] {
     }
 
     // H2
-    if (trimmed.startsWith("## ")) {
+    if (trimmed.startsWith("## ") && !trimmed.startsWith("### ")) {
       const header = trimmed.slice(3);
       inKeyFacts = header.toLowerCase() === "key facts";
       blocks.push({ type: "h2", text: header });
+      i++;
+      continue;
+    }
+
+    // H3 (### headers) → render as bold section subheader
+    if (trimmed.startsWith("### ")) {
+      inKeyFacts = false;
+      blocks.push({ type: "h3", text: trimmed.slice(4) });
       i++;
       continue;
     }
@@ -140,6 +148,8 @@ export function MarkdownResponse({ content }: { content: string }) {
             return <p key={idx} className="text-gray-500 italic text-sm mb-4">{block.text}</p>;
           case "h2":
             return <h2 key={idx} className="text-xs font-semibold uppercase tracking-widest text-indigo-600 mt-6 mb-2 pb-1 border-b border-indigo-100">{block.text}</h2>;
+          case "h3":
+            return <p key={idx} className="text-sm font-bold text-gray-800 mt-4 mb-1">{block.text}</p>;
           case "key-facts":
             return (
               <table key={idx} className="w-full text-sm mb-4 rounded border border-gray-200 overflow-hidden">

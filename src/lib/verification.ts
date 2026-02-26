@@ -342,7 +342,10 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
     });
     const text = (data as any).content?.[0]?.text ?? "";
     const out = (text ?? "").trim();
-    return out ? out : "No analysis generated.";
+    if (!out) return "No analysis generated.";
+    // Clean markdown headers (###, ####) → bold lines so MarkdownResponse renders them cleanly
+    const cleaned = out.replace(/^#{3,}\s+(.+)$/gm, "**$1**");
+    return cleaned;
   } catch (e) {
     console.error("[Verification] Claude error after all retries:", e);
     return "pending_retry";
