@@ -4,7 +4,7 @@ import { scoreMilitaryRelevance, isMilitaryQuery } from "@/lib/military-scoring"
 // Use relative /api/* paths; Vercel rewrites forward to upstream. Auth must be in the request
 // (Vercel does not inject headers), so we always send Authorization in every fetch.
 const DISCOVERY_URL = "/api/influencers/public/v1/discovery/";
-const SIMILAR_CREATORS_URL = "/api/influencers/public/v1/discovery/creators/similar/";
+// Similar creators uses the main discovery endpoint with the similar_to filter
 const RAW_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/raw/";
 const FULL_ENRICH_URL = "/api/enrich/public/v1/creators/enrich/handle/full/";
 const LOCATIONS_URL = "/api/ic-locations";
@@ -807,8 +807,8 @@ export async function searchLookalike(
 }
 
 /**
- * Find creators similar to a given handle using the Discovery Similar Creators API.
- * POST /public/v1/discovery/creators/similar/
+ * Find creators similar to a given handle using the Discovery API's similar_to filter.
+ * POST /public/v1/discovery/  with filters.similar_to
  * Cost: 0.01 per creator returned
  */
 export async function searchSimilarCreators(
@@ -819,16 +819,17 @@ export async function searchSimilarCreators(
   profileUrl?: string,
 ): Promise<SearchCreatorsResult> {
   const handle = username.replace(/^@/, "").trim().toLowerCase();
-  if (!handle && !profileUrl) throw new Error("No Instagram handle available for this creator");
+  if (!handle && !profileUrl) throw new Error("No handle available for this creator");
 
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
 
-  const plat = platform.toLowerCase();
-  let url: string;
+  const plat = platform.toLowerCase() === "all" ? "instagram" : platform.toLowerCase();
+
+  // Build the profile URL for the similar_to filter
+  let similarUrl: string;
   if (profileUrl) {
-    // Use provided URL directly, ensure trailing slash
-    url = profileUrl.endsWith("/") ? profileUrl : profileUrl + "/";
+    similarUrl = profileUrl.endsWith("/") ? profileUrl : profileUrl + "/";
   } else {
     const platformUrlMap: Record<string, string> = {
       instagram: `https://www.instagram.com/${handle}/`,
@@ -837,19 +838,26 @@ export async function searchSimilarCreators(
       twitter: `https://twitter.com/${handle}/`,
       twitch: `https://www.twitch.tv/${handle}/`,
     };
-    url = platformUrlMap[plat] || `https://www.instagram.com/${handle}/`;
+    similarUrl = platformUrlMap[plat] || `https://www.instagram.com/${handle}/`;
   }
 
-  const body = {
+  // Use the main discovery endpoint with similar_to filter
+  // Try URL format first, fall back to handle-only if 400
+  const buildBody = (similarValue: string) => ({
     platform: plat,
-    url,
-    paging: { limit, page: 0 },
-  };
+    paging: { limit, page: 1 },
+    sort: { sort_by: "relevancy" as const, sort_order: "desc" as const },
+    filters: {
+      similar_to: [similarValue],
+    },
+  });
 
-  console.log("[SimilarCreators] POST", SIMILAR_CREATORS_URL);
+  let body = buildBody(similarUrl);
+
+  console.log("[SimilarCreators] POST", DISCOVERY_URL);
   console.log("[SimilarCreators] Body:", JSON.stringify(body, null, 2));
 
-  const res = await fetch(SIMILAR_CREATORS_URL, {
+  let res = await fetch(DISCOVERY_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -858,12 +866,36 @@ export async function searchSimilarCreators(
     body: JSON.stringify(body),
   });
 
-  const rawResponse = await res.json();
+  let rawResponse = await res.json();
   console.log("[SimilarCreators] Response status:", res.status);
   console.log("[SimilarCreators] Response body:", JSON.stringify(rawResponse, null, 2));
 
+  // If URL format fails with 400, retry with just the handle
+  if (res.status === 400 && handle) {
+    console.log("[SimilarCreators] URL format failed, retrying with handle:", handle);
+    body = buildBody(handle);
+    console.log("[SimilarCreators] Retry body:", JSON.stringify(body, null, 2));
+
+    res = await fetch(DISCOVERY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    rawResponse = await res.json();
+    console.log("[SimilarCreators] Retry response status:", res.status);
+    console.log("[SimilarCreators] Retry response body:", JSON.stringify(rawResponse, null, 2));
+  }
+
   if (!res.ok) {
-    throw new Error(`Similar Creators API ${res.status}: ${res.statusText}`, { cause: rawResponse });
+    const detail = typeof rawResponse === "object" && rawResponse !== null
+      ? JSON.stringify(rawResponse)
+      : String(rawResponse);
+    console.error("[SimilarCreators] API error detail:", detail);
+    throw new Error(`Similar Creators API ${res.status}: ${detail}`);
   }
 
   const accounts = (rawResponse as { accounts?: ApiAccount[] }).accounts ?? [];
