@@ -699,7 +699,6 @@ const BrandDiscover = () => {
   } | null>(null);
 
   // Smart search state
-  // exactMatch state removed — Top Creator card replaces it
   const [searchHint, setSearchHint] = useState<string>("");
   const [similarCreators, setSimilarCreators] = useState<CreatorCard[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
@@ -1314,8 +1313,6 @@ const BrandDiscover = () => {
     setApiLoading(true);
     setCurrentPage(1);
     setUsernameNotFound(null);
-    setExactMatch(null);
-    setExactMatchRaw(null);
     enrichAbortRef.current?.abort();
     enrichedSetRef.current = new Set();
     setEnrichCache({});
@@ -1413,7 +1410,6 @@ const BrandDiscover = () => {
         console.warn("[BrandDiscover] Smart search failed:", err);
         if (searchQueryRef.current.trim().replace(/^@/, "") === effectiveQuery.replace(/^@/, "")) {
           setApiResults(null);
-          setExactMatch(null);
         }
       })
       .finally(() => {
