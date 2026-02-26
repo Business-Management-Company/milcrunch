@@ -2077,351 +2077,267 @@ const BrandDiscover = () => {
 
       <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+          <div className="flex items-center justify-between gap-4 mb-5">
             <div>
-              <h1 className="text-3xl font-bold text-pd-navy dark:text-white mb-2">
+              <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
                 Discover Creators
               </h1>
-              <p className="text-gray-500 dark:text-gray-400">
-                Search and filter military and veteran creators by branch, follower range, and
-                specialty. Build lists and invite them to events and campaigns.
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                Find and connect with military and veteran creators
               </p>
             </div>
-            {/* Credit Balance Card */}
-            <div className="shrink-0">
-              <div className={cn(
-                "flex items-center gap-3 rounded-xl border px-4 py-3 text-sm",
-                creditBalance && (creditBalance.credits_remaining ?? 0) <= 0
-                  ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
-                  : creditBalance && (creditBalance.credits_remaining ?? 0) < 10
-                  ? "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800"
-                  : "bg-white border-gray-200 dark:bg-[#1A1D27] dark:border-gray-800"
-              )}>
-                <Coins className={cn(
-                  "h-5 w-5 shrink-0",
+            {/* Credits Pill */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium cursor-default shrink-0",
                   creditBalance && (creditBalance.credits_remaining ?? 0) <= 0
-                    ? "text-red-500"
+                    ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400"
                     : creditBalance && (creditBalance.credits_remaining ?? 0) < 10
-                    ? "text-yellow-500"
-                    : "text-blue-600"
-                )} />
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {creditLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin inline" />
-                    ) : creditBalance ? (
-                      `${Number(creditBalance.credits_remaining ?? creditBalance.credits_total ?? 0).toFixed(2)} credits`
-                    ) : (
-                      "Credits: --"
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Search ~0.15 · Enrich 0.03 · Contact 1.03
-                  </p>
-                </div>
-                {creditBalance && (creditBalance.credits_remaining ?? 0) < 10 && (creditBalance.credits_remaining ?? 0) > 0 && (
-                  <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
-                )}
-                {creditBalance && (creditBalance.credits_remaining ?? 0) <= 0 && (
-                  <span className="text-xs font-medium text-red-600 dark:text-red-400">No credits</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Search bar row: Platform + Mode + Input + Search */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  className="w-[170px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border justify-between font-normal"
-                >
-                  <span className="truncate">
-                    {(safePlatform).length === 0
-                      ? "All Platforms"
-                      : safePlatform.length === 1
-                        ? PLATFORMS.find((p) => p.value === safePlatform[0])?.label ?? safePlatform[0]
-                        : `${safePlatform.length} Platforms`}
-                  </span>
-                  <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-1" align="start">
-                {PLATFORMS.map((p) => {
-                  const isChecked = safePlatform.includes(p.value);
-                  return (
-                    <label
-                      key={p.value}
-                      className={cn(
-                        "flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer transition-colors text-sm",
-                        isChecked
-                          ? "bg-blue-50 dark:bg-blue-950/30"
-                          : "hover:bg-muted"
-                      )}
-                    >
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={(checked) => {
-                          setPlatform(
-                            checked
-                              ? [...safePlatform, p.value]
-                              : safePlatform.filter((v) => v !== p.value)
-                          );
-                        }}
-                        className="border-gray-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f]"
-                      />
-                      {p.label}
-                    </label>
-                  );
-                })}
-              </PopoverContent>
-            </Popover>
-            <Select value={searchMode} onValueChange={(v) => setSearchMode(v as "keyword" | "username" | "lookalike")}>
-              <SelectTrigger className="w-[150px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="keyword">
-                  <div className="flex items-center gap-2">
-                    <Search className="h-3.5 w-3.5" />
-                    Keyword
-                  </div>
-                </SelectItem>
-                <SelectItem value="username">
-                  <div className="flex items-center gap-2">
-                    <UserSearch className="h-3.5 w-3.5" />
-                    Username
-                  </div>
-                </SelectItem>
-                <SelectItem value="lookalike">
-                  <div className="flex items-center gap-2">
-                    <UserSearch className="h-3.5 w-3.5" />
-                    Lookalike
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={creatorType} onValueChange={setCreatorType}>
-              <SelectTrigger className="w-[180px] h-12 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Creator Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {CREATOR_TYPES.map((ct) => (
-                  <SelectItem key={ct.value} value={ct.value}>
-                    <span className="flex items-center gap-2">
-                      {ct.icon && <span>{ct.icon}</span>}
-                      {ct.label}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="relative flex-1 min-w-[200px] max-w-xl">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={
-                  searchMode === "username"
-                    ? "Enter exact username (e.g. tonitrucks)"
-                    : searchMode === "lookalike"
-                    ? "Find creators similar to (e.g. tonitrucks)"
-                    : "Search military creators, fitness, lifestyle..."
-                }
-                className="pl-12 h-12 rounded-xl border border-border dark:border-gray-700 bg-background dark:bg-[#1A1D27] shadow-sm focus-visible:ring-2 transition-shadow hover:shadow-md"
-                value={searchQuery}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setSearchQuery(v);
-                  // Smart auto-detection replaces manual mode switching
-                  if (v.trim()) {
-                    const classified = classifyQuery(v);
-                    setSearchHint(classified.hint);
-                    // Auto-switch mode based on detection
-                    if (classified.type === "handle" || classified.type === "username") {
-                      setSearchMode("username");
-                    } else {
-                      setSearchMode("keyword");
-                    }
-                    // Auto-detect platform from URL
-                    if (classified.detectedPlatform) {
-                      setPlatform([classified.detectedPlatform]);
-                    }
-                  } else {
-                    setSearchHint("");
-                  }
-                }}
-                onKeyDown={handleSearchKeyDown}
-              />
-            </div>
-            <Button onClick={handleSmartSearch} className="h-12 rounded-lg shrink-0 bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-6">
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
-          </div>
-
-          {/* Search hint */}
-          {searchHint && searchQuery.trim() && (
-            <div className="flex items-center gap-1.5 text-xs text-[#1e3a5f]/70 mb-2 ml-1">
-              <Sparkles className="h-3 w-3" />
-              {searchHint}
-            </div>
-          )}
-
-          {/* Smart suggestions — shown when no search is active */}
-          {!apiResults && !apiLoading && !searchQuery.trim() && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {[
-                { label: "Find military spouse creators on Instagram", icon: "🎖️" },
-                { label: "Search Army veterans with 10k+ followers", icon: "💪" },
-                { label: "TikTok creators who post about military fitness", icon: "🎵" },
-                { label: "Navy veteran podcasters", icon: "🎙️" },
-              ].map((suggestion) => (
-                <button
-                  key={suggestion.label}
-                  onClick={() => {
-                    setSearchQuery(suggestion.label);
-                    searchQueryRef.current = suggestion.label;
-                    const classified = classifyQuery(suggestion.label);
-                    setSearchHint(classified.hint);
-                    // Trigger search after a tick so state updates
-                    setTimeout(() => handleSmartSearch(), 50);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border border-[#1e3a5f]/15 bg-[#1e3a5f]/5 text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors"
-                >
-                  <span>{suggestion.icon}</span>
-                  {suggestion.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Active creator type pill + smart search applied filters */}
-          {(creatorType !== "all" || smartFiltersApplied.length > 0) && (
-            <div className="flex items-center gap-2 text-sm mb-4 flex-wrap">
-              {creatorType !== "all" && (() => {
-                const ct = CREATOR_TYPES.find((t) => t.value === creatorType);
-                return ct ? (
-                  <Badge variant="secondary" className="bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20 text-xs font-medium gap-1.5 pr-1">
-                    {ct.icon && <span>{ct.icon}</span>}
-                    Filtering: {ct.label}
-                    <button
-                      onClick={() => setCreatorType("all")}
-                      className="ml-1 hover:bg-[#1e3a5f]/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold"
-                    >
-                      ✕
-                    </button>
-                  </Badge>
-                ) : null;
-              })()}
-              {smartFiltersApplied.length > 0 && (
-                <>
-                  <Search className="h-3.5 w-3.5 shrink-0 text-pd-blue/80" />
-                  <span className="text-muted-foreground">Smart filters:</span>
-                  {smartFiltersApplied.map((label) => (
-                    <Badge key={label} variant="secondary" className="bg-pd-blue/10 text-pd-blue border-pd-blue/20 text-xs font-medium">
-                      {label}
-                    </Badge>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Filter bar — primary filters always visible */}
-          <div className="flex flex-wrap items-end gap-3 mb-2">
-            <div className="relative" ref={locationWrapperRef}>
-              <Input
-                placeholder="Location"
-                className="w-[200px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border pr-8"
-                value={locationInput}
-                onChange={(e) => handleLocationInputChange(e.target.value)}
-                onFocus={() => { if (locationSuggestions.length > 0) setLocationDropdownOpen(true); }}
-              />
-              {locationLoading && (
-                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-              )}
-              {locationDropdownOpen && (locationSuggestions.length > 0 || locationLoading) && (
-                <div className="absolute z-50 top-full left-0 mt-1 w-[320px] max-h-[240px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] shadow-lg">
-                  {locationLoading && locationSuggestions.length === 0 && (
-                    <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Searching locations...
-                    </div>
+                    ? "bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-950/30 dark:border-yellow-800 dark:text-yellow-400"
+                    : "bg-gray-50 border-gray-200 text-gray-700 dark:bg-[#1A1D27] dark:border-gray-700 dark:text-gray-300"
+                )}>
+                  <Coins className={cn(
+                    "h-3.5 w-3.5",
+                    creditBalance && (creditBalance.credits_remaining ?? 0) <= 0
+                      ? "text-red-500"
+                      : creditBalance && (creditBalance.credits_remaining ?? 0) < 10
+                      ? "text-yellow-500"
+                      : "text-gray-500 dark:text-gray-400"
+                  )} />
+                  {creditLoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : creditBalance ? (
+                    `${Number(creditBalance.credits_remaining ?? creditBalance.credits_total ?? 0).toFixed(0)} credits`
+                  ) : (
+                    "--"
                   )}
-                  {locationSuggestions.map((loc) => (
-                    <button
-                      key={loc}
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition-colors"
-                      onClick={() => handleLocationSelect(loc)}
-                    >
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="truncate">{loc}</span>
-                    </button>
+                  {creditBalance && (creditBalance.credits_remaining ?? 0) < 10 && (creditBalance.credits_remaining ?? 0) > 0 && (
+                    <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                <p>Search ~0.15 credits</p>
+                <p>Enrich 0.03 credits</p>
+                <p>Contact 1.03 credits</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Hero Search Card */}
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-b from-gray-50/80 to-white dark:from-[#1A1D27] dark:to-[#1A1D27] p-5 mb-5 shadow-sm">
+            {/* Primary search row */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-[150px] h-11 rounded-lg bg-white dark:bg-[#0F1117] dark:border-gray-600 border-gray-200 justify-between font-normal text-sm"
+                  >
+                    <span className="truncate">
+                      {(safePlatform).length === 0
+                        ? "All Platforms"
+                        : safePlatform.length === 1
+                          ? PLATFORMS.find((p) => p.value === safePlatform[0])?.label ?? safePlatform[0]
+                          : `${safePlatform.length} Platforms`}
+                    </span>
+                    <ChevronDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-1" align="start">
+                  {PLATFORMS.map((p) => {
+                    const isChecked = safePlatform.includes(p.value);
+                    return (
+                      <label
+                        key={p.value}
+                        className={cn(
+                          "flex items-center gap-2.5 px-3 py-2 rounded-md cursor-pointer transition-colors text-sm",
+                          isChecked
+                            ? "bg-blue-50 dark:bg-blue-950/30"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            setPlatform(
+                              checked
+                                ? [...safePlatform, p.value]
+                                : safePlatform.filter((v) => v !== p.value)
+                            );
+                          }}
+                          className="border-gray-300 data-[state=checked]:bg-[#1e3a5f] data-[state=checked]:border-[#1e3a5f]"
+                        />
+                        {p.label}
+                      </label>
+                    );
+                  })}
+                </PopoverContent>
+              </Popover>
+              <Select value={searchMode} onValueChange={(v) => setSearchMode(v as "keyword" | "username" | "lookalike")}>
+                <SelectTrigger className="w-[130px] h-11 rounded-lg bg-white dark:bg-[#0F1117] dark:border-gray-600 border-gray-200 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="keyword">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-3.5 w-3.5" />
+                      Keyword
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="username">
+                    <div className="flex items-center gap-2">
+                      <UserSearch className="h-3.5 w-3.5" />
+                      Username
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="lookalike">
+                    <div className="flex items-center gap-2">
+                      <UserSearch className="h-3.5 w-3.5" />
+                      Lookalike
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1 min-w-[240px]">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder={
+                    searchMode === "username"
+                      ? "Enter exact username (e.g. tonitrucks)"
+                      : searchMode === "lookalike"
+                      ? "Find creators similar to (e.g. tonitrucks)"
+                      : "Search military creators, fitness, lifestyle..."
+                  }
+                  className="pl-12 h-12 text-base rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#0F1117] shadow-sm focus-visible:ring-2 focus-visible:ring-[#1e3a5f]/30 transition-shadow hover:shadow-md"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSearchQuery(v);
+                    if (v.trim()) {
+                      const classified = classifyQuery(v);
+                      setSearchHint(classified.hint);
+                      if (classified.type === "handle" || classified.type === "username") {
+                        setSearchMode("username");
+                      } else {
+                        setSearchMode("keyword");
+                      }
+                      if (classified.detectedPlatform) {
+                        setPlatform([classified.detectedPlatform]);
+                      }
+                    } else {
+                      setSearchHint("");
+                    }
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                />
+              </div>
+              <Button onClick={handleSmartSearch} className="h-12 rounded-xl shrink-0 bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-8 shadow-sm font-medium">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
+            </div>
+
+            {/* Secondary row: Creator type + hint */}
+            <div className="flex items-center gap-3 mt-3">
+              <Select value={creatorType} onValueChange={setCreatorType}>
+                <SelectTrigger className="w-[170px] h-9 rounded-lg bg-white dark:bg-[#0F1117] dark:border-gray-600 border-gray-200 text-sm">
+                  <SelectValue placeholder="Creator Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CREATOR_TYPES.map((ct) => (
+                    <SelectItem key={ct.value} value={ct.value}>
+                      <span className="flex items-center gap-2">
+                        {ct.icon && <span>{ct.icon}</span>}
+                        {ct.label}
+                      </span>
+                    </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              {searchHint && searchQuery.trim() && (
+                <div className="flex items-center gap-1.5 text-xs text-[#1e3a5f]/70">
+                  <Sparkles className="h-3 w-3" />
+                  {searchHint}
                 </div>
               )}
             </div>
-            <Select value={followersRange} onValueChange={setFollowersRange}>
-              <SelectTrigger className="w-[160px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Followers" />
-              </SelectTrigger>
-              <SelectContent>
-                {FOLLOWER_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={engagementMin} onValueChange={setEngagementMin}>
-              <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Engagement" />
-              </SelectTrigger>
-              <SelectContent>
-                {ENGAGEMENT_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={gender} onValueChange={setGender}>
-              <SelectTrigger className="w-[130px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                <SelectValue placeholder="Gender" />
-              </SelectTrigger>
-              <SelectContent>
-                {GENDER_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => setShowMoreFilters((v) => !v)}
-            >
-              <ChevronDown className={cn("h-3.5 w-3.5 mr-1 transition-transform", showMoreFilters && "rotate-180")} />
-              {showMoreFilters ? "Less Filters" : "More Filters"}
-            </Button>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={clearFilters}>
-              Clear Filters
-            </Button>
+
+            {/* Smart suggestions — inside hero when idle */}
+            {!apiResults && !apiLoading && !searchQuery.trim() && (
+              <>
+                <div className="border-t border-gray-100 dark:border-gray-700/50 mt-4 pt-3">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Try a search</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "Military spouse creators on Instagram", icon: "🎖️" },
+                      { label: "Army veterans with 10k+ followers", icon: "💪" },
+                      { label: "TikTok military fitness creators", icon: "🎵" },
+                      { label: "Navy veteran podcasters", icon: "🎙️" },
+                    ].map((suggestion) => (
+                      <button
+                        key={suggestion.label}
+                        onClick={() => {
+                          setSearchQuery(suggestion.label);
+                          searchQueryRef.current = suggestion.label;
+                          const classified = classifyQuery(suggestion.label);
+                          setSearchHint(classified.hint);
+                          setTimeout(() => handleSmartSearch(), 50);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-full border border-[#1e3a5f]/15 bg-white dark:bg-[#0F1117] text-[#1e3a5f] dark:text-blue-300 hover:bg-[#1e3a5f]/5 dark:hover:bg-blue-950/30 transition-colors"
+                      >
+                        <span>{suggestion.icon}</span>
+                        {suggestion.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Active filters + Save/Saved row */}
+          <div className="flex items-center gap-2 text-sm mb-3 flex-wrap">
+            {creatorType !== "all" && (() => {
+              const ct = CREATOR_TYPES.find((t) => t.value === creatorType);
+              return ct ? (
+                <Badge variant="secondary" className="bg-[#1e3a5f]/10 text-[#1e3a5f] border-[#1e3a5f]/20 text-xs font-medium gap-1.5 pr-1">
+                  {ct.icon && <span>{ct.icon}</span>}
+                  {ct.label}
+                  <button
+                    onClick={() => setCreatorType("all")}
+                    className="ml-1 hover:bg-[#1e3a5f]/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-[10px] font-bold"
+                  >
+                    ✕
+                  </button>
+                </Badge>
+              ) : null;
+            })()}
+            {smartFiltersApplied.length > 0 && smartFiltersApplied.map((label) => (
+              <Badge key={label} variant="secondary" className="bg-pd-blue/10 text-pd-blue border-pd-blue/20 text-xs font-medium">
+                {label}
+              </Badge>
+            ))}
+            <div className="flex-1" />
             {searchQuery.trim() && (
-              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => { setSaveSearchName(""); setSaveSearchOpen(true); }}>
-                <Save className="h-3.5 w-3.5 mr-1" />
-                Save Search
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2" onClick={() => { setSaveSearchName(""); setSaveSearchOpen(true); }}>
+                <Save className="h-3 w-3 mr-1" />
+                Save
               </Button>
             )}
             {(savedSearches ?? []).length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="rounded-lg">
-                    <Bookmark className="h-3.5 w-3.5 mr-1" />
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
+                    <Bookmark className="h-3 w-3 mr-1" />
                     Saved
-                    <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                    <ChevronDown className="h-2.5 w-2.5 ml-1 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuContent align="end" className="w-64">
                   {savedSearches.map((s) => (
                     <DropdownMenuItem key={s.id} onClick={() => handleLoadSavedSearch(s)} className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
@@ -2442,61 +2358,172 @@ const BrandDiscover = () => {
             )}
           </div>
 
-          {/* Collapsible extra filters */}
+          {/* Compact filters toggle */}
+          <div className="flex items-center gap-2 mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-8 rounded-lg text-xs gap-1.5",
+                showMoreFilters && "bg-[#1e3a5f]/5 border-[#1e3a5f]/30 text-[#1e3a5f]"
+              )}
+              onClick={() => setShowMoreFilters((v) => !v)}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              More Filters
+              {activeFilterCount > 0 && (
+                <span className="ml-0.5 inline-flex items-center justify-center w-4.5 h-4.5 text-[10px] font-bold rounded-full bg-[#1e3a5f] text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronDown className={cn("h-3 w-3 ml-0.5 transition-transform", showMoreFilters && "rotate-180")} />
+            </Button>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground" onClick={clearFilters}>
+                Clear all
+              </Button>
+            )}
+          </div>
+
+          {/* Collapsible filter panel */}
           {showMoreFilters && (
-            <div className="flex flex-wrap items-end gap-3 mb-4 pl-0 animate-in slide-in-from-top-2 duration-200">
-              <Select value={niche} onValueChange={setNiche}>
-                <SelectTrigger className="w-[140px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                  <SelectValue placeholder="Niche" />
-                </SelectTrigger>
-                <SelectContent>
-                  {NICHE_OPTIONS.map((n) => (
-                    <SelectItem key={n} value={n}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger className="w-[150px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border">
-                  <SelectValue placeholder="Language" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Keywords in bio (comma separated)"
-                className="w-[280px] rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border"
-                value={keywordsInBio}
-                onChange={(e) => setKeywordsInBio(e.target.value)}
-              />
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#1A1D27]/50 p-4 mb-4 animate-in slide-in-from-top-2 duration-200">
+              <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Location</label>
+                  <div className="relative" ref={locationWrapperRef}>
+                    <Input
+                      placeholder="City, state, country..."
+                      className="w-[180px] h-9 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border pr-8 text-sm"
+                      value={locationInput}
+                      onChange={(e) => handleLocationInputChange(e.target.value)}
+                      onFocus={() => { if (locationSuggestions.length > 0) setLocationDropdownOpen(true); }}
+                    />
+                    {locationLoading && (
+                      <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                    )}
+                    {locationDropdownOpen && (locationSuggestions.length > 0 || locationLoading) && (
+                      <div className="absolute z-50 top-full left-0 mt-1 w-[320px] max-h-[240px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] shadow-lg">
+                        {locationLoading && locationSuggestions.length === 0 && (
+                          <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Searching locations...
+                          </div>
+                        )}
+                        {locationSuggestions.map((loc) => (
+                          <button
+                            key={loc}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 transition-colors"
+                            onClick={() => handleLocationSelect(loc)}
+                          >
+                            <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate">{loc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Followers</label>
+                  <Select value={followersRange} onValueChange={setFollowersRange}>
+                    <SelectTrigger className="w-[150px] h-9 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border text-sm">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FOLLOWER_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Engagement</label>
+                  <Select value={engagementMin} onValueChange={setEngagementMin}>
+                    <SelectTrigger className="w-[130px] h-9 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border text-sm">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ENGAGEMENT_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Gender</label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger className="w-[120px] h-9 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border text-sm">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GENDER_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Niche</label>
+                  <Select value={niche} onValueChange={setNiche}>
+                    <SelectTrigger className="w-[130px] h-9 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border text-sm">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NICHE_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={n}>{n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Language</label>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger className="w-[130px] h-9 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border text-sm">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Bio Keywords</label>
+                  <Input
+                    placeholder="e.g. veteran, milspouse"
+                    className="w-[200px] h-9 rounded-lg bg-background dark:bg-[#1A1D27] dark:border-gray-700 border-border text-sm"
+                    value={keywordsInBio}
+                    onChange={(e) => setKeywordsInBio(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Military Branch */}
-          <div className="mb-6">
-            <p className="text-sm font-medium text-foreground mb-2">Military Branch</p>
-            <div className="flex flex-wrap gap-2">
-              {BRANCHES.map((branch) => {
-                const selected = selectedBranches.has(branch);
-                return (
-                  <Badge
-                    key={branch}
-                    variant="outline"
-                    className={cn(
-                      "cursor-pointer transition-colors rounded-md",
-                      selected
-                        ? "bg-pd-blue/15 text-pd-blue border-pd-blue/50"
-                        : "hover:bg-muted hover:text-foreground border-border"
-                    )}
-                    onClick={() => toggleBranch(branch)}
-                  >
-                    {branch}
-                  </Badge>
-                );
-              })}
-            </div>
+          {/* Military Branch Pills */}
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">Branch</span>
+            {BRANCHES.map((branch) => {
+              const selected = selectedBranches.has(branch);
+              const colors = BRANCH_COLORS[branch];
+              return (
+                <button
+                  key={branch}
+                  onClick={() => toggleBranch(branch)}
+                  className={cn(
+                    "inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-full border transition-all",
+                    selected
+                      ? colors.selected
+                      : cn("text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 bg-transparent", colors.unselected)
+                  )}
+                >
+                  {branch}
+                </button>
+              );
+            })}
           </div>
 
           {apiLoading && (
@@ -2506,17 +2533,100 @@ const BrandDiscover = () => {
             </div>
           )}
 
-          {/* Empty state: no search yet */}
+          {/* Empty state: trending creators */}
           {!hasSearched && !apiLoading && (
-            <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-12 md:p-16 text-center">
-              <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium text-foreground mb-2">
-                Search for military and veteran creators
-              </p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Enter a search term above and click Search Creators or press Enter to find creators by name, handle, or keyword.
-              </p>
-            </Card>
+            <div>
+              {trendingLoading ? (
+                <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm">Loading trending creators...</span>
+                </div>
+              ) : trendingCreators.length > 0 ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-5">
+                    <Sparkles className="h-5 w-5 text-amber-500" />
+                    <h2 className="text-lg font-semibold text-foreground">Trending Military Creators</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {trendingCreators.map((tc) => {
+                      const branchColor = tc.branch ? BRANCH_COLORS[tc.branch] : null;
+                      return (
+                        <Card
+                          key={tc.id}
+                          className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 cursor-pointer hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all"
+                          onClick={() => {
+                            const mapped: CreatorCard = {
+                              id: tc.id,
+                              name: tc.display_name,
+                              username: tc.handle,
+                              avatar: tc.ic_avatar_url || tc.avatar_url || "",
+                              bio: tc.bio || "",
+                              followers: tc.follower_count || 0,
+                              engagementRate: tc.engagement_rate || 0,
+                              platforms: tc.platforms?.length ? tc.platforms : [tc.platform || "instagram"],
+                              category: tc.category || undefined,
+                              socialPlatforms: tc.platforms || [],
+                              hashtags: [],
+                              externalLinks: [],
+                              isVerified: tc.is_verified,
+                              hasEmail: false,
+                            };
+                            setProfileCreator(mapped);
+                            setProfileModalOpen(true);
+                          }}
+                        >
+                          <div className="flex items-start gap-3 mb-3">
+                            <DiscoverAvatar
+                              src={tc.ic_avatar_url || tc.avatar_url || ""}
+                              name={tc.display_name}
+                              size={48}
+                              isVerified={tc.is_verified}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-sm text-foreground truncate">{tc.display_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">@{tc.handle}</p>
+                            </div>
+                          </div>
+                          {tc.bio && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{tc.bio}</p>
+                          )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {tc.follower_count != null && tc.follower_count > 0 && (
+                              <span className="text-xs font-medium text-foreground">
+                                {tc.follower_count >= 1_000_000 ? `${(tc.follower_count / 1_000_000).toFixed(1)}M` : tc.follower_count >= 1_000 ? `${(tc.follower_count / 1_000).toFixed(1)}K` : tc.follower_count} followers
+                              </span>
+                            )}
+                            {tc.branch && (
+                              <span className={cn(
+                                "text-[10px] font-medium px-2 py-0.5 rounded-full border",
+                                branchColor ? branchColor.selected : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+                              )}>
+                                {tc.branch}
+                              </span>
+                            )}
+                            {tc.category && !tc.branch && (
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+                                {tc.category}
+                              </span>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-12 md:p-16 text-center">
+                  <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-lg font-medium text-foreground mb-2">
+                    Search for military and veteran creators
+                  </p>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    Enter a search term above and click Search or press Enter to find creators by name, handle, or keyword.
+                  </p>
+                </Card>
+              )}
+            </div>
           )}
 
           {/* Username not found — inline fallback UI */}
