@@ -257,9 +257,7 @@ function tabSlug(tab: string): string {
   return tab.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-const CONTENT_TABS = TABS.filter(
-  (t) => t !== "Financial Model"
-);
+const CONTENT_TABS = [...TABS];
 
 const DEMO_LINK_PRESETS = [
   { label: "Discovery", url: "/brand/discover" },
@@ -306,6 +304,7 @@ function ManageContentPanel({
   const [uploadProgress, setUploadProgress] = useState(0);
   const videoFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const imageFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const panelScrollRef = useRef<HTMLDivElement | null>(null);
 
   // --- Content state ---
   const [contentDraft, setContentDraft] = useState<Record<string, TabContent>>({});
@@ -323,8 +322,11 @@ function ManageContentPanel({
         if (src) {
           cd[tab] = {
             headline: src.headline,
+            headlineVisible: src.headlineVisible,
             headlineAccent: src.headlineAccent || "",
+            headlineAccentVisible: src.headlineAccentVisible,
             description: src.description,
+            descriptionVisible: src.descriptionVisible,
             sections: src.sections.map((s) => ({
               ...s,
               items: [...s.items],
@@ -752,7 +754,32 @@ function ManageContentPanel({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div ref={panelScrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {/* Jump-to-tab dropdown */}
+          <div className="relative">
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const el = document.getElementById(`panel-${panelTab}-${tabSlug(e.target.value)}`);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                e.target.value = "";
+              }}
+              className={cn(
+                "w-full appearance-none rounded-lg pl-3 pr-8 py-2 text-xs border transition-colors cursor-pointer",
+                dark
+                  ? "bg-white/10 border-white/20 text-white focus:border-[#1e3a5f]"
+                  : "bg-gray-50 border-gray-300 text-[#111827] focus:border-[#1e3a5f]"
+              )}
+            >
+              <option value="" disabled>Jump to tab…</option>
+              {(panelTab === "media" ? TABS : CONTENT_TABS).map((t) => (
+                <option key={t} value={t}>{TAB_LABELS[t]}</option>
+              ))}
+            </select>
+            <ChevronDown className={cn("absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none", dark ? "text-gray-400" : "text-gray-500")} />
+          </div>
+
           {panelTab === "media" && TABS.map((tab) => {
             const videoVal = videoDraft[tab] ?? "";
             const imageVal = imageDraft[tab] ?? "";
@@ -761,7 +788,7 @@ function ManageContentPanel({
             const isImageUploading = uploading === `image-${tab}`;
 
             return (
-              <div key={tab} className={cn("pb-4 border-b", dark ? "border-white/10" : "border-gray-100")}>
+              <div key={tab} id={`panel-media-${tabSlug(tab)}`} className={cn("pb-4 border-b", dark ? "border-white/10" : "border-gray-100")}>
                 <label className="text-sm font-semibold block mb-1.5">
                   {TAB_LABELS[tab]}
                 </label>
@@ -880,7 +907,7 @@ function ManageContentPanel({
             const c = contentDraft[tab];
             if (!c) return null;
             return (
-              <div key={tab} className={cn("pb-5 border-b", dark ? "border-white/10" : "border-gray-100")}>
+              <div key={tab} id={`panel-content-${tabSlug(tab)}`} className={cn("pb-5 border-b", dark ? "border-white/10" : "border-gray-100")}>
                 <label className="text-sm font-semibold block mb-2">{TAB_LABELS[tab]}</label>
 
                 {/* Headline */}
@@ -2295,7 +2322,12 @@ export default function Prospectus() {
         {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} />}
         {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} />}
         {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} />}
-        {activeTab === "Financial Model" && <FinancialModelTab dark={darkMode} />}
+        {activeTab === "Financial Model" && (
+          <>
+            <ContentTab dark={darkMode} tab="Financial Model" dbContent={tabContent["Financial Model"]} />
+            <FinancialModelTab dark={darkMode} />
+          </>
+        )}
       </main>
 
       {/* Footer */}
