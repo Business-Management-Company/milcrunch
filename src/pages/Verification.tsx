@@ -260,10 +260,24 @@ function InlineNameEdit({ id, name, onSave }: { id: string; name: string; onSave
     const trimmed = value.trim();
     if (!trimmed || trimmed === name) { setEditing(false); setValue(name); return; }
     setSaving(true);
-    const { error } = await supabase.from("verifications").update({ person_name: trimmed }).eq("id", id);
-    setSaving(false);
-    if (!error) { toast.success("Name updated"); setEditing(false); onSave(); }
-    else toast.error("Failed to update name");
+    if (id.startsWith("dm_")) {
+      const realId = id.slice(3);
+      const { error } = await supabase.from("directory_members").update({ creator_name: trimmed } as Record<string, unknown>).eq("id", realId);
+      setSaving(false);
+      if (!error) { toast.success("Name updated"); setEditing(false); onSave(); }
+      else toast.error("Failed to update name");
+    } else if (id.startsWith("li_")) {
+      const realId = id.slice(3);
+      const { error } = await supabase.from("influencer_list_items").update({ display_name: trimmed } as Record<string, unknown>).eq("id", realId);
+      setSaving(false);
+      if (!error) { toast.success("Name updated"); setEditing(false); onSave(); }
+      else toast.error("Failed to update name");
+    } else {
+      const { error } = await supabase.from("verifications").update({ person_name: trimmed }).eq("id", id);
+      setSaving(false);
+      if (!error) { toast.success("Name updated"); setEditing(false); onSave(); }
+      else toast.error("Failed to update name");
+    }
   };
 
   if (editing) {
@@ -398,11 +412,108 @@ export default function Verification() {
   const [dirEnrichmentMap, setDirEnrichmentMap] = useState<Record<string, unknown>>({});
 
   const fetchVerifications = async () => {
-    const { data, error } = await supabase
+    // 1. Fetch all verification records
+    const { data: vData } = await supabase
       .from("verifications")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error) setList((data ?? []) as VerificationRecord[]);
+    const verifications = (vData ?? []) as VerificationRecord[];
+
+    // Build a set of handles/names already in verifications for dedup
+    const verifiedHandles = new Set<string>();
+    const verifiedNames = new Set<string>();
+    for (const v of verifications) {
+      if (v.source_username) verifiedHandles.add(v.source_username.toLowerCase());
+      if (v.person_name) verifiedNames.add(v.person_name.toLowerCase());
+    }
+
+    // 2. Fetch directory_members not already in verifications
+    const { data: dmData } = await supabase
+      .from("directory_members")
+      .select("id, creator_name, creator_handle, branch, bio, ic_avatar_url, avatar_url, status, category, platform");
+    const syntheticFromDm: VerificationRecord[] = [];
+    const seenSynthetic = new Set<string>();
+    for (const dm of (dmData ?? []) as { id: string; creator_name: string; creator_handle: string; branch: string | null; bio: string | null; ic_avatar_url: string | null; avatar_url: string | null; status: string | null; category: string | null; platform: string | null }[]) {
+      const handleKey = dm.creator_handle?.toLowerCase() ?? "";
+      const nameKey = dm.creator_name?.toLowerCase() ?? "";
+      if (verifiedHandles.has(handleKey) || verifiedNames.has(nameKey)) continue;
+      if (seenSynthetic.has(handleKey || nameKey)) continue;
+      seenSynthetic.add(handleKey || nameKey);
+      syntheticFromDm.push({
+        id: `dm_${dm.id}`,
+        person_name: dm.creator_name || dm.creator_handle || "Unknown",
+        claimed_branch: dm.branch,
+        claimed_type: dm.category,
+        claimed_status: dm.category,
+        linkedin_url: null,
+        website_url: null,
+        verification_score: 0,
+        status: "pending" as const,
+        pdl_data: null,
+        serp_results: null,
+        firecrawl_data: null,
+        ai_analysis: null,
+        evidence_sources: null,
+        red_flags: null,
+        notes: dm.bio,
+        verified_by: null,
+        source: dm.platform || "directory",
+        source_username: dm.creator_handle,
+        profile_photo_url: dm.ic_avatar_url || dm.avatar_url,
+        city: null,
+        state: null,
+        zip: null,
+        manual_checks: null,
+        created_at: null,
+        updated_at: null,
+        last_verified_at: null,
+      });
+    }
+
+    // 3. Fetch influencer_list_items not already covered
+    const { data: liData } = await supabase
+      .from("influencer_list_items")
+      .select("id, display_name, handle, contact_email, bio, location, follower_count");
+    for (const li of (liData ?? []) as { id: string; display_name: string | null; handle: string | null; contact_email: string | null; bio: string | null; location: string | null; follower_count: number | null }[]) {
+      const handleKey = li.handle?.toLowerCase() ?? "";
+      const nameKey = (li.display_name ?? "").toLowerCase();
+      if (verifiedHandles.has(handleKey) || verifiedNames.has(nameKey)) continue;
+      if (seenSynthetic.has(handleKey || nameKey)) continue;
+      if (!handleKey && !nameKey) continue;
+      seenSynthetic.add(handleKey || nameKey);
+      syntheticFromDm.push({
+        id: `li_${li.id}`,
+        person_name: li.display_name || li.handle || "Unknown",
+        claimed_branch: null,
+        claimed_type: null,
+        claimed_status: null,
+        linkedin_url: null,
+        website_url: null,
+        verification_score: 0,
+        status: "pending" as const,
+        pdl_data: null,
+        serp_results: null,
+        firecrawl_data: null,
+        ai_analysis: null,
+        evidence_sources: null,
+        red_flags: null,
+        notes: li.bio,
+        verified_by: null,
+        source: "list",
+        source_username: li.handle,
+        profile_photo_url: null,
+        city: li.location?.split(",")[0]?.trim() || null,
+        state: li.location?.split(",")[1]?.trim() || null,
+        zip: null,
+        manual_checks: null,
+        created_at: null,
+        updated_at: null,
+        last_verified_at: null,
+      });
+    }
+
+    // Combine: verifications first, then unverified creators
+    setList([...verifications, ...syntheticFromDm]);
   };
 
   useEffect(() => {
@@ -481,16 +592,21 @@ export default function Verification() {
   }, [location.state]);
 
   const filtered = list.filter(
-    (r) =>
-      r.person_name.toLowerCase().includes(search.toLowerCase()) ||
-      (r.claimed_branch ?? "").toLowerCase().includes(search.toLowerCase())
+    (r) => {
+      const q = search.toLowerCase();
+      return r.person_name.toLowerCase().includes(q) ||
+        (r.claimed_branch ?? "").toLowerCase().includes(q) ||
+        (r.source_username ?? "").toLowerCase().includes(q);
+    }
   );
 
+  const isSyntheticRow = (r: VerificationRecord) => r.id.startsWith("dm_") || r.id.startsWith("li_");
   const stats = {
     total: list.length,
     verified: list.filter((r) => r.status === "verified").length,
-    pending: list.filter((r) => r.status === "pending").length,
+    pending: list.filter((r) => r.status === "pending" && !isSyntheticRow(r)).length,
     flagged: list.filter((r) => r.status === "flagged" || r.status === "denied").length,
+    notVerified: list.filter((r) => isSyntheticRow(r)).length,
   };
 
   // Backfill career data for all verifications that have ai_analysis but no career_track
@@ -877,7 +993,7 @@ export default function Verification() {
         // Priority 3: blank for manual entry
         return "";
       })(),
-      verification_id: row.id,
+      verification_id: (row.id.startsWith("dm_") || row.id.startsWith("li_")) ? "" : row.id,
       verification_status: row.status ?? "pending",
       photo_url: bestPhoto,
     });
@@ -925,52 +1041,67 @@ export default function Verification() {
   const handleSaveEdit = async () => {
     setEditCreatorSaving(true);
     try {
-      // 1. Update verifications table
-      const vPayload: Record<string, unknown> = {
-        person_name: editForm.name,
-        claimed_branch: editForm.branch || null,
-        claimed_status: editForm.category || null,
-        status: editForm.verificationStatus,
-        linkedin_url: editForm.linkedin || null,
-        website_url: editForm.website || null,
-        profile_photo_url: editForm.photoUrl || null,
-        notes: editForm.notes || null,
-        updated_at: new Date().toISOString(),
-      };
-      if (editForm.confidenceOverride && editForm.confidenceScore != null) {
-        vPayload.verification_score = editForm.confidenceScore;
-        vPayload.manual_checks = {
-          ...((list.find((r) => r.id === editForm.id)?.manual_checks as Record<string, unknown>) || {}),
-          confidence_override: true,
-          manual_score: editForm.confidenceScore,
-        };
-      }
-      const { error: vErr } = await supabase.from("verifications").update(vPayload).eq("id", editForm.id);
-      if (vErr) throw vErr;
+      const isSynthetic = editForm.id.startsWith("dm_") || editForm.id.startsWith("li_");
 
-      // 2. Update speakers table if linked
-      const { data: speakerRows } = await supabase.from("speakers")
-        .select("id")
-        .eq("verification_id", editForm.id)
-        .limit(1);
-      if (speakerRows && speakerRows.length > 0) {
+      if (!isSynthetic) {
+        // Real verification record — update it
+        const vPayload: Record<string, unknown> = {
+          person_name: editForm.name,
+          claimed_branch: editForm.branch || null,
+          claimed_status: editForm.category || null,
+          status: editForm.verificationStatus,
+          linkedin_url: editForm.linkedin || null,
+          website_url: editForm.website || null,
+          profile_photo_url: editForm.photoUrl || null,
+          notes: editForm.notes || null,
+          updated_at: new Date().toISOString(),
+        };
+        if (editForm.confidenceOverride && editForm.confidenceScore != null) {
+          vPayload.verification_score = editForm.confidenceScore;
+          vPayload.manual_checks = {
+            ...((list.find((r) => r.id === editForm.id)?.manual_checks as Record<string, unknown>) || {}),
+            confidence_override: true,
+            manual_score: editForm.confidenceScore,
+          };
+        }
+        const { error: vErr } = await supabase.from("verifications").update(vPayload).eq("id", editForm.id);
+        if (vErr) throw vErr;
+
+        // Update speakers table if linked
+        const { data: speakerRows } = await supabase.from("speakers")
+          .select("id")
+          .eq("verification_id", editForm.id)
+          .limit(1);
+        if (speakerRows && speakerRows.length > 0) {
+          await supabase.from("speakers").update({
+            name: editForm.name,
+            branch: editForm.branch || null,
+            bio: editForm.notes || null,
+            photo_url: editForm.photoUrl || null,
+            verification_status: editForm.verificationStatus,
+          } as Record<string, unknown>).eq("verification_id", editForm.id);
+        }
+      }
+
+      // Update directory_members if linked by handle
+      if (editForm.sourceUsername) {
+        await supabase.from("directory_members").update({
+          creator_name: editForm.name,
+          branch: editForm.branch || null,
+          bio: editForm.notes || null,
+          ic_avatar_url: editForm.photoUrl || null,
+          category: editForm.category || null,
+        } as Record<string, unknown>).eq("creator_handle", editForm.sourceUsername);
+      }
+
+      // Also update speakers table by name match for synthetic records
+      if (isSynthetic) {
         await supabase.from("speakers").update({
           name: editForm.name,
           branch: editForm.branch || null,
           bio: editForm.notes || null,
           photo_url: editForm.photoUrl || null,
-          verification_status: editForm.verificationStatus,
-        } as Record<string, unknown>).eq("verification_id", editForm.id);
-      }
-
-      // 3. Update directory_members if linked by handle
-      if (editForm.sourceUsername) {
-        await supabase.from("directory_members").update({
-          creator_name: editForm.name,
-          bio: editForm.notes || null,
-          ic_avatar_url: editForm.photoUrl || null,
-          status: editForm.verificationStatus,
-        } as Record<string, unknown>).eq("creator_handle", editForm.sourceUsername);
+        } as Record<string, unknown>).eq("name", list.find((r) => r.id === editForm.id)?.person_name ?? editForm.name);
       }
 
       toast.success("Creator updated successfully");
@@ -1054,26 +1185,54 @@ export default function Verification() {
   };
 
   const handleReverify = async (row: VerificationRecord) => {
-    toast.info(`Re-verifying ${row.person_name}...`);
+    const isSynth = row.id.startsWith("dm_") || row.id.startsWith("li_");
+    let realId = row.id;
+
+    // For synthetic records, create a real verification record first
+    if (isSynth) {
+      toast.info(`Starting verification for ${row.person_name}...`);
+      const { data: inserted, error: insertErr } = await supabase.from("verifications").insert({
+        person_name: row.person_name,
+        claimed_branch: row.claimed_branch,
+        claimed_type: row.claimed_type,
+        claimed_status: row.claimed_status,
+        linkedin_url: row.linkedin_url,
+        website_url: row.website_url,
+        profile_photo_url: row.profile_photo_url,
+        notes: row.notes,
+        source: row.source,
+        source_username: row.source_username,
+        status: "pending",
+        verification_score: 0,
+      }).select("id").single();
+      if (insertErr || !inserted) {
+        toast.error("Failed to create verification record: " + (insertErr?.message ?? "Unknown error"));
+        return;
+      }
+      realId = inserted.id;
+    } else {
+      toast.info(`Re-verifying ${row.person_name}...`);
+    }
+
     try {
       // Incremental save: write career/media to DB as each phase completes
       const onReverifyPhase = async (p: PipelinePhase | { phase: number; name: string; status: string; data?: unknown }) => {
         const phaseData = (p as PipelinePhase).data as Record<string, unknown> | undefined;
         if (p.phase === 5 && (p.status === "done" || p.status === "empty")) {
           const mediaItems = phaseData?.mediaAppearances ?? [];
-          const { data: existing5 } = await supabase.from("verifications").select("manual_checks").eq("id", row.id).single();
+          const { data: existing5 } = await supabase.from("verifications").select("manual_checks").eq("id", realId).single();
           const mc5 = (existing5?.manual_checks ?? {}) as Record<string, unknown>;
           await supabase.from("verifications").update({
             manual_checks: { ...mc5, youtube_media: { videos: mediaItems, searched_at: new Date().toISOString() } },
-          }).eq("id", row.id);
+          }).eq("id", realId);
         }
         if (p.phase === 6 && (p.status === "done" || p.status === "empty")) {
           const careerResult = phaseData?.careerData ?? null;
-          const { data: existing6 } = await supabase.from("verifications").select("manual_checks").eq("id", row.id).single();
+          const { data: existing6 } = await supabase.from("verifications").select("manual_checks").eq("id", realId).single();
           const mc6 = (existing6?.manual_checks ?? {}) as Record<string, unknown>;
           await supabase.from("verifications").update({
             manual_checks: { ...mc6, career_track: { result: careerResult, generated_at: new Date().toISOString() } },
-          }).eq("id", row.id);
+          }).eq("id", realId);
         }
       };
       const result = await runVerificationPipeline(
@@ -1089,7 +1248,7 @@ export default function Verification() {
         onReverifyPhase
       );
       // Final save merges everything including phases that may not have triggered incremental saves
-      const { data: existingReverify } = await supabase.from("verifications").select("manual_checks").eq("id", row.id).single();
+      const { data: existingReverify } = await supabase.from("verifications").select("manual_checks").eq("id", realId).single();
       const existingChecksReverify = (existingReverify?.manual_checks ?? {}) as Record<string, unknown>;
       const mergedChecks = {
         ...existingChecksReverify,
@@ -1110,7 +1269,7 @@ export default function Verification() {
         linkedin_url: result.linkedinUrl || row.linkedin_url || null,
         last_verified_at: new Date().toISOString(),
         manual_checks: mergedChecks,
-      }).eq("id", row.id);
+      }).eq("id", realId);
       if (reverifyError) {
         console.error('RE-VERIFY SAVE FAILED:', reverifyError);
         toast.error("Re-verification save failed: " + reverifyError.message);
@@ -1208,7 +1367,7 @@ export default function Verification() {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-muted-foreground">Total Profiles</p>
@@ -1225,6 +1384,12 @@ export default function Verification() {
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-muted-foreground">Pending</p>
             <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-muted-foreground">Not Verified</p>
+            <p className="text-2xl font-bold text-gray-400">{stats.notVerified}</p>
           </CardContent>
         </Card>
         <Card className="rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -1589,47 +1754,66 @@ export default function Verification() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAddAsSpeaker(row); }}>
-                              <UserPlus className="h-4 w-4 mr-2" /> Add as Speaker
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditCreator(row); }}>
-                              <Pencil className="h-4 w-4 mr-2" /> Edit Creator
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate("/lists"); }}>
-                              <List className="h-4 w-4 mr-2" /> Add to List
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleInviteToEvent(row); }}>
-                              <Mail className="h-4 w-4 mr-2" /> Invite to Event
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExportProfile(row); }}>
-                              <Download className="h-4 w-4 mr-2" /> Export Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
-                                <ChevronDown className="h-4 w-4 mr-2" /> Change Status
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent>
-                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "verified" }).eq("id", row.id); toast.success("Status changed to verified"); fetchVerifications(); }}>
-                                  <ShieldCheck className="h-4 w-4 mr-2 text-blue-700" /> Verified
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "pending" }).eq("id", row.id); toast.success("Status changed to pending"); fetchVerifications(); }}>
-                                  <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "flagged" }).eq("id", row.id); toast.success("Status changed to flagged"); fetchVerifications(); }}>
-                                  <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "denied" }).eq("id", row.id); toast.success("Status changed to denied"); fetchVerifications(); }}>
-                                  <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReverify(row); }}>
-                              <RefreshCw className="h-4 w-4 mr-2" /> Re-verify
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(row.id); }}>
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </DropdownMenuItem>
+                            {(() => {
+                              const isSynth = row.id.startsWith("dm_") || row.id.startsWith("li_");
+                              return (
+                                <>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAddAsSpeaker(row); }}>
+                                    <UserPlus className="h-4 w-4 mr-2" /> Add as Speaker
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditCreator(row); }}>
+                                    <Pencil className="h-4 w-4 mr-2" /> Edit Creator
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate("/lists"); }}>
+                                    <List className="h-4 w-4 mr-2" /> Add to List
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleInviteToEvent(row); }}>
+                                    <Mail className="h-4 w-4 mr-2" /> Invite to Event
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExportProfile(row); }}>
+                                    <Download className="h-4 w-4 mr-2" /> Export Profile
+                                  </DropdownMenuItem>
+                                  {!isSynth && (
+                                    <>
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger onClick={(e) => e.stopPropagation()}>
+                                          <ChevronDown className="h-4 w-4 mr-2" /> Change Status
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent>
+                                          <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "verified" }).eq("id", row.id); toast.success("Status changed to verified"); fetchVerifications(); }}>
+                                            <ShieldCheck className="h-4 w-4 mr-2 text-blue-700" /> Verified
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "pending" }).eq("id", row.id); toast.success("Status changed to pending"); fetchVerifications(); }}>
+                                            <Clock className="h-4 w-4 mr-2 text-amber-600" /> Pending
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "flagged" }).eq("id", row.id); toast.success("Status changed to flagged"); fetchVerifications(); }}>
+                                            <AlertTriangle className="h-4 w-4 mr-2 text-red-600" /> Flagged
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await supabase.from("verifications").update({ status: "denied" }).eq("id", row.id); toast.success("Status changed to denied"); fetchVerifications(); }}>
+                                            <XCircle className="h-4 w-4 mr-2 text-red-600" /> Denied
+                                          </DropdownMenuItem>
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuSub>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReverify(row); }}>
+                                        <RefreshCw className="h-4 w-4 mr-2" /> Re-verify
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="text-red-600" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(row.id); }}>
+                                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                  {isSynth && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleReverify(row); }}>
+                                        <ShieldCheck className="h-4 w-4 mr-2" /> Start Verification
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
