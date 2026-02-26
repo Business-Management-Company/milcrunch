@@ -1661,7 +1661,6 @@ interface TabContent {
   headlineVisible?: boolean;
   headlineAccent?: string;
   headlineAccentVisible?: boolean;
-  heroImage?: string;
   description: string;
   descriptionVisible?: boolean;
   sections: SectionBlock[];
@@ -1869,7 +1868,6 @@ const TAB_CONTENT: Record<string, TabContent> = {
   "Streaming/Media": {
     headline: "The Living Room is",
     headlineAccent: "the New Feed",
-    heroImage: "https://github.com/user-attachments/assets/c9dfc6b0-9e45-42f5-9704-41cf697f42c7",
     description:
       "YouTube, Instagram, and TikTok are no longer just phone apps. All three have launched dedicated Apple TV, Fire TV, and Roku applications — moving creator content from the palm of your hand to the biggest screen in the house. This isn't a trend. It's a platform shift.",
     sections: [
@@ -2058,13 +2056,6 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
               <span className="text-[#1e3a5f]">{content.headlineAccent}</span>
             )}
           </h2>
-        )}
-        {content.heroImage && (
-          <img
-            src={content.heroImage}
-            alt=""
-            className="w-full max-w-3xl mx-auto rounded-xl shadow-md my-6 object-cover"
-          />
         )}
         {content.descriptionVisible !== false && (
           <p
