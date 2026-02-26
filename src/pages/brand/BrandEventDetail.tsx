@@ -48,6 +48,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 import ImageUpload from "@/components/cms/ImageUpload";
 import EventCommunityTab from "@/components/EventCommunityTab";
 import EventInsightsTab from "@/components/EventInsightsTab";
@@ -76,6 +77,7 @@ interface EventRow {
   state: string | null;
   cover_image_url: string | null;
   is_published: boolean | null;
+  status: string | null;
   capacity: number | null;
   created_at: string | null;
   directory_id: string | null;
@@ -267,6 +269,8 @@ const BrandEventDetail = () => {
   const [sponsors, setSponsors] = useState<SponsorRow[]>([]);
   const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
   const [eventTickets, setEventTickets] = useState<TicketRow[]>([]);
+  const [ticketEdits, setTicketEdits] = useState<Record<string, Partial<TicketRow>>>({});
+  const [ticketSaving, setTicketSaving] = useState<Record<string, boolean>>({});
   const [regSearch, setRegSearch] = useState("");
   const [checkInMode, setCheckInMode] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
@@ -288,6 +292,11 @@ const BrandEventDetail = () => {
   const [editRegStatus, setEditRegStatus] = useState("confirmed");
   const [savingReg, setSavingReg] = useState(false);
   const [deletingReg, setDeletingReg] = useState<RegistrationRow | null>(null);
+
+  /* bulk selection for registrations */
+  const [selectedRegIds, setSelectedRegIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   /* editable overview fields */
   const [editTitle, setEditTitle] = useState("");
@@ -417,6 +426,35 @@ const BrandEventDetail = () => {
     setDeletingReg(null);
   };
 
+  const toggleRegSelect = (id: string) => {
+    setSelectedRegIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const confirmBulkDeleteRegs = async () => {
+    if (selectedRegIds.size === 0) return;
+    if (guardAction("delete", "Deletions are disabled in demo mode")) { setBulkDeleteOpen(false); return; }
+    setBulkDeleting(true);
+    const ids = Array.from(selectedRegIds);
+    const { error } = await supabase
+      .from("event_registrations")
+      .delete()
+      .in("id", ids);
+    setBulkDeleting(false);
+    if (error) {
+      toast.error("Failed to delete registrations");
+      console.error(error);
+    } else {
+      toast.success(`Removed ${ids.length} registration${ids.length !== 1 ? "s" : ""}`);
+      setSelectedRegIds(new Set());
+      fetchAll();
+    }
+    setBulkDeleteOpen(false);
+  };
+
   /* ---- banner upload ---- */
   const handleBannerUpload = useCallback(
     async (file: File) => {
@@ -538,11 +576,28 @@ const BrandEventDetail = () => {
     if (!eventId) return;
     setSaving(true);
     try {
+      // Try updating both status and is_published; if the status column doesn't
+      // exist yet, fall back to just is_published so the button never errors.
+      const payload: Record<string, unknown> = {
+        status: newStatus,
+        is_published: newStatus !== "draft",
+      };
       const { error } = await supabase
         .from("events")
-        .update({ status: newStatus, is_published: newStatus !== "draft" } as Record<string, unknown>)
+        .update(payload as Record<string, unknown>)
         .eq("id", eventId);
-      if (error) throw error;
+      if (error) {
+        // If the error is about the status column not existing, retry with just is_published
+        if (error.message?.includes("status") || error.code === "PGRST204" || error.code === "42703") {
+          const { error: fallbackErr } = await supabase
+            .from("events")
+            .update({ is_published: newStatus !== "draft" } as Record<string, unknown>)
+            .eq("id", eventId);
+          if (fallbackErr) throw fallbackErr;
+        } else {
+          throw error;
+        }
+      }
       toast.success(`Status changed to ${newStatus}`);
       fetchAll();
     } catch (err: unknown) {
@@ -641,6 +696,37 @@ const BrandEventDetail = () => {
   const updateTicketField = async (id: string, field: string, value: unknown) => {
     await supabase.from("event_tickets").update({ [field]: value } as Record<string, unknown>).eq("id", id);
   };
+  const editTicketLocal = (id: string, field: keyof TicketRow, value: unknown) => {
+    setTicketEdits((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+  };
+  const saveTicket = async (ticket: TicketRow) => {
+    setTicketSaving((prev) => ({ ...prev, [ticket.id]: true }));
+    try {
+      const edits = ticketEdits[ticket.id] || {};
+      const payload: Record<string, unknown> = {
+        name: edits.name ?? ticket.name,
+        description: edits.description ?? ticket.description ?? "",
+        price: edits.price ?? ticket.price,
+        quantity: edits.quantity ?? ticket.quantity,
+        event_format: edits.event_format ?? ticket.event_format ?? "in_person",
+        qr_enabled: edits.qr_enabled ?? ticket.qr_enabled ?? false,
+        is_active: edits.is_active ?? ticket.is_active ?? true,
+        sort_order: edits.sort_order ?? ticket.sort_order,
+      };
+      const { error } = await supabase
+        .from("event_tickets")
+        .update(payload)
+        .eq("id", ticket.id);
+      if (error) throw error;
+      setTicketEdits((prev) => { const next = { ...prev }; delete next[ticket.id]; return next; });
+      toast.success(`"${payload.name}" saved`);
+      fetchAll();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to save ticket");
+    } finally {
+      setTicketSaving((prev) => ({ ...prev, [ticket.id]: false }));
+    }
+  };
 
   /* ---- delete event ---- */
   const deleteEvent = async () => {
@@ -676,7 +762,8 @@ const BrandEventDetail = () => {
     );
   }
 
-  const statusKey = (event.status || "draft") as string;
+  // Derive status: prefer explicit status column, fall back to is_published boolean
+  const statusKey = (event.status || (event.is_published ? "published" : "draft")) as string;
 
   /* ---- Check-In Mode overlay ---- */
   if (checkInMode) {
@@ -1254,20 +1341,27 @@ const BrandEventDetail = () => {
                   </div>
 
                   {/* Ticket list */}
-                  {eventTickets.map((t) => (
-                    <Card key={t.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
+                  {eventTickets.map((t) => {
+                    const edits = ticketEdits[t.id] || {};
+                    const isDirty = Object.keys(edits).length > 0;
+                    const isSaving = ticketSaving[t.id] || false;
+                    return (
+                    <Card key={t.id} className={`rounded-xl border bg-white dark:bg-[#1A1D27] p-4 ${isDirty ? "border-blue-400 dark:border-blue-600" : "border-gray-200 dark:border-gray-800"}`}>
                       <div className="flex items-start gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                        <div className="flex-1 space-y-3">
+                          {/* Row 1: Name + badges */}
+                          <div className="flex items-center gap-2">
                             <Input
                               defaultValue={t.name}
                               className="font-semibold text-sm max-w-xs"
-                              onBlur={(e) => updateTicketField(t.id, "name", e.target.value)}
+                              onChange={(e) => editTicketLocal(t.id, "name", e.target.value)}
                             />
-                            <Badge variant="outline" className="text-xs capitalize">{(t.event_format || "in_person").replace("_", " ")}</Badge>
-                            {t.qr_enabled && <Badge className="bg-green-100 text-green-700 text-xs">QR Enabled</Badge>}
-                            {!t.is_active && <Badge className="bg-red-100 text-red-700 text-xs">Inactive</Badge>}
+                            <Badge variant="outline" className="text-xs capitalize shrink-0">{((edits.event_format as string) || t.event_format || "in_person").replace("_", " ")}</Badge>
+                            {(edits.qr_enabled ?? t.qr_enabled) && <Badge className="bg-green-100 text-green-700 text-xs shrink-0">QR</Badge>}
+                            {!(edits.is_active ?? t.is_active ?? true) && <Badge className="bg-red-100 text-red-700 text-xs shrink-0">Inactive</Badge>}
                           </div>
+
+                          {/* Row 2: Price, Quantity, Sold, Format */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                             <div>
                               <Label className="text-xs text-muted-foreground">Price</Label>
@@ -1275,7 +1369,7 @@ const BrandEventDetail = () => {
                                 type="number"
                                 defaultValue={t.price}
                                 className="h-8 text-sm"
-                                onBlur={(e) => updateTicketField(t.id, "price", parseFloat(e.target.value) || 0)}
+                                onChange={(e) => editTicketLocal(t.id, "price", parseFloat(e.target.value) || 0)}
                               />
                             </div>
                             <div>
@@ -1284,7 +1378,7 @@ const BrandEventDetail = () => {
                                 type="number"
                                 defaultValue={t.quantity || 0}
                                 className="h-8 text-sm"
-                                onBlur={(e) => updateTicketField(t.id, "quantity", parseInt(e.target.value) || 0)}
+                                onChange={(e) => editTicketLocal(t.id, "quantity", parseInt(e.target.value) || 0)}
                               />
                             </div>
                             <div>
@@ -1295,7 +1389,7 @@ const BrandEventDetail = () => {
                               <Label className="text-xs text-muted-foreground">Format</Label>
                               <Select
                                 defaultValue={t.event_format || "in_person"}
-                                onValueChange={(v) => { updateTicketField(t.id, "event_format", v); fetchAll(); }}
+                                onValueChange={(v) => editTicketLocal(t.id, "event_format", v)}
                               >
                                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                                 <SelectContent>
@@ -1304,14 +1398,63 @@ const BrandEventDetail = () => {
                               </Select>
                             </div>
                           </div>
-                          {t.description && <p className="text-xs text-muted-foreground mt-2 truncate">{t.description}</p>}
+
+                          {/* Row 3: Description */}
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Description</Label>
+                            <Textarea
+                              defaultValue={t.description || ""}
+                              placeholder="Optional ticket description..."
+                              className="text-sm min-h-[60px]"
+                              onChange={(e) => editTicketLocal(t.id, "description", e.target.value)}
+                            />
+                          </div>
+
+                          {/* Row 4: Toggles + Sort Order + Save */}
+                          <div className="flex flex-wrap items-center gap-4 pt-1">
+                            <label className="flex items-center gap-2 text-sm">
+                              <Switch
+                                checked={edits.is_active !== undefined ? !!edits.is_active : (t.is_active ?? true)}
+                                onCheckedChange={(v) => editTicketLocal(t.id, "is_active", v)}
+                              />
+                              Active
+                            </label>
+                            <label className="flex items-center gap-2 text-sm">
+                              <Switch
+                                checked={edits.qr_enabled !== undefined ? !!edits.qr_enabled : (t.qr_enabled ?? false)}
+                                onCheckedChange={(v) => editTicketLocal(t.id, "qr_enabled", v)}
+                              />
+                              QR Check-in
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Sort Order</Label>
+                              <Input
+                                type="number"
+                                defaultValue={t.sort_order}
+                                className="h-8 text-sm w-16"
+                                onChange={(e) => editTicketLocal(t.id, "sort_order", parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                            <div className="ml-auto">
+                              <Button
+                                size="sm"
+                                onClick={() => saveTicket(t)}
+                                disabled={isSaving}
+                                className="bg-pd-blue hover:bg-pd-darkblue text-white"
+                              >
+                                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                                Save
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                         <Button variant="ghost" size="icon" className="shrink-0 text-red-500 hover:text-red-700" onClick={() => deleteTicket(t.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </Card>
-                  ))}
+                    );
+                  })}
 
                   {eventTickets.length === 0 && (
                     <Card className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1A1D27] p-8 text-center text-muted-foreground">
