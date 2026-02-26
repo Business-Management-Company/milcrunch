@@ -80,6 +80,7 @@ import {
   categorizeAndScoreSnippet,
   filterCriminalResults,
   detectBranch,
+  detectType,
   generateDossierNarrative,
   runVerificationAnalysis,
   extractCareerTimeline,
@@ -95,6 +96,8 @@ import {
   type MilitaryServiceSummary,
   type EnhancedCareerResult,
   recomputeScoreFromRecord,
+  computeVerificationScore,
+  recommendStatus,
 } from "@/lib/verification";
 import {
   DropdownMenu,
@@ -588,19 +591,44 @@ export default function Verification() {
     try {
       const { data: rows, error } = await supabase
         .from("verifications")
-        .select("id, pdl_data, evidence_sources, claimed_branch, claimed_type, linkedin_url, firecrawl_data, verification_score, status");
+        .select("id, pdl_data, evidence_sources, claimed_branch, claimed_type, claimed_status, linkedin_url, firecrawl_data, verification_score, status, ai_analysis");
       if (error || !rows) { toast.error("Failed to load records"); return; }
       setRescoreProgress({ done: 0, total: rows.length });
       let updated = 0;
+      let reclassified = 0;
       for (const row of rows) {
-        const { score, status } = recomputeScoreFromRecord(row);
+        const sources = (row.evidence_sources ?? []) as EvidenceSource[];
+        // Auto-detect type from AI analysis + evidence
+        const detected = detectType(row.ai_analysis as string | null, sources);
+        const updates: Record<string, unknown> = {};
+        let effectiveType = row.claimed_type ?? row.claimed_status ?? "";
+        if (detected) {
+          // Only reclassify if currently "veteran" or empty — don't override manual corrections
+          const currentStatus = (row.claimed_status ?? "").toLowerCase();
+          if (!currentStatus || currentStatus === "veteran") {
+            updates.claimed_status = detected.claimedStatus;
+            updates.claimed_type = detected.claimedType;
+            effectiveType = detected.claimedStatus;
+            reclassified++;
+          }
+        }
+        // Also auto-detect branch if missing
+        if (!row.claimed_branch) {
+          const branch = detectBranch(row.ai_analysis as string | null, sources);
+          if (branch) updates.claimed_branch = branch;
+        }
+        const { score, status } = recomputeScoreFromRecord({ ...row, claimed_type: effectiveType });
         if (score !== row.verification_score || status !== row.status) {
-          await supabase.from("verifications").update({ verification_score: score, status }).eq("id", row.id);
+          updates.verification_score = score;
+          updates.status = status;
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("verifications").update(updates).eq("id", row.id);
           updated++;
         }
         setRescoreProgress((p) => ({ ...p, done: p.done + 1 }));
       }
-      toast.success(`Re-scored ${rows.length} records (${updated} changed)`);
+      toast.success(`Re-scored ${rows.length} records (${updated} changed, ${reclassified} reclassified)`);
       fetchVerifications();
     } catch (e) {
       console.error("[ReScore]", e);
@@ -648,19 +676,33 @@ export default function Verification() {
       const detectedBranch = detectBranch(result.aiAnalysis, result.evidenceSources);
       const finalBranch = addForm.claimedBranch || detectedBranch || null;
 
+      // Auto-detect type (spouse/family/veteran) from AI analysis + evidence
+      const detectedType = detectType(result.aiAnalysis, result.evidenceSources);
+      const finalStatus = detectedType?.claimedStatus ?? addForm.claimedStatus;
+      const finalType = detectedType?.claimedType ?? null;
+
+      // If type changed, recompute score with correct type for proper scoring
+      let finalScore = result.verificationScore;
+      let finalVerificationStatus = result.status;
+      if (detectedType) {
+        finalScore = computeVerificationScore(0, result.evidenceSources, { hasUnitOrMOS: false, hasDates: false, hasAwards: false }, { claimedBranch: finalBranch ?? undefined, claimedType: finalStatus, linkedinUrl: result.linkedinUrl ?? undefined, pdlData: result.pdlData });
+        finalVerificationStatus = recommendStatus(finalScore, result.redFlags.length > 0);
+      }
+
       const { data: inserted, error } = await supabase
         .from("verifications")
         .insert({
           person_name: addForm.fullName.trim(),
           claimed_branch: finalBranch,
-          claimed_status: addForm.claimedStatus,
+          claimed_status: finalStatus,
+          claimed_type: finalType,
           linkedin_url: addForm.linkedinUrl.trim() || result.linkedinUrl || null,
           source_username: addForm.instagramHandle.trim() || null,
           profile_photo_url: resolvedPhoto || addForm.profilePhotoUrl || null,
           website_url: addForm.websiteUrl.trim() || null,
           notes: addForm.notes.trim() || null,
-          verification_score: result.verificationScore,
-          status: result.status,
+          verification_score: finalScore,
+          status: finalVerificationStatus,
           pdl_data: result.pdlData,
           serp_results: result.serpResults,
           firecrawl_data: result.firecrawlData,
@@ -3304,8 +3346,22 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
         socialProfiles: mc.social_profiles ?? undefined,
       });
       if (result && result !== "pending_retry") {
-        await supabase.from("verifications").update({ ai_analysis: result }).eq("id", record.id);
-        toast.success("AI analysis completed successfully");
+        // Auto-detect type from new AI analysis + evidence
+        const detected = detectType(result, sources);
+        const updates: Record<string, unknown> = { ai_analysis: result };
+        if (detected) {
+          updates.claimed_status = detected.claimedStatus;
+          updates.claimed_type = detected.claimedType;
+          // Also auto-detect branch from new analysis
+          const newBranch = detectBranch(result, sources);
+          if (newBranch && !record.claimed_branch) updates.claimed_branch = newBranch;
+          // Recompute score with corrected type
+          const newScore = computeVerificationScore(0, sources, { hasUnitOrMOS: false, hasDates: false, hasAwards: false }, { claimedBranch: (updates.claimed_branch as string) ?? record.claimed_branch ?? undefined, claimedType: detected.claimedStatus, linkedinUrl: record.linkedin_url ?? undefined, pdlData: record.pdl_data });
+          updates.verification_score = newScore;
+          updates.status = recommendStatus(newScore, sources.some((s) => s.isRedFlag));
+        }
+        await supabase.from("verifications").update(updates).eq("id", record.id);
+        toast.success(`AI analysis completed${detected ? ` — reclassified as ${detected.claimedType}` : ""}`);
         onRefresh?.();
       } else {
         toast.error("AI analysis still failing — Anthropic may be overloaded. Try again in a few minutes.");

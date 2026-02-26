@@ -315,12 +315,21 @@ Evidence sources:
 5. Career Timeline: ${JSON.stringify(params.careerData ?? null, null, 2)}
 6. Social Profiles: ${JSON.stringify(params.socialProfiles ?? [], null, 2)}
 
+MILITARY CATEGORY DETECTION — CRITICAL:
+Before scoring, determine the person's ACTUAL military connection type from the evidence:
+- "Veteran" — ONLY if evidence shows PERSONAL military service (their own enlistment, "I served", "when I was deployed", their own DD-214, etc.)
+- "Military Spouse" — if evidence mentions: "military spouse", "milspouse", "my husband/wife serves/served", "married to a Marine/Soldier", "military wife/husband", "deployment wife/husband", "PCS life", etc.
+- "Gold Star Family" — if evidence mentions: "Gold Star", "fallen Marine/Soldier", husband/wife killed in action, tribute to fallen service member
+- "Military Family" — if evidence mentions: "military kid/brat/child", parent who served, etc.
+IMPORTANT: References to a SPOUSE's or FAMILY MEMBER's military service (e.g. "my Marine husband", "tribute to my fallen husband") should categorize the person as Military Spouse or Gold Star — NOT as Veteran. Only personal service evidence makes someone a Veteran.
+
 Provide:
-1. VERIFICATION CONFIDENCE: A score from 50-100% with reasoning. Start at 50% (benefit of the doubt) and only go UP with supporting evidence, or DOWN if there is concrete negative evidence.
-2. EVIDENCE SUMMARY: Key findings. Highlight anything that SUPPORTS the claim. Only mention contradictions if they are factual and specific.
-3. RED FLAGS: ONLY list these if there is actual negative evidence (criminal records, stolen valor reports, factual impossibilities). Do NOT list "no evidence found" as a red flag.
-4. RECOMMENDED STATUS: Verified (supporting evidence found), Pending (no evidence either way — this is the DEFAULT), Flagged (concrete negative evidence found).
-5. SUGGESTED FOLLOW-UP: What additional steps could confirm the claim — e.g., DD-214 upload, reference check, direct outreach.
+1. MILITARY CATEGORY: State the detected category (Veteran / Military Spouse / Gold Star Family / Military Family / Active Duty) and the branch if identifiable. Explain which evidence led to this determination.
+2. VERIFICATION CONFIDENCE: A score from 50-100% with reasoning. Start at 50% (benefit of the doubt) and only go UP with supporting evidence, or DOWN if there is concrete negative evidence.
+3. EVIDENCE SUMMARY: Key findings. Highlight anything that SUPPORTS the claim. Only mention contradictions if they are factual and specific.
+4. RED FLAGS: ONLY list these if there is actual negative evidence (criminal records, stolen valor reports, factual impossibilities). Do NOT list "no evidence found" as a red flag.
+5. RECOMMENDED STATUS: Verified (supporting evidence found), Pending (no evidence either way — this is the DEFAULT), Flagged (concrete negative evidence found).
+6. SUGGESTED FOLLOW-UP: What additional steps could confirm the claim — e.g., DD-214 upload, reference check, direct outreach.
 
 Remember: Most veterans are telling the truth. Give them the benefit of the doubt.`;
 
@@ -919,6 +928,103 @@ export function detectBranch(aiAnalysis: string | null, evidenceSources: { snipp
   }
   const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   return sorted.length > 0 ? sorted[0][0] : null;
+}
+
+// --- Type Auto-Detection (Spouse / Family / Veteran) ---
+// Analyzes AI analysis + evidence to determine if the person is a military spouse/family
+// rather than a veteran. Spouse/family language takes PRIORITY over veteran label
+// because spouses often reference their partner's service, which can be misread as their own.
+
+const SPOUSE_PATTERNS: RegExp[] = [
+  /\bmilitary\s+spouse\b/i,
+  /\bmilspouse\b/i,
+  /\bmil[\s-]?spouse\b/i,
+  /\bmilitary\s+wife\b/i,
+  /\bmilitary\s+husband\b/i,
+  /\bmy\s+husband\b.*\b(?:serves?|served|veteran|military|deployed|marine|soldier|sailor|airman)\b/i,
+  /\bmy\s+wife\b.*\b(?:serves?|served|veteran|military|deployed|marine|soldier|sailor|airman)\b/i,
+  /\bmarried\s+to\s+a\s+(?:marine|soldier|sailor|airman|veteran|service\s*member)\b/i,
+  /\b(?:marine|soldier|sailor|airman|veteran)\s+(?:husband|wife)\b/i,
+  /\bdeployment\s+(?:wife|husband)\b/i,
+  /\bPCS\s+(?:wife|husband|life|move)\b/i,
+  /\bhusband\s+(?:is|was)\s+(?:a\s+)?(?:veteran|marine|soldier|sailor|airman|in\s+the\s+(?:army|navy|marines|air\s*force|coast\s*guard|military))\b/i,
+  /\bwife\s+(?:is|was)\s+(?:a\s+)?(?:veteran|marine|soldier|sailor|airman|in\s+the\s+(?:army|navy|marines|air\s*force|coast\s*guard|military))\b/i,
+  /\bfallen\s+(?:marine|soldier|sailor|airman|hero|husband|wife)\b/i,
+  /\bhusband\b.*\b(?:fallen|killed\s+in\s+action|KIA)\b/i,
+  /\bwife\b.*\b(?:fallen|killed\s+in\s+action|KIA)\b/i,
+];
+
+const GOLD_STAR_PATTERNS: RegExp[] = [
+  /\bgold\s*star\b/i,
+  /\bfallen\s+(?:marine|soldier|sailor|airman|hero|service\s*member)\b/i,
+  /\bkilled\s+in\s+action\b/i,
+  /\bKIA\b/,
+  /\blost\s+(?:my|her|his)\s+(?:husband|wife|son|daughter|father|mother)\b.*\b(?:military|service|combat|war|deployment|iraq|afghanistan)\b/i,
+  /\btribute\s+to\s+(?:my\s+)?fallen\b/i,
+];
+
+const FAMILY_PATTERNS: RegExp[] = [
+  /\bmilitary\s+family\b/i,
+  /\bmilitary\s+(?:kid|child|brat|daughter|son)\b/i,
+  /\b(?:my\s+)?(?:dad|father|mom|mother)\s+(?:is|was)\s+(?:a\s+)?(?:veteran|marine|soldier|sailor|airman|in\s+the\s+(?:army|navy|marines|air\s*force|coast\s*guard|military))\b/i,
+];
+
+const PERSONAL_SERVICE_PATTERNS: RegExp[] = [
+  /\bI\s+served\b/i,
+  /\bwhen\s+I\s+(?:was\s+)?(?:deployed|enlisted|stationed)\b/i,
+  /\bmy\s+(?:enlistment|service|deployment|MOS|DD[\s-]?214|military\s+career)\b/i,
+  /\bI\s+(?:enlisted|deployed|was\s+stationed)\b/i,
+  /\b(?:my|I)\s+(?:time\s+)?(?:in|with)\s+the\s+(?:army|navy|marines|air\s*force|coast\s*guard|military)\b/i,
+  /\bafter\s+(?:I|my)\s+(?:left|retired\s+from)\s+(?:the\s+)?(?:army|navy|marines|air\s*force|coast\s*guard|military|service)\b/i,
+];
+
+export function detectType(
+  aiAnalysis: string | null,
+  evidenceSources: { title?: string; snippet?: string; category?: string }[],
+): { claimedStatus: string; claimedType: string } | null {
+  const texts = [
+    aiAnalysis ?? "",
+    ...evidenceSources.map((s) => `${s.title ?? ""} ${s.snippet ?? ""}`),
+  ].join("\n");
+  if (!texts.trim()) return null;
+
+  // Count matches for each category
+  let spouseHits = 0;
+  let goldStarHits = 0;
+  let familyHits = 0;
+  let personalServiceHits = 0;
+
+  for (const pat of SPOUSE_PATTERNS) {
+    const m = texts.match(new RegExp(pat.source, "gi"));
+    if (m) spouseHits += m.length;
+  }
+  for (const pat of GOLD_STAR_PATTERNS) {
+    const m = texts.match(new RegExp(pat.source, "gi"));
+    if (m) goldStarHits += m.length;
+  }
+  for (const pat of FAMILY_PATTERNS) {
+    const m = texts.match(new RegExp(pat.source, "gi"));
+    if (m) familyHits += m.length;
+  }
+  for (const pat of PERSONAL_SERVICE_PATTERNS) {
+    const m = texts.match(new RegExp(pat.source, "gi"));
+    if (m) personalServiceHits += m.length;
+  }
+
+  // Gold Star takes highest priority (subset of spouse/family but more specific)
+  if (goldStarHits > 0 && goldStarHits >= personalServiceHits) {
+    return { claimedStatus: "gold_star", claimedType: "Gold Star Family" };
+  }
+  // Spouse language found and outweighs personal service language
+  if (spouseHits > 0 && spouseHits > personalServiceHits) {
+    return { claimedStatus: "military_spouse", claimedType: "Military Spouse" };
+  }
+  // Family language found and outweighs personal service language
+  if (familyHits > 0 && familyHits > personalServiceHits) {
+    return { claimedStatus: "military_family", claimedType: "Military Family" };
+  }
+  // No spouse/family detected — don't override
+  return null;
 }
 
 // --- Dossier Narrative (Deep Analysis) ---
