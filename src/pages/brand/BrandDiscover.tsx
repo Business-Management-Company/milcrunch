@@ -418,6 +418,96 @@ function DiscoverAvatar({ url, name, username, size = "w-10 h-10", borderClass =
   );
 }
 
+const SEARCH_STATUS_TEXTS = [
+  "Searching creators…",
+  "Analyzing profiles…",
+  "Finding top matches…",
+  "Ranking by relevance…",
+];
+
+/** 4×2 grid of cycling creator avatars shown while search loads. */
+function SearchShowcase({ avatars }: { avatars: { url: string; name: string }[] }) {
+  const GRID_SIZE = 8;
+  const [grid, setGrid] = useState<{ url: string; name: string; key: number }[]>([]);
+  const [statusIdx, setStatusIdx] = useState(0);
+  const nextKey = useRef(GRID_SIZE);
+
+  // Seed the grid on mount / when avatars change
+  useEffect(() => {
+    if (avatars.length === 0) return;
+    const shuffled = [...avatars].sort(() => Math.random() - 0.5);
+    setGrid(shuffled.slice(0, GRID_SIZE).map((a, i) => ({ ...a, key: i })));
+    nextKey.current = GRID_SIZE;
+  }, [avatars]);
+
+  // Swap 2–3 random slots every 1.5s
+  useEffect(() => {
+    if (avatars.length <= GRID_SIZE) return;
+    const interval = setInterval(() => {
+      setGrid((prev) => {
+        const next = [...prev];
+        const swapCount = 2 + Math.floor(Math.random() * 2); // 2 or 3
+        const usedSlots = new Set<number>();
+        const currentUrls = new Set(next.map((g) => g.url));
+        const pool = avatars.filter((a) => !currentUrls.has(a.url));
+        if (pool.length === 0) return prev;
+        for (let s = 0; s < swapCount && pool.length > 0; s++) {
+          let slotIdx: number;
+          do { slotIdx = Math.floor(Math.random() * GRID_SIZE); } while (usedSlots.has(slotIdx));
+          usedSlots.add(slotIdx);
+          const pick = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+          next[slotIdx] = { ...pick, key: nextKey.current++ };
+        }
+        return next;
+      });
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [avatars]);
+
+  // Cycle status text every 2s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatusIdx((i) => (i + 1) % SEARCH_STATUS_TEXTS.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (grid.length === 0) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span className="text-sm">{SEARCH_STATUS_TEXTS[statusIdx]}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-5 py-8">
+      <div className="grid grid-cols-4 gap-4">
+        {grid.map((item) => (
+          <div
+            key={item.key}
+            className="animate-in fade-in zoom-in-90 duration-500"
+          >
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 shadow-sm bg-gradient-to-br from-[#1e3a5f] to-[#2d5282]">
+              <img
+                src={safeImgUrl(item.url)}
+                alt={item.name}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="text-sm font-medium transition-all">{SEARCH_STATUS_TEXTS[statusIdx]}</span>
+      </div>
+    </div>
+  );
+}
+
 /** If this handle matches a directory_members row, upload the enrichment avatar
  *  to Supabase storage and update the row with the permanent URL (fire-and-forget). */
 function maybeUpdateFeaturedAvatar(handle: string, data: EnrichedProfileResponse) {
@@ -685,6 +775,9 @@ const BrandDiscover = () => {
   // Rendering from filter-state updates (location, gender, etc.) must not overwrite
   // the ref that executeSearch set to the effective/simplified query.
   useEffect(() => { searchQueryRef.current = searchQuery; }, [searchQuery]);
+
+  // Showcase avatars for search-loading animation
+  const [showcaseAvatars, setShowcaseAvatars] = useState<{ url: string; name: string }[]>([]);
 
   // Credit balance state
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
@@ -1011,6 +1104,18 @@ const BrandDiscover = () => {
       .then((creators) => setTrendingCreators(creators))
       .catch(() => console.warn("[BrandDiscover] Failed to load trending creators"))
       .finally(() => setTrendingLoading(false));
+  }, []);
+
+  // Load 30 showcase avatars for search-loading animation
+  useEffect(() => {
+    fetchShowcaseCreators(30)
+      .then((creators) => {
+        const avatars = creators
+          .filter((c) => c.ic_avatar_url || c.avatar_url)
+          .map((c) => ({ url: (c.ic_avatar_url || c.avatar_url)!, name: c.display_name }));
+        setShowcaseAvatars(avatars);
+      })
+      .catch(() => {});
   }, []);
 
   // Get Contact Info handler (full enrichment - 1.03 credits)
@@ -2718,19 +2823,16 @@ const BrandDiscover = () => {
           </div>
 
           {apiLoading && (
-            <div className="flex items-center gap-2 text-muted-foreground mb-4">
-              {aiParsing ? (
-                <>
-                  <Sparkles className="h-4 w-4 animate-pulse text-[#1e3a5f]" />
-                  <span className="text-sm text-[#1e3a5f]">AI parsing your search…</span>
-                </>
-              ) : (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="text-sm">Searching creators…</span>
-                </>
-              )}
-            </div>
+            aiParsing ? (
+              <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                <Sparkles className="h-4 w-4 animate-pulse text-[#1e3a5f]" />
+                <span className="text-sm text-[#1e3a5f]">AI parsing your search…</span>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <SearchShowcase avatars={showcaseAvatars} />
+              </div>
+            )
           )}
 
           {/* NL search banner — shows what AI interpreted */}
