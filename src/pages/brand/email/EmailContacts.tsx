@@ -379,6 +379,8 @@ const EmailContacts = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [sortCol, setSortCol] = useState<"first_name"|"last_name"|"email"|"source"|"status"|"added"|null>("added");
+  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
 
   // Add contact modal
   const [showAdd, setShowAdd] = useState(false);
@@ -953,7 +955,33 @@ const EmailContacts = () => {
     });
   };
 
-  const filtered = getFilteredContacts();
+  const toggleSort = (col: typeof sortCol) => {
+    if (sortCol !== col) { setSortCol(col); setSortDir("asc"); }
+    else if (sortDir === "asc") setSortDir("desc");
+    else { setSortCol(null); setSortDir("asc"); }
+  };
+  const sortArrow = (col: typeof sortCol) =>
+    sortCol === col ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+
+  const filtered = (() => {
+    const list = getFilteredContacts();
+    if (sortCol) {
+      const dir = sortDir === "asc" ? 1 : -1;
+      list.sort((a, b) => {
+        let av = "", bv = "";
+        switch (sortCol) {
+          case "first_name": av = (a.first_name || "").toLowerCase(); bv = (b.first_name || "").toLowerCase(); break;
+          case "last_name": av = (a.last_name || "").toLowerCase(); bv = (b.last_name || "").toLowerCase(); break;
+          case "email": av = a.email.toLowerCase(); bv = b.email.toLowerCase(); break;
+          case "source": av = (a.source || "manual").toLowerCase(); bv = (b.source || "manual").toLowerCase(); break;
+          case "status": av = (a.status || "").toLowerCase(); bv = (b.status || "").toLowerCase(); break;
+          case "added": return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        }
+        return dir * av.localeCompare(bv);
+      });
+    }
+    return list;
+  })();
   const visibleIds = filtered.slice(0, 100).map((c) => c.id);
 
   // Deduplicate by email for unique count display
@@ -1432,12 +1460,11 @@ const EmailContacts = () => {
                   />
                 </TableHead>
                 <TableHead className="w-10"></TableHead>
-                <TableHead>First Name</TableHead>
-                <TableHead>Last Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Added</TableHead>
+                {([["first_name","First Name"],["last_name","Last Name"],["email","Email"],["source","Source"],["status","Status"],["added","Added"]] as const).map(([col, label]) => (
+                  <TableHead key={col} className="cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort(col)}>
+                    {label}{sortArrow(col)}
+                  </TableHead>
+                ))}
                 <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>

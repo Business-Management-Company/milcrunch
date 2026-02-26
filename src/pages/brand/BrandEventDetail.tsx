@@ -272,6 +272,8 @@ const BrandEventDetail = () => {
   const [ticketEdits, setTicketEdits] = useState<Record<string, Partial<TicketRow>>>({});
   const [ticketSaving, setTicketSaving] = useState<Record<string, boolean>>({});
   const [regSearch, setRegSearch] = useState("");
+  const [regSortCol, setRegSortCol] = useState<"name"|"email"|"ticket"|"branch"|"status"|"registered"|"checkin"|null>("registered");
+  const [regSortDir, setRegSortDir] = useState<"asc"|"desc">("desc");
   const [checkInMode, setCheckInMode] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
   const [eventStreams, setEventStreams] = useState<StreamRow[]>([]);
@@ -1560,6 +1562,14 @@ const BrandEventDetail = () => {
                 const first = name.split(/\s+/)[0];
                 return first.length > 8 ? first.slice(0, 7) + "\u2026" : first;
               };
+              const toggleRegSort = (col: typeof regSortCol) => {
+                if (regSortCol !== col) { setRegSortCol(col); setRegSortDir("asc"); }
+                else if (regSortDir === "asc") setRegSortDir("desc");
+                else { setRegSortCol(null); setRegSortDir("asc"); }
+              };
+              const regSortArrow = (col: typeof regSortCol) =>
+                regSortCol === col ? (regSortDir === "asc" ? " ▲" : " ▼") : "";
+
               const filteredRegs = registrations.filter((r) => {
                 const q = regSearch.toLowerCase();
                 if (!q) return true;
@@ -1570,6 +1580,22 @@ const BrandEventDetail = () => {
                   (r.military_branch || "").toLowerCase().includes(q)
                 );
               });
+              if (regSortCol) {
+                const dir = regSortDir === "asc" ? 1 : -1;
+                filteredRegs.sort((a, b) => {
+                  let av = "", bv = "";
+                  switch (regSortCol) {
+                    case "name": av = `${a.first_name} ${a.last_name}`.toLowerCase(); bv = `${b.first_name} ${b.last_name}`.toLowerCase(); break;
+                    case "email": av = a.email.toLowerCase(); bv = b.email.toLowerCase(); break;
+                    case "ticket": av = resolveTicketName(a).toLowerCase(); bv = resolveTicketName(b).toLowerCase(); break;
+                    case "branch": av = (a.military_branch || "").toLowerCase(); bv = (b.military_branch || "").toLowerCase(); break;
+                    case "status": av = (a.status || "").toLowerCase(); bv = (b.status || "").toLowerCase(); break;
+                    case "registered": return dir * (new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+                    case "checkin": return dir * ((a.checked_in ? 1 : 0) - (b.checked_in ? 1 : 0));
+                  }
+                  return dir * av.localeCompare(bv);
+                });
+              }
               const checkedInCount = registrations.filter((r) => r.checked_in).length;
               const allFilteredSelected = filteredRegs.length > 0 && filteredRegs.every((r) => selectedRegIds.has(r.id));
               const someFilteredSelected = filteredRegs.some((r) => selectedRegIds.has(r.id));
@@ -1699,14 +1725,13 @@ const BrandEventDetail = () => {
                                 onCheckedChange={toggleSelectAllFiltered}
                               />
                             </th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Name</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Email</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Ticket</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Branch</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Status</th>
-                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Registered</th>
-                            <th className="px-1 py-2.5 text-center">
-                              <CheckCircle2 className="h-3.5 w-3.5 mx-auto text-muted-foreground" />
+                            {([["name","Name"],["email","Email"],["ticket","Ticket"],["branch","Branch"],["status","Status"],["registered","Registered"]] as const).map(([col, label]) => (
+                              <th key={col} className="px-2 py-2.5 font-medium text-muted-foreground text-xs cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleRegSort(col)}>
+                                {label}{regSortArrow(col)}
+                              </th>
+                            ))}
+                            <th className="px-1 py-2.5 text-center cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleRegSort("checkin")}>
+                              <span className="inline-flex items-center gap-0.5 text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5" />{regSortArrow("checkin") && <span className="text-[10px]">{regSortArrow("checkin")}</span>}</span>
                             </th>
                             <th className="px-1 py-2.5" />
                           </tr>
