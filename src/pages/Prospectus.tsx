@@ -660,13 +660,13 @@ function ManageContentPanel({
   // --- Section image upload/delete ---
   const sectionImageRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const handleSectionImageUpload = async (tab: string, idx: number, file: File) => {
+  const handleSectionImageUpload = async (tab: string, idx: number, file: File, targetField: "image_url" | "media_url" = "image_url") => {
     if (file.size > MAX_IMAGE_SIZE) {
       alert(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 25 MB.`);
       return;
     }
     if (!(await ensureSession())) return;
-    const oldUrl = contentDraft[tab]?.sections?.[idx]?.image_url;
+    const oldUrl = contentDraft[tab]?.sections?.[idx]?.[targetField];
     if (oldUrl && oldUrl.includes(IMAGE_BUCKET)) {
       const oldPath = oldUrl.split(`${IMAGE_BUCKET}/`)[1]?.split("?")[0];
       if (oldPath) await supabase.storage.from(IMAGE_BUCKET).remove([oldPath]);
@@ -688,7 +688,7 @@ function ManageContentPanel({
       }
       setUploadProgress(100);
       const { data: { publicUrl } } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
-      updateSection(tab, idx, "image_url", publicUrl);
+      updateSection(tab, idx, targetField, publicUrl);
       setTimeout(() => { setUploading(null); setUploadProgress(0); }, 500);
     } catch (err) {
       clearInterval(progressTimer);
@@ -1128,11 +1128,132 @@ function ManageContentPanel({
                                   <input type="text" value={section.subheading || ""} onChange={(e) => updateSection(tab, idx, "subheading", e.target.value)}
                                     placeholder="Optional subheading" className={cn(inputCls, "text-xs")} />
                                 </div>
+                                {/* Media type toggle */}
                                 <div>
-                                  <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Background Image/Video URL</label>
-                                  <input type="text" value={section.media_url || ""} onChange={(e) => updateSection(tab, idx, "media_url", e.target.value)}
-                                    placeholder="Paste URL or leave empty" className={cn(inputCls, "text-xs")} />
+                                  <label className={cn("text-xs block mb-1", dark ? "text-gray-500" : "text-gray-400")}>Background Media</label>
+                                  <div className="flex items-center gap-1 mb-2">
+                                    {(["image", "video"] as const).map((mt) => (
+                                      <button key={mt} type="button"
+                                        onClick={() => updateSection(tab, idx, "media_type", mt)}
+                                        className={cn("px-3 py-1 rounded-full text-xs font-medium border transition-colors capitalize",
+                                          (section.media_type || "image") === mt
+                                            ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                                            : dark ? "border-white/20 text-gray-400 hover:text-white" : "border-gray-300 text-gray-500 hover:text-gray-700")}>
+                                        {mt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {(section.media_type || "image") === "image" ? (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <input type="text" placeholder="Paste image URL or upload…" value={section.media_url || ""}
+                                          onChange={(e) => updateSection(tab, idx, "media_url", e.target.value)}
+                                          className={cn(inputCls, "text-xs flex-1")} />
+                                        <input ref={(el) => { sectionImageRefs.current[`hero-${tab}-${idx}`] = el; }}
+                                          type="file" accept={ACCEPTED_IMAGE_TYPES} className="hidden"
+                                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSectionImageUpload(tab, idx, f, "media_url"); e.target.value = ""; }} />
+                                        <button type="button" onClick={() => sectionImageRefs.current[`hero-${tab}-${idx}`]?.click()} disabled={!!uploading}
+                                          className={cn("flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border transition-colors disabled:opacity-50 shrink-0",
+                                            dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50")}>
+                                          <Upload className="h-3 w-3" /> {section.media_url ? "Replace" : "Upload"}
+                                        </button>
+                                        {section.media_url && (
+                                          <button type="button" onClick={() => updateSection(tab, idx, "media_url", "")} disabled={!!uploading}
+                                            className="flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 shrink-0">
+                                            <Trash2 className="h-3 w-3" />
+                                          </button>
+                                        )}
+                                      </div>
+                                      {uploading === `section-${tab}-${idx}` && (
+                                        <div className={cn("mt-1 h-1.5 rounded-full overflow-hidden", dark ? "bg-white/10" : "bg-gray-200")}>
+                                          <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                        </div>
+                                      )}
+                                      {section.media_url && (
+                                        <div className={cn("mt-1.5 rounded overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
+                                          <img src={section.media_url} alt="Hero background" className="w-full max-h-32 object-cover" />
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <input type="text" value={section.media_url || ""} onChange={(e) => updateSection(tab, idx, "media_url", e.target.value)}
+                                        placeholder="Paste YouTube/Vimeo URL or upload" className={cn(inputCls, "text-xs")} />
+                                      {section.media_url && !uploading?.startsWith(`section-video-${tab}-${idx}`) && (
+                                        <p className={cn("text-xs mt-1", parseVideoEmbed(section.media_url) ? "text-emerald-500" : "text-amber-500")}>
+                                          {parseVideoEmbed(section.media_url) ? `${parseVideoEmbed(section.media_url)!.type.toUpperCase()} detected` : "Unrecognized URL format"}
+                                        </p>
+                                      )}
+                                      {uploading === `section-video-${tab}-${idx}` && (
+                                        <div className={cn("mt-1 h-1.5 rounded-full overflow-hidden", dark ? "bg-white/10" : "bg-gray-200")}>
+                                          <div className="h-full bg-[#1e3a5f] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <input ref={(el) => { sectionVideoRefs.current[`hero-${tab}-${idx}`] = el; }}
+                                          type="file" accept={ACCEPTED_VIDEO_TYPES} className="hidden"
+                                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSectionVideoUpload(tab, idx, f); e.target.value = ""; }} />
+                                        <button type="button" onClick={() => sectionVideoRefs.current[`hero-${tab}-${idx}`]?.click()} disabled={!!uploading}
+                                          className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
+                                            dark ? "border-white/10 hover:bg-white/5" : "border-gray-300 hover:bg-gray-50")}>
+                                          <Upload className="h-3.5 w-3.5" /> {section.media_url ? "Replace" : "Upload"}
+                                        </button>
+                                        {section.media_url && (
+                                          <button type="button" onClick={() => { handleSectionVideoDelete(tab, idx); updateSection(tab, idx, "media_url", ""); }} disabled={!!uploading}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50">
+                                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                                          </button>
+                                        )}
+                                      </div>
+                                      {section.media_url && parseVideoEmbed(section.media_url) && (
+                                        <div className={cn("mt-2 rounded-lg overflow-hidden border", dark ? "border-white/10" : "border-gray-200")}>
+                                          {parseVideoEmbed(section.media_url)!.type === "mp4" ? (
+                                            <video src={parseVideoEmbed(section.media_url)!.embedUrl} controls className="w-full aspect-video bg-black" preload="metadata" />
+                                          ) : (
+                                            <iframe src={parseVideoEmbed(section.media_url)!.embedUrl} title="Video preview" className="w-full aspect-video" style={{ border: 0 }}
+                                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                                          )}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
                                 </div>
+                                {/* Demo link dropdown */}
+                                {(() => {
+                                  const sectionKey = `${tab}-${idx}`;
+                                  const isPreset = !!section.demo_url && PRESET_URLS.has(section.demo_url);
+                                  const isCustom = customDemoSections.has(sectionKey) || (!!section.demo_url && !isPreset);
+                                  const selectValue = !section.demo_url && !isCustom ? "" : isPreset ? section.demo_url : "__custom__";
+                                  return (
+                                    <>
+                                      <label className={cn("text-xs block mt-1 mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Demo Link (opens in modal)</label>
+                                      <div className="relative">
+                                        <select value={selectValue}
+                                          onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === "__custom__") {
+                                              setCustomDemoSections((prev) => new Set(prev).add(sectionKey));
+                                              updateSection(tab, idx, "demo_url", "");
+                                            } else {
+                                              setCustomDemoSections((prev) => { const next = new Set(prev); next.delete(sectionKey); return next; });
+                                              updateSection(tab, idx, "demo_url", val);
+                                            }
+                                          }}
+                                          className={cn("w-full appearance-none rounded-lg pl-3 pr-8 py-2 text-xs border transition-colors cursor-pointer",
+                                            dark ? "bg-white/10 border-white/20 text-white focus:border-[#1e3a5f]" : "bg-gray-50 border-gray-300 text-[#111827] focus:border-[#1e3a5f]")}>
+                                          <option value="">- None -</option>
+                                          {DEMO_LINK_PRESETS.map((p) => (<option key={p.url} value={p.url}>{p.label}</option>))}
+                                          <option value="__custom__">(Custom URL)</option>
+                                        </select>
+                                        <ChevronDown className={cn("absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none", dark ? "text-gray-400" : "text-gray-500")} />
+                                      </div>
+                                      {isCustom && (
+                                        <input type="text" placeholder="/events/mil-con-2026?tab=gtm-planner" value={section.demo_url || ""}
+                                          onChange={(e) => updateSection(tab, idx, "demo_url", e.target.value)} className={cn(inputCls, "text-xs mt-1")} />
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </>
                             )}
 
@@ -1986,24 +2107,36 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
         if (blockType === "hero") {
           const hasBg = !!section.media_url;
           const bgParsed = section.media_url ? parseVideoEmbed(section.media_url) : null;
+          const heroClickable = !!section.demo_url;
           return (
             <section key={`block-${i}`} className="max-w-4xl mx-auto">
               {hasBg ? (
-                <div className="relative w-full aspect-[21/9] rounded-2xl overflow-hidden bg-black">
+                <div
+                  className={cn("relative w-full aspect-[21/9] rounded-2xl overflow-hidden bg-black", heroClickable && "group cursor-pointer")}
+                  onClick={() => heroClickable && setDemoModal({ open: true, url: section.demo_url! })}
+                >
                   {bgParsed?.type === "mp4" ? (
                     <video src={bgParsed.embedUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
                   ) : section.media_url ? (
                     <img src={section.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
                   ) : null}
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className={cn("absolute inset-0 flex items-center justify-center", heroClickable ? "bg-black/40 group-hover:bg-black/60 transition-colors duration-200" : "bg-black/50")}>
                     <div className="text-center px-6">
                       {section.heading && <h2 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">{section.heading}</h2>}
                       {section.subheading && <p className="text-lg text-white/80 mt-2">{section.subheading}</p>}
+                      {heroClickable && (
+                        <span className="inline-flex items-center gap-2 mt-4 text-white font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <Play className="h-5 w-5" /> Explore Live Demo
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8">
+                <div
+                  className={cn("text-center py-8", heroClickable && "group cursor-pointer")}
+                  onClick={() => heroClickable && setDemoModal({ open: true, url: section.demo_url! })}
+                >
                   {section.heading && (
                     <h2 className={cn("text-3xl md:text-4xl font-extrabold leading-tight transition-colors duration-300", dark ? "text-white" : "text-[#111827]")}>
                       {section.heading}
@@ -2011,6 +2144,11 @@ function ContentTab({ dark, tab, dbContent }: { dark: boolean; tab: string; dbCo
                   )}
                   {section.subheading && (
                     <p className={cn("text-lg mt-2 transition-colors duration-300", dark ? "text-gray-400" : "text-[#6B7280]")}>{section.subheading}</p>
+                  )}
+                  {heroClickable && (
+                    <span className={cn("inline-flex items-center gap-2 mt-3 text-sm font-semibold opacity-60 group-hover:opacity-100 transition-opacity duration-200", dark ? "text-white" : "text-[#1e3a5f]")}>
+                      <Play className="h-4 w-4" /> Explore Live Demo
+                    </span>
                   )}
                 </div>
               )}
