@@ -814,23 +814,31 @@ export async function searchLookalike(
 export async function searchSimilarCreators(
   username: string,
   platform: string = "instagram",
-  limit: number = 10
+  limit: number = 10,
+  /** Pass a full profile URL directly (e.g. from creator's instagram_url field) */
+  profileUrl?: string,
 ): Promise<SearchCreatorsResult> {
   const handle = username.replace(/^@/, "").trim().toLowerCase();
-  if (!handle) throw new Error("Username is required");
+  if (!handle && !profileUrl) throw new Error("No Instagram handle available for this creator");
 
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("VITE_INFLUENCERS_CLUB_API_KEY is not set");
 
   const plat = platform.toLowerCase();
-  const platformUrlMap: Record<string, string> = {
-    instagram: `https://www.instagram.com/${handle}`,
-    tiktok: `https://www.tiktok.com/@${handle}`,
-    youtube: `https://www.youtube.com/@${handle}`,
-    twitter: `https://twitter.com/${handle}`,
-    twitch: `https://www.twitch.tv/${handle}`,
-  };
-  const url = platformUrlMap[plat] || `https://www.instagram.com/${handle}`;
+  let url: string;
+  if (profileUrl) {
+    // Use provided URL directly, ensure trailing slash
+    url = profileUrl.endsWith("/") ? profileUrl : profileUrl + "/";
+  } else {
+    const platformUrlMap: Record<string, string> = {
+      instagram: `https://www.instagram.com/${handle}/`,
+      tiktok: `https://www.tiktok.com/@${handle}/`,
+      youtube: `https://www.youtube.com/@${handle}/`,
+      twitter: `https://twitter.com/${handle}/`,
+      twitch: `https://www.twitch.tv/${handle}/`,
+    };
+    url = platformUrlMap[plat] || `https://www.instagram.com/${handle}/`;
+  }
 
   const body = {
     platform: plat,

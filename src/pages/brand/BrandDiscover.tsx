@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ import CreateListModal from "@/components/CreateListModal";
 import BulkActionBar from "@/components/BulkActionBar";
 import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
+import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage, fetchShowcaseCreators, type ShowcaseCreator } from "@/lib/featured-creators";
 import { saveCreatorAvatar } from "@/lib/directories";
 import { parseSmartQuery } from "@/lib/smart-search-parser";
 import { toast } from "sonner";
@@ -48,6 +48,14 @@ import { useDemoMode } from "@/hooks/useDemoMode";
 import { PlatformIcons } from "@/components/PlatformIcons";
 
 const BRANCHES = ["Army", "Navy", "Air Force", "Marines", "Coast Guard"] as const;
+
+const BRANCH_COLORS: Record<string, { selected: string; unselected: string }> = {
+  Army: { selected: "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/40 dark:text-green-400 dark:border-green-700", unselected: "hover:bg-green-50 hover:text-green-700 hover:border-green-200 dark:hover:bg-green-950/20 dark:hover:text-green-400" },
+  Navy: { selected: "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/40 dark:text-blue-400 dark:border-blue-700", unselected: "hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 dark:hover:bg-blue-950/20 dark:hover:text-blue-400" },
+  "Air Force": { selected: "bg-sky-100 text-sky-600 border-sky-300 dark:bg-sky-900/40 dark:text-sky-400 dark:border-sky-700", unselected: "hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200 dark:hover:bg-sky-950/20 dark:hover:text-sky-400" },
+  Marines: { selected: "bg-red-100 text-red-700 border-red-300 dark:bg-red-900/40 dark:text-red-400 dark:border-red-700", unselected: "hover:bg-red-50 hover:text-red-700 hover:border-red-200 dark:hover:bg-red-950/20 dark:hover:text-red-400" },
+  "Coast Guard": { selected: "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/40 dark:text-orange-400 dark:border-orange-700", unselected: "hover:bg-orange-50 hover:text-orange-700 hover:border-orange-200 dark:hover:bg-orange-950/20 dark:hover:text-orange-400" },
+};
 
 const LAST_SEARCH_KEY = "pd_discover_last_search";
 
@@ -84,6 +92,25 @@ const CREATOR_TYPES = [
 ] as const;
 
 const ALL_SOCIAL_PLATFORMS = ["instagram", "tiktok", "youtube", "twitter", "facebook", "linkedin"] as const;
+
+/** Build the best profile URL for a creator to pass to Find Similar API. */
+function getCreatorProfileUrl(creator: CreatorCard, fallbackPlatform: string): string | undefined {
+  // Check external links for an existing Instagram URL
+  if (creator.externalLinks) {
+    const igLink = creator.externalLinks.find(
+      (l) => l.url && /instagram\.com\//i.test(l.url)
+    );
+    if (igLink?.url) return igLink.url;
+  }
+  // Build from username
+  const handle = (creator.username ?? "").replace(/^@/, "").trim();
+  if (!handle) return undefined;
+  const plat = fallbackPlatform.toLowerCase();
+  if (plat === "tiktok") return `https://www.tiktok.com/@${handle}/`;
+  if (plat === "youtube") return `https://www.youtube.com/@${handle}/`;
+  if (plat === "twitter") return `https://twitter.com/${handle}/`;
+  return `https://www.instagram.com/${handle}/`;
+}
 
 const NON_PERSONAL_DOMAINS = new Set([
   "bbc.com", "bbc.co.uk", "cnn.com", "nytimes.com", "washingtonpost.com",
@@ -630,6 +657,8 @@ const BrandDiscover = () => {
   const [sortBy, setSortBy] = useState<string>("confidence");
   const [selectedBranches, setSelectedBranches] = useState<Set<Branch>>(new Set());
   const [smartFiltersApplied, setSmartFiltersApplied] = useState<string[]>([]);
+  const [trendingCreators, setTrendingCreators] = useState<ShowcaseCreator[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
   const [apiResults, setApiResults] = useState<{ creators: CreatorCard[]; total: number; rawResponse: unknown } | null>(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -907,6 +936,15 @@ const BrandDiscover = () => {
 
   // Load saved searches and credits on mount
   useEffect(() => { loadSavedSearches(); refreshCredits(); }, [loadSavedSearches, refreshCredits]);
+
+  // Load trending creators for empty state
+  useEffect(() => {
+    setTrendingLoading(true);
+    fetchShowcaseCreators(8)
+      .then((creators) => setTrendingCreators(creators))
+      .catch(() => console.warn("[BrandDiscover] Failed to load trending creators"))
+      .finally(() => setTrendingLoading(false));
+  }, []);
 
   // Get Contact Info handler (full enrichment - 1.03 credits)
   const handleGetContactInfo = async (creator: CreatorCard) => {
@@ -1435,6 +1473,20 @@ const BrandDiscover = () => {
   };
 
   const hasSearched = apiResults !== null;
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (locationFilter) count++;
+    if (followersRange !== "any") count++;
+    if (engagementMin !== "any") count++;
+    if (gender !== "any") count++;
+    if (niche !== "All niches") count++;
+    if (language !== "any") count++;
+    if (keywordsInBio.trim()) count++;
+    if (selectedBranches.size > 0) count++;
+    return count;
+  }, [locationFilter, followersRange, engagementMin, gender, niche, language, keywordsInBio, selectedBranches]);
+
   // Show fallback keyword results when username search returned 0 direct results
   const creators = (apiResults?.creators ?? []).length > 0
     ? (apiResults?.creators ?? [])
@@ -2659,10 +2711,12 @@ const BrandDiscover = () => {
                             variant="outline"
                             className="text-xs"
                             onClick={() => {
+                              const profileUrl = getCreatorProfileUrl(exactMatch, platform[0] || "instagram");
+                              if (!profileUrl) { toast.error("No handle available to find similar creators"); return; }
                               setSimilarLoading(true);
-                              searchSimilarCreators(exactMatch.username ?? "", platform[0] || "instagram")
+                              searchSimilarCreators(exactMatch.username ?? "", platform[0] || "instagram", 10, profileUrl)
                                 .then((res) => setSimilarCreators(res.creators))
-                                .catch(() => toast.error("Failed to find similar creators"))
+                                .catch((err) => toast.error(err?.message || "Failed to find similar creators"))
                                 .finally(() => setSimilarLoading(false));
                             }}
                             disabled={similarLoading}
@@ -2737,10 +2791,12 @@ const BrandDiscover = () => {
                             variant="outline"
                             className="text-xs"
                             onClick={() => {
+                              const profileUrl = getCreatorProfileUrl(topCreator, platform[0] || "instagram");
+                              if (!profileUrl) { toast.error("No handle available to find similar creators"); return; }
                               setSimilarLoading(true);
-                              searchSimilarCreators(topCreator.username ?? "", platform[0] || "instagram")
+                              searchSimilarCreators(topCreator.username ?? "", platform[0] || "instagram", 10, profileUrl)
                                 .then((res) => setSimilarCreators(res.creators))
-                                .catch(() => toast.error("Failed to find similar creators"))
+                                .catch((err) => toast.error(err?.message || "Failed to find similar creators"))
                                 .finally(() => setSimilarLoading(false));
                             }}
                             disabled={similarLoading}
@@ -3254,10 +3310,12 @@ const BrandDiscover = () => {
                               title="Find similar creators"
                               disabled={similarLoading}
                               onClick={() => {
+                                const profileUrl = getCreatorProfileUrl(creator, platform[0] || "instagram");
+                                if (!profileUrl) { toast.error("No handle available to find similar creators"); return; }
                                 setSimilarLoading(true);
-                                searchSimilarCreators(creator.username ?? "", platform[0] || "instagram")
+                                searchSimilarCreators(creator.username ?? "", platform[0] || "instagram", 10, profileUrl)
                                   .then((res) => { setSimilarCreators(res.creators); window.scrollTo({ top: 0, behavior: "smooth" }); })
-                                  .catch(() => toast.error("Failed to find similar creators"))
+                                  .catch((err) => toast.error(err?.message || "Failed to find similar creators"))
                                   .finally(() => setSimilarLoading(false));
                               }}
                             >
