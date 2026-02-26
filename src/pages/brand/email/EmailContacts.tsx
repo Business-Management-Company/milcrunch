@@ -858,6 +858,18 @@ const EmailContacts = () => {
       return;
     }
 
+    const KNOWN_BRANCHES = ["army", "navy", "marines", "air force", "coast guard", "space force"];
+    const resolveBranch = (c: typeof toInsert[0]): string | null => {
+      const meta = (c.metadata as Record<string, unknown>)?.military_branch as string | undefined;
+      if (meta) return meta;
+      // Check tags for a military branch name
+      if (c.tags && c.tags.length > 0) {
+        const match = c.tags.find((t) => KNOWN_BRANCHES.includes(t.toLowerCase()));
+        if (match) return match;
+      }
+      return null;
+    };
+
     const rows = toInsert.map((c) => ({
       event_id: bulkEventId,
       ticket_id: bulkTicketId || null,
@@ -867,7 +879,7 @@ const EmailContacts = () => {
       phone: c.phone || null,
       company: c.company || null,
       title: c.title || null,
-      military_branch: (c.metadata as Record<string, unknown>)?.military_branch as string || null,
+      military_branch: resolveBranch(c),
       registration_code: generateRegCode(),
       status: "confirmed",
       checked_in: false,

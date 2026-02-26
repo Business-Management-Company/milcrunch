@@ -1019,7 +1019,17 @@ const BrandEventDetail = () => {
                         status={event.is_published ? "published" : "draft"}
                         sponsors={sponsors.map(s => ({ sponsor_name: s.sponsor_name, tier: s.tier }))}
                         speakers={speakers.map(s => ({ creator_name: s.creator_name, role: s.role, confirmed: s.confirmed }))}
-                        tickets={eventTickets.map(t => ({ name: t.name, price: t.price, quantity: t.quantity, sold: t.sold }))}
+                        tickets={(() => {
+                          // Count registrations with no ticket_id (from bulk-add without ticket selection)
+                          const unmatchedCount = registrations.filter(r => !r.ticket_id).length;
+                          return eventTickets.map((t, idx) => {
+                            const actualSold = registrations.filter(r => r.ticket_id === t.id).length;
+                            // Attribute unmatched registrations to the first ticket type
+                            const extra = idx === 0 ? unmatchedCount : 0;
+                            const sold = Math.max(t.sold || 0, actualSold + extra);
+                            return { name: t.name, price: t.price, quantity: t.quantity || 0, sold };
+                          });
+                        })()}
                         registrationCount={registrations.length}
                         agendaSessionCount={agenda.length}
                       />
@@ -1651,88 +1661,87 @@ const BrandEventDetail = () => {
                     </Card>
                   ) : (
                     <Card className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50 dark:bg-[#151821] text-left">
-                            <tr>
-                              <th className="pl-4 pr-2 py-3 w-10">
+                      <table className="w-full text-sm table-fixed">
+                        <thead className="bg-gray-50 dark:bg-[#151821] text-left">
+                          <tr>
+                            <th className="pl-3 pr-1 py-2.5 w-9">
+                              <Checkbox
+                                checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
+                                onCheckedChange={toggleSelectAllFiltered}
+                              />
+                            </th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Name</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs">Email</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[100px]">Ticket</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[90px]">Branch</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[80px]">Status</th>
+                            <th className="px-2 py-2.5 font-medium text-muted-foreground text-xs w-[85px]">Registered</th>
+                            <th className="px-1 py-2.5 font-medium text-muted-foreground text-xs text-center w-10">
+                              <CheckCircle2 className="h-3.5 w-3.5 mx-auto" />
+                            </th>
+                            <th className="px-1 py-2.5 w-[68px]" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {filteredRegs.map((r) => (
+                            <tr key={r.id} className={`hover:bg-gray-50/50 dark:hover:bg-[#1E2130] ${selectedRegIds.has(r.id) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
+                              <td className="pl-3 pr-1 py-2">
                                 <Checkbox
-                                  checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
-                                  onCheckedChange={toggleSelectAllFiltered}
+                                  checked={selectedRegIds.has(r.id)}
+                                  onCheckedChange={() => toggleRegSelect(r.id)}
                                 />
-                              </th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground">Name</th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground">Email</th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground">Ticket</th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground">Branch</th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground">Registered</th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground text-center">Check-in</th>
-                              <th className="px-4 py-3 font-medium text-muted-foreground text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {filteredRegs.map((r) => (
-                              <tr key={r.id} className={`hover:bg-gray-50/50 dark:hover:bg-[#1E2130] ${selectedRegIds.has(r.id) ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
-                                <td className="pl-4 pr-2 py-3">
-                                  <Checkbox
-                                    checked={selectedRegIds.has(r.id)}
-                                    onCheckedChange={() => toggleRegSelect(r.id)}
-                                  />
-                                </td>
-                                <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
-                                  {r.first_name} {r.last_name}
-                                </td>
-                                <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
-                                <td className="px-4 py-3">
-                                  <Badge variant="outline" className="text-xs">
-                                    {resolveTicketName(r)}
-                                  </Badge>
-                                </td>
-                                <td className="px-4 py-3 text-muted-foreground">{r.military_branch || "\u2014"}</td>
-                                <td className="px-4 py-3">
-                                  <Badge className={r.status === "confirmed" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}>
-                                    {r.status}
-                                  </Badge>
-                                </td>
-                                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : "\u2014"}
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => toggleCheckIn(r)}
-                                    className={r.checked_in ? "text-blue-700" : "text-gray-300 hover:text-gray-500"}
+                              </td>
+                              <td className="px-2 py-2 font-medium text-foreground truncate text-xs">
+                                {r.first_name} {r.last_name}
+                              </td>
+                              <td className="px-2 py-2 text-muted-foreground truncate text-xs" title={r.email}>{r.email}</td>
+                              <td className="px-2 py-2">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  {resolveTicketName(r)}
+                                </Badge>
+                              </td>
+                              <td className="px-2 py-2 text-muted-foreground text-xs truncate">{r.military_branch || "\u2014"}</td>
+                              <td className="px-2 py-2">
+                                <Badge className={`text-[10px] px-1.5 py-0 ${r.status === "confirmed" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}`}>
+                                  {r.status}
+                                </Badge>
+                              </td>
+                              <td className="px-2 py-2 text-muted-foreground text-xs">
+                                {r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "\u2014"}
+                              </td>
+                              <td className="px-1 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleCheckIn(r)}
+                                  className={r.checked_in ? "text-blue-700" : "text-gray-300 hover:text-gray-500"}
+                                >
+                                  {r.checked_in ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                                </button>
+                              </td>
+                              <td className="px-1 py-2">
+                                <div className="flex items-center justify-end gap-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditReg(r)}
+                                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                    title="Edit"
                                   >
-                                    {r.checked_in ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-                                  </Button>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center justify-end gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => openEditReg(r)}
-                                      className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                      title="Edit"
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setDeletingReg(r)}
-                                      className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeletingReg(r)}
+                                    className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </Card>
                   )}
 
