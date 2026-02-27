@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   Lock, Play, Share2, Check, Video,
   Loader2, Sun, Moon, Monitor,
-  CheckCircle2, BookOpen,
+  CheckCircle2, BookOpen, ZoomIn,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
   Eye, EyeOff, ChevronDown, GripVertical, ChevronRight,
 } from "lucide-react";
@@ -2187,7 +2187,16 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
 
       {/* Backward compat: show prospectus_videos video below headline if no VIDEO block exists */}
       {!hasVideoBlock && videoUrl && (
-        <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={false} />
+        <div className="relative rounded-xl overflow-hidden group max-w-3xl mx-auto">
+          <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={false} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+            <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Watch Demo</span>
+          </div>
+          {/* Mobile badge */}
+          <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
+            <Play className="h-4 w-4 text-white" />
+          </div>
+        </div>
       )}
 
       {/* Block-aware section rendering */}
@@ -2225,6 +2234,12 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
                       )}
                     </div>
                   </div>
+                  {/* Mobile badge */}
+                  {heroClickable && (
+                    <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
+                      <Play className="h-4 w-4 text-white" />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div
@@ -2314,36 +2329,48 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
               )}
               {hasImage && (
                 <div
-                  className={cn("relative", section.demo_url && "group cursor-pointer")}
-                  onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
+                  className="relative group cursor-pointer"
+                  onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
                 >
                   <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" />
-                  {section.demo_url && (
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
-                    </div>
-                  )}
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                    <span className="text-white font-semibold text-sm flex items-center gap-2">
+                      {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
+                    </span>
+                  </div>
+                  {/* Mobile badge — always visible since no hover on touch */}
+                  <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
+                    {section.demo_url ? <Play className="h-4 w-4 text-white" /> : <ZoomIn className="h-4 w-4 text-white" />}
+                  </div>
                 </div>
               )}
               {hasVideo && (() => {
                 const embed = parseVideoEmbed(section.video_url!);
                 if (!embed) return null;
                 return (
-                  <div
-                    className={cn("relative rounded-xl overflow-hidden shadow-md", section.demo_url && "group cursor-pointer")}
-                    onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
-                  >
+                  <div className="relative rounded-xl overflow-hidden shadow-md group">
                     {embed.type === "mp4" ? (
                       <video src={embed.embedUrl} controls className="w-full aspect-video bg-black" preload="metadata" />
                     ) : (
                       <iframe src={embed.embedUrl} title={section.heading || "Video"} className="w-full aspect-video" style={{ border: 0 }}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                     )}
-                    {section.demo_url && (
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+                    {section.demo_url ? (
+                      <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
+                        onClick={() => setDemoModal({ open: true, url: section.demo_url! })}
+                      >
                         <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
                       </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+                        <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Watch Demo</span>
+                      </div>
                     )}
+                    {/* Mobile badge */}
+                    <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
+                      <Play className="h-4 w-4 text-white" />
+                    </div>
                   </div>
                 );
               })()}
@@ -2364,7 +2391,16 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
                 </h3>
               )}
               {section.video_url && (
-                <ProspectusMedia videoUrl={section.video_url} dark={dark} isSuperAdmin={false} />
+                <div className="relative rounded-xl overflow-hidden group">
+                  <ProspectusMedia videoUrl={section.video_url} dark={dark} isSuperAdmin={false} />
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+                    <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Watch Demo</span>
+                  </div>
+                  {/* Mobile badge */}
+                  <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
+                    <Play className="h-4 w-4 text-white" />
+                  </div>
+                </div>
               )}
             </section>
           );
@@ -2413,15 +2449,19 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
             )}
             {section.image_url && (
               <div
-                className={cn("relative mb-5", section.demo_url && "group cursor-pointer")}
-                onClick={() => section.demo_url && setDemoModal({ open: true, url: section.demo_url })}
+                className="relative mb-5 group cursor-pointer"
+                onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
               >
                 <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" />
-                {section.demo_url && (
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
-                  </div>
-                )}
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm flex items-center gap-2">
+                    {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
+                  </span>
+                </div>
+                {/* Mobile badge */}
+                <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
+                  {section.demo_url ? <Play className="h-4 w-4 text-white" /> : <ZoomIn className="h-4 w-4 text-white" />}
+                </div>
               </div>
             )}
             {section.description && (
