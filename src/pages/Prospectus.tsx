@@ -1718,8 +1718,11 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, dbContent, videoUrl, imageUrl }: { dark: boolean; dbContent?: TabContent; videoUrl?: string; imageUrl?: string }) {
-  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} />;
+function OverviewTab({ dark, dbContent, videoUrl, imageUrl, onVideoEnded, onScrollProgress, showScrollHint }: {
+  dark: boolean; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
+  onVideoEnded?: () => void; onScrollProgress?: (pct: number) => void; showScrollHint?: boolean;
+}) {
+  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} onVideoEnded={onVideoEnded} onScrollProgress={onScrollProgress} showScrollHint={showScrollHint} />;
 }
 
 /* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
@@ -2120,10 +2123,37 @@ const TAB_CONTENT: Record<string, TabContent> = {
   },
 };
 
-function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolean; tab: string; dbContent?: TabContent; videoUrl?: string; imageUrl?: string }) {
+function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, onScrollProgress, showScrollHint }: {
+  dark: boolean; tab: string; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
+  onVideoEnded?: () => void;
+  onScrollProgress?: (pct: number) => void;
+  showScrollHint?: boolean;
+}) {
   const [demoModal, setDemoModal] = useState<{ open: boolean; url: string }>({ open: false, url: "" });
+  const [scrollProgressLocal, setScrollProgressLocal] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   const content = dbContent || TAB_CONTENT[tab];
   const kbSlug = TAB_KB_CATEGORY[tab];
+
+  // Track scroll progress through this tab's content
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    const handleScroll = () => {
+      const rect = container.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      // How much of the container has scrolled past the viewport top
+      const scrolled = Math.max(0, -rect.top + viewportH);
+      const total = container.scrollHeight;
+      if (total <= 0) return;
+      const pct = Math.min(1, scrolled / total);
+      setScrollProgressLocal(pct);
+      onScrollProgress?.(pct);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // initial check
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [onScrollProgress]);
 
   if (!content) {
     return (
@@ -2137,7 +2167,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
   const hasVideoBlock = visibleBlocks.some((s) => inferBlockType(s) === "video");
 
   return (
-    <div className="space-y-12">
+    <div ref={containerRef} className="space-y-12 relative">
       {/* Deep Dive link */}
       {kbSlug && (
         <div className="flex justify-end -mb-8">
@@ -2188,7 +2218,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
       {/* Backward compat: show prospectus_videos video below headline if no VIDEO block exists */}
       {!hasVideoBlock && videoUrl && (
         <div className="relative rounded-xl overflow-hidden group max-w-3xl mx-auto">
-          <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={false} />
+          <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={false} onVideoEnded={onVideoEnded} />
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
             <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Watch Demo</span>
           </div>
@@ -2514,6 +2544,27 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
         </section>
       )}
 
+      {/* Scroll progress bar + hint */}
+      {showScrollHint && (
+        <div className="sticky bottom-0 left-0 right-0 z-10 pointer-events-none">
+          <div className="h-1 bg-gray-200/30 dark:bg-white/10 rounded-full overflow-hidden max-w-3xl mx-auto">
+            <div
+              className="h-full bg-[#1e3a5f] transition-all duration-200 rounded-full"
+              style={{ width: `${Math.round((scrollProgressLocal ?? 0) * 100)}%` }}
+            />
+          </div>
+          {(scrollProgressLocal ?? 0) < 0.5 && (
+            <p className={cn(
+              "text-center text-xs mt-2 animate-pulse transition-colors duration-300",
+              dark ? "text-gray-500" : "text-gray-400"
+            )}>
+              <ChevronDown className="inline h-3 w-3 mr-1" />
+              Scroll to continue
+            </p>
+          )}
+        </div>
+      )}
+
       <DemoIframeModal
         open={demoModal.open}
         onOpenChange={(v) => setDemoModal((prev) => ({ ...prev, open: v }))}
@@ -2551,7 +2602,7 @@ export default function Prospectus() {
   const [unlockedUpTo, setUnlockedUpTo] = useState(0);
   const [justUnlocked, setJustUnlocked] = useState<number | null>(null);
   const [lockedTooltip, setLockedTooltip] = useState<string | null>(null);
-  const imageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   // Admin gating toggle
   const [gatingEnabled, setGatingEnabled] = useState(true);
@@ -2699,42 +2750,25 @@ export default function Prospectus() {
     }
   };
 
-  // Image fallback: start a 10-second timer when viewing a tab with only an image
-  // No-media: unlock immediately when navigating to a tab with no media
+  // Reset scroll progress when active tab changes
   useEffect(() => {
-    // Clear previous timer
-    if (imageTimerRef.current) {
-      clearTimeout(imageTimerRef.current);
-      imageTimerRef.current = null;
-    }
+    setScrollProgress(0);
+  }, [activeTab]);
 
-    // Super admin already unlocked, or gating disabled
+  // Scroll-based unlock: unlock next tab when user scrolls past 50% (for non-video tabs)
+  useEffect(() => {
     if (isSuperAdmin || !gatingEnabled) return;
-
     const currentIdx = visibleTabs.indexOf(activeTab);
-    // Only run gating logic if this tab is the frontier (the one we need to watch to unlock next)
     if (currentIdx !== unlockedUpTo || currentIdx >= visibleTabs.length - 1) return;
 
-    const mediaType = getMediaType(videoUrls[activeTab], imageUrls[activeTab]);
+    const hasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
+    // If tab has a video, unlock is handled by onVideoEnded — not scroll
+    if (hasVideo) return;
 
-    if (mediaType === "none") {
-      // No media at all — unlock next tab immediately
+    if (scrollProgress >= 0.5) {
       unlockNextTab();
-    } else if (mediaType === "image") {
-      // Image only — unlock after 10 seconds
-      imageTimerRef.current = setTimeout(() => {
-        unlockNextTab();
-      }, 10_000);
     }
-    // If video, user must watch to the end (handled by onVideoEnded callback)
-
-    return () => {
-      if (imageTimerRef.current) {
-        clearTimeout(imageTimerRef.current);
-        imageTimerRef.current = null;
-      }
-    };
-  }, [activeTab, unlockedUpTo, videoUrls, imageUrls, isSuperAdmin, gatingEnabled]);
+  }, [scrollProgress, activeTab, unlockedUpTo, videoUrls, imageUrls, isSuperAdmin, gatingEnabled]);
 
   // If active tab is hidden (and not super admin), redirect to first visible tab
   useEffect(() => {
@@ -2746,6 +2780,12 @@ export default function Prospectus() {
   if (!hasAccess) {
     return <AccessGate onAccess={() => setHasAccess(true)} />;
   }
+
+  // Gating helpers for tab content
+  const isFrontierTab = gatingEnabled && !isSuperAdmin && visibleTabs.indexOf(activeTab) === unlockedUpTo;
+  const activeHasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
+  const showScrollHint = isFrontierTab && !activeHasVideo;
+  const handleScrollProgress = (pct: number) => setScrollProgress(pct);
 
   const handleShare = async () => {
     try {
@@ -2969,7 +3009,7 @@ export default function Prospectus() {
                           : "bg-gray-800 text-white"
                       )}
                     >
-                      Watch the current video to unlock
+                      Complete the current tab to unlock
                       <div
                         className={cn(
                           "absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45",
@@ -2987,18 +3027,18 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} />}
-        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} />}
-        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} videoUrl={videoUrls["MilCrunch Experience"]} imageUrl={imageUrls["MilCrunch Experience"]} />}
-        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} />}
-        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} />}
-        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} />}
-        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} />}
-        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} />}
-        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} videoUrl={videoUrls["MilCrunch Experience"]} imageUrl={imageUrls["MilCrunch Experience"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Financial Model" && (
           <>
-            <ContentTab dark={darkMode} tab="Financial Model" dbContent={tabContent["Financial Model"]} videoUrl={videoUrls["Financial Model"]} imageUrl={imageUrls["Financial Model"]} />
+            <ContentTab dark={darkMode} tab="Financial Model" dbContent={tabContent["Financial Model"]} videoUrl={videoUrls["Financial Model"]} imageUrl={imageUrls["Financial Model"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />
             <FinancialModelTab dark={darkMode} />
           </>
         )}

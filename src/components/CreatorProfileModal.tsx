@@ -273,6 +273,7 @@ export default function CreatorProfileModal({
   const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
   const [postContentType, setPostContentType] = useState<"posts" | "reels">("posts");
+  const [brokenPostImages, setBrokenPostImages] = useState<Set<string>>(new Set());
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
   const { addCreatorToList, lists, createList, isCreatorInList } = useLists();
@@ -398,6 +399,7 @@ export default function CreatorProfileModal({
       setFetchingEmail(false);
       setFetchedEmail(null);
       setEmailNotFound(false);
+      setBrokenPostImages(new Set());
       return;
     }
     const rawHandle = creator.username;
@@ -1313,26 +1315,43 @@ export default function CreatorProfileModal({
       <SheetContent
         side="right"
         className={cn(
-          "w-full border-l border-border dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-0 sm:max-w-[90%]",
+          "w-full border-l border-border dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-0 sm:max-w-[95vw] lg:max-w-6xl",
           "flex flex-col overflow-hidden"
         )}
       >
-        {/* ── Top Stats Bar ── */}
-        <div className="flex items-center gap-3 px-6 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0">
-          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[#1e3a5f]/10">
-            {selectedPlatform === "tiktok" ? <TikTokIcon className="h-5 w-5 text-[#1e3a5f]" /> :
-             selectedPlatform === "youtube" ? <Youtube className="h-5 w-5 text-[#1e3a5f]" /> :
-             selectedPlatform === "twitter" ? <X className="h-5 w-5 text-[#1e3a5f]" /> :
-             selectedPlatform === "facebook" ? <Facebook className="h-5 w-5 text-[#1e3a5f]" /> :
-             <Instagram className="h-5 w-5 text-[#1e3a5f]" />}
-          </div>
-          <div>
-            <span className="text-sm font-bold text-[#1e3a5f]">{formatNumber(followers)}</span>
-            <span className="text-sm text-gray-500 ml-1">followers</span>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500">{formatPercent(engagement)} eng</span>
-          </div>
+        {/* ── Top Platform Bar ── */}
+        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0 overflow-x-auto">
+          {availablePlatforms.map((p) => {
+            const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
+            const platData = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : null;
+            const pFollowers = Number((platData as Record<string, unknown>)?.follower_count ?? (platData as Record<string, unknown>)?.subscriber_count ?? 0);
+            const pEngagement = Number((platData as Record<string, unknown>)?.engagement_percent ?? (platData as Record<string, unknown>)?.engagement_rate ?? 0);
+            const iconColor = p === "instagram" ? "text-pink-500" : p === "tiktok" ? "text-black dark:text-white" : p === "youtube" ? "text-red-600" : p === "twitter" ? "text-gray-900 dark:text-white" : p === "facebook" ? "text-blue-600" : "text-gray-500";
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setSelectedPlatform(p.toLowerCase())}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl border-2 px-4 py-2 transition-colors shrink-0",
+                  isActive ? "border-[#1e3a5f] bg-white dark:bg-[#1A1D27]" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] hover:border-gray-300"
+                )}
+              >
+                <div className={cn("shrink-0", iconColor)}>
+                  {p === "instagram" ? <Instagram className="h-5 w-5" /> :
+                   p === "tiktok" ? <TikTokIcon className="h-5 w-5" /> :
+                   p === "youtube" ? <Youtube className="h-5 w-5" /> :
+                   p === "twitter" ? <X className="h-5 w-5" /> :
+                   p === "facebook" ? <Facebook className="h-5 w-5" /> :
+                   <ExternalLink className="h-5 w-5" />}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{formatNumber(pFollowers)}</p>
+                  <p className="text-[11px] text-gray-500 leading-tight">{formatPercent(pEngagement)} eng</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex h-full flex-col md:flex-row overflow-hidden min-h-0">
@@ -1452,6 +1471,17 @@ export default function CreatorProfileModal({
             )}
             {/* CTA Buttons */}
             <div className="space-y-2">
+              {/* Branch badge */}
+              {detectedBranch && (
+                <div className="flex flex-wrap gap-1.5 mb-1">
+                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold", BRANCH_STYLES[detectedBranch] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400")}>
+                    {detectedBranch}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-0.5 text-[11px] font-semibold">
+                    Veteran
+                  </span>
+                </div>
+              )}
               {/* Add to List */}
               <div className="relative" ref={listDropdownRef}>
                 <Button
@@ -1552,6 +1582,163 @@ export default function CreatorProfileModal({
                 <Ban className="mr-2 h-4 w-4" />
                 Exclude from results
               </Button>
+
+              {/* Add to Directory */}
+              {!hideDirectoryActions && (
+                <div className="relative" ref={dirDropdownRef}>
+                  <Button
+                    variant="outline"
+                    className="w-full text-sm rounded-lg border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    disabled={approvingDir}
+                    onClick={() => { setDirDropdownOpen(!dirDropdownOpen); setListDropdownOpen(false); setEventDropdownOpen(false); }}
+                  >
+                    {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
+                    Add to Directory
+                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                  {dirDropdownOpen && (
+                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                      {directoriesList.length === 0 ? (
+                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No directories yet</div>
+                      ) : (
+                        directoriesList.map((dir) => (
+                          <button
+                            key={dir.id}
+                            type="button"
+                            onClick={() => handleStandaloneApprove(dir.id)}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                              <FolderPlus className="h-3.5 w-3.5 text-blue-700 dark:text-blue-500" />
+                            </div>
+                            <span className="truncate flex-1">{dir.name}</span>
+                          </button>
+                        ))
+                      )}
+                      <div className="border-t border-gray-100 dark:border-gray-700">
+                        {showNewDirInput ? (
+                          <div className="flex items-center gap-1.5 p-2">
+                            <input
+                              type="text"
+                              value={newDirName}
+                              onChange={(e) => setNewDirName(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleInlineCreateDir()}
+                              placeholder="Directory name..."
+                              autoFocus
+                              className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                            />
+                            <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewDirInput(true)}
+                            className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Create New Directory
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Invite to Event */}
+              {!hideDirectoryActions && (
+                <div className="relative" ref={eventDropdownRef}>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                    disabled={invitingEvent}
+                    onClick={() => { setEventDropdownOpen(!eventDropdownOpen); setListDropdownOpen(false); setDirDropdownOpen(false); }}
+                  >
+                    {invitingEvent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarPlus className="mr-2 h-4 w-4" />}
+                    Invite to Event
+                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                  {eventDropdownOpen && (
+                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                      {eventsLoading ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        </div>
+                      ) : eventsList.length === 0 ? (
+                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No upcoming events</div>
+                      ) : (
+                        eventsList.map((evt) => (
+                          <button
+                            key={evt.id}
+                            type="button"
+                            onClick={() => handleInviteToEvent(evt.id, evt.title)}
+                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                              <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate font-medium">{evt.title}</p>
+                              <p className="text-[10px] text-gray-400">
+                                {new Date(evt.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Verify Military Status */}
+              {!hideDirectoryActions && (
+                <Button
+                  variant="outline"
+                  className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
+                  onClick={handleVerifyMilitary}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Verify Military Status
+                </Button>
+              )}
+
+              {/* Remove from Directory */}
+              {onRemoveFromDirectory && (
+                <Button
+                  variant="outline"
+                  className="w-full bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/40 rounded-lg"
+                  onClick={onRemoveFromDirectory}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Remove from Directory
+                </Button>
+              )}
+            </div>
+
+            {/* Contact / Email */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Contact</p>
+              {displayEmail ? (
+                <a href={`mailto:${displayEmail}`} className="flex items-center gap-1.5 text-sm text-[#0064B1] hover:underline">
+                  <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
+                </a>
+              ) : emailNotFound ? (
+                <p className="text-sm text-gray-500">No email found</p>
+              ) : fetchingEmail ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                  <span className="text-sm text-blue-600">Fetching...</span>
+                </div>
+              ) : creator?.username ? (
+                <button onClick={handleGetEmail} className="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium">
+                  <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500">&mdash;</p>
+              )}
             </div>
 
             {/* Cross-Platform Summary */}
@@ -1647,174 +1834,6 @@ export default function CreatorProfileModal({
               </div>
             </div>
 
-            {/* MilCrunch Actions */}
-            <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
-              {/* Branch badge */}
-              {detectedBranch && (
-                <div className="flex flex-wrap gap-1.5 mb-1">
-                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold", BRANCH_STYLES[detectedBranch] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400")}>
-                    {detectedBranch}
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-0.5 text-[11px] font-semibold">
-                    Veteran
-                  </span>
-                </div>
-              )}
-
-              {/* Add to Directory */}
-              {!hideDirectoryActions && (
-                <div className="relative" ref={dirDropdownRef}>
-                  <Button
-                    variant="outline"
-                    className="w-full text-sm rounded-lg border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    disabled={approvingDir}
-                    onClick={() => { setDirDropdownOpen(!dirDropdownOpen); setListDropdownOpen(false); setEventDropdownOpen(false); }}
-                  >
-                    {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
-                    Add to Directory
-                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                  {dirDropdownOpen && (
-                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
-                      {directoriesList.length === 0 ? (
-                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No directories yet</div>
-                      ) : (
-                        directoriesList.map((dir) => (
-                          <button
-                            key={dir.id}
-                            type="button"
-                            onClick={() => handleStandaloneApprove(dir.id)}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
-                          >
-                            <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                              <FolderPlus className="h-3.5 w-3.5 text-blue-700 dark:text-blue-500" />
-                            </div>
-                            <span className="truncate flex-1">{dir.name}</span>
-                          </button>
-                        ))
-                      )}
-                      <div className="border-t border-gray-100 dark:border-gray-700">
-                        {showNewDirInput ? (
-                          <div className="flex items-center gap-1.5 p-2">
-                            <input
-                              type="text"
-                              value={newDirName}
-                              onChange={(e) => setNewDirName(e.target.value)}
-                              onKeyDown={(e) => e.key === "Enter" && handleInlineCreateDir()}
-                              placeholder="Directory name..."
-                              autoFocus
-                              className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                            />
-                            <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
-                              <Plus className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setShowNewDirInput(true)}
-                            className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
-                          >
-                            <Plus className="h-4 w-4" />
-                            Create New Directory
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Invite to Event ── */}
-              {!hideDirectoryActions && (
-                <div className="relative" ref={eventDropdownRef}>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    disabled={invitingEvent}
-                    onClick={() => { setEventDropdownOpen(!eventDropdownOpen); setListDropdownOpen(false); setDirDropdownOpen(false); }}
-                  >
-                    {invitingEvent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarPlus className="mr-2 h-4 w-4" />}
-                    Invite to Event
-                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                  {eventDropdownOpen && (
-                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
-                      {eventsLoading ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                        </div>
-                      ) : eventsList.length === 0 ? (
-                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No upcoming events</div>
-                      ) : (
-                        eventsList.map((evt) => (
-                          <button
-                            key={evt.id}
-                            type="button"
-                            onClick={() => handleInviteToEvent(evt.id, evt.title)}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
-                          >
-                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                              <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="truncate font-medium">{evt.title}</p>
-                              <p className="text-[10px] text-gray-400">
-                                {new Date(evt.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                              </p>
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {onRemoveFromDirectory && (
-                <Button
-                  variant="outline"
-                  className="w-full bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/40 rounded-lg"
-                  onClick={onRemoveFromDirectory}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove from Directory
-                </Button>
-              )}
-              {!hideDirectoryActions && (
-                <Button
-                  variant="outline"
-                  className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
-                  onClick={handleVerifyMilitary}
-                >
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  Verify Military Status
-                </Button>
-              )}
-            </div>
-            {/* Contact / Email */}
-            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Contact</p>
-              {displayEmail ? (
-                <a href={`mailto:${displayEmail}`} className="flex items-center gap-1.5 text-sm text-[#0064B1] hover:underline">
-                  <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
-                </a>
-              ) : emailNotFound ? (
-                <p className="text-sm text-gray-500">No email found</p>
-              ) : fetchingEmail ? (
-                <div className="flex items-center gap-1.5">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
-                  <span className="text-sm text-blue-600">Fetching...</span>
-                </div>
-              ) : creator?.username ? (
-                <button onClick={handleGetEmail} className="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium">
-                  <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
-                </button>
-              ) : (
-                <p className="text-sm text-gray-500">&mdash;</p>
-              )}
-            </div>
-
           </div>
           </ScrollArea>
 
@@ -1856,6 +1875,129 @@ export default function CreatorProfileModal({
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="analytics" className="mt-5 space-y-5">
+                      {/* Engagement Per Post */}
+                      {postEngagementData.length > 0 ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
+                          <p className="text-xs text-muted-foreground mb-3">Engagement rate for recent posts (likes + comments / followers)</p>
+                          <div className="h-36 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={postEngagementData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="post" tick={{ fontSize: 9 }} />
+                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v}%`} />
+                                <Tooltip formatter={(value: number) => [`${value.toFixed(2)}%`, "ER"]} />
+                                <Bar dataKey="er" fill="#1e3a5f" radius={[3, 3, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      ) : showEnrichmentLoading ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
+                          <Skeleton className="h-36 w-full animate-pulse" />
+                        </div>
+                      ) : null}
+
+                      {/* Key Metrics Grid */}
+                      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Key Metrics</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {showEnrichmentLoading && avgLikes === 0 && avgComments === 0 && avgViews === 0 ? (
+                            [1, 2, 3, 4].map((i) => (
+                              <div key={i} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
+                                <Skeleton className="h-6 w-12 mx-auto mb-1 animate-pulse" />
+                                <Skeleton className="h-3 w-16 mx-auto animate-pulse" />
+                              </div>
+                            ))
+                          ) : (
+                            [
+                              { label: "Avg Likes", value: avgLikes, fmt: formatNumber },
+                              { label: "Avg Comments", value: avgComments, fmt: formatNumber },
+                              { label: "Avg Views", value: avgViews, fmt: formatNumber },
+                              { label: statLabels.postsPerMonth, value: postsPerMonth, fmt: (v: number) => `${formatNumber(v)}/mo` },
+                            ].filter(({ value }) => value > 0).map(({ label, value, fmt }) => (
+                              <div key={label} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
+                                <p className="text-lg font-bold text-[#000741] dark:text-white">{fmt(value)}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {selectedPlatform === "instagram" && reelsPct > 0 && (
+                          <p className="text-xs text-muted-foreground mt-3">Reels make up {reelsPct}% of last 12 posts</p>
+                        )}
+                      </div>
+
+                      {/* Follower Growth Chart */}
+                      {growthData.length > 0 ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
+                          <div className="h-44 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={growthData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="period" tick={{ fontSize: 12 }} />
+                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`} />
+                                <Tooltip formatter={(value: number) => [`${value > 0 ? "+" : ""}${value.toFixed(2)}%`, "Growth"]} />
+                                <Bar dataKey="growth" radius={[4, 4, 0, 0]}>
+                                  {growthData.map((entry, i) => (
+                                    <Cell key={i} fill={entry.growth >= 0 ? "#22c55e" : "#ef4444"} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            @{displayUsername || "creator"} {(() => { const total = growthData.reduce((s, d) => s + d.growth, 0); return total >= 0 ? `grew by ${total.toFixed(1)}%` : `declined by ${Math.abs(total).toFixed(1)}%`; })()} in the last 12 months
+                          </p>
+                        </div>
+                      ) : showEnrichmentLoading ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
+                          <Skeleton className="h-44 w-full" />
+                        </div>
+                      ) : null}
+
+                      {/* Estimated Income */}
+                      {(incomeMin != null && incomeMax != null && (incomeMin > 0 || incomeMax > 0)) ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
+                            @{displayUsername || "handle"} generated between{" "}
+                            <span className="font-bold text-[#1e3a5f]">${formatNum(incomeMin)}</span> and{" "}
+                            <span className="font-bold text-[#1e3a5f]">${formatNum(incomeMax)}</span> in income in the last 90 days.
+                          </p>
+                        </div>
+                      ) : showEnrichmentLoading ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
+                          <Skeleton className="h-4 w-full max-w-md" />
+                        </div>
+                      ) : null}
+
+                      {/* Top Creator Hashtags */}
+                      {showEnrichmentLoading && platformHashtags.length === 0 && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Creator Hashtags</p>
+                          <div className="flex flex-wrap gap-2">
+                            {[80, 64, 72, 56, 48, 60].map((w, i) => (
+                              <Skeleton key={i} className="h-7 animate-pulse rounded-full" style={{ width: w }} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {platformHashtags.length > 0 && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Creator Hashtags</p>
+                          <div className="flex flex-wrap gap-2">
+                            {platformHashtags.map((tag: string) => (
+                              <span key={tag} className="inline-block rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Audience Reachability */}
                       {audienceReachability && audienceReachability.length > 0 && (
                         <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
