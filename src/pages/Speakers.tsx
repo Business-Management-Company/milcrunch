@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCreatorAvatar } from "@/lib/avatar";
+import { getCreatorAvatar, getAvatarFallback } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { MarkdownResponse } from "@/components/MarkdownResponse";
 import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
@@ -1057,10 +1057,22 @@ export default function Speakers() {
         <div className="flex items-center gap-4 flex-wrap">
           {/* Photo */}
           {photo ? (
-            <img src={photo} alt="" className="h-16 w-16 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700" />
+            <img
+              src={photo}
+              alt=""
+              className="h-16 w-16 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.style.display = "none";
+                const fallback = document.createElement("div");
+                fallback.className = "h-16 w-16 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-lg font-semibold text-[#1e3a5f]";
+                fallback.textContent = getAvatarFallback(speaker.name);
+                el.parentElement?.insertBefore(fallback, el);
+              }}
+            />
           ) : (
-            <div className="h-16 w-16 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center">
-              <Mic className="h-8 w-8 text-[#1e3a5f]" />
+            <div className="h-16 w-16 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-lg font-semibold text-[#1e3a5f]">
+              {getAvatarFallback(speaker.name)}
             </div>
           )}
 
@@ -1818,11 +1830,23 @@ export default function Speakers() {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        {(getCreatorAvatar(speaker) || speaker.photo_url) ? (
-                          <img src={(getCreatorAvatar(speaker) || speaker.photo_url)!} alt="" className="h-8 w-8 rounded-full object-cover" />
+                        {(speaker.photo_url || getCreatorAvatar(speaker)) ? (
+                          <img
+                            src={(speaker.photo_url || getCreatorAvatar(speaker))!}
+                            alt=""
+                            className="h-8 w-8 rounded-full object-cover"
+                            onError={(e) => {
+                              const el = e.currentTarget;
+                              el.style.display = "none";
+                              const fallback = document.createElement("div");
+                              fallback.className = "h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-xs font-semibold text-[#1e3a5f]";
+                              fallback.textContent = getAvatarFallback(speaker.name);
+                              el.parentElement?.insertBefore(fallback, el);
+                            }}
+                          />
                         ) : (
-                          <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center">
-                            <Mic className="h-4 w-4 text-[#1e3a5f]" />
+                          <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-xs font-semibold text-[#1e3a5f]">
+                            {getAvatarFallback(speaker.name)}
                           </div>
                         )}
                         <span>{speaker.name}</span>
