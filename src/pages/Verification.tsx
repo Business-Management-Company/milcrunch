@@ -512,6 +512,21 @@ export default function Verification() {
       });
     }
 
+    // Backfill profile_photo_url for real verifications from directory_members
+    const dmAvatarMap = new Map<string, string>();
+    for (const dm of (dmData ?? []) as { creator_handle: string; creator_name: string; ic_avatar_url: string | null; avatar_url: string | null }[]) {
+      const avatar = dm.ic_avatar_url || dm.avatar_url;
+      if (!avatar) continue;
+      if (dm.creator_handle) dmAvatarMap.set(dm.creator_handle.toLowerCase(), avatar);
+      if (dm.creator_name) dmAvatarMap.set(dm.creator_name.toLowerCase(), avatar);
+    }
+    for (const v of verifications) {
+      if (v.profile_photo_url) continue;
+      const byHandle = v.source_username ? dmAvatarMap.get(v.source_username.toLowerCase()) : null;
+      const byName = v.person_name ? dmAvatarMap.get(v.person_name.toLowerCase()) : null;
+      if (byHandle || byName) v.profile_photo_url = (byHandle || byName)!;
+    }
+
     // Combine: verifications first, then unverified creators
     setList([...verifications, ...syntheticFromDm]);
   };
