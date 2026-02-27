@@ -27,6 +27,7 @@ const TABS = [
   "Discovery",
   "Verification",
   "365 Insights",
+  "Social Media",
   "Streaming/Media",
   "Partnership Model",
   "Financial Model",
@@ -42,10 +43,31 @@ const TAB_LABELS: Record<TabId, string> = {
   "Discovery": "Discovery",
   "Verification": "Verification",
   "365 Insights": "365 Insights",
+  "Social Media": "Social Media",
   "Streaming/Media": "Streaming",
   "Partnership Model": "Partnership",
   "Financial Model": "Financials",
 };
+
+/**
+ * Mapping from display tab name → DB tab_name for tabs that differ.
+ * Most tabs use their display name as the DB key; entries here override that.
+ */
+const TAB_DB_NAMES: Partial<Record<TabId, string>> = {
+  "Social Media": "social-media",
+};
+/** Reverse lookup: DB tab_name → display tab name */
+const DB_NAME_TO_TAB: Record<string, TabId> = Object.fromEntries(
+  Object.entries(TAB_DB_NAMES).map(([display, db]) => [db, display as TabId])
+) as Record<string, TabId>;
+/** Convert display tab name to DB tab_name */
+function dbTabName(tab: string): string {
+  return TAB_DB_NAMES[tab as TabId] ?? tab;
+}
+/** Convert DB tab_name back to display tab name */
+function displayTabName(dbName: string): string {
+  return DB_NAME_TO_TAB[dbName] ?? dbName;
+}
 
 
 const SAAS_ROWS = [
@@ -63,6 +85,7 @@ const TAB_KB_CATEGORY: Record<string, string> = {
   "MilCrunch Experience": "events-pdx",
   "Discovery": "creator-network",
   "365 Insights": "365-insights",
+  "Social Media": "social-media",
   "Streaming/Media": "streaming-media",
   "Partnership Model": "sponsorship-revenue",
 };
@@ -496,7 +519,7 @@ function ManageContentPanel({
     if (!(await ensureSession())) return;
     setSaving(true);
     const rows = TABS.map((tab) => ({
-      tab_name: tab,
+      tab_name: dbTabName(tab),
       video_url: videoDraft[tab]?.trim() || null,
       image_url: imageDraft[tab]?.trim() || null,
       updated_at: new Date().toISOString(),
@@ -508,7 +531,7 @@ function ManageContentPanel({
       // and prevents duplicate rows from accumulating over time.
       await supabase.from("prospectus_videos").delete().in(
         "tab_name",
-        TABS as unknown as string[]
+        TABS.map(dbTabName)
       );
       const { data, error } = await supabase
         .from("prospectus_videos")
@@ -542,7 +565,7 @@ function ManageContentPanel({
     const baseUpserts = CONTENT_TABS.filter((tab) => contentDraft[tab]).map((tab) => {
       const c = contentDraft[tab];
       return {
-        tab_name: tab,
+        tab_name: dbTabName(tab),
         headline: c.headline || null,
         headline_accent: c.headlineAccent || null,
         description: c.description || null,
@@ -555,7 +578,7 @@ function ManageContentPanel({
     const visibilityMap: Record<string, { headline: boolean; headlineAccent: boolean; description: boolean; tab: boolean }> = {};
     CONTENT_TABS.filter((tab) => contentDraft[tab]).forEach((tab) => {
       const c = contentDraft[tab];
-      visibilityMap[tab] = {
+      visibilityMap[dbTabName(tab)] = {
         headline: c.headlineVisible !== false,
         headlineAccent: c.headlineAccentVisible !== false,
         description: c.descriptionVisible !== false,
@@ -1652,7 +1675,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             />
             {error && (
               <p className="text-red-400 text-sm mt-2">
-                This email isn't on the approved list. Contact andrew@recurrentx.com to request access.
+                This email isn't on the approved list. Contact hello@milcrunch.com to request access.
               </p>
             )}
           </div>
@@ -1669,8 +1692,8 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 
         <p className="text-gray-600 text-xs mt-6">
           Contact{" "}
-          <a href="mailto:andrew@recurrentx.com" className="text-[#1e3a5f] hover:underline">
-            andrew@recurrentx.com
+          <a href="mailto:hello@milcrunch.com" className="text-[#1e3a5f] hover:underline">
+            hello@milcrunch.com
           </a>{" "}
           to request access.
         </p>
@@ -1934,6 +1957,28 @@ const TAB_CONTENT: Record<string, TabContent> = {
     bottomNote: {
       heading: "Data-Driven Decisions",
       text: "Know which creators are trending, which niches are growing, and where to invest your marketing budget before competitors do.",
+    },
+  },
+  "Social Media": {
+    headline: "Amplify Your Reach Across",
+    headlineAccent: "Every Platform",
+    description:
+      "MilCrunch gives military creators and brands the tools to manage, schedule, and measure social media content across every major platform \u2014 all from one command center.",
+    sections: [
+      {
+        heading: "Key Features",
+        items: [
+          "Multi-Platform Publishing \u2014 Schedule and post to Instagram, TikTok, YouTube, X, Facebook, and LinkedIn from one dashboard",
+          "Content Calendar \u2014 Visualize your posting cadence and plan campaigns weeks in advance",
+          "Performance Analytics \u2014 Track engagement, reach, and growth across all connected accounts",
+          "Creator Collaboration \u2014 Coordinate content drops with multiple creators for maximum impact",
+          "Brand-Safe Monitoring \u2014 Real-time alerts for mentions, sentiment shifts, and brand safety",
+        ],
+      },
+    ],
+    bottomNote: {
+      heading: "One Dashboard, Every Channel",
+      text: "Stop logging into five apps. MilCrunch centralizes your social media operations so your team spends less time switching tabs and more time building community.",
     },
   },
   "Streaming/Media": {
@@ -2498,11 +2543,12 @@ export default function Prospectus() {
         const iMap: ImageUrls = {};
         const seen = new Set<string>();
         for (const row of data as { tab_name: string; video_url: string | null; image_url: string | null }[]) {
+          const displayName = displayTabName(row.tab_name);
           // First (most recent) row per tab wins — skip older duplicates
-          if (seen.has(row.tab_name)) continue;
-          seen.add(row.tab_name);
-          if (row.video_url) vMap[row.tab_name] = row.video_url;
-          if (row.image_url) iMap[row.tab_name] = row.image_url;
+          if (seen.has(displayName)) continue;
+          seen.add(displayName);
+          if (row.video_url) vMap[displayName] = row.video_url;
+          if (row.image_url) iMap[displayName] = row.image_url;
         }
         setVideoUrls(vMap);
         setImageUrls(iMap);
@@ -2547,8 +2593,9 @@ export default function Prospectus() {
         const tabVis = row.tab_visible !== undefined && row.tab_visible !== null
           ? row.tab_visible
           : row.visibility?.tab;
-        if (tabVis === false) hidden.add(row.tab_name);
-        map[row.tab_name] = {
+        const tabDisplayName = displayTabName(row.tab_name);
+        if (tabVis === false) hidden.add(tabDisplayName);
+        map[tabDisplayName] = {
           headline: row.headline || "",
           headlineVisible: row.visibility?.headline === false ? false : undefined,
           headlineAccent: row.headline_accent || undefined,
@@ -2694,16 +2741,17 @@ export default function Prospectus() {
     // Persist to Supabase — update the visibility JSON for this tab
     try {
       // Fetch current row to merge visibility
+      const dbName = dbTabName(tab);
       const { data: existing } = await supabase
         .from("prospectus_tab_content")
         .select("visibility")
-        .eq("tab_name", tab)
+        .eq("tab_name", dbName)
         .maybeSingle();
       const vis = (existing?.visibility as Record<string, unknown>) || {};
       vis.tab = !nowHidden;
       await supabase
         .from("prospectus_tab_content")
-        .upsert({ tab_name: tab, visibility: vis, updated_at: new Date().toISOString() }, { onConflict: "tab_name" });
+        .upsert({ tab_name: dbName, visibility: vis, updated_at: new Date().toISOString() }, { onConflict: "tab_name" });
     } catch {
       // visibility column may not exist yet — persists locally this session
     }
@@ -2915,6 +2963,7 @@ export default function Prospectus() {
         {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} />}
         {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} />}
         {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} />}
+        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} />}
         {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} />}
         {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} />}
         {activeTab === "Financial Model" && (
