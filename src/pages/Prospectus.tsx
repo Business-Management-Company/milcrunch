@@ -359,7 +359,7 @@ function ManageContentPanel({
             descriptionVisible: src.descriptionVisible,
             sections: src.sections.map((s) => ({
               ...s,
-              items: [...s.items],
+              items: [...(s.items ?? [])],
             })),
             bottomNote: src.bottomNote
               ? { heading: src.bottomNote.heading, text: src.bottomNote.text }
@@ -1738,7 +1738,7 @@ interface SectionBlock {
   heading?: string;
   subheading?: string;
   description?: string;
-  items: string[];
+  items?: string[];
   image_url?: string;
   video_url?: string;
   media_url?: string;
