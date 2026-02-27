@@ -978,35 +978,32 @@ export default function Verification() {
   const handleSaveEdit = async () => {
     setEditCreatorSaving(true);
     try {
-      const isSynthetic = editForm.id.startsWith("dm_") || editForm.id.startsWith("li_");
       const statusChanged = editForm.verificationStatus !== editForm.originalStatus;
 
-      // 1. Update verifications table (only if real record)
-      if (!isSynthetic) {
-        const vPayload: Record<string, unknown> = {
-          person_name: editForm.name,
-          claimed_branch: editForm.branch || null,
-          claimed_status: editForm.category || null,
-          status: editForm.verificationStatus,
-          linkedin_url: editForm.linkedin || null,
-          website_url: editForm.website || null,
-          profile_photo_url: editForm.photoUrl || null,
-          notes: editForm.notes || null,
-          updated_at: new Date().toISOString(),
+      // 1. Update verifications table
+      const vPayload: Record<string, unknown> = {
+        person_name: editForm.name,
+        claimed_branch: editForm.branch || null,
+        claimed_status: editForm.category || null,
+        status: editForm.verificationStatus,
+        linkedin_url: editForm.linkedin || null,
+        website_url: editForm.website || null,
+        profile_photo_url: editForm.photoUrl || null,
+        notes: editForm.notes || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (statusChanged) {
+        vPayload.manual_status_override = true;
+        const existingMc = (list.find((r) => r.id === editForm.id)?.manual_checks as Record<string, unknown>) || {};
+        vPayload.manual_checks = {
+          ...existingMc,
+          manual_status_override: true,
+          override_date: new Date().toISOString(),
+          original_status: editForm.originalStatus,
         };
-        if (statusChanged) {
-          vPayload.manual_status_override = true;
-          const existingMc = (list.find((r) => r.id === editForm.id)?.manual_checks as Record<string, unknown>) || {};
-          vPayload.manual_checks = {
-            ...existingMc,
-            manual_status_override: true,
-            override_date: new Date().toISOString(),
-            original_status: editForm.originalStatus,
-          };
-        }
-        const { error: vErr } = await supabase.from("verifications").update(vPayload).eq("id", editForm.id);
-        if (vErr) throw vErr;
       }
+      const { error: vErr } = await supabase.from("verifications").update(vPayload).eq("id", editForm.id);
+      if (vErr) throw vErr;
 
       // 2. Update directory_members if linked by handle
       if (editForm.sourceUsername) {
@@ -1030,27 +1027,16 @@ export default function Verification() {
       }
 
       // 3. Update speakers table if linked
-      if (!isSynthetic) {
-        const { data: speakerRows } = await supabase.from("speakers")
-          .select("id").eq("verification_id", editForm.id).limit(1);
-        if (speakerRows && speakerRows.length > 0) {
-          await supabase.from("speakers").update({
-            name: editForm.name,
-            branch: editForm.branch || null,
-            bio: editForm.notes || null,
-            photo_url: editForm.photoUrl || null,
-            verification_status: editForm.verificationStatus,
-          } as Record<string, unknown>).eq("verification_id", editForm.id);
-        }
-      } else {
-        // For synthetic rows, try matching by name
-        const originalName = list.find((r) => r.id === editForm.id)?.person_name ?? editForm.name;
+      const { data: speakerRows } = await supabase.from("speakers")
+        .select("id").eq("verification_id", editForm.id).limit(1);
+      if (speakerRows && speakerRows.length > 0) {
         await supabase.from("speakers").update({
           name: editForm.name,
           branch: editForm.branch || null,
           bio: editForm.notes || null,
           photo_url: editForm.photoUrl || null,
-        } as Record<string, unknown>).eq("name", originalName);
+          verification_status: editForm.verificationStatus,
+        } as Record<string, unknown>).eq("verification_id", editForm.id);
       }
 
       toast.success("Creator updated successfully");
