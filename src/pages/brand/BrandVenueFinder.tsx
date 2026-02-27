@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -238,6 +239,7 @@ async function callConcierge(prompt: string): Promise<{
 export default function BrandVenueFinder() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
@@ -440,6 +442,34 @@ export default function BrandVenueFinder() {
       });
     }
   };
+
+  // ─── Auto-load saved search from URL ?search=UUID ─────────
+  const autoLoadedRef = useRef(false);
+  useEffect(() => {
+    if (autoLoadedRef.current || !user) return;
+    const searchId = searchParams.get("search");
+    if (!searchId) return;
+    autoLoadedRef.current = true;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("saved_venue_searches")
+        .select("*")
+        .eq("id", searchId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error || !data) {
+        console.warn("[VenueFinder] Could not load saved search from URL:", error?.message ?? "not found");
+        toast({ title: "Saved search not found", variant: "destructive" });
+        // Clean the URL param
+        setSearchParams({}, { replace: true });
+        return;
+      }
+      // Clean the URL param so refreshes don't re-trigger
+      setSearchParams({}, { replace: true });
+      handleLoadSearch(data as SavedVenueSearch);
+    })();
+  }, [user, searchParams]);
 
   const hasActiveFilters =
     searchTerm.trim() !== "" ||
