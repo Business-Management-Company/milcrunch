@@ -46,6 +46,8 @@ import {
   Ban,
   TrendingUp,
   ChevronRight,
+  MoreHorizontal,
+  Camera,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import {
@@ -53,6 +55,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 import { cn, safeImageUrl, goodAvatarCache } from "@/lib/utils";
@@ -63,11 +66,68 @@ import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage } from "@/lib/featured-creators";
 import CreateListModal from "@/components/CreateListModal";
 
-/** TikTok brand SVG icon (matches PlatformIcons.tsx) */
+/** TikTok branded SVG icon with teal/pink accent */
 function TikTokIcon({ className }: { className?: string }) {
   return (
+    <svg viewBox="0 0 24 24" className={className}>
+      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.75a8.18 8.18 0 004.77 1.52V6.82a4.84 4.84 0 01-1-.13z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Instagram gradient SVG icon */
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none">
+      <defs>
+        <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FEDA75" />
+          <stop offset="25%" stopColor="#FA7E1E" />
+          <stop offset="50%" stopColor="#D62976" />
+          <stop offset="75%" stopColor="#962FBF" />
+          <stop offset="100%" stopColor="#4F5BD5" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad)" strokeWidth="2" />
+      <circle cx="12" cy="12" r="5" stroke="url(#ig-grad)" strokeWidth="2" />
+      <circle cx="17.5" cy="6.5" r="1.5" fill="url(#ig-grad)" />
+    </svg>
+  );
+}
+
+/** YouTube red play button SVG icon */
+function YoutubeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className}>
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" fill="#FF0000" />
+      <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#FFF" />
+    </svg>
+  );
+}
+
+/** X (Twitter) black icon */
+function XIcon({ className }: { className?: string }) {
+  return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.75a8.18 8.18 0 004.77 1.52V6.82a4.84 4.84 0 01-1-.13z" />
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
+/** LinkedIn blue icon */
+function LinkedInIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className}>
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" fill="#0A66C2" />
+    </svg>
+  );
+}
+
+/** Facebook blue icon */
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className}>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2" />
     </svg>
   );
 }
@@ -80,6 +140,19 @@ const BRANCH_STYLES: Record<string, string> = {
   "Coast Guard": "bg-orange-600/10 text-orange-700 dark:bg-orange-600/20 dark:text-orange-400",
   "Space Force": "bg-indigo-600/10 text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-400",
 };
+
+/** Render the branded colored icon for a platform */
+function PlatformBrandIcon({ platform, className }: { platform: string; className?: string }) {
+  switch (platform) {
+    case "instagram": return <InstagramIcon className={className} />;
+    case "tiktok": return <TikTokIcon className={className} />;
+    case "youtube": return <YoutubeIcon className={className} />;
+    case "twitter": return <XIcon className={className} />;
+    case "facebook": return <FacebookIcon className={className} />;
+    case "linkedin": return <LinkedInIcon className={className} />;
+    default: return <ExternalLink className={cn(className, "text-gray-500")} />;
+  }
+}
 
 const PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "facebook", "twitter", "linkedin"];
 const PLATFORM_LABELS: Record<string, string> = {
@@ -1220,15 +1293,20 @@ export default function CreatorProfileModal({
   const filteredPosts = useMemo(() => {
     const raw = igRecord?.post_data;
     if (!Array.isArray(raw)) return [];
-    const mapped = (raw as Record<string, unknown>[]).map((item) => {
+    const mapped = (raw as Record<string, unknown>[]).map((item, idx) => {
       const media = item.media as unknown[] | undefined;
       const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
       const eng = item.engagement as Record<string, unknown> | undefined;
       const isCarousel = Array.isArray(media) && media.length > 1;
       const isReel = Boolean(item.is_reel ?? item.video_url ?? item.is_video);
+      // Try multiple image sources: media[0].url, thumbnail, image_url, display_url, media_url
+      const thumbnail = (firstMedia?.url ?? firstMedia?.thumbnail_url ?? item.thumbnail ?? item.image_url ?? item.display_url ?? item.media_url) as string | undefined;
+      if (idx < 3) {
+        console.log(`[PostImages] Post ${idx}:`, { thumbnail, mediaUrl: firstMedia?.url, itemThumbnail: item.thumbnail, imageUrl: item.image_url, displayUrl: item.display_url, mediaKeys: firstMedia ? Object.keys(firstMedia) : "no media", itemKeys: Object.keys(item).filter(k => k.includes("image") || k.includes("thumb") || k.includes("url") || k.includes("media") || k.includes("display")) });
+      }
       return {
         id: String(item.post_id ?? item.id ?? Math.random()),
-        thumbnail: (firstMedia?.url ?? item.thumbnail ?? item.image_url) as string | undefined,
+        thumbnail,
         caption: (item.caption as string) ?? undefined,
         likes: Number(eng?.likes ?? item.likes ?? 0),
         comments: Number(eng?.comments ?? item.comments ?? 0),
@@ -1315,7 +1393,7 @@ export default function CreatorProfileModal({
       <SheetContent
         side="right"
         className={cn(
-          "w-full border-l border-border dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-0 sm:max-w-[95vw] lg:max-w-6xl",
+          "w-full border-l border-border dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-0 sm:max-w-[90vw] lg:max-w-7xl",
           "flex flex-col overflow-hidden"
         )}
       >
@@ -1326,7 +1404,6 @@ export default function CreatorProfileModal({
             const platData = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : null;
             const pFollowers = Number((platData as Record<string, unknown>)?.follower_count ?? (platData as Record<string, unknown>)?.subscriber_count ?? 0);
             const pEngagement = Number((platData as Record<string, unknown>)?.engagement_percent ?? (platData as Record<string, unknown>)?.engagement_rate ?? 0);
-            const iconColor = p === "instagram" ? "text-pink-500" : p === "tiktok" ? "text-black dark:text-white" : p === "youtube" ? "text-red-600" : p === "twitter" ? "text-gray-900 dark:text-white" : p === "facebook" ? "text-blue-600" : "text-gray-500";
             return (
               <button
                 key={p}
@@ -1337,17 +1414,10 @@ export default function CreatorProfileModal({
                   isActive ? "border-[#1e3a5f] bg-white dark:bg-[#1A1D27]" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] hover:border-gray-300"
                 )}
               >
-                <div className={cn("shrink-0", iconColor)}>
-                  {p === "instagram" ? <Instagram className="h-5 w-5" /> :
-                   p === "tiktok" ? <TikTokIcon className="h-5 w-5" /> :
-                   p === "youtube" ? <Youtube className="h-5 w-5" /> :
-                   p === "twitter" ? <X className="h-5 w-5" /> :
-                   p === "facebook" ? <Facebook className="h-5 w-5" /> :
-                   <ExternalLink className="h-5 w-5" />}
-                </div>
+                <PlatformBrandIcon platform={p} className="h-5 w-5 shrink-0" />
                 <div className="text-left">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{formatNumber(pFollowers)}</p>
-                  <p className="text-[11px] text-gray-500 leading-tight">{formatPercent(pEngagement)} eng</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{pFollowers > 0 ? formatNumber(pFollowers) : PLATFORM_LABELS[p] ?? p}</p>
+                  <p className="text-[11px] text-green-600 leading-tight">{pEngagement > 0 ? `${formatPercent(pEngagement)} eng` : "—"}</p>
                 </div>
               </button>
             );
@@ -1356,7 +1426,7 @@ export default function CreatorProfileModal({
 
         <div className="flex h-full flex-col md:flex-row overflow-hidden min-h-0">
           {/* ── Left Sidebar ── */}
-          <ScrollArea className="w-full md:w-[300px] shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
+          <ScrollArea className="w-full md:w-[280px] shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
           <div className="p-5 space-y-4">
             {/* Avatar */}
             <div className="mx-auto h-24 w-24 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
@@ -1409,7 +1479,7 @@ export default function CreatorProfileModal({
 
             {/* Bio */}
             {bio && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 line-clamp-4 leading-relaxed">{bio}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 line-clamp-3 leading-relaxed">{bio}</p>
             )}
 
             {/* Info rows */}
@@ -1469,7 +1539,7 @@ export default function CreatorProfileModal({
                 </span>
               </div>
             )}
-            {/* CTA Buttons */}
+            {/* Action Buttons */}
             <div className="space-y-2">
               {/* Branch badge */}
               {detectedBranch && (
@@ -1482,239 +1552,240 @@ export default function CreatorProfileModal({
                   </span>
                 </div>
               )}
-              {/* Add to List */}
-              <div className="relative" ref={listDropdownRef}>
-                <Button
-                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg text-sm"
-                  disabled={!listCreator}
-                  onClick={() => {
-                    if (!listDropdownOpen && listCreator) {
-                      const alreadyIn = new Set<string>();
-                      for (const list of lists) {
-                        if (list.creators.some((c) => c.id === listCreator.id)) alreadyIn.add(list.id);
-                      }
-                      setSelectedListIds(alreadyIn);
-                    }
-                    setListDropdownOpen(!listDropdownOpen);
-                    setDirDropdownOpen(false);
-                    setEventDropdownOpen(false);
-                  }}
-                >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Add creator to a list
-                  <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                </Button>
-                {listDropdownOpen && (
-                  <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[260px] overflow-y-auto">
-                    {lists.length === 0 ? (
-                      <div className="py-3 px-3 text-xs text-gray-400 text-center">No lists yet</div>
-                    ) : (
-                      lists.map((list) => {
-                        const alreadyIn = listCreator ? list.creators.some((c) => c.id === listCreator.id) : false;
-                        const checked = selectedListIds.has(list.id);
-                        return (
-                          <label
-                            key={list.id}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors select-none"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setSelectedListIds((prev) => {
-                                  const next = new Set(prev);
-                                  if (next.has(list.id)) next.delete(list.id);
-                                  else next.add(list.id);
-                                  return next;
-                                });
-                              }}
-                              className="h-4 w-4 rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]/40 shrink-0"
-                            />
-                            <span className="truncate flex-1">{list.name}</span>
-                            {alreadyIn && <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />}
-                          </label>
-                        );
-                      })
-                    )}
-                    <div className="border-t border-gray-100 dark:border-gray-700">
-                      {showNewListInput ? (
-                        <div className="flex items-center gap-1.5 p-2">
-                          <input
-                            type="text"
-                            value={newListName}
-                            onChange={(e) => setNewListName(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleInlineCreateList()}
-                            placeholder="List name..."
-                            autoFocus
-                            className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
-                          />
-                          <button type="button" onClick={handleInlineCreateList} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setShowNewListInput(true)}
-                          className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Create New List
-                        </button>
-                      )}
-                    </div>
-                    <div className="border-t border-gray-100 dark:border-gray-700 p-2">
-                      <button
-                        type="button"
-                        disabled={selectedListIds.size === 0}
-                        onClick={handleConfirmAddToLists}
-                        className="w-full py-1.5 px-3 text-sm font-medium rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Confirm
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Exclude from results */}
-              <Button variant="outline" className="w-full rounded-lg text-sm border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50">
-                <Ban className="mr-2 h-4 w-4" />
-                Exclude from results
-              </Button>
-
-              {/* Add to Directory */}
-              {!hideDirectoryActions && (
-                <div className="relative" ref={dirDropdownRef}>
+              {/* Primary: Add to List + Three-dot menu */}
+              <div className="flex gap-2">
+                <div className="relative flex-1" ref={listDropdownRef}>
                   <Button
-                    variant="outline"
-                    className="w-full text-sm rounded-lg border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    disabled={approvingDir}
-                    onClick={() => { setDirDropdownOpen(!dirDropdownOpen); setListDropdownOpen(false); setEventDropdownOpen(false); }}
+                    className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg text-sm"
+                    disabled={!listCreator}
+                    onClick={() => {
+                      if (!listDropdownOpen && listCreator) {
+                        const alreadyIn = new Set<string>();
+                        for (const list of lists) {
+                          if (list.creators.some((c) => c.id === listCreator.id)) alreadyIn.add(list.id);
+                        }
+                        setSelectedListIds(alreadyIn);
+                      }
+                      setListDropdownOpen(!listDropdownOpen);
+                      setDirDropdownOpen(false);
+                      setEventDropdownOpen(false);
+                    }}
                   >
-                    {approvingDir ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
-                    Add to Directory
+                    <ListPlus className="mr-2 h-4 w-4" />
+                    Add to List
                     <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
                   </Button>
-                  {dirDropdownOpen && (
-                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
-                      {directoriesList.length === 0 ? (
-                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No directories yet</div>
+                  {listDropdownOpen && (
+                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[260px] overflow-y-auto">
+                      {lists.length === 0 ? (
+                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No lists yet</div>
                       ) : (
-                        directoriesList.map((dir) => (
-                          <button
-                            key={dir.id}
-                            type="button"
-                            onClick={() => handleStandaloneApprove(dir.id)}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
-                          >
-                            <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                              <FolderPlus className="h-3.5 w-3.5 text-blue-700 dark:text-blue-500" />
-                            </div>
-                            <span className="truncate flex-1">{dir.name}</span>
-                          </button>
-                        ))
+                        lists.map((list) => {
+                          const alreadyIn = listCreator ? list.creators.some((c) => c.id === listCreator.id) : false;
+                          const checked = selectedListIds.has(list.id);
+                          return (
+                            <label
+                              key={list.id}
+                              className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 transition-colors select-none"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => {
+                                  setSelectedListIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(list.id)) next.delete(list.id);
+                                    else next.add(list.id);
+                                    return next;
+                                  });
+                                }}
+                                className="h-4 w-4 rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]/40 shrink-0"
+                              />
+                              <span className="truncate flex-1">{list.name}</span>
+                              {alreadyIn && <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />}
+                            </label>
+                          );
+                        })
                       )}
                       <div className="border-t border-gray-100 dark:border-gray-700">
-                        {showNewDirInput ? (
+                        {showNewListInput ? (
                           <div className="flex items-center gap-1.5 p-2">
                             <input
                               type="text"
-                              value={newDirName}
-                              onChange={(e) => setNewDirName(e.target.value)}
-                              onKeyDown={(e) => e.key === "Enter" && handleInlineCreateDir()}
-                              placeholder="Directory name..."
+                              value={newListName}
+                              onChange={(e) => setNewListName(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleInlineCreateList()}
+                              placeholder="List name..."
                               autoFocus
                               className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
                             />
-                            <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
+                            <button type="button" onClick={handleInlineCreateList} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setShowNewDirInput(true)}
+                            onClick={() => setShowNewListInput(true)}
                             className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
                           >
                             <Plus className="h-4 w-4" />
-                            Create New Directory
+                            Create New List
                           </button>
                         )}
+                      </div>
+                      <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                        <button
+                          type="button"
+                          disabled={selectedListIds.size === 0}
+                          onClick={handleConfirmAddToLists}
+                          className="w-full py-1.5 px-3 text-sm font-medium rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Confirm
+                        </button>
                       </div>
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Invite to Event */}
-              {!hideDirectoryActions && (
-                <div className="relative" ref={eventDropdownRef}>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-                    disabled={invitingEvent}
-                    onClick={() => { setEventDropdownOpen(!eventDropdownOpen); setListDropdownOpen(false); setDirDropdownOpen(false); }}
-                  >
-                    {invitingEvent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarPlus className="mr-2 h-4 w-4" />}
-                    Invite to Event
-                    <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                  {eventDropdownOpen && (
-                    <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
-                      {eventsLoading ? (
-                        <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                        </div>
-                      ) : eventsList.length === 0 ? (
-                        <div className="py-3 px-3 text-xs text-gray-400 text-center">No upcoming events</div>
-                      ) : (
-                        eventsList.map((evt) => (
-                          <button
-                            key={evt.id}
-                            type="button"
-                            onClick={() => handleInviteToEvent(evt.id, evt.title)}
-                            className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
-                          >
-                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                              <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="truncate font-medium">{evt.title}</p>
-                              <p className="text-[10px] text-gray-400">
-                                {new Date(evt.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                              </p>
-                            </div>
+                {/* Three-dot action menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="shrink-0 h-9 w-9 rounded-lg border-gray-200 dark:border-gray-700">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
+                    {!hideDirectoryActions && (
+                      <DropdownMenuItem onClick={() => { setDirDropdownOpen(true); setListDropdownOpen(false); setEventDropdownOpen(false); }}>
+                        <FolderPlus className="mr-2 h-4 w-4 text-blue-600" />
+                        Add to Directory
+                      </DropdownMenuItem>
+                    )}
+                    {!hideDirectoryActions && (
+                      <DropdownMenuItem onClick={() => { setEventDropdownOpen(true); setListDropdownOpen(false); setDirDropdownOpen(false); }}>
+                        <CalendarPlus className="mr-2 h-4 w-4 text-blue-600" />
+                        Invite to Event
+                      </DropdownMenuItem>
+                    )}
+                    {!hideDirectoryActions && <DropdownMenuSeparator />}
+                    {!hideDirectoryActions && (
+                      <DropdownMenuItem onClick={handleVerifyMilitary}>
+                        <ShieldCheck className="mr-2 h-4 w-4 text-green-600" />
+                        Verify Military Status
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem>
+                      <Ban className="mr-2 h-4 w-4 text-gray-400" />
+                      Exclude from Results
+                    </DropdownMenuItem>
+                    {!displayEmail && !emailNotFound && !fetchingEmail && creator?.username && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleGetEmail}>
+                          <Mail className="mr-2 h-4 w-4 text-blue-600" />
+                          Get Email (1 credit)
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {onRemoveFromDirectory && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={onRemoveFromDirectory} className="text-red-600 focus:text-red-600">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove from Directory
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Directory dropdown (shows when triggered from menu) */}
+              {dirDropdownOpen && !hideDirectoryActions && (
+                <div className="relative" ref={dirDropdownRef}>
+                  <div className="bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                    {directoriesList.length === 0 ? (
+                      <div className="py-3 px-3 text-xs text-gray-400 text-center">No directories yet</div>
+                    ) : (
+                      directoriesList.map((dir) => (
+                        <button
+                          key={dir.id}
+                          type="button"
+                          onClick={() => handleStandaloneApprove(dir.id)}
+                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                            <FolderPlus className="h-3.5 w-3.5 text-blue-700 dark:text-blue-500" />
+                          </div>
+                          <span className="truncate flex-1">{dir.name}</span>
+                        </button>
+                      ))
+                    )}
+                    <div className="border-t border-gray-100 dark:border-gray-700">
+                      {showNewDirInput ? (
+                        <div className="flex items-center gap-1.5 p-2">
+                          <input
+                            type="text"
+                            value={newDirName}
+                            onChange={(e) => setNewDirName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleInlineCreateDir()}
+                            placeholder="Directory name..."
+                            autoFocus
+                            className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] focus:outline-none focus:ring-1 focus:ring-[#1e3a5f]/40"
+                          />
+                          <button type="button" onClick={handleInlineCreateDir} className="p-1.5 rounded-lg bg-[#1e3a5f] text-white hover:bg-[#2d5282]">
+                            <Plus className="h-3.5 w-3.5" />
                           </button>
-                        ))
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewDirInput(true)}
+                          className="w-full flex items-center gap-2 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-[#1e3a5f] font-medium text-left transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create New Directory
+                        </button>
                       )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 
-              {/* Verify Military Status */}
-              {!hideDirectoryActions && (
-                <Button
-                  variant="outline"
-                  className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
-                  onClick={handleVerifyMilitary}
-                >
-                  <ShieldCheck className="mr-2 h-4 w-4" />
-                  Verify Military Status
-                </Button>
-              )}
-
-              {/* Remove from Directory */}
-              {onRemoveFromDirectory && (
-                <Button
-                  variant="outline"
-                  className="w-full bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-950/40 rounded-lg"
-                  onClick={onRemoveFromDirectory}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Remove from Directory
-                </Button>
+              {/* Event dropdown (shows when triggered from menu) */}
+              {eventDropdownOpen && !hideDirectoryActions && (
+                <div className="relative" ref={eventDropdownRef}>
+                  <div className="bg-white dark:bg-[#1A1D27] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-[200px] overflow-y-auto">
+                    {eventsLoading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                      </div>
+                    ) : eventsList.length === 0 ? (
+                      <div className="py-3 px-3 text-xs text-gray-400 text-center">No upcoming events</div>
+                    ) : (
+                      eventsList.map((evt) => (
+                        <button
+                          key={evt.id}
+                          type="button"
+                          onClick={() => handleInviteToEvent(evt.id, evt.title)}
+                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                            <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate font-medium">{evt.title}</p>
+                            <p className="text-[10px] text-gray-400">
+                              {new Date(evt.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -1792,17 +1863,11 @@ export default function CreatorProfileModal({
                       onClick={() => setSelectedPlatform(p.toLowerCase())}
                       className={cn(
                         "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                        isActive ? "bg-[#1e3a5f] text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-[#1e3a5f]/20"
+                        isActive ? "bg-[#1e3a5f]/10 ring-2 ring-[#1e3a5f]" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                       )}
                       title={PLATFORM_LABELS[p.toLowerCase()] ?? p}
                     >
-                      {(p === "instagram" && <Instagram className="h-4 w-4" />) ||
-                        (p === "tiktok" && <TikTokIcon className="h-4 w-4" />) ||
-                        (p === "youtube" && <Youtube className="h-4 w-4" />) ||
-                        (p === "facebook" && <Facebook className="h-4 w-4" />) ||
-                        (p === "twitter" && <X className="h-4 w-4" />) || (
-                          <ExternalLink className="h-4 w-4" />
-                        )}
+                      <PlatformBrandIcon platform={p} className="h-4 w-4" />
                     </button>
                   );
                 })}
@@ -2176,10 +2241,11 @@ export default function CreatorProfileModal({
                             >
                               <div className="relative">
                                 {post.thumbnail && !brokenPostImages.has(post.id) ? (
-                                  <img src={post.thumbnail} alt="" loading="lazy" className="w-full aspect-square object-cover" onError={() => setBrokenPostImages(prev => new Set(prev).add(post.id))} />
+                                  <img src={post.thumbnail} alt="" loading="lazy" className="w-full aspect-square object-cover" onError={() => { console.log("[PostImages] Image failed to load:", post.thumbnail); setBrokenPostImages(prev => new Set(prev).add(post.id)); }} />
                                 ) : (
-                                  <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                    <Image className="h-8 w-8 text-gray-300" />
+                                  <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-1">
+                                    <Camera className="h-6 w-6 text-gray-300" />
+                                    <span className="text-[10px] text-gray-400">No preview</span>
                                   </div>
                                 )}
                                 {post.isCarousel && (
