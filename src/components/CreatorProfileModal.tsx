@@ -40,6 +40,12 @@ import {
   Music,
   Check,
   Mail,
+  MapPin,
+  Globe,
+  Briefcase,
+  Ban,
+  TrendingUp,
+  ChevronRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import {
@@ -266,6 +272,7 @@ export default function CreatorProfileModal({
   const [error, setError] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
+  const [postContentType, setPostContentType] = useState<"posts" | "reels">("posts");
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
   const { addCreatorToList, lists, createList, isCreatorInList } = useLists();
@@ -1091,6 +1098,148 @@ export default function CreatorProfileModal({
     }));
   }, [resultTop.lookalikes]);
 
+  // ── Audience data hooks (only populated when FULL enrichment data available) ──
+
+  const audienceGender = useMemo(() => {
+    const raw = igRecord?.audience_gender ?? igRecord?.audience_genders ?? igRecord?.gender_split;
+    if (!raw) return null;
+    if (typeof raw === "object" && !Array.isArray(raw)) {
+      const obj = raw as Record<string, number>;
+      const male = Number(obj.male ?? obj.MALE ?? 0);
+      const female = Number(obj.female ?? obj.FEMALE ?? 0);
+      if (male === 0 && female === 0) return null;
+      return { male, female };
+    }
+    if (Array.isArray(raw)) {
+      let male = 0, female = 0;
+      for (const item of raw) {
+        const o = item as Record<string, unknown>;
+        const code = String(o.code ?? o.gender ?? o.name ?? "").toLowerCase();
+        const weight = Number(o.weight ?? o.value ?? o.percentage ?? 0);
+        const pct = weight > 1 ? weight : weight * 100;
+        if (code === "male") male = pct;
+        if (code === "female") female = pct;
+      }
+      if (male === 0 && female === 0) return null;
+      return { male, female };
+    }
+    return null;
+  }, [igRecord]);
+
+  const audienceAge = useMemo(() => {
+    const raw = igRecord?.audience_age ?? igRecord?.audience_ages ?? igRecord?.age_split;
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: Record<string, unknown>) => ({
+      bracket: String(item.code ?? item.range ?? item.age_range ?? item.name ?? ""),
+      percentage: (() => {
+        const w = Number(item.weight ?? item.value ?? item.percentage ?? 0);
+        return w > 1 ? w : w * 100;
+      })(),
+    })).filter((a: { bracket: string; percentage: number }) => a.bracket && a.percentage > 0)
+      .sort((a: { percentage: number }, b: { percentage: number }) => b.percentage - a.percentage);
+  }, [igRecord]);
+
+  const audienceReachability = useMemo(() => {
+    const raw = igRecord?.audience_reachability ?? igRecord?.audience_reach;
+    if (!Array.isArray(raw)) return [];
+    return raw.map((item: Record<string, unknown>) => ({
+      label: String(item.code ?? item.name ?? item.label ?? ""),
+      percentage: (() => {
+        const w = Number(item.weight ?? item.value ?? item.percentage ?? 0);
+        return w > 1 ? w : w * 100;
+      })(),
+    })).filter((a: { label: string; percentage: number }) => a.label && a.percentage > 0);
+  }, [igRecord]);
+
+  const audienceLanguages = useMemo(() => {
+    const raw = igRecord?.audience_languages ?? igRecord?.audience_language;
+    if (!Array.isArray(raw)) return [];
+    return raw.slice(0, 8).map((item: Record<string, unknown>) => ({
+      language: String(item.code ?? item.name ?? item.language ?? ""),
+      percentage: (() => {
+        const w = Number(item.weight ?? item.value ?? item.percentage ?? 0);
+        return w > 1 ? w : w * 100;
+      })(),
+    })).filter((a: { language: string; percentage: number }) => a.language && a.percentage > 0)
+      .sort((a: { percentage: number }, b: { percentage: number }) => b.percentage - a.percentage);
+  }, [igRecord]);
+
+  const audienceCredibility = useMemo(() => {
+    const raw = igRecord?.audience_credibility ?? igRecord?.credibility_score ?? igRecord?.audience_quality;
+    if (raw == null) return null;
+    const score = Number(raw);
+    if (!isFinite(score)) return null;
+    const level = score >= 70 ? "High" : score >= 40 ? "Medium" : "Low";
+    return { score, level };
+  }, [igRecord]);
+
+  const audienceBrandAffinity = useMemo(() => {
+    const raw = igRecord?.audience_brand_affinity ?? igRecord?.brand_affinity;
+    if (!Array.isArray(raw)) return [];
+    return raw.slice(0, 10).map((item: Record<string, unknown>) => ({
+      name: String(item.name ?? item.brand ?? item.label ?? ""),
+      percentage: (() => {
+        const w = Number(item.weight ?? item.value ?? item.percentage ?? 0);
+        return w > 1 ? w : w * 100;
+      })(),
+    })).filter((a: { name: string; percentage: number }) => a.name && a.percentage > 0);
+  }, [igRecord]);
+
+  const audienceInterests = useMemo(() => {
+    const raw = igRecord?.audience_interests ?? igRecord?.interests;
+    if (!Array.isArray(raw)) return [];
+    return raw.slice(0, 12).map((item: unknown) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") return String((item as Record<string, unknown>).name ?? (item as Record<string, unknown>).label ?? (item as Record<string, unknown>).interest ?? "");
+      return "";
+    }).filter(Boolean);
+  }, [igRecord]);
+
+  const crossPlatformSummary = useMemo(() => {
+    const platformStats: { platform: string; followers: number; engagement: number }[] = [];
+    if (igRecord) {
+      platformStats.push({ platform: "Instagram", followers: Number(igRecord.follower_count ?? 0), engagement: Number(igRecord.engagement_percent ?? igRecord.engagement_rate ?? 0) });
+    }
+    if (tiktokData) {
+      platformStats.push({ platform: "TikTok", followers: Number(tiktokData.follower_count ?? 0), engagement: Number(tiktokData.engagement_percent ?? 0) });
+    }
+    if (youtubeData) {
+      platformStats.push({ platform: "YouTube", followers: Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0), engagement: Number(youtubeData.engagement_percent ?? 0) });
+    }
+    if (twitterData) {
+      platformStats.push({ platform: "X", followers: Number(twitterData.follower_count ?? 0), engagement: Number(twitterData.engagement_percent ?? 0) });
+    }
+    const totalReach = platformStats.reduce((s, p) => s + p.followers, 0);
+    const mostEngaged = platformStats.length > 0 ? platformStats.reduce((best, p) => p.engagement > best.engagement ? p : best) : null;
+    const avgEngagement = platformStats.length > 0 ? platformStats.reduce((s, p) => s + p.engagement, 0) / platformStats.length : 0;
+    return { totalReach, mostEngaged, avgEngagement, platforms: platformStats };
+  }, [igRecord, tiktokData, youtubeData, twitterData]);
+
+  const filteredPosts = useMemo(() => {
+    const raw = igRecord?.post_data;
+    if (!Array.isArray(raw)) return [];
+    const mapped = (raw as Record<string, unknown>[]).map((item) => {
+      const media = item.media as unknown[] | undefined;
+      const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
+      const eng = item.engagement as Record<string, unknown> | undefined;
+      const isCarousel = Array.isArray(media) && media.length > 1;
+      const isReel = Boolean(item.is_reel ?? item.video_url ?? item.is_video);
+      return {
+        id: String(item.post_id ?? item.id ?? Math.random()),
+        thumbnail: (firstMedia?.url ?? item.thumbnail ?? item.image_url) as string | undefined,
+        caption: (item.caption as string) ?? undefined,
+        likes: Number(eng?.likes ?? item.likes ?? 0),
+        comments: Number(eng?.comments ?? item.comments ?? 0),
+        date: (item.created_at as string) ?? undefined,
+        permalink: (item.post_url as string) ?? undefined,
+        isCarousel,
+        isReel,
+      };
+    });
+    if (postContentType === "reels") return mapped.filter((p) => p.isReel);
+    return mapped;
+  }, [igRecord?.post_data, postContentType]);
+
   const platformLink = useMemo(() => {
     const u = displayUsername || creator?.username;
     if (!u) return null;
@@ -1135,6 +1284,11 @@ export default function CreatorProfileModal({
       } else {
         setEmailNotFound(true);
       }
+      // Merge FULL enrichment data so audience demographics populate
+      if (data) {
+        setEnriched(data);
+        setEnrichmentSource("api");
+      }
       if (user?.id) {
         logCreditUsage(user.id, "full_enrichment", 1.03, { handle: creator.username, source: "profile_modal" });
       }
@@ -1159,14 +1313,34 @@ export default function CreatorProfileModal({
       <SheetContent
         side="right"
         className={cn(
-          "w-full border-l border-border dark:border-gray-800 bg-card dark:bg-[#1A1D27] p-0 sm:max-w-[90%]",
+          "w-full border-l border-border dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-0 sm:max-w-[90%]",
           "flex flex-col overflow-hidden"
         )}
       >
-        <div className="flex h-full flex-col md:flex-row overflow-hidden">
-          {/* Left panel - fixed ~350px */}
-          <div className="flex w-full flex-col border-r border-border dark:border-gray-800 bg-white dark:bg-[#0F1117] p-6 md:w-[350px] shrink-0">
-            <div className="mx-auto mb-4 h-40 w-40 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
+        {/* ── Top Stats Bar ── */}
+        <div className="flex items-center gap-3 px-6 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0">
+          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[#1e3a5f]/10">
+            {selectedPlatform === "tiktok" ? <TikTokIcon className="h-5 w-5 text-[#1e3a5f]" /> :
+             selectedPlatform === "youtube" ? <Youtube className="h-5 w-5 text-[#1e3a5f]" /> :
+             selectedPlatform === "twitter" ? <X className="h-5 w-5 text-[#1e3a5f]" /> :
+             selectedPlatform === "facebook" ? <Facebook className="h-5 w-5 text-[#1e3a5f]" /> :
+             <Instagram className="h-5 w-5 text-[#1e3a5f]" />}
+          </div>
+          <div>
+            <span className="text-sm font-bold text-[#1e3a5f]">{formatNumber(followers)}</span>
+            <span className="text-sm text-gray-500 ml-1">followers</span>
+          </div>
+          <div>
+            <span className="text-sm text-gray-500">{formatPercent(engagement)} eng</span>
+          </div>
+        </div>
+
+        <div className="flex h-full flex-col md:flex-row overflow-hidden min-h-0">
+          {/* ── Left Sidebar ── */}
+          <ScrollArea className="w-full md:w-[300px] shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
+          <div className="p-5 space-y-4">
+            {/* Avatar */}
+            <div className="mx-auto h-24 w-24 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
               {modalAvatarSrc ? (
                 <img
                   src={modalAvatarSrc}
@@ -1192,56 +1366,96 @@ export default function CreatorProfileModal({
                 </div>
               )}
             </div>
-            <p className="text-lg font-bold text-center text-gray-900 dark:text-white">
-              {displayName}
-              {isVerified && (
-                <span className="ml-1.5 inline-flex items-center rounded-full bg-[#1e3a5f]/20 px-1.5 py-0.5 text-xs font-medium text-[#1e3a5f]">
-                  Verified
-                </span>
+            {/* Name + handle */}
+            <div className="text-center">
+              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                {displayName}
+                {isVerified && (
+                  <span className="ml-1.5 inline-flex items-center rounded-full bg-[#1e3a5f]/20 px-1.5 py-0.5 text-xs font-medium text-[#1e3a5f]">
+                    Verified
+                  </span>
+                )}
+              </p>
+              {displayUsername && (
+                <a
+                  href={platformLink ?? `https://instagram.com/${displayUsername}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#0064B1] hover:underline"
+                >
+                  @{displayUsername}
+                </a>
               )}
-            </p>
-            {displayUsername && (
-              <a
-                href={platformLink ?? `https://instagram.com/${displayUsername}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-center text-[#1e3a5f] hover:underline mb-2 block"
-              >
-                @{displayUsername}
-              </a>
-            )}
-            {/* Enrichment status badge */}
-            <div className="flex justify-center mb-2 flex-col items-center gap-1">
-              {showEnrichmentLoading && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400 animate-pulse">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Enriching… (0.03 credits)
-                </span>
-              )}
-              {enrichmentSource === "cache" && !showEnrichmentLoading && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                  <Check className="h-3 w-3" /> Cached
-                </span>
-              )}
-              {/* DEBUG: remove after fixing analytics */}
-              <span className="text-[9px] text-gray-400 font-mono">
-                src={enrichmentSource ?? "none"} ig={igRecord ? Object.keys(igRecord).length + "keys" : "none"} posts={Array.isArray(igRecord?.post_data) ? String((igRecord.post_data as unknown[]).length) : "0"} mc={String(mediaCount)} aL={String(Math.round(avgLikes))} aC={String(Math.round(avgComments))}
-              </span>
             </div>
-            {detectedBranch && (
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold", BRANCH_STYLES[detectedBranch] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400")}>
-                  {detectedBranch}
-                </span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-0.5 text-[11px] font-semibold">
-                  Veteran
+
+            {/* Bio */}
+            {bio && (
+              <p className="text-sm text-gray-400 dark:text-gray-500 line-clamp-4 leading-relaxed">{bio}</p>
+            )}
+
+            {/* Info rows */}
+            <div className="space-y-1.5">
+              {location && (
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+                  <span>{location}</span>
+                </div>
+              )}
+              {language && (
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <Globe className="h-4 w-4 text-gray-400 shrink-0" />
+                  <span>{language}</span>
+                </div>
+              )}
+              {category && (
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <Briefcase className="h-4 w-4 text-gray-400 shrink-0" />
+                  <span>{category}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Links Used */}
+            {(platformLinksFromEnrichment.links.length > 0 || platformLinksFromEnrichment.othersCount > 0) && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Links Used</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {platformLinksFromEnrichment.links.map(({ url }) => (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-[#1e3a5f] hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors truncate max-w-[200px]"
+                      title={url}
+                    >
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{url.replace(/^https?:\/\//, "").slice(0, 24)}...</span>
+                    </a>
+                  ))}
+                  {platformLinksFromEnrichment.othersCount > 0 && (
+                    <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-500">
+                      +{platformLinksFromEnrichment.othersCount} others
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Enrichment status */}
+            {showEnrichmentLoading && (
+              <div className="flex justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Enriching...
                 </span>
               </div>
             )}
+            {/* CTA Buttons */}
             <div className="space-y-2">
-              {/* ── Add to List ── */}
+              {/* Add to List */}
               <div className="relative" ref={listDropdownRef}>
                 <Button
-                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg"
+                  className="w-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white rounded-lg text-sm"
                   disabled={!listCreator}
                   onClick={() => {
                     if (!listDropdownOpen && listCreator) {
@@ -1256,8 +1470,8 @@ export default function CreatorProfileModal({
                     setEventDropdownOpen(false);
                   }}
                 >
-                  <ListPlus className="mr-2 h-4 w-4" />
-                  + Add to List
+                  <Mail className="mr-2 h-4 w-4" />
+                  Add creator to a list
                   <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
                 {listDropdownOpen && (
@@ -1333,12 +1547,126 @@ export default function CreatorProfileModal({
                 )}
               </div>
 
-              {/* ── Add to Directory ── */}
+              {/* Exclude from results */}
+              <Button variant="outline" className="w-full rounded-lg text-sm border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50">
+                <Ban className="mr-2 h-4 w-4" />
+                Exclude from results
+              </Button>
+            </div>
+
+            {/* Cross-Platform Summary */}
+            {crossPlatformSummary.totalReach > 0 && (
+              <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
+                <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Cross-Platform Summary</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/30">
+                      <Users className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Total Reach</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{formatNumber(crossPlatformSummary.totalReach)}</p>
+                    </div>
+                  </div>
+                  {crossPlatformSummary.mostEngaged && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                        <TrendingUp className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Most Engaged</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{crossPlatformSummary.mostEngaged.platform}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                      <BarChart3 className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Avg Engagement</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{formatPercent(crossPlatformSummary.avgEngagement)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Platforms row */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Platforms</p>
+              <div className="flex flex-wrap gap-2">
+                {availablePlatforms.map((p) => {
+                  const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setSelectedPlatform(p.toLowerCase())}
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                        isActive ? "bg-[#1e3a5f] text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-[#1e3a5f]/20"
+                      )}
+                      title={PLATFORM_LABELS[p.toLowerCase()] ?? p}
+                    >
+                      {(p === "instagram" && <Instagram className="h-4 w-4" />) ||
+                        (p === "tiktok" && <TikTokIcon className="h-4 w-4" />) ||
+                        (p === "youtube" && <Youtube className="h-4 w-4" />) ||
+                        (p === "facebook" && <Facebook className="h-4 w-4" />) ||
+                        (p === "twitter" && <X className="h-4 w-4" />) || (
+                          <ExternalLink className="h-4 w-4" />
+                        )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Detailed Stats */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+              <div className="space-y-0 text-[13px]">
+                {[
+                  { label: statLabels.followers, value: followers ? formatNumber(followers) : null },
+                  { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : null },
+                  { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : null },
+                  { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : null },
+                  { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : null },
+                  { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : null },
+                  { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : null },
+                  { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : null },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex justify-between items-center py-1.5">
+                    <span className="text-gray-500 dark:text-gray-400">{label}</span>
+                    {showEnrichmentLoading && !value ? (
+                      <Skeleton className="h-4 w-14 animate-pulse" />
+                    ) : (
+                      <span className={cn("font-semibold text-gray-900 dark:text-white", !value && "opacity-50")}>{value ?? "—"}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* MilCrunch Actions */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
+              {/* Branch badge */}
+              {detectedBranch && (
+                <div className="flex flex-wrap gap-1.5 mb-1">
+                  <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold", BRANCH_STYLES[detectedBranch] ?? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400")}>
+                    {detectedBranch}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-0.5 text-[11px] font-semibold">
+                    Veteran
+                  </span>
+                </div>
+              )}
+
+              {/* Add to Directory */}
               {!hideDirectoryActions && (
                 <div className="relative" ref={dirDropdownRef}>
                   <Button
                     variant="outline"
-                    className="w-full bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-500 border-blue-400 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 rounded-lg"
+                    className="w-full text-sm rounded-lg border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     disabled={approvingDir}
                     onClick={() => { setDirDropdownOpen(!dirDropdownOpen); setListDropdownOpen(false); setEventDropdownOpen(false); }}
                   >
@@ -1464,31 +1792,33 @@ export default function CreatorProfileModal({
                 </Button>
               )}
             </div>
-            <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
-            <div className="space-y-0 text-sm">
-              {[
-                { label: statLabels.followers, value: followers ? formatNumber(followers) : null },
-                { label: "Engagement Rate", value: engagement != null && engagement > 0 ? formatPercent(engagement) : null },
-                { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : null },
-                { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : null },
-                { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : null },
-                { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : null },
-                { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : null },
-                { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : null },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between items-center py-2">
-                  <span className="text-gray-600 dark:text-gray-400">{label}</span>
-                  {showEnrichmentLoading && !value ? (
-                    <Skeleton className="h-4 w-16 animate-pulse" />
-                  ) : (
-                    <span className={cn("font-semibold text-gray-900 dark:text-white transition-opacity duration-500", value ? "opacity-100" : "opacity-60")}>{value ?? "—"}</span>
-                  )}
+            {/* Contact / Email */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Contact</p>
+              {displayEmail ? (
+                <a href={`mailto:${displayEmail}`} className="flex items-center gap-1.5 text-sm text-[#0064B1] hover:underline">
+                  <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
+                </a>
+              ) : emailNotFound ? (
+                <p className="text-sm text-gray-500">No email found</p>
+              ) : fetchingEmail ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                  <span className="text-sm text-blue-600">Fetching...</span>
                 </div>
-              ))}
+              ) : creator?.username ? (
+                <button onClick={handleGetEmail} className="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium">
+                  <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500">&mdash;</p>
+              )}
             </div>
-          </div>
 
-          {/* Right panel - flex-1 scrollable */}
+          </div>
+          </ScrollArea>
+
+          {/* ── Right Panel ── */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {error && (
               <div className="p-4 text-sm text-destructive bg-destructive/10 border-b border-border shrink-0">
@@ -1497,239 +1827,151 @@ export default function CreatorProfileModal({
             )}
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-6">
-                {/* Platform tabs - pills with platform-specific colors and per-platform handles */}
-                <div className="flex flex-wrap gap-2">
-                  {availablePlatforms.map((p) => {
-                    const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
-                    const style = PLATFORM_PILL_STYLES[p.toLowerCase()];
-                    const label = PLATFORM_LABELS[p.toLowerCase()] ?? p;
-                    const handle = platformHandles.get(p.toLowerCase()) || displayUsername;
-                    const IconComp = style?.icon ?? Video;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setSelectedPlatform(p.toLowerCase())}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                          isActive
-                            ? (style?.active ?? "bg-[#1e3a5f] text-white")
-                            : (style?.inactive ?? "bg-gray-200 text-gray-600 hover:bg-gray-300")
-                        )}
-                      >
-                        <IconComp className="h-4 w-4" />
-                        {handle ? `@${handle}` : label}
-                      </button>
-                    );
-                  })}
-                </div>
-
                 {!hasDataForPlatform && !enrichmentLoading && (
                   <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border dark:border-gray-700 bg-muted/20 dark:bg-[#0F1117] p-4">
                     Data not available for this platform.
                   </p>
                 )}
 
-                {hasDataForPlatform ? (
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30 dark:bg-[#0F1117] p-4">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">{PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}</p>
-                    <div className="flex flex-wrap gap-6">
-                      <div>
-                        <p className="text-xs text-muted-foreground">{statLabels.followers}</p>
-                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(followers)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Engagement</p>
-                        <p className="text-lg font-bold text-[#000741] dark:text-white">{formatPercent(engagement)}</p>
-                      </div>
-                      {mediaCount > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">{statLabels.mediaCount}</p>
-                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(mediaCount)}</p>
-                        </div>
-                      )}
-                      {avgViews > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Avg Views</p>
-                          <p className="text-lg font-bold text-[#000741] dark:text-white">{formatNumber(avgViews)}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : showEnrichmentLoading ? (
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-muted/30 dark:bg-[#0F1117] p-4">
-                    <Skeleton className="h-3 w-20 mb-3 animate-pulse" />
-                    <div className="flex flex-wrap gap-6">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i}>
-                          <Skeleton className="h-3 w-14 mb-1.5 animate-pulse" />
-                          <Skeleton className="h-6 w-20 animate-pulse" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* Info grid - 3 columns in light gray/blue-50 card */}
-                <div className="rounded-xl bg-blue-50/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Bio</p>
-                      {showEnrichmentLoading && !bio ? (
-                        <div className="mt-1 space-y-1">
-                          <Skeleton className="h-3 w-full" />
-                          <Skeleton className="h-3 w-4/5" />
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-line">{bio || "—"}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Name</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{displayName}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Location</p>
-                      {showEnrichmentLoading && !location ? (
-                        <Skeleton className="h-4 w-32 mt-1" />
-                      ) : (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{location || "—"}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Language</p>
-                      {showEnrichmentLoading && !language ? (
-                        <Skeleton className="h-4 w-20 mt-1" />
-                      ) : (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{language || "—"}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Business Category</p>
-                      {showEnrichmentLoading && !category ? (
-                        <Skeleton className="h-4 w-24 mt-1" />
-                      ) : (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{category || "—"}</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">Email</p>
-                      {showEnrichmentLoading && !displayEmail ? (
-                        <Skeleton className="h-4 w-32 mt-1" />
-                      ) : displayEmail ? (
-                        <a href={`mailto:${displayEmail}`} className="text-sm text-[#1e3a5f] hover:underline mt-1 flex items-center gap-1">
-                          <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
-                        </a>
-                      ) : emailNotFound ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">No email found</p>
-                      ) : fetchingEmail ? (
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
-                          <span className="text-sm text-blue-600">Fetching email...</span>
-                        </div>
-                      ) : creator?.username ? (
-                        <button
-                          onClick={handleGetEmail}
-                          className="mt-1 inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium"
-                        >
-                          <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
-                        </button>
-                      ) : (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">&mdash;</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Platform Links - circular social icons, only for platforms creator has */}
-                <div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Platform Links</p>
-                  <div className="flex flex-wrap gap-3">
-                    {availablePlatforms.map((p) => {
-                      const href =
-                        p === "instagram"
-                          ? `https://instagram.com/${displayUsername}`
-                          : p === "tiktok"
-                            ? (tiktokData?.username ? `https://tiktok.com/@${tiktokData.username}` : `https://tiktok.com/@${displayUsername}`)
-                            : p === "youtube"
-                              ? (youtubeData?.custom_url ?? (youtubeData?.channel_id ? `https://youtube.com/channel/${youtubeData.channel_id}` : `https://youtube.com/@${displayUsername}`))
-                              : p === "twitter"
-                                ? `https://x.com/${(twitterData?.username as string) ?? displayUsername}`
-                                : p === "linkedin"
-                                  ? `https://linkedin.com/in/${displayUsername}`
-                                  : "#";
-                      return (
-                        <a
-                          key={p}
-                          href={href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-[#1e3a5f] hover:text-white transition-colors"
-                          title={PLATFORM_LABELS[p] ?? p}
-                        >
-                          {(p === "instagram" && <Instagram className="h-5 w-5" />) ||
-                            (p === "tiktok" && <TikTokIcon className="h-5 w-5" />) ||
-                            (p === "youtube" && <Youtube className="h-5 w-5" />) ||
-                            (p === "facebook" && <Facebook className="h-5 w-5" />) ||
-                            (p === "twitter" && <X className="h-5 w-5" />) || (
-                              <ExternalLink className="h-5 w-5" />
-                            )}
-                        </a>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Links Used - pill badges */}
-                {(platformLinksFromEnrichment.links.length > 0 || platformLinksFromEnrichment.othersCount > 0) && (
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Links Used</p>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {platformLinksFromEnrichment.links.map(({ url }) => (
-                        <a
-                          key={url}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 px-3 py-1 text-sm text-[#1e3a5f] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate max-w-[220px]"
-                          title={url}
-                        >
-                          <Link className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{url.replace(/^https?:\/\//, "").slice(0, 28)}…</span>
-                        </a>
-                      ))}
-                      {platformLinksFromEnrichment.othersCount > 0 && (
-                        <span className="rounded-full border border-gray-300 dark:border-gray-600 px-3 py-1 text-sm text-gray-600 dark:text-gray-400">
-                          + {platformLinksFromEnrichment.othersCount} others
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                  {/* Tab bar: Analytics | Posts | Similar Accounts */}
+                {/* Tab bar: Analytics | Posts | Similar Accounts */}
                   <Tabs defaultValue="analytics" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 gap-2 h-auto">
+                    <TabsList className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none p-0 h-auto">
                       <TabsTrigger
                         value="analytics"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#1e3a5f] data-[state=active]:text-white data-[state=active]:border-[#1e3a5f] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none text-gray-500 px-4 py-2.5 text-sm font-medium"
                       >
-                        <BarChart3 className="h-4 w-4" /> Analytics
+                        <BarChart3 className="h-4 w-4 mr-1.5" /> Analytics
                       </TabsTrigger>
                       <TabsTrigger
                         value="posts"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#1e3a5f] data-[state=active]:text-white data-[state=active]:border-[#1e3a5f] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none text-gray-500 px-4 py-2.5 text-sm font-medium"
                       >
-                        <Image className="h-4 w-4" /> Posts
+                        <Image className="h-4 w-4 mr-1.5" /> Posts
                       </TabsTrigger>
                       <TabsTrigger
                         value="similar"
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 data-[state=active]:bg-[#1e3a5f] data-[state=active]:text-white data-[state=active]:border-[#1e3a5f] text-gray-600 dark:text-gray-400 py-2.5"
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none text-gray-500 px-4 py-2.5 text-sm font-medium"
                       >
-                        <Users className="h-4 w-4" /> Similar Accounts
+                        <Users className="h-4 w-4 mr-1.5" /> Similar Accounts
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="analytics" className="mt-4 space-y-5">
+                    <TabsContent value="analytics" className="mt-5 space-y-5">
+                      {/* Audience Reachability */}
+                      {audienceReachability && audienceReachability.length > 0 && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Reachability</p>
+                          <div className="space-y-2">
+                            {audienceReachability.map((r) => (
+                              <div key={r.label} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500 w-24 shrink-0 truncate">{r.label}</span>
+                                <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                  <div className="h-full rounded-full bg-[#1e3a5f]" style={{ width: `${Math.min(r.percentage, 100)}%` }} />
+                                </div>
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{r.percentage.toFixed(1)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Audience Gender */}
+                      {audienceGender && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Gender</p>
+                          <div className="space-y-3">
+                            <div>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-gray-500">Male</span>
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">{audienceGender.male.toFixed(1)}%</span>
+                              </div>
+                              <div className="h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                <div className="h-full rounded-full bg-blue-500" style={{ width: `${audienceGender.male}%` }} />
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-gray-500">Female</span>
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">{audienceGender.female.toFixed(1)}%</span>
+                              </div>
+                              <div className="h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                <div className="h-full rounded-full bg-pink-500" style={{ width: `${audienceGender.female}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Audience Age & Languages */}
+                      {(audienceAge.length > 0 || audienceLanguages.length > 0) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          {audienceAge.length > 0 && (
+                            <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                              <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Age</p>
+                              <div className="space-y-2">
+                                {audienceAge.map((a) => (
+                                  <div key={a.bracket} className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-500 w-14 shrink-0">{a.bracket}</span>
+                                    <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                      <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.min(a.percentage, 100)}%` }} />
+                                    </div>
+                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{a.percentage.toFixed(1)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {audienceLanguages.length > 0 && (
+                            <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                              <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Languages</p>
+                              <div className="space-y-2">
+                                {audienceLanguages.map((l) => (
+                                  <div key={l.language} className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-500 w-20 shrink-0 truncate">{l.language}</span>
+                                    <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                      <div className="h-full rounded-full bg-teal-500" style={{ width: `${Math.min(l.percentage, 100)}%` }} />
+                                    </div>
+                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{l.percentage.toFixed(1)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Audience Credibility */}
+                      {audienceCredibility && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Credibility</p>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                              <div className={cn("h-full rounded-full", audienceCredibility.level === "High" ? "bg-green-500" : audienceCredibility.level === "Medium" ? "bg-yellow-500" : "bg-red-500")} style={{ width: `${Math.min(audienceCredibility.score, 100)}%` }} />
+                            </div>
+                            <span className={cn("text-xs font-semibold rounded-full px-2 py-0.5", audienceCredibility.level === "High" ? "bg-green-100 text-green-700" : audienceCredibility.level === "Medium" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700")}>
+                              {audienceCredibility.score.toFixed(0)}% &mdash; {audienceCredibility.level}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Audience Brand Affinity */}
+                      {audienceBrandAffinity.length > 0 && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Brand Affinity</p>
+                          <div className="space-y-2">
+                            {audienceBrandAffinity.map((b) => (
+                              <div key={b.name} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500 w-28 shrink-0 truncate">{b.name}</span>
+                                <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                  <div className="h-full rounded-full bg-purple-500" style={{ width: `${Math.min(b.percentage, 100)}%` }} />
+                                </div>
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{b.percentage.toFixed(1)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Follower Growth Chart */}
                       {growthData.length > 0 ? (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
@@ -1829,94 +2071,125 @@ export default function CreatorProfileModal({
                         </div>
                       ) : null}
 
-                      {/* Hashtag Cloud */}
+                      {/* Top Creator Hashtags */}
                       {showEnrichmentLoading && platformHashtags.length === 0 && (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Hashtags</p>
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Creator Hashtags</p>
                           <div className="flex flex-wrap gap-2">
                             {[80, 64, 72, 56, 48, 60].map((w, i) => (
-                              <Skeleton key={i} className="h-8 animate-pulse rounded-lg" style={{ width: w }} />
+                              <Skeleton key={i} className="h-7 animate-pulse rounded-full" style={{ width: w }} />
                             ))}
                           </div>
                         </div>
                       )}
                       {platformHashtags.length > 0 && (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Hashtags</p>
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Creator Hashtags</p>
                           <div className="flex flex-wrap gap-2">
-                            {platformHashtags.map((tag: string, i: number) => {
-                              const sizes = ["text-lg", "text-base", "text-base", "text-sm", "text-sm", "text-sm", "text-xs", "text-xs", "text-xs", "text-xs"];
-                              const opacities = [1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55];
-                              return (
-                                <span
-                                  key={tag}
-                                  className={cn(
-                                    "inline-block rounded-lg bg-[#1e3a5f]/10 px-3 py-1.5 font-medium text-[#1e3a5f] transition-colors hover:bg-[#1e3a5f]/20",
-                                    sizes[i] ?? "text-xs"
-                                  )}
-                                  style={{ opacity: opacities[i] ?? 0.55 }}
-                                >
-                                  #{tag}
-                                </span>
-                              );
-                            })}
+                            {platformHashtags.map((tag: string) => (
+                              <span key={tag} className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Audience Interests */}
+                      {audienceInterests.length > 0 && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Audience Interests</p>
+                          <div className="flex flex-wrap gap-2">
+                            {audienceInterests.map((interest) => (
+                              <span key={interest} className="inline-block rounded-full bg-blue-50 dark:bg-blue-900/20 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-400">
+                                {interest}
+                              </span>
+                            ))}
                           </div>
                         </div>
                       )}
                     </TabsContent>
-                    <TabsContent value="posts" className="mt-4">
-                      {recentPosts.length === 0 && showEnrichmentLoading ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <TabsContent value="posts" className="mt-5">
+                      {/* Posts / Reels toggle */}
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">Latest Creator Posts</p>
+                        <div className="flex rounded-full border border-gray-200 dark:border-gray-700 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setPostContentType("posts")}
+                            className={cn("px-3 py-1 text-xs font-medium transition-colors", postContentType === "posts" ? "bg-[#1e3a5f] text-white" : "text-gray-500 hover:bg-gray-50")}
+                          >
+                            Posts
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPostContentType("reels")}
+                            className={cn("px-3 py-1 text-xs font-medium transition-colors", postContentType === "reels" ? "bg-[#1e3a5f] text-white" : "text-gray-500 hover:bg-gray-50")}
+                          >
+                            Reels
+                          </button>
+                        </div>
+                      </div>
+
+                      {filteredPosts.length === 0 && showEnrichmentLoading ? (
+                        <div className="grid grid-cols-3 gap-3">
                           {[1, 2, 3, 4, 5, 6].map((i) => (
-                            <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-muted/30 dark:bg-[#0F1117]">
+                            <div key={i} className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117]">
                               <Skeleton className="w-full aspect-square animate-pulse" />
-                              <div className="p-2 space-y-1.5">
+                              <div className="p-2.5 space-y-1.5">
                                 <Skeleton className="h-3 w-full animate-pulse" />
                                 <Skeleton className="h-3 w-2/3 animate-pulse" />
                               </div>
                             </div>
                           ))}
                         </div>
-                      ) : recentPosts.length === 0 ? (
+                      ) : filteredPosts.length === 0 ? (
                         <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border dark:border-gray-700 bg-muted/20 dark:bg-[#0F1117] p-4">
-                          No post data available.
+                          No {postContentType} data available.
                         </p>
                       ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {recentPosts.map((post) => (
+                        <div className="grid grid-cols-3 gap-3">
+                          {filteredPosts.map((post) => (
                             <a
                               key={post.id}
                               href={post.permalink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-muted/30 dark:bg-[#0F1117] hover:shadow-md transition-shadow"
+                              className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117] hover:shadow-md transition-shadow group"
                             >
-                              {post.thumbnail ? (
-                                <img src={post.thumbnail} alt="" className="w-full aspect-square object-cover" />
-                              ) : (
-                                <div className="w-full aspect-square bg-muted flex items-center justify-center">
-                                  <Image className="h-8 w-8 text-muted-foreground" />
-                                </div>
-                              )}
-                              <div className="p-2">
-                                <p className="text-xs text-muted-foreground line-clamp-2">{post.caption || "—"}</p>
-                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <div className="relative">
+                                {post.thumbnail ? (
+                                  <img src={post.thumbnail} alt="" loading="lazy" className="w-full aspect-square object-cover" />
+                                ) : (
+                                  <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                    <Image className="h-8 w-8 text-gray-300" />
+                                  </div>
+                                )}
+                                {post.isCarousel && (
+                                  <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1">
+                                    <ChevronRight className="h-3 w-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2.5">
+                                {post.date && <p className="text-[10px] text-gray-400 mb-0.5">{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>}
+                                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{post.caption || "—"}</p>
+                                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
                                   <span>{formatNumber(post.likes)} likes</span>
                                   <span>{formatNumber(post.comments)} comments</span>
                                 </div>
-                                {post.date && <p className="text-xs text-muted-foreground mt-0.5">{post.date}</p>}
                               </div>
                             </a>
                           ))}
                         </div>
                       )}
                     </TabsContent>
-                    <TabsContent value="similar" className="mt-4">
+                    <TabsContent value="similar" className="mt-5">
                       {similarAccounts.length === 0 && showEnrichmentLoading ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-3">
                           {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4">
-                              <Skeleton className="h-12 w-12 rounded-full shrink-0 animate-pulse" />
+                            <div key={i} className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                              <Skeleton className="h-10 w-10 rounded-full shrink-0 animate-pulse" />
                               <div className="flex-1 space-y-1.5">
                                 <Skeleton className="h-4 w-24 animate-pulse" />
                                 <Skeleton className="h-3 w-32 animate-pulse" />
@@ -1926,34 +2199,38 @@ export default function CreatorProfileModal({
                         </div>
                       ) : similarAccounts.length === 0 ? (
                         <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border dark:border-gray-700 bg-muted/20 dark:bg-[#0F1117] p-4">
-                          No similar creators found.
+                          No similar accounts found.
                         </p>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="divide-y divide-gray-100 dark:divide-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] overflow-hidden">
                           {similarAccounts.map((acc) => (
-                            <a
+                            <div
                               key={acc.id ?? acc.username}
-                              href={acc.profile_url ?? (acc.username ? `https://instagram.com/${acc.username}` : "#")}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-4 hover:shadow-md transition-shadow"
+                              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                             >
                               {acc.avatar ? (
-                                <img src={acc.avatar} alt="" className="h-12 w-12 rounded-full object-cover shrink-0" />
+                                <img src={acc.avatar} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
                               ) : (
-                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center shrink-0">
-                                  <Users className="h-6 w-6 text-muted-foreground" />
+                                <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                                  <Users className="h-5 w-5 text-gray-400" />
                                 </div>
                               )}
                               <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-[#000741] dark:text-white truncate">@{acc.username ?? "—"}</p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">@{acc.username ?? "—"}</p>
+                                <p className="text-xs text-gray-500">
                                   {formatNumber(acc.followers ?? acc.follower_count)} followers
-                                  {acc.engagement_percent != null && acc.engagement_percent > 0 && ` · ${formatPercent(acc.engagement_percent)} engagement`}
+                                  {acc.engagement_percent != null && acc.engagement_percent > 0 && ` · ${formatPercent(acc.engagement_percent)} eng`}
                                 </p>
                               </div>
-                              <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-                            </a>
+                              <a
+                                href={acc.profile_url ?? (acc.username ? `https://instagram.com/${acc.username}` : "#")}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 text-xs font-medium text-[#1e3a5f] hover:underline"
+                              >
+                                View
+                              </a>
+                            </div>
                           ))}
                         </div>
                       )}
