@@ -813,9 +813,30 @@ export async function approveForDirectory(data: {
     columns: Object.keys(payload),
   });
 
-  const { error } = await supabase
+  // Check for existing row by handle (any directory) or name to prevent duplicates
+  const { data: existingByHandle } = await supabase
     .from("directory_members")
-    .upsert(payload, { onConflict: "directory_id,creator_handle", ignoreDuplicates: true });
+    .select("id, directory_id")
+    .eq("creator_handle", handle)
+    .limit(1)
+    .maybeSingle();
+
+  let error: { message: string; details?: string; hint?: string; code?: string } | null = null;
+
+  if (existingByHandle) {
+    // Update existing row instead of inserting duplicate
+    const { id: _id, ...updatePayload } = payload;
+    const { error: updateErr } = await supabase
+      .from("directory_members")
+      .update(updatePayload)
+      .eq("id", existingByHandle.id);
+    error = updateErr;
+  } else {
+    const { error: insertErr } = await supabase
+      .from("directory_members")
+      .insert(payload);
+    error = insertErr;
+  }
 
   if (error) {
     console.error("[approveForDirectory] UPSERT FAILED:", error.message, error.details, error.hint, error.code);
