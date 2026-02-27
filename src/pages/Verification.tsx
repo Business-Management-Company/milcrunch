@@ -1773,7 +1773,7 @@ export default function Verification() {
 
       {/* Edit Creator Modal */}
       <Dialog open={editCreatorOpen} onOpenChange={setEditCreatorOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-2xl w-full max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="flex items-center gap-2 text-lg"><Pencil className="h-5 w-5 text-[#1e3a5f]" /> Edit Creator</DialogTitle>
           </DialogHeader>
@@ -1785,7 +1785,7 @@ export default function Verification() {
               <div className="space-y-3">
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Name</Label>
-                  <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+                  <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="w-full truncate focus:text-clip" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1855,7 +1855,7 @@ export default function Verification() {
               <div className="space-y-3">
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bio</Label>
-                  <Textarea value={editForm.bio} onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Creator bio..." />
+                  <Textarea value={editForm.bio} onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))} rows={4} placeholder="Creator bio..." className="w-full min-h-[100px] break-words whitespace-pre-wrap" />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Photo URL</Label>
@@ -1863,7 +1863,7 @@ export default function Verification() {
                     {editForm.photoUrl && (
                       <img src={editForm.photoUrl} alt="" className="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                     )}
-                    <Input value={editForm.photoUrl} onChange={(e) => setEditForm((f) => ({ ...f, photoUrl: e.target.value }))} placeholder="https://..." className="flex-1" />
+                    <Input value={editForm.photoUrl} onChange={(e) => setEditForm((f) => ({ ...f, photoUrl: e.target.value }))} placeholder="https://..." className="flex-1 w-full truncate focus:text-clip" />
                   </div>
                 </div>
               </div>
@@ -1930,7 +1930,7 @@ export default function Verification() {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Internal</p>
               <div>
                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Internal Notes</Label>
-                <Textarea value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Internal notes..." />
+                <Textarea value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={4} placeholder="Internal notes..." className="w-full min-h-[100px] break-words whitespace-pre-wrap" />
               </div>
             </div>
           </div>
