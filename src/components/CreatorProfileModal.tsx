@@ -2043,41 +2043,39 @@ export default function CreatorProfileModal({
                         </div>
                       )}
 
-                      {/* Audience Age & Languages */}
-                      {(audienceAge.length > 0 || audienceLanguages.length > 0) && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                          {audienceAge.length > 0 && (
-                            <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
-                              <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Age</p>
-                              <div className="space-y-2">
-                                {audienceAge.map((a) => (
-                                  <div key={a.bracket} className="flex items-center gap-3">
-                                    <span className="text-xs text-gray-500 w-14 shrink-0">{a.bracket}</span>
-                                    <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                                      <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.min(a.percentage, 100)}%` }} />
-                                    </div>
-                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{a.percentage.toFixed(1)}%</span>
-                                  </div>
-                                ))}
+                      {/* Audience Age */}
+                      {audienceAge.length > 0 && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Age</p>
+                          <div className="space-y-2">
+                            {audienceAge.map((a) => (
+                              <div key={a.bracket} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500 w-14 shrink-0">{a.bracket}</span>
+                                <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                  <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.min(a.percentage, 100)}%` }} />
+                                </div>
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{a.percentage.toFixed(1)}%</span>
                               </div>
-                            </div>
-                          )}
-                          {audienceLanguages.length > 0 && (
-                            <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
-                              <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Languages</p>
-                              <div className="space-y-2">
-                                {audienceLanguages.map((l) => (
-                                  <div key={l.language} className="flex items-center gap-3">
-                                    <span className="text-xs text-gray-500 w-20 shrink-0 truncate">{l.language}</span>
-                                    <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                                      <div className="h-full rounded-full bg-teal-500" style={{ width: `${Math.min(l.percentage, 100)}%` }} />
-                                    </div>
-                                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{l.percentage.toFixed(1)}%</span>
-                                  </div>
-                                ))}
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Audience Languages */}
+                      {audienceLanguages.length > 0 && (
+                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Audience Languages</p>
+                          <div className="space-y-2">
+                            {audienceLanguages.map((l) => (
+                              <div key={l.language} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-500 w-20 shrink-0 truncate">{l.language}</span>
+                                <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                                  <div className="h-full rounded-full bg-teal-500" style={{ width: `${Math.min(l.percentage, 100)}%` }} />
+                                </div>
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{l.percentage.toFixed(1)}%</span>
                               </div>
-                            </div>
-                          )}
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -2109,129 +2107,6 @@ export default function CreatorProfileModal({
                                 </div>
                                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-10 text-right">{b.percentage.toFixed(1)}%</span>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Follower Growth Chart */}
-                      {growthData.length > 0 ? (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
-                          <div className="h-44 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={growthData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                                <XAxis dataKey="period" tick={{ fontSize: 12 }} />
-                                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`} />
-                                <Tooltip formatter={(value: number) => [`${value > 0 ? "+" : ""}${value.toFixed(2)}%`, "Growth"]} />
-                                <Bar dataKey="growth" radius={[4, 4, 0, 0]}>
-                                  {growthData.map((entry, i) => (
-                                    <Cell key={i} fill={entry.growth >= 0 ? "#22c55e" : "#ef4444"} />
-                                  ))}
-                                </Bar>
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                          {followerGrowth && (
-                            <p className="text-xs text-muted-foreground mt-2">{String(followerGrowth)}</p>
-                          )}
-                        </div>
-                      ) : showEnrichmentLoading ? (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
-                          <Skeleton className="h-44 w-full" />
-                        </div>
-                      ) : null}
-
-                      {/* Engagement Per Post */}
-                      {postEngagementData.length > 0 ? (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
-                          <p className="text-xs text-muted-foreground mb-3">Engagement rate for recent posts (likes + comments / followers)</p>
-                          <div className="h-36 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={postEngagementData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                                <XAxis dataKey="post" tick={{ fontSize: 9 }} />
-                                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v}%`} />
-                                <Tooltip formatter={(value: number) => [`${value.toFixed(2)}%`, "ER"]} />
-                                <Bar dataKey="er" fill="#1e3a5f" radius={[3, 3, 0, 0]} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
-                        </div>
-                      ) : showEnrichmentLoading ? (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
-                          <Skeleton className="h-36 w-full animate-pulse" />
-                        </div>
-                      ) : null}
-
-                      {/* Key Metrics Grid */}
-                      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Key Metrics</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {showEnrichmentLoading && avgLikes === 0 && avgComments === 0 && avgViews === 0 ? (
-                            [1, 2, 3, 4].map((i) => (
-                              <div key={i} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
-                                <Skeleton className="h-6 w-12 mx-auto mb-1 animate-pulse" />
-                                <Skeleton className="h-3 w-16 mx-auto animate-pulse" />
-                              </div>
-                            ))
-                          ) : (
-                            [
-                              { label: "Avg Likes", value: avgLikes, fmt: formatNumber },
-                              { label: "Avg Comments", value: avgComments, fmt: formatNumber },
-                              { label: "Avg Views", value: avgViews, fmt: formatNumber },
-                              { label: statLabels.postsPerMonth, value: postsPerMonth, fmt: (v: number) => `${formatNumber(v)}/mo` },
-                            ].filter(({ value }) => value > 0).map(({ label, value, fmt }) => (
-                              <div key={label} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
-                                <p className="text-lg font-bold text-[#000741] dark:text-white">{fmt(value)}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                        {selectedPlatform === "instagram" && reelsPct > 0 && (
-                          <p className="text-xs text-muted-foreground mt-3">Reels make up {reelsPct}% of last 12 posts</p>
-                        )}
-                      </div>
-
-                      {/* Estimated Income */}
-                      {(incomeMin != null && incomeMax != null && (incomeMin > 0 || incomeMax > 0)) ? (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">
-                            @{displayUsername || "handle"} generated between{" "}
-                            <span className="font-bold text-[#1e3a5f]">${formatNum(incomeMin)}</span> and{" "}
-                            <span className="font-bold text-[#1e3a5f]">${formatNum(incomeMax)}</span> in income in the last 90 days.
-                          </p>
-                        </div>
-                      ) : showEnrichmentLoading ? (
-                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
-                          <Skeleton className="h-4 w-full max-w-md" />
-                        </div>
-                      ) : null}
-
-                      {/* Top Creator Hashtags */}
-                      {showEnrichmentLoading && platformHashtags.length === 0 && (
-                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Creator Hashtags</p>
-                          <div className="flex flex-wrap gap-2">
-                            {[80, 64, 72, 56, 48, 60].map((w, i) => (
-                              <Skeleton key={i} className="h-7 animate-pulse rounded-full" style={{ width: w }} />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {platformHashtags.length > 0 && (
-                        <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Creator Hashtags</p>
-                          <div className="flex flex-wrap gap-2">
-                            {platformHashtags.map((tag: string) => (
-                              <span key={tag} className="inline-block rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
-                                #{tag}
-                              </span>
                             ))}
                           </div>
                         </div>
@@ -2300,8 +2175,8 @@ export default function CreatorProfileModal({
                               className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117] hover:shadow-md transition-shadow group"
                             >
                               <div className="relative">
-                                {post.thumbnail ? (
-                                  <img src={post.thumbnail} alt="" loading="lazy" className="w-full aspect-square object-cover" />
+                                {post.thumbnail && !brokenPostImages.has(post.id) ? (
+                                  <img src={post.thumbnail} alt="" loading="lazy" className="w-full aspect-square object-cover" onError={() => setBrokenPostImages(prev => new Set(prev).add(post.id))} />
                                 ) : (
                                   <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                                     <Image className="h-8 w-8 text-gray-300" />
@@ -2364,6 +2239,26 @@ export default function CreatorProfileModal({
                                   {acc.engagement_percent != null && acc.engagement_percent > 0 && ` · ${formatPercent(acc.engagement_percent)} eng`}
                                 </p>
                               </div>
+                              {onAddToList && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="shrink-0 h-7 px-2 text-xs rounded-lg border-gray-200 dark:border-gray-700"
+                                  onClick={() => onAddToList({
+                                    id: acc.id ?? acc.username ?? "",
+                                    name: acc.full_name ?? acc.username ?? "",
+                                    username: acc.username ?? "",
+                                    avatar: acc.avatar ?? "",
+                                    followers: acc.followers ?? acc.follower_count ?? 0,
+                                    engagementRate: acc.engagement_percent ?? 0,
+                                    platforms: [selectedPlatform || "instagram"],
+                                    bio: "",
+                                  })}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Add
+                                </Button>
+                              )}
                               <a
                                 href={acc.profile_url ?? (acc.username ? `https://instagram.com/${acc.username}` : "#")}
                                 target="_blank"
