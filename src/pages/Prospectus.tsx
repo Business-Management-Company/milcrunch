@@ -2217,15 +2217,8 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
 
       {/* Backward compat: show prospectus_videos video below headline if no VIDEO block exists */}
       {!hasVideoBlock && videoUrl && (
-        <div className="relative rounded-xl overflow-hidden group max-w-3xl mx-auto">
+        <div className="rounded-xl overflow-hidden max-w-3xl mx-auto">
           <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={false} onVideoEnded={onVideoEnded} />
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
-            <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Watch Demo</span>
-          </div>
-          {/* Mobile badge */}
-          <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
-            <Play className="h-4 w-4 text-white" />
-          </div>
         </div>
       )}
 
@@ -2385,22 +2378,20 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                       <iframe src={embed.embedUrl} title={section.heading || "Video"} className="w-full aspect-video" style={{ border: 0 }}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                     )}
-                    {section.demo_url ? (
+                    {section.demo_url && (
                       <div
                         className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
                         onClick={() => setDemoModal({ open: true, url: section.demo_url! })}
                       >
                         <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
                       </div>
-                    ) : (
-                      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
-                        <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Watch Demo</span>
+                    )}
+                    {/* Mobile badge — only for demo links */}
+                    {section.demo_url && (
+                      <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
+                        <Play className="h-4 w-4 text-white" />
                       </div>
                     )}
-                    {/* Mobile badge */}
-                    <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
-                      <Play className="h-4 w-4 text-white" />
-                    </div>
                   </div>
                 );
               })()}
@@ -2421,15 +2412,8 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                 </h3>
               )}
               {section.video_url && (
-                <div className="relative rounded-xl overflow-hidden group">
+                <div className="rounded-xl overflow-hidden">
                   <ProspectusMedia videoUrl={section.video_url} dark={dark} isSuperAdmin={false} />
-                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
-                    <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Watch Demo</span>
-                  </div>
-                  {/* Mobile badge */}
-                  <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
-                    <Play className="h-4 w-4 text-white" />
-                  </div>
                 </div>
               )}
             </section>
