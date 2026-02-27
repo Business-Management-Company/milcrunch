@@ -415,14 +415,16 @@ export default function Verification() {
     if (handles.length > 0 || names.length > 0) {
       const { data: dmData } = await supabase
         .from("directory_members")
-        .select("creator_handle, creator_name, ic_avatar_url, avatar_url");
+        .select("creator_handle, creator_name, profile_image_url, avatar_url, ic_avatar_url");
       if (dmData) {
         const dmAvatarMap = new Map<string, string>();
-        for (const dm of dmData as { creator_handle: string; creator_name: string; ic_avatar_url: string | null; avatar_url: string | null }[]) {
-          const avatar = dm.ic_avatar_url || dm.avatar_url;
+        for (const dm of dmData as { creator_handle: string; creator_name: string; profile_image_url: string | null; avatar_url: string | null; ic_avatar_url: string | null }[]) {
+          // Priority: profile_image_url → avatar_url → ic_avatar_url
+          const avatar = dm.profile_image_url || dm.avatar_url || dm.ic_avatar_url;
           if (!avatar) continue;
-          if (dm.creator_handle) dmAvatarMap.set(dm.creator_handle.toLowerCase(), avatar);
-          if (dm.creator_name) dmAvatarMap.set(dm.creator_name.toLowerCase(), avatar);
+          const clean = avatar.startsWith("http://") ? avatar.replace("http://", "https://") : avatar;
+          if (dm.creator_handle) dmAvatarMap.set(dm.creator_handle.toLowerCase(), clean);
+          if (dm.creator_name) dmAvatarMap.set(dm.creator_name.toLowerCase(), clean);
         }
         for (const v of verifications) {
           if (v.profile_photo_url) continue;

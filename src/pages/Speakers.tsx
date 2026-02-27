@@ -430,12 +430,14 @@ export default function Speakers() {
     if (handles.length > 0) {
       const { data: dmRows } = await supabase
         .from("directory_members")
-        .select("creator_handle, creator_name, ic_avatar_url, avatar_url, enrichment_data")
+        .select("creator_handle, creator_name, profile_image_url, avatar_url, ic_avatar_url, enrichment_data")
         .in("creator_handle", handles);
       if (dmRows) {
         for (const dm of dmRows) {
-          const url = dm.ic_avatar_url || dm.avatar_url;
-          const avatar = url && typeof url === "string" && url.startsWith("https://") ? url : null;
+          // Priority: profile_image_url → avatar_url → ic_avatar_url
+          const url = dm.profile_image_url || dm.avatar_url || dm.ic_avatar_url;
+          const clean = url && typeof url === "string" && url.startsWith("http://") ? url.replace("http://", "https://") : url;
+          const avatar = clean && typeof clean === "string" && clean.startsWith("https://") ? clean : null;
           // Extract bio from enrichment_data if available
           const ed = dm.enrichment_data as Record<string, unknown> | null;
           const igData = (ed?.result as Record<string, unknown>)?.instagram as Record<string, unknown> | undefined ?? ed?.instagram as Record<string, unknown> | undefined;
@@ -451,12 +453,14 @@ export default function Speakers() {
     if (unmatchedNames.length > 0) {
       const { data: dmByName } = await supabase
         .from("directory_members")
-        .select("creator_handle, creator_name, ic_avatar_url, avatar_url, enrichment_data")
+        .select("creator_handle, creator_name, profile_image_url, avatar_url, ic_avatar_url, enrichment_data")
         .in("creator_name", unmatchedNames);
       if (dmByName) {
         for (const dm of dmByName) {
-          const url = dm.ic_avatar_url || dm.avatar_url;
-          const avatar = url && typeof url === "string" && url.startsWith("https://") ? url : null;
+          // Priority: profile_image_url → avatar_url → ic_avatar_url
+          const url = dm.profile_image_url || dm.avatar_url || dm.ic_avatar_url;
+          const clean = url && typeof url === "string" && url.startsWith("http://") ? url.replace("http://", "https://") : url;
+          const avatar = clean && typeof clean === "string" && clean.startsWith("https://") ? clean : null;
           const ed = dm.enrichment_data as Record<string, unknown> | null;
           const igData = (ed?.result as Record<string, unknown>)?.instagram as Record<string, unknown> | undefined ?? ed?.instagram as Record<string, unknown> | undefined;
           const bio = (igData?.biography ?? igData?.bio) as string | undefined;
@@ -1057,19 +1061,18 @@ export default function Speakers() {
         <div className="flex items-center gap-4 flex-wrap">
           {/* Photo */}
           {photo ? (
-            <img
-              src={photo}
-              alt=""
-              className="h-16 w-16 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-              onError={(e) => {
-                const el = e.currentTarget;
-                el.style.display = "none";
-                const fallback = document.createElement("div");
-                fallback.className = "h-16 w-16 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-lg font-semibold text-[#1e3a5f]";
-                fallback.textContent = getAvatarFallback(speaker.name);
-                el.parentElement?.insertBefore(fallback, el);
-              }}
-            />
+            <>
+              <img
+                src={photo}
+                alt=""
+                className="h-16 w-16 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                referrerPolicy="no-referrer"
+                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.removeAttribute('style'); }}
+              />
+              <div className="h-16 w-16 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-lg font-semibold text-[#1e3a5f]" style={{ display: 'none' }}>
+                {getAvatarFallback(speaker.name)}
+              </div>
+            </>
           ) : (
             <div className="h-16 w-16 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-lg font-semibold text-[#1e3a5f]">
               {getAvatarFallback(speaker.name)}
@@ -1830,25 +1833,27 @@ export default function Speakers() {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        {(speaker.photo_url || getCreatorAvatar(speaker)) ? (
-                          <img
-                            src={(speaker.photo_url || getCreatorAvatar(speaker))!}
-                            alt=""
-                            className="h-8 w-8 rounded-full object-cover"
-                            onError={(e) => {
-                              const el = e.currentTarget;
-                              el.style.display = "none";
-                              const fallback = document.createElement("div");
-                              fallback.className = "h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-xs font-semibold text-[#1e3a5f]";
-                              fallback.textContent = getAvatarFallback(speaker.name);
-                              el.parentElement?.insertBefore(fallback, el);
-                            }}
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center text-xs font-semibold text-[#1e3a5f]">
-                            {getAvatarFallback(speaker.name)}
-                          </div>
-                        )}
+                        {(() => {
+                          const src = speaker.photo_url || getCreatorAvatar(speaker);
+                          return src ? (
+                            <>
+                              <img
+                                src={src}
+                                alt=""
+                                className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.removeAttribute('style'); }}
+                              />
+                              <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-[#1e3a5f]" style={{ display: 'none' }}>
+                                {getAvatarFallback(speaker.name)}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-[#1e3a5f]/10 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-[#1e3a5f]">
+                              {getAvatarFallback(speaker.name)}
+                            </div>
+                          );
+                        })()}
                         <span>{speaker.name}</span>
                         {speaker.verification_status === "verified" && (
                           <ShieldCheck className="h-4 w-4 text-blue-700 shrink-0" />

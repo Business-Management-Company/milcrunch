@@ -1,23 +1,33 @@
 /**
+ * Sanitise a candidate URL: accept https:// and upgrade http:// to https://.
+ * Returns null for anything else (empty, data-uri, blob, etc.).
+ */
+function sanitiseUrl(url: unknown): string | null {
+  if (!url || typeof url !== 'string') return null;
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('http://')) return url.replace('http://', 'https://');
+  return null;
+}
+
+/**
  * Resolve the best avatar URL from a creator-like object.
- * Works with any shape: directory_members, creator_profiles, verifications, speakers, etc.
- * Returns the first non-empty HTTPS URL, or null.
+ *
+ * Priority (matches the directory_members image fields):
+ *   profile_image_url → avatar_url → ic_avatar_url
+ *
+ * Additional fallbacks for speaker / verification shapes:
+ *   photo_url → profile_photo_url → profile_photo
  */
 export function getCreatorAvatar(creator: any): string | null {
-  const url = (
-    creator?.ic_avatar_url
-    || creator?.avatar_url
-    || creator?.profile_image_url
-    || creator?.profile_photo
-    || creator?.photo_url
-    || creator?.profile_photo_url
-    || null
+  return (
+    sanitiseUrl(creator?.profile_image_url)
+    ?? sanitiseUrl(creator?.avatar_url)
+    ?? sanitiseUrl(creator?.ic_avatar_url)
+    ?? sanitiseUrl(creator?.photo_url)
+    ?? sanitiseUrl(creator?.profile_photo_url)
+    ?? sanitiseUrl(creator?.profile_photo)
+    ?? null
   );
-  if (!url) return null;
-  if (typeof url === 'string' && url.startsWith('https://')) return url;
-  // Accept http:// URLs too (e.g. CloudFront) — upgrade to https
-  if (typeof url === 'string' && url.startsWith('http://')) return url.replace('http://', 'https://');
-  return null;
 }
 
 /** First letter of name, uppercased. Returns '?' if name is empty. */
