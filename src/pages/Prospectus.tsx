@@ -2546,7 +2546,6 @@ export default function Prospectus() {
   const [hiddenTabs, setHiddenTabs] = useState<Set<string>>(new Set());
   const visibleTabs = TABS.filter((t) => !hiddenTabs.has(t));
   const [manageOpen, setManageOpen] = useState(false);
-  const [exploreDemoOpen, setExploreDemoOpen] = useState(false);
 
   // Tab gating: track which tabs are unlocked (by index). Index 0 always unlocked.
   const [unlockedUpTo, setUnlockedUpTo] = useState(0);
@@ -2872,15 +2871,6 @@ export default function Prospectus() {
               ))}
             </div>
 
-            {/* Explore Demo */}
-            <button
-              type="button"
-              onClick={() => setExploreDemoOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e3a5f] hover:bg-[#2d5282] text-white transition-all duration-300"
-            >
-              🎯 Explore Demo
-            </button>
-
             {/* Share button */}
             <button
               type="button"
@@ -3050,14 +3040,6 @@ export default function Prospectus() {
           onToggleTabVisible={handleToggleTabVisible}
         />
       )}
-
-      {/* Explore Demo iframe modal */}
-      <DemoIframeModal
-        open={exploreDemoOpen}
-        onOpenChange={setExploreDemoOpen}
-        url="/summary?demo=true&embed=true"
-        title="MilCrunch Demo"
-      />
 
       {/* Unlock pulse animation */}
       <style>{`
