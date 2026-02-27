@@ -23,7 +23,7 @@ const THEME_KEY = "prospectus_theme";
 const TABS = [
   "Overview",
   "Events & Attendee App",
-  "MilCrunch Experience",
+  "Event Venues",
   "Discovery",
   "Verification",
   "365 Insights",
@@ -39,7 +39,7 @@ type TabId = (typeof TABS)[number];
 const TAB_LABELS: Record<TabId, string> = {
   "Overview": "Overview",
   "Events & Attendee App": "Events & App",
-  "MilCrunch Experience": "Experience",
+  "Event Venues": "Event Venues",
   "Discovery": "Discovery",
   "Verification": "Verification",
   "365 Insights": "365 Insights",
@@ -54,6 +54,7 @@ const TAB_LABELS: Record<TabId, string> = {
  * Most tabs use their display name as the DB key; entries here override that.
  */
 const TAB_DB_NAMES: Partial<Record<TabId, string>> = {
+  "Event Venues": "event-venues",
   "Social Media": "social-media",
 };
 /** Reverse lookup: DB tab_name → display tab name */
@@ -82,7 +83,7 @@ const SAAS_ROWS = [
 
 const TAB_KB_CATEGORY: Record<string, string> = {
   "Events & Attendee App": "events-pdx",
-  "MilCrunch Experience": "events-pdx",
+  "Event Venues": "events-pdx",
   "Discovery": "creator-network",
   "365 Insights": "365-insights",
   "Social Media": "social-media",
@@ -1887,7 +1888,7 @@ const TAB_CONTENT: Record<string, TabContent> = {
       text: "None of which share data, none of which understand the military community, and none of which give you a unified picture of ROI. MilCrunch replaces all of it. One login, one platform, one source of truth.",
     },
   },
-  "MilCrunch Experience": {
+  "Event Venues": {
     headline: "From the Team That Built the",
     headlineAccent: "Parade Deck Experience",
     description:
@@ -3013,7 +3014,7 @@ export default function Prospectus() {
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
         {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "MilCrunch Experience" && <ContentTab dark={darkMode} tab="MilCrunch Experience" dbContent={tabContent["MilCrunch Experience"]} videoUrl={videoUrls["MilCrunch Experience"]} imageUrl={imageUrls["MilCrunch Experience"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
