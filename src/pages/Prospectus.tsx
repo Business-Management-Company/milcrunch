@@ -1311,8 +1311,8 @@ function ManageContentPanel({
                                 </div>
                                 <div>
                                   <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Items (one per line)</label>
-                                  <textarea value={section.items.join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
-                                    rows={Math.max(3, section.items.length + 1)} className={cn(inputCls, "text-xs")} />
+                                  <textarea value={(section.items ?? []).join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
+                                    rows={Math.max(3, (section.items ?? []).length + 1)} className={cn(inputCls, "text-xs")} />
                                 </div>
                               </>
                             )}
@@ -1534,8 +1534,8 @@ function ManageContentPanel({
                                   <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>
                                     Items (one per line, format: <span className="font-mono">number | label</span>)
                                   </label>
-                                  <textarea value={section.items.join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
-                                    rows={Math.max(3, section.items.length + 1)} placeholder={"310M+ | Creator Database\n85-95% | Verification Accuracy"}
+                                  <textarea value={(section.items ?? []).join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
+                                    rows={Math.max(3, (section.items ?? []).length + 1)} placeholder={"310M+ | Creator Database\n85-95% | Verification Accuracy"}
                                     className={cn(inputCls, "text-xs font-mono")} />
                                 </div>
                               </>
@@ -2282,7 +2282,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
                   {section.description}
                 </p>
               )}
-              {section.items.length > 0 && section.items.some((it) => it.trim()) && (
+              {Array.isArray(section.items) && section.items.length > 0 && section.items.some((it) => it.trim()) && (
                 <div className="space-y-3">
                   {section.items.filter((it) => it.trim()).map((item, j) => (
                     <div key={j} className="flex items-start gap-3">
@@ -2372,7 +2372,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
 
         /* ---- STATS block ---- */
         if (blockType === "stats") {
-          const statItems = section.items.filter((it) => it.includes("|")).map((it) => {
+          const statItems = (Array.isArray(section.items) ? section.items : []).filter((it) => it.includes("|")).map((it) => {
             const [num, ...rest] = it.split("|");
             return { num: num.trim(), label: rest.join("|").trim() };
           });
@@ -2429,7 +2429,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl }: { dark: boolea
                 {section.description}
               </p>
             )}
-            {section.items.length > 0 && section.items.some((it) => it.trim()) && (
+            {Array.isArray(section.items) && section.items.length > 0 && section.items.some((it) => it.trim()) && (
               <div className="space-y-3">
                 {section.items.filter((it) => it.trim()).map((item, j) => (
                   <div key={j} className="flex items-start gap-3">
