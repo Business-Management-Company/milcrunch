@@ -91,7 +91,11 @@ function getApiKey(): string {
 function mapAccountToCard(account: ApiAccount, index: number): CreatorCard {
   const p = account.profile;
   console.log(`[influencers-club] Raw API profile[${index}]:`, JSON.parse(JSON.stringify(account)));
-  const id = (account.user_id ?? `api-${index}`) as string;
+  // Use user_id when available (stable across searches), fall back to username
+  // (unique per platform), then a random ID as last resort. Never use index-based
+  // IDs like `api-${index}` — they collide across pagination pages and cause
+  // enrichment cache mixups.
+  const id = (account.user_id ?? p?.username ?? crypto.randomUUID()) as string;
   const name = (p?.full_name ?? p?.username ?? "Unknown") as string;
 
   const avatarRaw = (p?.picture ?? p?.profile_picture_hd ?? p?.profile_picture ?? p?.profile_pic_url ?? p?.avatar ?? p?.avatar_url ?? p?.profile_image_url) as string | undefined | null;
@@ -733,11 +737,20 @@ export async function searchByUsername(
     return { creators: [], total: 0, rawResponse };
   }
 
-  // Map enrichment response to a CreatorCard via the same mapper used for discovery
+  // Validate the API returned data for the requested handle, not a different person.
+  // The IC API sometimes returns a related but different profile.
+  const returnedUsername = (ig.username as string)?.toLowerCase();
+  if (returnedUsername && returnedUsername !== handle) {
+    console.warn(`[usernameSearch] API returned "${returnedUsername}" but searched for "${handle}" — possible mismatch`);
+  }
+
+  // Map enrichment response to a CreatorCard via the same mapper used for discovery.
+  // Use the searched handle as user_id (not the returned username) so the card ID
+  // always matches what the user searched for.
   const profile = { ...ig } as Record<string, unknown>;
   if (result) mergeEnrichFlags(profile, result);
   const card = mapAccountToCard(
-    { user_id: (ig.username as string) ?? handle, profile: profile as unknown as ApiProfile },
+    { user_id: handle, profile: profile as unknown as ApiProfile },
     0
   );
 

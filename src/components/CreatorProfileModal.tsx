@@ -292,7 +292,10 @@ export default function CreatorProfileModal({
   const dirDropdownRef = useRef<HTMLDivElement>(null);
   const eventDropdownRef = useRef<HTMLDivElement>(null);
 
-  const username = creator?.username ?? (creator?.name?.replace(/\s+/g, "_").toLowerCase());
+  // Only use the actual username from the API — never derive one from the
+  // display name.  Deriving "cbs_evening_news" from "CBS Evening News" would
+  // enrich a completely different person and cause data merging bugs.
+  const username = creator?.username;
 
   // Load directories for "Add to Directory" dropdown
   useEffect(() => {
@@ -390,7 +393,7 @@ export default function CreatorProfileModal({
       setEmailNotFound(false);
       return;
     }
-    const rawHandle = creator.username || username;
+    const rawHandle = creator.username;
     const handle = typeof rawHandle === "string" ? rawHandle.replace(/^@/, "").trim() : "";
     if (!handle) {
       setEnriched(null);
@@ -399,14 +402,21 @@ export default function CreatorProfileModal({
       return;
     }
 
-    // Use cached enrichment from background enrichment if available
+    // Use cached enrichment from background enrichment if available,
+    // but validate the data actually belongs to this creator.
     if (cachedEnrichment) {
-      console.log("[Enrich] Using prop-cached enrichment for:", handle);
-      setEnriched(cachedEnrichment);
-      setEnrichmentLoading(false);
-      setError(null);
-      setEnrichmentSource("prop");
-      return;
+      const cachedUsername = (cachedEnrichment.instagram?.username as string)?.toLowerCase();
+      if (cachedUsername && cachedUsername !== handle.toLowerCase()) {
+        console.warn("[Enrich] Cached enrichment username mismatch:", cachedUsername, "vs", handle, "— skipping cache");
+        // Don't use mismatched cached data — fall through to fresh fetch
+      } else {
+        console.log("[Enrich] Using prop-cached enrichment for:", handle);
+        setEnriched(cachedEnrichment);
+        setEnrichmentLoading(false);
+        setError(null);
+        setEnrichmentSource("prop");
+        return;
+      }
     }
 
     console.log("[Enrich] useEffect fired, username:", handle);
@@ -450,6 +460,18 @@ export default function CreatorProfileModal({
         const payload = await enrichCreatorProfile(handle, controller.signal);
         clearTimeout(timeoutId);
         if (cancelledRef.current || generationRef.current !== gen) return;
+
+        // Validate the returned profile belongs to the requested creator
+        const returnedUsername = (payload?.instagram?.username as string)?.toLowerCase();
+        if (returnedUsername && returnedUsername !== handle.toLowerCase()) {
+          console.warn(`[Enrich] API returned profile for "${returnedUsername}" but requested "${handle}" — discarding`);
+          setEnrichmentLoading(false);
+          setEnriched(null);
+          setError(null);
+          setEnrichmentTimedOut(true); // show "data unavailable" state
+          return;
+        }
+
         setEnrichmentLoading(false);
         setEnriched(payload);
         setError(null);

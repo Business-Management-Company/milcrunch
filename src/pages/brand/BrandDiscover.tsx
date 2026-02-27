@@ -697,8 +697,11 @@ function formatFollowers(count: number): string {
 function deduplicateCreators(cards: CreatorCard[]): CreatorCard[] {
   const seen = new Set<string>();
   return cards.filter((c) => {
-    if (seen.has(c.id)) return false;
-    seen.add(c.id);
+    // Deduplicate by username (unique per platform) rather than id, because
+    // IDs from the IC API may not be stable across pagination pages.
+    const key = c.username?.toLowerCase() ?? c.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -1740,6 +1743,13 @@ const BrandDiscover = () => {
             };
 
             result.creators.forEach((creator) => {
+              // Validate enrichment data matches this specific creator
+              const enrichedUsername = (platData.username as string)?.toLowerCase();
+              if (enrichedUsername && creator.username && enrichedUsername !== creator.username.toLowerCase()) {
+                console.warn(`[usernameEnrich] Enrichment username "${enrichedUsername}" doesn't match card "${creator.username}" — skipping merge`);
+                enrichedSetRef.current.add(creator.id);
+                return;
+              }
               console.log("Enriching username result:", creator.username, "creator_has:", apiResult.creator_has);
               const partial = extractFromEnrichment(enrichResponse);
               // Merge enrichment data directly into the card
@@ -2191,6 +2201,13 @@ const BrandDiscover = () => {
               // ── 3. Cache miss — call the IC API (costs credits) ──
               const data = await enrichCreatorProfile(creator.username!, controller.signal, enrichPlatform);
               if (data && !controller.signal.aborted) {
+                // Validate the returned profile matches the requested creator
+                const returnedUsername = (data.instagram?.username as string)?.toLowerCase();
+                if (returnedUsername && creator.username && returnedUsername !== creator.username.toLowerCase()) {
+                  console.warn(`[BgEnrich] API returned "${returnedUsername}" but requested "${creator.username}" — skipping`);
+                  enrichedSetRef.current.add(creator.id);
+                  return;
+                }
                 enrichedSetRef.current.add(creator.id);
                 const partial = extractFromEnrichment(data);
                 setEnrichCache((prev) => ({ ...prev, [creator.id]: partial }));
