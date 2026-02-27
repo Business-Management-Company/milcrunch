@@ -343,6 +343,7 @@ interface PrefillData {
   zip?: string;
   source?: string;
   sourceUsername?: string;
+  profilePhotoUrl?: string;
   /** @deprecated kept for backwards compat with old navigation state */
   claimedRank?: string;
 }
@@ -596,7 +597,7 @@ export default function Verification() {
         zip: p.zip || "",
         source: p.source || "manual",
         sourceUsername: p.sourceUsername || "",
-        profilePhotoUrl: "",
+        profilePhotoUrl: p.profilePhotoUrl || "",
       });
       setAddOpen(true);
       navigate(location.pathname, { replace: true, state: {} });
@@ -925,6 +926,20 @@ export default function Verification() {
         }
         })();
 
+        // Upsert directory_members with avatar so Verification list row shows the photo
+        const dmHandle = (addForm.instagramHandle.trim().replace(/^@/, "") || addForm.sourceUsername || "").toLowerCase();
+        const finalPhoto = resolvedPhoto || addForm.profilePhotoUrl || null;
+        if (dmHandle && finalPhoto) {
+          await supabase
+            .from("directory_members")
+            .upsert({
+              creator_handle: dmHandle,
+              creator_name: addForm.fullName.trim(),
+              ic_avatar_url: finalPhoto,
+              avatar_url: finalPhoto,
+            } as Record<string, unknown>, { onConflict: "creator_handle" });
+        }
+
         setList((prev) => [
           {
             ...inserted,
@@ -950,6 +965,7 @@ export default function Verification() {
             zip: addForm.zip.trim() || null,
             source: addForm.source || "manual",
             source_username: addForm.sourceUsername || null,
+            profile_photo_url: finalPhoto,
             manual_checks: {
               youtube_results: result.youtubeResults ?? [],
               youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
@@ -962,7 +978,7 @@ export default function Verification() {
           } as VerificationRecord,
           ...prev,
         ]);
-        setAddForm({ fullName: "", claimedBranch: "", claimedStatus: "veteran", linkedinUrl: "", instagramHandle: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "" });
+        setAddForm({ fullName: "", claimedBranch: "", claimedStatus: "veteran", linkedinUrl: "", instagramHandle: "", websiteUrl: "", notes: "", city: "", state: "", zip: "", source: "manual", sourceUsername: "", profilePhotoUrl: "" });
         setAddOpen(false);
         setNewRecordId(null);
         setExpandedId(inserted.id);

@@ -768,6 +768,11 @@ export default function CreatorProfileModal({
         prefillCity = parts[0];
       }
     }
+    // Resolve best avatar to carry over to Verification
+    let resolvedPhoto = extractAvatarFromEnrichment(enriched) ?? creator?.avatar ?? null;
+    if (resolvedPhoto && resolvedPhoto.includes("ui-avatars.com")) resolvedPhoto = null;
+    if (resolvedPhoto) resolvedPhoto = resolvedPhoto.replace(/^http:\/\//i, "https://");
+
     onOpenChange(false);
     navigate("/verification", {
       state: {
@@ -783,6 +788,7 @@ export default function CreatorProfileModal({
           state: prefillState,
           source: "discovery",
           sourceUsername: displayUsername,
+          profilePhotoUrl: resolvedPhoto || "",
         },
       },
     });

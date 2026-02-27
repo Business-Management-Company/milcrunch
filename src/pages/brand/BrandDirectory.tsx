@@ -553,6 +553,7 @@ const BrandDirectory = () => {
           notes: `Added from directory: ${selectedDir?.name ?? ""}`,
           source: "instagram",
           sourceUsername: m.creator_handle ?? "",
+          profilePhotoUrl: m.ic_avatar_url || m.avatar_url || "",
         },
       },
     });
