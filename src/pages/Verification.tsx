@@ -373,14 +373,17 @@ export default function Verification() {
     branch: "",
     category: "",
     confidenceScore: null as number | null,
-    confidenceOverride: false,
     verificationStatus: "pending" as string,
+    originalStatus: "" as string,
+    statusManualOverride: false,
     bio: "",
     photoUrl: "",
     instagram: "",
     tiktok: "",
     youtube: "",
     linkedin: "",
+    twitter: "",
+    facebook: "",
     email: "",
     phone: "",
     website: "",
@@ -945,20 +948,24 @@ export default function Verification() {
       const dmAvatar = dmMatch.ic_avatar_url || dmMatch.avatar_url;
       if (dmAvatar) bestPhoto = dmAvatar;
     }
+    const mc = (row.manual_checks as Record<string, unknown> | null) ?? {};
     setEditForm({
       id: row.id,
       name: row.person_name,
       branch: row.claimed_branch ?? "",
       category: row.claimed_status ?? "",
       confidenceScore: row.verification_score,
-      confidenceOverride: !!(row.manual_checks as Record<string, unknown> | null)?.confidence_override,
       verificationStatus: row.status ?? "pending",
+      originalStatus: row.status ?? "pending",
+      statusManualOverride: !!(mc as Record<string, unknown>).manual_status_override,
       bio: row.notes ?? "",
       photoUrl: bestPhoto,
       instagram: row.source_username ?? "",
       tiktok: "",
       youtube: "",
       linkedin: row.linkedin_url ?? "",
+      twitter: "",
+      facebook: "",
       email: "",
       phone: "",
       website: row.website_url ?? "",
@@ -971,54 +978,79 @@ export default function Verification() {
   const handleSaveEdit = async () => {
     setEditCreatorSaving(true);
     try {
-      // Update verification record
-      const vPayload: Record<string, unknown> = {
-        person_name: editForm.name,
-        claimed_branch: editForm.branch || null,
-        claimed_status: editForm.category || null,
-        status: editForm.verificationStatus,
-        linkedin_url: editForm.linkedin || null,
-        website_url: editForm.website || null,
-        profile_photo_url: editForm.photoUrl || null,
-        notes: editForm.notes || null,
-        updated_at: new Date().toISOString(),
-      };
-      if (editForm.confidenceOverride && editForm.confidenceScore != null) {
-        vPayload.verification_score = editForm.confidenceScore;
-        vPayload.manual_checks = {
-          ...((list.find((r) => r.id === editForm.id)?.manual_checks as Record<string, unknown>) || {}),
-          confidence_override: true,
-          manual_score: editForm.confidenceScore,
+      const isSynthetic = editForm.id.startsWith("dm_") || editForm.id.startsWith("li_");
+      const statusChanged = editForm.verificationStatus !== editForm.originalStatus;
+
+      // 1. Update verifications table (only if real record)
+      if (!isSynthetic) {
+        const vPayload: Record<string, unknown> = {
+          person_name: editForm.name,
+          claimed_branch: editForm.branch || null,
+          claimed_status: editForm.category || null,
+          status: editForm.verificationStatus,
+          linkedin_url: editForm.linkedin || null,
+          website_url: editForm.website || null,
+          profile_photo_url: editForm.photoUrl || null,
+          notes: editForm.notes || null,
+          updated_at: new Date().toISOString(),
         };
-      }
-      const { error: vErr } = await supabase.from("verifications").update(vPayload).eq("id", editForm.id);
-      if (vErr) throw vErr;
-
-      // Update speakers table if linked
-      const { data: speakerRows } = await supabase.from("speakers")
-        .select("id")
-        .eq("verification_id", editForm.id)
-        .limit(1);
-      if (speakerRows && speakerRows.length > 0) {
-        await supabase.from("speakers").update({
-          name: editForm.name,
-          branch: editForm.branch || null,
-          bio: editForm.notes || null,
-          photo_url: editForm.photoUrl || null,
-          verification_status: editForm.verificationStatus,
-        } as Record<string, unknown>).eq("verification_id", editForm.id);
+        if (statusChanged) {
+          vPayload.manual_status_override = true;
+          const existingMc = (list.find((r) => r.id === editForm.id)?.manual_checks as Record<string, unknown>) || {};
+          vPayload.manual_checks = {
+            ...existingMc,
+            manual_status_override: true,
+            override_date: new Date().toISOString(),
+            original_status: editForm.originalStatus,
+          };
+        }
+        const { error: vErr } = await supabase.from("verifications").update(vPayload).eq("id", editForm.id);
+        if (vErr) throw vErr;
       }
 
-      // Update directory_members if linked by handle
+      // 2. Update directory_members if linked by handle
       if (editForm.sourceUsername) {
-        await supabase.from("directory_members").update({
+        const dmPayload: Record<string, unknown> = {
           creator_name: editForm.name,
           branch: editForm.branch || null,
           bio: editForm.notes || null,
           ic_avatar_url: editForm.photoUrl || null,
           category: editForm.category || null,
-          verification_status: editForm.verificationStatus,
-        } as Record<string, unknown>).eq("creator_handle", editForm.sourceUsername);
+        };
+        if (statusChanged) {
+          dmPayload.status = editForm.verificationStatus;
+          dmPayload.manual_override = true;
+          dmPayload.override_date = new Date().toISOString();
+          dmPayload.original_status = editForm.originalStatus;
+        }
+        if (editForm.verificationStatus === "verified") {
+          dmPayload.is_verified = true;
+        }
+        await supabase.from("directory_members").update(dmPayload).eq("creator_handle", editForm.sourceUsername);
+      }
+
+      // 3. Update speakers table if linked
+      if (!isSynthetic) {
+        const { data: speakerRows } = await supabase.from("speakers")
+          .select("id").eq("verification_id", editForm.id).limit(1);
+        if (speakerRows && speakerRows.length > 0) {
+          await supabase.from("speakers").update({
+            name: editForm.name,
+            branch: editForm.branch || null,
+            bio: editForm.notes || null,
+            photo_url: editForm.photoUrl || null,
+            verification_status: editForm.verificationStatus,
+          } as Record<string, unknown>).eq("verification_id", editForm.id);
+        }
+      } else {
+        // For synthetic rows, try matching by name
+        const originalName = list.find((r) => r.id === editForm.id)?.person_name ?? editForm.name;
+        await supabase.from("speakers").update({
+          name: editForm.name,
+          branch: editForm.branch || null,
+          bio: editForm.notes || null,
+          photo_url: editForm.photoUrl || null,
+        } as Record<string, unknown>).eq("name", originalName);
       }
 
       toast.success("Creator updated successfully");
@@ -1741,140 +1773,174 @@ export default function Verification() {
 
       {/* Edit Creator Modal */}
       <Dialog open={editCreatorOpen} onOpenChange={setEditCreatorOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Pencil className="h-5 w-5" /> Edit Creator</DialogTitle>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle className="flex items-center gap-2 text-lg"><Pencil className="h-5 w-5 text-[#1e3a5f]" /> Edit Creator</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Label>Name</Label>
-                <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Branch</Label>
-                <Select value={editForm.branch} onValueChange={(v) => setEditForm((f) => ({ ...f, branch: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                  <SelectContent>
-                    {BRANCHES.map((b) => (
-                      <SelectItem key={b} value={b}>{b}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Status / Category</Label>
-                <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {["Veteran", "Active Duty", "Military Spouse", "Military Family", "Gold Star Family", "Reserve", "National Guard"].map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="flex items-center gap-2">
-                  Confidence Score
-                  {editForm.confidenceOverride && <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200">Manual Override</Badge>}
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Input type="number" min={0} max={100} value={editForm.confidenceScore ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, confidenceScore: e.target.value === "" ? null : Number(e.target.value), confidenceOverride: true }))} placeholder="0-100" />
+          <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-5">
+            {/* ── PROFILE ── */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Profile</p>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Name</Label>
+                  <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Branch</Label>
+                    <Select value={editForm.branch} onValueChange={(v) => setEditForm((f) => ({ ...f, branch: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                      <SelectContent>
+                        {["Army", "Navy", "Marines", "Air Force", "Space Force", "Coast Guard", "National Guard"].map((b) => (
+                          <SelectItem key={b} value={b}>{b}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</Label>
+                    <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        {["Veteran", "Active Duty", "Military Spouse", "Military Family", "DOD", "Reserves"].map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
-              <div>
-                <Label>Verification Status</Label>
-                <Select value={editForm.verificationStatus} onValueChange={(v) => {
-                  setEditForm((f) => {
-                    let score = f.confidenceScore;
-                    let override = f.confidenceOverride;
-                    // Auto-adjust confidence score to match status threshold
-                    if (v === "verified" && (score == null || score < 80)) {
-                      score = 80;
-                      override = true;
-                    } else if (v === "flagged" && (score == null || score >= 40)) {
-                      score = 39;
-                      override = true;
-                    }
-                    return { ...f, verificationStatus: v, confidenceScore: score, confidenceOverride: override };
-                  });
-                }}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="verified">Verified</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="flagged">Flagged</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
-            <div>
-              <Label>Bio</Label>
-              <Textarea value={editForm.bio} onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Creator bio..." />
-            </div>
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
 
+            {/* ── VERIFICATION ── */}
             <div>
-              <Label>Photo URL</Label>
-              <Input value={editForm.photoUrl} onChange={(e) => setEditForm((f) => ({ ...f, photoUrl: e.target.value }))} placeholder="https://..." />
-              {editForm.photoUrl && (
-                <div className="mt-1.5 flex items-center gap-2">
-                  <img src={editForm.photoUrl} alt="" className="h-10 w-10 rounded-full object-cover border" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  <span className="text-xs text-muted-foreground truncate">{editForm.photoUrl}</span>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Social Profiles</Label>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Verification</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Instagram</Label>
-                  <Input value={editForm.instagram} onChange={(e) => setEditForm((f) => ({ ...f, instagram: e.target.value }))} placeholder="@handle" className="text-sm" />
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Status
+                    {(editForm.statusManualOverride || editForm.verificationStatus !== editForm.originalStatus) && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#1e3a5f] text-white leading-none">Manual</span>
+                    )}
+                  </Label>
+                  <Select value={editForm.verificationStatus} onValueChange={(v) => setEditForm((f) => ({ ...f, verificationStatus: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="verified">Verified</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="flagged">Flagged</SelectItem>
+                      <SelectItem value="denied">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">TikTok</Label>
-                  <Input value={editForm.tiktok} onChange={(e) => setEditForm((f) => ({ ...f, tiktok: e.target.value }))} placeholder="@handle" className="text-sm" />
-                </div>
-                <div>
-                  <Label className="text-xs">YouTube</Label>
-                  <Input value={editForm.youtube} onChange={(e) => setEditForm((f) => ({ ...f, youtube: e.target.value }))} placeholder="Channel URL" className="text-sm" />
-                </div>
-                <div>
-                  <Label className="text-xs">LinkedIn</Label>
-                  <Input value={editForm.linkedin} onChange={(e) => setEditForm((f) => ({ ...f, linkedin: e.target.value }))} placeholder="Profile URL" className="text-sm" />
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Confidence Score</Label>
+                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-gray-50 dark:bg-gray-900">
+                    <Progress value={editForm.confidenceScore ?? 0} className="h-2 flex-1" />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400 tabular-nums">{editForm.confidenceScore ?? 0}%</span>
+                  </div>
                 </div>
               </div>
             </div>
 
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
+
+            {/* ── BIO & PHOTO ── */}
             <div>
-              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Contact</Label>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Bio & Photo</p>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bio</Label>
+                  <Textarea value={editForm.bio} onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))} rows={3} placeholder="Creator bio..." />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Photo URL</Label>
+                  <div className="flex items-center gap-3">
+                    {editForm.photoUrl && (
+                      <img src={editForm.photoUrl} alt="" className="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    )}
+                    <Input value={editForm.photoUrl} onChange={(e) => setEditForm((f) => ({ ...f, photoUrl: e.target.value }))} placeholder="https://..." className="flex-1" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
+
+            {/* ── SOCIAL PROFILES ── */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Social Profiles</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instagram</Label>
+                  <Input value={editForm.instagram} onChange={(e) => setEditForm((f) => ({ ...f, instagram: e.target.value }))} placeholder="@handle" />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">YouTube</Label>
+                  <Input value={editForm.youtube} onChange={(e) => setEditForm((f) => ({ ...f, youtube: e.target.value }))} placeholder="Channel URL" />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">TikTok</Label>
+                  <Input value={editForm.tiktok} onChange={(e) => setEditForm((f) => ({ ...f, tiktok: e.target.value }))} placeholder="@handle" />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">LinkedIn</Label>
+                  <Input value={editForm.linkedin} onChange={(e) => setEditForm((f) => ({ ...f, linkedin: e.target.value }))} placeholder="Profile URL" />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Twitter / X</Label>
+                  <Input value={editForm.twitter} onChange={(e) => setEditForm((f) => ({ ...f, twitter: e.target.value }))} placeholder="@handle" />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Facebook</Label>
+                  <Input value={editForm.facebook} onChange={(e) => setEditForm((f) => ({ ...f, facebook: e.target.value }))} placeholder="Profile URL" />
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
+
+            {/* ── CONTACT ── */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Contact</p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">Email</Label>
-                  <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@..." className="text-sm" />
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                  <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@..." />
                 </div>
                 <div>
-                  <Label className="text-xs">Phone</Label>
-                  <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 123-4567" className="text-sm" />
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone</Label>
+                  <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 123-4567" />
                 </div>
                 <div>
-                  <Label className="text-xs">Website</Label>
-                  <Input value={editForm.website} onChange={(e) => setEditForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://..." className="text-sm" />
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Website</Label>
+                  <Input value={editForm.website} onChange={(e) => setEditForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://..." />
                 </div>
               </div>
             </div>
 
-            <div>
-              <Label>Internal Notes</Label>
-              <Textarea value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Internal notes..." />
-            </div>
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
 
-            <Button onClick={handleSaveEdit} disabled={editCreatorSaving || !editForm.name.trim()} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
+            {/* ── INTERNAL ── */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Internal</p>
+              <div>
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Internal Notes</Label>
+                <Textarea value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Internal notes..." />
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky footer */}
+          <div className="sticky bottom-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-4 flex items-center gap-3">
+            <Button variant="outline" onClick={() => setEditCreatorOpen(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={editCreatorSaving || !editForm.name.trim()} className="flex-1 bg-[#1e3a5f] hover:bg-[#2d5282]">
               {editCreatorSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Changes
             </Button>
