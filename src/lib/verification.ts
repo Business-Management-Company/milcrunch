@@ -27,6 +27,7 @@ function safeString(val: unknown): string {
 // --- People Data Labs ---
 export interface PDLEnrichParams {
   name?: string;
+  email?: string;
   profile?: string[];
   location?: string;
 }
@@ -47,10 +48,19 @@ export interface PDLResponse {
 }
 
 export async function enrichPersonPDL(params: PDLEnrichParams): Promise<PDLResponse | null> {
+  // PDL requires at least one of: name, email, profile, or pdl_id
+  const hasName = !!params.name?.trim();
+  const hasEmail = !!params.email?.trim();
+  const hasProfile = !!params.profile?.length;
+  if (!hasName && !hasEmail && !hasProfile) {
+    console.warn("[Verification] PDL skipped — no name, email, or profile provided");
+    return null;
+  }
   const searchParams = new URLSearchParams();
-  if (params.name) searchParams.set("name", params.name);
-  if (params.profile?.length) {
-    for (const p of params.profile) searchParams.append("profile", p);
+  if (hasName) searchParams.set("name", params.name!);
+  if (hasEmail) searchParams.set("email", params.email!);
+  if (hasProfile) {
+    for (const p of params.profile!) searchParams.append("profile", p);
   }
   if (params.location) searchParams.set("location", params.location);
   searchParams.set("min_likelihood", "2");
@@ -150,11 +160,17 @@ export async function scrapeFirecrawl(url: string): Promise<{ markdown?: string 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, formats: ["markdown"] }),
     });
-    if (!res.ok) throw new Error(`FireCrawl ${res.status}`);
+    if (!res.ok) {
+      let errorBody = "";
+      try { errorBody = await res.text(); } catch { /* ignore */ }
+      console.warn(`[Verification] FireCrawl ${res.status} for ${url}:`, errorBody.slice(0, 500));
+      // Return null gracefully — don't throw, so other URLs can still proceed
+      return null;
+    }
     const data = await res.json();
     return data.data ?? data;
   } catch (e) {
-    console.error("[Verification] FireCrawl error:", e);
+    console.error("[Verification] FireCrawl error for", url, ":", e);
     return null;
   }
 }
@@ -405,7 +421,8 @@ Return a JSON object with this exact structure:
   "summary": "Based on analysis, X of Y results appear to be about a different person. Recommended confidence in criminal findings: Z%"
 }
 
-Return ONLY the JSON object, no markdown formatting.`;
+Return ONLY the JSON object, no markdown formatting.
+IMPORTANT: Keep your response concise. Each "reasoning" field should be 1-2 sentences max. The "summary" should be 1-2 sentences.`;
 
   try {
     const { json: data } = await fetchAnthropicWithRetry({
@@ -414,9 +431,36 @@ Return ONLY the JSON object, no markdown formatting.`;
       messages: [{ role: "user", content: prompt }],
     });
     const text = ((data as any).content?.[0]?.text ?? "").trim();
+    console.log("[Verification] Criminal filter AI raw response length:", text.length, "stop_reason:", (data as any).stop_reason);
     // Strip markdown code fences if present
     const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-    const parsed = JSON.parse(jsonStr);
+
+    let parsed: { results?: unknown[]; summary?: string };
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      // Attempt to repair truncated JSON by closing open brackets/braces
+      console.warn("[Verification] Criminal filter JSON parse failed, attempting repair. Raw tail:", jsonStr.slice(-200));
+      let repaired = jsonStr;
+      // Trim any trailing incomplete key-value pair (e.g. `"reasoning": "some text`)
+      repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"{}[\]]*$/, "");
+      // Count open vs close braces/brackets
+      const openBraces = (repaired.match(/{/g) || []).length;
+      const closeBraces = (repaired.match(/}/g) || []).length;
+      const openBrackets = (repaired.match(/\[/g) || []).length;
+      const closeBrackets = (repaired.match(/]/g) || []).length;
+      // Close any open brackets then braces
+      for (let i = 0; i < openBrackets - closeBrackets; i++) repaired += "]";
+      for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
+      try {
+        parsed = JSON.parse(repaired);
+        console.log("[Verification] Criminal filter JSON repair succeeded");
+      } catch (e2) {
+        console.error("[Verification] Criminal filter JSON repair also failed:", e2);
+        throw e2;
+      }
+    }
+
     return {
       filtered: (parsed.results ?? []).map((r: Record<string, unknown>) => ({
         title: r.title ?? "",
@@ -523,6 +567,8 @@ export interface VerificationInput {
   notes?: string;
   /** Social handle (e.g. "joellerblades") — used to tighten YouTube/media search queries */
   socialHandle?: string;
+  /** Optional email — improves PDL match accuracy */
+  email?: string;
 }
 
 export interface PipelinePhase {
@@ -591,6 +637,7 @@ export async function runVerificationPipeline(
   try {
     pdlData = await enrichPersonPDL({
       name: input.fullName,
+      email: input.email || undefined,
       profile: input.linkedinUrl ? [input.linkedinUrl] : undefined,
       location: undefined,
     });
