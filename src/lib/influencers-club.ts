@@ -470,7 +470,7 @@ export async function enrichCreatorProfile(
   const body = {
     handle,
     platform: platKey,
-    include_lookalikes: false,
+    include_lookalikes: true,
     email_required: "preferred",
   };
   const apiKey = getApiKey();
@@ -566,7 +566,7 @@ export async function fullEnrichCreatorProfile(
   const body = {
     handle,
     platform: platKey,
-    include_lookalikes: false,
+    include_lookalikes: true,
     email_required: "preferred",
   };
 
@@ -703,7 +703,7 @@ export async function searchByUsername(
   const body = {
     handle,
     platform: platform.toLowerCase(),
-    include_lookalikes: false,
+    include_lookalikes: true,
     email_required: "preferred",
   };
 

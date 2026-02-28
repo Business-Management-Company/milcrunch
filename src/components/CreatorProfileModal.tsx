@@ -325,6 +325,7 @@ interface SimilarAccount {
   follower_count?: number;
   engagement_percent?: number;
   profile_url?: string;
+  similarity?: number;
 }
 
 export default function CreatorProfileModal({
@@ -594,15 +595,42 @@ export default function CreatorProfileModal({
   const igRecord = ig && typeof ig === "object" ? (ig as Record<string, unknown>) : undefined;
   const reelsObj = igRecord?.reels as Record<string, unknown> | undefined;
 
-  // Log enrichment data shape for debugging
+  // Comprehensive enrichment debug logging
   useEffect(() => {
     if (!enriched) return;
-    console.log("[Enrich] Data loaded:", {
+    const rt = enriched.result ?? {};
+    console.log("[Enrich] === FULL ENRICHMENT DEBUG ===");
+    console.log("[Enrich] result keys:", Object.keys(rt));
+    console.log("[Enrich] creator_has:", rt.creator_has);
+    console.log("[Enrich] accounts:", rt.accounts);
+    console.log("[Enrich] platform_links:", rt.platform_links);
+    console.log("[Enrich] tiktok data:", rt.tiktok ? `YES (keys: ${Object.keys(rt.tiktok as object).length})` : "NONE");
+    console.log("[Enrich] youtube data:", rt.youtube ? `YES (keys: ${Object.keys(rt.youtube as object).length})` : "NONE");
+    console.log("[Enrich] twitter data:", rt.twitter ? `YES (keys: ${Object.keys(rt.twitter as object).length})` : "NONE");
+    console.log("[Enrich] lookalikes:", Array.isArray(rt.lookalikes) ? `${(rt.lookalikes as unknown[]).length} accounts` : "NONE");
+    if (rt.tiktok) console.log("[Enrich] TikTok sample:", { follower_count: (rt.tiktok as Record<string, unknown>).follower_count, engagement_percent: (rt.tiktok as Record<string, unknown>).engagement_percent });
+    if (rt.youtube) console.log("[Enrich] YouTube sample:", { subscriber_count: (rt.youtube as Record<string, unknown>).subscriber_count, follower_count: (rt.youtube as Record<string, unknown>).follower_count, engagement_percent: (rt.youtube as Record<string, unknown>).engagement_percent });
+    console.log("[Enrich] IG data:", {
       keys: igRecord ? Object.keys(igRecord).length : 0,
       media_count: igRecord?.media_count,
       post_data: Array.isArray(igRecord?.post_data) ? (igRecord!.post_data as unknown[]).length + " posts" : "none",
       follower_count: igRecord?.follower_count,
     });
+    // Log first post data structure for image debugging
+    if (Array.isArray(igRecord?.post_data) && (igRecord!.post_data as unknown[]).length > 0) {
+      const firstPost = (igRecord!.post_data as Record<string, unknown>[])[0];
+      console.log("[Enrich] First post ALL keys:", Object.keys(firstPost));
+      console.log("[Enrich] First post image fields:", {
+        thumbnail: firstPost.thumbnail,
+        image: firstPost.image,
+        image_url: firstPost.image_url,
+        display_url: firstPost.display_url,
+        media_url: firstPost.media_url,
+        media: firstPost.media,
+        thumbnail_url: firstPost.thumbnail_url,
+        video_url: firstPost.video_url,
+      });
+    }
   }, [enriched, igRecord]);
   const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
   const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
@@ -1157,21 +1185,27 @@ export default function CreatorProfileModal({
   }, [igRecord?.post_data]);
 
   const similarAccounts: SimilarAccount[] = useMemo(() => {
-    const raw = resultTop.lookalikes;
-    if (!Array.isArray(raw)) return [];
+    // Try multiple field names for lookalike/similar data
+    const raw = resultTop.lookalikes ?? resultTop.similar_accounts ?? resultTop.similar_users ?? resultTop.related_accounts;
+    if (!Array.isArray(raw)) {
+      console.log("[Similar] No similar accounts found. Tried: lookalikes, similar_accounts, similar_users, related_accounts. Available result keys:", Object.keys(resultTop));
+      return [];
+    }
+    console.log("[Similar] Found", raw.length, "similar accounts. First item keys:", raw[0] ? Object.keys(raw[0]) : "empty");
     return raw.slice(0, 12).map((item: Record<string, unknown>) => ({
-      id: String(item.username ?? Math.random()),
-      username: item.username as string | undefined,
-      name: (item.full_name ?? item.username) as string | undefined,
-      full_name: item.full_name as string | undefined,
-      avatar: (item.profile_picture ?? item.picture) as string | undefined,
+      id: String(item.username ?? item.id ?? Math.random()),
+      username: (item.username ?? item.handle) as string | undefined,
+      name: (item.full_name ?? item.name ?? item.username) as string | undefined,
+      full_name: (item.full_name ?? item.name) as string | undefined,
+      avatar: (item.profile_picture ?? item.picture ?? item.avatar ?? item.profile_pic_url ?? item.avatar_url) as string | undefined,
       picture: item.picture as string | undefined,
-      followers: Number(item.follower_count ?? item.followers ?? 0),
+      followers: Number(item.follower_count ?? item.followers ?? item.subscriber_count ?? 0),
       follower_count: Number(item.follower_count ?? item.followers ?? 0),
-      engagement_percent: Number(item.engagement_percent ?? 0),
+      engagement_percent: Number(item.engagement_percent ?? item.engagement_rate ?? 0),
       profile_url: item.profile_url as string | undefined,
+      similarity: Number(item.similarity ?? item.similarity_score ?? item.score ?? 0),
     }));
-  }, [resultTop.lookalikes]);
+  }, [resultTop.lookalikes, resultTop.similar_accounts, resultTop.similar_users, resultTop.related_accounts]);
 
   // ── Audience data hooks (only populated when FULL enrichment data available) ──
 
@@ -1789,29 +1823,6 @@ export default function CreatorProfileModal({
               )}
             </div>
 
-            {/* Contact / Email */}
-            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Contact</p>
-              {displayEmail ? (
-                <a href={`mailto:${displayEmail}`} className="flex items-center gap-1.5 text-sm text-[#0064B1] hover:underline">
-                  <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
-                </a>
-              ) : emailNotFound ? (
-                <p className="text-sm text-gray-500">No email found</p>
-              ) : fetchingEmail ? (
-                <div className="flex items-center gap-1.5">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
-                  <span className="text-sm text-blue-600">Fetching...</span>
-                </div>
-              ) : creator?.username ? (
-                <button onClick={handleGetEmail} className="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium">
-                  <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
-                </button>
-              ) : (
-                <p className="text-sm text-gray-500">&mdash;</p>
-              )}
-            </div>
-
             {/* Cross-Platform Summary */}
             {crossPlatformSummary.totalReach > 0 && (
               <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
@@ -1897,6 +1908,29 @@ export default function CreatorProfileModal({
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Contact / Email */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Contact</p>
+              {displayEmail ? (
+                <a href={`mailto:${displayEmail}`} className="flex items-center gap-1.5 text-sm text-[#0064B1] hover:underline">
+                  <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
+                </a>
+              ) : emailNotFound ? (
+                <p className="text-sm text-gray-500">No email found</p>
+              ) : fetchingEmail ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                  <span className="text-sm text-blue-600">Fetching...</span>
+                </div>
+              ) : creator?.username ? (
+                <button onClick={handleGetEmail} className="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium">
+                  <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500">&mdash;</p>
+              )}
             </div>
 
           </div>
