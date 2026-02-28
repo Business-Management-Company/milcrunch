@@ -360,7 +360,7 @@ function ManageContentPanel({
             descriptionVisible: src.descriptionVisible,
             sections: src.sections.map((s) => ({
               ...s,
-              items: [...(s.items ?? [])],
+              items: Array.isArray(s.items) ? [...s.items] : [],
             })),
             bottomNote: src.bottomNote
               ? { heading: src.bottomNote.heading, text: src.bottomNote.text }
@@ -1312,8 +1312,8 @@ function ManageContentPanel({
                                 </div>
                                 <div>
                                   <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>Items (one per line)</label>
-                                  <textarea value={(section.items ?? []).join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
-                                    rows={Math.max(3, (section.items ?? []).length + 1)} className={cn(inputCls, "text-xs")} />
+                                  <textarea value={(Array.isArray(section.items) ? section.items : []).join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
+                                    rows={Math.max(3, (Array.isArray(section.items) ? section.items : []).length + 1)} className={cn(inputCls, "text-xs")} />
                                 </div>
                               </>
                             )}
@@ -1535,8 +1535,8 @@ function ManageContentPanel({
                                   <label className={cn("text-xs block mb-0.5", dark ? "text-gray-500" : "text-gray-400")}>
                                     Items (one per line, format: <span className="font-mono">number | label</span>)
                                   </label>
-                                  <textarea value={(section.items ?? []).join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
-                                    rows={Math.max(3, (section.items ?? []).length + 1)} placeholder={"310M+ | Creator Database\n85-95% | Verification Accuracy"}
+                                  <textarea value={(Array.isArray(section.items) ? section.items : []).join("\n")} onChange={(e) => updateSection(tab, idx, "items", e.target.value.split("\n"))}
+                                    rows={Math.max(3, (Array.isArray(section.items) ? section.items : []).length + 1)} placeholder={"310M+ | Creator Database\n85-95% | Verification Accuracy"}
                                     className={cn(inputCls, "text-xs font-mono")} />
                                 </div>
                               </>
@@ -1769,8 +1769,8 @@ function inferBlockType(s: SectionBlock): BlockType {
     return t;
   }
   if (s.video_url) return "video";
-  if (s.items?.length > 0 && s.items.some((i) => i.trim())) return "features";
-  if (s.image_url && !s.description && (!s.items || !s.items.some((i) => i.trim()))) return "media";
+  if (Array.isArray(s.items) && s.items.length > 0 && s.items.some((i) => i.trim())) return "features";
+  if (s.image_url && !s.description && (!Array.isArray(s.items) || !s.items.some((i) => i.trim()))) return "media";
   return "text";
 }
 
@@ -2372,26 +2372,12 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                 const embed = parseVideoEmbed(section.video_url!);
                 if (!embed) return null;
                 return (
-                  <div className="relative rounded-xl overflow-hidden shadow-md group">
+                  <div className="rounded-xl overflow-hidden shadow-md">
                     {embed.type === "mp4" ? (
                       <video src={embed.embedUrl} controls className="w-full aspect-video bg-black" preload="metadata" />
                     ) : (
                       <iframe src={embed.embedUrl} title={section.heading || "Video"} className="w-full aspect-video" style={{ border: 0 }}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                    )}
-                    {section.demo_url && (
-                      <div
-                        className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
-                        onClick={() => setDemoModal({ open: true, url: section.demo_url! })}
-                      >
-                        <span className="text-white font-semibold text-sm flex items-center gap-2"><Play className="h-5 w-5" /> Explore Live Demo</span>
-                      </div>
-                    )}
-                    {/* Mobile badge — only for demo links */}
-                    {section.demo_url && (
-                      <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5 pointer-events-none">
-                        <Play className="h-4 w-4 text-white" />
-                      </div>
                     )}
                   </div>
                 );
