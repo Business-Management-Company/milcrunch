@@ -524,22 +524,10 @@ export default function CreatorProfileModal({
 
     const platform = "instagram";
 
-    // Check Supabase cache first, then fall back to IC API
-    (async () => {
-      // 1. Check Supabase cache
-      const cached = await getEnrichCache(handle, platform);
-      if (cancelledRef.current || generationRef.current !== gen) return;
-
-      if (cached) {
-        console.log("[Enrich] Supabase cache hit for:", handle);
-        setEnriched(cached);
-        setEnrichmentLoading(false);
-        setEnrichmentSource("cache");
-        return;
-      }
-
-      // 2. Cache miss — call IC API (0.03 credits)
-      console.log("[Enrich] Cache miss, calling IC API for:", handle);
+    // Helper: fetch from IC API and update state
+    const fetchFromApi = async (showLoading: boolean) => {
+      if (showLoading) setEnrichmentLoading(true);
+      console.log("[Enrich] Calling IC API for:", handle);
       const timeoutId = setTimeout(() => {
         console.log("[Enrich] TIMEOUT: Aborting after 45 seconds");
         controller.abort();
@@ -554,10 +542,12 @@ export default function CreatorProfileModal({
         const returnedUsername = (payload?.instagram?.username as string)?.toLowerCase();
         if (returnedUsername && returnedUsername !== handle.toLowerCase()) {
           console.warn(`[Enrich] API returned profile for "${returnedUsername}" but requested "${handle}" — discarding`);
-          setEnrichmentLoading(false);
-          setEnriched(null);
-          setError(null);
-          setEnrichmentTimedOut(true); // show "data unavailable" state
+          if (showLoading) {
+            setEnrichmentLoading(false);
+            setEnriched(null);
+            setError(null);
+            setEnrichmentTimedOut(true);
+          }
           return;
         }
 
@@ -566,24 +556,45 @@ export default function CreatorProfileModal({
         setError(null);
         setEnrichmentSource("api");
 
-        // 3. Save to Supabase cache for future lookups
+        // Save to Supabase cache for future lookups
         if (payload) {
           setEnrichCache(handle, platform, payload);
         }
       } catch (err) {
         clearTimeout(timeoutId);
         if (cancelledRef.current || generationRef.current !== gen) return;
-        setEnrichmentLoading(false);
-        if ((err as Error)?.name === "AbortError") {
-          setEnriched(null);
-          setEnrichmentTimedOut(true);
-          console.log("[Enrich] Request aborted (timeout or modal closed)");
-        } else {
-          console.error("[Enrich] Failed:", err);
-          setEnriched(null);
-          setEnrichmentTimedOut(true);
+        if (showLoading) {
+          setEnrichmentLoading(false);
+          if ((err as Error)?.name === "AbortError") {
+            setEnriched(null);
+            setEnrichmentTimedOut(true);
+            console.log("[Enrich] Request aborted (timeout or modal closed)");
+          } else {
+            console.error("[Enrich] Failed:", err);
+            setEnriched(null);
+            setEnrichmentTimedOut(true);
+          }
         }
       }
+    };
+
+    // Check Supabase cache first, show instantly if available, then refresh in background
+    (async () => {
+      const cached = await getEnrichCache(handle, platform);
+      if (cancelledRef.current || generationRef.current !== gen) return;
+
+      if (cached) {
+        console.log("[Enrich] Supabase cache hit for:", handle);
+        setEnriched(cached);
+        setEnrichmentLoading(false);
+        setEnrichmentSource("cache");
+        // Background refresh — don't show loading spinner, silently update data
+        fetchFromApi(false);
+        return;
+      }
+
+      // Cache miss — fetch from API with loading indicator
+      await fetchFromApi(true);
     })();
 
     return () => {
@@ -1559,7 +1570,7 @@ export default function CreatorProfileModal({
         )}
       >
         {/* ── Top Platform Bar ── */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0">
           {availablePlatforms.map((p) => {
             const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
             const platData = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : p === "facebook" ? facebookData : p === "linkedin" ? linkedinData : null;
@@ -1571,7 +1582,7 @@ export default function CreatorProfileModal({
                 type="button"
                 onClick={() => { userSelectedPlatformRef.current = true; setSelectedPlatform(p.toLowerCase()); }}
                 className={cn(
-                  "flex-1 min-w-[140px] flex items-center gap-2.5 rounded-xl border-2 px-4 py-2 transition-colors",
+                  "flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 transition-colors max-w-[200px]",
                   isActive ? "border-[#3B82F6] bg-blue-50/50 dark:bg-blue-950/20" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] hover:border-gray-300"
                 )}
               >
@@ -1590,7 +1601,7 @@ export default function CreatorProfileModal({
 
         <div className="flex h-full flex-col md:flex-row overflow-hidden min-h-0">
           {/* ── Left Sidebar ── */}
-          <ScrollArea className="w-full md:w-[280px] shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
+          <ScrollArea className="w-full md:w-[320px] shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
           <div className="p-5 space-y-4">
             {/* Avatar */}
             <div className="mx-auto h-24 w-24 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
