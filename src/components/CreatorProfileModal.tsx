@@ -598,6 +598,7 @@ export default function CreatorProfileModal({
   // Comprehensive enrichment debug logging
   useEffect(() => {
     if (!enriched) return;
+    console.log("FULL ENRICHMENT RESPONSE:", JSON.stringify(enriched, null, 2));
     const rt = enriched.result ?? {};
     console.log("[Enrich] === FULL ENRICHMENT DEBUG ===");
     console.log("[Enrich] result keys:", Object.keys(rt));
