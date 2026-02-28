@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Sheet,
@@ -365,6 +365,37 @@ export default function CreatorProfileModal({
   const [eventsList, setEventsList] = useState<{ id: string; title: string; start_date: string }[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [invitingEvent, setInvitingEvent] = useState(false);
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(320);
+
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.clientX;
+    dragStartWidthRef.current = sidebarWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const delta = ev.clientX - dragStartXRef.current;
+      const newWidth = Math.max(250, Math.min(450, dragStartWidthRef.current + delta));
+      setSidebarWidth(newWidth);
+    };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, [sidebarWidth]);
+
   // Get Email state
   const [fetchingEmail, setFetchingEmail] = useState(false);
   const [fetchedEmail, setFetchedEmail] = useState<string | null>(null);
@@ -480,6 +511,7 @@ export default function CreatorProfileModal({
       setBrokenPostImages(new Set());
       setPlatformEnrichments({});
       userSelectedPlatformRef.current = false;
+      setSidebarWidth(320);
       return;
     }
     const rawHandle = creator.username;
@@ -1196,9 +1228,10 @@ export default function CreatorProfileModal({
     const raw = platRecord?.post_data;
     if (!Array.isArray(raw) || followers <= 0) return [];
     return raw.slice(0, 12).map((item: Record<string, unknown>, i: number) => {
-      const eng = item.engagement as Record<string, unknown> | undefined;
-      const likes = Number(eng?.likes ?? 0);
-      const comments = Number(eng?.comments ?? 0);
+      // Handle both nested engagement object and flat fields (TikTok/YouTube use flat)
+      const eng = (item.engagement && typeof item.engagement === "object") ? item.engagement as Record<string, unknown> : item;
+      const likes = Number(eng.likes ?? eng.like_count ?? eng.digg_count ?? 0);
+      const comments = Number(eng.comments ?? eng.comment_count ?? 0);
       const er = ((likes + comments) / followers) * 100;
       return { post: `P${i + 1}`, er: Number(er.toFixed(2)) };
     });
@@ -1270,15 +1303,16 @@ export default function CreatorProfileModal({
     return raw.slice(0, 12).map((item: Record<string, unknown>) => {
       const media = item.media as unknown[] | undefined;
       const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
-      const engagement = item.engagement as Record<string, unknown> | undefined;
+      // Handle both nested engagement object and flat fields
+      const eng = (item.engagement && typeof item.engagement === "object") ? item.engagement as Record<string, unknown> : item;
       return {
         id: String(item.post_id ?? item.id ?? Math.random()),
-        thumbnail: (firstMedia?.url ?? item.thumbnail ?? item.image_url) as string | undefined,
-        caption: (item.caption as string) ?? undefined,
-        likes: Number(engagement?.likes ?? item.likes ?? 0),
-        comments: Number(engagement?.comments ?? item.comments ?? 0),
-        date: (item.created_at as string) ?? undefined,
-        permalink: (item.post_url as string) ?? undefined,
+        thumbnail: (firstMedia?.url ?? item.thumbnail ?? item.image_url ?? item.cover ?? item.video_cover) as string | undefined,
+        caption: (item.caption ?? item.title ?? item.description) as string | undefined,
+        likes: Number(eng.likes ?? eng.like_count ?? eng.digg_count ?? 0),
+        comments: Number(eng.comments ?? eng.comment_count ?? 0),
+        date: (item.created_at ?? item.create_time ?? item.published_at) as string | undefined,
+        permalink: (item.post_url ?? item.video_url ?? item.url) as string | undefined,
       };
     });
   }, [selectedPlatform, igRecord?.post_data, tiktokData, youtubeData, twitterData]);
@@ -1306,10 +1340,20 @@ export default function CreatorProfileModal({
     }));
   }, [resultTop.lookalikes, resultTop.similar_accounts, resultTop.similar_users, resultTop.related_accounts]);
 
-  // ── Audience data hooks (only populated when FULL enrichment data available) ──
+  // ── Audience data hooks — use platform-specific data when available ──
+
+  // Helper: resolve the active platform's data record for audience stats
+  const activePlatRecord = useMemo(() => {
+    if (selectedPlatform === "tiktok" && tiktokData) return tiktokData;
+    if (selectedPlatform === "youtube" && youtubeData) return youtubeData;
+    if (selectedPlatform === "twitter" && twitterData) return twitterData;
+    if (selectedPlatform === "facebook" && facebookData) return facebookData;
+    return igRecord;
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, facebookData, igRecord]);
 
   const audienceGender = useMemo(() => {
-    const raw = igRecord?.audience_gender ?? igRecord?.audience_genders ?? igRecord?.gender_split;
+    const rec = activePlatRecord;
+    const raw = rec?.audience_gender ?? rec?.audience_genders ?? rec?.gender_split;
     if (!raw) return null;
     if (typeof raw === "object" && !Array.isArray(raw)) {
       const obj = raw as Record<string, number>;
@@ -1332,10 +1376,11 @@ export default function CreatorProfileModal({
       return { male, female };
     }
     return null;
-  }, [igRecord]);
+  }, [activePlatRecord]);
 
   const audienceAge = useMemo(() => {
-    const raw = igRecord?.audience_age ?? igRecord?.audience_ages ?? igRecord?.age_split;
+    const rec = activePlatRecord;
+    const raw = rec?.audience_age ?? rec?.audience_ages ?? rec?.age_split;
     if (!Array.isArray(raw)) return [];
     return raw.map((item: Record<string, unknown>) => ({
       bracket: String(item.code ?? item.range ?? item.age_range ?? item.name ?? ""),
@@ -1345,10 +1390,11 @@ export default function CreatorProfileModal({
       })(),
     })).filter((a: { bracket: string; percentage: number }) => a.bracket && a.percentage > 0)
       .sort((a: { percentage: number }, b: { percentage: number }) => b.percentage - a.percentage);
-  }, [igRecord]);
+  }, [activePlatRecord]);
 
   const audienceReachability = useMemo(() => {
-    const raw = igRecord?.audience_reachability ?? igRecord?.audience_reach;
+    const rec = activePlatRecord;
+    const raw = rec?.audience_reachability ?? rec?.audience_reach;
     if (!Array.isArray(raw)) return [];
     return raw.map((item: Record<string, unknown>) => ({
       label: String(item.code ?? item.name ?? item.label ?? ""),
@@ -1357,10 +1403,11 @@ export default function CreatorProfileModal({
         return w > 1 ? w : w * 100;
       })(),
     })).filter((a: { label: string; percentage: number }) => a.label && a.percentage > 0);
-  }, [igRecord]);
+  }, [activePlatRecord]);
 
   const audienceLanguages = useMemo(() => {
-    const raw = igRecord?.audience_languages ?? igRecord?.audience_language;
+    const rec = activePlatRecord;
+    const raw = rec?.audience_languages ?? rec?.audience_language;
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 8).map((item: Record<string, unknown>) => ({
       language: String(item.code ?? item.name ?? item.language ?? ""),
@@ -1370,19 +1417,21 @@ export default function CreatorProfileModal({
       })(),
     })).filter((a: { language: string; percentage: number }) => a.language && a.percentage > 0)
       .sort((a: { percentage: number }, b: { percentage: number }) => b.percentage - a.percentage);
-  }, [igRecord]);
+  }, [activePlatRecord]);
 
   const audienceCredibility = useMemo(() => {
-    const raw = igRecord?.audience_credibility ?? igRecord?.credibility_score ?? igRecord?.audience_quality;
+    const rec = activePlatRecord;
+    const raw = rec?.audience_credibility ?? rec?.credibility_score ?? rec?.audience_quality;
     if (raw == null) return null;
     const score = Number(raw);
     if (!isFinite(score)) return null;
     const level = score >= 70 ? "High" : score >= 40 ? "Medium" : "Low";
     return { score, level };
-  }, [igRecord]);
+  }, [activePlatRecord]);
 
   const audienceBrandAffinity = useMemo(() => {
-    const raw = igRecord?.audience_brand_affinity ?? igRecord?.brand_affinity;
+    const rec = activePlatRecord;
+    const raw = rec?.audience_brand_affinity ?? rec?.brand_affinity;
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 10).map((item: Record<string, unknown>) => ({
       name: String(item.name ?? item.brand ?? item.label ?? ""),
@@ -1391,17 +1440,18 @@ export default function CreatorProfileModal({
         return w > 1 ? w : w * 100;
       })(),
     })).filter((a: { name: string; percentage: number }) => a.name && a.percentage > 0);
-  }, [igRecord]);
+  }, [activePlatRecord]);
 
   const audienceInterests = useMemo(() => {
-    const raw = igRecord?.audience_interests ?? igRecord?.interests;
+    const rec = activePlatRecord;
+    const raw = rec?.audience_interests ?? rec?.interests;
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 12).map((item: unknown) => {
       if (typeof item === "string") return item;
       if (item && typeof item === "object") return String((item as Record<string, unknown>).name ?? (item as Record<string, unknown>).label ?? (item as Record<string, unknown>).interest ?? "");
       return "";
     }).filter(Boolean);
-  }, [igRecord]);
+  }, [activePlatRecord]);
 
   const crossPlatformSummary = useMemo(() => {
     const platformStats: { platform: string; followers: number; engagement: number }[] = [];
@@ -1442,13 +1492,13 @@ export default function CreatorProfileModal({
     const mapped = (raw as Record<string, unknown>[]).map((item, idx) => {
       const media = item.media as unknown[] | undefined;
       const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
-      const eng = item.engagement as Record<string, unknown> | undefined;
+      const engObj = (item.engagement && typeof item.engagement === "object") ? item.engagement as Record<string, unknown> : item;
       const isCarousel = Array.isArray(media) && media.length > 1;
       const isReel = Boolean(item.is_reel ?? item.video_url ?? item.is_video);
       // Try multiple image sources from media array entries and direct item fields
       const thumbnail = (() => {
         const MEDIA_KEYS = ['url', 'thumbnail_url', 'media_url', 'display_url', 'image_url', 'src', 'thumbnail', 'preview_url'];
-        const ITEM_KEYS = ['thumbnail', 'image', 'image_url', 'display_url', 'media_url', 'thumbnail_url', 'video_thumbnail', 'preview_url', 'thumbnail_src', 'picture', 'thumbnail_resource'];
+        const ITEM_KEYS = ['thumbnail', 'image', 'image_url', 'display_url', 'media_url', 'thumbnail_url', 'video_thumbnail', 'preview_url', 'thumbnail_src', 'picture', 'thumbnail_resource', 'cover', 'video_cover'];
         // 1. Try media array entries (object with url, or direct string)
         if (Array.isArray(media)) {
           for (const m of media) {
@@ -1479,11 +1529,11 @@ export default function CreatorProfileModal({
       return {
         id: String(item.post_id ?? item.id ?? Math.random()),
         thumbnail,
-        caption: (item.caption as string) ?? undefined,
-        likes: Number(eng?.likes ?? item.likes ?? 0),
-        comments: Number(eng?.comments ?? item.comments ?? 0),
-        date: (item.created_at as string) ?? undefined,
-        permalink: (item.post_url as string) ?? undefined,
+        caption: (item.caption ?? item.title ?? item.description) as string | undefined,
+        likes: Number(engObj.likes ?? engObj.like_count ?? engObj.digg_count ?? 0),
+        comments: Number(engObj.comments ?? engObj.comment_count ?? 0),
+        date: (item.created_at ?? item.create_time ?? item.published_at) as string | undefined,
+        permalink: (item.post_url ?? item.video_url ?? item.url) as string | undefined,
         isCarousel,
         isReel,
       };
@@ -1576,20 +1626,21 @@ export default function CreatorProfileModal({
             const platData = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : p === "facebook" ? facebookData : p === "linkedin" ? linkedinData : null;
             const pFollowers = Number((platData as Record<string, unknown>)?.follower_count ?? (platData as Record<string, unknown>)?.subscriber_count ?? 0);
             const pEngagement = Number((platData as Record<string, unknown>)?.engagement_percent ?? (platData as Record<string, unknown>)?.engagement_rate ?? 0);
+            const brandColor = p === "instagram" ? "text-[#E1306C]" : p === "tiktok" ? "text-[#00C9B7]" : p === "youtube" ? "text-[#FF0000]" : p === "twitter" ? "text-gray-900 dark:text-white" : p === "facebook" ? "text-[#1877F2]" : p === "linkedin" ? "text-[#0A66C2]" : "text-gray-900 dark:text-white";
             return (
               <button
                 key={p}
                 type="button"
                 onClick={() => { userSelectedPlatformRef.current = true; setSelectedPlatform(p.toLowerCase()); }}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 transition-colors max-w-[200px]",
+                  "flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 transition-colors",
                   isActive ? "border-[#3B82F6] bg-blue-50/50 dark:bg-blue-950/20" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] hover:border-gray-300"
                 )}
               >
-                <PlatformBrandIcon platform={p} className="h-6 w-6 shrink-0" />
+                <PlatformBrandIcon platform={p} className="h-5 w-5 shrink-0" />
                 <div className="text-left min-w-0">
-                  <p className="text-sm leading-tight">
-                    <span className="font-bold text-[#E1306C]">{pFollowers > 0 ? formatNumber(pFollowers) : "—"}</span>
+                  <p className="text-sm leading-tight whitespace-nowrap">
+                    <span className={cn("font-bold", brandColor)}>{pFollowers > 0 ? formatNumber(pFollowers) : "—"}</span>
                     <span className="text-gray-500 ml-1 text-xs font-normal">{p === "youtube" ? "subscribers" : "followers"}</span>
                   </p>
                   <p className="text-[11px] text-green-600 leading-tight font-medium">{pEngagement > 0 ? `${formatPercent(pEngagement)} eng` : "—"}</p>
@@ -1601,7 +1652,7 @@ export default function CreatorProfileModal({
 
         <div className="flex h-full flex-col md:flex-row overflow-hidden min-h-0">
           {/* ── Left Sidebar ── */}
-          <ScrollArea className="w-full md:w-[320px] shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
+          <ScrollArea className="shrink-0 border-r border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]" style={{ width: sidebarWidth }}>
           <div className="p-5 space-y-4">
             {/* Avatar */}
             <div className="mx-auto h-24 w-24 rounded-full overflow-hidden relative border-2 border-gray-200 dark:border-gray-700">
@@ -2077,8 +2128,17 @@ export default function CreatorProfileModal({
           </div>
           </ScrollArea>
 
+          {/* ── Draggable Divider ── */}
+          <div
+            className="hidden md:flex items-center justify-center w-1 shrink-0 cursor-col-resize group hover:bg-blue-400/30 active:bg-blue-500/40 transition-colors relative"
+            onMouseDown={handleDividerMouseDown}
+          >
+            <div className="absolute inset-y-0 -left-1 -right-1" />
+            <div className="w-0.5 h-8 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors" />
+          </div>
+
           {/* ── Right Panel ── */}
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden" style={{ minWidth: 400 }}>
             {error && (
               <div className="p-4 text-sm text-destructive bg-destructive/10 border-b border-border shrink-0">
                 {error}
