@@ -640,28 +640,6 @@ export default function CreatorProfileModal({
     return () => { cancelled = true; controller.abort(); };
   }, [enriched, open, creator?.id, creator?.socialPlatforms, creator?.platforms]);
 
-  // ── Auto-select platform with the most followers ──
-  // Runs as platform enrichments arrive; stops once user manually picks a platform.
-  useEffect(() => {
-    if (userSelectedPlatformRef.current) return;
-    if (!enriched) return;
-
-    const candidates: [string, number][] = [];
-    if (igRecord) candidates.push(["instagram", Number(igRecord.follower_count ?? 0)]);
-    if (platformEnrichments.tiktok) candidates.push(["tiktok", Number(platformEnrichments.tiktok.follower_count ?? 0)]);
-    if (platformEnrichments.youtube) candidates.push(["youtube", Number(platformEnrichments.youtube.subscriber_count ?? platformEnrichments.youtube.follower_count ?? 0)]);
-    if (platformEnrichments.twitter) candidates.push(["twitter", Number(platformEnrichments.twitter.follower_count ?? 0)]);
-    if (platformEnrichments.facebook) candidates.push(["facebook", Number(platformEnrichments.facebook.follower_count ?? platformEnrichments.facebook.page_likes ?? 0)]);
-    if (platformEnrichments.linkedin) candidates.push(["linkedin", Number(platformEnrichments.linkedin.follower_count ?? platformEnrichments.linkedin.connections ?? 0)]);
-
-    if (candidates.length > 0) {
-      const best = candidates.reduce((a, b) => (b[1] > a[1] ? b : a));
-      if (best[1] > 0 && best[0] !== selectedPlatform) {
-        setSelectedPlatform(best[0]);
-      }
-    }
-  }, [enriched, igRecord, platformEnrichments, selectedPlatform]);
-
   /** Two-level response: result (top-level) + result.instagram (ig) */
   const resultTop = enriched?.result ?? {};
   const ig = enriched?.instagram;
@@ -713,6 +691,28 @@ export default function CreatorProfileModal({
   const twitterData = platformEnrichments.twitter ?? (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
   const facebookData = platformEnrichments.facebook ?? (resultTop as Record<string, unknown>).facebook as Record<string, unknown> | undefined;
   const linkedinData = platformEnrichments.linkedin ?? (resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined;
+
+  // ── Auto-select platform with the most followers ──
+  // Runs as platform enrichments arrive; stops once user manually picks a platform.
+  useEffect(() => {
+    if (userSelectedPlatformRef.current) return;
+    if (!enriched) return;
+
+    const candidates: [string, number][] = [];
+    if (igRecord) candidates.push(["instagram", Number(igRecord.follower_count ?? 0)]);
+    if (tiktokData) candidates.push(["tiktok", Number(tiktokData.follower_count ?? 0)]);
+    if (youtubeData) candidates.push(["youtube", Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0)]);
+    if (twitterData) candidates.push(["twitter", Number(twitterData.follower_count ?? 0)]);
+    if (facebookData) candidates.push(["facebook", Number(facebookData.follower_count ?? facebookData.page_likes ?? 0)]);
+    if (linkedinData) candidates.push(["linkedin", Number(linkedinData.follower_count ?? linkedinData.connections ?? 0)]);
+
+    if (candidates.length > 0) {
+      const best = candidates.reduce((a, b) => (b[1] > a[1] ? b : a));
+      if (best[1] > 0 && best[0] !== selectedPlatform) {
+        setSelectedPlatform(best[0]);
+      }
+    }
+  }, [enriched, igRecord, tiktokData, youtubeData, twitterData, facebookData, linkedinData, selectedPlatform]);
 
   /** Merge platforms from all possible IC response shapes + creator card */
   const { availablePlatforms, platformHandles } = useMemo(() => {
