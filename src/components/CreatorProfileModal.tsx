@@ -369,6 +369,7 @@ export default function CreatorProfileModal({
   const [fetchingEmail, setFetchingEmail] = useState(false);
   const [fetchedEmail, setFetchedEmail] = useState<string | null>(null);
   const [emailNotFound, setEmailNotFound] = useState(false);
+  const [platformEnrichments, setPlatformEnrichments] = useState<Record<string, Record<string, unknown>>>({});
 
   const listDropdownRef = useRef<HTMLDivElement>(null);
   const dirDropdownRef = useRef<HTMLDivElement>(null);
@@ -474,6 +475,7 @@ export default function CreatorProfileModal({
       setFetchedEmail(null);
       setEmailNotFound(false);
       setBrokenPostImages(new Set());
+      setPlatformEnrichments({});
       return;
     }
     const rawHandle = creator.username;
@@ -588,6 +590,44 @@ export default function CreatorProfileModal({
     };
   }, [open, creator?.id, creator?.username, username, cachedEnrichment]);
 
+  // ── Multi-platform enrichment: fetch TikTok, YouTube, etc. data ──
+  // After IG enrichment is done, enrich other platforms the creator has (RAW, 0.03 credits each).
+  useEffect(() => {
+    if (!enriched || !open || !creator) return;
+    const handle = (creator.username ?? "").replace(/^@/, "").trim();
+    if (!handle) return;
+
+    const otherPlatforms = (creator.socialPlatforms ?? creator.platforms ?? [])
+      .map((p: string) => p.toLowerCase())
+      .filter((p: string) => p !== "instagram");
+    if (otherPlatforms.length === 0) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    otherPlatforms.forEach(async (platform: string) => {
+      if (cancelled) return;
+      try {
+        const data = await enrichCreatorProfile(handle, controller.signal, platform, false);
+        if (cancelled) return;
+        if (data?.instagram && typeof data.instagram === "object") {
+          console.log(`[Enrich] Multi-platform ${platform}:`, {
+            follower_count: (data.instagram as Record<string, unknown>).follower_count,
+            subscriber_count: (data.instagram as Record<string, unknown>).subscriber_count,
+            engagement_percent: (data.instagram as Record<string, unknown>).engagement_percent,
+          });
+          setPlatformEnrichments(prev => ({ ...prev, [platform]: data.instagram as Record<string, unknown> }));
+        }
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") {
+          console.warn(`[Enrich] Multi-platform ${platform} failed:`, err);
+        }
+      }
+    });
+
+    return () => { cancelled = true; controller.abort(); };
+  }, [enriched, open, creator?.id, creator?.socialPlatforms, creator?.platforms]);
+
   /** Two-level response: result (top-level) + result.instagram (ig) */
   const resultTop = enriched?.result ?? {};
   const ig = enriched?.instagram;
@@ -633,11 +673,12 @@ export default function CreatorProfileModal({
       });
     }
   }, [enriched, igRecord]);
-  const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
-  const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
-  const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
-  const facebookData = (resultTop as Record<string, unknown>).facebook as Record<string, unknown> | undefined;
-  const linkedinData = (resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined;
+  // Platform data: prefer multi-platform enrichment results, fall back to main enrichment result keys
+  const tiktokData = platformEnrichments.tiktok ?? (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
+  const youtubeData = platformEnrichments.youtube ?? (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
+  const twitterData = platformEnrichments.twitter ?? (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
+  const facebookData = platformEnrichments.facebook ?? (resultTop as Record<string, unknown>).facebook as Record<string, unknown> | undefined;
+  const linkedinData = platformEnrichments.linkedin ?? (resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined;
 
   /** Merge platforms from all possible IC response shapes + creator card */
   const { availablePlatforms, platformHandles } = useMemo(() => {
@@ -1490,8 +1531,12 @@ export default function CreatorProfileModal({
               >
                 <PlatformBrandIcon platform={p} className="h-5 w-5 shrink-0" />
                 <div className="text-left">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{pFollowers > 0 ? formatNumber(pFollowers) : PLATFORM_LABELS[p] ?? p}</p>
-                  <p className="text-[11px] text-green-600 leading-tight">{pEngagement > 0 ? `${formatPercent(pEngagement)} eng` : "—"}</p>
+                  <p className="text-sm leading-tight">
+                    <span className="font-bold text-[#E1306C]">{pFollowers > 0 ? formatNumber(pFollowers) : "—"}</span>
+                    {pFollowers > 0 && <span className="text-gray-500 ml-1 text-xs font-normal">followers</span>}
+                    {!pFollowers && <span className="text-gray-500 ml-1 text-xs font-normal">{PLATFORM_LABELS[p] ?? p}</span>}
+                  </p>
+                  <p className="text-[11px] text-green-600 leading-tight font-medium">{pEngagement > 0 ? `${formatPercent(pEngagement)} eng` : "—"}</p>
                 </div>
               </button>
             );
