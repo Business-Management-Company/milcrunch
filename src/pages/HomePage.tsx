@@ -284,8 +284,18 @@ function getBestStats(creator: ShowcaseCreator): { value: string; label: string 
   if (creator.follower_count && creator.follower_count > 0) {
     stats.push({ value: formatFollowerCount(creator.follower_count), label: "Followers" });
   }
-  if (creator.avg_likes != null && Number(creator.avg_likes) > 0) {
-    stats.push({ value: formatFollowerCount(Number(creator.avg_likes)), label: "Avg Likes" });
+  if (creator.avg_likes != null) {
+    const raw = String(creator.avg_likes);
+    // avg_likes may already be formatted (e.g. "2.9K") after enrichment,
+    // or a raw number string (e.g. "2949") from the database.
+    const numeric = parseFloat(raw);
+    if (!isNaN(numeric) && numeric > 0) {
+      // Raw number — format it
+      stats.push({ value: formatFollowerCount(numeric), label: "Avg Likes" });
+    } else if (/\d/.test(raw) && raw !== "0" && raw !== "—") {
+      // Already formatted string like "2.9K" — use as-is
+      stats.push({ value: raw, label: "Avg Likes" });
+    }
   }
   return stats.slice(0, 2);
 }
