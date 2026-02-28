@@ -1166,33 +1166,33 @@ export default function CreatorProfileModal({
     if (selectedPlatform === "tiktok" && tiktokData) {
       return {
         followers: Number(tiktokData.follower_count ?? 0),
-        engagement: Number(tiktokData.engagement_percent ?? 0),
+        engagement: Number(tiktokData.engagement_percent ?? tiktokData.engagement_rate ?? 0),
         mediaCount: Number(tiktokData.media_count ?? tiktokData.video_count ?? 0),
-        postsPerMonth: Number(tiktokData.posting_frequency_recent_months ?? 0),
-        avgLikes: Number(tiktokData.avg_likes ?? tiktokData.avg_like_count ?? 0),
-        avgComments: Number(tiktokData.avg_comments ?? tiktokData.avg_comment_count ?? 0),
-        avgSpecial: Number(tiktokData.avg_shares ?? tiktokData.avg_share_count ?? 0),
-        avgViews: Number(tiktokData.avg_view_count ?? tiktokData.avg_views ?? 0),
+        postsPerMonth: Number(tiktokData.posting_frequency_recent_months ?? tiktokData.posts_per_month ?? tiktokData.videos_per_month ?? tiktokData.posting_frequency ?? 0),
+        avgLikes: Number(tiktokData.avg_likes ?? tiktokData.avg_like_count ?? tiktokData.average_likes ?? 0),
+        avgComments: Number(tiktokData.avg_comments ?? tiktokData.avg_comment_count ?? tiktokData.average_comments ?? 0),
+        avgSpecial: Number(tiktokData.avg_shares ?? tiktokData.avg_share_count ?? tiktokData.average_shares ?? 0),
+        avgViews: Number(tiktokData.avg_view_count ?? tiktokData.avg_views ?? tiktokData.average_views ?? 0),
       };
     }
     if (selectedPlatform === "youtube" && youtubeData) {
       return {
         followers: Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0),
-        engagement: Number(youtubeData.engagement_percent ?? 0),
+        engagement: Number(youtubeData.engagement_percent ?? youtubeData.engagement_rate ?? 0),
         mediaCount: Number(youtubeData.video_count ?? youtubeData.media_count ?? 0),
-        postsPerMonth: Number(youtubeData.posting_frequency_recent_months ?? 0),
-        avgLikes: Number(youtubeData.avg_likes ?? youtubeData.avg_like_count ?? 0),
-        avgComments: Number(youtubeData.avg_comments ?? youtubeData.avg_comment_count ?? 0),
+        postsPerMonth: Number(youtubeData.posting_frequency_recent_months ?? youtubeData.posts_per_month ?? youtubeData.videos_per_month ?? youtubeData.posting_frequency ?? 0),
+        avgLikes: Number(youtubeData.avg_likes ?? youtubeData.avg_like_count ?? youtubeData.average_likes ?? 0),
+        avgComments: Number(youtubeData.avg_comments ?? youtubeData.avg_comment_count ?? youtubeData.average_comments ?? 0),
         avgSpecial: Number(youtubeData.avg_short_plays ?? youtubeData.avg_shorts_plays ?? 0),
-        avgViews: Number(youtubeData.avg_view_count ?? youtubeData.avg_views ?? 0),
+        avgViews: Number(youtubeData.avg_view_count ?? youtubeData.avg_views ?? youtubeData.average_views ?? 0),
       };
     }
     if (selectedPlatform === "twitter" && twitterData) {
       return {
         followers: Number(twitterData.follower_count ?? 0),
-        engagement: Number(twitterData.engagement_percent ?? 0),
+        engagement: Number(twitterData.engagement_percent ?? twitterData.engagement_rate ?? 0),
         mediaCount: Number(twitterData.media_count ?? twitterData.tweet_count ?? twitterData.statuses_count ?? 0),
-        postsPerMonth: Number(twitterData.posting_frequency_recent_months ?? 0),
+        postsPerMonth: Number(twitterData.posting_frequency_recent_months ?? twitterData.posts_per_month ?? twitterData.posting_frequency ?? 0),
         avgLikes: Number(twitterData.avg_likes ?? twitterData.avg_like_count ?? 0),
         avgComments: Number(twitterData.avg_comments ?? twitterData.avg_comment_count ?? twitterData.avg_replies ?? 0),
         avgSpecial: Number(twitterData.avg_retweets ?? twitterData.avg_retweet_count ?? 0),
@@ -1369,7 +1369,7 @@ export default function CreatorProfileModal({
       username: (item.username ?? item.handle) as string | undefined,
       name: (item.full_name ?? item.name ?? item.username) as string | undefined,
       full_name: (item.full_name ?? item.name) as string | undefined,
-      avatar: (item.profile_picture ?? item.picture ?? item.avatar ?? item.profile_pic_url ?? item.avatar_url) as string | undefined,
+      avatar: (item.profile_picture ?? item.picture ?? item.avatar ?? item.profile_pic_url ?? item.avatar_url ?? item.picture_url ?? item.image ?? item.thumbnail) as string | undefined,
       picture: item.picture as string | undefined,
       followers: Number(item.follower_count ?? item.followers ?? item.subscriber_count ?? 0),
       follower_count: Number(item.follower_count ?? item.followers ?? 0),
@@ -1498,19 +1498,19 @@ export default function CreatorProfileModal({
       platformStats.push({ platform: "Instagram", followers: Number(igRecord.follower_count ?? 0), engagement: Number(igRecord.engagement_percent ?? igRecord.engagement_rate ?? 0) });
     }
     if (tiktokData) {
-      platformStats.push({ platform: "TikTok", followers: Number(tiktokData.follower_count ?? 0), engagement: Number(tiktokData.engagement_percent ?? 0) });
+      platformStats.push({ platform: "TikTok", followers: Number(tiktokData.follower_count ?? 0), engagement: Number(tiktokData.engagement_percent ?? tiktokData.engagement_rate ?? 0) });
     }
     if (youtubeData) {
-      platformStats.push({ platform: "YouTube", followers: Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0), engagement: Number(youtubeData.engagement_percent ?? 0) });
+      platformStats.push({ platform: "YouTube", followers: Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0), engagement: Number(youtubeData.engagement_percent ?? youtubeData.engagement_rate ?? 0) });
     }
     if (twitterData) {
-      platformStats.push({ platform: "X", followers: Number(twitterData.follower_count ?? 0), engagement: Number(twitterData.engagement_percent ?? 0) });
+      platformStats.push({ platform: "X", followers: Number(twitterData.follower_count ?? 0), engagement: Number(twitterData.engagement_percent ?? twitterData.engagement_rate ?? 0) });
     }
     if (facebookData) {
-      platformStats.push({ platform: "Facebook", followers: Number(facebookData.follower_count ?? facebookData.page_likes ?? 0), engagement: Number(facebookData.engagement_percent ?? 0) });
+      platformStats.push({ platform: "Facebook", followers: Number(facebookData.follower_count ?? facebookData.page_likes ?? 0), engagement: Number(facebookData.engagement_percent ?? facebookData.engagement_rate ?? 0) });
     }
     if (linkedinData) {
-      platformStats.push({ platform: "LinkedIn", followers: Number(linkedinData.follower_count ?? linkedinData.connections ?? 0), engagement: Number(linkedinData.engagement_percent ?? 0) });
+      platformStats.push({ platform: "LinkedIn", followers: Number(linkedinData.follower_count ?? linkedinData.connections ?? 0), engagement: Number(linkedinData.engagement_percent ?? linkedinData.engagement_rate ?? 0) });
     }
     const totalReach = platformStats.reduce((s, p) => s + p.followers, 0);
     const mostEngaged = platformStats.length > 0 ? platformStats.reduce((best, p) => p.engagement > best.engagement ? p : best) : null;
@@ -2576,13 +2576,29 @@ export default function CreatorProfileModal({
                                   <tr key={acc.id ?? acc.username} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                     <td className="py-2.5 px-3">
                                       <div className="flex items-center gap-2.5">
-                                        {acc.avatar ? (
-                                          <img src={acc.avatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                        ) : (
-                                          <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                            <Users className="h-4 w-4 text-gray-400" />
-                                          </div>
-                                        )}
+                                        {acc.avatar || acc.picture ? (
+                                          <img
+                                            src={safeImageUrl(acc.avatar || acc.picture || "")}
+                                            alt=""
+                                            className="h-9 w-9 rounded-full object-cover shrink-0"
+                                            onError={(e) => {
+                                              const el = e.target as HTMLImageElement;
+                                              el.style.display = 'none';
+                                              // Show the letter fallback sibling
+                                              const fallback = el.nextElementSibling as HTMLElement | null;
+                                              if (fallback) fallback.style.display = 'flex';
+                                            }}
+                                          />
+                                        ) : null}
+                                        <div
+                                          className="h-9 w-9 rounded-full shrink-0 items-center justify-center text-white text-sm font-bold"
+                                          style={{
+                                            display: acc.avatar || acc.picture ? 'none' : 'flex',
+                                            backgroundColor: `hsl(${((acc.username ?? acc.name ?? "?").charCodeAt(0) * 47) % 360}, 55%, 50%)`,
+                                          }}
+                                        >
+                                          {(acc.name ?? acc.username ?? "?").charAt(0).toUpperCase()}
+                                        </div>
                                         <div className="min-w-0">
                                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.name ?? acc.full_name ?? acc.username ?? "—"}</p>
                                           <p className="text-xs text-gray-500 truncate">@{acc.username ?? "—"}</p>
