@@ -366,10 +366,10 @@ export default function CreatorProfileModal({
   const [eventsLoading, setEventsLoading] = useState(false);
   const [invitingEvent, setInvitingEvent] = useState(false);
   // Resizable sidebar
-  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [sidebarWidth, setSidebarWidth] = useState(330);
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
-  const dragStartWidthRef = useRef(320);
+  const dragStartWidthRef = useRef(330);
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -382,7 +382,7 @@ export default function CreatorProfileModal({
     const handleMouseMove = (ev: MouseEvent) => {
       if (!isDraggingRef.current) return;
       const delta = ev.clientX - dragStartXRef.current;
-      const newWidth = Math.max(250, Math.min(450, dragStartWidthRef.current + delta));
+      const newWidth = Math.max(250, Math.min(500, dragStartWidthRef.current + delta));
       setSidebarWidth(newWidth);
     };
     const handleMouseUp = () => {
@@ -2185,11 +2185,11 @@ export default function CreatorProfileModal({
 
           {/* ── Draggable Divider ── */}
           <div
-            className="hidden md:flex items-center justify-center w-1 shrink-0 cursor-col-resize group hover:bg-blue-400/30 active:bg-blue-500/40 transition-colors relative"
+            className="hidden md:flex items-center justify-center shrink-0 cursor-col-resize group relative"
+            style={{ width: 6 }}
             onMouseDown={handleDividerMouseDown}
           >
-            <div className="absolute inset-y-0 -left-1 -right-1" />
-            <div className="w-0.5 h-8 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors" />
+            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0 group-hover:w-[2px] group-active:w-[2px] bg-[#CBD5E1] transition-all" />
           </div>
 
           {/* ── Right Panel ── */}
