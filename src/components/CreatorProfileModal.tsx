@@ -540,7 +540,7 @@ export default function CreatorProfileModal({
       }, 45000);
 
       try {
-        const payload = await enrichCreatorProfile(handle, controller.signal);
+        const payload = await enrichCreatorProfile(handle, controller.signal, "instagram", true);
         clearTimeout(timeoutId);
         if (cancelledRef.current || generationRef.current !== gen) return;
 
@@ -2290,17 +2290,9 @@ export default function CreatorProfileModal({
                                     loading="lazy"
                                     className="w-full aspect-square object-cover"
                                     referrerPolicy="no-referrer"
-                                    crossOrigin="anonymous"
                                     onError={(e) => {
                                       const img = e.target as HTMLImageElement;
-                                      const origSrc = post.thumbnail ?? "";
-                                      // Try without crossOrigin first (some CDNs reject CORS preflight)
-                                      if (img.crossOrigin) {
-                                        img.crossOrigin = "";
-                                        img.src = origSrc;
-                                        return;
-                                      }
-                                      console.log("[PostImages] Image failed to load:", origSrc);
+                                      console.log("[PostImages] Image failed to load:", post.thumbnail);
                                       setBrokenPostImages(prev => new Set(prev).add(post.id));
                                     }}
                                   />

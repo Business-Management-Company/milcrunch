@@ -461,12 +461,13 @@ export interface EnrichedProfileResponse {
 export async function enrichCreatorProfile(
   username: string,
   signal?: AbortSignal,
-  platform: string = "instagram"
+  platform: string = "instagram",
+  full: boolean = false
 ): Promise<EnrichedProfileResponse | null> {
   const handle = username.replace(/^@/, "").trim();
   const platKey = platform.toLowerCase() === "all" ? "instagram" : platform.toLowerCase();
 
-  const url = RAW_ENRICH_URL;
+  const url = full ? FULL_ENRICH_URL : RAW_ENRICH_URL;
   const body = {
     handle,
     platform: platKey,
