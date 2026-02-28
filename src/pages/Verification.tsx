@@ -367,10 +367,14 @@ export default function Verification() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [editCreatorOpen, setEditCreatorOpen] = useState(false);
   const [editCreatorSaving, setEditCreatorSaving] = useState(false);
+  const [icCategories, setIcCategories] = useState<string[]>([]);
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const categoryBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [editForm, setEditForm] = useState({
     id: "",
     name: "",
     branch: "",
+    militaryStatus: "",
     category: "",
     confidenceScore: null as number | null,
     verificationStatus: "pending" as string,
@@ -484,6 +488,24 @@ export default function Verification() {
       setCreatorSearch("");
     })();
   }, [addOpen]);
+
+  // Fetch distinct IC categories for the edit modal autocomplete
+  useEffect(() => {
+    if (!editCreatorOpen) return;
+    supabase
+      .from("directory_members")
+      .select("category")
+      .not("category", "is", null)
+      .then(({ data }) => {
+        if (!data) return;
+        const unique = [...new Set(
+          (data as { category: string | null }[])
+            .map((d) => d.category)
+            .filter((c): c is string => !!c && c.trim() !== "")
+        )].sort();
+        setIcCategories(unique);
+      });
+  }, [editCreatorOpen]);
 
   // Pre-fill from discovery navigation state
   useEffect(() => {
@@ -935,7 +957,7 @@ export default function Verification() {
     setAddSpeakerOpen(true);
   };
 
-  const handleEditCreator = (row: VerificationRecord) => {
+  const handleEditCreator = async (row: VerificationRecord) => {
     const handle = row.source_username;
     let bestPhoto = row.profile_photo_url || "";
     if (handle && dirEnrichmentMap[handle]) {
@@ -950,12 +972,23 @@ export default function Verification() {
       const dmAvatar = dmMatch.ic_avatar_url || dmMatch.avatar_url;
       if (dmAvatar) bestPhoto = dmAvatar;
     }
+    // Fetch IC category from directory_members
+    let icCategory = "";
+    if (handle) {
+      const { data: dmCat } = await supabase
+        .from("directory_members")
+        .select("category")
+        .eq("creator_handle", handle)
+        .maybeSingle();
+      if (dmCat?.category) icCategory = dmCat.category as string;
+    }
     const mc = (row.manual_checks as Record<string, unknown> | null) ?? {};
     setEditForm({
       id: row.id,
       name: row.person_name,
       branch: row.claimed_branch ?? "",
-      category: row.claimed_status ?? "",
+      militaryStatus: row.claimed_status ?? "",
+      category: icCategory,
       confidenceScore: row.verification_score,
       verificationStatus: row.status ?? "pending",
       originalStatus: row.status ?? "pending",
@@ -986,7 +1019,7 @@ export default function Verification() {
       const vPayload: Record<string, unknown> = {
         person_name: editForm.name,
         claimed_branch: editForm.branch || null,
-        claimed_status: editForm.category || null,
+        claimed_status: editForm.militaryStatus || null,
         status: editForm.verificationStatus,
         linkedin_url: editForm.linkedin || null,
         website_url: editForm.website || null,
@@ -1771,17 +1804,19 @@ export default function Verification() {
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Profile</p>
               <div className="space-y-3">
+                {/* 1. Name */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Name</Label>
                   <Input value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className="w-full truncate focus:text-clip" />
                 </div>
+                {/* 2. Branch + 3. Military Status */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Branch</Label>
                     <Select value={editForm.branch} onValueChange={(v) => setEditForm((f) => ({ ...f, branch: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
                       <SelectContent>
-                        {["Army", "Navy", "Marines", "Air Force", "Space Force", "Coast Guard", "National Guard"].map((b) => (
+                        {["Army", "Navy", "Marines", "Air Force", "Coast Guard", "Space Force", "National Guard"].map((b) => (
                           <SelectItem key={b} value={b}>{b}</SelectItem>
                         ))}
                       </SelectContent>
@@ -1789,15 +1824,60 @@ export default function Verification() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Military Status</Label>
-                    <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
+                    <Select value={editForm.militaryStatus} onValueChange={(v) => setEditForm((f) => ({ ...f, militaryStatus: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                       <SelectContent>
-                        {["Active Duty", "Veteran", "Military Spouse", "Guard/Reserve", "Retired", "Cadet/ROTC"].map((c) => (
+                        {["Veteran", "Active Duty", "Military Spouse", "Military Family", "DOD", "Reserves", "Guard", "Retired", "Cadet/ROTC"].map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                {/* 4. Category — searchable autocomplete from IC categories */}
+                <div className="relative">
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</Label>
+                  <Input
+                    value={editForm.category}
+                    onChange={(e) => {
+                      setEditForm((f) => ({ ...f, category: e.target.value }));
+                      setCategoryPopoverOpen(true);
+                    }}
+                    onFocus={() => setCategoryPopoverOpen(true)}
+                    onBlur={() => {
+                      if (categoryBlurTimer.current) clearTimeout(categoryBlurTimer.current);
+                      categoryBlurTimer.current = setTimeout(() => setCategoryPopoverOpen(false), 150);
+                    }}
+                    placeholder="Search or type a category..."
+                    className="w-full"
+                    autoComplete="off"
+                  />
+                  {categoryPopoverOpen && (() => {
+                    const filtered = icCategories.filter((c) =>
+                      !editForm.category || c.toLowerCase().includes(editForm.category.toLowerCase())
+                    );
+                    if (filtered.length === 0) return null;
+                    return (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                        {filtered.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setEditForm((f) => ({ ...f, category: c }));
+                              setCategoryPopoverOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 truncate ${
+                              editForm.category === c ? "bg-gray-50 dark:bg-gray-800 font-medium text-[#1e3a5f]" : "text-gray-700 dark:text-gray-300"
+                            }`}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1808,6 +1888,7 @@ export default function Verification() {
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Verification</p>
               <div className="grid grid-cols-2 gap-3">
+                {/* 5. Verification Status */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                     Verification Status
@@ -1825,6 +1906,7 @@ export default function Verification() {
                     </SelectContent>
                   </Select>
                 </div>
+                {/* 6. Confidence Score */}
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Confidence Score</Label>
                   <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-gray-50 dark:bg-gray-900">
