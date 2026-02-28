@@ -371,6 +371,9 @@ export default function CreatorProfileModal({
   const [emailNotFound, setEmailNotFound] = useState(false);
   const [platformEnrichments, setPlatformEnrichments] = useState<Record<string, Record<string, unknown>>>({});
 
+  // Track whether user has manually selected a platform (prevents auto-switching)
+  const userSelectedPlatformRef = useRef(false);
+
   const listDropdownRef = useRef<HTMLDivElement>(null);
   const dirDropdownRef = useRef<HTMLDivElement>(null);
   const eventDropdownRef = useRef<HTMLDivElement>(null);
@@ -476,6 +479,7 @@ export default function CreatorProfileModal({
       setEmailNotFound(false);
       setBrokenPostImages(new Set());
       setPlatformEnrichments({});
+      userSelectedPlatformRef.current = false;
       return;
     }
     const rawHandle = creator.username;
@@ -611,12 +615,20 @@ export default function CreatorProfileModal({
         const data = await enrichCreatorProfile(handle, controller.signal, platform, false);
         if (cancelled) return;
         if (data?.instagram && typeof data.instagram === "object") {
-          console.log(`[Enrich] Multi-platform ${platform}:`, {
-            follower_count: (data.instagram as Record<string, unknown>).follower_count,
-            subscriber_count: (data.instagram as Record<string, unknown>).subscriber_count,
-            engagement_percent: (data.instagram as Record<string, unknown>).engagement_percent,
+          const pd = data.instagram as Record<string, unknown>;
+          console.log(`[Enrich] Multi-platform ${platform} ALL KEYS:`, Object.keys(pd));
+          console.log(`[Enrich] Multi-platform ${platform} stats:`, {
+            follower_count: pd.follower_count,
+            subscriber_count: pd.subscriber_count,
+            engagement_percent: pd.engagement_percent,
+            engagement_rate: pd.engagement_rate,
+            media_count: pd.media_count,
+            video_count: pd.video_count,
+            avg_likes: pd.avg_likes,
+            avg_views: pd.avg_view_count ?? pd.avg_views,
+            post_data: Array.isArray(pd.post_data) ? `${(pd.post_data as unknown[]).length} posts` : "none",
           });
-          setPlatformEnrichments(prev => ({ ...prev, [platform]: data.instagram as Record<string, unknown> }));
+          setPlatformEnrichments(prev => ({ ...prev, [platform]: pd }));
         }
       } catch (err) {
         if ((err as Error)?.name !== "AbortError") {
@@ -627,6 +639,28 @@ export default function CreatorProfileModal({
 
     return () => { cancelled = true; controller.abort(); };
   }, [enriched, open, creator?.id, creator?.socialPlatforms, creator?.platforms]);
+
+  // ── Auto-select platform with the most followers ──
+  // Runs as platform enrichments arrive; stops once user manually picks a platform.
+  useEffect(() => {
+    if (userSelectedPlatformRef.current) return;
+    if (!enriched) return;
+
+    const candidates: [string, number][] = [];
+    if (igRecord) candidates.push(["instagram", Number(igRecord.follower_count ?? 0)]);
+    if (platformEnrichments.tiktok) candidates.push(["tiktok", Number(platformEnrichments.tiktok.follower_count ?? 0)]);
+    if (platformEnrichments.youtube) candidates.push(["youtube", Number(platformEnrichments.youtube.subscriber_count ?? platformEnrichments.youtube.follower_count ?? 0)]);
+    if (platformEnrichments.twitter) candidates.push(["twitter", Number(platformEnrichments.twitter.follower_count ?? 0)]);
+    if (platformEnrichments.facebook) candidates.push(["facebook", Number(platformEnrichments.facebook.follower_count ?? platformEnrichments.facebook.page_likes ?? 0)]);
+    if (platformEnrichments.linkedin) candidates.push(["linkedin", Number(platformEnrichments.linkedin.follower_count ?? platformEnrichments.linkedin.connections ?? 0)]);
+
+    if (candidates.length > 0) {
+      const best = candidates.reduce((a, b) => (b[1] > a[1] ? b : a));
+      if (best[1] > 0 && best[0] !== selectedPlatform) {
+        setSelectedPlatform(best[0]);
+      }
+    }
+  }, [enriched, igRecord, platformEnrichments, selectedPlatform]);
 
   /** Two-level response: result (top-level) + result.instagram (ig) */
   const resultTop = enriched?.result ?? {};
@@ -1209,10 +1243,18 @@ export default function CreatorProfileModal({
     (selectedPlatform === "instagram" && !!ig) ||
     (selectedPlatform === "tiktok" && !!tiktokData) ||
     (selectedPlatform === "youtube" && !!youtubeData) ||
-    (selectedPlatform === "twitter" && !!twitterData);
+    (selectedPlatform === "twitter" && !!twitterData) ||
+    (selectedPlatform === "facebook" && !!facebookData) ||
+    (selectedPlatform === "linkedin" && !!linkedinData);
 
   const recentPosts: PostItem[] = useMemo(() => {
-    const raw = igRecord?.post_data;
+    let platRecord: Record<string, unknown> | undefined;
+    if (selectedPlatform === "tiktok") platRecord = tiktokData;
+    else if (selectedPlatform === "youtube") platRecord = youtubeData;
+    else if (selectedPlatform === "twitter") platRecord = twitterData;
+    else platRecord = igRecord;
+
+    const raw = platRecord?.post_data;
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 12).map((item: Record<string, unknown>) => {
       const media = item.media as unknown[] | undefined;
@@ -1228,7 +1270,7 @@ export default function CreatorProfileModal({
         permalink: (item.post_url as string) ?? undefined,
       };
     });
-  }, [igRecord?.post_data]);
+  }, [selectedPlatform, igRecord?.post_data, tiktokData, youtubeData, twitterData]);
 
   const similarAccounts: SimilarAccount[] = useMemo(() => {
     // Try multiple field names for lookalike/similar data
@@ -1377,7 +1419,14 @@ export default function CreatorProfileModal({
   }, [igRecord, tiktokData, youtubeData, twitterData, facebookData, linkedinData]);
 
   const filteredPosts = useMemo(() => {
-    const raw = igRecord?.post_data;
+    // Use the selected platform's post data
+    let platRecord: Record<string, unknown> | undefined;
+    if (selectedPlatform === "tiktok") platRecord = tiktokData;
+    else if (selectedPlatform === "youtube") platRecord = youtubeData;
+    else if (selectedPlatform === "twitter") platRecord = twitterData;
+    else platRecord = igRecord;
+
+    const raw = platRecord?.post_data;
     if (!Array.isArray(raw)) return [];
     const mapped = (raw as Record<string, unknown>[]).map((item, idx) => {
       const media = item.media as unknown[] | undefined;
@@ -1416,9 +1465,6 @@ export default function CreatorProfileModal({
         }
         return undefined;
       })() as string | undefined;
-      if (idx < 3) {
-        console.log(`[PostImages] Post ${idx}:`, { thumbnail, mediaUrl: firstMedia?.url, itemThumbnail: item.thumbnail, imageUrl: item.image_url, displayUrl: item.display_url, mediaKeys: firstMedia ? Object.keys(firstMedia) : "no media", itemKeys: Object.keys(item).filter(k => k.includes("image") || k.includes("thumb") || k.includes("url") || k.includes("media") || k.includes("display")) });
-      }
       return {
         id: String(item.post_id ?? item.id ?? Math.random()),
         thumbnail,
@@ -1433,7 +1479,7 @@ export default function CreatorProfileModal({
     });
     if (postContentType === "reels") return mapped.filter((p) => p.isReel);
     return mapped;
-  }, [igRecord?.post_data, postContentType]);
+  }, [selectedPlatform, igRecord?.post_data, tiktokData, youtubeData, twitterData, postContentType]);
 
   const platformLink = useMemo(() => {
     const u = displayUsername || creator?.username;
@@ -1523,18 +1569,17 @@ export default function CreatorProfileModal({
               <button
                 key={p}
                 type="button"
-                onClick={() => setSelectedPlatform(p.toLowerCase())}
+                onClick={() => { userSelectedPlatformRef.current = true; setSelectedPlatform(p.toLowerCase()); }}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-xl border-2 px-4 py-2 transition-colors shrink-0",
-                  isActive ? "border-[#1e3a5f] bg-white dark:bg-[#1A1D27]" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] hover:border-gray-300"
+                  "flex-1 min-w-[140px] flex items-center gap-2.5 rounded-xl border-2 px-4 py-2 transition-colors",
+                  isActive ? "border-[#3B82F6] bg-blue-50/50 dark:bg-blue-950/20" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1A1D27] hover:border-gray-300"
                 )}
               >
-                <PlatformBrandIcon platform={p} className="h-5 w-5 shrink-0" />
-                <div className="text-left">
+                <PlatformBrandIcon platform={p} className="h-6 w-6 shrink-0" />
+                <div className="text-left min-w-0">
                   <p className="text-sm leading-tight">
                     <span className="font-bold text-[#E1306C]">{pFollowers > 0 ? formatNumber(pFollowers) : "—"}</span>
-                    {pFollowers > 0 && <span className="text-gray-500 ml-1 text-xs font-normal">followers</span>}
-                    {!pFollowers && <span className="text-gray-500 ml-1 text-xs font-normal">{PLATFORM_LABELS[p] ?? p}</span>}
+                    <span className="text-gray-500 ml-1 text-xs font-normal">{p === "youtube" ? "subscribers" : "followers"}</span>
                   </p>
                   <p className="text-[11px] text-green-600 leading-tight font-medium">{pEngagement > 0 ? `${formatPercent(pEngagement)} eng` : "—"}</p>
                 </div>
@@ -1979,10 +2024,10 @@ export default function CreatorProfileModal({
                     <button
                       key={p}
                       type="button"
-                      onClick={() => setSelectedPlatform(p.toLowerCase())}
+                      onClick={() => { userSelectedPlatformRef.current = true; setSelectedPlatform(p.toLowerCase()); }}
                       className={cn(
                         "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                        isActive ? "bg-[#1e3a5f]/10 ring-2 ring-[#1e3a5f]" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        isActive ? "bg-[#3B82F6]/10 ring-2 ring-[#3B82F6]" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                       )}
                       title={PLATFORM_LABELS[p.toLowerCase()] ?? p}
                     >
