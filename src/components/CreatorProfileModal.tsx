@@ -635,6 +635,8 @@ export default function CreatorProfileModal({
   const tiktokData = (resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
   const youtubeData = (resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
   const twitterData = (resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
+  const facebookData = (resultTop as Record<string, unknown>).facebook as Record<string, unknown> | undefined;
+  const linkedinData = (resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined;
 
   /** Merge platforms from all possible IC response shapes + creator card */
   const { availablePlatforms, platformHandles } = useMemo(() => {
@@ -678,6 +680,8 @@ export default function CreatorProfileModal({
     if (tiktokData) { found.add("tiktok"); if (!handles.has("tiktok") && tiktokData.username) handles.set("tiktok", String(tiktokData.username).replace(/^@/, "")); }
     if (youtubeData) { found.add("youtube"); if (!handles.has("youtube")) { const u = (youtubeData.custom_url as string) ?? (youtubeData.username as string); if (u) handles.set("youtube", u.replace(/^@/, "")); } }
     if (twitterData) { found.add("twitter"); if (!handles.has("twitter") && twitterData.username) handles.set("twitter", String(twitterData.username).replace(/^@/, "")); }
+    if (facebookData) { found.add("facebook"); if (!handles.has("facebook") && facebookData.username) handles.set("facebook", String(facebookData.username).replace(/^@/, "")); }
+    if (linkedinData) { found.add("linkedin"); if (!handles.has("linkedin") && linkedinData.username) handles.set("linkedin", String(linkedinData.username).replace(/^@/, "")); }
     if (ig) found.add("instagram");
 
     // 5. creator.socialPlatforms / creator.platforms from the card
@@ -698,7 +702,7 @@ export default function CreatorProfileModal({
     const ordered = PLATFORM_ORDER.filter((p) => found.has(p));
     found.forEach((p) => { if (!ordered.includes(p)) ordered.push(p); });
     return { availablePlatforms: ordered, platformHandles: handles };
-  }, [resultTop.creator_has, resultTop.accounts, resultTop.platform_links, resultTop.username, enriched, tiktokData, youtubeData, twitterData, ig, igRecord, creator?.socialPlatforms, creator?.platforms, creator?.username]);
+  }, [resultTop.creator_has, resultTop.accounts, resultTop.platform_links, resultTop.username, enriched, tiktokData, youtubeData, twitterData, facebookData, linkedinData, ig, igRecord, creator?.socialPlatforms, creator?.platforms, creator?.username]);
 
   const listCreator: ListCreator | null = creator
     ? {
@@ -1318,11 +1322,17 @@ export default function CreatorProfileModal({
     if (twitterData) {
       platformStats.push({ platform: "X", followers: Number(twitterData.follower_count ?? 0), engagement: Number(twitterData.engagement_percent ?? 0) });
     }
+    if (facebookData) {
+      platformStats.push({ platform: "Facebook", followers: Number(facebookData.follower_count ?? facebookData.page_likes ?? 0), engagement: Number(facebookData.engagement_percent ?? 0) });
+    }
+    if (linkedinData) {
+      platformStats.push({ platform: "LinkedIn", followers: Number(linkedinData.follower_count ?? linkedinData.connections ?? 0), engagement: Number(linkedinData.engagement_percent ?? 0) });
+    }
     const totalReach = platformStats.reduce((s, p) => s + p.followers, 0);
     const mostEngaged = platformStats.length > 0 ? platformStats.reduce((best, p) => p.engagement > best.engagement ? p : best) : null;
     const avgEngagement = platformStats.length > 0 ? platformStats.reduce((s, p) => s + p.engagement, 0) / platformStats.length : 0;
     return { totalReach, mostEngaged, avgEngagement, platforms: platformStats };
-  }, [igRecord, tiktokData, youtubeData, twitterData]);
+  }, [igRecord, tiktokData, youtubeData, twitterData, facebookData, linkedinData]);
 
   const filteredPosts = useMemo(() => {
     const raw = igRecord?.post_data;
@@ -1333,8 +1343,37 @@ export default function CreatorProfileModal({
       const eng = item.engagement as Record<string, unknown> | undefined;
       const isCarousel = Array.isArray(media) && media.length > 1;
       const isReel = Boolean(item.is_reel ?? item.video_url ?? item.is_video);
-      // Try multiple image sources: media[0].url, thumbnail, image_url, display_url, media_url
-      const thumbnail = (firstMedia?.url ?? firstMedia?.thumbnail_url ?? item.thumbnail ?? item.image_url ?? item.display_url ?? item.media_url) as string | undefined;
+      // Try multiple image sources from media array entries and direct item fields
+      const thumbnail = (() => {
+        const MEDIA_KEYS = ['url', 'thumbnail_url', 'media_url', 'display_url', 'image_url', 'src', 'thumbnail', 'preview_url'];
+        const ITEM_KEYS = ['thumbnail', 'image', 'image_url', 'display_url', 'media_url', 'thumbnail_url', 'video_thumbnail', 'preview_url', 'thumbnail_src', 'picture', 'thumbnail_resource'];
+        // 1. Try media array entries (object with url, or direct string)
+        if (Array.isArray(media)) {
+          for (const m of media) {
+            if (typeof m === 'string' && m.startsWith('http')) return m;
+            if (m && typeof m === 'object') {
+              const mo = m as Record<string, unknown>;
+              for (const k of MEDIA_KEYS) {
+                const v = mo[k];
+                if (typeof v === 'string' && v.startsWith('http')) return v;
+              }
+            }
+          }
+        }
+        // 2. Try firstMedia fields (already extracted)
+        if (firstMedia) {
+          for (const k of MEDIA_KEYS) {
+            const v = firstMedia[k];
+            if (typeof v === 'string' && v.startsWith('http')) return v;
+          }
+        }
+        // 3. Try direct item fields
+        for (const k of ITEM_KEYS) {
+          const v = item[k];
+          if (typeof v === 'string' && v.startsWith('http')) return v;
+        }
+        return undefined;
+      })() as string | undefined;
       if (idx < 3) {
         console.log(`[PostImages] Post ${idx}:`, { thumbnail, mediaUrl: firstMedia?.url, itemThumbnail: item.thumbnail, imageUrl: item.image_url, displayUrl: item.display_url, mediaKeys: firstMedia ? Object.keys(firstMedia) : "no media", itemKeys: Object.keys(item).filter(k => k.includes("image") || k.includes("thumb") || k.includes("url") || k.includes("media") || k.includes("display")) });
       }
@@ -1435,7 +1474,7 @@ export default function CreatorProfileModal({
         <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-[#0F1117] border-b border-gray-100 dark:border-gray-800 shrink-0 overflow-x-auto">
           {availablePlatforms.map((p) => {
             const isActive = selectedPlatform.toLowerCase() === p.toLowerCase();
-            const platData = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : null;
+            const platData = p === "instagram" ? igRecord : p === "tiktok" ? tiktokData : p === "youtube" ? youtubeData : p === "twitter" ? twitterData : p === "facebook" ? facebookData : p === "linkedin" ? linkedinData : null;
             const pFollowers = Number((platData as Record<string, unknown>)?.follower_count ?? (platData as Record<string, unknown>)?.subscriber_count ?? 0);
             const pEngagement = Number((platData as Record<string, unknown>)?.engagement_percent ?? (platData as Record<string, unknown>)?.engagement_rate ?? 0);
             return (
@@ -1823,6 +1862,29 @@ export default function CreatorProfileModal({
               )}
             </div>
 
+            {/* Contact / Email */}
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Contact</p>
+              {displayEmail ? (
+                <a href={`mailto:${displayEmail}`} className="flex items-center gap-1.5 text-sm text-[#0064B1] hover:underline">
+                  <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
+                </a>
+              ) : emailNotFound ? (
+                <p className="text-sm text-gray-500">No email found</p>
+              ) : fetchingEmail ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+                  <span className="text-sm text-blue-600">Fetching...</span>
+                </div>
+              ) : creator?.username ? (
+                <button onClick={handleGetEmail} className="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium">
+                  <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
+                </button>
+              ) : (
+                <p className="text-sm text-gray-500">&mdash;</p>
+              )}
+            </div>
+
             {/* Cross-Platform Summary */}
             {crossPlatformSummary.totalReach > 0 && (
               <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 p-4">
@@ -1910,29 +1972,6 @@ export default function CreatorProfileModal({
               </div>
             </div>
 
-            {/* Contact / Email */}
-            <div className="border-t border-gray-100 dark:border-gray-800 pt-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Contact</p>
-              {displayEmail ? (
-                <a href={`mailto:${displayEmail}`} className="flex items-center gap-1.5 text-sm text-[#0064B1] hover:underline">
-                  <Mail className="h-3.5 w-3.5 shrink-0" /> {displayEmail}
-                </a>
-              ) : emailNotFound ? (
-                <p className="text-sm text-gray-500">No email found</p>
-              ) : fetchingEmail ? (
-                <div className="flex items-center gap-1.5">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
-                  <span className="text-sm text-blue-600">Fetching...</span>
-                </div>
-              ) : creator?.username ? (
-                <button onClick={handleGetEmail} className="inline-flex items-center gap-1 text-sm text-blue-700 hover:text-blue-800 hover:underline font-medium">
-                  <Mail className="h-3.5 w-3.5" /> Get Email (1 credit)
-                </button>
-              ) : (
-                <p className="text-sm text-gray-500">&mdash;</p>
-              )}
-            </div>
-
           </div>
           </ScrollArea>
 
@@ -1996,36 +2035,6 @@ export default function CreatorProfileModal({
                           <Skeleton className="h-36 w-full animate-pulse" />
                         </div>
                       ) : null}
-
-                      {/* Key Metrics Grid */}
-                      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Key Metrics</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {showEnrichmentLoading && avgLikes === 0 && avgComments === 0 && avgViews === 0 ? (
-                            [1, 2, 3, 4].map((i) => (
-                              <div key={i} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
-                                <Skeleton className="h-6 w-12 mx-auto mb-1 animate-pulse" />
-                                <Skeleton className="h-3 w-16 mx-auto animate-pulse" />
-                              </div>
-                            ))
-                          ) : (
-                            [
-                              { label: "Avg Likes", value: avgLikes, fmt: formatNumber },
-                              { label: "Avg Comments", value: avgComments, fmt: formatNumber },
-                              { label: "Avg Views", value: avgViews, fmt: formatNumber },
-                              { label: statLabels.postsPerMonth, value: postsPerMonth, fmt: (v: number) => `${formatNumber(v)}/mo` },
-                            ].filter(({ value }) => value > 0).map(({ label, value, fmt }) => (
-                              <div key={label} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-center">
-                                <p className="text-lg font-bold text-[#000741] dark:text-white">{fmt(value)}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                        {selectedPlatform === "instagram" && reelsPct > 0 && (
-                          <p className="text-xs text-muted-foreground mt-3">Reels make up {reelsPct}% of last 12 posts</p>
-                        )}
-                      </div>
 
                       {/* Follower Growth Chart */}
                       {growthData.length > 0 ? (
@@ -2275,7 +2284,26 @@ export default function CreatorProfileModal({
                             >
                               <div className="relative">
                                 {post.thumbnail && !brokenPostImages.has(post.id) ? (
-                                  <img src={post.thumbnail} alt="" loading="lazy" className="w-full aspect-square object-cover" onError={() => { console.log("[PostImages] Image failed to load:", post.thumbnail); setBrokenPostImages(prev => new Set(prev).add(post.id)); }} />
+                                  <img
+                                    src={post.thumbnail}
+                                    alt=""
+                                    loading="lazy"
+                                    className="w-full aspect-square object-cover"
+                                    referrerPolicy="no-referrer"
+                                    crossOrigin="anonymous"
+                                    onError={(e) => {
+                                      const img = e.target as HTMLImageElement;
+                                      const origSrc = post.thumbnail ?? "";
+                                      // Try without crossOrigin first (some CDNs reject CORS preflight)
+                                      if (img.crossOrigin) {
+                                        img.crossOrigin = "";
+                                        img.src = origSrc;
+                                        return;
+                                      }
+                                      console.log("[PostImages] Image failed to load:", origSrc);
+                                      setBrokenPostImages(prev => new Set(prev).add(post.id));
+                                    }}
+                                  />
                                 ) : (
                                   <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-1">
                                     <Camera className="h-6 w-6 text-gray-300" />
@@ -2319,56 +2347,73 @@ export default function CreatorProfileModal({
                           No similar accounts found.
                         </p>
                       ) : (
-                        <div className="divide-y divide-gray-100 dark:divide-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] overflow-hidden">
-                          {similarAccounts.map((acc) => (
-                            <div
-                              key={acc.id ?? acc.username}
-                              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                            >
-                              {acc.avatar ? (
-                                <img src={acc.avatar} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
-                              ) : (
-                                <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                  <Users className="h-5 w-5 text-gray-400" />
-                                </div>
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">@{acc.username ?? "—"}</p>
-                                <p className="text-xs text-gray-500">
-                                  {formatNumber(acc.followers ?? acc.follower_count)} followers
-                                  {acc.engagement_percent != null && acc.engagement_percent > 0 && ` · ${formatPercent(acc.engagement_percent)} eng`}
-                                </p>
-                              </div>
-                              {onAddToList && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="shrink-0 h-7 px-2 text-xs rounded-lg border-gray-200 dark:border-gray-700"
-                                  onClick={() => onAddToList({
-                                    id: acc.id ?? acc.username ?? "",
-                                    name: acc.full_name ?? acc.username ?? "",
-                                    username: acc.username ?? "",
-                                    avatar: acc.avatar ?? "",
-                                    followers: acc.followers ?? acc.follower_count ?? 0,
-                                    engagementRate: acc.engagement_percent ?? 0,
-                                    platforms: [selectedPlatform || "instagram"],
-                                    bio: "",
-                                  })}
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Add
-                                </Button>
-                              )}
-                              <a
-                                href={acc.profile_url ?? (acc.username ? `https://instagram.com/${acc.username}` : "#")}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="shrink-0 text-xs font-medium text-[#1e3a5f] hover:underline"
-                              >
-                                View
-                              </a>
-                            </div>
-                          ))}
+                        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117]">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-100 dark:border-gray-800 text-left text-[11px] text-gray-500 uppercase tracking-wider">
+                                <th className="py-2.5 px-3">Creator</th>
+                                <th className="py-2.5 px-3">Subscribers</th>
+                                <th className="py-2.5 px-3">Engagement</th>
+                                <th className="py-2.5 px-3">Similarity</th>
+                                <th className="py-2.5 px-3"></th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                              {similarAccounts.map((acc) => {
+                                const simPct = acc.similarity != null && acc.similarity > 0
+                                  ? (acc.similarity <= 1 ? acc.similarity * 100 : acc.similarity)
+                                  : 0;
+                                return (
+                                  <tr key={acc.id ?? acc.username} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                    <td className="py-2.5 px-3">
+                                      <div className="flex items-center gap-2.5">
+                                        {acc.avatar ? (
+                                          <img src={acc.avatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                        ) : (
+                                          <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                                            <Users className="h-4 w-4 text-gray-400" />
+                                          </div>
+                                        )}
+                                        <div className="min-w-0">
+                                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.name ?? acc.full_name ?? acc.username ?? "—"}</p>
+                                          <p className="text-xs text-gray-500 truncate">@{acc.username ?? "—"}</p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">{formatNumber(acc.followers ?? acc.follower_count)}</td>
+                                    <td className="py-2.5 px-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{acc.engagement_percent != null && acc.engagement_percent > 0 ? formatPercent(acc.engagement_percent) : "—"}</td>
+                                    <td className="py-2.5 px-3 whitespace-nowrap">
+                                      {simPct > 0 ? (
+                                        <span className="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                                          {simPct.toFixed(0)}%
+                                        </span>
+                                      ) : "—"}
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      {onOpenCreator ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => onOpenCreator(acc.username ?? "")}
+                                          className="text-xs font-medium text-[#1e3a5f] hover:underline"
+                                        >
+                                          View
+                                        </button>
+                                      ) : (
+                                        <a
+                                          href={acc.profile_url ?? (acc.username ? `https://instagram.com/${acc.username}` : "#")}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs font-medium text-[#1e3a5f] hover:underline"
+                                        >
+                                          View
+                                        </a>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                     </TabsContent>
