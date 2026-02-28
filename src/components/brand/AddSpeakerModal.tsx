@@ -73,6 +73,21 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
   const [directoryResults, setDirectoryResults] = useState<DirectoryPerson[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Track names already added as speakers to this event
+  const [existingSpeakerNames, setExistingSpeakerNames] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!open || !eventId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("event_speakers")
+        .select("creator_name")
+        .eq("event_id", eventId);
+      if (data) {
+        setExistingSpeakerNames(new Set(data.map((r: { creator_name: string }) => (r.creator_name ?? "").toLowerCase())));
+      }
+    })();
+  }, [open, eventId]);
 
   // Manual form state
   const [manualName, setManualName] = useState("");
@@ -171,8 +186,25 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
   };
 
   const addFromDirectory = async (person: DirectoryPerson) => {
+    if (existingSpeakerNames.has(person.name.toLowerCase())) {
+      toast.warning(`${person.name} is already added as a speaker for this event`);
+      return;
+    }
     setAdding(true);
     try {
+      // Double-check server-side
+      const { data: dup } = await supabase
+        .from("event_speakers")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("creator_name", person.name)
+        .limit(1);
+      if (dup && dup.length > 0) {
+        toast.warning(`${person.name} is already added as a speaker for this event`);
+        setExistingSpeakerNames(prev => new Set(prev).add(person.name.toLowerCase()));
+        setAdding(false);
+        return;
+      }
       const { error } = await supabase.from("event_speakers").insert({
         event_id: eventId,
         creator_name: person.name,
@@ -186,6 +218,7 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
         toast.error(error.message);
       } else {
         toast.success(`${person.name} added as speaker`);
+        setExistingSpeakerNames(prev => new Set(prev).add(person.name.toLowerCase()));
         onAdded();
         onOpenChange(false);
       }
@@ -197,15 +230,33 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
   };
 
   const addManually = async () => {
-    if (!manualName.trim()) {
+    const trimmedName = manualName.trim();
+    if (!trimmedName) {
       toast.error("Name is required");
+      return;
+    }
+    if (existingSpeakerNames.has(trimmedName.toLowerCase())) {
+      toast.warning(`${trimmedName} is already added as a speaker for this event`);
       return;
     }
     setAdding(true);
     try {
+      // Double-check server-side
+      const { data: dup } = await supabase
+        .from("event_speakers")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("creator_name", trimmedName)
+        .limit(1);
+      if (dup && dup.length > 0) {
+        toast.warning(`${trimmedName} is already added as a speaker for this event`);
+        setExistingSpeakerNames(prev => new Set(prev).add(trimmedName.toLowerCase()));
+        setAdding(false);
+        return;
+      }
       const { error } = await supabase.from("event_speakers").insert({
         event_id: eventId,
-        creator_name: manualName.trim(),
+        creator_name: trimmedName,
         avatar_url: manualPhoto.trim() || null,
         bio: manualBio.trim() || null,
         role: manualType,
@@ -217,7 +268,8 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
       if (error) {
         toast.error(error.message);
       } else {
-        toast.success(`${manualName.trim()} added as speaker`);
+        toast.success(`${trimmedName} added as speaker`);
+        setExistingSpeakerNames(prev => new Set(prev).add(trimmedName.toLowerCase()));
         onAdded();
         onOpenChange(false);
         resetManualForm();
@@ -280,11 +332,13 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
             )}
 
             <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-              {directoryResults.map((person) => (
+              {directoryResults.map((person) => {
+                const alreadyAdded = existingSpeakerNames.has(person.name.toLowerCase());
+                return (
                 <Card
                   key={person.id}
-                  className="p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                  onClick={() => !adding && addFromDirectory(person)}
+                  className={`p-3 transition-colors ${alreadyAdded ? "opacity-60 cursor-default bg-green-50/50 dark:bg-green-900/10" : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
+                  onClick={() => !adding && !alreadyAdded && addFromDirectory(person)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-pd-blue/10 flex items-center justify-center shrink-0 overflow-hidden">
@@ -300,6 +354,9 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
                         {person.verified && (
                           <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />
                         )}
+                        {alreadyAdded && (
+                          <span className="text-[10px] font-semibold text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded-full shrink-0">Already Added</span>
+                        )}
                       </div>
                       {person.branch && (
                         <Badge variant="outline" className="text-xs mt-0.5">{person.branch}</Badge>
@@ -308,14 +365,17 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
                         <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{person.bio}</p>
                       )}
                     </div>
-                    {adding ? (
+                    {alreadyAdded ? (
+                      <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                    ) : adding ? (
                       <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                     ) : (
                       <CheckCircle className="h-4 w-4 text-muted-foreground shrink-0" />
                     )}
                   </div>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
 

@@ -976,10 +976,20 @@ export default function Speakers() {
     if (!inviteSpeaker || !selectedEventId) return;
     setInviteSaving(true);
 
+    // Check for duplicate before inserting
     const { data: existingSpeakers } = await supabase
       .from("event_speakers")
-      .select("id")
+      .select("id, creator_name")
       .eq("event_id", selectedEventId);
+    const alreadyExists = (existingSpeakers ?? []).some(
+      (s: { creator_name: string }) => (s.creator_name ?? "").toLowerCase() === inviteSpeaker.name.toLowerCase()
+    );
+    if (alreadyExists) {
+      toast.warning(`${inviteSpeaker.name} is already added as a speaker for this event`);
+      setExistingEventIds(prev => [...prev, selectedEventId]);
+      setInviteSaving(false);
+      return;
+    }
     const sortOrder = existingSpeakers?.length ?? 0;
 
     const { error } = await supabase.from("event_speakers").insert({

@@ -937,10 +937,48 @@ export default function CreatorProfileModal({
     setShowNewDirInput(false);
   };
 
+  // Track which events this creator is already a speaker for
+  const [speakerEventIds, setSpeakerEventIds] = useState<Set<string>>(new Set());
+
+  // Fetch existing speaker assignments when event dropdown opens
+  useEffect(() => {
+    if (!eventDropdownOpen || !creator) return;
+    (async () => {
+      const { data } = await supabase
+        .from("event_speakers")
+        .select("event_id")
+        .eq("creator_name", creator.name);
+      if (data) setSpeakerEventIds(new Set(data.map((r: { event_id: string }) => r.event_id)));
+    })();
+  }, [eventDropdownOpen, creator?.name]);
+
+  // Reset when modal closes
+  useEffect(() => {
+    if (!open) setSpeakerEventIds(new Set());
+  }, [open]);
+
   const handleInviteToEvent = async (eventId: string, eventTitle: string) => {
     if (!creator) return;
+    // Prevent duplicate
+    if (speakerEventIds.has(eventId)) {
+      toast.warning(`${creator.name} is already added as a speaker for this event`);
+      return;
+    }
     setInvitingEvent(true);
     try {
+      // Double-check server-side to prevent race conditions
+      const { data: existing } = await supabase
+        .from("event_speakers")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("creator_name", creator.name)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        toast.warning(`${creator.name} is already added as a speaker for this event`);
+        setSpeakerEventIds(prev => new Set(prev).add(eventId));
+        setInvitingEvent(false);
+        return;
+      }
       // Get current speaker count for sort order
       const { count } = await supabase
         .from("event_speakers")
@@ -958,6 +996,7 @@ export default function CreatorProfileModal({
       } as Record<string, unknown>);
       if (err) throw err;
       toast.success(`Invited ${creator.name} to ${eventTitle}`);
+      setSpeakerEventIds(prev => new Set(prev).add(eventId));
       setEventDropdownOpen(false);
     } catch {
       toast.error("Failed to invite to event");
@@ -1991,24 +2030,40 @@ export default function CreatorProfileModal({
                     ) : eventsList.length === 0 ? (
                       <div className="py-3 px-3 text-xs text-gray-400 text-center">No upcoming events</div>
                     ) : (
-                      eventsList.map((evt) => (
-                        <button
-                          key={evt.id}
-                          type="button"
-                          onClick={() => handleInviteToEvent(evt.id, evt.title)}
-                          className="w-full flex items-center gap-2.5 py-2 px-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-sm text-gray-700 dark:text-gray-300 text-left transition-colors"
-                        >
-                          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                            <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="truncate font-medium">{evt.title}</p>
-                            <p className="text-[10px] text-gray-400">
-                              {new Date(evt.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                            </p>
-                          </div>
-                        </button>
-                      ))
+                      eventsList.map((evt) => {
+                        const alreadyAdded = speakerEventIds.has(evt.id);
+                        return (
+                          <button
+                            key={evt.id}
+                            type="button"
+                            onClick={() => !alreadyAdded && handleInviteToEvent(evt.id, evt.title)}
+                            disabled={alreadyAdded}
+                            className={cn(
+                              "w-full flex items-center gap-2.5 py-2 px-3 text-sm text-left transition-colors",
+                              alreadyAdded
+                                ? "opacity-60 cursor-default bg-gray-50 dark:bg-gray-800/30"
+                                : "hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-gray-700 dark:text-gray-300"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
+                              alreadyAdded ? "bg-green-100 dark:bg-green-900/30" : "bg-blue-50 dark:bg-blue-900/30"
+                            )}>
+                              {alreadyAdded
+                                ? <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                                : <CalendarPlus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate font-medium">{evt.title}</p>
+                              <p className="text-[10px] text-gray-400">
+                                {alreadyAdded
+                                  ? "Already added"
+                                  : new Date(evt.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 </div>
