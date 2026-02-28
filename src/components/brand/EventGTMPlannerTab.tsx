@@ -388,6 +388,15 @@ export default function EventGTMPlannerTab({
   expandAll = false,
   demoMode = false,
 }: Props) {
+  /* GTM sub-tab state */
+  type GtmSection = "conflicts" | "strategy" | "summary";
+  const showAll = scrollToSection === "all";
+  const initialSection: GtmSection =
+    scrollToSection === "strategy" || scrollToSection === "gtm" ? "strategy"
+    : scrollToSection === "summary" ? "summary"
+    : "conflicts";
+  const [activeSection, setActiveSection] = useState<GtmSection>(initialSection);
+
   /* Conflict Scanner */
   const [scanning, setScanning] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictResults | null>(null);
@@ -466,23 +475,21 @@ export default function EventGTMPlannerTab({
     })();
   }, [eventId]);
 
-  /* Scroll to section when specified via URL param */
+  /* Scroll to section when showAll + scrollToSection specifies a card */
   useEffect(() => {
-    if (!scrollToSection) return;
+    if (!scrollToSection || !showAll) return;
     const timer = setTimeout(() => {
       const refMap: Record<string, React.RefObject<HTMLDivElement | null>> = {
         conflicts: conflictsCardRef,
         gtm: gtmCardRef,
         strategy: gtmCardRef,
-        venues: gtmCardRef,
-        campaigns: gtmCardRef,
         summary: summaryCardRef,
       };
       const ref = refMap[scrollToSection.toLowerCase()];
       ref?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 300);
     return () => clearTimeout(timer);
-  }, [scrollToSection]);
+  }, [scrollToSection, showAll]);
 
   const saveDemoState = async (field: "conflicts" | "gtm_plan" | "summary", value: unknown) => {
     const serialized = field === "conflicts" ? value : value;
@@ -932,9 +939,386 @@ Both events serve overlapping military audiences. Write the email.`,
     }
   };
 
+  /* ---- Conflict count for tab badge ---- */
+  const totalConflictCount = conflicts
+    ? conflicts.holidays.length + conflicts.observances.length + conflicts.aiEvents.length
+    : 0;
+
+  /* ---- Section panels (extracted for reuse in both tabbed and stacked views) ---- */
+  const conflictsPanel = (
+    <Card ref={conflictsCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h3 className="font-semibold flex items-center gap-2">
+          <ShieldAlert className="h-5 w-5 text-amber-500" /> Conflicts & Collabs
+        </h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          {!demoMode && (
+            <Select value={dateWindow} onValueChange={(v) => setDateWindow(v as "15" | "30" | "60")}>
+              <SelectTrigger className="w-[190px] h-8 text-xs">
+                <SelectValue placeholder="Date window" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 days before event</SelectItem>
+                <SelectItem value="30">30 days before event</SelectItem>
+                <SelectItem value="60">60 days before event</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {!demoMode && isSuperAdmin && conflicts && (
+            <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
+              onClick={() => saveDemoState("conflicts", conflicts)}>
+              <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+            </Button>
+          )}
+          {!demoMode && (
+            <Button size="sm" onClick={runConflictScan} disabled={scanning || !startDate}>
+              {scanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
+              {scanning ? "Scanning\u2026" : "Scan for Conflicts"}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {!startDate && (
+        <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 mb-4">
+          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+          <span className="text-sm text-amber-700 dark:text-amber-300">
+            Set an event date to enable date-filtered conflict scanning.
+          </span>
+        </div>
+      )}
+
+      <p className="text-sm text-muted-foreground mb-4">
+        Check for US holidays, military observance dates, competing events, and collaboration opportunities near your event dates.
+      </p>
+
+      {conflicts && conflicts.aiEvents.length > 0 && (
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <div className="flex gap-1 rounded-lg border p-0.5 bg-muted/30">
+            <button onClick={() => setFilterMode("all")}
+              className={cn("px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                filterMode === "all" ? "bg-white shadow-sm text-foreground dark:bg-gray-800" : "text-muted-foreground hover:text-foreground")}>
+              All ({conflicts.aiEvents.length})
+            </button>
+            <button onClick={() => setFilterMode("conflicts")}
+              className={cn("px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                filterMode === "conflicts" ? "bg-red-50 shadow-sm text-red-700 dark:bg-red-950 dark:text-red-300" : "text-muted-foreground hover:text-foreground")}>
+              Conflicts ({aiConflictCount})
+            </button>
+            <button onClick={() => setFilterMode("collabs")}
+              className={cn("px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                filterMode === "collabs" ? "bg-teal-50 shadow-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300" : "text-muted-foreground hover:text-foreground")}>
+              Collabs ({aiCollabCount})
+            </button>
+          </div>
+        </div>
+      )}
+
+      {conflicts && (
+        <div className="space-y-4">
+          {conflicts.holidays.length > 0 && (
+            <CollapsibleSection title="Federal Holiday Conflicts" count={conflicts.holidays.length} forceOpen={expandAll}>
+              {conflicts.holidays.map((h, i) => (
+                <div key={i}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    h.proximity === "same-day"
+                      ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                      : "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
+                  }`}>
+                  {h.proximity === "same-day" ? (
+                    <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                  ) : (
+                    <CalendarCheck className="h-4 w-4 text-yellow-500 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium">{h.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{format(h.date, "MMM d, yyyy")}</span>
+                  </div>
+                  <Badge variant={h.proximity === "same-day" ? "destructive" : "secondary"} className="text-xs shrink-0">
+                    {h.proximity === "same-day" ? "Same day" : "Within 3 days"}
+                  </Badge>
+                </div>
+              ))}
+            </CollapsibleSection>
+          )}
+
+          {conflicts.observances.length > 0 && (
+            <CollapsibleSection title="Military Observance Conflicts" count={conflicts.observances.length} forceOpen={expandAll}>
+              {conflicts.observances.map((obs, i) => {
+                const isSameDay = obs.direction === "same-day";
+                const isLeverage = obs.suggestion === "leverage";
+                return (
+                  <div key={i}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-blue-300 bg-blue-50/60 dark:border-blue-800/50 dark:bg-blue-950/20">
+                    <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-blue-900 dark:text-blue-300">{obs.name}</span>
+                        <span className="text-xs text-blue-700 dark:text-blue-500">{format(obs.date, "MMM d, yyyy")}</span>
+                      </div>
+                      <p className="text-xs text-blue-800/80 dark:text-blue-400/70 mt-1">
+                        {isSameDay
+                          ? `Falls during your event. Consider theming sessions or marketing around ${obs.name} to boost engagement and attendance.`
+                          : obs.direction === "before"
+                          ? `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} before your event. ${
+                              isLeverage
+                                ? `Close enough to tie in ${obs.name} messaging — use it to build pre-event momentum.`
+                                : `Be aware that attendees may have ${obs.name}-related commitments. Consider adjusting outreach timing.`
+                            }`
+                          : `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} after your event. ${
+                              isLeverage
+                                ? `Leverage proximity to ${obs.name} in post-event content and follow-up campaigns.`
+                                : `Some attendees may be traveling or attending ${obs.name} events. Monitor registration trends.`
+                            }`
+                        }
+                      </p>
+                    </div>
+                    <Badge className="text-[10px] shrink-0 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-400 border-0">
+                      {isLeverage ? "Leverage" : "Caution"}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </CollapsibleSection>
+          )}
+
+          {filteredAIEvents.length > 0 && (
+            <CollapsibleSection
+              title={filterMode === "conflicts" ? "Competing Events" : filterMode === "collabs" ? "Collaboration Opportunities" : "Events & Opportunities"}
+              count={filteredAIEvents.length}
+              forceOpen={expandAll}
+            >
+              {filteredAIEvents.map((ev, i) => {
+                const isConflict = ev.type === "conflict";
+                const isChamber = ev.source.toLowerCase().includes("chamber");
+                return (
+                  <div key={i}
+                    className={cn(
+                      "p-3 rounded-lg border border-l-4",
+                      isConflict ? "border-l-red-500" : "border-l-teal-500",
+                      isConflict
+                        ? ev.severity === "high"
+                          ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                          : ev.severity === "medium"
+                          ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
+                          : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/30"
+                        : "border-teal-200 bg-teal-50/60 dark:border-teal-800/50 dark:bg-teal-950/20",
+                    )}>
+                    <div className="flex items-start gap-3">
+                      {isConflict ? (
+                        <AlertTriangle className={cn(
+                          "h-4 w-4 shrink-0 mt-0.5",
+                          ev.severity === "high" ? "text-red-500" : ev.severity === "medium" ? "text-yellow-500" : "text-gray-400",
+                        )} />
+                      ) : (
+                        <Handshake className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">{ev.name}</span>
+                          <Badge variant="secondary"
+                            className={cn("text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0",
+                              isConflict ? "bg-red-100 text-red-700 border-red-200" : "bg-teal-100 text-teal-700 border-teal-200")}>
+                            {isConflict ? "Conflict" : "Collab"}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                            {sourceIcon(ev.source)}
+                            {ev.source}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{ev.date} · {ev.location}</p>
+                        <p className="text-xs text-muted-foreground/80 mt-1">{ev.reason}</p>
+                        {isChamber && !isConflict && (
+                          <p className="text-xs text-teal-700 dark:text-teal-300 font-medium mt-1">
+                            <Landmark className="h-3 w-3 inline mr-1" />
+                            Chamber partnership could drive local business sponsor leads.
+                          </p>
+                        )}
+                        <div className={cn(
+                          "text-xs p-2 rounded-md mt-1.5",
+                          isConflict
+                            ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                            : "bg-teal-50/80 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300",
+                        )}>
+                          <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
+                          {ev.suggestion}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <Badge
+                          variant={ev.severity === "high" ? "destructive" : "secondary"}
+                          className={cn("text-xs", ev.severity === "low" && "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400")}>
+                          {ev.severity}
+                        </Badge>
+                        {!isConflict && !demoMode && (
+                          <Button size="sm" variant="outline"
+                            className="text-xs border-teal-300 text-teal-700 hover:bg-teal-50"
+                            onClick={() => generateCollabPitch(ev)}>
+                            <Send className="h-3 w-3 mr-1" />
+                            Reach Out
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </CollapsibleSection>
+          )}
+
+          {conflicts.holidays.length === 0 && conflicts.observances.length === 0 && conflicts.aiEvents.length === 0 && (
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-green-700 dark:text-green-300">No scheduling conflicts detected</span>
+            </div>
+          )}
+
+          {conflicts.aiFailed && (
+            <p className="text-xs text-muted-foreground italic">
+              Note: External event scan was unavailable. Only holiday/observance conflicts are shown.
+            </p>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+
+  const strategyPanel = (
+    <Card ref={gtmCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-blue-600" /> AI GTM Strategy
+        </h3>
+        {!demoMode && (
+          <div className="flex gap-2">
+            {gtmPlan && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => copyText(gtmPlan, "GTM plan")}>
+                  <Copy className="h-4 w-4 mr-1.5" /> Copy
+                </Button>
+                <Button size="sm" variant="outline" onClick={printGTM}>
+                  <Printer className="h-4 w-4 mr-1.5" /> Print
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => shareReport("gtm", gtmPlan)} disabled={sharing}>
+                  {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
+                </Button>
+                {isSuperAdmin && (
+                  <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
+                    onClick={() => saveDemoState("gtm_plan", gtmPlan)}>
+                    <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+                  </Button>
+                )}
+              </>
+            )}
+            <Button size="sm" onClick={generateGTM} disabled={generatingGTM}>
+              {generatingGTM ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+              {generatingGTM ? "Generating\u2026" : "Generate GTM Plan"}
+            </Button>
+          </div>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Generate an AI-powered Go-To-Market strategy tailored for military/veteran audiences.
+        {conflicts ? " Detected conflicts will be factored into risk mitigation." : " Run the conflict scanner first for best results."}
+      </p>
+
+      {gtmPlan && (
+        <CollapsibleSection title="Generated GTM Plan" forceOpen={expandAll}>
+          <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
+            <MarkdownRenderer content={gtmPlan} />
+          </div>
+        </CollapsibleSection>
+      )}
+    </Card>
+  );
+
+  const summaryPanel = (
+    <Card ref={summaryCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold flex items-center gap-2">
+          <FileText className="h-5 w-5 text-blue-500" /> Supervisor Summary
+        </h3>
+        {!demoMode && (
+          <div className="flex gap-2">
+            {summary && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => copyText(summary, "Executive summary")}>
+                  <Copy className="h-4 w-4 mr-1.5" /> Copy
+                </Button>
+                <Button size="sm" variant="outline" onClick={printSummary}>
+                  <Printer className="h-4 w-4 mr-1.5" /> Print
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => shareReport("summary", summary)} disabled={sharing}>
+                  {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
+                </Button>
+                {isSuperAdmin && (
+                  <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
+                    onClick={() => saveDemoState("summary", summary)}>
+                    <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+                  </Button>
+                )}
+              </>
+            )}
+            <Button size="sm" onClick={generateSummary} disabled={generatingSummary}>
+              {generatingSummary ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileText className="h-4 w-4 mr-1.5" />}
+              {generatingSummary ? "Generating\u2026" : "Generate Summary"}
+            </Button>
+          </div>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Generate a military-style executive brief with BLUF, readiness assessment, and risk analysis — ready to send up the chain.
+      </p>
+
+      {summary && (
+        <CollapsibleSection title="Generated Executive Brief" forceOpen={expandAll}>
+          <div ref={summaryRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30">
+            <MarkdownRenderer content={summary} />
+          </div>
+        </CollapsibleSection>
+      )}
+    </Card>
+  );
+
+  /* ---- Tab definitions ---- */
+  const gtmTabs: { id: GtmSection; label: string; icon: React.ReactNode; badge: React.ReactNode }[] = [
+    {
+      id: "conflicts",
+      label: "Conflicts & Collabs",
+      icon: <ShieldAlert className="h-4 w-4" />,
+      badge: conflicts ? (
+        <span className={cn(
+          "ml-1.5 text-[10px] font-semibold rounded-full px-1.5 py-0.5 leading-none",
+          totalConflictCount > 0
+            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+            : "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
+        )}>
+          {totalConflictCount > 0 ? totalConflictCount : "Clear"}
+        </span>
+      ) : null,
+    },
+    {
+      id: "strategy",
+      label: "AI GTM Strategy",
+      icon: <Sparkles className="h-4 w-4" />,
+      badge: gtmPlan ? (
+        <CheckCircle2 className="ml-1.5 h-3.5 w-3.5 text-green-500" />
+      ) : null,
+    },
+    {
+      id: "summary",
+      label: "Supervisor Summary",
+      icon: <FileText className="h-4 w-4" />,
+      badge: summary ? (
+        <CheckCircle2 className="ml-1.5 h-3.5 w-3.5 text-green-500" />
+      ) : null,
+    },
+  ];
+
   /* ======================================== */
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Save All as Demo — super_admin only, hidden in demo mode */}
       {isSuperAdmin && !demoMode && (
         <div className="flex items-center justify-between rounded-xl border border-[#1e3a5f]/30 bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10 p-4">
@@ -956,284 +1340,42 @@ Both events serve overlapping military audiences. Write the email.`,
         </div>
       )}
 
-      {/* Section A — Conflicts & Collabs */}
-      <Card ref={conflictsCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h3 className="font-semibold flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-amber-500" /> Conflicts & Collabs
-          </h3>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Date window dropdown — hidden in demo mode */}
-            {!demoMode && (
-              <Select value={dateWindow} onValueChange={(v) => setDateWindow(v as "15" | "30" | "60")}>
-                <SelectTrigger className="w-[190px] h-8 text-xs">
-                  <SelectValue placeholder="Date window" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 days before event</SelectItem>
-                  <SelectItem value="30">30 days before event</SelectItem>
-                  <SelectItem value="60">60 days before event</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-
-            {!demoMode && isSuperAdmin && conflicts && (
-              <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                onClick={() => saveDemoState("conflicts", conflicts)}>
-                <Save className="h-4 w-4 mr-1.5" /> Save as Demo
-              </Button>
-            )}
-            {!demoMode && (
-              <Button size="sm" onClick={runConflictScan} disabled={scanning || !startDate}>
-                {scanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
-                {scanning ? "Scanning\u2026" : "Scan for Conflicts"}
-              </Button>
-            )}
-          </div>
+      {/* Tab bar — hidden in showAll mode */}
+      {!showAll && (
+        <div className="flex gap-1 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-1">
+          {gtmTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSection(tab.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 justify-center",
+                activeSection === tab.id
+                  ? "bg-[#1e3a5f] text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800",
+              )}
+            >
+              {tab.icon}
+              <span className="hidden sm:inline">{tab.label}</span>
+              {tab.badge}
+            </button>
+          ))}
         </div>
+      )}
 
-        {/* No-date warning */}
-        {!startDate && (
-          <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 mb-4">
-            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-            <span className="text-sm text-amber-700 dark:text-amber-300">
-              Set an event date to enable date-filtered conflict scanning.
-            </span>
-          </div>
-        )}
-
-        <p className="text-sm text-muted-foreground mb-4">
-          Check for US holidays, military observance dates, competing events, and collaboration opportunities near your event dates.
-        </p>
-
-        {/* Filter bar — shown when AI events exist */}
-        {conflicts && conflicts.aiEvents.length > 0 && (
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <div className="flex gap-1 rounded-lg border p-0.5 bg-muted/30">
-              <button
-                onClick={() => setFilterMode("all")}
-                className={cn(
-                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
-                  filterMode === "all" ? "bg-white shadow-sm text-foreground dark:bg-gray-800" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                All ({conflicts.aiEvents.length})
-              </button>
-              <button
-                onClick={() => setFilterMode("conflicts")}
-                className={cn(
-                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
-                  filterMode === "conflicts" ? "bg-red-50 shadow-sm text-red-700 dark:bg-red-950 dark:text-red-300" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Conflicts ({aiConflictCount})
-              </button>
-              <button
-                onClick={() => setFilterMode("collabs")}
-                className={cn(
-                  "px-3 py-1 rounded-md text-xs font-medium transition-colors",
-                  filterMode === "collabs" ? "bg-teal-50 shadow-sm text-teal-700 dark:bg-teal-950 dark:text-teal-300" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Collabs ({aiCollabCount})
-              </button>
-            </div>
-          </div>
-        )}
-
-        {conflicts && (
-          <div className="space-y-4">
-            {/* Holiday conflicts */}
-            {conflicts.holidays.length > 0 && (
-              <CollapsibleSection title="Federal Holiday Conflicts" count={conflicts.holidays.length} forceOpen={expandAll}>
-                {conflicts.holidays.map((h, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      h.proximity === "same-day"
-                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-                        : "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
-                    }`}
-                  >
-                    {h.proximity === "same-day" ? (
-                      <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-                    ) : (
-                      <CalendarCheck className="h-4 w-4 text-yellow-500 shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">{h.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {format(h.date, "MMM d, yyyy")}
-                      </span>
-                    </div>
-                    <Badge variant={h.proximity === "same-day" ? "destructive" : "secondary"} className="text-xs shrink-0">
-                      {h.proximity === "same-day" ? "Same day" : "Within 3 days"}
-                    </Badge>
-                  </div>
-                ))}
-              </CollapsibleSection>
-            )}
-
-            {/* Military Observance Conflicts */}
-            {conflicts.observances.length > 0 && (
-              <CollapsibleSection title="Military Observance Conflicts" count={conflicts.observances.length} forceOpen={expandAll}>
-                {conflicts.observances.map((obs, i) => {
-                  const isSameDay = obs.direction === "same-day";
-                  const isLeverage = obs.suggestion === "leverage";
-                  return (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 p-3 rounded-lg border border-blue-300 bg-blue-50/60 dark:border-blue-800/50 dark:bg-blue-950/20"
-                    >
-                      <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-blue-900 dark:text-blue-300">{obs.name}</span>
-                          <span className="text-xs text-blue-700 dark:text-blue-500">
-                            {format(obs.date, "MMM d, yyyy")}
-                          </span>
-                        </div>
-                        <p className="text-xs text-blue-800/80 dark:text-blue-400/70 mt-1">
-                          {isSameDay
-                            ? `Falls during your event. Consider theming sessions or marketing around ${obs.name} to boost engagement and attendance.`
-                            : obs.direction === "before"
-                            ? `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} before your event. ${
-                                isLeverage
-                                  ? `Close enough to tie in ${obs.name} messaging — use it to build pre-event momentum.`
-                                  : `Be aware that attendees may have ${obs.name}-related commitments. Consider adjusting outreach timing.`
-                              }`
-                            : `${obs.daysAway} day${obs.daysAway > 1 ? "s" : ""} after your event. ${
-                                isLeverage
-                                  ? `Leverage proximity to ${obs.name} in post-event content and follow-up campaigns.`
-                                  : `Some attendees may be traveling or attending ${obs.name} events. Monitor registration trends.`
-                              }`
-                          }
-                        </p>
-                      </div>
-                      <Badge className="text-[10px] shrink-0 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-400 border-0">
-                        {isLeverage ? "Leverage" : "Caution"}
-                      </Badge>
-                    </div>
-                  );
-                })}
-              </CollapsibleSection>
-            )}
-
-            {/* AI-Scanned Events (Conflicts & Collabs) */}
-            {filteredAIEvents.length > 0 && (
-              <CollapsibleSection
-                title={filterMode === "conflicts" ? "Competing Events" : filterMode === "collabs" ? "Collaboration Opportunities" : "Events & Opportunities"}
-                count={filteredAIEvents.length}
-                forceOpen={expandAll}
-              >
-                {filteredAIEvents.map((ev, i) => {
-                  const isConflict = ev.type === "conflict";
-                  const isChamber = ev.source.toLowerCase().includes("chamber");
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        "p-3 rounded-lg border border-l-4",
-                        isConflict ? "border-l-red-500" : "border-l-teal-500",
-                        isConflict
-                          ? ev.severity === "high"
-                            ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-                            : ev.severity === "medium"
-                            ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/30"
-                            : "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/30"
-                          : "border-teal-200 bg-teal-50/60 dark:border-teal-800/50 dark:bg-teal-950/20",
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        {isConflict ? (
-                          <AlertTriangle className={cn(
-                            "h-4 w-4 shrink-0 mt-0.5",
-                            ev.severity === "high" ? "text-red-500" : ev.severity === "medium" ? "text-yellow-500" : "text-gray-400",
-                          )} />
-                        ) : (
-                          <Handshake className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium">{ev.name}</span>
-                            <Badge
-                              variant="secondary"
-                              className={cn(
-                                "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0",
-                                isConflict
-                                  ? "bg-red-100 text-red-700 border-red-200"
-                                  : "bg-teal-100 text-teal-700 border-teal-200",
-                              )}
-                            >
-                              {isConflict ? "Conflict" : "Collab"}
-                            </Badge>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
-                              {sourceIcon(ev.source)}
-                              {ev.source}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{ev.date} · {ev.location}</p>
-                          <p className="text-xs text-muted-foreground/80 mt-1">{ev.reason}</p>
-                          {isChamber && !isConflict && (
-                            <p className="text-xs text-teal-700 dark:text-teal-300 font-medium mt-1">
-                              <Landmark className="h-3 w-3 inline mr-1" />
-                              Chamber partnership could drive local business sponsor leads.
-                            </p>
-                          )}
-                          <div className={cn(
-                            "text-xs p-2 rounded-md mt-1.5",
-                            isConflict
-                              ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
-                              : "bg-teal-50/80 text-teal-800 dark:bg-teal-950/30 dark:text-teal-300",
-                          )}>
-                            <Sparkles className="h-3 w-3 inline mr-1 opacity-70" />
-                            {ev.suggestion}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <Badge
-                            variant={ev.severity === "high" ? "destructive" : "secondary"}
-                            className={cn("text-xs", ev.severity === "low" && "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400")}
-                          >
-                            {ev.severity}
-                          </Badge>
-                          {!isConflict && !demoMode && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-xs border-teal-300 text-teal-700 hover:bg-teal-50"
-                              onClick={() => generateCollabPitch(ev)}
-                            >
-                              <Send className="h-3 w-3 mr-1" />
-                              Reach Out
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </CollapsibleSection>
-            )}
-
-            {/* All clear */}
-            {conflicts.holidays.length === 0 && conflicts.observances.length === 0 && conflicts.aiEvents.length === 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-700 dark:text-green-300">No scheduling conflicts detected</span>
-              </div>
-            )}
-
-            {/* Fallback note */}
-            {conflicts.aiFailed && (
-              <p className="text-xs text-muted-foreground italic">
-                Note: External event scan was unavailable. Only holiday/observance conflicts are shown.
-              </p>
-            )}
-          </div>
-        )}
-      </Card>
+      {/* Tab content or stacked view */}
+      {showAll ? (
+        <div className="space-y-6">
+          {conflictsPanel}
+          {strategyPanel}
+          {summaryPanel}
+        </div>
+      ) : (
+        <>
+          {activeSection === "conflicts" && conflictsPanel}
+          {activeSection === "strategy" && strategyPanel}
+          {activeSection === "summary" && summaryPanel}
+        </>
+      )}
 
       {/* Pitch email modal */}
       {pitchTarget && (
@@ -1294,102 +1436,6 @@ Both events serve overlapping military audiences. Write the email.`,
           </div>
         </div>
       )}
-
-      {/* Section B — AI GTM Strategy */}
-      <Card ref={gtmCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-blue-600" /> AI GTM Strategy
-          </h3>
-          {!demoMode && (
-            <div className="flex gap-2">
-              {gtmPlan && (
-                <>
-                  <Button size="sm" variant="outline" onClick={() => copyText(gtmPlan, "GTM plan")}>
-                    <Copy className="h-4 w-4 mr-1.5" /> Copy
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={printGTM}>
-                    <Printer className="h-4 w-4 mr-1.5" /> Print
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => shareReport("gtm", gtmPlan)} disabled={sharing}>
-                    {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
-                  </Button>
-                  {isSuperAdmin && (
-                    <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                      onClick={() => saveDemoState("gtm_plan", gtmPlan)}>
-                      <Save className="h-4 w-4 mr-1.5" /> Save as Demo
-                    </Button>
-                  )}
-                </>
-              )}
-              <Button size="sm" onClick={generateGTM} disabled={generatingGTM}>
-                {generatingGTM ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
-                {generatingGTM ? "Generating\u2026" : "Generate GTM Plan"}
-              </Button>
-            </div>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Generate an AI-powered Go-To-Market strategy tailored for military/veteran audiences.
-          {conflicts ? " Detected conflicts will be factored into risk mitigation." : " Run the conflict scanner first for best results."}
-        </p>
-
-        {gtmPlan && (
-          <CollapsibleSection title="Generated GTM Plan" forceOpen={expandAll}>
-            <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
-              <MarkdownRenderer content={gtmPlan} />
-            </div>
-          </CollapsibleSection>
-        )}
-
-      </Card>
-
-      {/* Section C — Supervisor Summary */}
-      <Card ref={summaryCardRef} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1D27] p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5 text-blue-500" /> Supervisor Summary
-          </h3>
-          {!demoMode && (
-            <div className="flex gap-2">
-              {summary && (
-                <>
-                  <Button size="sm" variant="outline" onClick={() => copyText(summary, "Executive summary")}>
-                    <Copy className="h-4 w-4 mr-1.5" /> Copy
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={printSummary}>
-                    <Printer className="h-4 w-4 mr-1.5" /> Print
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => shareReport("summary", summary)} disabled={sharing}>
-                    {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
-                  </Button>
-                  {isSuperAdmin && (
-                    <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                      onClick={() => saveDemoState("summary", summary)}>
-                      <Save className="h-4 w-4 mr-1.5" /> Save as Demo
-                    </Button>
-                  )}
-                </>
-              )}
-              <Button size="sm" onClick={generateSummary} disabled={generatingSummary}>
-                {generatingSummary ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileText className="h-4 w-4 mr-1.5" />}
-                {generatingSummary ? "Generating\u2026" : "Generate Summary"}
-              </Button>
-            </div>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Generate a military-style executive brief with BLUF, readiness assessment, and risk analysis — ready to send up the chain.
-        </p>
-
-        {summary && (
-          <CollapsibleSection title="Generated Executive Brief" forceOpen={expandAll}>
-            <div ref={summaryRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30">
-              <MarkdownRenderer content={summary} />
-            </div>
-          </CollapsibleSection>
-        )}
-      </Card>
     </div>
   );
 }

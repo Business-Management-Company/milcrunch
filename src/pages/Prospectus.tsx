@@ -1864,7 +1864,7 @@ const TAB_CONTENT: Record<string, TabContent> = {
         description:
           "Describe your event in plain English \u2014 \u2018500-person veteran entrepreneur summit in San Diego targeting transitioning service members\u2019 \u2014 and the platform generates a full go-to-market strategy: target creator lists, email campaign sequences, social content calendars, sponsor outreach templates, and timeline milestones. What used to take a marketing team two weeks to plan takes MilCrunch two minutes.",
         items: [],
-        link_url: "/brand/events/85e418d7-8295-4525-9f9d-97fa90fa3d25?tab=gtm-planner&expand=all&demo=true",
+        link_url: "/brand/events/85e418d7-8295-4525-9f9d-97fa90fa3d25?tab=gtm-planner&section=all&expand=all&demo=true",
         link_label: "See the MIC 2026 GTM Plan in Action",
       },
       {
