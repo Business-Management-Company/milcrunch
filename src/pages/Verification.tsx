@@ -1788,11 +1788,11 @@ export default function Verification() {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</Label>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Military Status</Label>
                     <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                       <SelectContent>
-                        {["Veteran", "Active Duty", "Military Spouse", "Military Family", "DOD", "Reserves"].map((c) => (
+                        {["Active Duty", "Veteran", "Military Spouse", "Guard/Reserve", "Retired", "Cadet/ROTC"].map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
                         ))}
                       </SelectContent>
@@ -1810,7 +1810,7 @@ export default function Verification() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    Status
+                    Verification Status
                     {(editForm.statusManualOverride || editForm.verificationStatus !== editForm.originalStatus) && (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#1e3a5f] text-white leading-none">Manual</span>
                     )}
