@@ -283,6 +283,8 @@ const BrandEventDetail = () => {
   const initialTab = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(initialTab && VALID_TABS.has(initialTab) ? initialTab : "overview");
   const isEmbed = searchParams.get("embed") === "true";
+  const isExpandAll = searchParams.get("expand") === "all";
+  const isDemoView = searchParams.get("demo") === "true";
   const [showAddSpeaker, setShowAddSpeaker] = useState(false);
   const [editingSpeaker, setEditingSpeaker] = useState<SpeakerRow | null>(null);
 
@@ -1866,6 +1868,8 @@ const BrandEventDetail = () => {
                 sponsorCount={sponsors.length}
                 registrationCount={registrations.length}
                 scrollToSection={searchParams.get("section")}
+                expandAll={isExpandAll}
+                demoMode={isDemoView}
               />
             )}
           </TabsContent>

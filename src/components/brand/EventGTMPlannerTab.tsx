@@ -37,6 +37,8 @@ interface Props {
   sponsorCount: number;
   registrationCount: number;
   scrollToSection?: string | null;
+  expandAll?: boolean;
+  demoMode?: boolean;
 }
 
 interface HolidayConflict {
@@ -320,14 +322,17 @@ function CollapsibleSection({
   title,
   count,
   defaultOpen = true,
+  forceOpen = false,
   children,
 }: {
   title: string;
   count?: number;
   defaultOpen?: boolean;
+  forceOpen?: boolean;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(defaultOpen || forceOpen);
+  const isOpen = forceOpen || open;
   return (
     <div className="space-y-2">
       <button
@@ -338,7 +343,7 @@ function CollapsibleSection({
         <ChevronRight
           className={cn(
             "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
-            open && "rotate-90",
+            isOpen && "rotate-90",
           )}
         />
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground group-hover:text-foreground transition-colors">
@@ -351,7 +356,7 @@ function CollapsibleSection({
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-in-out",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
         <div className="overflow-hidden">
@@ -380,6 +385,8 @@ export default function EventGTMPlannerTab({
   sponsorCount,
   registrationCount,
   scrollToSection,
+  expandAll = false,
+  demoMode = false,
 }: Props) {
   /* Conflict Scanner */
   const [scanning, setScanning] = useState(false);
@@ -928,8 +935,8 @@ Both events serve overlapping military audiences. Write the email.`,
   /* ======================================== */
   return (
     <div className="space-y-6">
-      {/* Save All as Demo — super_admin only */}
-      {isSuperAdmin && (
+      {/* Save All as Demo — super_admin only, hidden in demo mode */}
+      {isSuperAdmin && !demoMode && (
         <div className="flex items-center justify-between rounded-xl border border-[#1e3a5f]/30 bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10 p-4">
           <div>
             <p className="text-sm font-medium text-[#1e3a5f] dark:text-blue-300">Demo Persistence</p>
@@ -956,28 +963,32 @@ Both events serve overlapping military audiences. Write the email.`,
             <ShieldAlert className="h-5 w-5 text-amber-500" /> Conflicts & Collabs
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Date window dropdown */}
-            <Select value={dateWindow} onValueChange={(v) => setDateWindow(v as "15" | "30" | "60")}>
-              <SelectTrigger className="w-[190px] h-8 text-xs">
-                <SelectValue placeholder="Date window" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 days before event</SelectItem>
-                <SelectItem value="30">30 days before event</SelectItem>
-                <SelectItem value="60">60 days before event</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Date window dropdown — hidden in demo mode */}
+            {!demoMode && (
+              <Select value={dateWindow} onValueChange={(v) => setDateWindow(v as "15" | "30" | "60")}>
+                <SelectTrigger className="w-[190px] h-8 text-xs">
+                  <SelectValue placeholder="Date window" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 days before event</SelectItem>
+                  <SelectItem value="30">30 days before event</SelectItem>
+                  <SelectItem value="60">60 days before event</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
-            {isSuperAdmin && conflicts && (
+            {!demoMode && isSuperAdmin && conflicts && (
               <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
                 onClick={() => saveDemoState("conflicts", conflicts)}>
                 <Save className="h-4 w-4 mr-1.5" /> Save as Demo
               </Button>
             )}
-            <Button size="sm" onClick={runConflictScan} disabled={scanning || !startDate}>
-              {scanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
-              {scanning ? "Scanning\u2026" : "Scan for Conflicts"}
-            </Button>
+            {!demoMode && (
+              <Button size="sm" onClick={runConflictScan} disabled={scanning || !startDate}>
+                {scanning ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
+                {scanning ? "Scanning\u2026" : "Scan for Conflicts"}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1035,7 +1046,7 @@ Both events serve overlapping military audiences. Write the email.`,
           <div className="space-y-4">
             {/* Holiday conflicts */}
             {conflicts.holidays.length > 0 && (
-              <CollapsibleSection title="Federal Holiday Conflicts" count={conflicts.holidays.length}>
+              <CollapsibleSection title="Federal Holiday Conflicts" count={conflicts.holidays.length} forceOpen={expandAll}>
                 {conflicts.holidays.map((h, i) => (
                   <div
                     key={i}
@@ -1066,7 +1077,7 @@ Both events serve overlapping military audiences. Write the email.`,
 
             {/* Military Observance Conflicts */}
             {conflicts.observances.length > 0 && (
-              <CollapsibleSection title="Military Observance Conflicts" count={conflicts.observances.length}>
+              <CollapsibleSection title="Military Observance Conflicts" count={conflicts.observances.length} forceOpen={expandAll}>
                 {conflicts.observances.map((obs, i) => {
                   const isSameDay = obs.direction === "same-day";
                   const isLeverage = obs.suggestion === "leverage";
@@ -1114,6 +1125,7 @@ Both events serve overlapping military audiences. Write the email.`,
               <CollapsibleSection
                 title={filterMode === "conflicts" ? "Competing Events" : filterMode === "collabs" ? "Collaboration Opportunities" : "Events & Opportunities"}
                 count={filteredAIEvents.length}
+                forceOpen={expandAll}
               >
                 {filteredAIEvents.map((ev, i) => {
                   const isConflict = ev.type === "conflict";
@@ -1186,7 +1198,7 @@ Both events serve overlapping military audiences. Write the email.`,
                           >
                             {ev.severity}
                           </Badge>
-                          {!isConflict && (
+                          {!isConflict && !demoMode && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -1289,31 +1301,33 @@ Both events serve overlapping military audiences. Write the email.`,
           <h3 className="font-semibold flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-blue-600" /> AI GTM Strategy
           </h3>
-          <div className="flex gap-2">
-            {gtmPlan && (
-              <>
-                <Button size="sm" variant="outline" onClick={() => copyText(gtmPlan, "GTM plan")}>
-                  <Copy className="h-4 w-4 mr-1.5" /> Copy
-                </Button>
-                <Button size="sm" variant="outline" onClick={printGTM}>
-                  <Printer className="h-4 w-4 mr-1.5" /> Print
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => shareReport("gtm", gtmPlan)} disabled={sharing}>
-                  {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
-                </Button>
-                {isSuperAdmin && (
-                  <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                    onClick={() => saveDemoState("gtm_plan", gtmPlan)}>
-                    <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+          {!demoMode && (
+            <div className="flex gap-2">
+              {gtmPlan && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => copyText(gtmPlan, "GTM plan")}>
+                    <Copy className="h-4 w-4 mr-1.5" /> Copy
                   </Button>
-                )}
-              </>
-            )}
-            <Button size="sm" onClick={generateGTM} disabled={generatingGTM}>
-              {generatingGTM ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
-              {generatingGTM ? "Generating\u2026" : "Generate GTM Plan"}
-            </Button>
-          </div>
+                  <Button size="sm" variant="outline" onClick={printGTM}>
+                    <Printer className="h-4 w-4 mr-1.5" /> Print
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => shareReport("gtm", gtmPlan)} disabled={sharing}>
+                    {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
+                  </Button>
+                  {isSuperAdmin && (
+                    <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
+                      onClick={() => saveDemoState("gtm_plan", gtmPlan)}>
+                      <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+                    </Button>
+                  )}
+                </>
+              )}
+              <Button size="sm" onClick={generateGTM} disabled={generatingGTM}>
+                {generatingGTM ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+                {generatingGTM ? "Generating\u2026" : "Generate GTM Plan"}
+              </Button>
+            </div>
+          )}
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           Generate an AI-powered Go-To-Market strategy tailored for military/veteran audiences.
@@ -1321,7 +1335,7 @@ Both events serve overlapping military audiences. Write the email.`,
         </p>
 
         {gtmPlan && (
-          <CollapsibleSection title="Generated GTM Plan">
+          <CollapsibleSection title="Generated GTM Plan" forceOpen={expandAll}>
             <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
               <MarkdownRenderer content={gtmPlan} />
             </div>
@@ -1336,38 +1350,40 @@ Both events serve overlapping military audiences. Write the email.`,
           <h3 className="font-semibold flex items-center gap-2">
             <FileText className="h-5 w-5 text-blue-500" /> Supervisor Summary
           </h3>
-          <div className="flex gap-2">
-            {summary && (
-              <>
-                <Button size="sm" variant="outline" onClick={() => copyText(summary, "Executive summary")}>
-                  <Copy className="h-4 w-4 mr-1.5" /> Copy
-                </Button>
-                <Button size="sm" variant="outline" onClick={printSummary}>
-                  <Printer className="h-4 w-4 mr-1.5" /> Print
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => shareReport("summary", summary)} disabled={sharing}>
-                  {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
-                </Button>
-                {isSuperAdmin && (
-                  <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
-                    onClick={() => saveDemoState("summary", summary)}>
-                    <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+          {!demoMode && (
+            <div className="flex gap-2">
+              {summary && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => copyText(summary, "Executive summary")}>
+                    <Copy className="h-4 w-4 mr-1.5" /> Copy
                   </Button>
-                )}
-              </>
-            )}
-            <Button size="sm" onClick={generateSummary} disabled={generatingSummary}>
-              {generatingSummary ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileText className="h-4 w-4 mr-1.5" />}
-              {generatingSummary ? "Generating\u2026" : "Generate Summary"}
-            </Button>
-          </div>
+                  <Button size="sm" variant="outline" onClick={printSummary}>
+                    <Printer className="h-4 w-4 mr-1.5" /> Print
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => shareReport("summary", summary)} disabled={sharing}>
+                    {sharing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />} Share
+                  </Button>
+                  {isSuperAdmin && (
+                    <Button size="sm" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5"
+                      onClick={() => saveDemoState("summary", summary)}>
+                      <Save className="h-4 w-4 mr-1.5" /> Save as Demo
+                    </Button>
+                  )}
+                </>
+              )}
+              <Button size="sm" onClick={generateSummary} disabled={generatingSummary}>
+                {generatingSummary ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <FileText className="h-4 w-4 mr-1.5" />}
+                {generatingSummary ? "Generating\u2026" : "Generate Summary"}
+              </Button>
+            </div>
+          )}
         </div>
         <p className="text-sm text-muted-foreground mb-4">
           Generate a military-style executive brief with BLUF, readiness assessment, and risk analysis — ready to send up the chain.
         </p>
 
         {summary && (
-          <CollapsibleSection title="Generated Executive Brief">
+          <CollapsibleSection title="Generated Executive Brief" forceOpen={expandAll}>
             <div ref={summaryRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30">
               <MarkdownRenderer content={summary} />
             </div>
