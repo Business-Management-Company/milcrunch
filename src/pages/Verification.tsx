@@ -2435,7 +2435,8 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
       } finally {
         setAiFiltering(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("[BackgroundReview] Outer error:", err);
       setSearching(false);
       setHasSearched(true);
     }

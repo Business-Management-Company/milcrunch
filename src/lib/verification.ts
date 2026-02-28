@@ -1236,6 +1236,10 @@ async function fetchAnthropicWithRetry(body: Record<string, unknown>, maxAttempt
         const json = await res.json();
         return { ok: true, status: res.status, json };
       }
+      // Read the error body so we know WHY it failed
+      let errorBody = "";
+      try { errorBody = await res.text(); } catch { /* ignore */ }
+      console.error(`[Anthropic] HTTP ${res.status} on attempt ${attempt}/${maxAttempts}. Response body:`, errorBody);
       // Retry on 429 (rate limit) and 529 (overloaded)
       if ((res.status === 429 || res.status === 529) && attempt < maxAttempts) {
         const delay = ANTHROPIC_RETRY_DELAYS[attempt] ?? 30000;
@@ -1243,7 +1247,7 @@ async function fetchAnthropicWithRetry(body: Record<string, unknown>, maxAttempt
         await new Promise((r) => setTimeout(r, delay));
         continue;
       }
-      throw new Error(`Anthropic ${res.status}`);
+      throw new Error(`Anthropic ${res.status}: ${errorBody}`);
     } catch (err) {
       if (attempt >= maxAttempts) throw err;
       const delay = ANTHROPIC_RETRY_DELAYS[attempt] ?? 30000;
