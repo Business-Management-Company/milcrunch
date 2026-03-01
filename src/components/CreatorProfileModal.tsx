@@ -1644,9 +1644,13 @@ export default function CreatorProfileModal({
       const media = item.media as unknown[] | undefined;
       const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
       const engObj = (item.engagement && typeof item.engagement === "object") ? item.engagement as Record<string, unknown> : item;
-      const isCarousel = Array.isArray(media) && media.length > 1;
-      // Only flag as reel if explicitly marked — do NOT use video_url (most IG posts have it)
-      const isReel = Boolean(item.is_reel || item.is_video || item.type === "reel" || item.type === "video");
+      const isCarousel = Boolean(item.is_carousel) || (Array.isArray(media) && media.length > 1);
+      // Flag as reel: IC uses product_type="clips" for IG reels, media_type=2 for videos
+      const isReel = Boolean(
+        item.is_reel || item.is_video || item.type === "reel" || item.type === "video"
+        || item.product_type === "clips" || item.product_type === "reel"
+        || (item.media_type === 2 && !item.is_carousel)
+      );
       // Extract thumbnail — try many IC field patterns
       const isUrl = (v: unknown): v is string => typeof v === 'string' && v.startsWith('http');
       const thumbnail = (() => {
