@@ -39,6 +39,7 @@ export default async function handler(req, res) {
   const nullOnly = req.query?.nullOnly === "1" || (req.body && req.body.nullOnly);
   const missingAvatars = req.query?.missingAvatars === "1" || (req.body && req.body.missingAvatars);
   const fromCache = req.query?.fromCache === "1" || (req.body && req.body.fromCache);
+  const targetHandles = req.body?.handles; // optional: array of specific handles to process
 
   // ── fromCache mode: extract avatars from existing enrichment_data (ZERO credits) ──
   if (fromCache) {
@@ -70,7 +71,10 @@ export default async function handler(req, res) {
     .from("directory_members")
     .select("id, creator_handle, platform, ic_avatar_url, avatar_url, banner_image_url");
 
-  if (missingAvatars) {
+  if (Array.isArray(targetHandles) && targetHandles.length > 0) {
+    // Targeted mode: process only specific handles (force re-enrich)
+    query = query.in("creator_handle", targetHandles.map(h => h.toLowerCase()));
+  } else if (missingAvatars) {
     // Only rows where BOTH avatar fields are NULL and creator_handle is set
     query = query
       .is("avatar_url", null)
