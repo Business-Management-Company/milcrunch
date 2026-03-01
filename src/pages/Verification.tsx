@@ -948,11 +948,22 @@ export default function Verification() {
 
   const expanded = expandedId ? list.find((r) => r.id === expandedId) : null;
 
-  const handleAddAsSpeaker = (row: VerificationRecord) => {
-    // Resolve best photo: enrichment avatar > verification profile_photo_url
+  const handleAddAsSpeaker = async (row: VerificationRecord) => {
     const handle = row.source_username;
+
+    // Check for duplicate by verification_id
+    const { data: existing } = await supabase
+      .from("speakers")
+      .select("id")
+      .eq("verification_id", row.id)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      toast.warning(`${row.person_name} is already added as a speaker`);
+      return;
+    }
+
+    // Resolve best photo
     let bestPhoto = row.profile_photo_url || "";
-    // Try to extract avatar from IC enrichment data cached in dirEnrichmentMap
     if (handle && dirEnrichmentMap[handle]) {
       const ed = dirEnrichmentMap[handle] as Record<string, unknown>;
       const result = (ed.result ?? ed) as Record<string, unknown>;
@@ -960,33 +971,57 @@ export default function Verification() {
       const enrichAvatar = (ig.picture ?? ig.profile_picture_hd ?? ig.profile_picture ?? ig.profile_pic_url) as string | undefined;
       if (enrichAvatar && enrichAvatar.startsWith("http")) bestPhoto = enrichAvatar;
     }
-    // Also check dirMembers list if available
     const dmMatch = handle ? dirMembers.find((m) => m.creator_handle === handle) : null;
     if (dmMatch) {
       const dmAvatar = dmMatch.ic_avatar_url || dmMatch.avatar_url;
       if (dmAvatar) bestPhoto = dmAvatar;
     }
 
-    setSpeakerForm({
+    // Resolve bio: directory_members > enrichment cache > verification notes
+    let bio = "";
+    if (handle) {
+      const { data: dmRow } = await supabase
+        .from("directory_members")
+        .select("bio")
+        .eq("creator_handle", handle)
+        .maybeSingle();
+      if (dmRow?.bio) bio = dmRow.bio as string;
+    }
+    if (!bio && handle) {
+      const { data: cacheRow } = await supabase
+        .from("creator_enrichment_cache")
+        .select("enrichment_data")
+        .eq("username", handle.toLowerCase())
+        .limit(1)
+        .maybeSingle();
+      if (cacheRow?.enrichment_data) {
+        const ed = cacheRow.enrichment_data as Record<string, unknown>;
+        const result = (ed.result ?? ed) as Record<string, unknown>;
+        const ig = (result.instagram ?? result) as Record<string, unknown>;
+        bio = (ig?.biography as string) || "";
+      }
+    }
+    if (!bio && row.notes && !/failed|error|skipped/i.test(row.notes)) {
+      bio = row.notes;
+    }
+
+    // Insert speaker directly — no modal
+    const { error } = await supabase.from("speakers").insert({
       name: row.person_name,
-      branch: row.claimed_branch ?? "",
-      rank: row.claimed_type ?? "",
-      bio: (() => {
-        // Priority 1: notes field (bio from Discovery enrichment) — skip error messages
-        if (row.notes && !/failed|error|skipped/i.test(row.notes)) return row.notes;
-        // Priority 2: extract from evidence source snippets
-        const evSources = (row.evidence_sources ?? []) as EvidenceSource[];
-        const best = evSources.find((s) => s.category === "Military Service" && s.snippet?.length > 50)
-          || evSources.find((s) => s.category === "Professional" && s.snippet?.length > 50);
-        if (best) return best.snippet.slice(0, 300);
-        // Priority 3: blank for manual entry
-        return "";
-      })(),
+      branch: row.claimed_branch || null,
+      rank: (row as any).claimed_type || null,
+      bio: bio || null,
+      photo_url: bestPhoto || null,
       verification_id: row.id,
       verification_status: row.status ?? "pending",
-      photo_url: bestPhoto,
-    });
-    setAddSpeakerOpen(true);
+      review_status: "pending_review",
+    } as Record<string, unknown>);
+
+    if (error) {
+      toast.error("Failed to add speaker: " + error.message);
+    } else {
+      toast.success(`${row.person_name} added as speaker`);
+    }
   };
 
   const handleEditCreator = async (row: VerificationRecord) => {
@@ -4535,24 +4570,21 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
 
       {/* ── TABBED LAYOUT ── */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-auto p-0 gap-0">
-          <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+        <TabsList className="w-full justify-start bg-transparent h-auto p-1 gap-1.5 border-b border-gray-200 dark:border-gray-700 pb-3 mb-1 rounded-none">
+          <TabsTrigger value="overview" className="rounded-full px-4 py-1.5 text-base font-medium transition-colors bg-[#F1F5F9] text-[#334155] hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-sm border-0">
             Overview
           </TabsTrigger>
-          <TabsTrigger value="evidence" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
-            Evidence ({sources.length})
+          <TabsTrigger value="evidence" className="group rounded-full px-4 py-1.5 text-base font-medium transition-colors bg-[#F1F5F9] text-[#334155] hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-sm border-0">
+            Evidence <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full text-xs font-bold bg-[#334155]/10 text-[#334155] group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white">{sources.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="career" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+          <TabsTrigger value="career" className="rounded-full px-4 py-1.5 text-base font-medium transition-colors bg-[#F1F5F9] text-[#334155] hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-sm border-0">
             Career
           </TabsTrigger>
-          <TabsTrigger value="social" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+          <TabsTrigger value="social" className="rounded-full px-4 py-1.5 text-base font-medium transition-colors bg-[#F1F5F9] text-[#334155] hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-sm border-0">
             Social
           </TabsTrigger>
-          <TabsTrigger value="background" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+          <TabsTrigger value="background" className="rounded-full px-4 py-1.5 text-base font-medium transition-colors bg-[#F1F5F9] text-[#334155] hover:bg-blue-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-sm border-0">
             Background
-          </TabsTrigger>
-          <TabsTrigger value="events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
-            Events
           </TabsTrigger>
         </TabsList>
 
@@ -4786,17 +4818,6 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
           )}
         </TabsContent>
 
-        {/* ── EVENTS TAB ── */}
-        <TabsContent value="events" className="mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Target className="h-5 w-5 text-[#1e3a5f]" />
-            <h3 className="text-base font-semibold text-[#000741] dark:text-white">Assigned Events</h3>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">No events assigned yet.</p>
-          <Button variant="outline" size="sm" onClick={() => onInviteToEvent?.(record)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> Add to Event
-          </Button>
-        </TabsContent>
       </Tabs>
 
     </div>
