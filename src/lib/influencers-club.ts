@@ -526,24 +526,51 @@ export async function enrichCreatorProfile(
   }
 
   const result = (dataRecord).result as Record<string, unknown> | undefined;
-  // Look for platform-specific data under the searched platform key, fall back to instagram
-  const platformData = result && typeof result === "object"
-    ? (result[platKey] as Record<string, unknown> | undefined) ??
-      (platKey !== "instagram" ? (result.instagram as Record<string, unknown> | undefined) : undefined)
-    : undefined;
 
-  console.log("[Enrich] OK for", handle, "— platform:", platKey, "data:", !!platformData, "platforms:", result?.creator_has);
+  // Look for platform-specific data:
+  //   1. result[platformKey]  — e.g. result.tiktok
+  //   2. result.instagram     — some endpoints always nest under "instagram"
+  //   3. result itself        — RAW endpoint for non-IG platforms sometimes returns
+  //                             data directly in result without a platform sub-key
+  let platformData: Record<string, unknown> | undefined;
+  if (result && typeof result === "object") {
+    platformData =
+      (result[platKey] as Record<string, unknown> | undefined) ??
+      (platKey !== "instagram" ? (result.instagram as Record<string, unknown> | undefined) : undefined);
 
-  // Dump all URL-like values from platform data to find the avatar field
+    // Fallback: if result itself has platform-like fields (follower_count,
+    // post_data, username, etc.), treat result as the platform data record.
+    if (!platformData) {
+      const hasDataFields = result.follower_count != null || result.subscriber_count != null
+        || result.post_data != null || result.username != null || result.engagement_percent != null;
+      if (hasDataFields) {
+        console.log(`[Enrich] Using result itself as platform data for "${platKey}" (no nested key found). Result keys:`, Object.keys(result).slice(0, 20));
+        platformData = result;
+      }
+    }
+  }
+
+  console.log("[Enrich] OK for", handle, "— platform:", platKey, "data:", !!platformData,
+    "platforms:", result?.creator_has,
+    "result keys:", result ? Object.keys(result).slice(0, 15) : "none");
+
   if (platformData && typeof platformData === "object") {
-    const urlFields = Object.entries(platformData)
-      .filter(([, v]) => typeof v === "string" && ((v as string).startsWith("http") || (v as string).includes("cdninstagram")))
-      .map(([k, v]) => `${k}: ${(v as string).substring(0, 120)}`);
-    console.log(`[Enrich] ${handle} — URL fields in platformData (${Object.keys(platformData).length} keys):`, urlFields);
+    // Log key stats fields to debug what data is available
+    console.log(`[Enrich] ${handle} [${platKey}] stats:`, {
+      follower_count: platformData.follower_count,
+      subscriber_count: platformData.subscriber_count,
+      engagement_percent: platformData.engagement_percent ?? platformData.engagement_rate,
+      avg_likes: platformData.avg_likes ?? platformData.avg_like_count,
+      avg_views: platformData.avg_view_count ?? platformData.avg_views,
+      post_data: Array.isArray(platformData.post_data) ? `${(platformData.post_data as unknown[]).length} posts` : typeof platformData.post_data,
+      creator_follower_growth: platformData.creator_follower_growth ? "YES" : "none",
+      income: platformData.income ? "YES" : "none",
+      keys: Object.keys(platformData).length,
+    });
   }
 
   if (!platformData || typeof platformData !== "object") {
-    console.warn("[Enrich] No platform data in result for", handle, "(tried:", platKey, ")");
+    console.warn("[Enrich] No platform data in result for", handle, "(tried:", platKey, "). Result keys:", result ? Object.keys(result) : "none");
     return null;
   }
 

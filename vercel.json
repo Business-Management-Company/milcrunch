@@ -30,6 +30,7 @@
     {"source": "/api/youtube", "destination": "/api/youtube"},
     {"source": "/api/parse-rss", "destination": "/api/parse-rss"},
     {"source": "/api/social-monitor", "destination": "/api/social-monitor"},
+    {"source": "/api/social-listening-scan", "destination": "/api/social-listening-scan"},
     {"source": "/api/shared-reports", "destination": "/api/shared-reports"},
     {"source": "/api/backfill-avatars", "destination": "/api/backfill-avatars"},
     {"source": "/api/cleanup-avatars", "destination": "/api/cleanup-avatars"},
