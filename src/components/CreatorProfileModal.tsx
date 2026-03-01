@@ -1271,6 +1271,18 @@ export default function CreatorProfileModal({
     return creator?.branch || detectBranch(bioText);
   }, [igRecord, creator?.bio, creator?.branch]);
 
+  // ── Resolve the active platform data record ──
+  // Used by stats, charts, hashtags, audience analytics — single source of truth.
+  // MUST be declared before any useMemo that references it (bio, stats, etc.)
+  const activePlatformRecord = useMemo((): Record<string, unknown> | undefined => {
+    if (selectedPlatform === "tiktok") return tiktokData;
+    if (selectedPlatform === "youtube") return youtubeData;
+    if (selectedPlatform === "twitter") return twitterData;
+    if (selectedPlatform === "facebook") return facebookData;
+    if (selectedPlatform === "linkedin") return linkedinData;
+    return igRecord;
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, facebookData, linkedinData, igRecord]);
+
   const bio = useMemo(() => {
     const rec = activePlatformRecord;
     if (rec) {
@@ -1302,17 +1314,6 @@ export default function CreatorProfileModal({
   const category =
     (igRecord?.category as string) ?? (Array.isArray(nicheClass) && nicheClass.length ? nicheClass.join(", ") : "") ?? "";
   const isVerified = Boolean(igRecord?.is_verified);
-
-  // ── Resolve the active platform data record ──
-  // Used by stats, charts, hashtags, audience analytics — single source of truth.
-  const activePlatformRecord = useMemo((): Record<string, unknown> | undefined => {
-    if (selectedPlatform === "tiktok") return tiktokData;
-    if (selectedPlatform === "youtube") return youtubeData;
-    if (selectedPlatform === "twitter") return twitterData;
-    if (selectedPlatform === "facebook") return facebookData;
-    if (selectedPlatform === "linkedin") return linkedinData;
-    return igRecord;
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, facebookData, linkedinData, igRecord]);
 
   // True when multi-platform enrichment is still fetching data for the selected platform
   const isPlatformStillLoading = selectedPlatform !== "instagram" && platformEnrichmentLoading.has(selectedPlatform);
