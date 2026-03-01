@@ -48,6 +48,8 @@ import {
   ChevronRight,
   MoreHorizontal,
   Camera,
+  Play,
+  Eye,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import {
@@ -2647,7 +2649,8 @@ export default function CreatorProfileModal({
                         <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border dark:border-gray-700 bg-muted/20 dark:bg-[#0F1117] p-4">
                           No {postContentType} data available.
                         </p>
-                      ) : (
+                      ) : postContentType === "reels" ? (
+                        /* ── Reels: vertical 9:16 cards with play overlay ── */
                         <div className="grid grid-cols-3 gap-3">
                           {filteredPosts.map((post) => (
                             <a
@@ -2657,7 +2660,61 @@ export default function CreatorProfileModal({
                               rel="noopener noreferrer"
                               className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117] hover:shadow-md transition-shadow group"
                             >
-                              {/* Thumbnail — clean square image, no overlays */}
+                              <div className="relative overflow-hidden" style={{ aspectRatio: '9/16' }}>
+                                {post.thumbnail && !brokenPostImages.has(post.id) ? (
+                                  <img
+                                    src={post.thumbnail}
+                                    alt=""
+                                    loading="lazy"
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                    onError={() => setBrokenPostImages(prev => new Set(prev).add(post.id))}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-1">
+                                    <Camera className="h-6 w-6 text-gray-300" />
+                                    <span className="text-[10px] text-gray-400">No preview</span>
+                                  </div>
+                                )}
+                                {/* Play button overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <div className="h-12 w-12 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm group-hover:bg-black/70 transition-colors">
+                                    <Play className="h-5 w-5 text-white ml-0.5" fill="white" />
+                                  </div>
+                                </div>
+                                {/* Views badge bottom-left */}
+                                {post.views != null && post.views > 0 && (
+                                  <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                                    <Eye className="h-3 w-3 text-white" />
+                                    <span className="text-[10px] text-white font-medium">{formatNumber(post.views)}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-2.5">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[2rem]">{post.caption || "—"}</p>
+                                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
+                                  {post.views != null && post.views > 0 && (
+                                    <span>{formatNumber(post.views)} views</span>
+                                  )}
+                                  {post.date && (
+                                    <span>{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        /* ── Posts: square 1:1 cards ── */
+                        <div className="grid grid-cols-3 gap-3">
+                          {filteredPosts.map((post) => (
+                            <a
+                              key={post.id}
+                              href={post.permalink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117] hover:shadow-md transition-shadow group"
+                            >
                               <div className="relative overflow-hidden aspect-square">
                                 {post.thumbnail && !brokenPostImages.has(post.id) ? (
                                   <img
@@ -2674,11 +2731,10 @@ export default function CreatorProfileModal({
                                     <span className="text-[10px] text-gray-400">No preview</span>
                                   </div>
                                 )}
-                                {/* Play button overlay for reels/videos */}
                                 {post.isReel && (
                                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
-                                      <Video className="h-4 w-4 text-white ml-0.5" />
+                                      <Play className="h-4 w-4 text-white ml-0.5" fill="white" />
                                     </div>
                                   </div>
                                 )}
