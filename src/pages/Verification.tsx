@@ -2597,13 +2597,22 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
     (async () => {
       const { data } = await supabase.from("verifications").select("manual_checks").eq("id", recordId).single();
       const checks = (data?.manual_checks ?? {}) as Record<string, unknown>;
-      const saved = checks.background_review as { results?: AIFilteredCriminalResult[]; summary?: string; reviewed_at?: string; ai_failed?: boolean } | undefined;
-      if (saved?.results?.length || saved?.summary) {
-        setAiResults((saved.results ?? []) as AIFilteredCriminalResult[]);
-        setAiSummary((saved.summary ?? "") as string);
-        setLastReviewedAt((saved.reviewed_at ?? null) as string | null);
-        setAiFailed(!!saved.ai_failed);
-        setHasSearched(true);
+      const saved = checks.background_review as { results?: unknown; summary?: string; reviewed_at?: string; ai_failed?: boolean } | undefined;
+      if (saved) {
+        // Guard: old buggy code may have saved an object instead of an array for results
+        const rawResults = saved.results;
+        const resultsArray: AIFilteredCriminalResult[] = Array.isArray(rawResults)
+          ? rawResults
+          : (rawResults && typeof rawResults === "object" && Array.isArray((rawResults as any).filtered))
+            ? (rawResults as any).filtered
+            : [];
+        if (resultsArray.length > 0 || saved.summary) {
+          setAiResults(resultsArray);
+          setAiSummary((saved.summary ?? "") as string);
+          setLastReviewedAt((saved.reviewed_at ?? null) as string | null);
+          setAiFailed(!!saved.ai_failed);
+          setHasSearched(true);
+        }
       }
       setDbLoaded(true);
     })();
@@ -2700,7 +2709,7 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
   // Determine overall summary status — only flag "red" if AI confirms a high-relevance, high-concern result about this person
   const getSummaryStatus = () => {
     // Filter to only results the AI considers actually relevant to this person
-    const relevant = aiResults.filter((r) => r.relevance_score > 50);
+    const relevant = (Array.isArray(aiResults) ? aiResults : []).filter((r) => r.relevance_score > 50);
     if (relevant.length === 0) return "clear";
     const hasHighConcern = relevant.some((r) => r.concern_level === "high");
     if (hasHighConcern) return "red";
@@ -2710,7 +2719,8 @@ function BackgroundReviewTab({ personName, recordId, claimedBranch, locationCont
   };
 
   // Sort results by relevance (most relevant first)
-  const sortedResults = [...aiResults].sort((a, b) => b.relevance_score - a.relevance_score);
+  const safeResults = Array.isArray(aiResults) ? aiResults : [];
+  const sortedResults = [...safeResults].sort((a, b) => b.relevance_score - a.relevance_score);
   const visibleResults = showAll ? sortedResults : sortedResults.slice(0, VISIBLE_COUNT);
   const hiddenCount = sortedResults.length - VISIBLE_COUNT;
 
