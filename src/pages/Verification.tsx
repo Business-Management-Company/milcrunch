@@ -71,6 +71,7 @@ import {
   Info,
   Share2,
   Copy,
+  CalendarDays,
 } from "lucide-react";
 import { BRANCHES, CLAIMED_STATUS_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
@@ -4763,7 +4764,145 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
 
       </Tabs>
 
+      {/* ── ASSIGNED EVENTS ACCORDION ── */}
+      <AssignedEventsAccordion record={record} onInviteToEvent={onInviteToEvent} />
+
     </div>
+    </div>
+  );
+}
+
+/** Collapsible accordion for assigned events + add-to-event */
+function AssignedEventsAccordion({ record, onInviteToEvent }: { record: VerificationRecord; onInviteToEvent?: (record: VerificationRecord) => void }) {
+  const [open, setOpen] = useState(false);
+  const [assignedEvents, setAssignedEvents] = useState<{ id: string; event_id: string; status: string; event_title: string }[]>([]);
+  const [availableEvents, setAvailableEvents] = useState<{ id: string; title: string }[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const loadEvents = async () => {
+    if (loaded) return;
+    // Fetch events this person has been invited to
+    const { data: invites } = await supabase
+      .from("event_invitations")
+      .select("id, event_id, status")
+      .eq("person_name", record.person_name);
+    const inviteList = (invites ?? []) as { id: string; event_id: string; status: string }[];
+
+    // Fetch all events to resolve titles and provide available options
+    const { data: allEvents } = await supabase
+      .from("events")
+      .select("id, title")
+      .order("start_date", { ascending: false })
+      .limit(50);
+    const eventList = (allEvents ?? []) as { id: string; title: string }[];
+    const eventMap = Object.fromEntries(eventList.map(e => [e.id, e.title]));
+
+    const enriched = inviteList.map(inv => ({
+      ...inv,
+      event_title: eventMap[inv.event_id] ?? "Unknown Event",
+    }));
+    setAssignedEvents(enriched);
+
+    // Available = events not already assigned
+    const assignedIds = new Set(inviteList.map(i => i.event_id));
+    setAvailableEvents(eventList.filter(e => !assignedIds.has(e.id)));
+    setLoaded(true);
+  };
+
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) loadEvents();
+  };
+
+  const handleAdd = async () => {
+    if (!selectedEventId) return;
+    setAdding(true);
+    const { error } = await supabase.from("event_invitations").insert({
+      event_id: selectedEventId,
+      person_name: record.person_name,
+      verification_id: record.id,
+      status: "invited",
+    });
+    if (error) {
+      if (error.code === "23505") {
+        toast.warning(`${record.person_name} is already invited to this event`);
+      } else {
+        toast.error("Failed to add: " + error.message);
+      }
+    } else {
+      toast.success(`Added ${record.person_name} to event`);
+      setLoaded(false);
+      setSelectedEventId("");
+      loadEvents();
+    }
+    setAdding(false);
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden mt-6">
+      <button
+        onClick={handleToggle}
+        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus:outline-none focus:ring-0"
+      >
+        <CalendarDays className="h-5 w-5 text-[#1e3a5f]" />
+        <span className="font-semibold text-sm flex-1 text-[#000741] dark:text-white">Assigned Events</span>
+        {assignedEvents.length > 0 && (
+          <Badge variant="secondary" className="text-xs">{assignedEvents.length}</Badge>
+        )}
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="border-t border-gray-200 dark:border-gray-800 px-4 py-3 space-y-3">
+          {/* Assigned events list */}
+          {assignedEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No events assigned yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {assignedEvents.map((ev) => (
+                <div key={ev.id} className="flex items-center justify-between px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800/50">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{ev.event_title}</span>
+                  </div>
+                  <Badge variant={ev.status === "accepted" ? "default" : "secondary"} className="text-xs capitalize">
+                    {ev.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add to event */}
+          <div className="flex items-center gap-2 pt-1">
+            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+              <SelectTrigger className="flex-1 h-9 text-sm">
+                <SelectValue placeholder="Select an event..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableEvents.length === 0 ? (
+                  <SelectItem value="_none" disabled>No available events</SelectItem>
+                ) : (
+                  availableEvents.map((ev) => (
+                    <SelectItem key={ev.id} value={ev.id}>{ev.title}</SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              onClick={handleAdd}
+              disabled={!selectedEventId || adding}
+              className="bg-[#1e3a5f] hover:bg-[#2d5282] h-9 px-4"
+            >
+              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+              Add
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
