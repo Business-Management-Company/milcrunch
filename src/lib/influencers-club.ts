@@ -721,7 +721,8 @@ export async function searchByUsername(
   });
 
   const rawResponse = await res.json();
-  console.log("[usernameSearch] Response status:", res.status, "keys:", Object.keys(rawResponse as object));
+  console.log("[usernameSearch] Response status:", res.status);
+  console.log("[usernameSearch] IC RAW RESPONSE:", JSON.stringify(rawResponse, null, 2));
 
   if (!res.ok) {
     throw new Error(`Username search ${res.status}: ${res.statusText}`, { cause: rawResponse });
@@ -734,26 +735,28 @@ export async function searchByUsername(
     (platKey !== "instagram" ? (result?.instagram as Record<string, unknown> | undefined) : undefined);
 
   if (!ig || typeof ig !== "object") {
-    console.log("[usernameSearch] No platform data found for handle:", handle, "(tried:", platKey, ")");
-    return { creators: [], total: 0, rawResponse };
+    console.warn(`[usernameSearch] No platform data for "${handle}" on ${platKey}`);
+    throw new Error(`Username search 404: No data for "${handle}" on ${platKey}`, { cause: rawResponse });
   }
 
   // Validate the API returned data for the requested handle, not a different person.
-  // The IC API sometimes returns a related but different profile.
+  // The IC API sometimes returns a related but different profile — reject mismatches
+  // so callers fall back to cross-platform search or keyword search.
   const returnedUsername = (ig.username as string)?.toLowerCase();
   if (returnedUsername && returnedUsername !== handle) {
-    console.warn(`[usernameSearch] API returned "${returnedUsername}" but searched for "${handle}" — possible mismatch`);
+    console.warn(`[usernameSearch] USERNAME MISMATCH: searched "${handle}" but API returned "${returnedUsername}" — rejecting`);
+    throw new Error(`Username search 404: Mismatch — searched "${handle}" got "${returnedUsername}"`, { cause: rawResponse });
   }
 
   // Map enrichment response to a CreatorCard via the same mapper used for discovery.
-  // Use the searched handle as user_id (not the returned username) so the card ID
-  // always matches what the user searched for.
   const profile = { ...ig } as Record<string, unknown>;
   if (result) mergeEnrichFlags(profile, result);
   const card = mapAccountToCard(
     { user_id: handle, profile: profile as unknown as ApiProfile },
     0
   );
+
+  console.log("[usernameSearch] Matched profile:", { name: card.name, username: card.username, followers: card.followers, platforms: card.socialPlatforms });
 
   return { creators: [card], total: 1, rawResponse };
 }

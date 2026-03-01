@@ -1945,8 +1945,9 @@ const BrandDiscover = () => {
     const q = searchQuery.trim();
     if (!q) return;
 
-    // Route to lookalike handler when explicitly in lookalike mode
-    if (searchMode === "lookalike") {
+    // Route to dedicated handler when explicitly in username or lookalike mode.
+    // runModeSearch has cross-platform fallback and keyword fallback for usernames.
+    if (searchMode === "username" || searchMode === "lookalike") {
       runModeSearch();
       return;
     }
