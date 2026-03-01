@@ -51,7 +51,7 @@ import {
   Play,
   Eye,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, PieChart, Pie } from "recharts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1378,7 +1378,9 @@ export default function CreatorProfileModal({
     });
   }, [activePlatformRecord, followers]);
 
-  const { incomeMin, incomeMax, income, followerGrowth, growthData, reelsPct } = useMemo(() => {
+  const [growthTimeRange, setGrowthTimeRange] = useState<"12" | "6" | "3">("12");
+
+  const { incomeMin, incomeMax, income, followerGrowth, growthData, reelsPct, engagementDistro } = useMemo(() => {
     const platRecord = activePlatformRecord;
 
     const incObj = platRecord?.income as Record<string, unknown> | undefined;
@@ -1400,11 +1402,19 @@ export default function CreatorProfileModal({
       ? Number(igRecord?.reels_percentage_last_12_posts ?? 0)
       : 0;
 
-    const gData: { period: string; growth: number }[] = [];
+    const gData: { period: string; growth: number; months: number }[] = [];
     if (growthRec && typeof growthRec === "object") {
-      if (growthRec["12_months_ago"] != null) gData.push({ period: "12mo", growth: Number(growthRec["12_months_ago"]) });
-      if (growthRec["6_months_ago"] != null) gData.push({ period: "6mo", growth: Number(growthRec["6_months_ago"]) });
-      if (growthRec["3_months_ago"] != null) gData.push({ period: "3mo", growth: Number(growthRec["3_months_ago"]) });
+      if (growthRec["12_months_ago"] != null) gData.push({ period: "12mo ago", growth: Number(growthRec["12_months_ago"]), months: 12 });
+      if (growthRec["6_months_ago"] != null) gData.push({ period: "6mo ago", growth: Number(growthRec["6_months_ago"]), months: 6 });
+      if (growthRec["3_months_ago"] != null) gData.push({ period: "3mo ago", growth: Number(growthRec["3_months_ago"]), months: 3 });
+    }
+
+    // Engagement distribution for income fallback (pie chart)
+    const eDistro: { name: string; value: number; fill: string }[] = [];
+    if (avgLikes > 0 || avgComments > 0 || avgViews > 0) {
+      if (avgLikes > 0) eDistro.push({ name: "Avg Likes", value: Math.round(avgLikes), fill: "#ef4444" });
+      if (avgComments > 0) eDistro.push({ name: "Avg Comments", value: Math.round(avgComments), fill: "#3b82f6" });
+      if (avgViews > 0) eDistro.push({ name: "Avg Views", value: Math.round(avgViews), fill: "#8b5cf6" });
     }
 
     return {
@@ -1414,8 +1424,9 @@ export default function CreatorProfileModal({
       followerGrowth: fGrowth,
       growthData: gData,
       reelsPct: rPct,
+      engagementDistro: eDistro,
     };
-  }, [activePlatformRecord, selectedPlatform, igRecord]);
+  }, [activePlatformRecord, selectedPlatform, igRecord, avgLikes, avgComments, avgViews]);
 
   const showEnrichmentLoading = enrichmentLoading && !enrichmentTimedOut;
   const showPlatformLoading = isPlatformStillLoading;
@@ -2442,28 +2453,43 @@ export default function CreatorProfileModal({
                       ) : null}
 
                       {/* Follower Growth Chart */}
-                      {growthData.length > 0 ? (
+                      {growthData.length > 0 ? (() => {
+                        const filteredGrowth = growthData.filter(d => d.months <= Number(growthTimeRange));
+                        const latestGrowth = filteredGrowth.length > 0 ? filteredGrowth[filteredGrowth.length - 1].growth : 0;
+                        const followerDelta = followers > 0 ? Math.round(followers * Math.abs(latestGrowth) / (100 + Math.abs(latestGrowth))) : 0;
+                        return (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">Follower Growth</p>
+                            <select
+                              value={growthTimeRange}
+                              onChange={e => setGrowthTimeRange(e.target.value as "12" | "6" | "3")}
+                              className="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-[#1a1a2e] text-gray-700 dark:text-gray-300"
+                            >
+                              <option value="12">Last 12 months</option>
+                              <option value="6">Last 6 months</option>
+                              <option value="3">Last 3 months</option>
+                            </select>
+                          </div>
                           <div className="h-44 w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={growthData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                              <LineChart data={filteredGrowth} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                                 <XAxis dataKey="period" tick={{ fontSize: 12 }} />
                                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}%`} />
                                 <Tooltip formatter={(value: number) => [`${value > 0 ? "+" : ""}${value.toFixed(2)}%`, "Growth"]} />
-                                <Bar dataKey="growth" radius={[4, 4, 0, 0]}>
-                                  {growthData.map((entry, i) => (
-                                    <Cell key={i} fill={entry.growth >= 0 ? "#22c55e" : "#ef4444"} />
-                                  ))}
-                                </Bar>
-                              </BarChart>
+                                <Line type="monotone" dataKey="growth" stroke={latestGrowth >= 0 ? "#22c55e" : "#ef4444"} strokeWidth={2} dot={{ r: 5, fill: latestGrowth >= 0 ? "#22c55e" : "#ef4444" }} />
+                              </LineChart>
                             </ResponsiveContainer>
                           </div>
                           <p className="text-xs text-muted-foreground mt-2">
-                            @{displayUsername || "creator"} {(() => { const total = growthData.reduce((s, d) => s + d.growth, 0); return total >= 0 ? `grew by ${total.toFixed(1)}%` : `declined by ${Math.abs(total).toFixed(1)}%`; })()} in the last 12 months
+                            @{displayUsername || "creator"} {latestGrowth >= 0
+                              ? `gained ~${formatNum(followerDelta)} followers (+${latestGrowth.toFixed(1)}%)`
+                              : `declined ~${formatNum(followerDelta)} followers (${latestGrowth.toFixed(1)}%)`
+                            } in the last {growthTimeRange} months
                           </p>
                         </div>
-                      ) : (showEnrichmentLoading || showPlatformLoading) ? (
+                        );
+                      })() : (showEnrichmentLoading || showPlatformLoading) ? (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
                           <Skeleton className="h-44 w-full" />
@@ -2471,11 +2497,11 @@ export default function CreatorProfileModal({
                       ) : hasDataForPlatform ? (
                         <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
-                          <p className="text-sm text-muted-foreground">Growth data not available for {PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}.</p>
+                          <p className="text-sm text-muted-foreground">This account doesn&apos;t have enough follower history to show growth data.</p>
                         </div>
                       ) : null}
 
-                      {/* Estimated Income */}
+                      {/* Estimated Income / Engagement Overview fallback */}
                       {(incomeMin != null && incomeMax != null && (incomeMin > 0 || incomeMax > 0)) ? (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
@@ -2490,10 +2516,34 @@ export default function CreatorProfileModal({
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
                           <Skeleton className="h-4 w-full max-w-md" />
                         </div>
+                      ) : hasDataForPlatform && engagementDistro.length > 0 ? (
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Engagement Overview</p>
+                          <p className="text-xs text-muted-foreground mb-3">Average engagement per post</p>
+                          <div className="flex items-center gap-4">
+                            <div className="h-32 w-32 flex-shrink-0">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie data={engagementDistro} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={52} paddingAngle={3} />
+                                  <Tooltip formatter={(value: number, name: string) => [formatNum(value), name]} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="flex flex-col gap-2 text-sm">
+                              {engagementDistro.map(d => (
+                                <div key={d.name} className="flex items-center gap-2">
+                                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: d.fill }} />
+                                  <span className="text-gray-600 dark:text-gray-400">{d.name}:</span>
+                                  <span className="font-semibold text-gray-900 dark:text-white">{formatNum(d.value)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       ) : hasDataForPlatform ? (
                         <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0F1117] p-4">
-                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
-                          <p className="text-sm text-muted-foreground">Income data not available for {PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}.</p>
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Engagement Overview</p>
+                          <p className="text-sm text-muted-foreground">Not enough engagement data available for this account.</p>
                         </div>
                       ) : null}
 
