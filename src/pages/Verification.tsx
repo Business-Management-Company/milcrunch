@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-// Tabs removed — ExpandedRow now uses single scrolling layout
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
@@ -987,7 +987,25 @@ export default function Verification() {
       id: row.id,
       name: row.person_name,
       branch: row.claimed_branch ?? "",
-      militaryStatus: row.claimed_status ?? "",
+      militaryStatus: (() => {
+        const raw = (row as any).claimed_type || row.claimed_status || "";
+        const options = ["Veteran", "Active Duty", "Military Spouse", "Military Family", "DOD", "Reserves", "Guard", "Retired", "Cadet/ROTC"];
+        const exact = options.find(o => o === raw);
+        if (exact) return exact;
+        const lower = raw.toLowerCase().replace(/_/g, " ");
+        const match = options.find(o => o.toLowerCase() === lower);
+        if (match) return match;
+        if (lower.includes("spouse")) return "Military Spouse";
+        if (lower.includes("active")) return "Active Duty";
+        if (lower.includes("gold") && lower.includes("star")) return "Gold Star Family";
+        if (lower.includes("family")) return "Military Family";
+        if (lower.includes("reserve")) return "Reserves";
+        if (lower.includes("guard")) return "Guard";
+        if (lower.includes("veteran") || lower === "vet") return "Veteran";
+        if (lower.includes("retired")) return "Retired";
+        if (lower.includes("cadet") || lower.includes("rotc")) return "Cadet/ROTC";
+        return raw;
+      })(),
       category: icCategory,
       confidenceScore: row.verification_score,
       verificationStatus: row.status ?? "pending",
@@ -1020,6 +1038,7 @@ export default function Verification() {
         person_name: editForm.name,
         claimed_branch: editForm.branch || null,
         claimed_status: editForm.militaryStatus || null,
+        claimed_type: editForm.militaryStatus || null,
         status: editForm.verificationStatus,
         linkedin_url: editForm.linkedin || null,
         website_url: editForm.website || null,
@@ -1740,7 +1759,7 @@ export default function Verification() {
                     {expandedId === row.id && expanded && (
                       <TableRow key={`${row.id}-exp`} className="border-none hover:bg-transparent">
                         <TableCell colSpan={8} className="p-0 border-none">
-                          <ExpandedRow record={expanded} onRefresh={fetchVerifications} dirEnrichmentMap={dirEnrichmentMap} />
+                          <ExpandedRow record={expanded} onRefresh={fetchVerifications} dirEnrichmentMap={dirEnrichmentMap} onInviteToEvent={(rec) => { setInviteRecord(rec); setInviteEventOpen(true); }} />
                         </TableCell>
                       </TableRow>
                     )}
@@ -1794,7 +1813,7 @@ export default function Verification() {
 
       {/* Edit Creator Modal */}
       <Dialog open={editCreatorOpen} onOpenChange={setEditCreatorOpen}>
-        <DialogContent className="max-w-2xl w-full max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-2xl w-full max-h-[85vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="flex items-center gap-2 text-lg"><Pencil className="h-5 w-5 text-[#1e3a5f]" /> Edit Creator</DialogTitle>
           </DialogHeader>
@@ -2006,11 +2025,11 @@ export default function Verification() {
           </div>
 
           {/* Sticky footer */}
-          <div className="sticky bottom-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-4 flex items-center gap-3">
-            <Button variant="outline" onClick={() => setEditCreatorOpen(false)} className="flex-1">
+          <div className="sticky bottom-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-4 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setEditCreatorOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={editCreatorSaving || !editForm.name.trim()} className="flex-1 bg-[#1e3a5f] hover:bg-[#2d5282]">
+            <Button onClick={handleSaveEdit} disabled={editCreatorSaving || !editForm.name.trim()} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
               {editCreatorSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Changes
             </Button>
@@ -3557,7 +3576,7 @@ function StatusDot({ status, tooltip }: { status: 'red' | 'yellow' | 'green'; to
   );
 }
 
-function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: VerificationRecord; onRefresh?: () => void; dirEnrichmentMap: Record<string, unknown> }) {
+function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: { record: VerificationRecord; onRefresh?: () => void; dirEnrichmentMap: Record<string, unknown>; onInviteToEvent?: (record: VerificationRecord) => void }) {
   const [reverifying, setReverifying] = useState(false);
   const [reverifyPhase, setReverifyPhase] = useState("");
   const [reverifyProgress, setReverifyProgress] = useState(0);
@@ -3567,13 +3586,6 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
   const [shareLink, setShareLink] = useState("");
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
-  const [evidenceOpen, setEvidenceOpen] = useState(false);
-  const [backgroundOpen, setBackgroundOpen] = useState(false);
-  const [summaryOpen, setSummaryOpen] = useState(false);
-  const [careerOpen, setCareerOpen] = useState(false);
-  const [socialOpen, setSocialOpen] = useState(false);
-  const [mediaOpen, setMediaOpen] = useState(false);
-  const [speakerReadinessOpen, setSpeakerReadinessOpen] = useState(false);
   const [additionalSearchOpen, setAdditionalSearchOpen] = useState(false);
   const [additionalQuery, setAdditionalQuery] = useState("");
   const [additionalSearching, setAdditionalSearching] = useState(false);
@@ -4361,50 +4373,73 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
         </Card>
       )}
 
-      {/* ── 2. SPEAKER READINESS — collapsible ── */}
-      <SpeakerReadinessInline record={record} onRefresh={onRefresh} isOpen={speakerReadinessOpen} onToggle={() => setSpeakerReadinessOpen(!speakerReadinessOpen)} />
+      {/* ── TABBED LAYOUT ── */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="w-full justify-start border-b rounded-none bg-transparent h-auto p-0 gap-0">
+          <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="evidence" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+            Evidence ({sources.length})
+          </TabsTrigger>
+          <TabsTrigger value="career" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+            Career
+          </TabsTrigger>
+          <TabsTrigger value="social" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+            Social
+          </TabsTrigger>
+          <TabsTrigger value="background" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+            Background
+          </TabsTrigger>
+          <TabsTrigger value="events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:text-[#000741] dark:data-[state=active]:text-white">
+            Events
+          </TabsTrigger>
+        </TabsList>
 
-      {/* ── 3. AI SUMMARY ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setSummaryOpen(!summaryOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
-          {summaryOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <FileText className="h-5 w-5 text-[#1e3a5f]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
-          {(() => {
-            const a = record.ai_analysis;
-            const s = (!a || a === "pending_retry" || /failed|error/i.test(a)) ? 'red' : 'green';
-            const tip = s === 'red' ? "Analysis incomplete — click 'Retry AI Analysis' to generate" : "Complete \u2713";
-            return <StatusDot status={s} tooltip={tip} />;
-          })()}
-          {(!record.ai_analysis || record.ai_analysis === "pending_retry" || /failed|error/i.test(record.ai_analysis)) && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleRetryAIAnalysis(); }}
-              disabled={regenAI}
-              className="ml-auto flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 disabled:opacity-50"
-            >
-              {regenAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              Retry AI Analysis
-            </button>
-          )}
-        </button>
-        {summaryOpen && <div className="ml-6 mt-4 mb-2"><IntelligenceSummary record={record} onRetryAI={handleRetryAIAnalysis} retryingAI={regenAI} /></div>}
-      </section>
+        {/* ── OVERVIEW TAB ── */}
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Intelligence Summary */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-[#1e3a5f]" />
+                <h3 className="text-base font-semibold text-[#000741] dark:text-white">Intelligence Summary</h3>
+                {(() => {
+                  const a = record.ai_analysis;
+                  const s = (!a || a === "pending_retry" || /failed|error/i.test(a)) ? 'red' : 'green';
+                  const tip = s === 'red' ? "Analysis incomplete — click 'Retry AI Analysis' to generate" : "Complete \u2713";
+                  return <StatusDot status={s} tooltip={tip} />;
+                })()}
+                {(!record.ai_analysis || record.ai_analysis === "pending_retry" || /failed|error/i.test(record.ai_analysis)) && (
+                  <button
+                    onClick={handleRetryAIAnalysis}
+                    disabled={regenAI}
+                    className="ml-auto flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 disabled:opacity-50"
+                  >
+                    {regenAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    Retry
+                  </button>
+                )}
+              </div>
+              <IntelligenceSummary record={record} onRetryAI={handleRetryAIAnalysis} retryingAI={regenAI} />
+            </div>
+            {/* Speaker Readiness */}
+            <div className="space-y-3">
+              <SpeakerReadinessInline record={record} onRefresh={onRefresh} isOpen={true} onToggle={() => {}} />
+            </div>
+          </div>
+        </TabsContent>
 
-      {/* ── 3. EVIDENCE SOURCES — accordion ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button
-          onClick={() => setEvidenceOpen(!evidenceOpen)}
-          className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0"
-        >
-          {evidenceOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Search className="h-5 w-5 text-[#1e3a5f]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Evidence Sources</h3>
-          <Badge variant="secondary" className="text-xs ml-1">{sources.length}</Badge>
-          <StatusDot status={sources.length >= 10 ? 'green' : sources.length > 0 ? 'yellow' : 'red'} tooltip={sources.length >= 10 ? "Complete \u2713" : sources.length > 0 ? "Limited evidence — re-verify for more sources" : "No evidence found — re-verify to search"} />
-        </button>
-        {evidenceOpen && (
-          <div className="ml-6 mt-4 mb-2 space-y-4">
-            <div className="flex items-center justify-end gap-2">
+        {/* ── EVIDENCE TAB ── */}
+        <TabsContent value="evidence" className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-[#1e3a5f]" />
+              <h3 className="text-base font-semibold text-[#000741] dark:text-white">Evidence Sources</h3>
+              <Badge variant="secondary" className="text-xs ml-1">{sources.length}</Badge>
+              <StatusDot status={sources.length >= 10 ? 'green' : sources.length > 0 ? 'yellow' : 'red'} tooltip={sources.length >= 10 ? "Complete \u2713" : sources.length > 0 ? "Limited evidence" : "No evidence found"} />
+            </div>
+            <div className="flex items-center gap-2">
               <button onClick={handleRegenEvidence} disabled={regenEvidence} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
                 {regenEvidence ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
               </button>
@@ -4426,139 +4461,122 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
                 </DialogContent>
               </Dialog>
             </div>
-            {sources.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No evidence sources yet.</p>
-            ) : (
-              Array.from(sourcesByCategory.entries()).map(([cat, catSources]) => (
-                <EvidenceAccordionGroup key={cat} category={cat} sources={catSources} />
-              ))
-            )}
           </div>
-        )}
-      </section>
+          {sources.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No evidence sources yet.</p>
+          ) : (
+            Array.from(sourcesByCategory.entries()).map(([cat, catSources]) => (
+              <EvidenceAccordionGroup key={cat} category={cat} sources={catSources} />
+            ))
+          )}
+        </TabsContent>
 
-      {/* ── 4. CAREER TRACK — inline ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setCareerOpen(!careerOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
-          {careerOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Briefcase className="h-5 w-5 text-[#1e3a5f]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
-          {(() => {
-            const mc = record.manual_checks as Record<string, unknown> | null;
-            const career = (mc as any)?.career_track?.result;
-            const pdl = record.pdl_data as any;
-            let s: 'red' | 'yellow' | 'green' = 'red';
-            if (!career && !pdl) { s = 'red'; }
-            else {
-              s = 'yellow';
-              if (career) {
-                const hasBranch = !!career.military_summary?.branch;
-                const hasRank = !!career.military_summary?.rank;
-                const hasEntries = (career.career?.length > 0 || career.post_service?.length > 0 || career.education?.length > 0 || career.awards?.length > 0);
-                if (hasBranch || hasRank || hasEntries) s = 'green';
+        {/* ── CAREER TAB ── */}
+        <TabsContent value="career" className="mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Briefcase className="h-5 w-5 text-[#1e3a5f]" />
+            <h3 className="text-base font-semibold text-[#000741] dark:text-white">Military / Civilian Career</h3>
+            {(() => {
+              const mc = record.manual_checks as Record<string, unknown> | null;
+              const career = (mc as any)?.career_track?.result;
+              const pdl = record.pdl_data as any;
+              let s: 'red' | 'yellow' | 'green' = 'red';
+              if (!career && !pdl) { s = 'red'; }
+              else {
+                s = 'yellow';
+                if (career) {
+                  const hasBranch = !!career.military_summary?.branch;
+                  const hasRank = !!career.military_summary?.rank;
+                  const hasEntries = (career.career?.length > 0 || career.post_service?.length > 0 || career.education?.length > 0 || career.awards?.length > 0);
+                  if (hasBranch || hasRank || hasEntries) s = 'green';
+                }
+                if (s !== 'green' && pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) s = 'green';
               }
-              if (s !== 'green' && pdl && (pdl.employment?.length > 0 || pdl.experience?.length > 0 || pdl.jobs?.length > 0)) s = 'green';
-            }
-            const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Some career data missing — click 'Regenerate' to improve" : "No career data — click 'Regenerate' to extract";
-            return <StatusDot status={s} tooltip={tip} />;
-          })()}
-        </button>
-        {careerOpen && <div className="ml-6 mt-4 mb-2"><CareerTrackTab record={record} /></div>}
-      </section>
+              const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Some data missing" : "No career data";
+              return <StatusDot status={s} tooltip={tip} />;
+            })()}
+          </div>
+          <CareerTrackTab record={record} />
+        </TabsContent>
 
-      {/* ── 5. SOCIAL ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setSocialOpen(!socialOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
-          {socialOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Globe className="h-5 w-5 text-[#1e3a5f]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
-          {(() => {
-            const mc = record.manual_checks as Record<string, unknown> | null;
-            const savedProfiles = (mc?.social_profiles ?? []) as unknown[];
-            let count = Array.isArray(savedProfiles) ? savedProfiles.length : 0;
-            if (record.source_username) count++;
-            if (record.linkedin_url) count++;
-            const s = count >= 2 ? 'green' : count === 1 ? 'yellow' : 'red';
-            const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Only 1 profile confirmed" : "No social profiles verified";
-            return <StatusDot status={s} tooltip={tip} />;
-          })()}
-        </button>
-        {socialOpen && (
-          <div className="ml-6 mt-4 mb-2">
-            <div className="flex justify-end mb-2">
+        {/* ── SOCIAL TAB ── */}
+        <TabsContent value="social" className="mt-6 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-[#1e3a5f]" />
+                <h3 className="text-base font-semibold text-[#000741] dark:text-white">Social Verification</h3>
+                {(() => {
+                  const mc = record.manual_checks as Record<string, unknown> | null;
+                  const savedProfiles = (mc?.social_profiles ?? []) as unknown[];
+                  let count = Array.isArray(savedProfiles) ? savedProfiles.length : 0;
+                  if (record.source_username) count++;
+                  if (record.linkedin_url) count++;
+                  const s = count >= 2 ? 'green' : count === 1 ? 'yellow' : 'red';
+                  const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Only 1 profile confirmed" : "No social profiles verified";
+                  return <StatusDot status={s} tooltip={tip} />;
+                })()}
+              </div>
               <button onClick={handleRegenSocial} disabled={regenSocial} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
                 {regenSocial ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
               </button>
             </div>
             <SocialVerificationSection record={record} />
           </div>
-        )}
-      </section>
-
-      {/* ── 6. MEDIA — collapsible ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button onClick={() => setMediaOpen(!mediaOpen)} className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0">
-          {mediaOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <Video className="h-5 w-5 text-[#1e3a5f]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
-          {(() => {
-            const mc = record.manual_checks as Record<string, unknown> | null;
-            let s: 'red' | 'yellow' | 'green' = 'red';
-            if (mc) {
-              const ytMedia = (mc as any)?.youtube_media;
-              if (ytMedia) {
-                const videos = ytMedia.videos as unknown[] | undefined;
-                s = (Array.isArray(videos) && videos.length > 0) ? 'green' : 'yellow';
-              }
-            }
-            const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "Search completed but no results found" : "No media found — re-verify to search";
-            return <StatusDot status={s} tooltip={tip} />;
-          })()}
-        </button>
-        {mediaOpen && (
-          <div className="ml-6 mt-4 mb-2">
-            <div className="flex justify-end mb-2">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-[#1e3a5f]" />
+                <h3 className="text-base font-semibold text-[#000741] dark:text-white">Media & Appearances</h3>
+                {(() => {
+                  const mc = record.manual_checks as Record<string, unknown> | null;
+                  let s: 'red' | 'yellow' | 'green' = 'red';
+                  if (mc) {
+                    const ytMedia = (mc as any)?.youtube_media;
+                    if (ytMedia) {
+                      const videos = ytMedia.videos as unknown[] | undefined;
+                      s = (Array.isArray(videos) && videos.length > 0) ? 'green' : 'yellow';
+                    }
+                  }
+                  const tip = s === 'green' ? "Complete \u2713" : s === 'yellow' ? "No results found" : "Not searched yet";
+                  return <StatusDot status={s} tooltip={tip} />;
+                })()}
+              </div>
               <button onClick={handleRegenMedia} disabled={regenMedia} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
                 {regenMedia ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
               </button>
             </div>
             <MediaTab record={record} />
           </div>
-        )}
-      </section>
+        </TabsContent>
 
-      {/* ── 7. BACKGROUND — expandable ── */}
-      <section className="pl-4 ml-6 pr-8 max-w-full overflow-hidden py-3">
-        <button
-          onClick={() => setBackgroundOpen(!backgroundOpen)}
-          className="flex items-center gap-2 w-full text-left group focus:outline-none focus:ring-0"
-        >
-          {backgroundOpen ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
-          <ShieldAlert className="h-5 w-5 text-[#1e3a5f]" />
-          <h3 className="text-base font-semibold text-[#000741] dark:text-white">Background Review</h3>
-          {(() => {
-            const bgOverride = (record.manual_checks as any)?.background_dot_override;
-            const bgRan = !!(record.ai_analysis || record.pdl_data);
-            const bgStatus = bgOverride || (!bgRan ? 'red' : redFlags.length > 0 ? 'red' : ((record.manual_checks as any)?.background_warnings) ? 'yellow' : 'green');
-            const handleBgDotClick = async (e: React.MouseEvent) => {
-              e.stopPropagation();
-              const next = bgStatus === 'red' ? 'yellow' : bgStatus === 'yellow' ? 'green' : 'red';
-              await supabase.from('verifications').update({
-                manual_checks: { ...((record.manual_checks as any) || {}), background_dot_override: next },
-              }).eq('id', record.id);
-              onRefresh?.();
-            };
-            const bgTip = bgStatus === 'green' ? "Complete \u2713" : bgStatus === 'yellow' ? "Review completed with warnings" : "Not yet reviewed — re-verify to run";
-            return (
-              <span onClick={handleBgDotClick} className="cursor-pointer" title="Click to cycle status">
-                <StatusDot status={bgStatus as 'red' | 'yellow' | 'green'} tooltip={bgTip} />
-              </span>
-            );
-          })()}
-        </button>
-        {backgroundOpen && (
-          <div className="ml-6 mt-4 mb-2">
-            <div className="flex justify-end mb-2">
+        {/* ── BACKGROUND TAB ── */}
+        <TabsContent value="background" className="mt-6 space-y-6">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-[#1e3a5f]" />
+                <h3 className="text-base font-semibold text-[#000741] dark:text-white">Background Review</h3>
+                {(() => {
+                  const bgOverride = (record.manual_checks as any)?.background_dot_override;
+                  const bgRan = !!(record.ai_analysis || record.pdl_data);
+                  const bgStatus = bgOverride || (!bgRan ? 'red' : redFlags.length > 0 ? 'red' : ((record.manual_checks as any)?.background_warnings) ? 'yellow' : 'green');
+                  const handleBgDotClick = async (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    const next = bgStatus === 'red' ? 'yellow' : bgStatus === 'yellow' ? 'green' : 'red';
+                    await supabase.from('verifications').update({
+                      manual_checks: { ...((record.manual_checks as any) || {}), background_dot_override: next },
+                    }).eq('id', record.id);
+                    onRefresh?.();
+                  };
+                  const bgTip = bgStatus === 'green' ? "Complete \u2713" : bgStatus === 'yellow' ? "Warnings present" : "Not yet reviewed";
+                  return (
+                    <span onClick={handleBgDotClick} className="cursor-pointer" title="Click to cycle status">
+                      <StatusDot status={bgStatus as 'red' | 'yellow' | 'green'} tooltip={bgTip} />
+                    </span>
+                  );
+                })()}
+              </div>
               <button onClick={handleRegenBackground} disabled={regenBackground} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50">
                 {regenBackground ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Regenerate
               </button>
@@ -4571,8 +4589,55 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap }: { record: Verifica
               onRefresh={onRefresh}
             />
           </div>
-        )}
-      </section>
+          {/* Contact Information */}
+          {pdlData && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Mail className="h-5 w-5 text-[#1e3a5f]" />
+                <h3 className="text-base font-semibold text-[#000741] dark:text-white">Contact Information</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                {(pdlData as any)?.work_email && (
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{(pdlData as any).work_email}</span>
+                  </div>
+                )}
+                {((pdlData as any)?.personal_emails as string[] | undefined)?.map((em, i) => (
+                  <div key={i} className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{em}</span>
+                  </div>
+                ))}
+                {(pdlData as any)?.mobile_phone && (
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{(pdlData as any).mobile_phone}</span>
+                  </div>
+                )}
+                {locationStr && (
+                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span>{locationStr}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── EVENTS TAB ── */}
+        <TabsContent value="events" className="mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="h-5 w-5 text-[#1e3a5f]" />
+            <h3 className="text-base font-semibold text-[#000741] dark:text-white">Assigned Events</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">No events assigned yet.</p>
+          <Button variant="outline" size="sm" onClick={() => onInviteToEvent?.(record)}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Add to Event
+          </Button>
+        </TabsContent>
+      </Tabs>
 
     </div>
     </div>
