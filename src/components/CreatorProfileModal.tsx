@@ -253,6 +253,97 @@ function formatNum(n: number): string {
   return formatNumber(n);
 }
 
+/**
+ * Normalise metrics from any platform's enrichment data record.
+ * Tries direct IC fields first (FULL endpoint), then falls back to
+ * computing averages from post_data (RAW endpoint — 0.03 credits).
+ */
+function getMetricsForPlatform(
+  rec: Record<string, unknown> | undefined,
+  platform: string,
+  creatorCard?: Partial<CreatorCard> | null,
+) {
+  if (!rec) {
+    return { followers: 0, engagement: 0, mediaCount: 0, postsPerMonth: 0, avgLikes: 0, avgComments: 0, avgSpecial: 0, avgViews: 0 };
+  }
+
+  const pick = (...vals: (number | unknown)[]): number => {
+    for (const v of vals) {
+      const n = Number(v);
+      if (n && isFinite(n) && n > 0) return n;
+    }
+    return 0;
+  };
+
+  const fc = pick(
+    rec.follower_count,
+    rec.subscriber_count,
+    creatorCard?.followers,
+  );
+
+  // Always try computeFromPostData as a fallback — the RAW endpoint returns
+  // post_data but NOT pre-computed averages for TikTok/YouTube/Twitter.
+  const computed = computeFromPostData(rec, fc);
+
+  const reelsObj = platform === "instagram"
+    ? (rec.reels as Record<string, unknown> | undefined)
+    : undefined;
+
+  const engagement = pick(
+    rec.engagement_percent, rec.engagement_rate,
+    computed.engagement,
+    creatorCard?.engagementRate,
+  );
+  const mediaCount = pick(
+    rec.media_count, rec.number_of_posts, rec.video_count,
+    rec.tweet_count, rec.statuses_count,
+    creatorCard?.mediaCount,
+  );
+  const postsPerMonth = pick(
+    rec.posting_frequency_recent_months, rec.posts_per_month,
+    rec.videos_per_month, rec.posting_frequency,
+    computed.postsPerMonth,
+    creatorCard?.postsPerMonth,
+  );
+  const avgLikes = pick(
+    rec.avg_likes, rec.avg_like_count, rec.average_likes,
+    computed.avgLikes,
+    creatorCard?.avgLikes,
+  );
+  const avgComments = pick(
+    rec.avg_comments, rec.avg_comment_count, rec.average_comments,
+    rec.avg_replies,
+    computed.avgComments,
+    creatorCard?.avgComments,
+  );
+
+  let avgSpecial = 0;
+  if (platform === "instagram") {
+    avgSpecial = pick(
+      reelsObj?.avg_like_count, reelsObj?.avg_likes,
+      rec.avg_reel_likes,
+      creatorCard?.avgReelLikes,
+    );
+  } else if (platform === "tiktok") {
+    avgSpecial = pick(rec.avg_shares, rec.avg_share_count, rec.average_shares);
+  } else if (platform === "youtube") {
+    avgSpecial = pick(rec.avg_short_plays, rec.avg_shorts_plays);
+  } else if (platform === "twitter") {
+    avgSpecial = pick(rec.avg_retweets, rec.avg_retweet_count);
+  }
+
+  const avgViews = pick(
+    rec.avg_view_count, rec.avg_views, rec.average_views,
+    rec.avg_impressions,
+    reelsObj?.avg_view_count,
+    rec.avg_reels_plays, rec.average_reels_plays,
+    computed.avgViews,
+    creatorCard?.avgViews,
+  );
+
+  return { followers: fc, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews };
+}
+
 /* ── Enrichment cache (Supabase) ── */
 const ENRICH_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -401,6 +492,7 @@ export default function CreatorProfileModal({
   const [fetchedEmail, setFetchedEmail] = useState<string | null>(null);
   const [emailNotFound, setEmailNotFound] = useState(false);
   const [platformEnrichments, setPlatformEnrichments] = useState<Record<string, Record<string, unknown>>>({});
+  const [platformEnrichmentLoading, setPlatformEnrichmentLoading] = useState<Set<string>>(new Set());
 
   // Track whether user has manually selected a platform (prevents auto-switching)
   const userSelectedPlatformRef = useRef(false);
@@ -510,6 +602,7 @@ export default function CreatorProfileModal({
       setEmailNotFound(false);
       setBrokenPostImages(new Set());
       setPlatformEnrichments({});
+      setPlatformEnrichmentLoading(new Set());
       userSelectedPlatformRef.current = false;
       setSidebarWidth(320);
       return;
@@ -686,6 +779,13 @@ export default function CreatorProfileModal({
     const controller = new AbortController();
     let cancelled = false;
 
+    // Mark all platforms as loading
+    setPlatformEnrichmentLoading(prev => {
+      const next = new Set(prev);
+      otherPlatforms.forEach(p => next.add(p));
+      return next;
+    });
+
     otherPlatforms.forEach(async (platform: string) => {
       if (cancelled) return;
       try {
@@ -704,6 +804,8 @@ export default function CreatorProfileModal({
             avg_likes: pd.avg_likes,
             avg_views: pd.avg_view_count ?? pd.avg_views,
             post_data: Array.isArray(pd.post_data) ? `${(pd.post_data as unknown[]).length} posts` : "none",
+            creator_follower_growth: pd.creator_follower_growth ? "YES" : "none",
+            income: pd.income ? "YES" : "none",
           });
           setPlatformEnrichments(prev => ({ ...prev, [platform]: pd }));
         }
@@ -711,10 +813,18 @@ export default function CreatorProfileModal({
         if ((err as Error)?.name !== "AbortError") {
           console.warn(`[Enrich] Multi-platform ${platform} failed:`, err);
         }
+      } finally {
+        if (!cancelled) {
+          setPlatformEnrichmentLoading(prev => {
+            const next = new Set(prev);
+            next.delete(platform);
+            return next;
+          });
+        }
       }
     });
 
-    return () => { cancelled = true; controller.abort(); };
+    return () => { cancelled = true; controller.abort(); setPlatformEnrichmentLoading(new Set()); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enriched, open, creator?.id]);
 
@@ -1162,17 +1272,13 @@ export default function CreatorProfileModal({
   }, [igRecord, creator?.bio, creator?.branch]);
 
   const bio = useMemo(() => {
-    if (selectedPlatform === "tiktok" && tiktokData) {
-      return (tiktokData.biography as string) ?? (tiktokData.bio as string) ?? creator?.bio ?? "";
+    const rec = activePlatformRecord;
+    if (rec) {
+      const b = (rec.biography as string) ?? (rec.bio as string) ?? (rec.description as string);
+      if (b) return b;
     }
-    if (selectedPlatform === "youtube" && youtubeData) {
-      return (youtubeData.description as string) ?? (youtubeData.biography as string) ?? creator?.bio ?? "";
-    }
-    if (selectedPlatform === "twitter" && twitterData) {
-      return (twitterData.biography as string) ?? (twitterData.bio as string) ?? (twitterData.description as string) ?? creator?.bio ?? "";
-    }
-    return (igRecord?.biography as string) ?? creator?.bio ?? "";
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, creator?.bio]);
+    return creator?.bio ?? "";
+  }, [activePlatformRecord, creator?.bio]);
   const location =
     (igRecord?.location as string) ??
     (igRecord?.country as string) ??
@@ -1197,71 +1303,27 @@ export default function CreatorProfileModal({
     (igRecord?.category as string) ?? (Array.isArray(nicheClass) && nicheClass.length ? nicheClass.join(", ") : "") ?? "";
   const isVerified = Boolean(igRecord?.is_verified);
 
+  // ── Resolve the active platform data record ──
+  // Used by stats, charts, hashtags, audience analytics — single source of truth.
+  const activePlatformRecord = useMemo((): Record<string, unknown> | undefined => {
+    if (selectedPlatform === "tiktok") return tiktokData;
+    if (selectedPlatform === "youtube") return youtubeData;
+    if (selectedPlatform === "twitter") return twitterData;
+    if (selectedPlatform === "facebook") return facebookData;
+    if (selectedPlatform === "linkedin") return linkedinData;
+    return igRecord;
+  }, [selectedPlatform, tiktokData, youtubeData, twitterData, facebookData, linkedinData, igRecord]);
+
+  // True when multi-platform enrichment is still fetching data for the selected platform
+  const isPlatformStillLoading = selectedPlatform !== "instagram" && platformEnrichmentLoading.has(selectedPlatform);
+
   const { followers, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews } = useMemo(() => {
-    if (selectedPlatform === "tiktok" && tiktokData) {
-      return {
-        followers: Number(tiktokData.follower_count ?? 0),
-        engagement: Number(tiktokData.engagement_percent ?? tiktokData.engagement_rate ?? 0),
-        mediaCount: Number(tiktokData.media_count ?? tiktokData.video_count ?? 0),
-        postsPerMonth: Number(tiktokData.posting_frequency_recent_months ?? tiktokData.posts_per_month ?? tiktokData.videos_per_month ?? tiktokData.posting_frequency ?? 0),
-        avgLikes: Number(tiktokData.avg_likes ?? tiktokData.avg_like_count ?? tiktokData.average_likes ?? 0),
-        avgComments: Number(tiktokData.avg_comments ?? tiktokData.avg_comment_count ?? tiktokData.average_comments ?? 0),
-        avgSpecial: Number(tiktokData.avg_shares ?? tiktokData.avg_share_count ?? tiktokData.average_shares ?? 0),
-        avgViews: Number(tiktokData.avg_view_count ?? tiktokData.avg_views ?? tiktokData.average_views ?? 0),
-      };
-    }
-    if (selectedPlatform === "youtube" && youtubeData) {
-      return {
-        followers: Number(youtubeData.subscriber_count ?? youtubeData.follower_count ?? 0),
-        engagement: Number(youtubeData.engagement_percent ?? youtubeData.engagement_rate ?? 0),
-        mediaCount: Number(youtubeData.video_count ?? youtubeData.media_count ?? 0),
-        postsPerMonth: Number(youtubeData.posting_frequency_recent_months ?? youtubeData.posts_per_month ?? youtubeData.videos_per_month ?? youtubeData.posting_frequency ?? 0),
-        avgLikes: Number(youtubeData.avg_likes ?? youtubeData.avg_like_count ?? youtubeData.average_likes ?? 0),
-        avgComments: Number(youtubeData.avg_comments ?? youtubeData.avg_comment_count ?? youtubeData.average_comments ?? 0),
-        avgSpecial: Number(youtubeData.avg_short_plays ?? youtubeData.avg_shorts_plays ?? 0),
-        avgViews: Number(youtubeData.avg_view_count ?? youtubeData.avg_views ?? youtubeData.average_views ?? 0),
-      };
-    }
-    if (selectedPlatform === "twitter" && twitterData) {
-      return {
-        followers: Number(twitterData.follower_count ?? 0),
-        engagement: Number(twitterData.engagement_percent ?? twitterData.engagement_rate ?? 0),
-        mediaCount: Number(twitterData.media_count ?? twitterData.tweet_count ?? twitterData.statuses_count ?? 0),
-        postsPerMonth: Number(twitterData.posting_frequency_recent_months ?? twitterData.posts_per_month ?? twitterData.posting_frequency ?? 0),
-        avgLikes: Number(twitterData.avg_likes ?? twitterData.avg_like_count ?? 0),
-        avgComments: Number(twitterData.avg_comments ?? twitterData.avg_comment_count ?? twitterData.avg_replies ?? 0),
-        avgSpecial: Number(twitterData.avg_retweets ?? twitterData.avg_retweet_count ?? 0),
-        avgViews: Number(twitterData.avg_views ?? twitterData.avg_view_count ?? twitterData.avg_impressions ?? 0),
-      };
-    }
-    // RAW endpoint: compute from post_data. FULL endpoint: use direct fields.
-    const fc = Number(igRecord?.follower_count ?? creator?.followers ?? 0);
-
-    // Try to compute analytics from post_data (RAW endpoint), then check direct fields (FULL endpoint), then creator card fallbacks
-    const computed = computeFromPostData(igRecord, fc);
-
-    // Helper: pick first non-zero value
-    const pick = (...vals: (number | undefined | null)[]): number => {
-      for (const v of vals) {
-        const n = Number(v);
-        if (n && isFinite(n) && n > 0) return n;
-      }
-      return 0;
-    };
-
-    const result = {
-      followers: fc,
-      engagement: pick(igRecord?.engagement_percent as number, igRecord?.engagement_rate as number, computed.engagement, creator?.engagementRate),
-      mediaCount: pick(igRecord?.media_count as number, igRecord?.number_of_posts as number, creator?.mediaCount),
-      postsPerMonth: pick(igRecord?.posting_frequency_recent_months as number, igRecord?.posts_per_month as number, igRecord?.posting_frequency as number, computed.postsPerMonth, creator?.postsPerMonth),
-      avgLikes: pick(igRecord?.avg_likes as number, igRecord?.avg_like_count as number, igRecord?.average_likes as number, computed.avgLikes, creator?.avgLikes),
-      avgComments: pick(igRecord?.avg_comments as number, igRecord?.avg_comment_count as number, igRecord?.average_comments as number, computed.avgComments, creator?.avgComments),
-      avgSpecial: pick(reelsObj?.avg_like_count as number, reelsObj?.avg_likes as number, igRecord?.avg_reel_likes as number, creator?.avgReelLikes),
-      avgViews: pick(reelsObj?.avg_view_count as number, igRecord?.avg_reels_plays as number, igRecord?.average_reels_plays as number, igRecord?.avg_views as number, igRecord?.avg_view_count as number, computed.avgViews, creator?.avgViews),
-    };
-    console.log("[PlatformStats] IG result:", result, "enriched:", !!igRecord, "post_data:", Array.isArray(igRecord?.post_data) ? (igRecord!.post_data as unknown[]).length : "none");
-    return result;
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, reelsObj, creator]);
+    const metrics = getMetricsForPlatform(activePlatformRecord, selectedPlatform, creator);
+    console.log(`[PlatformStats] ${selectedPlatform} result:`, metrics,
+      "record keys:", activePlatformRecord ? Object.keys(activePlatformRecord).length : 0,
+      "post_data:", Array.isArray(activePlatformRecord?.post_data) ? (activePlatformRecord!.post_data as unknown[]).length : "none");
+    return metrics;
+  }, [activePlatformRecord, selectedPlatform, creator]);
 
   const statLabels = useMemo(() => {
     switch (selectedPlatform) {
@@ -1277,29 +1339,18 @@ export default function CreatorProfileModal({
   }, [selectedPlatform]);
 
   const platformHashtags = useMemo(() => {
-    let platData: Record<string, unknown> | undefined;
-    if (selectedPlatform === "tiktok") platData = tiktokData;
-    else if (selectedPlatform === "youtube") platData = youtubeData;
-    else if (selectedPlatform === "twitter") platData = twitterData;
-    else platData = igRecord;
-    if (!platData) return [];
-    const raw = platData.hashtags ?? platData.frequently_used_hashtags ?? platData.top_hashtags ?? platData.popular_hashtags ?? platData.tags;
+    if (!activePlatformRecord) return [];
+    const raw = activePlatformRecord.hashtags ?? activePlatformRecord.frequently_used_hashtags ?? activePlatformRecord.top_hashtags ?? activePlatformRecord.popular_hashtags ?? activePlatformRecord.tags;
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 10).map((t: unknown) => {
       if (typeof t === "string") return t.replace(/^#/, "");
       if (t && typeof t === "object" && "name" in t) return String((t as { name: string }).name).replace(/^#/, "");
       return String(t);
     });
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord]);
+  }, [activePlatformRecord]);
 
   const postEngagementData = useMemo(() => {
-    let platRecord: Record<string, unknown> | undefined;
-    if (selectedPlatform === "tiktok") platRecord = tiktokData;
-    else if (selectedPlatform === "youtube") platRecord = youtubeData;
-    else if (selectedPlatform === "twitter") platRecord = twitterData;
-    else platRecord = igRecord;
-
-    const raw = platRecord?.post_data;
+    const raw = activePlatformRecord?.post_data;
     if (!Array.isArray(raw) || followers <= 0) return [];
     return raw.slice(0, 12).map((item: Record<string, unknown>, i: number) => {
       // Handle both nested engagement object and flat fields (TikTok/YouTube use flat)
@@ -1309,15 +1360,10 @@ export default function CreatorProfileModal({
       const er = ((likes + comments) / followers) * 100;
       return { post: `P${i + 1}`, er: Number(er.toFixed(2)) };
     });
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord, followers]);
+  }, [activePlatformRecord, followers]);
 
   const { incomeMin, incomeMax, income, followerGrowth, growthData, reelsPct } = useMemo(() => {
-    // Pick the platform-specific data record for analytics
-    let platRecord: Record<string, unknown> | undefined;
-    if (selectedPlatform === "tiktok") platRecord = tiktokData;
-    else if (selectedPlatform === "youtube") platRecord = youtubeData;
-    else if (selectedPlatform === "twitter") platRecord = twitterData;
-    else platRecord = igRecord;
+    const platRecord = activePlatformRecord;
 
     const incObj = platRecord?.income as Record<string, unknown> | undefined;
     const iMin = incObj && typeof incObj === "object" ? (Number(incObj.min ?? 0) || undefined) : undefined;
@@ -1353,26 +1399,15 @@ export default function CreatorProfileModal({
       growthData: gData,
       reelsPct: rPct,
     };
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, igRecord]);
+  }, [activePlatformRecord, selectedPlatform, igRecord]);
 
   const showEnrichmentLoading = enrichmentLoading && !enrichmentTimedOut;
+  const showPlatformLoading = isPlatformStillLoading;
   const engagementDisplay = engagement != null && engagement > 0 ? engagement : null;
-  const hasDataForPlatform =
-    (selectedPlatform === "instagram" && !!ig) ||
-    (selectedPlatform === "tiktok" && !!tiktokData) ||
-    (selectedPlatform === "youtube" && !!youtubeData) ||
-    (selectedPlatform === "twitter" && !!twitterData) ||
-    (selectedPlatform === "facebook" && !!facebookData) ||
-    (selectedPlatform === "linkedin" && !!linkedinData);
+  const hasDataForPlatform = !!activePlatformRecord;
 
   const recentPosts: PostItem[] = useMemo(() => {
-    let platRecord: Record<string, unknown> | undefined;
-    if (selectedPlatform === "tiktok") platRecord = tiktokData;
-    else if (selectedPlatform === "youtube") platRecord = youtubeData;
-    else if (selectedPlatform === "twitter") platRecord = twitterData;
-    else platRecord = igRecord;
-
-    const raw = platRecord?.post_data;
+    const raw = activePlatformRecord?.post_data;
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 12).map((item: Record<string, unknown>) => {
       const media = item.media as unknown[] | undefined;
@@ -1389,7 +1424,7 @@ export default function CreatorProfileModal({
         permalink: (item.post_url ?? item.video_url ?? item.url) as string | undefined,
       };
     });
-  }, [selectedPlatform, igRecord?.post_data, tiktokData, youtubeData, twitterData]);
+  }, [activePlatformRecord]);
 
   const similarAccounts: SimilarAccount[] = useMemo(() => {
     // Try multiple field names for lookalike/similar data
@@ -1417,13 +1452,8 @@ export default function CreatorProfileModal({
   // ── Audience data hooks — use platform-specific data when available ──
 
   // Helper: resolve the active platform's data record for audience stats
-  const activePlatRecord = useMemo(() => {
-    if (selectedPlatform === "tiktok" && tiktokData) return tiktokData;
-    if (selectedPlatform === "youtube" && youtubeData) return youtubeData;
-    if (selectedPlatform === "twitter" && twitterData) return twitterData;
-    if (selectedPlatform === "facebook" && facebookData) return facebookData;
-    return igRecord;
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, facebookData, igRecord]);
+  // Alias for audience analytics — reuse the shared activePlatformRecord
+  const activePlatRecord = activePlatformRecord;
 
   const audienceGender = useMemo(() => {
     const rec = activePlatRecord;
@@ -2205,7 +2235,7 @@ export default function CreatorProfileModal({
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-center py-1.5">
                     <span className="text-gray-500 dark:text-gray-400">{label}</span>
-                    {showEnrichmentLoading && !value ? (
+                    {(showEnrichmentLoading || showPlatformLoading) && !value ? (
                       <Skeleton className="h-4 w-14 animate-pulse" />
                     ) : (
                       <span className={cn("font-semibold text-gray-900 dark:text-white", !value && "opacity-50")}>{value ?? "—"}</span>
@@ -2236,9 +2266,9 @@ export default function CreatorProfileModal({
             )}
             <ScrollArea className="flex-1">
               <div className="p-6 space-y-6">
-                {!hasDataForPlatform && !enrichmentLoading && (
+                {!hasDataForPlatform && !enrichmentLoading && !showPlatformLoading && (
                   <p className="text-sm text-muted-foreground rounded-lg border border-dashed border-border dark:border-gray-700 bg-muted/20 dark:bg-[#0F1117] p-4">
-                    Data not available for this platform.
+                    Data not available for {PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}.
                   </p>
                 )}
 
@@ -2281,7 +2311,7 @@ export default function CreatorProfileModal({
                             </ResponsiveContainer>
                           </div>
                         </div>
-                      ) : showEnrichmentLoading ? (
+                      ) : (showEnrichmentLoading || showPlatformLoading) ? (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
                           <Skeleton className="h-36 w-full animate-pulse" />
@@ -2315,7 +2345,7 @@ export default function CreatorProfileModal({
                             @{displayUsername || "creator"} {(() => { const total = growthData.reduce((s, d) => s + d.growth, 0); return total >= 0 ? `grew by ${total.toFixed(1)}%` : `declined by ${Math.abs(total).toFixed(1)}%`; })()} in the last 12 months
                           </p>
                         </div>
-                      ) : showEnrichmentLoading ? (
+                      ) : (showEnrichmentLoading || showPlatformLoading) ? (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
                           <Skeleton className="h-44 w-full" />
@@ -2337,7 +2367,7 @@ export default function CreatorProfileModal({
                             <span className="font-bold text-[#1e3a5f]">${formatNum(incomeMax)}</span> in income in the last 90 days.
                           </p>
                         </div>
-                      ) : showEnrichmentLoading ? (
+                      ) : (showEnrichmentLoading || showPlatformLoading) ? (
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
                           <Skeleton className="h-4 w-full max-w-md" />
@@ -2350,7 +2380,7 @@ export default function CreatorProfileModal({
                       ) : null}
 
                       {/* Top Creator Hashtags */}
-                      {showEnrichmentLoading && platformHashtags.length === 0 && (
+                      {(showEnrichmentLoading || showPlatformLoading) && platformHashtags.length === 0 && (
                         <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-5">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Top Creator Hashtags</p>
                           <div className="flex flex-wrap gap-2">
