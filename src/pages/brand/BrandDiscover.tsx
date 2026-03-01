@@ -30,6 +30,7 @@ import { useLists } from "@/contexts/ListContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { approveForDirectory, detectBranch, extractAvatarFromEnrichment, extractBannerImage, fetchShowcaseCreators, type ShowcaseCreator } from "@/lib/featured-creators";
 import { saveCreatorAvatar } from "@/lib/directories";
+import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
 import { parseSmartQuery } from "@/lib/smart-search-parser";
 import { isNaturalLanguageQuery, parseNaturalLanguageSearch, followersToRange, engagementToOption } from "@/lib/nl-search-parser";
 import { toast } from "sonner";
@@ -2432,6 +2433,17 @@ const BrandDiscover = () => {
     // Extract banner image from enrichment data
     const bannerUrl = extractBannerImage(raw) ?? null;
 
+    // Extract platform URLs from enrichment data
+    const enrichPlatforms = getPlatformsFromEnrichmentData(raw);
+    const platformUrls: Record<string, string> = {};
+    for (const ep of enrichPlatforms) {
+      platformUrls[ep.platform] = ep.url;
+    }
+    const enrichedPlatformNames = enrichPlatforms.map((ep) => ep.platform);
+
+    // Extract category from IC enrichment
+    const enrichCategory = (igData?.category as string) || (igData?.category_name as string) || creator.category || null;
+
     // Resolve follower count: enrichment may have fresher data than search
     const followerCount =
       (igData?.follower_count as number) ||
@@ -2457,12 +2469,14 @@ const BrandDiscover = () => {
       bio: bioText || null,
       branch,
       status: "veteran",
-      platforms: socialPlatforms.length > 0 ? socialPlatforms : creator.platforms,
-      category: creator.category ?? null,
+      platforms: enrichedPlatformNames.length > 0 ? enrichedPlatformNames : (socialPlatforms.length > 0 ? socialPlatforms : creator.platforms),
+      platform_urls: Object.keys(platformUrls).length > 0 ? platformUrls : undefined,
+      category: enrichCategory,
       ic_avatar_url: avatarUrl,
       enrichment_data: raw || null,
       added_by: effectiveUserId ?? null,
       directory_id: directoryId || null,
+      banner_image_url: bannerUrl,
     });
 
     if (error) {

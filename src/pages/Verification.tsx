@@ -367,6 +367,7 @@ export default function Verification() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [editCreatorOpen, setEditCreatorOpen] = useState(false);
   const [editCreatorSaving, setEditCreatorSaving] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const [icCategories, setIcCategories] = useState<string[]>([]);
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const categoryBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -492,18 +493,49 @@ export default function Verification() {
   // Fetch distinct IC categories for the edit modal autocomplete
   useEffect(() => {
     if (!editCreatorOpen) return;
+    const allCats = new Set<string>();
+
+    // Standard military/creator categories always available
+    const builtIn = [
+      "Active Duty", "Artist", "Beauty, Cosmetic & Personal Care", "Blogger",
+      "Clothing (Brand)", "Content Creator", "Digital Creator", "Entertainment",
+      "Fitness", "Food & Beverage", "Government Official", "Health/Beauty",
+      "Media/News Company", "Military", "Motivational Speaker", "Musician/Band",
+      "News Personality", "Personal Blog", "Photographer", "Public Figure",
+      "Sports", "Travel", "Veteran", "Video Creator",
+    ];
+    for (const c of builtIn) allCats.add(c);
+
+    // Fetch from directory_members
     supabase
       .from("directory_members")
       .select("category")
       .not("category", "is", null)
       .then(({ data }) => {
+        if (data) {
+          for (const d of data as { category: string | null }[]) {
+            if (d.category?.trim()) allCats.add(d.category.trim());
+          }
+        }
+        setIcCategories([...allCats].sort());
+      });
+
+    // Also fetch IC categories from enrichment cache
+    supabase
+      .from("creator_enrichment_cache")
+      .select("enrichment_data")
+      .limit(200)
+      .then(({ data }) => {
         if (!data) return;
-        const unique = [...new Set(
-          (data as { category: string | null }[])
-            .map((d) => d.category)
-            .filter((c): c is string => !!c && c.trim() !== "")
-        )].sort();
-        setIcCategories(unique);
+        for (const row of data) {
+          const ed = row.enrichment_data as Record<string, unknown> | null;
+          if (!ed) continue;
+          const result = (ed.result ?? ed) as Record<string, unknown>;
+          const ig = result.instagram as Record<string, unknown> | undefined;
+          const cat = (ig?.category as string) || (ig?.category_name as string);
+          if (cat?.trim()) allCats.add(cat.trim());
+        }
+        setIcCategories([...allCats].sort());
       });
   }, [editCreatorOpen]);
 
@@ -972,16 +1004,99 @@ export default function Verification() {
       const dmAvatar = dmMatch.ic_avatar_url || dmMatch.avatar_url;
       if (dmAvatar) bestPhoto = dmAvatar;
     }
-    // Fetch IC category from directory_members
+
+    // Fetch IC enrichment data from creator_enrichment_cache + directory_members
+    let enrichData: Record<string, unknown> | null = null;
     let icCategory = "";
+    let dmBio = "";
     if (handle) {
-      const { data: dmCat } = await supabase
+      // Try creator_enrichment_cache first (richest data)
+      const { data: cacheRow } = await supabase
+        .from("creator_enrichment_cache")
+        .select("enrichment_data")
+        .eq("username", handle.toLowerCase())
+        .limit(1)
+        .maybeSingle();
+      if (cacheRow?.enrichment_data) {
+        enrichData = cacheRow.enrichment_data as Record<string, unknown>;
+      }
+      // Fallback to directory_members enrichment_data
+      if (!enrichData && dirEnrichmentMap[handle]) {
+        enrichData = dirEnrichmentMap[handle] as Record<string, unknown>;
+      }
+      // Also fetch category + bio from directory_members
+      const { data: dmRow } = await supabase
         .from("directory_members")
-        .select("category")
+        .select("category, bio")
         .eq("creator_handle", handle)
         .maybeSingle();
-      if (dmCat?.category) icCategory = dmCat.category as string;
+      if (dmRow?.category) icCategory = dmRow.category as string;
+      if (dmRow?.bio) dmBio = dmRow.bio as string;
     }
+
+    // Extract IC data from enrichment_data
+    const result = enrichData ? ((enrichData as Record<string, unknown>).result ?? enrichData) as Record<string, unknown> : null;
+    const igData = result ? (result.instagram ?? result) as Record<string, unknown> : null;
+    const ttData = result?.tiktok as Record<string, unknown> | undefined;
+    const ytData = result?.youtube as Record<string, unknown> | undefined;
+    const twData = result?.twitter as Record<string, unknown> | undefined;
+    const fbData = result?.facebook as Record<string, unknown> | undefined;
+
+    // Extract fields from IC enrichment data
+    const icBio = (igData?.biography as string) || (ttData?.bio as string) || (ytData?.description as string) || "";
+    const icIg = (igData?.username as string) || "";
+    const icTt = (ttData?.username as string) || (ttData?.handle as string) || "";
+    const icYt = (ytData?.channel_url as string) || (ytData?.username as string) || "";
+    const icTw = (twData?.username as string) || (twData?.handle as string) || "";
+    const icFb = (fbData?.url as string) || (fbData?.username as string) || "";
+    const icEmail = (result?.email as string) || (igData?.email as string) || "";
+    const icPhone = (result?.phone as string) || (result?.phone_number as string) || (igData?.phone as string) || "";
+    const icWebsite = (igData?.website as string) || (igData?.external_url as string) || "";
+    const icCategoryFromEnrich = (igData?.category as string) || (igData?.category_name as string) || "";
+
+    // Build initial values from verification record
+    const baseBio = row.notes ?? "";
+    const baseIg = row.source_username ?? "";
+    const baseLi = row.linkedin_url ?? "";
+    const baseWebsite = row.website_url ?? "";
+
+    // Track which fields get auto-filled from IC data
+    const filled = new Set<string>();
+
+    // Auto-fill empty fields from IC enrichment (don't overwrite existing data)
+    const finalBio = baseBio || dmBio || icBio;
+    if (!baseBio && (dmBio || icBio)) filled.add("bio");
+
+    const finalCategory = icCategory || icCategoryFromEnrich;
+    if (!icCategory && icCategoryFromEnrich) filled.add("category");
+    if (icCategory || icCategoryFromEnrich) filled.add("category");
+
+    const finalIg = baseIg || icIg;
+    if (!baseIg && icIg) filled.add("instagram");
+
+    const finalTt = icTt;
+    if (icTt) filled.add("tiktok");
+
+    const finalYt = icYt;
+    if (icYt) filled.add("youtube");
+
+    const finalTw = icTw;
+    if (icTw) filled.add("twitter");
+
+    const finalFb = icFb;
+    if (icFb) filled.add("facebook");
+
+    const finalEmail = icEmail;
+    if (icEmail) filled.add("email");
+
+    const finalPhone = icPhone;
+    if (icPhone) filled.add("phone");
+
+    const finalWebsite = baseWebsite || icWebsite;
+    if (!baseWebsite && icWebsite) filled.add("website");
+
+    setAutoFilledFields(filled);
+
     const mc = (row.manual_checks as Record<string, unknown> | null) ?? {};
     setEditForm({
       id: row.id,
@@ -1006,22 +1121,22 @@ export default function Verification() {
         if (lower.includes("cadet") || lower.includes("rotc")) return "Cadet/ROTC";
         return raw;
       })(),
-      category: icCategory,
+      category: finalCategory,
       confidenceScore: row.verification_score,
       verificationStatus: row.status ?? "pending",
       originalStatus: row.status ?? "pending",
       statusManualOverride: !!(mc as Record<string, unknown>).manual_status_override,
-      bio: row.notes ?? "",
+      bio: finalBio,
       photoUrl: bestPhoto,
-      instagram: row.source_username ?? "",
-      tiktok: "",
-      youtube: "",
-      linkedin: row.linkedin_url ?? "",
-      twitter: "",
-      facebook: "",
-      email: "",
-      phone: "",
-      website: row.website_url ?? "",
+      instagram: finalIg,
+      tiktok: finalTt,
+      youtube: finalYt,
+      linkedin: baseLi,
+      twitter: finalTw,
+      facebook: finalFb,
+      email: finalEmail,
+      phone: finalPhone,
+      website: finalWebsite,
       notes: row.notes ?? "",
       sourceUsername: row.source_username ?? "",
     });
@@ -1061,19 +1176,27 @@ export default function Verification() {
 
       // 2. Update directory_members if linked by handle
       if (editForm.sourceUsername) {
+        // Build platform_urls from social handles
+        const platformUrls: Record<string, string> = {};
+        if (editForm.instagram) platformUrls.instagram = `https://instagram.com/${editForm.instagram.replace(/^@/, "")}`;
+        if (editForm.tiktok) platformUrls.tiktok = `https://tiktok.com/@${editForm.tiktok.replace(/^@/, "")}`;
+        if (editForm.youtube) platformUrls.youtube = editForm.youtube.startsWith("http") ? editForm.youtube : `https://youtube.com/@${editForm.youtube}`;
+        if (editForm.twitter) platformUrls.twitter = `https://x.com/${editForm.twitter.replace(/^@/, "")}`;
+        if (editForm.facebook) platformUrls.facebook = editForm.facebook.startsWith("http") ? editForm.facebook : `https://facebook.com/${editForm.facebook}`;
+        if (editForm.linkedin) platformUrls.linkedin = editForm.linkedin.startsWith("http") ? editForm.linkedin : `https://linkedin.com/in/${editForm.linkedin}`;
+
+        const platforms = Object.keys(platformUrls);
+
         const dmPayload: Record<string, unknown> = {
           creator_name: editForm.name,
           branch: editForm.branch || null,
-          bio: editForm.notes || null,
+          status: editForm.militaryStatus || null, // Always save military status
+          bio: editForm.bio || editForm.notes || null,
           ic_avatar_url: editForm.photoUrl || null,
           category: editForm.category || null,
+          platform_urls: platformUrls,
+          platforms,
         };
-        if (statusChanged) {
-          dmPayload.status = editForm.verificationStatus;
-          dmPayload.manual_override = true;
-          dmPayload.override_date = new Date().toISOString();
-          dmPayload.original_status = editForm.originalStatus;
-        }
         if (editForm.verificationStatus === "verified") {
           dmPayload.is_verified = true;
         }
@@ -1813,12 +1936,12 @@ export default function Verification() {
 
       {/* Edit Creator Modal */}
       <Dialog open={editCreatorOpen} onOpenChange={setEditCreatorOpen}>
-        <DialogContent className="max-w-2xl w-full max-h-[85vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-0">
+        <DialogContent className="max-w-2xl w-full max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-gray-200 dark:border-gray-800">
             <DialogTitle className="flex items-center gap-2 text-lg"><Pencil className="h-5 w-5 text-[#1e3a5f]" /> Edit Creator</DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-5">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 min-h-0">
             {/* ── PROFILE ── */}
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Profile</p>
@@ -1855,7 +1978,10 @@ export default function Verification() {
                 </div>
                 {/* 4. Category — searchable autocomplete from IC categories */}
                 <div className="relative">
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Category
+                    {autoFilledFields.has("category") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC data</span>}
+                  </Label>
                   <Input
                     value={editForm.category}
                     onChange={(e) => {
@@ -1943,7 +2069,10 @@ export default function Verification() {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Bio & Photo</p>
               <div className="space-y-3">
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Bio</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Bio
+                    {autoFilledFields.has("bio") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC data</span>}
+                  </Label>
                   <Textarea value={editForm.bio} onChange={(e) => setEditForm((f) => ({ ...f, bio: e.target.value }))} rows={4} placeholder="Creator bio..." className="w-full min-h-[100px] break-words whitespace-pre-wrap" />
                 </div>
                 <div>
@@ -1962,18 +2091,29 @@ export default function Verification() {
 
             {/* ── SOCIAL PROFILES ── */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Social Profiles</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                Social Profiles
+                {(autoFilledFields.has("tiktok") || autoFilledFields.has("youtube") || autoFilledFields.has("twitter") || autoFilledFields.has("facebook")) && (
+                  <span className="text-[10px] font-normal normal-case tracking-normal text-emerald-600 dark:text-emerald-400">Auto-filled from IC data</span>
+                )}
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instagram</Label>
                   <Input value={editForm.instagram} onChange={(e) => setEditForm((f) => ({ ...f, instagram: e.target.value }))} placeholder="@handle" />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">YouTube</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    YouTube
+                    {autoFilledFields.has("youtube") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC</span>}
+                  </Label>
                   <Input value={editForm.youtube} onChange={(e) => setEditForm((f) => ({ ...f, youtube: e.target.value }))} placeholder="Channel URL" />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">TikTok</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    TikTok
+                    {autoFilledFields.has("tiktok") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC</span>}
+                  </Label>
                   <Input value={editForm.tiktok} onChange={(e) => setEditForm((f) => ({ ...f, tiktok: e.target.value }))} placeholder="@handle" />
                 </div>
                 <div>
@@ -1981,11 +2121,17 @@ export default function Verification() {
                   <Input value={editForm.linkedin} onChange={(e) => setEditForm((f) => ({ ...f, linkedin: e.target.value }))} placeholder="Profile URL" />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Twitter / X</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Twitter / X
+                    {autoFilledFields.has("twitter") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC</span>}
+                  </Label>
                   <Input value={editForm.twitter} onChange={(e) => setEditForm((f) => ({ ...f, twitter: e.target.value }))} placeholder="@handle" />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Facebook</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Facebook
+                    {autoFilledFields.has("facebook") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC</span>}
+                  </Label>
                   <Input value={editForm.facebook} onChange={(e) => setEditForm((f) => ({ ...f, facebook: e.target.value }))} placeholder="Profile URL" />
                 </div>
               </div>
@@ -1995,18 +2141,32 @@ export default function Verification() {
 
             {/* ── CONTACT ── */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">Contact</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                Contact
+                {(autoFilledFields.has("email") || autoFilledFields.has("phone")) && (
+                  <span className="text-[10px] font-normal normal-case tracking-normal text-emerald-600 dark:text-emerald-400">Auto-filled from IC data</span>
+                )}
+              </p>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Email
+                    {autoFilledFields.has("email") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC</span>}
+                  </Label>
                   <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@..." />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Phone
+                    {autoFilledFields.has("phone") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC</span>}
+                  </Label>
                   <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} placeholder="(555) 123-4567" />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Website</Label>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    Website
+                    {autoFilledFields.has("website") && <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400">IC</span>}
+                  </Label>
                   <Input value={editForm.website} onChange={(e) => setEditForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://..." />
                 </div>
               </div>
@@ -2025,7 +2185,7 @@ export default function Verification() {
           </div>
 
           {/* Sticky footer */}
-          <div className="sticky bottom-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-4 flex justify-end gap-3">
+          <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-6 py-4 flex justify-end gap-3">
             <Button variant="outline" onClick={() => setEditCreatorOpen(false)}>
               Cancel
             </Button>
