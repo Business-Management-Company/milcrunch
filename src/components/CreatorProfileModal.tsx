@@ -476,6 +476,7 @@ export default function CreatorProfileModal({
   const [createListModalOpen, setCreateListModalOpen] = useState(false);
   const [postContentType, setPostContentType] = useState<"posts" | "reels">("posts");
   const [brokenPostImages, setBrokenPostImages] = useState<Set<string>>(new Set());
+  const [similarAvatars, setSimilarAvatars] = useState<Record<string, string>>({});
   const [approvingDir, setApprovingDir] = useState(false);
   const [directoriesList, setDirectoriesList] = useState<{ id: string; name: string }[]>([]);
   const { addCreatorToList, lists, createList, isCreatorInList } = useLists();
@@ -1471,6 +1472,43 @@ export default function CreatorProfileModal({
       };
     });
   }, [resultTop.lookalikes, resultTop.similar_accounts, resultTop.similar_users, resultTop.related_accounts]);
+
+  // Fetch avatars for similar accounts via lightweight RAW enrich calls
+  useEffect(() => {
+    if (similarAccounts.length === 0) return;
+    // Only fetch for accounts that don't already have an avatar
+    const needAvatars = similarAccounts.filter(a => !a.avatar && !a.picture && a.username && !similarAvatars[a.username]);
+    if (needAvatars.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      // Fetch in batches of 5 to avoid hammering the API
+      const results: Record<string, string> = {};
+      for (let i = 0; i < needAvatars.length; i += 5) {
+        if (cancelled) break;
+        const batch = needAvatars.slice(i, i + 5);
+        const promises = batch.map(async (acc) => {
+          try {
+            const data = await enrichCreatorProfile(acc.username!, undefined, "instagram", false);
+            const ig = data?.instagram;
+            if (ig && typeof ig === "object") {
+              const pic = (ig as Record<string, unknown>).profile_picture_hd ?? (ig as Record<string, unknown>).profile_picture ?? (ig as Record<string, unknown>).picture;
+              if (typeof pic === "string" && pic.startsWith("http")) {
+                results[acc.username!] = pic;
+              }
+            }
+          } catch {
+            // Silently skip failed enrichments
+          }
+        });
+        await Promise.all(promises);
+      }
+      if (!cancelled && Object.keys(results).length > 0) {
+        setSimilarAvatars(prev => ({ ...prev, ...results }));
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [similarAccounts.length]);
 
   // ── Audience data hooks — use platform-specific data when available ──
 
@@ -2787,9 +2825,9 @@ export default function CreatorProfileModal({
                             <thead>
                               <tr className="border-b border-gray-100 dark:border-gray-800 text-left text-[11px] text-gray-500 uppercase tracking-wider">
                                 <th className="py-2.5 px-3">Creator</th>
-                                <th className="py-2.5 px-3">Subscribers</th>
+                                <th className="py-2.5 px-3">Followers</th>
                                 <th className="py-2.5 px-3">Engagement</th>
-                                <th className="py-2.5 px-3">Similarity</th>
+                                <th className="py-2.5 px-3">Similarity Score</th>
                                 <th className="py-2.5 px-3"></th>
                               </tr>
                             </thead>
@@ -2798,13 +2836,17 @@ export default function CreatorProfileModal({
                                 const simPct = acc.similarity != null && acc.similarity > 0
                                   ? (acc.similarity <= 1 ? acc.similarity * 100 : acc.similarity)
                                   : 0;
+                                // Avatar: from original data, or from enriched lookup
+                                const avatarUrl = acc.avatar || acc.picture || (acc.username ? similarAvatars[acc.username] : undefined);
+                                const initColor = `hsl(${((acc.username ?? acc.name ?? "?").charCodeAt(0) * 47) % 360}, 55%, 50%)`;
+                                const initLetter = (acc.name ?? acc.username ?? "?").charAt(0).toUpperCase();
                                 return (
                                   <tr key={acc.id ?? acc.username} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                     <td className="py-2.5 px-3">
                                       <div className="flex items-center gap-2.5">
-                                        {acc.avatar || acc.picture ? (
+                                        {avatarUrl ? (
                                           <img
-                                            src={safeImageUrl(acc.avatar || acc.picture || "")}
+                                            src={safeImageUrl(avatarUrl)}
                                             alt=""
                                             className="h-9 w-9 rounded-full object-cover shrink-0"
                                             referrerPolicy="no-referrer"
@@ -2819,11 +2861,11 @@ export default function CreatorProfileModal({
                                         <div
                                           className="h-9 w-9 rounded-full shrink-0 items-center justify-center text-white text-sm font-bold"
                                           style={{
-                                            display: acc.avatar || acc.picture ? 'none' : 'flex',
-                                            backgroundColor: `hsl(${((acc.username ?? acc.name ?? "?").charCodeAt(0) * 47) % 360}, 55%, 50%)`,
+                                            display: avatarUrl ? 'none' : 'flex',
+                                            backgroundColor: initColor,
                                           }}
                                         >
-                                          {(acc.name ?? acc.username ?? "?").charAt(0).toUpperCase()}
+                                          {initLetter}
                                         </div>
                                         <div className="min-w-0">
                                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{acc.name ?? acc.full_name ?? acc.username ?? "—"}</p>
@@ -2835,10 +2877,10 @@ export default function CreatorProfileModal({
                                     <td className="py-2.5 px-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">{acc.engagement_percent != null && acc.engagement_percent > 0 ? formatPercent(acc.engagement_percent) : "—"}</td>
                                     <td className="py-2.5 px-3 whitespace-nowrap">
                                       {simPct > 0 ? (
-                                        <span className="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
-                                          {simPct.toFixed(0)}%
+                                        <span className="inline-flex items-center rounded-lg bg-green-50 dark:bg-green-900/20 px-2.5 py-1 text-xs font-semibold text-green-700 dark:text-green-400">
+                                          {simPct.toFixed(0)}
                                         </span>
-                                      ) : <span className="text-xs text-gray-400">N/A</span>}
+                                      ) : <span className="inline-flex items-center rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-500 dark:text-gray-400">N/A</span>}
                                     </td>
                                     <td className="py-2.5 px-3">
                                       {onOpenCreator ? (
