@@ -824,22 +824,28 @@ export default function CreatorProfileModal({
         if (data?.instagram && typeof data.instagram === "object") {
           const pd = data.instagram as Record<string, unknown>;
           const pdFollowers = Number(pd.follower_count ?? pd.subscriber_count ?? 0);
+          const pdEngagement = Number(pd.engagement_percent ?? pd.engagement_rate ?? 0);
+          const pdMediaCount = Number(pd.media_count ?? pd.video_count ?? pd.number_of_posts ?? 0);
           const igFollowers = Number(igRecord?.follower_count ?? 0);
+          const igEngagement = Number(igRecord?.engagement_percent ?? igRecord?.engagement_rate ?? 0);
+          const igMediaCount = Number(igRecord?.media_count ?? igRecord?.number_of_posts ?? 0);
 
-          console.log(`[Enrich] Multi-platform ${platform} data:`, {
-            follower_count: pd.follower_count,
-            subscriber_count: pd.subscriber_count,
-            engagement_percent: pd.engagement_percent ?? pd.engagement_rate,
+          console.log(`[Enrich] Multi-platform ${platform} enrichment:`, {
+            pdFollowers, pdEngagement: pdEngagement.toFixed(2), pdMediaCount,
+            igFollowers, igEngagement: igEngagement.toFixed(2), igMediaCount,
             post_data: Array.isArray(pd.post_data) ? `${(pd.post_data as unknown[]).length} posts` : "none",
             keys: Object.keys(pd).length,
-            igFollowers,
-            pdFollowers,
           });
 
-          // Sanity check: if returned data has the exact same follower count as IG,
-          // it's likely IG data leaked through the result.instagram fallback — skip it.
-          if (platform !== "instagram" && igFollowers > 0 && pdFollowers === igFollowers) {
-            console.warn(`[Enrich] Multi-platform ${platform}: SKIPPING — follower_count (${pdFollowers}) matches IG (${igFollowers}), likely cross-contaminated data`);
+          // Cross-contamination guard: if the returned data matches IG on 2+ metrics,
+          // it's likely the API returned IG data instead of the requested platform's data.
+          let igMatchCount = 0;
+          if (igFollowers > 0 && pdFollowers === igFollowers) igMatchCount++;
+          if (igEngagement > 0 && Math.abs(pdEngagement - igEngagement) < 0.01) igMatchCount++;
+          if (igMediaCount > 0 && pdMediaCount === igMediaCount) igMatchCount++;
+
+          if (platform !== "instagram" && igMatchCount >= 2) {
+            console.warn(`[Enrich] Multi-platform ${platform}: SKIPPING — ${igMatchCount} metrics match IG data (cross-contamination detected)`);
           } else {
             setPlatformEnrichments(prev => ({ ...prev, [platform]: pd }));
           }
@@ -1329,14 +1335,15 @@ export default function CreatorProfileModal({
       linkedin: platformEnrichments.linkedin ?? (_resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined,
     };
 
-    const chosen = platMap[selectedPlatform] ?? _igRec;
+    // No IG fallback — when a non-IG platform has no data yet, return undefined
+    // so the sidebar shows "—" instead of misleading Instagram numbers.
+    const chosen = platMap[selectedPlatform];
 
     console.log(`[activePlatformRecord] selectedPlatform="${selectedPlatform}"`,
-      "→ record:", chosen ? `YES (${Object.keys(chosen).length} keys, follower_count=${chosen.follower_count}, subscriber_count=${chosen.subscriber_count})` : "undefined",
+      "→ record:", chosen ? `YES (${Object.keys(chosen).length} keys, follower_count=${chosen.follower_count}, subscriber_count=${chosen.subscriber_count})` : "undefined (no data for this platform)",
       "| sources:", {
         fromEnrichments: !!platformEnrichments[selectedPlatform],
         fromResultTop: !!((_resultTop as Record<string, unknown>)[selectedPlatform]),
-        isIgFallback: chosen === _igRec && selectedPlatform !== "instagram",
       });
 
     return chosen;

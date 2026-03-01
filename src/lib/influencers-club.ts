@@ -527,18 +527,21 @@ export async function enrichCreatorProfile(
 
   const result = (dataRecord).result as Record<string, unknown> | undefined;
 
-  // Look for platform-specific data:
-  //   1. result[platformKey]  — e.g. result.tiktok
-  //   2. result itself        — RAW endpoint for non-IG platforms sometimes returns
-  //                             data directly in result without a platform sub-key
-  //
-  // NOTE: Do NOT fall back to result.instagram for non-IG platforms!
-  // The initial IG enrichment embeds IG data at result.instagram, and when the
-  // same response structure is returned for a YouTube/TikTok RAW call, using
-  // result.instagram would pick up *Instagram* data and store it as YouTube data.
+  // Look for platform-specific data in the API response:
+  //   1. result[platformKey]  — e.g. result.youtube, result.tiktok
+  //   2. result.instagram     — IC API confusingly always nests platform data under
+  //                             "instagram" key regardless of which platform was requested
+  //   3. result itself        — some RAW responses put data directly at the top level
   let platformData: Record<string, unknown> | undefined;
   if (result && typeof result === "object") {
     platformData = result[platKey] as Record<string, unknown> | undefined;
+
+    // Fallback to result.instagram — the IC API uses this as a generic key
+    // for the requested platform's data, even for YouTube/TikTok calls.
+    if (!platformData && result.instagram && typeof result.instagram === "object") {
+      platformData = result.instagram as Record<string, unknown>;
+      console.log(`[Enrich] Using result.instagram as platform data for "${platKey}" (no result.${platKey} key found)`);
+    }
 
     // Fallback: if result itself has platform-like fields (follower_count,
     // post_data, username, etc.), treat result as the platform data record.
@@ -614,9 +617,10 @@ export async function fullEnrichCreatorProfile(
   if (!res.ok) throw new Error(`Enrich API ${res.status}: ${res.statusText}`, { cause: data });
 
   const result = (data as Record<string, unknown>)?.result as Record<string, unknown> | undefined;
-  // Only try result[platKey] — do NOT fall back to result.instagram for non-IG platforms
-  // (same fix as enrichCreatorProfile — prevents IG data cross-contamination)
   let platformData = result?.[platKey] as Record<string, unknown> | undefined;
+  if (!platformData && result?.instagram && typeof result.instagram === "object") {
+    platformData = result.instagram as Record<string, unknown>;
+  }
   if (!platformData && result) {
     const hasDataFields = result.follower_count != null || result.subscriber_count != null
       || result.post_data != null || result.username != null || result.engagement_percent != null;
