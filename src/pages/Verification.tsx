@@ -4760,41 +4760,8 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
               onRefresh={onRefresh}
             />
           </div>
-          {/* Contact Information */}
-          {pdlData && (
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Mail className="h-5 w-5 text-[#1e3a5f]" />
-                <h3 className="text-base font-semibold text-[#000741] dark:text-white">Contact Information</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                {(pdlData as any)?.work_email && (
-                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{(pdlData as any).work_email}</span>
-                  </div>
-                )}
-                {((pdlData as any)?.personal_emails as string[] | undefined)?.map((em, i) => (
-                  <div key={i} className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{em}</span>
-                  </div>
-                ))}
-                {(pdlData as any)?.mobile_phone && (
-                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{(pdlData as any).mobile_phone}</span>
-                  </div>
-                )}
-                {locationStr && (
-                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{locationStr}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Contact Information — collapsible accordion */}
+          <ContactInfoAccordion pdlData={pdlData} locationStr={locationStr} />
         </TabsContent>
 
       </Tabs>
@@ -4803,6 +4770,66 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
       <AssignedEventsAccordion record={record} onInviteToEvent={onInviteToEvent} />
 
     </div>
+    </div>
+  );
+}
+
+/** Collapsible accordion for contact information */
+function ContactInfoAccordion({ pdlData, locationStr }: { pdlData: any; locationStr: string }) {
+  const [open, setOpen] = useState(false);
+  if (!pdlData) return null;
+
+  const hasEmail = !!(pdlData.work_email || (pdlData.personal_emails as string[] | undefined)?.length);
+  const hasPhone = !!pdlData.mobile_phone;
+  const hasLocation = !!locationStr;
+  const hasAny = hasEmail || hasPhone || hasLocation;
+  const itemCount = (pdlData.work_email ? 1 : 0) + ((pdlData.personal_emails as string[] | undefined)?.length ?? 0) + (hasPhone ? 1 : 0) + (hasLocation ? 1 : 0);
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus:outline-none focus:ring-0"
+      >
+        <Mail className="h-5 w-5 text-[#1e3a5f]" />
+        <span className="font-semibold text-sm flex-1 text-[#000741] dark:text-white">Contact Information</span>
+        {hasAny && <Badge variant="secondary" className="text-xs">{itemCount}</Badge>}
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="border-t border-gray-200 dark:border-gray-800 px-4 py-3">
+          {!hasAny ? (
+            <p className="text-sm text-muted-foreground">No contact information available.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              {pdlData.work_email && (
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{pdlData.work_email}</span>
+                </div>
+              )}
+              {(pdlData.personal_emails as string[] | undefined)?.map((em: string, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{em}</span>
+                </div>
+              ))}
+              {pdlData.mobile_phone && (
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{pdlData.mobile_phone}</span>
+                </div>
+              )}
+              {locationStr && (
+                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>{locationStr}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
