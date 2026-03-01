@@ -423,7 +423,7 @@ interface CreatorProfileModalProps {
   onAddToList?: (creator: ListCreator) => void;
   onOpenCreator?: (username: string) => void;
   cachedEnrichment?: EnrichedProfileResponse | null;
-  /** Hide "Add to Directory" and "Verify Military Status" buttons (e.g. when opened from a directory). */
+  /** Hide "Add to Directory" buttons (e.g. when opened from a directory). */
   hideDirectoryActions?: boolean;
   /** If provided, shows a "Remove from Directory" button and calls this on click. */
   onRemoveFromDirectory?: () => void;
@@ -1207,89 +1207,6 @@ export default function CreatorProfileModal({
     } finally {
       setInvitingEvent(false);
     }
-  };
-
-  const handleVerifyMilitary = () => {
-    const BRANCH_PATTERNS: [RegExp, string][] = [
-      [/\barmy\b/i, "Army"],
-      [/\bnavy\b/i, "Navy"],
-      [/\bair\s*force\b/i, "Air Force"],
-      [/\bmarine[s]?\b|\busmc\b/i, "Marines"],
-      [/\bcoast\s*guard\b/i, "Coast Guard"],
-      [/\bspace\s*force\b/i, "Space Force"],
-    ];
-    const RANK_PATTERNS = /\b(Private|Corporal|Specialist|Sergeant|Staff Sergeant|Gunnery Sergeant|First Sergeant|Master Sergeant|Sergeant Major|Lieutenant|Captain|Major|Colonel|General|Admiral|Commander|Petty Officer|Seaman|Airman|Warrant Officer)\b/i;
-    const bioText = (igRecord?.biography as string) ?? creator?.bio ?? "";
-    const fullName = (igRecord?.full_name as string) ?? creator?.name ?? "";
-    let claimedBranch = "";
-    for (const [pattern, branch] of BRANCH_PATTERNS) {
-      if (pattern.test(bioText) || pattern.test(fullName)) { claimedBranch = branch; break; }
-    }
-    const rankMatch = bioText.match(RANK_PATTERNS);
-    const claimedRank = rankMatch ? rankMatch[1] : "";
-    // Gather links from enrichment
-    const linkedinUrl = (() => {
-      const profiles = resultTop.profiles as { url?: string; network?: string }[] | undefined;
-      if (Array.isArray(profiles)) {
-        const li = profiles.find((p) => p.network === "linkedin" || (p.url ?? "").includes("linkedin"));
-        if (li?.url) return li.url;
-      }
-      const links = (resultTop.other_links as string[]) ?? (resultTop.links_in_bio as string[]) ?? [];
-      if (Array.isArray(links)) {
-        const li = links.find((u) => typeof u === "string" && u.includes("linkedin.com"));
-        if (li) return li;
-      }
-      return "";
-    })();
-    const websiteUrl = (() => {
-      const links = (resultTop.other_links as string[]) ?? (resultTop.links_in_bio as string[]) ?? [];
-      if (Array.isArray(links)) {
-        const site = links.find((u) => typeof u === "string" && !u.includes("linkedin") && !u.includes("instagram") && !u.includes("tiktok") && !u.includes("youtube") && !u.includes("twitter") && !u.includes("facebook"));
-        if (site) return site;
-      }
-      return "";
-    })();
-    const platforms = availablePlatforms.map((p) => `${p}: @${displayUsername}`).join(", ");
-    const notes = [bioText, platforms].filter(Boolean).join("\n\n");
-    // Extract city/state from location string (e.g. "San Diego, CA" or "San Diego, California, US")
-    let prefillCity = "";
-    let prefillState = "";
-    if (location) {
-      const parts = location.split(",").map((s: string) => s.trim());
-      if (parts.length >= 2) {
-        prefillCity = parts[0];
-        const stateCandidate = parts[1].replace(/,?\s*(US|USA|United States)$/i, "").trim();
-        // Accept 2-letter state codes or full state names
-        if (stateCandidate.length === 2) prefillState = stateCandidate.toUpperCase();
-        else prefillState = stateCandidate;
-      } else if (parts.length === 1) {
-        prefillCity = parts[0];
-      }
-    }
-    // Resolve best avatar to carry over to Verification
-    let resolvedPhoto = extractAvatarFromEnrichment(enriched) ?? creator?.avatar ?? null;
-    if (resolvedPhoto && resolvedPhoto.includes("ui-avatars.com")) resolvedPhoto = null;
-    if (resolvedPhoto) resolvedPhoto = resolvedPhoto.replace(/^http:\/\//i, "https://");
-
-    onOpenChange(false);
-    navigate("/verification", {
-      state: {
-        prefill: {
-          fullName,
-          claimedBranch,
-          claimedRank,
-          claimedStatus: "veteran",
-          linkedinUrl,
-          websiteUrl,
-          notes,
-          city: prefillCity,
-          state: prefillState,
-          source: "discovery",
-          sourceUsername: displayUsername,
-          profilePhotoUrl: resolvedPhoto || "",
-        },
-      },
-    });
   };
 
   useEffect(() => {
@@ -2088,13 +2005,6 @@ export default function CreatorProfileModal({
                       <DropdownMenuItem onClick={() => { setEventDropdownOpen(true); setListDropdownOpen(false); setDirDropdownOpen(false); }}>
                         <CalendarPlus className="mr-2 h-4 w-4 text-blue-600" />
                         Invite to Event
-                      </DropdownMenuItem>
-                    )}
-                    {!hideDirectoryActions && <DropdownMenuSeparator />}
-                    {!hideDirectoryActions && (
-                      <DropdownMenuItem onClick={handleVerifyMilitary}>
-                        <ShieldCheck className="mr-2 h-4 w-4 text-green-600" />
-                        Verify Military Status
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem>

@@ -152,6 +152,7 @@ function DirAvatar({ m, size = "lg" }: { m: DirectoryMember; size?: "sm" | "lg" 
           src={src}
           alt={m.creator_name ?? ""}
           className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
           onLoad={handleLoad}
           onError={() => setFailed(true)}
         />

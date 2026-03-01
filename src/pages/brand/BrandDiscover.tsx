@@ -406,6 +406,7 @@ function DiscoverAvatar({ url, name, username, size = "w-10 h-10", borderClass =
           src={displaySrc}
           alt={name}
           loading="lazy"
+          referrerPolicy="no-referrer"
           onLoad={() => _goodAvatarCache.set(cacheKey, displaySrc!)}
           onError={() => setErrCount((c) => c + 1)}
           className={`${size} rounded-full object-cover ${borderClass} absolute inset-0 z-10`}
@@ -936,34 +937,6 @@ const BrandDiscover = () => {
       if (handles.has(h)) return true;
     }
     return false;
-  };
-
-  // Batch-load verifications for badge display (handle → { score, status })
-  const [verificationMap, setVerificationMap] = useState<Map<string, { score: number; status: string }>>(new Map());
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data } = await supabase
-        .from("verifications")
-        .select("source_username, verification_score, status");
-      if (!data) return;
-      const map = new Map<string, { score: number; status: string }>();
-      for (const v of data) {
-        const handle = (v as { source_username?: string }).source_username;
-        if (handle) {
-          map.set(handle.toLowerCase(), {
-            score: (v as { verification_score?: number }).verification_score ?? 0,
-            status: (v as { status?: string }).status ?? "pending",
-          });
-        }
-      }
-      setVerificationMap(map);
-    })();
-  }, [user]);
-
-  const getVerification = (handle: string | undefined): { score: number; status: string } | null => {
-    if (!handle) return null;
-    return verificationMap.get(handle.replace(/^@/, "").toLowerCase()) ?? null;
   };
 
   // --- Location autocomplete ---
@@ -3705,20 +3678,6 @@ const BrandDiscover = () => {
                         <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate flex items-center gap-2">
                           {topCreator.name}
                           {topCreator.isVerified && <BadgeCheck className="h-4 w-4 text-[#6C5CE7] shrink-0" />}
-                          {(() => {
-                            const v = getVerification(topCreator.username);
-                            if (!v) return null;
-                            const color = v.score >= 80 ? "text-emerald-600" : v.score >= 40 ? "text-amber-500" : "text-red-500";
-                            const label = v.score >= 80 ? "Verified" : v.score >= 40 ? "Pending" : "Flagged";
-                            return (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={`inline-flex items-center gap-0.5 shrink-0 ${color}`}><ShieldCheck className="h-4 w-4" /></span>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs">{label} {v.score}%</TooltipContent>
-                              </Tooltip>
-                            );
-                          })()}
                           {isInAnyDirectory(topCreator.username) && (
                             <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
                           )}
@@ -3888,20 +3847,6 @@ const BrandDiscover = () => {
                                   <p className="font-semibold text-[#000741] dark:text-white truncate flex items-center gap-1">
                                     {creator.name}
                                     {isActiveEnrich && <Loader2 className="h-3 w-3 animate-spin text-gray-400 shrink-0" />}
-                                    {(() => {
-                                      const v = getVerification(creator.username);
-                                      if (!v) return null;
-                                      const color = v.score >= 80 ? "text-emerald-600" : v.score >= 40 ? "text-amber-500" : "text-red-500";
-                                      const label = v.score >= 80 ? "Verified" : v.score >= 40 ? "Pending" : "Flagged";
-                                      return (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className={`inline-flex items-center shrink-0 ${color}`}><ShieldCheck className="h-3 w-3" /></span>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top" className="text-xs">{label} {v.score}%</TooltipContent>
-                                        </Tooltip>
-                                      );
-                                    })()}
                                     {isInAnyDirectory(creator.username) && (
                                       <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 text-[9px] font-semibold text-blue-700 dark:text-blue-500" title="In directory"><ShieldCheck className="h-2.5 w-2.5" /></span>
                                     )}
@@ -4129,20 +4074,6 @@ const BrandDiscover = () => {
                               {(creator.hasEmail || contactEmails[creator.id]) && !contactEmails[creator.id] && (
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 ml-1" title="Email available"><Mail className="h-3 w-3" /></span>
                               )}
-                              {(() => {
-                                const v = getVerification(creator.username);
-                                if (!v) return null;
-                                const color = v.score >= 80 ? "text-emerald-600" : v.score >= 40 ? "text-amber-500" : "text-red-500";
-                                const label = v.score >= 80 ? "Verified" : v.score >= 40 ? "Pending" : "Flagged";
-                                return (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className={`inline-flex items-center shrink-0 ml-1 ${color}`}><ShieldCheck className="h-3.5 w-3.5" /></span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">{label} {v.score}%</TooltipContent>
-                                  </Tooltip>
-                                );
-                              })()}
                               {isInAnyDirectory(creator.username) && (
                                 <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-500 ml-1" title="In directory"><ShieldCheck className="h-3 w-3" /></span>
                               )}
