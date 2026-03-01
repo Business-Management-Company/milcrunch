@@ -908,20 +908,35 @@ export default function CreatorProfileModal({
       post_data: Array.isArray(igRecord?.post_data) ? (igRecord!.post_data as unknown[]).length + " posts" : "none",
       follower_count: igRecord?.follower_count,
     });
-    // Log first post data structure for image debugging
-    if (Array.isArray(igRecord?.post_data) && (igRecord!.post_data as unknown[]).length > 0) {
-      const firstPost = (igRecord!.post_data as Record<string, unknown>[])[0];
-      console.log("[Enrich] First post ALL keys:", Object.keys(firstPost));
-      console.log("[Enrich] First post image fields:", {
-        thumbnail: firstPost.thumbnail,
-        image: firstPost.image,
-        image_url: firstPost.image_url,
-        display_url: firstPost.display_url,
-        media_url: firstPost.media_url,
-        media: firstPost.media,
-        thumbnail_url: firstPost.thumbnail_url,
-        video_url: firstPost.video_url,
-      });
+    // Deep-log post data: find where IC hides posts and image URLs
+    if (igRecord) {
+      // Check every possible location for post arrays
+      const postCandidates = ['post_data', 'recent_posts', 'posts', 'feed', 'media', 'top_posts', 'latest_posts'];
+      for (const key of postCandidates) {
+        const val = igRecord[key];
+        if (Array.isArray(val) && val.length > 0) {
+          console.log(`[Enrich] FOUND posts at igRecord.${key}: ${val.length} items`);
+          const first = val[0] as Record<string, unknown>;
+          console.log(`[Enrich] igRecord.${key}[0] ALL KEYS:`, Object.keys(first));
+          console.log(`[Enrich] igRecord.${key}[0] FULL OBJECT:`, JSON.stringify(first, null, 2));
+        }
+      }
+      // Also check user_profile sub-object
+      const up = igRecord.user_profile as Record<string, unknown> | undefined;
+      if (up && typeof up === 'object') {
+        console.log("[Enrich] user_profile keys:", Object.keys(up));
+        for (const key of postCandidates) {
+          const val = up[key];
+          if (Array.isArray(val) && val.length > 0) {
+            console.log(`[Enrich] FOUND posts at user_profile.${key}: ${val.length} items`);
+            const first = val[0] as Record<string, unknown>;
+            console.log(`[Enrich] user_profile.${key}[0] ALL KEYS:`, Object.keys(first));
+            console.log(`[Enrich] user_profile.${key}[0] FULL OBJECT:`, JSON.stringify(first, null, 2));
+          }
+        }
+      }
+      // Dump ALL igRecord top-level keys so we can spot any we missed
+      console.log("[Enrich] ALL igRecord keys:", Object.keys(igRecord).sort());
     }
   }, [enriched, igRecord]);
   // Platform data: prefer multi-platform enrichment results, fall back to main enrichment result keys
@@ -1591,10 +1606,33 @@ export default function CreatorProfileModal({
 
   const filteredPosts = useMemo(() => {
     const platRecord = activePlatformRecord;
-    const raw = platRecord?.post_data;
+    // IC puts posts in various fields — try them all
+    const raw = (() => {
+      if (!platRecord) return undefined;
+      const POST_KEYS = ['post_data', 'recent_posts', 'posts', 'feed', 'top_posts', 'latest_posts'];
+      for (const key of POST_KEYS) {
+        const val = platRecord[key];
+        if (Array.isArray(val) && val.length > 0) {
+          console.log(`[Posts] Found posts at platRecord.${key}: ${val.length} items`);
+          return val;
+        }
+      }
+      // Also check user_profile sub-object
+      const up = platRecord.user_profile as Record<string, unknown> | undefined;
+      if (up && typeof up === 'object') {
+        for (const key of POST_KEYS) {
+          const val = up[key];
+          if (Array.isArray(val) && val.length > 0) {
+            console.log(`[Posts] Found posts at platRecord.user_profile.${key}: ${val.length} items`);
+            return val;
+          }
+        }
+      }
+      return undefined;
+    })();
     // Debug: log what we have
-    console.log("[Posts] platRecord:", platRecord ? `YES (${Object.keys(platRecord).length} keys)` : "undefined",
-      "post_data:", Array.isArray(raw) ? `${raw.length} posts` : typeof raw, "postContentType:", postContentType);
+    console.log("[Posts] platRecord:", platRecord ? `YES (${Object.keys(platRecord).length} keys, keys: ${Object.keys(platRecord).sort().join(', ')})` : "undefined",
+      "posts found:", Array.isArray(raw) ? `${raw.length} posts` : "none", "postContentType:", postContentType);
     if (!Array.isArray(raw)) return [];
     // Log first post's full structure so we can find image URL fields
     if (raw.length > 0) {
