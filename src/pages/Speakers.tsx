@@ -4,7 +4,8 @@ import { getCreatorAvatar, getAvatarFallback } from "@/lib/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { MarkdownResponse } from "@/components/MarkdownResponse";
 import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
-import { enrichCreatorProfile } from "@/lib/influencers-club";
+// Cache-first: all enrichment reads from Supabase, zero IC API credits
+// import { enrichCreatorProfile } from "@/lib/influencers-club";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -519,42 +520,46 @@ export default function Speakers() {
       }
 
       if (enrichTargets.length > 0) {
-        console.log(`[Speakers] Attempting IC enrichment for ${enrichTargets.length} speakers missing photos`);
-        // Fire-and-forget: enrich in background, update state when results arrive
+        console.log(`[Speakers] Looking up ${enrichTargets.length} speakers in enrichment cache (zero IC credits)`);
+        // Read from creator_enrichment_cache — no IC API calls
         for (const { speakerId, handle } of enrichTargets) {
-          enrichCreatorProfile(handle).then((result) => {
-            if (!result) return;
-            const ig = result.instagram as Record<string, unknown>;
-            const avatar = (ig?.picture ?? ig?.profile_picture_hd ?? ig?.profile_picture ?? ig?.profile_pic_url) as string | undefined;
-            const bio = (ig?.biography ?? ig?.bio) as string | undefined;
-            if (!avatar) return;
+          supabase
+            .from("creator_enrichment_cache")
+            .select("enrichment_data")
+            .eq("username", handle.toLowerCase())
+            .limit(1)
+            .maybeSingle()
+            .then(({ data: cached }) => {
+              if (!cached?.enrichment_data) return;
+              const ed = cached.enrichment_data as Record<string, unknown>;
+              const ig = (ed.instagram ?? ed.result) as Record<string, unknown> | undefined;
+              if (!ig) return;
+              const avatar = (ig.picture ?? ig.profile_picture_hd ?? ig.profile_picture ?? ig.profile_pic_url) as string | undefined;
+              const bio = (ig.biography ?? ig.bio) as string | undefined;
+              if (!avatar) return;
 
-            const photoUrl = avatar.replace(/^http:\/\//i, "https://");
-            console.log(`[Speakers] IC enrichment found photo for "${handle}": ${photoUrl.substring(0, 80)}`);
+              const photoUrl = avatar.replace(/^http:\/\//i, "https://");
+              console.log(`[Speakers] Cache found photo for "${handle}": ${photoUrl.substring(0, 80)}`);
 
-            // Update local state
-            setSpeakers((prev) =>
-              prev.map((s) => {
-                if (s.id !== speakerId) return s;
-                const patched = { ...s };
-                if (!getCreatorAvatar(patched)) patched.photo_url = photoUrl;
-                if ((!patched.bio || patched.bio.trim() === "") && bio) patched.bio = bio;
-                return patched;
-              })
-            );
+              setSpeakers((prev) =>
+                prev.map((s) => {
+                  if (s.id !== speakerId) return s;
+                  const patched = { ...s };
+                  if (!getCreatorAvatar(patched)) patched.photo_url = photoUrl;
+                  if ((!patched.bio || patched.bio.trim() === "") && bio) patched.bio = bio;
+                  return patched;
+                })
+              );
 
-            // Persist photo to speakers table
-            supabase
-              .from("speakers")
-              .update({ photo_url: photoUrl, ...(bio ? { bio } : {}) } as Record<string, unknown>)
-              .eq("id", speakerId)
-              .then(({ error: e }) => {
-                if (e) console.warn(`[Speakers] Failed to persist IC photo for ${handle}:`, e.message);
-                else console.log(`[Speakers] Persisted IC photo for ${handle}`);
-              });
-          }).catch((err) => {
-            console.warn(`[Speakers] IC enrichment failed for ${handle}:`, (err as Error).message);
-          });
+              supabase
+                .from("speakers")
+                .update({ photo_url: photoUrl, ...(bio ? { bio } : {}) } as Record<string, unknown>)
+                .eq("id", speakerId)
+                .then(({ error: e }) => {
+                  if (e) console.warn(`[Speakers] Failed to persist cached photo for ${handle}:`, e.message);
+                  else console.log(`[Speakers] Persisted cached photo for ${handle}`);
+                });
+            });
         }
       }
     }
@@ -709,10 +714,36 @@ export default function Speakers() {
     }
     setContactFetching(true);
     try {
-      const result = await enrichCreatorProfile(targetHandle);
+      // Cache-first: check directory_members → creator_enrichment_cache (zero credits)
+      let result: Record<string, unknown> | null = null;
+
+      // Try directory_members.enrichment_data first
+      const { data: dm } = await supabase
+        .from("directory_members")
+        .select("enrichment_data")
+        .eq("creator_handle", targetHandle.replace(/^@/, "").toLowerCase())
+        .limit(1)
+        .maybeSingle();
+      if (dm?.enrichment_data) {
+        result = dm.enrichment_data as Record<string, unknown>;
+      }
+
+      // Fall back to creator_enrichment_cache
+      if (!result) {
+        const { data: cached } = await supabase
+          .from("creator_enrichment_cache")
+          .select("enrichment_data")
+          .eq("username", targetHandle.replace(/^@/, "").toLowerCase())
+          .limit(1)
+          .maybeSingle();
+        if (cached?.enrichment_data) {
+          result = cached.enrichment_data as Record<string, unknown>;
+        }
+      }
+
       if (result) {
-        const r = (result as Record<string, unknown>).result as Record<string, unknown> | undefined;
-        const ig = (result as Record<string, unknown>).instagram as Record<string, unknown> | undefined;
+        const r = result.result as Record<string, unknown> | undefined;
+        const ig = result.instagram as Record<string, unknown> | undefined;
         const email = (r?.email ?? (r?.emails as string[])?.[0] ?? ig?.email) as string | undefined;
         const phone = (r?.phone ?? r?.phone_number ?? ig?.phone) as string | undefined;
         const city = (r?.city ?? ig?.city) as string | undefined;
@@ -748,12 +779,12 @@ export default function Speakers() {
         setContactData({ email: email || undefined, phone: phone || undefined, city: city || undefined });
 
         if (!email && !phone) {
-          toast.info("No contact info found for this creator (0.03 credits used)");
+          toast.info("No contact info found in cached data (0 credits used)");
         } else {
-          toast.success("Contact info fetched (0.03 credits)");
+          toast.success("Contact info fetched from cache (0 credits)");
         }
       } else {
-        toast.error("Could not enrich this handle");
+        toast.error("No cached data found for this handle — enrich from Discovery first");
       }
     } catch (err) {
       toast.error("Failed to fetch contact info: " + (err as Error).message);

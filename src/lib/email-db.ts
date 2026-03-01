@@ -296,7 +296,8 @@ export async function getContactListMemberships(email: string): Promise<Array<{ 
 export async function syncBulkContacts(
   listId: string,
   contacts: Array<{ email: string; first_name?: string; last_name?: string; phone?: string; company?: string; title?: string; source?: ContactSource; metadata?: Record<string, unknown> }>,
-): Promise<{ inserted: number; duplicates: number }> {
+  options?: { updateExisting?: boolean },
+): Promise<{ inserted: number; duplicates: number; updated?: number }> {
   const rows = contacts.map(c => ({
     list_id: listId,
     email: c.email.toLowerCase().trim(),
@@ -309,6 +310,12 @@ export async function syncBulkContacts(
     tags: [],
     metadata: c.metadata ?? {},
   }));
+  if (options?.updateExisting) {
+    // Upsert with update on conflict — re-sync refreshes metadata, avatar, etc.
+    const { data, error } = await sb.from("email_contacts").upsert(rows, { onConflict: "list_id,email" }).select("id");
+    if (error) { console.error("syncBulkContacts", error); return { inserted: 0, duplicates: contacts.length }; }
+    return { inserted: data?.length ?? 0, duplicates: 0, updated: data?.length ?? 0 };
+  }
   const { data, error } = await sb.from("email_contacts").upsert(rows, { onConflict: "list_id,email", ignoreDuplicates: true }).select("id");
   if (error) { console.error("syncBulkContacts", error); return { inserted: 0, duplicates: contacts.length }; }
   const inserted = data?.length ?? 0;

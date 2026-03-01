@@ -719,7 +719,7 @@ const EmailContacts = () => {
     await Promise.all(dirs.map(async d => {
       allMembers.push(...await fetchDirectoryMembers(d.id));
     }));
-    const contacts: Array<{ email: string; first_name?: string; source: ContactSource }> = [];
+    const contacts: Array<{ email: string; first_name?: string; last_name?: string; source: ContactSource; metadata?: Record<string, unknown> }> = [];
     const seen = new Set<string>();
     for (const m of allMembers) {
       const ed = m.enrichment_data as any;
@@ -729,12 +729,28 @@ const EmailContacts = () => {
       else if (ed?.contact_email) email = ed.contact_email;
       if (email && !seen.has(email.toLowerCase())) {
         seen.add(email.toLowerCase());
-        contacts.push({ email, first_name: m.creator_name || m.creator_handle, source: "creator" });
+        // Split creator_name into first/last
+        const nameParts = (m.creator_name || m.creator_handle || "").split(/\s+/);
+        const firstName = nameParts[0] || m.creator_handle || undefined;
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
+        contacts.push({
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          source: "creator",
+          metadata: {
+            avatar: m.avatar_url || m.ic_avatar_url || null,
+            username: m.creator_handle,
+            platform: m.platform || "instagram",
+            followers: m.follower_count ?? null,
+            bio: m.bio || null,
+          },
+        });
       }
     }
     if (contacts.length === 0) { toast.info("No creators with email found"); setSyncing(null); return; }
-    const result = await syncBulkContacts(listId, contacts);
-    toast.success(`Synced ${result.inserted} creators (${result.duplicates} already existed)`);
+    const result = await syncBulkContacts(listId, contacts, { updateExisting: true });
+    toast.success(`Synced ${result.updated ?? result.inserted} creators with avatars & metadata`);
     setSyncing(null);
     loadData();
   };

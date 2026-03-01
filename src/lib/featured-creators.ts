@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { generateProfileSlug, saveCreatorAvatar } from "@/lib/directories";
-import { enrichCreatorProfile, type EnrichedProfileResponse } from "@/lib/influencers-club";
+// Cache-first: no IC API imports — all reads from Supabase
+import { type EnrichedProfileResponse } from "@/lib/influencers-club";
 
 // Homepage showcase functions use `featured_creators` table.
 // Directory/network page functions use `directory_members` table
@@ -152,7 +153,8 @@ export async function fetchFeaturedHomepageCreators(): Promise<ShowcaseCreator[]
   return FALLBACK_HERO_CREATORS;
 }
 
-const HERO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// Cache-first: never expire — data is saved at discovery/add time
+// const HERO_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Check creator_enrichment_cache for a cached enrichment response. */
 async function getHeroEnrichCache(
@@ -167,8 +169,7 @@ async function getHeroEnrichCache(
       .eq("platform", platform)
       .single();
     if (!data) return null;
-    const cachedAt = new Date(data.cached_at).getTime();
-    if (Date.now() - cachedAt > HERO_CACHE_TTL_MS) return null;
+    // Cache-first: always return cached data, no TTL expiry
     return data.enrichment_data as EnrichedProfileResponse;
   } catch {
     return null;
@@ -272,22 +273,34 @@ export async function enrichHomepageHeroCreators(
       const handle = c.handle;
       const platform = c.platform || "instagram";
       try {
-        // 1. Check DB cache (gracefully returns null if table doesn't exist)
+        // Cache-first: read from DB cache only — zero IC API credits
         let responseData: Record<string, unknown> | null = null;
-        const cached = await getHeroEnrichCache(handle, platform);
 
+        // 1a. Check creator_enrichment_cache
+        const cached = await getHeroEnrichCache(handle, platform);
         if (cached) {
           console.log("[HeroEnrich] Cache hit for", handle);
           responseData = cached as unknown as Record<string, unknown>;
-        } else {
-          console.log("[HeroEnrich] Cache miss for", handle, "— calling POST enrich");
-          const enrichment = await enrichCreatorProfile(handle, undefined, platform);
-          responseData = enrichment as unknown as Record<string, unknown>;
+        }
 
-          // Try to cache (silently fails if table doesn't exist)
-          if (responseData) {
-            await setHeroEnrichCache(handle, platform, responseData as unknown as EnrichedProfileResponse);
-          }
+        // 1b. Fall back to directory_members.enrichment_data
+        if (!responseData) {
+          try {
+            const { data: dm } = await supabase
+              .from("directory_members")
+              .select("enrichment_data")
+              .eq("creator_handle", handle.replace(/^@/, "").toLowerCase())
+              .limit(1)
+              .maybeSingle();
+            if (dm?.enrichment_data) {
+              console.log("[HeroEnrich] Found in directory_members for", handle);
+              responseData = dm.enrichment_data as Record<string, unknown>;
+            }
+          } catch { /* table may not exist */ }
+        }
+
+        if (!responseData) {
+          console.log("[HeroEnrich] No cached data for", handle, "— skipping (enrich from Discovery first)");
         }
 
         if (!responseData) return c; // API returned null — keep existing data
@@ -424,13 +437,12 @@ export async function fillShowcaseAvatarsFromCache(
   return result;
 }
 
-/** Fetch avatars from the IC API for creators still missing a profile photo.
- *  Runs AFTER fillShowcaseAvatarsFromCache (which only checks the local cache).
- *  Calls enrichCreatorProfile (0.03 credits each), capped at maxApiFetches.
- *  Persists results to Supabase storage + updates directory_members. */
+/** Fill missing avatars from creator_enrichment_cache (zero IC API credits).
+ *  Runs AFTER fillShowcaseAvatarsFromCache.
+ *  Only reads from Supabase cache — never calls IC API. */
 export async function fillMissingAvatarsFromApi(
   creators: ShowcaseCreator[],
-  maxApiFetches = 15,
+  _maxApiFetches = 15,
 ): Promise<ShowcaseCreator[]> {
   const hasAvatar = (c: ShowcaseCreator) =>
     !!c.ic_avatar_url || !!c.avatar_url || !!extractAvatarFromEnrichment(c.enrichment_data);
@@ -438,52 +450,53 @@ export async function fillMissingAvatarsFromApi(
   const missing = creators.filter((c) => !hasAvatar(c));
   if (missing.length === 0) return creators;
 
-  console.log("[FillAvatars] Creators still missing avatars:", missing.length, "— fetching up to", maxApiFetches, "from IC API");
-  const toFetch = missing.slice(0, maxApiFetches);
+  console.log("[FillAvatars] Creators still missing avatars:", missing.length, "— checking enrichment cache (zero credits)");
 
   const avatarMap = new Map<string, string>();
 
   await Promise.allSettled(
-    toFetch.map(async (c) => {
+    missing.map(async (c) => {
       try {
-        const enrichment = await enrichCreatorProfile(c.handle, undefined, c.platform || "instagram");
-        if (!enrichment) return;
+        // Read from creator_enrichment_cache — zero IC API credits
+        const { data: cached } = await supabase
+          .from("creator_enrichment_cache")
+          .select("enrichment_data")
+          .eq("username", c.handle.toLowerCase())
+          .limit(1)
+          .maybeSingle();
 
-        // Extract avatar from enrichment response
-        const avatar = extractAvatarFromEnrichment(enrichment as unknown as Record<string, unknown>);
+        if (!cached?.enrichment_data) return;
+
+        const avatar = extractAvatarFromEnrichment(cached.enrichment_data as Record<string, unknown>);
         if (!avatar) {
-          console.log("[FillAvatars] No avatar found in enrichment for", c.handle);
+          console.log("[FillAvatars] No avatar found in cache for", c.handle);
           return;
         }
 
-        console.log("[FillAvatars] Found avatar for", c.handle);
+        console.log("[FillAvatars] Found avatar in cache for", c.handle);
 
-        // Persist to Supabase storage (fire-and-forget for permanent URL)
+        // Persist to Supabase storage
         const permanentUrl = await saveCreatorAvatar(c.handle, avatar);
         const finalUrl = permanentUrl || avatar;
         avatarMap.set(c.handle.toLowerCase(), finalUrl);
 
-        // Also cache the enrichment data on directory_members for future use
+        // Update directory_members
         supabase
           .from("directory_members")
-          .update({
-            ic_avatar_url: finalUrl,
-            avatar_url: finalUrl,
-            enrichment_data: enrichment,
-          })
+          .update({ ic_avatar_url: finalUrl, avatar_url: finalUrl })
           .eq("creator_handle", c.handle)
           .then(({ error }) => {
             if (error) console.warn("[FillAvatars] DB update failed for", c.handle, error.message);
           });
       } catch (err) {
-        console.warn("[FillAvatars] API call failed for", c.handle, ":", err);
+        console.warn("[FillAvatars] Cache lookup failed for", c.handle, ":", err);
       }
     }),
   );
 
   if (avatarMap.size === 0) return creators;
 
-  console.log("[FillAvatars] Resolved avatars for", avatarMap.size, "creators");
+  console.log("[FillAvatars] Resolved avatars for", avatarMap.size, "creators from cache");
   return creators.map((c) => {
     const url = avatarMap.get(c.handle.toLowerCase());
     if (url) return { ...c, ic_avatar_url: url, avatar_url: url };
@@ -1017,46 +1030,57 @@ export function extractBannerImage(enrichData: unknown): string | null {
 }
 
 /** Fetch recent posts from Influencers.club raw enrichment and return the first image URL. */
-export async function fetchBannerFromPosts(handle: string, platform = "instagram"): Promise<string | null> {
+/** Cache-first: extract banner from creator_enrichment_cache or directory_members.
+ *  Zero IC API credits. */
+export async function fetchBannerFromPosts(handle: string, _platform = "instagram"): Promise<string | null> {
   try {
-    const apiKey = import.meta.env.VITE_INFLUENCERS_CLUB_API_KEY as string | undefined;
-    if (!apiKey) return null;
-    const res = await fetch(
-      `/api/enrich/public/v1/creators/enrich/handle/raw/${platform}/${encodeURIComponent(handle)}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-      },
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
+    // 1. Check creator_enrichment_cache
+    const { data: cached } = await supabase
+      .from("creator_enrichment_cache")
+      .select("enrichment_data")
+      .eq("username", handle.toLowerCase())
+      .limit(1)
+      .maybeSingle();
 
-    // Try extracting from the enrichment response
-    const banner = extractBannerImage(data);
-    if (banner) return banner;
+    const ed = cached?.enrichment_data as Record<string, unknown> | null;
+    if (ed) {
+      const banner = extractBannerImage(ed);
+      if (banner) return banner;
 
-    // Dig into nested result structures
-    const ig = data?.instagram ?? data?.result?.instagram ?? data?.result ?? data;
-    const posts = ig?.post_data ?? ig?.posts ?? ig?.recent_posts;
-    if (!Array.isArray(posts) || posts.length === 0) return null;
-
-    for (const post of posts.slice(0, 6)) {
-      const media = post.media as unknown[] | undefined;
-      if (Array.isArray(media) && media.length > 0) {
-        const m = media[0] as Record<string, unknown>;
-        if (m.url && typeof m.url === "string") return (m.url as string).replace(/^http:\/\//i, "https://");
+      // Try post thumbnails
+      const ig = (ed?.instagram ?? (ed?.result as Record<string, unknown>)?.instagram ?? ed?.result ?? ed) as Record<string, unknown>;
+      const posts = (ig?.post_data ?? ig?.posts ?? ig?.recent_posts) as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(posts) && posts.length > 0) {
+        for (const post of posts.slice(0, 6)) {
+          const media = post.media as unknown[] | undefined;
+          if (Array.isArray(media) && media.length > 0) {
+            const m = media[0] as Record<string, unknown>;
+            if (m.url && typeof m.url === "string") return (m.url as string).replace(/^http:\/\//i, "https://");
+          }
+          if (post.thumbnail && typeof post.thumbnail === "string")
+            return (post.thumbnail as string).replace(/^http:\/\//i, "https://");
+          if (post.image_url && typeof post.image_url === "string")
+            return (post.image_url as string).replace(/^http:\/\//i, "https://");
+        }
       }
-      if (post.thumbnail && typeof post.thumbnail === "string")
-        return (post.thumbnail as string).replace(/^http:\/\//i, "https://");
-      if (post.image_url && typeof post.image_url === "string")
-        return (post.image_url as string).replace(/^http:\/\//i, "https://");
     }
+
+    // 2. Check directory_members.enrichment_data
+    const { data: dm } = await supabase
+      .from("directory_members")
+      .select("enrichment_data")
+      .eq("creator_handle", handle.toLowerCase())
+      .limit(1)
+      .maybeSingle();
+
+    if (dm?.enrichment_data) {
+      const banner = extractBannerImage(dm.enrichment_data as Record<string, unknown>);
+      if (banner) return banner;
+    }
+
     return null;
   } catch (err) {
-    console.error("[fetchBannerFromPosts] error:", err);
+    console.error("[fetchBannerFromPosts] cache lookup error:", err);
     return null;
   }
 }

@@ -82,7 +82,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
-import { type CreatorCard, enrichCreatorProfile, type EnrichedProfileResponse } from "@/lib/influencers-club";
+import { type CreatorCard, type EnrichedProfileResponse } from "@/lib/influencers-club";
 import { PlatformIcons } from "@/components/PlatformIcons";
 
 interface PreviewMember {
@@ -310,14 +310,37 @@ const BrandDirectory = () => {
 
   const prefetchEnrichment = useCallback((handle: string) => {
     if (!handle || enrichmentCacheRef.current.has(handle)) return;
-    // Mark as in-flight to prevent duplicate fetches
+    // Cache-first: read from creator_enrichment_cache or directory_members — zero IC credits
     enrichmentCacheRef.current.set(handle, null);
-    enrichCreatorProfile(handle).then((data) => {
-      if (data) enrichmentCacheRef.current.set(handle, data);
-      else enrichmentCacheRef.current.delete(handle);
-    }).catch(() => {
-      enrichmentCacheRef.current.delete(handle);
-    });
+    (async () => {
+      try {
+        // Try creator_enrichment_cache first
+        const { data: cached } = await supabase
+          .from("creator_enrichment_cache")
+          .select("enrichment_data")
+          .eq("username", handle.toLowerCase())
+          .limit(1)
+          .maybeSingle();
+        if (cached?.enrichment_data) {
+          enrichmentCacheRef.current.set(handle, cached.enrichment_data as EnrichedProfileResponse);
+          return;
+        }
+        // Fall back to directory_members.enrichment_data
+        const { data: dm } = await supabase
+          .from("directory_members")
+          .select("enrichment_data")
+          .eq("creator_handle", handle.toLowerCase())
+          .limit(1)
+          .maybeSingle();
+        if (dm?.enrichment_data) {
+          enrichmentCacheRef.current.set(handle, dm.enrichment_data as EnrichedProfileResponse);
+        } else {
+          enrichmentCacheRef.current.delete(handle);
+        }
+      } catch {
+        enrichmentCacheRef.current.delete(handle);
+      }
+    })();
   }, []);
 
   const handleRowMouseEnter = useCallback((m: DirectoryMember) => {
