@@ -347,7 +347,7 @@ function getMetricsForPlatform(
 /* ── Enrichment cache (Supabase) ── */
 const ENRICH_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-async function getEnrichCache(handle: string, platform: string): Promise<EnrichedProfileResponse | null> {
+async function getEnrichCache(handle: string, platform: string, expectedName?: string): Promise<EnrichedProfileResponse | null> {
   try {
     const { data } = await supabase
       .from("creator_enrichment_cache")
@@ -358,6 +358,31 @@ async function getEnrichCache(handle: string, platform: string): Promise<Enriche
     if (!data) return null;
     const cachedAt = new Date(data.cached_at).getTime();
     if (Date.now() - cachedAt > ENRICH_CACHE_TTL_MS) return null;
+
+    // Validate cached profile name against expected name (prevents stale cross-account data)
+    if (expectedName) {
+      const enrichment = data.enrichment_data as EnrichedProfileResponse;
+      const cachedName = String(
+        enrichment?.instagram?.full_name ?? enrichment?.instagram?.name ?? enrichment?.result?.full_name ?? ""
+      ).trim().toLowerCase();
+      const expected = expectedName.trim().toLowerCase();
+      if (cachedName && expected && cachedName !== expected) {
+        const cachedWords = new Set(cachedName.split(/\s+/));
+        const expectedWords = expected.split(/\s+/);
+        const overlap = expectedWords.some((w: string) => w.length > 2 && cachedWords.has(w));
+        if (!overlap) {
+          console.warn(`[EnrichCache] Mismatch for @${handle}: cached "${cachedName}", expected "${expected}" — invalidating cache`);
+          supabase
+            .from("creator_enrichment_cache")
+            .delete()
+            .eq("username", handle.toLowerCase())
+            .eq("platform", platform)
+            .then(() => console.log(`[EnrichCache] Deleted stale cache for @${handle}`));
+          return null;
+        }
+      }
+    }
+
     return data.enrichment_data as EnrichedProfileResponse;
   } catch {
     return null;
@@ -705,7 +730,7 @@ export default function CreatorProfileModal({
 
     // Check Supabase cache first, show instantly if available, then refresh in background
     (async () => {
-      const cached = await getEnrichCache(handle, platform);
+      const cached = await getEnrichCache(handle, platform, creator?.name || undefined);
       if (cancelledRef.current || generationRef.current !== gen) return;
 
       if (cached) {

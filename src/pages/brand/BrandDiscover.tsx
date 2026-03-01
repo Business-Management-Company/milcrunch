@@ -571,7 +571,7 @@ async function getDirectoryAvatarBatch(
   return out;
 }
 
-async function getCachedEnrichment(username: string): Promise<EnrichedProfileResponse | null> {
+async function getCachedEnrichment(username: string, expectedName?: string): Promise<EnrichedProfileResponse | null> {
   try {
     const { data, error } = await supabase
       .from("creator_enrichment_cache")
@@ -582,6 +582,33 @@ async function getCachedEnrichment(username: string): Promise<EnrichedProfileRes
     if (error || !data) return null;
     const cachedAt = new Date(data.cached_at).getTime();
     if (Date.now() - cachedAt > CACHE_TTL_MS) return null;
+
+    // Validate cached profile name against expected name (prevents stale cross-account data)
+    if (expectedName) {
+      const enrichment = data.enrichment_data as EnrichedProfileResponse;
+      const cachedName = String(
+        enrichment?.instagram?.full_name ?? enrichment?.instagram?.name ?? enrichment?.result?.full_name ?? ""
+      ).trim().toLowerCase();
+      const expected = expectedName.trim().toLowerCase();
+      if (cachedName && expected && cachedName !== expected) {
+        // Check if names share at least one word (partial match OK)
+        const cachedWords = new Set(cachedName.split(/\s+/));
+        const expectedWords = expected.split(/\s+/);
+        const overlap = expectedWords.some((w) => w.length > 2 && cachedWords.has(w));
+        if (!overlap) {
+          console.warn(`[EnrichCache] Mismatch for @${username}: cached "${cachedName}", expected "${expected}" — invalidating cache`);
+          // Delete the stale cache entry (fire-and-forget)
+          supabase
+            .from("creator_enrichment_cache")
+            .delete()
+            .eq("username", username.toLowerCase())
+            .eq("platform", "instagram")
+            .then(() => console.log(`[EnrichCache] Deleted stale cache for @${username}`));
+          return null;
+        }
+      }
+    }
+
     return data.enrichment_data as EnrichedProfileResponse;
   } catch {
     return null;
@@ -1183,7 +1210,7 @@ const BrandDiscover = () => {
     setContactLoading(true);
     try {
       // Check Supabase cache first to avoid double-charging
-      const cached = await getCachedEnrichment(creator.username);
+      const cached = await getCachedEnrichment(creator.username, creator.name || undefined);
       const cachedEmail = cached?.result?.email ? String(cached.result.email) : null;
       if (cachedEmail) {
         setContactEmails((prev) => ({ ...prev, [creator.id]: cachedEmail }));
@@ -1344,7 +1371,7 @@ const BrandDiscover = () => {
 
     // Enrich if no email — check cache first to avoid double-charging
     if (!email && creator.username) {
-      const cached = await getCachedEnrichment(creator.username);
+      const cached = await getCachedEnrichment(creator.username, creator.name || undefined);
       const cachedEmail = cached?.result?.email ? String(cached.result.email) : null;
       if (cachedEmail) {
         email = cachedEmail;
@@ -2190,7 +2217,7 @@ const BrandDiscover = () => {
               }
 
               // ── 2. Check Supabase enrichment cache (7-day TTL) ──
-              const cached = await getCachedEnrichment(creator.username!);
+              const cached = await getCachedEnrichment(creator.username!, creator.name || undefined);
               if (cached && !controller.signal.aborted) {
                 enrichedSetRef.current.add(creator.id);
                 const partial = extractFromEnrichment(cached);
