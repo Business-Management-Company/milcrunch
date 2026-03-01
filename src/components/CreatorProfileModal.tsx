@@ -1590,12 +1590,13 @@ export default function CreatorProfileModal({
   }, [igRecord, tiktokData, youtubeData, twitterData, facebookData, linkedinData]);
 
   const filteredPosts = useMemo(() => {
-    // Use activePlatformRecord — single source of truth for the selected platform
     const platRecord = activePlatformRecord;
-
     const raw = platRecord?.post_data;
+    // Debug: log what we have
+    console.log("[Posts] platRecord:", platRecord ? `YES (${Object.keys(platRecord).length} keys)` : "undefined",
+      "post_data:", Array.isArray(raw) ? `${raw.length} posts` : typeof raw, "postContentType:", postContentType);
     if (!Array.isArray(raw)) return [];
-    // Debug: log first post's full structure to find where IC hides image URLs
+    // Log first post's full structure so we can find image URL fields
     if (raw.length > 0) {
       const sample = raw[0] as Record<string, unknown>;
       console.log("[Posts] First post ALL keys:", Object.keys(sample));
@@ -1603,94 +1604,81 @@ export default function CreatorProfileModal({
     }
     const mapped = (raw as Record<string, unknown>[]).map((item, idx) => {
       const media = item.media as unknown[] | undefined;
-      const images = item.images as unknown[] | undefined;
       const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
-      const firstImage = Array.isArray(images) && images[0] && typeof images[0] === "object" ? (images[0] as Record<string, unknown>) : undefined;
       const engObj = (item.engagement && typeof item.engagement === "object") ? item.engagement as Record<string, unknown> : item;
-      const isCarousel = (Array.isArray(media) && media.length > 1) || (Array.isArray(images) && images.length > 1);
-      const isReel = Boolean(item.is_reel ?? item.video_url ?? item.is_video ?? item.type === "reel" ?? item.type === "video");
-      // Try multiple image sources — IC nests differently for IG posts, IG reels, TikTok, YouTube
+      const isCarousel = Array.isArray(media) && media.length > 1;
+      // Only flag as reel if explicitly marked — do NOT use video_url (most IG posts have it)
+      const isReel = Boolean(item.is_reel || item.is_video || item.type === "reel" || item.type === "video");
+      // Extract thumbnail — try many IC field patterns
+      const isUrl = (v: unknown): v is string => typeof v === 'string' && v.startsWith('http');
       const thumbnail = (() => {
-        const URL_KEYS = ['url', 'thumbnail_url', 'media_url', 'display_url', 'image_url', 'src', 'thumbnail', 'preview_url'];
+        const MEDIA_KEYS = ['url', 'thumbnail_url', 'media_url', 'display_url', 'image_url', 'src', 'thumbnail', 'preview_url'];
         const ITEM_KEYS = [
           'thumbnail', 'image', 'image_url', 'display_url', 'media_url', 'thumbnail_url',
           'video_thumbnail', 'preview_url', 'thumbnail_src', 'picture', 'thumbnail_resource',
           'cover', 'video_cover', 'cover_url', 'origin_cover', 'dynamic_cover',
-          'thumbnail_media_url', 'post_image', 'post_url_image',
         ];
-        const tryExtract = (v: unknown): string | undefined => {
-          if (typeof v === 'string' && v.startsWith('http')) return v;
-          return undefined;
-        };
-        // 1. Try item.images array (IC IG posts often use this)
-        if (Array.isArray(images)) {
-          for (const img of images) {
-            if (typeof img === 'string' && img.startsWith('http')) return img;
-            if (img && typeof img === 'object') {
-              const io = img as Record<string, unknown>;
-              for (const k of URL_KEYS) { const r = tryExtract(io[k]); if (r) return r; }
-            }
-          }
-        }
-        // 2. Try item.media array
+        // 1. media array entries
         if (Array.isArray(media)) {
           for (const m of media) {
-            if (typeof m === 'string' && m.startsWith('http')) return m;
+            if (isUrl(m)) return m;
             if (m && typeof m === 'object') {
               const mo = m as Record<string, unknown>;
-              for (const k of URL_KEYS) { const r = tryExtract(mo[k]); if (r) return r; }
+              for (const k of MEDIA_KEYS) { if (isUrl(mo[k])) return mo[k] as string; }
             }
           }
         }
-        // 3. Try firstMedia / firstImage extracted objects
-        for (const obj of [firstMedia, firstImage]) {
-          if (!obj) continue;
-          for (const k of URL_KEYS) { const r = tryExtract(obj[k]); if (r) return r; }
+        // 2. firstMedia object
+        if (firstMedia) {
+          for (const k of MEDIA_KEYS) { if (isUrl(firstMedia[k])) return firstMedia[k] as string; }
         }
-        // 4. Try direct item fields (broadest search)
-        for (const k of ITEM_KEYS) { const r = tryExtract(item[k]); if (r) return r; }
-        // 5. Try nested objects: item.image_versions2.candidates[0].url, item.video.cover
+        // 3. item.images array
+        const images = item.images as unknown[] | undefined;
+        if (Array.isArray(images)) {
+          for (const img of images) {
+            if (isUrl(img)) return img;
+            if (img && typeof img === 'object') {
+              const io = img as Record<string, unknown>;
+              for (const k of MEDIA_KEYS) { if (isUrl(io[k])) return io[k] as string; }
+            }
+          }
+        }
+        // 4. Direct item fields
+        for (const k of ITEM_KEYS) { if (isUrl(item[k])) return item[k] as string; }
+        // 5. image_versions2.candidates[0].url
         const iv2 = item.image_versions2 as Record<string, unknown> | undefined;
         if (iv2) {
           const candidates = iv2.candidates as unknown[] | undefined;
           if (Array.isArray(candidates) && candidates[0]) {
             const c = candidates[0] as Record<string, unknown>;
-            const r = tryExtract(c.url ?? c.src); if (r) return r;
+            if (isUrl(c.url)) return c.url as string;
           }
         }
+        // 6. video.cover for TikTok
         const videoObj = item.video as Record<string, unknown> | undefined;
         if (videoObj) {
-          for (const k of ['cover', 'origin_cover', 'dynamic_cover', 'thumbnail', 'thumbnail_url']) {
-            const r = tryExtract(videoObj[k]); if (r) return r;
+          for (const k of ['cover', 'origin_cover', 'dynamic_cover', 'thumbnail']) {
+            if (isUrl(videoObj[k])) return videoObj[k] as string;
           }
         }
-        // 6. Try item.carousel_media[0] for IG carousels
+        // 7. carousel_media[0]
         const carousel = item.carousel_media as unknown[] | undefined;
         if (Array.isArray(carousel) && carousel[0] && typeof carousel[0] === 'object') {
           const cm = carousel[0] as Record<string, unknown>;
-          for (const k of ['image_url', 'display_url', 'url', 'thumbnail_url', 'media_url']) {
-            const r = tryExtract(cm[k]); if (r) return r;
-          }
-          const cmIv2 = cm.image_versions2 as Record<string, unknown> | undefined;
-          if (cmIv2) {
-            const cands = cmIv2.candidates as unknown[] | undefined;
-            if (Array.isArray(cands) && cands[0]) {
-              const r = tryExtract((cands[0] as Record<string, unknown>).url); if (r) return r;
-            }
-          }
+          for (const k of MEDIA_KEYS) { if (isUrl(cm[k])) return cm[k] as string; }
         }
-        if (idx === 0) console.log("[Posts] Could not find thumbnail for first post");
+        if (idx === 0) console.log("[Posts] WARNING: Could not extract thumbnail from first post");
         return undefined;
       })() as string | undefined;
       return {
-        id: String(item.post_id ?? item.id ?? item.pk ?? Math.random()),
+        id: String(item.post_id ?? item.id ?? idx),
         thumbnail,
-        caption: (item.caption ?? item.title ?? item.description ?? (item.caption_text as string | undefined)) as string | undefined,
+        caption: (item.caption ?? item.title ?? item.description) as string | undefined,
         likes: Number(engObj.likes ?? engObj.like_count ?? engObj.digg_count ?? 0),
         comments: Number(engObj.comments ?? engObj.comment_count ?? 0),
         views: Number(engObj.view_count ?? engObj.views ?? engObj.play_count ?? engObj.impressions ?? 0) || undefined,
-        date: (item.created_at ?? item.create_time ?? item.published_at ?? item.taken_at_timestamp ?? item.timestamp) as string | undefined,
-        permalink: (item.post_url ?? item.video_url ?? item.url ?? item.link) as string | undefined,
+        date: (item.created_at ?? item.create_time ?? item.published_at ?? item.taken_at_timestamp) as string | undefined,
+        permalink: (item.post_url ?? item.video_url ?? item.url) as string | undefined,
         isCarousel,
         isReel,
       };
