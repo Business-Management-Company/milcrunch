@@ -215,7 +215,12 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
         added_by: userId || null,
       });
       if (error) {
-        toast.error(error.message);
+        if (error.code === "23505") {
+          toast.warning(`${person.name} is already added as a speaker for this event`);
+          setExistingSpeakerNames(prev => new Set(prev).add(person.name.toLowerCase()));
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.success(`${person.name} added as speaker`);
         setExistingSpeakerNames(prev => new Set(prev).add(person.name.toLowerCase()));
@@ -266,7 +271,12 @@ export default function AddSpeakerModal({ open, onOpenChange, eventId, userId, c
         creator_handle: manualTitle.trim() || null,
       });
       if (error) {
-        toast.error(error.message);
+        if (error.code === "23505") {
+          toast.warning(`${trimmedName} is already added as a speaker for this event`);
+          setExistingSpeakerNames(prev => new Set(prev).add(trimmedName.toLowerCase()));
+        } else {
+          toast.error(error.message);
+        }
       } else {
         toast.success(`${trimmedName} added as speaker`);
         setExistingSpeakerNames(prev => new Set(prev).add(trimmedName.toLowerCase()));

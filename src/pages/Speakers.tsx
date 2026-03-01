@@ -1035,7 +1035,12 @@ export default function Speakers() {
     });
 
     if (error) {
-      toast.error("Failed to add to event: " + error.message);
+      if (error.code === "23505") {
+        toast.warning(`${inviteSpeaker.name} is already added as a speaker for this event`);
+        setExistingEventIds(prev => [...prev, selectedEventId]);
+      } else {
+        toast.error("Failed to add to event: " + error.message);
+      }
     } else {
       const eventTitle = allEvents.find((e) => e.id === selectedEventId)?.title ?? "event";
       toast.success(`Added ${inviteSpeaker.name} to ${eventTitle}`);

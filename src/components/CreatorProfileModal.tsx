@@ -1190,7 +1190,15 @@ export default function CreatorProfileModal({
         confirmed: false,
         added_by: user?.id ?? null,
       } as Record<string, unknown>);
-      if (err) throw err;
+      if (err) {
+        if (err.code === "23505") {
+          toast.warning(`${creator.name} is already added as a speaker for this event`);
+          setSpeakerEventIds(prev => new Set(prev).add(eventId));
+          setInvitingEvent(false);
+          return;
+        }
+        throw err;
+      }
       toast.success(`Invited ${creator.name} to ${eventTitle}`);
       setSpeakerEventIds(prev => new Set(prev).add(eventId));
       setEventDropdownOpen(false);
