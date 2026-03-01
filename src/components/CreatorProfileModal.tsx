@@ -1494,19 +1494,50 @@ export default function CreatorProfileModal({
       return [];
     }
     console.log("[Similar] Found", raw.length, "similar accounts. First item keys:", raw[0] ? Object.keys(raw[0]) : "empty");
-    return raw.slice(0, 12).map((item: Record<string, unknown>) => ({
-      id: String(item.username ?? item.id ?? Math.random()),
-      username: (item.username ?? item.handle) as string | undefined,
-      name: (item.full_name ?? item.name ?? item.username) as string | undefined,
-      full_name: (item.full_name ?? item.name) as string | undefined,
-      avatar: (item.profile_picture ?? item.picture ?? item.avatar ?? item.profile_pic_url ?? item.avatar_url ?? item.picture_url ?? item.image ?? item.thumbnail) as string | undefined,
-      picture: item.picture as string | undefined,
-      followers: Number(item.follower_count ?? item.followers ?? item.subscriber_count ?? 0),
-      follower_count: Number(item.follower_count ?? item.followers ?? 0),
-      engagement_percent: Number(item.engagement_percent ?? item.engagement_rate ?? 0),
-      profile_url: item.profile_url as string | undefined,
-      similarity: Number(item.similarity ?? item.similarity_score ?? item.score ?? 0),
-    }));
+    if (raw[0]) {
+      const first = raw[0] as Record<string, unknown>;
+      const prof = first.profile as Record<string, unknown> | undefined;
+      console.log("[Similar] First item avatar fields:", {
+        picture: first.picture, profile_picture: first.profile_picture,
+        avatar: first.avatar, profile_pic_url: first.profile_pic_url,
+        "profile.picture": prof?.picture, "profile.profile_picture": prof?.profile_picture,
+        "profile.profile_pic_url": prof?.profile_pic_url,
+      });
+    }
+    return raw.slice(0, 12).map((item: Record<string, unknown>) => {
+      // IC API nests creator data inside item.profile for lookalikes
+      const prof = (item.profile && typeof item.profile === "object") ? item.profile as Record<string, unknown> : undefined;
+      const resolveAvatar = (): string | undefined => {
+        const AVATAR_KEYS = [
+          "picture", "profile_picture", "profile_picture_hd", "profile_pic_url",
+          "profile_pic_url_hd", "avatar", "avatar_url", "picture_url",
+          "image", "thumbnail", "photo", "image_url", "profile_image_url",
+        ];
+        // Check top-level item first, then nested profile object
+        for (const src of [item, prof]) {
+          if (!src) continue;
+          for (const key of AVATAR_KEYS) {
+            const v = src[key];
+            if (typeof v === "string" && v.startsWith("http")) return v;
+          }
+        }
+        return undefined;
+      };
+      const username = (item.username ?? prof?.username ?? item.handle) as string | undefined;
+      return {
+        id: String(username ?? item.id ?? Math.random()),
+        username,
+        name: (item.full_name ?? prof?.full_name ?? item.name ?? prof?.name ?? username) as string | undefined,
+        full_name: (item.full_name ?? prof?.full_name ?? item.name ?? prof?.name) as string | undefined,
+        avatar: resolveAvatar(),
+        picture: (item.picture ?? prof?.picture) as string | undefined,
+        followers: Number(item.follower_count ?? prof?.follower_count ?? item.followers ?? prof?.number_of_followers ?? item.subscriber_count ?? 0),
+        follower_count: Number(item.follower_count ?? prof?.follower_count ?? item.followers ?? 0),
+        engagement_percent: Number(item.engagement_percent ?? prof?.engagement_percent ?? item.engagement_rate ?? prof?.engagement_rate ?? 0),
+        profile_url: item.profile_url as string | undefined,
+        similarity: Number(item.similarity ?? item.similarity_score ?? item.score ?? 0),
+      };
+    });
   }, [resultTop.lookalikes, resultTop.similar_accounts, resultTop.similar_users, resultTop.related_accounts]);
 
   // ── Audience data hooks — use platform-specific data when available ──
@@ -2735,10 +2766,10 @@ export default function CreatorProfileModal({
                                             src={safeImageUrl(acc.avatar || acc.picture || "")}
                                             alt=""
                                             className="h-9 w-9 rounded-full object-cover shrink-0"
+                                            referrerPolicy="no-referrer"
                                             onError={(e) => {
                                               const el = e.target as HTMLImageElement;
                                               el.style.display = 'none';
-                                              // Show the letter fallback sibling
                                               const fallback = el.nextElementSibling as HTMLElement | null;
                                               if (fallback) fallback.style.display = 'flex';
                                             }}
