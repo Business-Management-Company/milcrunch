@@ -275,10 +275,14 @@ function getMetricsForPlatform(
     return 0;
   };
 
+  // Only use creatorCard fallback for instagram — the card's followers/engagement
+  // are from the search result (always IG) and would be wrong for other platforms.
+  const cardForFallback = platform === "instagram" ? creatorCard : null;
+
   const fc = pick(
     rec.follower_count,
     rec.subscriber_count,
-    creatorCard?.followers,
+    cardForFallback?.followers,
   );
 
   // Always try computeFromPostData as a fallback — the RAW endpoint returns
@@ -292,29 +296,29 @@ function getMetricsForPlatform(
   const engagement = pick(
     rec.engagement_percent, rec.engagement_rate,
     computed.engagement,
-    creatorCard?.engagementRate,
+    cardForFallback?.engagementRate,
   );
   const mediaCount = pick(
     rec.media_count, rec.number_of_posts, rec.video_count,
     rec.tweet_count, rec.statuses_count,
-    creatorCard?.mediaCount,
+    cardForFallback?.mediaCount,
   );
   const postsPerMonth = pick(
     rec.posting_frequency_recent_months, rec.posts_per_month,
     rec.videos_per_month, rec.posting_frequency,
     computed.postsPerMonth,
-    creatorCard?.postsPerMonth,
+    cardForFallback?.postsPerMonth,
   );
   const avgLikes = pick(
     rec.avg_likes, rec.avg_like_count, rec.average_likes,
     computed.avgLikes,
-    creatorCard?.avgLikes,
+    cardForFallback?.avgLikes,
   );
   const avgComments = pick(
     rec.avg_comments, rec.avg_comment_count, rec.average_comments,
     rec.avg_replies,
     computed.avgComments,
-    creatorCard?.avgComments,
+    cardForFallback?.avgComments,
   );
 
   let avgSpecial = 0;
@@ -322,7 +326,7 @@ function getMetricsForPlatform(
     avgSpecial = pick(
       reelsObj?.avg_like_count, reelsObj?.avg_likes,
       rec.avg_reel_likes,
-      creatorCard?.avgReelLikes,
+      cardForFallback?.avgReelLikes,
     );
   } else if (platform === "tiktok") {
     avgSpecial = pick(rec.avg_shares, rec.avg_share_count, rec.average_shares);
@@ -338,7 +342,7 @@ function getMetricsForPlatform(
     reelsObj?.avg_view_count,
     rec.avg_reels_plays, rec.average_reels_plays,
     computed.avgViews,
-    creatorCard?.avgViews,
+    cardForFallback?.avgViews,
   );
 
   return { followers: fc, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews };
@@ -1299,14 +1303,25 @@ export default function CreatorProfileModal({
   // ── Resolve the active platform data record ──
   // Used by stats, charts, hashtags, audience analytics — single source of truth.
   // MUST be declared before any useMemo that references it (bio, stats, etc.)
+  // Deps include platformEnrichments + enriched so it re-evaluates when data arrives.
   const activePlatformRecord = useMemo((): Record<string, unknown> | undefined => {
-    if (selectedPlatform === "tiktok") return tiktokData;
-    if (selectedPlatform === "youtube") return youtubeData;
-    if (selectedPlatform === "twitter") return twitterData;
-    if (selectedPlatform === "facebook") return facebookData;
-    if (selectedPlatform === "linkedin") return linkedinData;
-    return igRecord;
-  }, [selectedPlatform, tiktokData, youtubeData, twitterData, facebookData, linkedinData, igRecord]);
+    // Re-derive from current state each time deps change
+    const _resultTop = enriched?.result ?? {};
+    const _ig = enriched?.instagram;
+    const _igRec = _ig && typeof _ig === "object" ? (_ig as Record<string, unknown>) : undefined;
+    const _tiktok = platformEnrichments.tiktok ?? (_resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
+    const _youtube = platformEnrichments.youtube ?? (_resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
+    const _twitter = platformEnrichments.twitter ?? (_resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
+    const _facebook = platformEnrichments.facebook ?? (_resultTop as Record<string, unknown>).facebook as Record<string, unknown> | undefined;
+    const _linkedin = platformEnrichments.linkedin ?? (_resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined;
+
+    if (selectedPlatform === "tiktok") return _tiktok;
+    if (selectedPlatform === "youtube") return _youtube;
+    if (selectedPlatform === "twitter") return _twitter;
+    if (selectedPlatform === "facebook") return _facebook;
+    if (selectedPlatform === "linkedin") return _linkedin;
+    return _igRec;
+  }, [selectedPlatform, platformEnrichments, enriched]);
 
   const bio = useMemo(() => {
     const rec = activePlatformRecord;
@@ -2605,22 +2620,23 @@ export default function CreatorProfileModal({
                               rel="noopener noreferrer"
                               className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117] hover:shadow-md transition-shadow group"
                             >
-                              <div className="relative">
+                              {/* Thumbnail — crop top/bottom to hide IG reel chrome (View profile, audio bar) */}
+                              <div className="relative overflow-hidden" style={{ height: 180 }}>
                                 {post.thumbnail && !brokenPostImages.has(post.id) ? (
                                   <img
                                     src={post.thumbnail}
                                     alt=""
                                     loading="lazy"
-                                    className="w-full aspect-square object-cover"
+                                    className="w-full h-full object-cover object-center"
                                     referrerPolicy="no-referrer"
-                                    onError={(e) => {
-                                      const img = e.target as HTMLImageElement;
+                                    style={{ transform: "scale(1.15)" }}
+                                    onError={() => {
                                       console.log("[PostImages] Image failed to load:", post.thumbnail);
                                       setBrokenPostImages(prev => new Set(prev).add(post.id));
                                     }}
                                   />
                                 ) : (
-                                  <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-1">
+                                  <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-1">
                                     <Camera className="h-6 w-6 text-gray-300" />
                                     <span className="text-[10px] text-gray-400">No preview</span>
                                   </div>
@@ -2630,13 +2646,21 @@ export default function CreatorProfileModal({
                                     <ChevronRight className="h-3 w-3 text-white" />
                                   </div>
                                 )}
+                                {post.isReel && (
+                                  <div className="absolute bottom-1.5 left-1.5 bg-black/60 rounded-md px-1.5 py-0.5 flex items-center gap-1">
+                                    <Video className="h-3 w-3 text-white" />
+                                    <span className="text-[10px] text-white font-medium">Reel</span>
+                                  </div>
+                                )}
                               </div>
                               <div className="p-2.5">
-                                {post.date && <p className="text-[10px] text-gray-400 mb-0.5">{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>}
-                                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{post.caption || "—"}</p>
-                                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
-                                  <span>{formatNumber(post.likes)} likes</span>
-                                  <span>{formatNumber(post.comments)} comments</span>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[2rem]">{post.caption || "—"}</p>
+                                <div className="flex items-center justify-between mt-1.5 text-[11px] text-gray-400">
+                                  <div className="flex items-center gap-2.5">
+                                    <span>{formatNumber(post.likes)} likes</span>
+                                    <span>{formatNumber(post.comments)} comments</span>
+                                  </div>
+                                  {post.date && <span className="text-[10px]">{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
                                 </div>
                               </div>
                             </a>
