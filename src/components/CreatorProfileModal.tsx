@@ -1415,25 +1415,21 @@ export default function CreatorProfileModal({
     console.log("[Similar] Found", raw.length, "similar accounts. First item keys:", raw[0] ? Object.keys(raw[0]) : "empty");
     if (raw[0]) {
       const first = raw[0] as Record<string, unknown>;
-      const prof = first.profile as Record<string, unknown> | undefined;
-      console.log("[Similar] First item avatar fields:", {
-        picture: first.picture, profile_picture: first.profile_picture,
-        avatar: first.avatar, profile_pic_url: first.profile_pic_url,
-        "profile.picture": prof?.picture, "profile.profile_picture": prof?.profile_picture,
-        "profile.profile_pic_url": prof?.profile_pic_url,
-      });
+      console.log("[Similar] First item FULL data:", JSON.stringify(first, null, 2).slice(0, 3000));
     }
     return raw.slice(0, 12).map((item: Record<string, unknown>) => {
-      // IC API nests creator data inside item.profile for lookalikes
+      // IC API nests creator data inside item.profile, item.user_profile, or item.user
       const prof = (item.profile && typeof item.profile === "object") ? item.profile as Record<string, unknown> : undefined;
+      const userProfile = (item.user_profile && typeof item.user_profile === "object") ? item.user_profile as Record<string, unknown> : undefined;
+      const userObj = (item.user && typeof item.user === "object") ? item.user as Record<string, unknown> : undefined;
       const resolveAvatar = (): string | undefined => {
         const AVATAR_KEYS = [
           "picture", "profile_picture", "profile_picture_hd", "profile_pic_url",
           "profile_pic_url_hd", "avatar", "avatar_url", "picture_url",
           "image", "thumbnail", "photo", "image_url", "profile_image_url",
         ];
-        // Check top-level item first, then nested profile object
-        for (const src of [item, prof]) {
+        // Check top-level item, then nested profile/user_profile/user objects
+        for (const src of [item, prof, userProfile, userObj]) {
           if (!src) continue;
           for (const key of AVATAR_KEYS) {
             const v = src[key];
@@ -1442,19 +1438,19 @@ export default function CreatorProfileModal({
         }
         return undefined;
       };
-      const username = (item.username ?? prof?.username ?? item.handle) as string | undefined;
+      const username = (item.username ?? prof?.username ?? userProfile?.username ?? userObj?.username ?? item.handle) as string | undefined;
       return {
         id: String(username ?? item.id ?? Math.random()),
         username,
-        name: (item.full_name ?? prof?.full_name ?? item.name ?? prof?.name ?? username) as string | undefined,
-        full_name: (item.full_name ?? prof?.full_name ?? item.name ?? prof?.name) as string | undefined,
+        name: (item.full_name ?? prof?.full_name ?? userProfile?.full_name ?? userObj?.full_name ?? item.name ?? prof?.name ?? username) as string | undefined,
+        full_name: (item.full_name ?? prof?.full_name ?? userProfile?.full_name ?? item.name ?? prof?.name) as string | undefined,
         avatar: resolveAvatar(),
-        picture: (item.picture ?? prof?.picture) as string | undefined,
-        followers: Number(item.follower_count ?? prof?.follower_count ?? item.followers ?? prof?.number_of_followers ?? item.subscriber_count ?? 0),
-        follower_count: Number(item.follower_count ?? prof?.follower_count ?? item.followers ?? 0),
-        engagement_percent: Number(item.engagement_percent ?? prof?.engagement_percent ?? item.engagement_rate ?? prof?.engagement_rate ?? 0),
-        profile_url: item.profile_url as string | undefined,
-        similarity: Number(item.similarity ?? item.similarity_score ?? item.score ?? 0),
+        picture: (item.picture ?? prof?.picture ?? userProfile?.picture ?? userObj?.picture) as string | undefined,
+        followers: Number(item.follower_count ?? prof?.follower_count ?? userProfile?.follower_count ?? item.followers ?? prof?.number_of_followers ?? item.subscriber_count ?? 0),
+        follower_count: Number(item.follower_count ?? prof?.follower_count ?? userProfile?.follower_count ?? item.followers ?? 0),
+        engagement_percent: Number(item.engagement_percent ?? prof?.engagement_percent ?? userProfile?.engagement_percent ?? item.engagement_rate ?? prof?.engagement_rate ?? 0),
+        profile_url: (item.profile_url ?? item.url ?? prof?.profile_url) as string | undefined,
+        similarity: Number(item.similarity ?? item.similarity_score ?? item.relevance_score ?? item.match_score ?? item.score ?? 0),
       };
     });
   }, [resultTop.lookalikes, resultTop.similar_accounts, resultTop.similar_users, resultTop.related_accounts]);
@@ -1599,52 +1595,102 @@ export default function CreatorProfileModal({
 
     const raw = platRecord?.post_data;
     if (!Array.isArray(raw)) return [];
+    // Debug: log first post's full structure to find where IC hides image URLs
+    if (raw.length > 0) {
+      const sample = raw[0] as Record<string, unknown>;
+      console.log("[Posts] First post ALL keys:", Object.keys(sample));
+      console.log("[Posts] First post full data:", JSON.stringify(sample, null, 2).slice(0, 3000));
+    }
     const mapped = (raw as Record<string, unknown>[]).map((item, idx) => {
       const media = item.media as unknown[] | undefined;
+      const images = item.images as unknown[] | undefined;
       const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
+      const firstImage = Array.isArray(images) && images[0] && typeof images[0] === "object" ? (images[0] as Record<string, unknown>) : undefined;
       const engObj = (item.engagement && typeof item.engagement === "object") ? item.engagement as Record<string, unknown> : item;
-      const isCarousel = Array.isArray(media) && media.length > 1;
-      const isReel = Boolean(item.is_reel ?? item.video_url ?? item.is_video);
-      // Try multiple image sources from media array entries and direct item fields
+      const isCarousel = (Array.isArray(media) && media.length > 1) || (Array.isArray(images) && images.length > 1);
+      const isReel = Boolean(item.is_reel ?? item.video_url ?? item.is_video ?? item.type === "reel" ?? item.type === "video");
+      // Try multiple image sources — IC nests differently for IG posts, IG reels, TikTok, YouTube
       const thumbnail = (() => {
-        const MEDIA_KEYS = ['url', 'thumbnail_url', 'media_url', 'display_url', 'image_url', 'src', 'thumbnail', 'preview_url'];
-        const ITEM_KEYS = ['thumbnail', 'image', 'image_url', 'display_url', 'media_url', 'thumbnail_url', 'video_thumbnail', 'preview_url', 'thumbnail_src', 'picture', 'thumbnail_resource', 'cover', 'video_cover'];
-        // 1. Try media array entries (object with url, or direct string)
+        const URL_KEYS = ['url', 'thumbnail_url', 'media_url', 'display_url', 'image_url', 'src', 'thumbnail', 'preview_url'];
+        const ITEM_KEYS = [
+          'thumbnail', 'image', 'image_url', 'display_url', 'media_url', 'thumbnail_url',
+          'video_thumbnail', 'preview_url', 'thumbnail_src', 'picture', 'thumbnail_resource',
+          'cover', 'video_cover', 'cover_url', 'origin_cover', 'dynamic_cover',
+          'thumbnail_media_url', 'post_image', 'post_url_image',
+        ];
+        const tryExtract = (v: unknown): string | undefined => {
+          if (typeof v === 'string' && v.startsWith('http')) return v;
+          return undefined;
+        };
+        // 1. Try item.images array (IC IG posts often use this)
+        if (Array.isArray(images)) {
+          for (const img of images) {
+            if (typeof img === 'string' && img.startsWith('http')) return img;
+            if (img && typeof img === 'object') {
+              const io = img as Record<string, unknown>;
+              for (const k of URL_KEYS) { const r = tryExtract(io[k]); if (r) return r; }
+            }
+          }
+        }
+        // 2. Try item.media array
         if (Array.isArray(media)) {
           for (const m of media) {
             if (typeof m === 'string' && m.startsWith('http')) return m;
             if (m && typeof m === 'object') {
               const mo = m as Record<string, unknown>;
-              for (const k of MEDIA_KEYS) {
-                const v = mo[k];
-                if (typeof v === 'string' && v.startsWith('http')) return v;
-              }
+              for (const k of URL_KEYS) { const r = tryExtract(mo[k]); if (r) return r; }
             }
           }
         }
-        // 2. Try firstMedia fields (already extracted)
-        if (firstMedia) {
-          for (const k of MEDIA_KEYS) {
-            const v = firstMedia[k];
-            if (typeof v === 'string' && v.startsWith('http')) return v;
+        // 3. Try firstMedia / firstImage extracted objects
+        for (const obj of [firstMedia, firstImage]) {
+          if (!obj) continue;
+          for (const k of URL_KEYS) { const r = tryExtract(obj[k]); if (r) return r; }
+        }
+        // 4. Try direct item fields (broadest search)
+        for (const k of ITEM_KEYS) { const r = tryExtract(item[k]); if (r) return r; }
+        // 5. Try nested objects: item.image_versions2.candidates[0].url, item.video.cover
+        const iv2 = item.image_versions2 as Record<string, unknown> | undefined;
+        if (iv2) {
+          const candidates = iv2.candidates as unknown[] | undefined;
+          if (Array.isArray(candidates) && candidates[0]) {
+            const c = candidates[0] as Record<string, unknown>;
+            const r = tryExtract(c.url ?? c.src); if (r) return r;
           }
         }
-        // 3. Try direct item fields
-        for (const k of ITEM_KEYS) {
-          const v = item[k];
-          if (typeof v === 'string' && v.startsWith('http')) return v;
+        const videoObj = item.video as Record<string, unknown> | undefined;
+        if (videoObj) {
+          for (const k of ['cover', 'origin_cover', 'dynamic_cover', 'thumbnail', 'thumbnail_url']) {
+            const r = tryExtract(videoObj[k]); if (r) return r;
+          }
         }
+        // 6. Try item.carousel_media[0] for IG carousels
+        const carousel = item.carousel_media as unknown[] | undefined;
+        if (Array.isArray(carousel) && carousel[0] && typeof carousel[0] === 'object') {
+          const cm = carousel[0] as Record<string, unknown>;
+          for (const k of ['image_url', 'display_url', 'url', 'thumbnail_url', 'media_url']) {
+            const r = tryExtract(cm[k]); if (r) return r;
+          }
+          const cmIv2 = cm.image_versions2 as Record<string, unknown> | undefined;
+          if (cmIv2) {
+            const cands = cmIv2.candidates as unknown[] | undefined;
+            if (Array.isArray(cands) && cands[0]) {
+              const r = tryExtract((cands[0] as Record<string, unknown>).url); if (r) return r;
+            }
+          }
+        }
+        if (idx === 0) console.log("[Posts] Could not find thumbnail for first post");
         return undefined;
       })() as string | undefined;
       return {
-        id: String(item.post_id ?? item.id ?? Math.random()),
+        id: String(item.post_id ?? item.id ?? item.pk ?? Math.random()),
         thumbnail,
-        caption: (item.caption ?? item.title ?? item.description) as string | undefined,
+        caption: (item.caption ?? item.title ?? item.description ?? (item.caption_text as string | undefined)) as string | undefined,
         likes: Number(engObj.likes ?? engObj.like_count ?? engObj.digg_count ?? 0),
         comments: Number(engObj.comments ?? engObj.comment_count ?? 0),
         views: Number(engObj.view_count ?? engObj.views ?? engObj.play_count ?? engObj.impressions ?? 0) || undefined,
-        date: (item.created_at ?? item.create_time ?? item.published_at) as string | undefined,
-        permalink: (item.post_url ?? item.video_url ?? item.url) as string | undefined,
+        date: (item.created_at ?? item.create_time ?? item.published_at ?? item.taken_at_timestamp ?? item.timestamp) as string | undefined,
+        permalink: (item.post_url ?? item.video_url ?? item.url ?? item.link) as string | undefined,
         isCarousel,
         isReel,
       };
@@ -2276,22 +2322,22 @@ export default function CreatorProfileModal({
 
                 {/* Tab bar: Analytics | Posts | Similar Accounts */}
                   <Tabs defaultValue="analytics" className="w-full">
-                    <TabsList className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 rounded-none p-0 h-auto">
+                    <TabsList className="flex justify-start gap-2 bg-transparent border-none rounded-none p-0 h-auto">
                       <TabsTrigger
                         value="analytics"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none text-gray-500 px-4 py-2.5 text-sm font-medium"
+                        className="rounded-full px-4 py-2 text-sm font-medium cursor-pointer transition-colors border-none shadow-none bg-gray-100 text-gray-700 hover:bg-gray-200 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-none"
                       >
                         <BarChart3 className="h-4 w-4 mr-1.5" /> Analytics
                       </TabsTrigger>
                       <TabsTrigger
                         value="posts"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none text-gray-500 px-4 py-2.5 text-sm font-medium"
+                        className="rounded-full px-4 py-2 text-sm font-medium cursor-pointer transition-colors border-none shadow-none bg-gray-100 text-gray-700 hover:bg-gray-200 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-none"
                       >
                         <Image className="h-4 w-4 mr-1.5" /> Posts
                       </TabsTrigger>
                       <TabsTrigger
                         value="similar"
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#1e3a5f] data-[state=active]:text-[#1e3a5f] data-[state=active]:shadow-none text-gray-500 px-4 py-2.5 text-sm font-medium"
+                        className="rounded-full px-4 py-2 text-sm font-medium cursor-pointer transition-colors border-none shadow-none bg-gray-100 text-gray-700 hover:bg-gray-200 data-[state=active]:bg-[#1B2A4A] data-[state=active]:text-white data-[state=active]:shadow-none"
                       >
                         <Users className="h-4 w-4 mr-1.5" /> Similar Accounts
                       </TabsTrigger>
@@ -2706,7 +2752,7 @@ export default function CreatorProfileModal({
                                         <span className="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
                                           {simPct.toFixed(0)}%
                                         </span>
-                                      ) : "—"}
+                                      ) : <span className="text-xs text-gray-400">N/A</span>}
                                     </td>
                                     <td className="py-2.5 px-3">
                                       {onOpenCreator ? (
