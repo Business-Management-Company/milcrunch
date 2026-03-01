@@ -72,7 +72,7 @@ import {
   Share2,
   Copy,
 } from "lucide-react";
-import { BRANCHES, CLAIMED_STATUS_OPTIONS, TYPE_OPTIONS } from "@/types/verification";
+import { BRANCHES, CLAIMED_STATUS_OPTIONS } from "@/types/verification";
 import type { VerificationRecord, EvidenceSource, RedFlag } from "@/types/verification";
 import {
   runVerificationPipeline,
@@ -395,8 +395,6 @@ export default function Verification() {
     notes: "",
     sourceUsername: "",
   });
-  const [addSpeakerOpen, setAddSpeakerOpen] = useState(false);
-  const [speakerForm, setSpeakerForm] = useState({ name: "", branch: "", rank: "", bio: "", verification_id: "", verification_status: "", photo_url: "" });
   const [inviteEventOpen, setInviteEventOpen] = useState(false);
   const [inviteRecord, setInviteRecord] = useState<VerificationRecord | null>(null);
   const [events, setEvents] = useState<{ id: string; title: string }[]>([]);
@@ -1261,24 +1259,6 @@ export default function Verification() {
     }
   };
 
-  const handleSaveSpeaker = async () => {
-    const { error } = await supabase.from("speakers").insert({
-      name: speakerForm.name,
-      branch: speakerForm.branch || null,
-      rank: speakerForm.rank || null,
-      bio: speakerForm.bio || null,
-      photo_url: speakerForm.photo_url || null,
-      verification_id: speakerForm.verification_id || null,
-      verification_status: speakerForm.verification_status || null,
-      review_status: "pending_review",
-    } as Record<string, unknown>);
-    if (error) {
-      toast.error("Failed to save speaker: " + error.message);
-    } else {
-      toast.success(`${speakerForm.name} added as speaker`);
-      setAddSpeakerOpen(false);
-    }
-  };
 
   const handleInviteToEvent = async (row: VerificationRecord) => {
     setInviteRecord(row);
@@ -1931,43 +1911,6 @@ export default function Verification() {
           )}
         </CardContent>
       </Card>
-
-      {/* Add as Speaker Modal */}
-      <Dialog open={addSpeakerOpen} onOpenChange={setAddSpeakerOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Mic className="h-5 w-5" /> Add as Speaker</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Name</Label>
-              <Input value={speakerForm.name} onChange={(e) => setSpeakerForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Branch</Label>
-              <Input value={speakerForm.branch} onChange={(e) => setSpeakerForm((f) => ({ ...f, branch: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Type</Label>
-              <Select value={speakerForm.rank} onValueChange={(v) => setSpeakerForm((f) => ({ ...f, rank: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                <SelectContent>
-                  {TYPE_OPTIONS.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Bio</Label>
-              <Textarea value={speakerForm.bio} onChange={(e) => setSpeakerForm((f) => ({ ...f, bio: e.target.value }))} rows={3} />
-            </div>
-            <Button onClick={handleSaveSpeaker} className="w-full bg-[#1e3a5f] hover:bg-[#2d5282]">
-              <UserPlus className="h-4 w-4 mr-2" /> Save Speaker
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Creator Modal */}
       <Dialog open={editCreatorOpen} onOpenChange={setEditCreatorOpen}>
