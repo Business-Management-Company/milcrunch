@@ -639,14 +639,48 @@ export default function CreatorProfileModal({
 
   // ── Multi-platform enrichment: fetch TikTok, YouTube, etc. data ──
   // After IG enrichment is done, enrich other platforms the creator has (RAW, 0.03 credits each).
+  // Detects platforms from: creator card fields, enrichment result (creator_has, accounts, platform data keys).
   useEffect(() => {
     if (!enriched || !open || !creator) return;
     const handle = (creator.username ?? "").replace(/^@/, "").trim();
     if (!handle) return;
 
-    const otherPlatforms = (creator.socialPlatforms ?? creator.platforms ?? [])
-      .map((p: string) => p.toLowerCase())
-      .filter((p: string) => p !== "instagram");
+    const rt = enriched.result ?? {};
+    const detected = new Set<string>();
+
+    // 1. From creator card
+    const cardPlats = creator.socialPlatforms ?? creator.platforms;
+    if (Array.isArray(cardPlats)) {
+      for (const p of cardPlats) { if (typeof p === "string") detected.add(p.toLowerCase()); }
+    }
+
+    // 2. From enrichment result.creator_has boolean flags
+    const has = rt.creator_has as Record<string, boolean> | undefined;
+    if (has && typeof has === "object") {
+      for (const [k, v] of Object.entries(has)) {
+        if (v) detected.add(k.toLowerCase());
+      }
+    }
+
+    // 3. From enrichment result.accounts array
+    const accounts = rt.accounts as { platform?: string }[] | undefined;
+    if (Array.isArray(accounts)) {
+      for (const acc of accounts) {
+        if (acc.platform) detected.add(acc.platform.toLowerCase());
+      }
+    }
+
+    // 4. From enrichment result platform data keys
+    const KNOWN_PLATFORMS = ["tiktok", "youtube", "twitter", "facebook", "linkedin"];
+    for (const p of KNOWN_PLATFORMS) {
+      if ((rt as Record<string, unknown>)[p] && typeof (rt as Record<string, unknown>)[p] === "object") {
+        detected.add(p);
+      }
+    }
+
+    // Remove instagram and filter to only platforms we don't already have enrichments for
+    detected.delete("instagram");
+    const otherPlatforms = Array.from(detected).filter(p => !platformEnrichments[p]);
     if (otherPlatforms.length === 0) return;
 
     const controller = new AbortController();
@@ -681,7 +715,8 @@ export default function CreatorProfileModal({
     });
 
     return () => { cancelled = true; controller.abort(); };
-  }, [enriched, open, creator?.id, creator?.socialPlatforms, creator?.platforms]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enriched, open, creator?.id]);
 
   /** Two-level response: result (top-level) + result.instagram (ig) */
   const resultTop = enriched?.result ?? {};
@@ -2251,6 +2286,11 @@ export default function CreatorProfileModal({
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
                           <Skeleton className="h-36 w-full animate-pulse" />
                         </div>
+                      ) : hasDataForPlatform ? (
+                        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Engagement Per Post</p>
+                          <p className="text-sm text-muted-foreground">Engagement data not available for {PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}.</p>
+                        </div>
                       ) : null}
 
                       {/* Follower Growth Chart */}
@@ -2280,6 +2320,11 @@ export default function CreatorProfileModal({
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
                           <Skeleton className="h-44 w-full" />
                         </div>
+                      ) : hasDataForPlatform ? (
+                        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">Follower Growth</p>
+                          <p className="text-sm text-muted-foreground">Growth data not available for {PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}.</p>
+                        </div>
                       ) : null}
 
                       {/* Estimated Income */}
@@ -2296,6 +2341,11 @@ export default function CreatorProfileModal({
                         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1117] p-4">
                           <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
                           <Skeleton className="h-4 w-full max-w-md" />
+                        </div>
+                      ) : hasDataForPlatform ? (
+                        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0F1117] p-4">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-2">Estimated Income</p>
+                          <p className="text-sm text-muted-foreground">Income data not available for {PLATFORM_LABELS[selectedPlatform] ?? selectedPlatform}.</p>
                         </div>
                       ) : null}
 
