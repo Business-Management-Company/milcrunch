@@ -3921,15 +3921,50 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
   const handleRegenBackground = async () => {
     setRegenBackground(true);
     try {
-      const results = await filterCriminalResults(
-        record.person_name,
-        record.claimed_branch ?? undefined,
-        ((record.pdl_data as any)?.location ?? []).map((l: { name: string }) => l.name).join(", ") || undefined
-      );
+      // Build location context safely (location may be string, array, or undefined)
+      const rawLoc = (record.pdl_data as any)?.location;
+      const locStr = typeof rawLoc === "string"
+        ? rawLoc
+        : Array.isArray(rawLoc)
+          ? rawLoc.map((l: any) => (typeof l === "string" ? l : l?.name ?? "")).filter(Boolean).join(", ")
+          : "";
+
+      // Run SERP searches (same queries as BackgroundReviewTab)
+      const locSuffix = locStr ? ` ${locStr}` : "";
+      const queries = [
+        `"${record.person_name}" controversy${locSuffix}`,
+        `"${record.person_name}" fraud OR scandal${locSuffix}`,
+        `"${record.person_name}" stolen valor`,
+      ];
+      const allResults: { title: string; url: string; snippet: string }[] = [];
+      const seen = new Set<string>();
+      for (const q of queries) {
+        const serpResults = await searchSerp(q);
+        for (const r of serpResults) {
+          const url = r.link ?? "";
+          if (seen.has(url)) continue;
+          seen.add(url);
+          allResults.push({ title: r.title ?? "No title", url, snippet: r.snippet ?? "" });
+        }
+      }
+
+      let filtered: any[] = [];
+      let summary = `No public concerns found for ${record.person_name}.`;
+      if (allResults.length > 0) {
+        const aiResult = await filterCriminalResults({
+          personName: record.person_name,
+          claimedBranch: record.claimed_branch ?? "Unknown",
+          locationContext: locStr,
+          results: allResults,
+        });
+        filtered = aiResult.filtered;
+        summary = aiResult.summary;
+      }
+
       const { data: row } = await supabase.from("verifications").select("manual_checks").eq("id", record.id).single();
       const mc = ((row?.manual_checks ?? {}) as Record<string, unknown>);
       await supabase.from("verifications").update({
-        manual_checks: { ...mc, background_review: { results, summary: results.length > 0 ? `${results.length} potential concerns found` : "No concerns identified", reviewed_at: new Date().toISOString() } },
+        manual_checks: { ...mc, background_review: { results: filtered, summary, reviewed_at: new Date().toISOString() } },
       }).eq("id", record.id);
       toast.success("Background review complete");
       onRefresh?.();
@@ -4721,7 +4756,7 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
               personName={record.person_name}
               recordId={record.id}
               claimedBranch={record.claimed_branch ?? undefined}
-              locationContext={locationStr || (pdlData?.location ? (pdlData.location as Array<{name: string}>).map((l) => l.name).join(", ") : undefined)}
+              locationContext={locationStr || (pdlData?.location ? (typeof pdlData.location === "string" ? pdlData.location : Array.isArray(pdlData.location) ? (pdlData.location as any[]).map((l: any) => typeof l === "string" ? l : l?.name ?? "").filter(Boolean).join(", ") : undefined) : undefined)}
               onRefresh={onRefresh}
             />
           </div>

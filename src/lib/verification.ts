@@ -352,7 +352,7 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
   try {
     const { json: data } = await fetchAnthropicWithRetry({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: "Please perform the verification analysis and provide your assessment." }],
     });
