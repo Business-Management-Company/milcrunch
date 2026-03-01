@@ -264,7 +264,7 @@ function getMetricsForPlatform(
   creatorCard?: Partial<CreatorCard> | null,
 ) {
   if (!rec) {
-    return { followers: 0, engagement: 0, mediaCount: 0, postsPerMonth: 0, avgLikes: 0, avgComments: 0, avgSpecial: 0, avgViews: 0 };
+    return { followers: 0, engagement: 0, mediaCount: 0, postsPerMonth: 0, avgLikes: 0, avgComments: 0, avgSpecial: 0, avgViews: 0, totalLikes: 0 };
   }
 
   const pick = (...vals: (number | unknown)[]): number => {
@@ -345,7 +345,12 @@ function getMetricsForPlatform(
     cardForFallback?.avgViews,
   );
 
-  return { followers: fc, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews };
+  const totalLikes = pick(
+    rec.total_likes, rec.total_like_count, rec.heart_count,
+    rec.total_hearts, rec.likes_count,
+  );
+
+  return { followers: fc, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews, totalLikes };
 }
 
 /* ── Enrichment cache (Supabase) ── */
@@ -837,16 +842,17 @@ export default function CreatorProfileModal({
             keys: Object.keys(pd).length,
           });
 
-          // Cross-contamination guard: if the returned data matches IG on 2+ metrics,
-          // it's likely the API returned IG data instead of the requested platform's data.
-          let igMatchCount = 0;
-          if (igFollowers > 0 && pdFollowers === igFollowers) igMatchCount++;
-          if (igEngagement > 0 && Math.abs(pdEngagement - igEngagement) < 0.01) igMatchCount++;
-          if (igMediaCount > 0 && pdMediaCount === igMediaCount) igMatchCount++;
+          // Cross-contamination guard: only skip if follower count exactly matches IG
+          // AND it's a meaningful number (>100). Engagement/mediaCount can legitimately
+          // be similar across platforms, so we only check the most reliable differentiator.
+          const isCrossContaminated = platform !== "instagram"
+            && igFollowers > 100
+            && pdFollowers === igFollowers;
 
-          if (platform !== "instagram" && igMatchCount >= 2) {
-            console.warn(`[Enrich] Multi-platform ${platform}: SKIPPING — ${igMatchCount} metrics match IG data (cross-contamination detected)`);
+          if (isCrossContaminated) {
+            console.warn(`[Enrich] Multi-platform ${platform}: SKIPPING — follower_count ${pdFollowers} matches IG exactly (cross-contamination)`);
           } else {
+            console.log(`[Enrich] Multi-platform ${platform}: ACCEPTED — followers=${pdFollowers}, engagement=${pdEngagement.toFixed(2)}, posts=${pdMediaCount}`);
             setPlatformEnrichments(prev => ({ ...prev, [platform]: pd }));
           }
         } else {
@@ -1384,7 +1390,7 @@ export default function CreatorProfileModal({
   // True when multi-platform enrichment is still fetching data for the selected platform
   const isPlatformStillLoading = selectedPlatform !== "instagram" && platformEnrichmentLoading.has(selectedPlatform);
 
-  const { followers, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews } = useMemo(() => {
+  const { followers, engagement, mediaCount, postsPerMonth, avgLikes, avgComments, avgSpecial, avgViews, totalLikes } = useMemo(() => {
     const metrics = getMetricsForPlatform(activePlatformRecord, selectedPlatform, creator);
     console.log(`[PlatformStats] ${selectedPlatform} result:`, metrics,
       "record keys:", activePlatformRecord ? Object.keys(activePlatformRecord).length : 0,
@@ -1473,25 +1479,6 @@ export default function CreatorProfileModal({
   const engagementDisplay = engagement != null && engagement > 0 ? engagement : null;
   const hasDataForPlatform = !!activePlatformRecord;
 
-  const recentPosts: PostItem[] = useMemo(() => {
-    const raw = activePlatformRecord?.post_data;
-    if (!Array.isArray(raw)) return [];
-    return raw.slice(0, 12).map((item: Record<string, unknown>) => {
-      const media = item.media as unknown[] | undefined;
-      const firstMedia = Array.isArray(media) && media[0] && typeof media[0] === "object" ? (media[0] as Record<string, unknown>) : undefined;
-      // Handle both nested engagement object and flat fields
-      const eng = (item.engagement && typeof item.engagement === "object") ? item.engagement as Record<string, unknown> : item;
-      return {
-        id: String(item.post_id ?? item.id ?? Math.random()),
-        thumbnail: (firstMedia?.url ?? item.thumbnail ?? item.image_url ?? item.cover ?? item.video_cover) as string | undefined,
-        caption: (item.caption ?? item.title ?? item.description) as string | undefined,
-        likes: Number(eng.likes ?? eng.like_count ?? eng.digg_count ?? 0),
-        comments: Number(eng.comments ?? eng.comment_count ?? 0),
-        date: (item.created_at ?? item.create_time ?? item.published_at) as string | undefined,
-        permalink: (item.post_url ?? item.video_url ?? item.url) as string | undefined,
-      };
-    });
-  }, [activePlatformRecord]);
 
   const similarAccounts: SimilarAccount[] = useMemo(() => {
     // Try multiple field names for lookalike/similar data
@@ -1682,12 +1669,8 @@ export default function CreatorProfileModal({
   }, [igRecord, tiktokData, youtubeData, twitterData, facebookData, linkedinData]);
 
   const filteredPosts = useMemo(() => {
-    // Use the selected platform's post data
-    let platRecord: Record<string, unknown> | undefined;
-    if (selectedPlatform === "tiktok") platRecord = tiktokData;
-    else if (selectedPlatform === "youtube") platRecord = youtubeData;
-    else if (selectedPlatform === "twitter") platRecord = twitterData;
-    else platRecord = igRecord;
+    // Use activePlatformRecord — single source of truth for the selected platform
+    const platRecord = activePlatformRecord;
 
     const raw = platRecord?.post_data;
     if (!Array.isArray(raw)) return [];
@@ -1743,7 +1726,7 @@ export default function CreatorProfileModal({
     });
     if (postContentType === "reels") return mapped.filter((p) => p.isReel);
     return mapped;
-  }, [selectedPlatform, igRecord?.post_data, tiktokData, youtubeData, twitterData, postContentType]);
+  }, [activePlatformRecord, postContentType]);
 
   const platformLink = useMemo(() => {
     const u = displayUsername || creator?.username;
@@ -1864,6 +1847,7 @@ export default function CreatorProfileModal({
                   src={modalAvatarSrc}
                   alt={displayName}
                   className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
                   onLoad={() => {
                     const key = displayUsername || creator?.username || "";
                     if (key && modalAvatarSrc) goodAvatarCache.set(key, modalAvatarSrc);
@@ -2328,6 +2312,7 @@ export default function CreatorProfileModal({
                   { label: statLabels.mediaCount, value: mediaCount ? formatNumber(mediaCount) : null },
                   { label: statLabels.postsPerMonth, value: postsPerMonth ? formatNumber(postsPerMonth) : null },
                   { label: statLabels.avgViews, value: avgViews ? formatNumber(avgViews) : null },
+                  ...(totalLikes > 0 ? [{ label: "Total Likes", value: formatNumber(totalLikes) }] : []),
                   { label: statLabels.avgSpecial, value: avgSpecial ? formatNumber(avgSpecial) : null },
                   { label: statLabels.avgLikes, value: avgLikes ? formatNumber(avgLikes) : null },
                   { label: statLabels.avgComments, value: avgComments ? formatNumber(avgComments) : null },
@@ -2678,8 +2663,8 @@ export default function CreatorProfileModal({
                               rel="noopener noreferrer"
                               className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117] hover:shadow-md transition-shadow group"
                             >
-                              {/* Thumbnail — aggressively crop to hide IG embed chrome (View Profile, audio bar) */}
-                              <div className="relative overflow-hidden" style={{ height: 200 }}>
+                              {/* Thumbnail — clean square image, no overlays */}
+                              <div className="relative overflow-hidden aspect-square">
                                 {post.thumbnail && !brokenPostImages.has(post.id) ? (
                                   <img
                                     src={post.thumbnail}
@@ -2687,7 +2672,6 @@ export default function CreatorProfileModal({
                                     loading="lazy"
                                     className="absolute inset-0 w-full h-full object-cover"
                                     referrerPolicy="no-referrer"
-                                    style={{ transform: "scale(1.35)", transformOrigin: "center 45%" }}
                                     onError={() => setBrokenPostImages(prev => new Set(prev).add(post.id))}
                                   />
                                 ) : (
@@ -2696,9 +2680,6 @@ export default function CreatorProfileModal({
                                     <span className="text-[10px] text-gray-400">No preview</span>
                                   </div>
                                 )}
-                                {/* Gradient masks to hide any remaining IG chrome at top/bottom edges */}
-                                <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/30 to-transparent pointer-events-none" />
-                                <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
                                 {/* Play button overlay for reels/videos */}
                                 {post.isReel && (
                                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -2714,15 +2695,18 @@ export default function CreatorProfileModal({
                                 )}
                               </div>
                               <div className="p-2.5">
+                                {post.date && (
+                                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">
+                                    {new Date(post.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                                  </p>
+                                )}
                                 <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[2rem]">{post.caption || "—"}</p>
-                                <div className="flex items-center justify-between mt-1.5 text-[11px] text-gray-400">
-                                  <div className="flex items-center gap-2">
-                                    {post.views != null && post.views > 0 && (
-                                      <span>{formatNumber(post.views)} views</span>
-                                    )}
-                                    <span>{formatNumber(post.likes)} likes</span>
-                                  </div>
-                                  {post.date && <span className="text-[10px]">{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
+                                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-400">
+                                  {post.views != null && post.views > 0 && (
+                                    <span>{formatNumber(post.views)} views</span>
+                                  )}
+                                  <span>{formatNumber(post.likes)} likes</span>
+                                  <span>{formatNumber(post.comments)} comments</span>
                                 </div>
                               </div>
                             </a>
