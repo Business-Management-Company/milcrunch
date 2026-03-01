@@ -345,11 +345,24 @@ export default function SocialMonitoring() {
         return;
       }
 
-      const msg = result.capped
-        ? `Found ${result.posts_found} matches — analyzed ${result.posts_analyzed} (capped). ${result.creators_scanned} creators scanned. 0 IC credits used.`
-        : `${result.posts_analyzed} new mentions found from ${result.creators_scanned} cached creators. 0 IC credits used.`;
+      // Show diagnostic info about Claude sentiment
+      const sentimentInfo = result.claude_calls > 0
+        ? `Claude: ${result.claude_calls} analyzed${result.claude_errors ? `, ${result.claude_errors} errors` : ""}`
+        : result.claude_skip_reason
+          ? `Sentiment skipped: ${result.claude_skip_reason}`
+          : "Sentiment: no API key configured";
 
-      toast.success(msg);
+      const msg = result.capped
+        ? `Found ${result.posts_found} matches — analyzed ${result.posts_analyzed} (capped). ${sentimentInfo}`
+        : `${result.posts_analyzed} new mentions found. ${sentimentInfo}`;
+
+      if (!result.anthropic_key_present) {
+        toast.error("Anthropic API key not found — set ANTHROPIC_API_KEY in Vercel env vars");
+      } else if (result.claude_errors > 0) {
+        toast.warning(msg);
+      } else {
+        toast.success(msg);
+      }
       await loadMentions();
     } catch (err) {
       toast.error("Scan request failed");

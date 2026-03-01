@@ -8,6 +8,8 @@ import { createClient } from "@supabase/supabase-js";
  * POST /api/social-listening-scan
  * Body: { monitor_id, action?: "scan" | "seed" | "ensure_tables" }
  */
+export const config = { maxDuration: 120 };
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -18,7 +20,11 @@ export default async function handler(req, res) {
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const anthropicKey =
-    process.env.ANTHROPIC_API_KEY || process.env.VITE_ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.VITE_ANTHROPIC_API_KEY ||
+    process.env.CLAUDE_API_KEY;
+
+  console.log("[scan] Anthropic key status:", anthropicKey ? `found (${anthropicKey.substring(0, 8)}...)` : "MISSING — sentiment analysis will be skipped");
 
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: "Supabase not configured" });
@@ -236,10 +242,20 @@ async function runScan(supabase, anthropicKey, monitorId, res) {
   let claudeCalls = 0;
 
   // 6. Batch Claude sentiment analysis (5 at a time, 500ms delay)
-  if (anthropicKey && toAnalyze.length > 0) {
+  let claudeErrors = 0;
+  let claudeSkipReason = null;
+
+  if (!anthropicKey) {
+    claudeSkipReason = "No ANTHROPIC_API_KEY env var — set ANTHROPIC_API_KEY or VITE_ANTHROPIC_API_KEY in Vercel";
+    console.warn("[scan] SKIPPING Claude sentiment:", claudeSkipReason);
+  } else if (toAnalyze.length === 0) {
+    claudeSkipReason = "No matches to analyze";
+  } else {
+    console.log(`[scan] Starting Claude sentiment for ${toAnalyze.length} mentions`);
     const batchSize = 5;
     for (let i = 0; i < toAnalyze.length; i += batchSize) {
       const batch = toAnalyze.slice(i, i + batchSize);
+      console.log(`[scan] Claude batch ${Math.floor(i / batchSize) + 1}: ${batch.map(m => m.creator_handle).join(", ")}`);
 
       const sentimentPromises = batch.map(async (match) => {
         try {
@@ -251,8 +267,8 @@ async function runScan(supabase, anthropicKey, monitorId, res) {
               "anthropic-version": "2023-06-01",
             },
             body: JSON.stringify({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 1024,
+              model: "claude-sonnet-4-5-20250929",
+              max_tokens: 512,
               system:
                 "You are a social media analyst for military influencer marketing. Analyze this creator's post for brand sentiment. Return ONLY valid JSON with no other text:\n{\n  \"sentiment\": \"positive\" | \"neutral\" | \"negative\" | \"mixed\",\n  \"sentiment_score\": 0.0 to 1.0,\n  \"is_sponsored\": true or false,\n  \"sponsorship_signals\": [],\n  \"themes\": [],\n  \"brand_context\": \"one sentence on how the brand is mentioned\"\n}",
               messages: [
@@ -267,22 +283,33 @@ async function runScan(supabase, anthropicKey, monitorId, res) {
           claudeCalls++;
 
           if (!resp.ok) {
-            console.error("[scan] Claude API error:", resp.status);
+            const errBody = await resp.text().catch(() => "");
+            console.error(`[scan] Claude API error for @${match.creator_handle}: HTTP ${resp.status}`, errBody.substring(0, 300));
+            claudeErrors++;
             return null;
           }
 
           const data = await resp.json();
           const text = data.content?.[0]?.text || "";
 
-          // Parse JSON — try trimming to last valid }
+          // Parse JSON — try trimming to extract JSON from potential surrounding text
           let parsed;
           try {
             parsed = JSON.parse(text);
           } catch {
-            const trimmed = text.slice(0, text.lastIndexOf("}") + 1);
-            try {
-              parsed = JSON.parse(trimmed);
-            } catch {
+            // Try extracting JSON object from text
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              try {
+                parsed = JSON.parse(jsonMatch[0]);
+              } catch {
+                console.warn(`[scan] Could not parse Claude response for @${match.creator_handle}:`, text.substring(0, 200));
+                claudeErrors++;
+                return null;
+              }
+            } else {
+              console.warn(`[scan] No JSON found in Claude response for @${match.creator_handle}:`, text.substring(0, 200));
+              claudeErrors++;
               return null;
             }
           }
@@ -300,7 +327,8 @@ async function runScan(supabase, anthropicKey, monitorId, res) {
             brand_context: parsed.brand_context || "",
           };
         } catch (err) {
-          console.error("[scan] Claude call failed:", err.message);
+          console.error(`[scan] Claude call failed for @${match.creator_handle}:`, err.message);
+          claudeErrors++;
           return null;
         }
       });
@@ -330,6 +358,7 @@ async function runScan(supabase, anthropicKey, monitorId, res) {
         await new Promise((r) => setTimeout(r, 500));
       }
     }
+    console.log(`[scan] Claude sentiment complete: ${claudeCalls} calls, ${claudeErrors} errors`);
   }
 
   // Default unscored mentions
@@ -367,11 +396,20 @@ async function runScan(supabase, anthropicKey, monitorId, res) {
       .eq("id", runId);
   }
 
+  const sentimentCounts = { positive: 0, negative: 0, neutral: 0, mixed: 0 };
+  for (const m of toAnalyze) {
+    sentimentCounts[m.sentiment] = (sentimentCounts[m.sentiment] || 0) + 1;
+  }
+
   return res.status(200).json({
     success: true,
     posts_found: matches.length,
     posts_analyzed: toAnalyze.length,
     claude_calls: claudeCalls,
+    claude_errors: claudeErrors,
+    claude_skip_reason: claudeSkipReason,
+    anthropic_key_present: !!anthropicKey,
+    sentiment_breakdown: sentimentCounts,
     ic_credits_used: 0,
     capped,
     duration_ms: duration,
