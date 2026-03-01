@@ -430,6 +430,7 @@ interface PostItem {
   caption?: string;
   likes?: number;
   comments?: number;
+  views?: number;
   date?: string;
   permalink?: string;
 }
@@ -822,21 +823,28 @@ export default function CreatorProfileModal({
         if (cancelled) return;
         if (data?.instagram && typeof data.instagram === "object") {
           const pd = data.instagram as Record<string, unknown>;
-          console.log(`[Enrich] Multi-platform ${platform} ALL KEYS:`, Object.keys(pd));
-          console.log(`[Enrich] Multi-platform ${platform} stats:`, {
+          const pdFollowers = Number(pd.follower_count ?? pd.subscriber_count ?? 0);
+          const igFollowers = Number(igRecord?.follower_count ?? 0);
+
+          console.log(`[Enrich] Multi-platform ${platform} data:`, {
             follower_count: pd.follower_count,
             subscriber_count: pd.subscriber_count,
-            engagement_percent: pd.engagement_percent,
-            engagement_rate: pd.engagement_rate,
-            media_count: pd.media_count,
-            video_count: pd.video_count,
-            avg_likes: pd.avg_likes,
-            avg_views: pd.avg_view_count ?? pd.avg_views,
+            engagement_percent: pd.engagement_percent ?? pd.engagement_rate,
             post_data: Array.isArray(pd.post_data) ? `${(pd.post_data as unknown[]).length} posts` : "none",
-            creator_follower_growth: pd.creator_follower_growth ? "YES" : "none",
-            income: pd.income ? "YES" : "none",
+            keys: Object.keys(pd).length,
+            igFollowers,
+            pdFollowers,
           });
-          setPlatformEnrichments(prev => ({ ...prev, [platform]: pd }));
+
+          // Sanity check: if returned data has the exact same follower count as IG,
+          // it's likely IG data leaked through the result.instagram fallback — skip it.
+          if (platform !== "instagram" && igFollowers > 0 && pdFollowers === igFollowers) {
+            console.warn(`[Enrich] Multi-platform ${platform}: SKIPPING — follower_count (${pdFollowers}) matches IG (${igFollowers}), likely cross-contaminated data`);
+          } else {
+            setPlatformEnrichments(prev => ({ ...prev, [platform]: pd }));
+          }
+        } else {
+          console.log(`[Enrich] Multi-platform ${platform}: enrichCreatorProfile returned ${data ? "no instagram field" : "null"}`);
         }
       } catch (err) {
         if ((err as Error)?.name !== "AbortError") {
@@ -867,7 +875,9 @@ export default function CreatorProfileModal({
   // Comprehensive enrichment debug logging
   useEffect(() => {
     if (!enriched) return;
-    console.log("FULL ENRICHMENT RESPONSE:", JSON.stringify(enriched, null, 2));
+    const handle = (creator?.username ?? "").replace(/^@/, "").toLowerCase();
+    // Always dump full enrichment JSON so the user can inspect the actual API response structure
+    console.log(`[Enrich] FULL ENRICHMENT JSON for @${handle}:`, JSON.stringify(enriched, null, 2));
     const rt = enriched.result ?? {};
     console.log("[Enrich] === FULL ENRICHMENT DEBUG ===");
     console.log("[Enrich] result keys:", Object.keys(rt));
@@ -1309,18 +1319,27 @@ export default function CreatorProfileModal({
     const _resultTop = enriched?.result ?? {};
     const _ig = enriched?.instagram;
     const _igRec = _ig && typeof _ig === "object" ? (_ig as Record<string, unknown>) : undefined;
-    const _tiktok = platformEnrichments.tiktok ?? (_resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined;
-    const _youtube = platformEnrichments.youtube ?? (_resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined;
-    const _twitter = platformEnrichments.twitter ?? (_resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined;
-    const _facebook = platformEnrichments.facebook ?? (_resultTop as Record<string, unknown>).facebook as Record<string, unknown> | undefined;
-    const _linkedin = platformEnrichments.linkedin ?? (_resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined;
 
-    if (selectedPlatform === "tiktok") return _tiktok;
-    if (selectedPlatform === "youtube") return _youtube;
-    if (selectedPlatform === "twitter") return _twitter;
-    if (selectedPlatform === "facebook") return _facebook;
-    if (selectedPlatform === "linkedin") return _linkedin;
-    return _igRec;
+    const platMap: Record<string, Record<string, unknown> | undefined> = {
+      instagram: _igRec,
+      tiktok: platformEnrichments.tiktok ?? (_resultTop as Record<string, unknown>).tiktok as Record<string, unknown> | undefined,
+      youtube: platformEnrichments.youtube ?? (_resultTop as Record<string, unknown>).youtube as Record<string, unknown> | undefined,
+      twitter: platformEnrichments.twitter ?? (_resultTop as Record<string, unknown>).twitter as Record<string, unknown> | undefined,
+      facebook: platformEnrichments.facebook ?? (_resultTop as Record<string, unknown>).facebook as Record<string, unknown> | undefined,
+      linkedin: platformEnrichments.linkedin ?? (_resultTop as Record<string, unknown>).linkedin as Record<string, unknown> | undefined,
+    };
+
+    const chosen = platMap[selectedPlatform] ?? _igRec;
+
+    console.log(`[activePlatformRecord] selectedPlatform="${selectedPlatform}"`,
+      "→ record:", chosen ? `YES (${Object.keys(chosen).length} keys, follower_count=${chosen.follower_count}, subscriber_count=${chosen.subscriber_count})` : "undefined",
+      "| sources:", {
+        fromEnrichments: !!platformEnrichments[selectedPlatform],
+        fromResultTop: !!((_resultTop as Record<string, unknown>)[selectedPlatform]),
+        isIgFallback: chosen === _igRec && selectedPlatform !== "instagram",
+      });
+
+    return chosen;
   }, [selectedPlatform, platformEnrichments, enriched]);
 
   const bio = useMemo(() => {
@@ -1677,6 +1696,7 @@ export default function CreatorProfileModal({
         caption: (item.caption ?? item.title ?? item.description) as string | undefined,
         likes: Number(engObj.likes ?? engObj.like_count ?? engObj.digg_count ?? 0),
         comments: Number(engObj.comments ?? engObj.comment_count ?? 0),
+        views: Number(engObj.view_count ?? engObj.views ?? engObj.play_count ?? engObj.impressions ?? 0) || undefined,
         date: (item.created_at ?? item.create_time ?? item.published_at) as string | undefined,
         permalink: (item.post_url ?? item.video_url ?? item.url) as string | undefined,
         isCarousel,
@@ -2620,20 +2640,17 @@ export default function CreatorProfileModal({
                               rel="noopener noreferrer"
                               className="rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-[#0F1117] hover:shadow-md transition-shadow group"
                             >
-                              {/* Thumbnail — crop top/bottom to hide IG reel chrome (View profile, audio bar) */}
-                              <div className="relative overflow-hidden" style={{ height: 180 }}>
+                              {/* Thumbnail — aggressively crop to hide IG embed chrome (View Profile, audio bar) */}
+                              <div className="relative overflow-hidden" style={{ height: 200 }}>
                                 {post.thumbnail && !brokenPostImages.has(post.id) ? (
                                   <img
                                     src={post.thumbnail}
                                     alt=""
                                     loading="lazy"
-                                    className="w-full h-full object-cover object-center"
+                                    className="absolute inset-0 w-full h-full object-cover"
                                     referrerPolicy="no-referrer"
-                                    style={{ transform: "scale(1.15)" }}
-                                    onError={() => {
-                                      console.log("[PostImages] Image failed to load:", post.thumbnail);
-                                      setBrokenPostImages(prev => new Set(prev).add(post.id));
-                                    }}
+                                    style={{ transform: "scale(1.35)", transformOrigin: "center 45%" }}
+                                    onError={() => setBrokenPostImages(prev => new Set(prev).add(post.id))}
                                   />
                                 ) : (
                                   <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center gap-1">
@@ -2641,24 +2658,31 @@ export default function CreatorProfileModal({
                                     <span className="text-[10px] text-gray-400">No preview</span>
                                   </div>
                                 )}
+                                {/* Gradient masks to hide any remaining IG chrome at top/bottom edges */}
+                                <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/30 to-transparent pointer-events-none" />
+                                <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                                {/* Play button overlay for reels/videos */}
+                                {post.isReel && (
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="h-10 w-10 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                                      <Video className="h-4 w-4 text-white ml-0.5" />
+                                    </div>
+                                  </div>
+                                )}
                                 {post.isCarousel && (
                                   <div className="absolute top-2 right-2 bg-black/60 rounded-full p-1">
                                     <ChevronRight className="h-3 w-3 text-white" />
-                                  </div>
-                                )}
-                                {post.isReel && (
-                                  <div className="absolute bottom-1.5 left-1.5 bg-black/60 rounded-md px-1.5 py-0.5 flex items-center gap-1">
-                                    <Video className="h-3 w-3 text-white" />
-                                    <span className="text-[10px] text-white font-medium">Reel</span>
                                   </div>
                                 )}
                               </div>
                               <div className="p-2.5">
                                 <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 min-h-[2rem]">{post.caption || "—"}</p>
                                 <div className="flex items-center justify-between mt-1.5 text-[11px] text-gray-400">
-                                  <div className="flex items-center gap-2.5">
+                                  <div className="flex items-center gap-2">
+                                    {post.views != null && post.views > 0 && (
+                                      <span>{formatNumber(post.views)} views</span>
+                                    )}
                                     <span>{formatNumber(post.likes)} likes</span>
-                                    <span>{formatNumber(post.comments)} comments</span>
                                   </div>
                                   {post.date && <span className="text-[10px]">{new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>}
                                 </div>
