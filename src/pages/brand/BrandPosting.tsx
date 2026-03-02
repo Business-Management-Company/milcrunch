@@ -104,7 +104,7 @@ type QueueSort = "scheduled" | "created";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type PostStatus = "idle" | "posting" | "success" | "failed";
-type ActiveTab = "queue" | "compose" | "calendar";
+type ActiveTab = "queue" | "compose" | "drafts" | "calendar";
 
 interface PlatformResult {
   status: PostStatus;
@@ -125,6 +125,16 @@ interface RecentPost {
   event_title?: string;
   campaign_id?: string;
   post_index?: number;
+}
+
+interface PostDraft {
+  id: string;
+  caption: string | null;
+  media_url: string | null;
+  platforms: string[];
+  scheduled_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 type PostType = "feed" | "story" | "reel";
@@ -270,6 +280,11 @@ export default function BrandPosting() {
   // Queue date-group collapse state (keys are date strings like "2026-03-05")
   const [collapsedDateGroups, setCollapsedDateGroups] = useState<Set<string>>(new Set());
 
+  // Drafts
+  const [drafts, setDrafts] = useState<PostDraft[]>([]);
+  const [loadingDrafts, setLoadingDrafts] = useState(true);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -352,6 +367,33 @@ export default function BrandPosting() {
   useEffect(() => {
     loadRecentPosts();
   }, [loadRecentPosts]);
+
+  // Load drafts
+  const loadDrafts = useCallback(async () => {
+    if (!userId) return;
+    setLoadingDrafts(true);
+    const { data } = await supabase
+      .from("post_drafts")
+      .select("id, caption, media_url, platforms, scheduled_at, created_at, updated_at")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+    setDrafts(
+      (data ?? []).map((r: any) => ({
+        id: r.id,
+        caption: r.caption,
+        media_url: r.media_url,
+        platforms: Array.isArray(r.platforms) ? r.platforms : [],
+        scheduled_at: r.scheduled_at,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      })),
+    );
+    setLoadingDrafts(false);
+  }, [userId]);
+
+  useEffect(() => {
+    loadDrafts();
+  }, [loadDrafts]);
 
   // Close send menu on outside click
   useEffect(() => {
@@ -531,23 +573,79 @@ export default function BrandPosting() {
     }
   };
 
-  // Save as draft
+  // Save as draft (to post_drafts table)
   const handleSaveDraft = async () => {
     if (!userId) return;
+    if (!caption.trim() && !filePreview) {
+      toast.error("Add a caption or media before saving.");
+      return;
+    }
     try {
-      await supabase.from("social_posts").insert({
-        user_id: userId,
-        caption: caption.trim(),
-        platforms: selectedPlatforms,
-        file_url: file?.name || null,
-        scheduled_time: null,
-        status: "draft",
-        results: {},
-      } as Record<string, unknown>);
-      toast.success("Draft saved!");
-      loadRecentPosts();
+      if (activeDraftId) {
+        // Update existing draft
+        await supabase
+          .from("post_drafts")
+          .update({
+            caption: caption.trim(),
+            media_url: filePreview || null,
+            platforms: selectedPlatforms,
+            scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
+            updated_at: new Date().toISOString(),
+          } as Record<string, unknown>)
+          .eq("id", activeDraftId);
+        toast.success("Draft updated!");
+      } else {
+        // Insert new draft
+        await supabase.from("post_drafts").insert({
+          user_id: userId,
+          caption: caption.trim(),
+          media_url: filePreview || null,
+          platforms: selectedPlatforms,
+          scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
+        } as Record<string, unknown>);
+        toast.success("Draft saved!");
+      }
+      loadDrafts();
     } catch {
       toast.error("Failed to save draft.");
+    }
+  };
+
+  // Load a draft into compose
+  const loadDraftIntoCompose = (draft: PostDraft) => {
+    setCaption(draft.caption || "");
+    setSelectedPlatforms(draft.platforms as UploadPostPlatform[]);
+    setFilePreview(draft.media_url || null);
+    setFile(null);
+    if (draft.scheduled_at) {
+      setSendMode("schedule");
+      setScheduledTime(new Date(draft.scheduled_at).toISOString().slice(0, 16));
+    } else {
+      setSendMode("now");
+      setScheduledTime("");
+    }
+    setActiveDraftId(draft.id);
+    setActiveTab("compose");
+  };
+
+  // Delete a draft
+  const handleDeleteDraft = async (draftId: string) => {
+    try {
+      await supabase.from("post_drafts").delete().eq("id", draftId);
+      if (activeDraftId === draftId) setActiveDraftId(null);
+      toast.success("Draft deleted.");
+      loadDrafts();
+    } catch {
+      toast.error("Failed to delete draft.");
+    }
+  };
+
+  // Auto-remove draft after posting/queueing
+  const clearActiveDraft = async () => {
+    if (activeDraftId) {
+      await supabase.from("post_drafts").delete().eq("id", activeDraftId);
+      setActiveDraftId(null);
+      loadDrafts();
     }
   };
 
@@ -645,6 +743,7 @@ export default function BrandPosting() {
 
       if (anySuccess) {
         toast.success(schedDate ? "Post scheduled!" : "Post published!");
+        clearActiveDraft();
       } else {
         toast.error(result.error || "Post failed. Check platform statuses.");
       }
@@ -675,6 +774,7 @@ export default function BrandPosting() {
     setAiCaptions([]);
     setAiContext("");
     setShowAiPrompt(false);
+    setActiveDraftId(null);
   };
 
   // Inline edit handlers
@@ -1217,6 +1317,7 @@ export default function BrandPosting() {
             {([
               { id: "queue" as const, label: "Queue", count: queuePosts.length },
               { id: "compose" as const, label: "Compose", count: null },
+              { id: "drafts" as const, label: "Drafts", count: drafts.length },
               { id: "calendar" as const, label: "Calendar", count: null },
             ]).map((tab) => (
               <button
@@ -1803,6 +1904,24 @@ export default function BrandPosting() {
 
               {/* Send actions */}
               <div className="flex items-center gap-3">
+                {/* Save Draft button */}
+                {sendMode !== "draft" && (
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    disabled={!caption.trim() && !filePreview}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all border",
+                      caption.trim() || filePreview
+                        ? "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        : "border-gray-200 dark:border-gray-700 text-gray-400 cursor-not-allowed",
+                    )}
+                  >
+                    <Save className="h-4 w-4" />
+                    {activeDraftId ? "Update Draft" : "Save Draft"}
+                  </button>
+                )}
+
                 <div className="relative flex-1" ref={sendMenuRef}>
                   <div className="flex">
                     <button
@@ -2055,7 +2174,117 @@ export default function BrandPosting() {
         )}
 
         {/* ============================================================ */}
-        {/* TAB 3: Calendar                                               */}
+        {/* TAB 3: Drafts                                                 */}
+        {/* ============================================================ */}
+        {activeTab === "drafts" && (
+          <div>
+            {loadingDrafts ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </div>
+            ) : drafts.length === 0 ? (
+              <div className="text-center py-16">
+                <Save className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No saved drafts.</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("compose")}
+                  className="mt-3 text-sm text-[#1e3a5f] font-medium hover:underline"
+                >
+                  Create a new post →
+                </button>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {drafts.map((draft) => {
+                  const platforms = draft.platforms ?? [];
+                  const primaryPlatform = platforms[0] || "instagram";
+                  const PrimaryIcon = getPlatformIcon(primaryPlatform);
+                  return (
+                    <div
+                      key={draft.id}
+                      className={cn(
+                        "bg-white dark:bg-[#1A1D27] rounded-xl border shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer group",
+                        activeDraftId === draft.id
+                          ? "border-[#1e3a5f] ring-1 ring-[#1e3a5f]/20"
+                          : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700",
+                      )}
+                      onClick={() => loadDraftIntoCompose(draft)}
+                    >
+                      {/* Media thumbnail */}
+                      {draft.media_url ? (
+                        <img
+                          src={draft.media_url}
+                          alt=""
+                          className="w-full h-32 object-cover"
+                        />
+                      ) : (
+                        <div
+                          className={cn(
+                            "w-full h-32 flex items-center justify-center",
+                            PLATFORM_GRADIENTS[primaryPlatform] || "bg-gray-100 dark:bg-gray-800",
+                          )}
+                        >
+                          {PrimaryIcon ? (
+                            <PrimaryIcon className="h-10 w-10 text-white/60" />
+                          ) : (
+                            <ImagePlus className="h-10 w-10 text-white/40" />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Content */}
+                      <div className="p-4">
+                        {/* Platforms */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                          {platforms.map((pid) => {
+                            const Icon = getPlatformIcon(pid);
+                            return Icon ? (
+                              <div key={pid} className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                <Icon className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                              </div>
+                            ) : null;
+                          })}
+                          {platforms.length === 0 && (
+                            <span className="text-[10px] text-gray-400">No platforms selected</span>
+                          )}
+                        </div>
+
+                        {/* Caption */}
+                        <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-3 leading-snug mb-3">
+                          {draft.caption || "No caption"}
+                        </p>
+
+                        {/* Footer: date + actions */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-400">
+                            {draft.scheduled_at
+                              ? `Scheduled: ${new Date(draft.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · ${new Date(draft.scheduled_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                              : `Saved ${new Date(draft.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDraft(draft.id);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Delete draft"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 4: Calendar                                               */}
         {/* ============================================================ */}
         {activeTab === "calendar" && (
           <div className="grid lg:grid-cols-3 gap-6">
