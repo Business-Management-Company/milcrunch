@@ -238,7 +238,8 @@ function ProspectusMedia({
       <img
         src={imageUrl}
         alt="Tab content"
-        className="w-full rounded-xl object-cover max-h-[500px]"
+        className="rounded-xl object-cover max-h-[500px] mx-auto"
+        style={{ maxWidth: 600, width: "100%", height: "auto" }}
       />
     );
   }
@@ -2373,10 +2374,11 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
               )}
               {hasImage && (
                 <div
-                  className="relative group cursor-pointer"
+                  className="relative group cursor-pointer mx-auto"
+                  style={{ maxWidth: 600 }}
                   onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
                 >
-                  <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" />
+                  <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
                   <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
                     <span className="text-white font-semibold text-sm flex items-center gap-2">
                       {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
@@ -2470,10 +2472,11 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
             )}
             {section.image_url && (
               <div
-                className="relative mb-5 group cursor-pointer"
+                className="relative mb-5 group cursor-pointer mx-auto"
+                style={{ maxWidth: 600 }}
                 onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
               >
-                <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" />
+                <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
                   <span className="text-white font-semibold text-sm flex items-center gap-2">
                     {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
