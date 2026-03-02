@@ -84,6 +84,7 @@ export default function SocialMonitoring() {
   const [mentionPlatformFilter, setMentionPlatformFilter] = useState("all");
   const [mentionSentimentFilter, setMentionSentimentFilter] = useState("all");
   const [alertDismissed, setAlertDismissed] = useState(false);
+  const [hiddenKeywords, setHiddenKeywords] = useState<Set<string>>(new Set());
   const [showComparison, setShowComparison] = useState(false);
   const [compareMonitorId, setCompareMonitorId] = useState<string | null>(null);
 
@@ -183,6 +184,7 @@ export default function SocialMonitoring() {
 
   // ── Derived keywords from active monitor (or all monitors) ──
   const keywords: TrackedKeyword[] = useMemo(() => {
+    const sanitizeHash = (h: string) => `#${h.replace(/^#+/, "")}`;
     if (isAll) {
       const result: TrackedKeyword[] = [];
       const seen = new Set<string>();
@@ -191,7 +193,7 @@ export default function SocialMonitoring() {
           if (!seen.has(`kw-${k}`)) { seen.add(`kw-${k}`); result.push({ id: `kw-${k}`, text: k, type: "keyword" }); }
         }
         for (const h of m.hashtags || []) {
-          if (!seen.has(`ht-${h}`)) { seen.add(`ht-${h}`); result.push({ id: `ht-${h}`, text: `#${h}`, type: "hashtag" }); }
+          if (!seen.has(`ht-${h}`)) { seen.add(`ht-${h}`); result.push({ id: `ht-${h}`, text: sanitizeHash(h), type: "hashtag" }); }
         }
       }
       return result;
@@ -202,7 +204,7 @@ export default function SocialMonitoring() {
       result.push({ id: `kw-${k}`, text: k, type: "keyword" });
     }
     for (const h of activeMonitor.hashtags || []) {
-      result.push({ id: `ht-${h}`, text: `#${h}`, type: "hashtag" });
+      result.push({ id: `ht-${h}`, text: sanitizeHash(h), type: "hashtag" });
     }
     return result;
   }, [activeMonitor, isAll, monitors]);
@@ -226,6 +228,21 @@ export default function SocialMonitoring() {
   const sentimentScore = totalMentions > 0 ? Math.round((positiveCount / totalMentions) * 100) : 0;
   const sentimentEmoji = sentimentScore > 70 ? "😊" : sentimentScore > 40 ? "😐" : "😟";
 
+  /* --- visible keywords for filtering chart --- */
+  const visibleKeywordTexts = useMemo(() => {
+    if (hiddenKeywords.size === 0) return null; // null = no filtering, show all
+    return new Set(
+      keywords.filter((k) => !hiddenKeywords.has(k.id)).map((k) => k.text.replace(/^#/, "").toLowerCase())
+    );
+  }, [keywords, hiddenKeywords]);
+
+  const chartMentions = useMemo(() => {
+    if (!visibleKeywordTexts) return mentions; // no filter active
+    return mentions.filter((m) =>
+      m.matched_keywords?.some((mk) => visibleKeywordTexts.has(mk.toLowerCase()))
+    );
+  }, [mentions, visibleKeywordTexts]);
+
   /* --- timeline chart data --- */
   const timelineData = useMemo(() => {
     const now = new Date();
@@ -236,14 +253,14 @@ export default function SocialMonitoring() {
       const key = format(subDays(end, i), "MMM d");
       days[key] = 0;
     }
-    mentions.forEach((m) => {
+    chartMentions.forEach((m) => {
       const key = format(new Date(m.detected_at), "MMM d");
       if (days[key] !== undefined) {
         days[key]++;
       }
     });
     return Object.entries(days).map(([day, count]) => ({ day, mentions: count }));
-  }, [mentions, rangeDays, customEnd, daySpan]);
+  }, [chartMentions, rangeDays, customEnd, daySpan]);
   const chartInterval = Math.max(0, Math.floor(timelineData.length / 12) - 1);
 
   /* --- platform breakdown --- */
@@ -430,11 +447,15 @@ export default function SocialMonitoring() {
     await loadMonitors();
   };
 
-  const KEYWORD_TYPE_STYLES: Record<string, string> = {
-    hashtag: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500",
-    mention: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    keyword: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-    brand: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  const KEYWORD_ACTIVE_STYLE = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+  const KEYWORD_HIDDEN_STYLE = "bg-gray-100 text-gray-400 dark:bg-gray-800/50 dark:text-gray-600";
+
+  const toggleKeywordVisibility = (id: string) => {
+    setHiddenKeywords((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
   const CHART_COLORS = ["#1e3a5f"];
@@ -666,22 +687,29 @@ export default function SocialMonitoring() {
             </div>
             <div className="flex flex-wrap gap-2">
               {keywords.map((k) => {
+                const isHidden = hiddenKeywords.has(k.id);
                 const count = mentions.filter((m) =>
                   m.matched_keywords?.some((mk) => mk.toLowerCase() === k.text.replace(/^#/, "").toLowerCase())
                 ).length;
                 return (
-                  <div key={k.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${KEYWORD_TYPE_STYLES[k.type]}`}>
+                  <button
+                    type="button"
+                    key={k.id}
+                    onClick={() => toggleKeywordVisibility(k.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${isHidden ? KEYWORD_HIDDEN_STYLE : KEYWORD_ACTIVE_STYLE}`}
+                    title={isHidden ? "Click to show in chart" : "Click to hide from chart"}
+                  >
                     {k.type === "hashtag" ? <Hash className="h-3 w-3" /> : k.type === "mention" ? <AtSign className="h-3 w-3" /> : null}
                     {k.text}
                     {count > 0 && (
-                      <Badge className="bg-white/60 dark:bg-black/20 text-current text-xs ml-0.5 px-1.5 py-0">{count}</Badge>
+                      <Badge className={`text-xs ml-0.5 px-1.5 py-0 ${isHidden ? "bg-gray-200/60 dark:bg-gray-700/40 text-gray-400 dark:text-gray-600" : "bg-white/60 dark:bg-black/20 text-current"}`}>{count}</Badge>
                     )}
                     {!isAll && (
-                      <button onClick={() => removeKeyword(k)} className="ml-0.5 opacity-50 hover:opacity-100">
+                      <span onClick={(e) => { e.stopPropagation(); removeKeyword(k); }} className="ml-0.5 opacity-50 hover:opacity-100">
                         <X className="h-3 w-3" />
-                      </button>
+                      </span>
                     )}
-                  </div>
+                  </button>
                 );
               })}
               {keywords.length === 0 && (
