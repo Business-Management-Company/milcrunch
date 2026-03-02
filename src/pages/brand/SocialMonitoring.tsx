@@ -151,7 +151,7 @@ export default function SocialMonitoring() {
       query = query.lte("detected_at", rangeEnd.toISOString());
     }
 
-    const { data, error } = await query.order("detected_at", { ascending: false });
+    const { data, error } = await query.order("detected_at", { ascending: false }).limit(5000);
 
     if (error) {
       console.error("[SocialMon] Mention load error:", error.message);
@@ -255,14 +255,13 @@ export default function SocialMonitoring() {
 
   /* --- brand names present in chart data (for multi-line) --- */
   const chartBrandNames = useMemo(() => {
-    if (!isAll) return [];
     const names = new Set<string>();
     chartMentions.forEach((m) => {
       const name = monitorNameMap[m.monitor_id];
       if (name) names.add(name);
     });
     return Array.from(names).sort();
-  }, [isAll, chartMentions, monitorNameMap]);
+  }, [chartMentions, monitorNameMap]);
 
   /* --- timeline chart data --- */
   const timelineData = useMemo(() => {
@@ -274,8 +273,8 @@ export default function SocialMonitoring() {
       dayKeys.push(format(subDays(end, i), "MMM d"));
     }
 
-    if (isAll && chartBrandNames.length > 0) {
-      // Per-brand breakdown
+    // Always build per-brand data when brands are available
+    if (chartBrandNames.length > 0) {
       const rows: Record<string, Record<string, number>> = {};
       for (const dk of dayKeys) {
         rows[dk] = {};
@@ -284,12 +283,12 @@ export default function SocialMonitoring() {
       chartMentions.forEach((m) => {
         const key = format(new Date(m.detected_at), "MMM d");
         const brand = monitorNameMap[m.monitor_id];
-        if (rows[key] && brand) rows[key][brand]++;
+        if (rows[key] && brand && rows[key][brand] !== undefined) rows[key][brand]++;
       });
       return dayKeys.map((day) => ({ day, ...rows[day] }));
     }
 
-    // Single-line (single monitor or no brand breakdown)
+    // Fallback: no brand mapping available
     const days: Record<string, number> = {};
     for (const dk of dayKeys) days[dk] = 0;
     chartMentions.forEach((m) => {
@@ -297,7 +296,7 @@ export default function SocialMonitoring() {
       if (days[key] !== undefined) days[key]++;
     });
     return dayKeys.map((day) => ({ day, mentions: days[day] }));
-  }, [chartMentions, rangeDays, customEnd, daySpan]);
+  }, [chartMentions, chartBrandNames, monitorNameMap, rangeDays, customEnd, daySpan]);
   const chartInterval = Math.max(0, Math.floor(timelineData.length / 12) - 1);
 
   /* --- platform breakdown --- */
@@ -771,7 +770,7 @@ export default function SocialMonitoring() {
             <Card className="rounded-xl border bg-white dark:bg-[#1A1D27] p-5 lg:col-span-2">
               <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-4">Mentions Timeline</h2>
               <ResponsiveContainer width="100%" height={260}>
-                {isAll && chartBrandNames.length > 1 ? (
+                {chartBrandNames.length > 1 ? (
                   <LineChart data={timelineData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                     <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={chartInterval} />
@@ -801,8 +800,8 @@ export default function SocialMonitoring() {
                   <AreaChart data={timelineData}>
                     <defs>
                       <linearGradient id="mentionsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366F1" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#6366F1" stopOpacity={0.02} />
+                        <stop offset="0%" stopColor={chartBrandNames.length === 1 ? (BRAND_COLORS[chartBrandNames[0]] || "#6366F1") : "#6366F1"} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={chartBrandNames.length === 1 ? (BRAND_COLORS[chartBrandNames[0]] || "#6366F1") : "#6366F1"} stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -814,12 +813,12 @@ export default function SocialMonitoring() {
                     />
                     <Area
                       type="monotone"
-                      dataKey="mentions"
-                      stroke="#6366F1"
+                      dataKey={chartBrandNames.length === 1 ? chartBrandNames[0] : "mentions"}
+                      stroke={chartBrandNames.length === 1 ? (BRAND_COLORS[chartBrandNames[0]] || "#6366F1") : "#6366F1"}
                       fill="url(#mentionsGradient)"
                       strokeWidth={2.5}
-                      name="Mentions"
-                      activeDot={{ r: 5, fill: "#6366F1", strokeWidth: 2, stroke: "#fff" }}
+                      name={chartBrandNames.length === 1 ? chartBrandNames[0] : "Mentions"}
+                      activeDot={{ r: 5, fill: chartBrandNames.length === 1 ? (BRAND_COLORS[chartBrandNames[0]] || "#6366F1") : "#6366F1", strokeWidth: 2, stroke: "#fff" }}
                     />
                   </AreaChart>
                 )}
