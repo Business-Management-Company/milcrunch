@@ -20,10 +20,13 @@ import {
 import {
   AreaChart,
   Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 import {
@@ -243,23 +246,57 @@ export default function SocialMonitoring() {
     );
   }, [mentions, visibleKeywordTexts]);
 
+  /* --- monitor ID → brand name lookup --- */
+  const monitorNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    monitors.forEach((m) => { map[m.id] = m.brand_name; });
+    return map;
+  }, [monitors]);
+
+  /* --- brand names present in chart data (for multi-line) --- */
+  const chartBrandNames = useMemo(() => {
+    if (!isAll) return [];
+    const names = new Set<string>();
+    chartMentions.forEach((m) => {
+      const name = monitorNameMap[m.monitor_id];
+      if (name) names.add(name);
+    });
+    return Array.from(names).sort();
+  }, [isAll, chartMentions, monitorNameMap]);
+
   /* --- timeline chart data --- */
   const timelineData = useMemo(() => {
     const now = new Date();
     const end = rangeDays === -1 && customEnd ? new Date(customEnd + "T23:59:59") : now;
     const dayCount = rangeDays > 0 ? rangeDays : rangeDays === 0 ? 1 : daySpan;
-    const days: Record<string, number> = {};
+    const dayKeys: string[] = [];
     for (let i = dayCount - 1; i >= 0; i--) {
-      const key = format(subDays(end, i), "MMM d");
-      days[key] = 0;
+      dayKeys.push(format(subDays(end, i), "MMM d"));
     }
+
+    if (isAll && chartBrandNames.length > 0) {
+      // Per-brand breakdown
+      const rows: Record<string, Record<string, number>> = {};
+      for (const dk of dayKeys) {
+        rows[dk] = {};
+        for (const bn of chartBrandNames) rows[dk][bn] = 0;
+      }
+      chartMentions.forEach((m) => {
+        const key = format(new Date(m.detected_at), "MMM d");
+        const brand = monitorNameMap[m.monitor_id];
+        if (rows[key] && brand) rows[key][brand]++;
+      });
+      return dayKeys.map((day) => ({ day, ...rows[day] }));
+    }
+
+    // Single-line (single monitor or no brand breakdown)
+    const days: Record<string, number> = {};
+    for (const dk of dayKeys) days[dk] = 0;
     chartMentions.forEach((m) => {
       const key = format(new Date(m.detected_at), "MMM d");
-      if (days[key] !== undefined) {
-        days[key]++;
-      }
+      if (days[key] !== undefined) days[key]++;
     });
-    return Object.entries(days).map(([day, count]) => ({ day, mentions: count }));
+    return dayKeys.map((day) => ({ day, mentions: days[day] }));
   }, [chartMentions, rangeDays, customEnd, daySpan]);
   const chartInterval = Math.max(0, Math.floor(timelineData.length / 12) - 1);
 
@@ -458,7 +495,17 @@ export default function SocialMonitoring() {
     });
   };
 
-  const CHART_COLORS = ["#1e3a5f"];
+  const BRAND_COLORS: Record<string, string> = {
+    "USAA": "#3B82F6",
+    "VetTix": "#10B981",
+    "Grunt Style": "#F59E0B",
+    "Nine Line Apparel": "#EF4444",
+    "Black Rifle Coffee": "#8B5CF6",
+    "Oscar Mike": "#EC4899",
+    "Ranger Up": "#14B8A6",
+    "Armed Forces Brewing": "#F97316",
+  };
+  const DEFAULT_BRAND_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
 
   return (
     <div className="space-y-6">
@@ -724,21 +771,58 @@ export default function SocialMonitoring() {
             <Card className="rounded-xl border bg-white dark:bg-[#1A1D27] p-5 lg:col-span-2">
               <h2 className="font-semibold text-sm text-gray-900 dark:text-white mb-4">Mentions Timeline</h2>
               <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={timelineData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={chartInterval} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="mentions"
-                    stroke={CHART_COLORS[0]}
-                    fill={CHART_COLORS[0]}
-                    fillOpacity={0.15}
-                    strokeWidth={2}
-                    name="Mentions"
-                  />
-                </AreaChart>
+                {isAll && chartBrandNames.length > 1 ? (
+                  <LineChart data={timelineData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={chartInterval} />
+                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid #e5e7eb" }}
+                      labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} iconType="circle" iconSize={8} />
+                    {chartBrandNames.map((name, i) => {
+                      const color = BRAND_COLORS[name] || DEFAULT_BRAND_COLORS[i % DEFAULT_BRAND_COLORS.length];
+                      return (
+                        <Line
+                          key={name}
+                          type="monotone"
+                          dataKey={name}
+                          stroke={color}
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={{ r: 5, fill: color, strokeWidth: 2, stroke: "#fff" }}
+                          name={name}
+                        />
+                      );
+                    })}
+                  </LineChart>
+                ) : (
+                  <AreaChart data={timelineData}>
+                    <defs>
+                      <linearGradient id="mentionsGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366F1" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#6366F1" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={chartInterval} />
+                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid #e5e7eb" }}
+                      labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="mentions"
+                      stroke="#6366F1"
+                      fill="url(#mentionsGradient)"
+                      strokeWidth={2.5}
+                      name="Mentions"
+                      activeDot={{ r: 5, fill: "#6366F1", strokeWidth: 2, stroke: "#fff" }}
+                    />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </Card>
 
