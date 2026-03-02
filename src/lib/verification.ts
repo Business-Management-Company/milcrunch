@@ -368,6 +368,79 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
   }
 }
 
+// --- Robust JSON parser for AI responses ---
+function parseAIJsonResponse(raw: string): { results?: unknown[]; summary?: string } {
+  let text = raw.trim();
+
+  // 1. Strip markdown code fences (```json ... ``` or ``` ... ```)
+  text = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?\s*```\s*$/i, "");
+
+  // 2. Try direct parse first
+  try {
+    return JSON.parse(text);
+  } catch {
+    // continue to repair strategies
+  }
+
+  console.warn("[Verification] JSON direct parse failed, attempting repairs. Tail:", text.slice(-200));
+
+  // 3. Try to extract the outermost JSON object from the text
+  const objectMatch = text.match(/\{[\s\S]*\}/);
+  if (objectMatch) {
+    try {
+      return JSON.parse(objectMatch[0]);
+    } catch {
+      // continue to more aggressive repair
+    }
+  }
+
+  // 4. Fix common AI JSON issues: trailing commas, unescaped newlines in strings
+  let repaired = text;
+
+  // Remove trailing commas before } or ]
+  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+  // Fix unescaped newlines inside string values (between quotes)
+  repaired = repaired.replace(/"([^"]*)\n([^"]*)"/g, (_, a, b) => `"${a}\\n${b}"`);
+
+  try {
+    return JSON.parse(repaired);
+  } catch {
+    // continue to truncation repair
+  }
+
+  // 5. Handle truncated response — trim trailing incomplete data and close brackets/braces
+  // Remove trailing incomplete string value (e.g. `"reasoning": "some text that got cut`)
+  repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"{}[\]]*$/, "");
+  // Also handle case where we're mid-string-value (unmatched quote)
+  const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
+  if (quoteCount % 2 !== 0) {
+    // Close the dangling string
+    repaired += '"';
+  }
+
+  // Count open vs close braces/brackets and close them
+  const openBraces = (repaired.match(/{/g) || []).length;
+  const closeBraces = (repaired.match(/}/g) || []).length;
+  const openBrackets = (repaired.match(/\[/g) || []).length;
+  const closeBrackets = (repaired.match(/]/g) || []).length;
+  for (let i = 0; i < openBrackets - closeBrackets; i++) repaired += "]";
+  for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
+
+  // Remove trailing commas one more time after our surgery
+  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+  try {
+    const result = JSON.parse(repaired);
+    console.log("[Verification] JSON repair succeeded");
+    return result;
+  } catch (e2) {
+    console.error("[Verification] All JSON repair strategies failed:", e2);
+    console.error("[Verification] Repaired text tail:", repaired.slice(-300));
+    throw new Error("Failed to parse AI response as JSON");
+  }
+}
+
 // --- Criminal History AI Filter ---
 export interface AIFilteredCriminalResult {
   title: string;
@@ -427,39 +500,19 @@ IMPORTANT: Keep your response concise. Each "reasoning" field should be 1-2 sent
   try {
     const { json: data } = await fetchAnthropicWithRetry({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [{ role: "user", content: prompt }],
     });
-    const text = ((data as any).content?.[0]?.text ?? "").trim();
-    console.log("[Verification] Criminal filter AI raw response length:", text.length, "stop_reason:", (data as any).stop_reason);
-    // Strip markdown code fences if present
-    const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+    const rawText = ((data as any).content?.[0]?.text ?? "").trim();
+    const stopReason = (data as any).stop_reason;
+    console.log("[Verification] Criminal filter AI raw response length:", rawText.length, "stop_reason:", stopReason);
 
-    let parsed: { results?: unknown[]; summary?: string };
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      // Attempt to repair truncated JSON by closing open brackets/braces
-      console.warn("[Verification] Criminal filter JSON parse failed, attempting repair. Raw tail:", jsonStr.slice(-200));
-      let repaired = jsonStr;
-      // Trim any trailing incomplete key-value pair (e.g. `"reasoning": "some text`)
-      repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"{}[\]]*$/, "");
-      // Count open vs close braces/brackets
-      const openBraces = (repaired.match(/{/g) || []).length;
-      const closeBraces = (repaired.match(/}/g) || []).length;
-      const openBrackets = (repaired.match(/\[/g) || []).length;
-      const closeBrackets = (repaired.match(/]/g) || []).length;
-      // Close any open brackets then braces
-      for (let i = 0; i < openBrackets - closeBrackets; i++) repaired += "]";
-      for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
-      try {
-        parsed = JSON.parse(repaired);
-        console.log("[Verification] Criminal filter JSON repair succeeded");
-      } catch (e2) {
-        console.error("[Verification] Criminal filter JSON repair also failed:", e2);
-        throw e2;
-      }
+    // If the response was cut off, log a warning
+    if (stopReason === "max_tokens") {
+      console.warn("[Verification] Criminal filter response was truncated (max_tokens reached)");
     }
+
+    const parsed = parseAIJsonResponse(rawText);
 
     return {
       filtered: (parsed.results ?? []).map((r: Record<string, unknown>) => ({
@@ -477,7 +530,7 @@ IMPORTANT: Keep your response concise. Each "reasoning" field should be 1-2 sent
     // Do NOT return unfiltered results as concerns — return empty with failure flag
     return {
       filtered: [],
-      summary: "Background review incomplete — AI analysis unavailable.",
+      summary: "Background review incomplete — AI analysis unavailable. Click Re-run Background Review to retry.",
       ai_failed: true,
     };
   }
