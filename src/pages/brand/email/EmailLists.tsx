@@ -18,6 +18,7 @@ import {
   getEmailLists, upsertEmailList, deleteEmailList,
   getContacts, getContactCount, addContact, addContactsBulk, deleteContact, unsubscribeContact,
 } from "@/lib/email-db";
+import { supabase } from "@/integrations/supabase/client";
 import { CONTACT_STATUS_COLORS } from "@/lib/email-types";
 import type { EmailList, EmailContact } from "@/lib/email-types";
 
@@ -92,6 +93,7 @@ const EmailLists = () => {
   const [contactLast, setContactLast] = useState("");
   const [addingContact, setAddingContact] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dirAvatars, setDirAvatars] = useState<Record<string, string>>({});
 
   // Load lists
   useEffect(() => {
@@ -123,7 +125,33 @@ const EmailLists = () => {
 
   const loadContacts = async (id: string) => {
     setLoadingContacts(true);
-    setContacts(await getContacts(id));
+    const contactData = await getContacts(id);
+    setContacts(contactData);
+
+    // Enrich avatars from directory_members by matching handles
+    const handles = contactData
+      .map(c => {
+        const u = (c.metadata as any)?.username;
+        return u && typeof u === "string" ? u.replace(/^@/, "") : null;
+      })
+      .filter((h): h is string => !!h);
+
+    if (handles.length > 0) {
+      const { data: members } = await (supabase as any)
+        .from("directory_members")
+        .select("creator_handle, avatar_url, ic_avatar_url")
+        .in("creator_handle", handles);
+
+      if (members && members.length > 0) {
+        const map: Record<string, string> = {};
+        for (const m of members) {
+          const url = m.avatar_url || m.ic_avatar_url;
+          if (url) map[String(m.creator_handle).toLowerCase()] = url;
+        }
+        setDirAvatars(map);
+      }
+    }
+
     setLoadingContacts(false);
   };
 
@@ -368,7 +396,9 @@ const EmailLists = () => {
                 {filteredContacts.map(c => {
                   const sc = CONTACT_STATUS_COLORS[c.status] || CONTACT_STATUS_COLORS.subscribed;
                   const m = c.metadata ?? {};
-                  const avatar = contactAvatarUrl(c);
+                  const metaAvatar = contactAvatarUrl(c);
+                  const handleKey = m.username ? String(m.username).replace(/^@/, "").toLowerCase() : null;
+                  const avatar = metaAvatar || (handleKey ? dirAvatars[handleKey] ?? null : null);
                   const handle = m.username ? `@${String(m.username).replace(/^@/, "")}` : null;
                   const followers = m.followers ? formatFollowerCount(m.followers) : null;
                   const engRate = m.engagement_rate ? `${Number(m.engagement_rate).toFixed(2)}%` : null;
