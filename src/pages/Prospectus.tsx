@@ -252,7 +252,7 @@ function ProspectusMedia({
         src={imageUrl}
         alt="Tab content"
         className="rounded-xl object-cover mx-auto"
-        style={{ maxWidth: "50%", height: "auto" }}
+        style={{ maxWidth: "100%", height: "auto" }}
       />
     );
   }
@@ -1391,6 +1391,23 @@ function ManageContentPanel({
                                         <img src={section.image_url} alt="Section image" className="w-full max-h-32 object-cover" />
                                       </div>
                                     )}
+                                    {section.image_url && (
+                                      <div className="mt-1.5">
+                                        <label className={cn("text-xs block mb-1", dark ? "text-gray-500" : "text-gray-400")}>Image Size</label>
+                                        <div className="flex items-center gap-1">
+                                          {(["25", "50", "75", "100"] as const).map((sz) => (
+                                            <button key={sz} type="button"
+                                              onClick={() => updateSection(tab, idx, "image_size", sz)}
+                                              className={cn("px-2.5 py-1 rounded text-xs font-medium border transition-colors",
+                                                (section.image_size || "100") === sz
+                                                  ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                                                  : dark ? "border-white/20 text-gray-400 hover:bg-white/5" : "border-gray-300 text-gray-500 hover:bg-gray-50")}>
+                                              {sz}%
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 {/* Video fields */}
@@ -1765,6 +1782,7 @@ interface SectionBlock {
   link_url?: string;
   link_label?: string;
   visible?: boolean;
+  image_size?: "25" | "50" | "75" | "100";
 }
 
 interface TabContent {
@@ -2390,7 +2408,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
               {hasImage && (
                 <div
                   className="relative group cursor-pointer mx-auto"
-                  style={{ maxWidth: "50%" }}
+                  style={{ maxWidth: `${section.image_size || "100"}%` }}
                   onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
                 >
                   <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
@@ -2488,7 +2506,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
             {section.image_url && (
               <div
                 className="relative mb-5 group cursor-pointer mx-auto"
-                style={{ maxWidth: "50%" }}
+                style={{ maxWidth: `${section.image_size || "100"}%` }}
                 onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
               >
                 <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
