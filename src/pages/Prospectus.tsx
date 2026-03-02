@@ -97,13 +97,25 @@ const TAB_KB_CATEGORY: Record<string, string> = {
 
 type VideoUrls = Record<string, string>;
 
-function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4"; embedUrl: string } | null {
+function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4" | "iframe"; embedUrl: string } | null {
   if (!url?.trim()) return null;
-  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  const trimmed = url.trim();
+
+  // Extract src from pasted iframe HTML (e.g. <iframe ... src="https://..." ...>)
+  const iframeSrcMatch = trimmed.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  const effectiveUrl = iframeSrcMatch ? iframeSrcMatch[1] : trimmed;
+
+  const ytMatch = effectiveUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) return { type: "youtube", embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?rel=0` };
-  const vimeoMatch = url.match(/(?:vimeo\.com\/)(\d+)/);
+  const vimeoMatch = effectiveUrl.match(/(?:vimeo\.com\/)(\d+)/);
   if (vimeoMatch) return { type: "vimeo", embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
-  if (/\.mp4(\?|$)/i.test(url) || /\.webm(\?|$)/i.test(url)) return { type: "mp4", embedUrl: url };
+  if (/\.mp4(\?|$)/i.test(effectiveUrl) || /\.webm(\?|$)/i.test(effectiveUrl)) return { type: "mp4", embedUrl: effectiveUrl };
+  // HeyGen, Loom, or any other https embed URL
+  if (/^https:\/\/.+\.(heygen|loom)\.com\//i.test(effectiveUrl)) return { type: "iframe", embedUrl: effectiveUrl };
+  // Generic: if user pasted an iframe tag, use the extracted src
+  if (iframeSrcMatch && /^https?:\/\//.test(effectiveUrl)) return { type: "iframe", embedUrl: effectiveUrl };
+  // Generic https URL that looks like an embed (contains /embed/ or /embeds/)
+  if (/^https:\/\/.+\/embeds?\//.test(effectiveUrl)) return { type: "iframe", embedUrl: effectiveUrl };
   return null;
 }
 
@@ -129,6 +141,10 @@ function ProspectusMedia({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [coverDismissed, setCoverDismissed] = useState(false);
+
+  // Reset cover when video URL changes
+  useEffect(() => { setCoverDismissed(false); }, [videoUrl]);
 
   // MP4 ended event
   useEffect(() => {
@@ -147,64 +163,58 @@ function ProspectusMedia({
 
     const handler = (e: MessageEvent) => {
       try {
-        // YouTube sends JSON with event "onStateChange", info.playerState 0 = ended
         if (typeof e.data === "string") {
           const msg = JSON.parse(e.data);
-          if (msg.event === "onStateChange" && msg.info === 0) {
-            onVideoEnded();
-          }
+          if (msg.event === "onStateChange" && msg.info === 0) onVideoEnded();
+          if (msg.event === "ended" || msg.method === "ended") onVideoEnded();
         }
-        // Vimeo sends JSON with event "ended"
-        if (typeof e.data === "string") {
-          const msg = JSON.parse(e.data);
-          if (msg.event === "ended" || msg.method === "ended") {
-            onVideoEnded();
-          }
-        }
-      } catch {
-        // Not a JSON message, ignore
-      }
+      } catch { /* Not JSON */ }
     };
     window.addEventListener("message", handler);
 
-    // Enable YouTube JS API and Vimeo event listening once iframe loads
     const iframe = iframeRef.current;
     if (iframe) {
       const onLoad = () => {
         try {
           if (parsed.type === "youtube") {
-            iframe.contentWindow?.postMessage(
-              JSON.stringify({ event: "listening", id: 1 }),
-              "*"
-            );
+            iframe.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
           }
           if (parsed.type === "vimeo") {
-            iframe.contentWindow?.postMessage(
-              JSON.stringify({ method: "addEventListener", value: "ended" }),
-              "*"
-            );
+            iframe.contentWindow?.postMessage(JSON.stringify({ method: "addEventListener", value: "ended" }), "*");
           }
-        } catch { /* cross-origin, ignored */ }
+        } catch { /* cross-origin */ }
       };
       iframe.addEventListener("load", onLoad);
-      return () => {
-        window.removeEventListener("message", handler);
-        iframe.removeEventListener("load", onLoad);
-      };
+      return () => { window.removeEventListener("message", handler); iframe.removeEventListener("load", onLoad); };
     }
     return () => window.removeEventListener("message", handler);
   }, [onVideoEnded, videoUrl]);
 
-  // Priority 1: Video
+  // Priority 1: Video (with optional cover image overlay)
   if (videoUrl) {
     const parsed = parseVideoEmbed(videoUrl);
     if (parsed) {
+      // Cover image: show on top of video, click to dismiss and reveal/play
+      if (imageUrl && !coverDismissed) {
+        return (
+          <div className="relative w-full aspect-video rounded-xl overflow-hidden cursor-pointer group" onClick={() => setCoverDismissed(true)}>
+            <img src={imageUrl} alt="Click to play" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <Play className="h-7 w-7 text-[#1e3a5f] ml-1" />
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       if (parsed.type === "mp4") {
         return (
           <video
             ref={videoRef}
             src={parsed.embedUrl}
             controls
+            autoPlay={coverDismissed}
             className="w-full aspect-video rounded-xl bg-black"
             preload="metadata"
           />
@@ -214,16 +224,19 @@ function ProspectusMedia({
       let embedSrc = parsed.embedUrl;
       if (parsed.type === "youtube") {
         embedSrc += (embedSrc.includes("?") ? "&" : "?") + "enablejsapi=1&origin=" + window.location.origin;
+        if (coverDismissed) embedSrc += "&autoplay=1";
       }
       if (parsed.type === "vimeo") {
         embedSrc += (embedSrc.includes("?") ? "&" : "?") + "api=1";
+        if (coverDismissed) embedSrc += "&autoplay=1";
       }
+      // iframe type (HeyGen, Loom, generic embeds) + YouTube + Vimeo
       return (
         <iframe
           ref={iframeRef}
           src={embedSrc}
           title="Video"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
           allowFullScreen
           className="w-full aspect-video rounded-xl"
           style={{ border: 0 }}
@@ -903,18 +916,20 @@ function ManageContentPanel({
 
                 {/* --- Video section --- */}
                 <p className={cn("text-xs font-medium mb-1 flex items-center gap-1", dark ? "text-gray-400" : "text-gray-500")}>
-                  <Video className="h-3 w-3" /> Video
+                  <Video className="h-3 w-3" /> Video / Embed
                 </p>
                 <input
                   type="text"
                   value={videoVal}
                   onChange={(e) => setVideoDraft((d) => ({ ...d, [tab]: e.target.value }))}
-                  placeholder="Paste URL or upload a file"
+                  placeholder="Paste embed URL, iframe code, or upload a file"
                   className={inputCls}
                 />
                 {videoVal && !isVideoUploading && (
                   <p className={cn("text-xs mt-1", parsed ? "text-emerald-500" : "text-amber-500")}>
-                    {parsed ? `${parsed.type.toUpperCase()} detected` : "Unrecognized URL format"}
+                    {parsed
+                      ? `${parsed.type === "iframe" ? "EMBED" : parsed.type.toUpperCase()} detected`
+                      : "Unrecognized format — paste an embed URL or iframe code"}
                   </p>
                 )}
                 {isVideoUploading && (
@@ -958,7 +973,7 @@ function ManageContentPanel({
                       <video src={parsed.embedUrl} controls className="w-full aspect-video bg-black" preload="metadata" />
                     ) : (
                       <iframe src={parsed.embedUrl} title={`${TAB_LABELS[tab]} preview`} className="w-full aspect-video" style={{ border: 0 }}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
                     )}
                   </div>
                 )}
@@ -2633,6 +2648,10 @@ export default function Prospectus() {
           seen.add(displayName);
           if (row.video_url) vMap[displayName] = row.video_url;
           if (row.image_url) iMap[displayName] = row.image_url;
+        }
+        // Default: HeyGen verification showcase if no video saved for Verification tab
+        if (!vMap["Verification"]) {
+          vMap["Verification"] = "https://app.heygen.com/embeds/51fc2e27463b41dfb43c9befc1706eff";
         }
         setVideoUrls(vMap);
         setImageUrls(iMap);
