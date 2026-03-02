@@ -710,19 +710,13 @@ export default function Verification() {
       let reclassified = 0;
       for (const row of rows) {
         const sources = (row.evidence_sources ?? []) as EvidenceSource[];
-        // Auto-detect type from AI analysis + evidence
+        // Auto-detect type from AI analysis + evidence — suggestion only, never overwrite claimed_status
         const detected = detectType(row.ai_analysis as string | null, sources);
         const updates: Record<string, unknown> = {};
-        let effectiveType = row.claimed_type ?? row.claimed_status ?? "";
+        const effectiveType = row.claimed_type ?? row.claimed_status ?? "";
         if (detected) {
-          // Only reclassify if currently "veteran" or empty — don't override manual corrections
-          const currentStatus = (row.claimed_status ?? "").toLowerCase();
-          if (!currentStatus || currentStatus === "veteran") {
-            updates.claimed_status = detected.claimedStatus;
-            updates.claimed_type = detected.claimedType;
-            effectiveType = detected.claimedStatus;
-            reclassified++;
-          }
+          reclassified++;
+          console.log(`[ReScore] ${row.id}: AI suggests "${detected.claimedType}" (current: "${row.claimed_status}") — stored as suggestion only`);
         }
         // Also auto-detect branch if missing
         if (!row.claimed_branch) {
@@ -788,10 +782,11 @@ export default function Verification() {
       const detectedBranch = detectBranch(result.aiAnalysis, result.evidenceSources);
       const finalBranch = addForm.claimedBranch || detectedBranch || null;
 
-      // Auto-detect type (spouse/family/veteran) from AI analysis + evidence
+      // Auto-detect type (spouse/family/veteran) from AI analysis + evidence — stored as suggestion only
       const detectedType = detectType(result.aiAnalysis, result.evidenceSources);
-      const finalStatus = detectedType?.claimedStatus ?? addForm.claimedStatus;
-      const finalType = detectedType?.claimedType ?? null;
+      // User's form selection ALWAYS takes priority — AI detection is stored as ai_suggested_type
+      const finalStatus = addForm.claimedStatus;
+      const finalType = addForm.claimedStatus || null;
 
       // If type changed, recompute score with correct type for proper scoring
       let finalScore = result.verificationScore;
@@ -831,6 +826,7 @@ export default function Verification() {
             youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
             career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
             social_profiles: result.socialVerification?.profiles ?? [],
+            ...(detectedType ? { ai_suggested_type: detectedType.claimedType, ai_suggested_status: detectedType.claimedStatus } : {}),
           },
           last_verified_at: new Date().toISOString(),
         })
@@ -4006,22 +4002,24 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
         socialProfiles: mc.social_profiles ?? undefined,
       });
       if (result && result !== "pending_retry") {
-        // Auto-detect type from new AI analysis + evidence
+        // Auto-detect type from new AI analysis + evidence — stored as suggestion, never overwrites claimed_status
         const detected = detectType(result, sources);
         const updates: Record<string, unknown> = { ai_analysis: result };
+        // Also auto-detect branch from new analysis (only if not already set)
+        const newBranch = detectBranch(result, sources);
+        if (newBranch && !record.claimed_branch) updates.claimed_branch = newBranch;
+        // Recompute score using the EXISTING claimed type (not AI suggestion)
+        const effectiveType = record.claimed_type ?? record.claimed_status ?? "";
+        const newScore = computeVerificationScore(0, sources, { hasUnitOrMOS: false, hasDates: false, hasAwards: false }, { claimedBranch: (updates.claimed_branch as string) ?? record.claimed_branch ?? undefined, claimedType: effectiveType, linkedinUrl: record.linkedin_url ?? undefined, pdlData: record.pdl_data });
+        updates.verification_score = newScore;
+        updates.status = recommendStatus(newScore, sources.some((s) => s.isRedFlag));
+        // Store AI suggestion in manual_checks for reference (not as the primary status)
         if (detected) {
-          updates.claimed_status = detected.claimedStatus;
-          updates.claimed_type = detected.claimedType;
-          // Also auto-detect branch from new analysis
-          const newBranch = detectBranch(result, sources);
-          if (newBranch && !record.claimed_branch) updates.claimed_branch = newBranch;
-          // Recompute score with corrected type
-          const newScore = computeVerificationScore(0, sources, { hasUnitOrMOS: false, hasDates: false, hasAwards: false }, { claimedBranch: (updates.claimed_branch as string) ?? record.claimed_branch ?? undefined, claimedType: detected.claimedStatus, linkedinUrl: record.linkedin_url ?? undefined, pdlData: record.pdl_data });
-          updates.verification_score = newScore;
-          updates.status = recommendStatus(newScore, sources.some((s) => s.isRedFlag));
+          const mc = ((record as any).manual_checks ?? {}) as Record<string, unknown>;
+          updates.manual_checks = { ...mc, ai_suggested_type: detected.claimedType, ai_suggested_status: detected.claimedStatus };
         }
         await supabase.from("verifications").update(updates).eq("id", record.id);
-        toast.success(`AI analysis completed${detected ? ` — reclassified as ${detected.claimedType}` : ""}`);
+        toast.success(`AI analysis completed${detected ? ` — AI suggests: ${detected.claimedType} (status not changed)` : ""}`);
         onRefresh?.();
       } else {
         toast.error("AI analysis still failing — Anthropic may be overloaded. Try again in a few minutes.");
@@ -4770,13 +4768,14 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
               onRefresh={onRefresh}
             />
           </div>
-          {/* Contact Information — collapsible accordion */}
-          <ContactInfoAccordion pdlData={pdlData} locationStr={locationStr} />
         </TabsContent>
 
       </Tabs>
 
-      {/* ── ASSIGNED EVENTS ACCORDION ── */}
+      {/* ── CONTACT INFORMATION ACCORDION — collapsed by default ── */}
+      <ContactInfoAccordion pdlData={pdlData} locationStr={locationStr} />
+
+      {/* ── ASSIGNED EVENTS ACCORDION — collapsed by default ── */}
       <AssignedEventsAccordion record={record} onInviteToEvent={onInviteToEvent} />
 
     </div>
