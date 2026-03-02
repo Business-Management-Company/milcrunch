@@ -3028,10 +3028,7 @@ export default function Prospectus() {
         {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Financial Model" && (
-          <>
-            <ContentTab dark={darkMode} tab="Financial Model" dbContent={tabContent["Financial Model"]} videoUrl={videoUrls["Financial Model"]} imageUrl={imageUrls["Financial Model"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />
-            <FinancialModelTab dark={darkMode} />
-          </>
+          <FinancialModelTab dark={darkMode} />
         )}
       </main>
 
