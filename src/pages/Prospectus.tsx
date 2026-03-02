@@ -2275,10 +2275,10 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
         )}
       </section>
 
-      {/* Backward compat: show prospectus_videos video below headline if no VIDEO block exists */}
-      {!hasVideoBlock && videoUrl && (
+      {/* Show prospectus_videos media (video or fallback image) below headline if no VIDEO block exists */}
+      {!hasVideoBlock && (videoUrl || imageUrl) && (
         <div className="rounded-xl overflow-hidden max-w-3xl mx-auto">
-          <ProspectusMedia videoUrl={videoUrl} dark={dark} isSuperAdmin={false} onVideoEnded={onVideoEnded} />
+          <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} onVideoEnded={onVideoEnded} />
         </div>
       )}
 
