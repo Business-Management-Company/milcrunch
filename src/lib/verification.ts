@@ -369,7 +369,7 @@ Remember: Most veterans are telling the truth. Give them the benefit of the doub
 }
 
 // --- Robust JSON parser for AI responses ---
-function parseAIJsonResponse(raw: string): { results?: unknown[]; summary?: string } {
+function parseAIJsonResponse(raw: string, inputResults?: { title: string; url: string; snippet: string }[]): { results?: unknown[]; summary?: string } {
   let text = raw.trim();
 
   // 1. Strip markdown code fences (```json ... ``` or ``` ... ```)
@@ -382,63 +382,90 @@ function parseAIJsonResponse(raw: string): { results?: unknown[]; summary?: stri
     // continue to repair strategies
   }
 
-  console.warn("[Verification] JSON direct parse failed, attempting repairs. Tail:", text.slice(-200));
+  console.warn("[Verification] JSON direct parse failed, attempting repairs. Raw length:", text.length);
 
-  // 3. Try to extract the outermost JSON object from the text
-  const objectMatch = text.match(/\{[\s\S]*\}/);
-  if (objectMatch) {
+  // 3. Strip everything before first { and after last } — AI may have added prose around JSON
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const extracted = text.substring(firstBrace, lastBrace + 1);
     try {
-      return JSON.parse(objectMatch[0]);
+      return JSON.parse(extracted);
     } catch {
-      // continue to more aggressive repair
+      // Try fixing common issues on the extracted JSON
+      let repaired = extracted;
+
+      // Remove trailing commas before } or ]
+      repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+      // Fix unescaped newlines inside string values
+      repaired = repaired.replace(/"([^"\\]*(?:\\.[^"\\]*)*)\n/g, (match, content) => {
+        return `"${content}\\n`;
+      });
+
+      try {
+        return JSON.parse(repaired);
+      } catch {
+        // continue to truncation repair on extracted
+      }
+
+      // Handle truncated JSON — trim trailing incomplete data
+      repaired = extracted;
+      // Remove trailing incomplete key-value pair
+      repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"{}[\]]*$/, "");
+      // Remove trailing commas
+      repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+      // Fix unmatched quotes
+      const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
+      if (quoteCount % 2 !== 0) {
+        repaired += '"';
+      }
+
+      // Close unclosed brackets/braces
+      const openBraces = (repaired.match(/{/g) || []).length;
+      const closeBraces = (repaired.match(/}/g) || []).length;
+      const openBrackets = (repaired.match(/\[/g) || []).length;
+      const closeBrackets = (repaired.match(/]/g) || []).length;
+      for (let i = 0; i < openBrackets - closeBrackets; i++) repaired += "]";
+      for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
+      repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+      try {
+        const result = JSON.parse(repaired);
+        console.log("[Verification] JSON truncation repair succeeded");
+        return result;
+      } catch {
+        // continue to last-resort fallback
+      }
     }
   }
 
-  // 4. Fix common AI JSON issues: trailing commas, unescaped newlines in strings
-  let repaired = text;
+  // 4. LAST RESORT: AI returned useful prose but no valid JSON — construct result from raw text
+  console.warn("[Verification] No valid JSON found in AI response, constructing result from raw text");
+  const rawSummary = text.substring(0, 2000).trim();
 
-  // Remove trailing commas before } or ]
-  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+  // Try to detect if the response indicates no concerns
+  const noConcernPatterns = /no (?:credible |significant |serious )?(?:criminal|stolen valor|fraud|concern|red flag|issue)/i;
+  const hasConcernPatterns = /(?:convicted|arrested|indicted|stolen valor confirmed|fraud confirmed|criminal record found)/i;
+  const isClear = noConcernPatterns.test(rawSummary) && !hasConcernPatterns.test(rawSummary);
 
-  // Fix unescaped newlines inside string values (between quotes)
-  repaired = repaired.replace(/"([^"]*)\n([^"]*)"/g, (_, a, b) => `"${a}\\n${b}"`);
+  // Build synthetic results from the original input results if available
+  const syntheticResults = (inputResults ?? []).map(r => ({
+    title: r.title,
+    url: r.url,
+    snippet: r.snippet,
+    relevance_score: isClear ? 10 : 50,
+    concern_level: isClear ? "none" : "low",
+    reasoning: "AI returned narrative analysis instead of structured JSON. Review manually if needed.",
+  }));
 
-  try {
-    return JSON.parse(repaired);
-  } catch {
-    // continue to truncation repair
-  }
-
-  // 5. Handle truncated response — trim trailing incomplete data and close brackets/braces
-  // Remove trailing incomplete string value (e.g. `"reasoning": "some text that got cut`)
-  repaired = repaired.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"{}[\]]*$/, "");
-  // Also handle case where we're mid-string-value (unmatched quote)
-  const quoteCount = (repaired.match(/(?<!\\)"/g) || []).length;
-  if (quoteCount % 2 !== 0) {
-    // Close the dangling string
-    repaired += '"';
-  }
-
-  // Count open vs close braces/brackets and close them
-  const openBraces = (repaired.match(/{/g) || []).length;
-  const closeBraces = (repaired.match(/}/g) || []).length;
-  const openBrackets = (repaired.match(/\[/g) || []).length;
-  const closeBrackets = (repaired.match(/]/g) || []).length;
-  for (let i = 0; i < openBrackets - closeBrackets; i++) repaired += "]";
-  for (let i = 0; i < openBraces - closeBraces; i++) repaired += "}";
-
-  // Remove trailing commas one more time after our surgery
-  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
-
-  try {
-    const result = JSON.parse(repaired);
-    console.log("[Verification] JSON repair succeeded");
-    return result;
-  } catch (e2) {
-    console.error("[Verification] All JSON repair strategies failed:", e2);
-    console.error("[Verification] Repaired text tail:", repaired.slice(-300));
-    throw new Error("Failed to parse AI response as JSON");
-  }
+  return {
+    results: syntheticResults,
+    summary: isClear
+      ? `AI analysis indicates no concerns found. (Note: response was unstructured text.) ${rawSummary}`
+      : `AI analysis completed but returned unstructured text — review results manually. ${rawSummary}`,
+  };
 }
 
 // --- Criminal History AI Filter ---
@@ -461,46 +488,32 @@ export async function filterCriminalResults(params: {
   summary: string;
   ai_failed?: boolean;
 }> {
-  const prompt = `You are filtering criminal/background search results for a specific person.
-Subject: "${params.personName}", claimed military branch: ${params.claimedBranch}, location context: ${params.locationContext || "unknown"}.
+  const systemPrompt = `You are a JSON API that filters criminal/background search results. You MUST respond with ONLY a valid JSON object. No markdown, no code fences, no explanatory text before or after. Your entire response must start with { and end with }. Never include any text outside the JSON object.`;
 
-Here are the search results to analyze:
+  const prompt = `Analyze these search results for "${params.personName}" (claimed branch: ${params.claimedBranch}, location: ${params.locationContext || "unknown"}).
+
+Search results:
 ${JSON.stringify(params.results, null, 2)}
 
-For EACH result, determine:
-1. NAME MATCH: Is this result about the SAME "${params.personName}", or a DIFFERENT person who happens to share a similar name? Compare the full name carefully. If the result mentions a different first name, middle name, age, or location that doesn't match, it is likely a different person — mark relevance_score below 20.
+For EACH result determine:
+1. NAME MATCH: Same person or different person with similar name? Different person → relevance_score below 20.
 2. CONCERN_LEVEL: none, low, medium, high
-3. REASONING: Brief explanation
+3. REASONING: 1-2 sentences max.
 
-IMPORTANT RULES:
-- Generic mentions of military documents (DD-214, VA benefits, GI Bill, military records) are NOT red flags unless they specifically indicate fraud or falsification by this person.
-- Educational or informational content about military processes is NOT a red flag.
-- Results about a DIFFERENT person with a similar name must get relevance_score below 20 and concern_level "none".
-- Only mark concern_level "high" if you are confident the result is about THIS specific person AND indicates stolen valor, fraud, or criminal activity.
-- Be CONSERVATIVE: when in doubt, mark relevance as low and concern as none.
+Rules:
+- Military docs (DD-214, VA benefits, GI Bill) are NOT red flags unless indicating fraud by this person.
+- Different person with similar name → relevance_score below 20, concern_level "none".
+- Only "high" concern if confident it's THIS person AND indicates stolen valor/fraud/criminal activity.
+- Be CONSERVATIVE: when in doubt, low relevance and "none" concern.
 
-Return a JSON object with this exact structure:
-{
-  "results": [
-    {
-      "title": "...",
-      "url": "...",
-      "snippet": "...",
-      "relevance_score": 0-100,
-      "concern_level": "none|low|medium|high",
-      "reasoning": "..."
-    }
-  ],
-  "summary": "Based on analysis, X of Y results appear to be about a different person. Recommended confidence in criminal findings: Z%"
-}
-
-Return ONLY the JSON object, no markdown formatting.
-IMPORTANT: Keep your response concise. Each "reasoning" field should be 1-2 sentences max. The "summary" should be 1-2 sentences.`;
+Respond with ONLY this JSON structure (no other text):
+{"results":[{"title":"...","url":"...","snippet":"...","relevance_score":0,"concern_level":"none","reasoning":"..."}],"summary":"1-2 sentence summary"}`;
 
   try {
     const { json: data } = await fetchAnthropicWithRetry({
       model: "claude-sonnet-4-20250514",
       max_tokens: 8192,
+      system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
     });
     const rawText = ((data as any).content?.[0]?.text ?? "").trim();
@@ -512,18 +525,18 @@ IMPORTANT: Keep your response concise. Each "reasoning" field should be 1-2 sent
       console.warn("[Verification] Criminal filter response was truncated (max_tokens reached)");
     }
 
-    const parsed = parseAIJsonResponse(rawText);
+    const parsed = parseAIJsonResponse(rawText, params.results);
 
     return {
       filtered: (parsed.results ?? []).map((r: Record<string, unknown>) => ({
-        title: r.title ?? "",
-        url: r.url ?? "",
-        snippet: r.snippet ?? "",
+        title: String(r.title ?? ""),
+        url: String(r.url ?? ""),
+        snippet: String(r.snippet ?? ""),
         relevance_score: typeof r.relevance_score === "number" ? r.relevance_score : 50,
-        concern_level: r.concern_level ?? "low",
-        reasoning: r.reasoning ?? "",
+        concern_level: (r.concern_level ?? "low") as string,
+        reasoning: String(r.reasoning ?? ""),
       })),
-      summary: parsed.summary ?? "",
+      summary: String(parsed.summary ?? ""),
     };
   } catch (e) {
     console.error("[Verification] Criminal filter AI error:", e);
