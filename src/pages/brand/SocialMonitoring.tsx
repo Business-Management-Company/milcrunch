@@ -43,7 +43,7 @@ import {
   Database,
   Zap,
 } from "lucide-react";
-import { format, formatDistanceToNow, subDays } from "date-fns";
+import { format, formatDistanceToNow, subDays, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -60,6 +60,8 @@ import {
 import SocialAgentChat from "@/components/brand/SocialAgentChat";
 import TrendAlerts from "@/components/brand/TrendAlerts";
 import CompetitorComparison from "@/components/brand/CompetitorComparison";
+
+const ALL_BRANDS = "__all__";
 
 /* =========== COMPONENT =========== */
 
@@ -85,6 +87,12 @@ export default function SocialMonitoring() {
   const [showComparison, setShowComparison] = useState(false);
   const [compareMonitorId, setCompareMonitorId] = useState<string | null>(null);
 
+  // Date range filter
+  const [rangeDays, setRangeDays] = useState(30);
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+
+  const isAll = activeMonitorId === ALL_BRANDS;
   const activeMonitor = monitors.find((m) => m.id === activeMonitorId) || null;
 
   // ── Load monitors ──
@@ -102,11 +110,11 @@ export default function SocialMonitoring() {
     const typed = (data || []) as unknown as Monitor[];
     setMonitors(typed);
     if (typed.length > 0 && !activeMonitorId) {
-      setActiveMonitorId(typed[0].id);
+      setActiveMonitorId(ALL_BRANDS);
     }
   }, [activeMonitorId]);
 
-  // ── Load mentions for active monitor ──
+  // ── Load mentions for active monitor (or all) with date range ──
   const loadMentions = useCallback(async () => {
     if (!activeMonitorId) {
       setMentions([]);
@@ -114,11 +122,32 @@ export default function SocialMonitoring() {
       return;
     }
 
-    const { data, error } = await supabase
+    // Compute date range
+    const now = new Date();
+    let rangeStart: Date;
+    let rangeEnd: Date = now;
+    if (rangeDays === -1) {
+      rangeStart = customStart ? new Date(customStart) : subDays(now, 30);
+      rangeEnd = customEnd ? new Date(customEnd + "T23:59:59") : now;
+    } else if (rangeDays === 0) {
+      rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    } else {
+      rangeStart = subDays(now, rangeDays);
+    }
+
+    let query = supabase
       .from("social_mentions")
       .select("*")
-      .eq("monitor_id", activeMonitorId)
-      .order("detected_at", { ascending: false });
+      .gte("detected_at", rangeStart.toISOString());
+
+    if (activeMonitorId !== ALL_BRANDS) {
+      query = query.eq("monitor_id", activeMonitorId);
+    }
+    if (rangeDays === -1 && customEnd) {
+      query = query.lte("detected_at", rangeEnd.toISOString());
+    }
+
+    const { data, error } = await query.order("detected_at", { ascending: false });
 
     if (error) {
       console.error("[SocialMon] Mention load error:", error.message);
@@ -126,17 +155,20 @@ export default function SocialMonitoring() {
 
     setMentions((data || []) as unknown as Mention[]);
 
-    // Load last run
-    const { data: runs } = await supabase
-      .from("monitor_runs")
-      .select("*")
-      .eq("monitor_id", activeMonitorId)
-      .order("ran_at", { ascending: false })
-      .limit(1);
-
-    setLastRun(((runs || [])[0] as unknown as MonitorRun) || null);
+    // Load last run (only for single monitor)
+    if (activeMonitorId !== ALL_BRANDS) {
+      const { data: runs } = await supabase
+        .from("monitor_runs")
+        .select("*")
+        .eq("monitor_id", activeMonitorId)
+        .order("ran_at", { ascending: false })
+        .limit(1);
+      setLastRun(((runs || [])[0] as unknown as MonitorRun) || null);
+    } else {
+      setLastRun(null);
+    }
     setLoading(false);
-  }, [activeMonitorId]);
+  }, [activeMonitorId, rangeDays, customStart, customEnd]);
 
   useEffect(() => {
     loadMonitors();
@@ -149,8 +181,21 @@ export default function SocialMonitoring() {
     }
   }, [activeMonitorId, loadMentions]);
 
-  // ── Derived keywords from active monitor ──
+  // ── Derived keywords from active monitor (or all monitors) ──
   const keywords: TrackedKeyword[] = useMemo(() => {
+    if (isAll) {
+      const result: TrackedKeyword[] = [];
+      const seen = new Set<string>();
+      for (const m of monitors) {
+        for (const k of m.keywords || []) {
+          if (!seen.has(`kw-${k}`)) { seen.add(`kw-${k}`); result.push({ id: `kw-${k}`, text: k, type: "keyword" }); }
+        }
+        for (const h of m.hashtags || []) {
+          if (!seen.has(`ht-${h}`)) { seen.add(`ht-${h}`); result.push({ id: `ht-${h}`, text: `#${h}`, type: "hashtag" }); }
+        }
+      }
+      return result;
+    }
     if (!activeMonitor) return [];
     const result: TrackedKeyword[] = [];
     for (const k of activeMonitor.keywords || []) {
@@ -160,15 +205,19 @@ export default function SocialMonitoring() {
       result.push({ id: `ht-${h}`, text: `#${h}`, type: "hashtag" });
     }
     return result;
-  }, [activeMonitor]);
+  }, [activeMonitor, isAll, monitors]);
 
   /* --- derived stats --- */
   const totalMentions = mentions.length;
-  const firstMentionDate = mentions.length > 0
-    ? new Date(mentions[mentions.length - 1].detected_at)
-    : new Date();
-  const daysSinceFirst = Math.max(1, Math.ceil((Date.now() - firstMentionDate.getTime()) / (1000 * 60 * 60 * 24)));
-  const avgDaily = (totalMentions / daysSinceFirst).toFixed(1);
+  const daySpan = rangeDays > 0 ? rangeDays
+    : rangeDays === 0 ? 1
+    : Math.max(1, customStart && customEnd
+      ? differenceInDays(new Date(customEnd), new Date(customStart)) || 1
+      : 30);
+  const avgDaily = (totalMentions / daySpan).toFixed(1);
+  const rangeLabel = rangeDays === 0 ? "Today"
+    : rangeDays === -1 ? "Custom range"
+    : `Last ${rangeDays} days`;
   const estimatedReach = mentions.reduce((sum, m) => sum + (m.estimated_reach || 0), 0);
   const positiveCount = mentions.filter((m) => m.sentiment === "positive").length;
   const neutralCount = mentions.filter((m) => m.sentiment === "neutral").length;
@@ -180,9 +229,11 @@ export default function SocialMonitoring() {
   /* --- timeline chart data --- */
   const timelineData = useMemo(() => {
     const now = new Date();
+    const end = rangeDays === -1 && customEnd ? new Date(customEnd + "T23:59:59") : now;
+    const dayCount = rangeDays > 0 ? rangeDays : rangeDays === 0 ? 1 : daySpan;
     const days: Record<string, number> = {};
-    for (let i = 29; i >= 0; i--) {
-      const key = format(subDays(now, i), "MMM d");
+    for (let i = dayCount - 1; i >= 0; i--) {
+      const key = format(subDays(end, i), "MMM d");
       days[key] = 0;
     }
     mentions.forEach((m) => {
@@ -192,7 +243,8 @@ export default function SocialMonitoring() {
       }
     });
     return Object.entries(days).map(([day, count]) => ({ day, mentions: count }));
-  }, [mentions]);
+  }, [mentions, rangeDays, customEnd, daySpan]);
+  const chartInterval = Math.max(0, Math.floor(timelineData.length / 12) - 1);
 
   /* --- platform breakdown --- */
   const platformBreakdown = useMemo(() => {
@@ -403,13 +455,14 @@ export default function SocialMonitoring() {
                 <SelectValue placeholder="Select monitor" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_BRANDS}>All Brands</SelectItem>
                 {monitors.map((m) => (
                   <SelectItem key={m.id} value={m.id}>{m.brand_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
-          <Button onClick={handleScan} disabled={scanning || !activeMonitorId} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
+          <Button onClick={handleScan} disabled={scanning || !activeMonitorId || isAll} className="bg-[#1e3a5f] hover:bg-[#2d5282]">
             {scanning ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {scanning ? "Scanning..." : "Scan Now"}
           </Button>
@@ -425,6 +478,63 @@ export default function SocialMonitoring() {
         </div>
       </div>
 
+      {/* Date Range Filter */}
+      {activeMonitorId && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-medium text-muted-foreground mr-1">Range:</span>
+          {[
+            { label: "Today", days: 0 },
+            { label: "7D", days: 7 },
+            { label: "15D", days: 15 },
+            { label: "30D", days: 30 },
+            { label: "60D", days: 60 },
+            { label: "90D", days: 90 },
+            { label: "180D", days: 180 },
+          ].map(({ label, days }) => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => setRangeDays(days)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                rangeDays === days
+                  ? "bg-[#1e3a5f] text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setRangeDays(-1)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              rangeDays === -1
+                ? "bg-[#1e3a5f] text-white"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
+          >
+            Custom
+          </button>
+          {rangeDays === -1 && (
+            <div className="flex items-center gap-2 ml-2">
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="w-[140px] h-8 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="w-[140px] h-8 text-xs"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Scan Progress */}
       {scanning && scanProgress && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex items-center gap-3">
@@ -433,8 +543,8 @@ export default function SocialMonitoring() {
         </div>
       )}
 
-      {/* Zero-credit banner */}
-      {lastRun && (
+      {/* Summary banner */}
+      {(lastRun || (isAll && totalMentions > 0)) && !alertDismissed && (
         <div className="bg-gradient-to-r from-[#1e3a5f] to-[#8B7CF7] text-white rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 rounded-full p-2">
@@ -442,24 +552,24 @@ export default function SocialMonitoring() {
             </div>
             <div>
               <p className="font-semibold text-sm">
-                {activeMonitor?.brand_name} has {totalMentions} mention{totalMentions !== 1 ? "s" : ""} in the last 30 days
+                {isAll ? "All tracked brands" : activeMonitor?.brand_name} {totalMentions === 1 ? "has" : "have"} {totalMentions} mention{totalMentions !== 1 ? "s" : ""} ({rangeLabel.toLowerCase()})
               </p>
-              <p className="text-xs text-white/80 mt-0.5">
-                Last scan: {lastRun.posts_analyzed} mentions analyzed from cached data (0 API credits used)
-                {lastRun.duration_ms ? ` in ${(lastRun.duration_ms / 1000).toFixed(1)}s` : ""}
-              </p>
+              {lastRun && (
+                <p className="text-xs text-white/80 mt-0.5">
+                  Last scan: {lastRun.posts_analyzed} mentions analyzed from cached data (0 API credits used)
+                  {lastRun.duration_ms ? ` in ${(lastRun.duration_ms / 1000).toFixed(1)}s` : ""}
+                </p>
+              )}
             </div>
           </div>
-          {!alertDismissed && (
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setAlertDismissed(true)}>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setAlertDismissed(true)}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       )}
 
       {/* AI Agent Chat */}
-      {activeMonitorId && (
+      {activeMonitorId && !isAll && (
         <SocialAgentChat
           activeMonitorId={activeMonitorId}
           activeMonitor={activeMonitor}
@@ -496,7 +606,7 @@ export default function SocialMonitoring() {
                 <div>
                   <p className="text-xs text-muted-foreground">Total Mentions</p>
                   <p className="text-2xl font-bold">{totalMentions}</p>
-                  <p className="text-xs text-green-600">Last 30 days</p>
+                  <p className="text-xs text-green-600">{rangeLabel}</p>
                 </div>
               </div>
             </Card>
@@ -548,9 +658,11 @@ export default function SocialMonitoring() {
           <Card className="rounded-xl border bg-white dark:bg-[#1A1D27] p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-sm text-gray-900 dark:text-white">Tracked Keywords & Hashtags</h2>
-              <Button size="sm" variant="outline" onClick={() => setShowAddKeyword(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add Keyword
-              </Button>
+              {!isAll && (
+                <Button size="sm" variant="outline" onClick={() => setShowAddKeyword(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Keyword
+                </Button>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {keywords.map((k) => {
@@ -564,9 +676,11 @@ export default function SocialMonitoring() {
                     {count > 0 && (
                       <Badge className="bg-white/60 dark:bg-black/20 text-current text-xs ml-0.5 px-1.5 py-0">{count}</Badge>
                     )}
-                    <button onClick={() => removeKeyword(k)} className="ml-0.5 opacity-50 hover:opacity-100">
-                      <X className="h-3 w-3" />
-                    </button>
+                    {!isAll && (
+                      <button onClick={() => removeKeyword(k)} className="ml-0.5 opacity-50 hover:opacity-100">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -584,7 +698,7 @@ export default function SocialMonitoring() {
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={timelineData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={4} />
+                  <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={chartInterval} />
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
                   <Area
