@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Outlet, useSearchParams } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TopNav from "@/components/layout/TopNav";
 import Sidebar from "@/components/layout/Sidebar";
@@ -8,6 +8,8 @@ import CommandPalette from "@/components/CommandPalette";
 import FloatingAdminChat from "@/components/superadmin/FloatingAdminChat";
 import DemoBanner, { DEMO_BANNER_HEIGHT } from "@/components/demo/DemoBanner";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_WIDTH = 240;
@@ -20,6 +22,7 @@ export default function AppLayout() {
   const [isMobile, setIsMobile] = useState(false);
   const [embedBannerDismissed, setEmbedBannerDismissed] = useState(false);
   const { isDemo } = useDemoMode();
+  const { isSuperAdmin } = useAuth();
   const [searchParams] = useSearchParams();
   const isEmbed = searchParams.get("embed") === "true";
   const demoOffset = isDemo && !isEmbed ? DEMO_BANNER_HEIGHT : 0;
@@ -113,6 +116,20 @@ export default function AppLayout() {
       </main>
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       <FloatingAdminChat />
+      {isSuperAdmin && (
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success("Link copied!");
+          }}
+          title="Copy Deep Link"
+          className="fixed bottom-4 left-4 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#1e3a5f] text-white text-xs font-medium shadow-lg hover:bg-[#2d5282] transition-colors"
+        >
+          <LinkIcon className="h-3.5 w-3.5" />
+          Copy Link
+        </button>
+      )}
     </div>
   );
 }
