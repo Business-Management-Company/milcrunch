@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Loader2, Search, Users, X, Instagram, Youtube, Globe, ExternalLink } from "lucide-react";
+import { Download, Loader2, Search, Users, X, Instagram, Youtube, Globe, ExternalLink, Mail, Phone, MapPin, Link } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 /* ── Types ────────────────────────────────────────────────────────── */
@@ -18,6 +18,9 @@ interface Contact {
   creator_handle: string;
   avatar_url: string | null;
   email: string | null;
+  phone: string | null;
+  website: string | null;
+  location: string | null;
   platform: string;
   branch: string | null;
   bio: string | null;
@@ -84,15 +87,7 @@ const BRANCH_COLORS: Record<string, string> = {
 function ContactDrawer({ contact, open, onClose }: { contact: Contact | null; open: boolean; onClose: () => void }) {
   if (!contact) return null;
 
-  const email = contact.email || (contact as unknown as Record<string, unknown>).enrichment_data
-    ? (() => {
-        const ed = (contact as unknown as Record<string, unknown>).enrichment_data as Record<string, unknown> | undefined;
-        if (!ed) return null;
-        if (ed.email) return String(ed.email);
-        if (Array.isArray(ed.emails) && ed.emails.length) return String(ed.emails[0]);
-        return null;
-      })()
-    : null;
+  const hasContactInfo = contact.email || contact.phone || contact.website || contact.location;
 
   return (
     <>
@@ -164,16 +159,60 @@ function ContactDrawer({ contact, open, onClose }: { contact: Contact | null; op
             </div>
           </div>
 
-          {/* Info */}
+          {/* Contact Info */}
+          {hasContactInfo && (
+            <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Contact Info</h3>
+              <div className="space-y-2.5 text-sm">
+                {contact.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-gray-400 shrink-0" />
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium truncate"
+                    >
+                      {contact.email}
+                    </a>
+                  </div>
+                )}
+                {contact.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-gray-400 shrink-0" />
+                    <a
+                      href={`tel:${contact.phone}`}
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                    >
+                      {contact.phone}
+                    </a>
+                  </div>
+                )}
+                {contact.website && (
+                  <div className="flex items-center gap-3">
+                    <Link className="h-4 w-4 text-gray-400 shrink-0" />
+                    <a
+                      href={contact.website.startsWith("http") ? contact.website : `https://${contact.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium truncate flex items-center gap-1"
+                    >
+                      {contact.website.replace(/^https?:\/\//, "")} <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  </div>
+                )}
+                {contact.location && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+                    <span className="text-gray-900 dark:text-white font-medium">{contact.location}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Details */}
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Details</h3>
             <div className="space-y-2.5 text-sm">
-              {email && (
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400 w-20 shrink-0">Email</span>
-                  <span className="text-gray-900 dark:text-white font-medium truncate">{email}</span>
-                </div>
-              )}
               <div className="flex items-center gap-3">
                 <span className="text-gray-400 w-20 shrink-0">Handle</span>
                 <a
@@ -256,13 +295,34 @@ const EmailContacts = () => {
       if (seen.has(handle)) continue;
       seen.add(handle);
 
-      // Extract email from enrichment_data if available
+      // Extract contact fields from enrichment_data
       const ed = row.enrichment_data as Record<string, unknown> | null;
       let email: string | null = null;
+      let phone: string | null = null;
+      let website: string | null = null;
+      let location: string | null = null;
       if (ed) {
-        if (typeof ed.email === "string") email = ed.email;
+        // Email: check multiple possible fields
+        if (typeof ed.email === "string" && ed.email) email = ed.email;
         else if (Array.isArray(ed.emails) && ed.emails.length) email = String(ed.emails[0]);
-        else if (typeof ed.contact_email === "string") email = ed.contact_email;
+        else if (typeof ed.contact_email === "string" && ed.contact_email) email = ed.contact_email;
+        else if (typeof ed.public_email === "string" && ed.public_email) email = ed.public_email;
+
+        // Phone
+        if (typeof ed.phone === "string" && ed.phone) phone = ed.phone;
+        else if (Array.isArray(ed.phones) && ed.phones.length) phone = String(ed.phones[0]);
+
+        // Website
+        if (typeof ed.website === "string" && ed.website) website = ed.website;
+        else if (Array.isArray(ed.websites) && ed.websites.length) website = String(ed.websites[0]);
+        else if (typeof ed.external_url === "string" && ed.external_url) website = ed.external_url;
+
+        // Location
+        if (typeof ed.location === "string" && ed.location) location = ed.location;
+        else if (Array.isArray(ed.locations) && ed.locations.length) location = String(ed.locations[0]);
+        else if (typeof ed.city === "string" && ed.city) {
+          location = ed.city + (typeof ed.country === "string" ? `, ${ed.country}` : "");
+        }
       }
 
       deduped.push({
@@ -271,6 +331,9 @@ const EmailContacts = () => {
         creator_handle: row.creator_handle,
         avatar_url: row.avatar_url,
         email,
+        phone,
+        website,
+        location,
         platform: row.platform || "instagram",
         branch: row.branch,
         bio: row.bio,
