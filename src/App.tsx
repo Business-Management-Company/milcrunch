@@ -160,6 +160,7 @@ import KbArticlePage from "./pages/kb/KbArticle";
 import KbAdmin from "./pages/kb/KbAdmin";
 import SharedReport from "./pages/SharedReport";
 import PublicVerificationReport from "./pages/PublicVerificationReport";
+import CopyDeepLink from "./components/superadmin/CopyDeepLink";
 
 const queryClient = new QueryClient();
 
@@ -358,6 +359,7 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CopyDeepLink />
             <DevRoleSwitcher />
             </ListProvider>
           </DevAdminProvider>
