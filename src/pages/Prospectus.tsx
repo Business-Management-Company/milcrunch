@@ -1626,7 +1626,7 @@ function ManageContentPanel({
 /* Access Gate (always dark)                                           */
 /* ------------------------------------------------------------------ */
 
-function AccessGate({ onAccess }: { onAccess: () => void }) {
+function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => void }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
@@ -1634,31 +1634,35 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
 
   const submit = async () => {
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return;
-    setChecking(true);
-
-    // Allow any @recurrent.io email automatically
-    if (trimmed.endsWith("@recurrent.io")) {
-      setChecking(false);
-      sessionStorage.setItem(SESSION_KEY, "1");
-      onAccess();
-      return;
-    }
-
-    const { data } = await supabase
-      .from("prospectus_access")
-      .select("id")
-      .eq("email", trimmed)
-      .limit(1) as { data: { id: string }[] | null };
-    setChecking(false);
-    if (data && data.length > 0) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      onAccess();
-    } else {
+    if (!trimmed || !trimmed.includes("@")) {
       setError(true);
       setShake(true);
       setTimeout(() => setShake(false), 500);
+      return;
     }
+    setChecking(true);
+
+    // Create access log entry
+    const { data: logRow, error: logErr } = await supabase
+      .from("prospectus_access_log")
+      .insert({ email: trimmed })
+      .select("id")
+      .single();
+
+    setChecking(false);
+    if (logErr || !logRow) {
+      // If logging table doesn't exist yet, still let them in
+      console.warn("[Prospectus] access log insert failed:", logErr?.message);
+      sessionStorage.setItem(SESSION_KEY, "1");
+      sessionStorage.setItem("prospectus_email", trimmed);
+      onAccess(trimmed, "");
+      return;
+    }
+
+    sessionStorage.setItem(SESSION_KEY, "1");
+    sessionStorage.setItem("prospectus_email", trimmed);
+    sessionStorage.setItem("prospectus_log_id", logRow.id);
+    onAccess(trimmed, logRow.id);
   };
 
   return (
@@ -1709,7 +1713,7 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             />
             {error && (
               <p className="text-red-400 text-sm mt-2">
-                This email isn't on the approved list. Contact hello@milcrunch.com to request access.
+                Please enter a valid email address.
               </p>
             )}
           </div>
@@ -1720,16 +1724,15 @@ function AccessGate({ onAccess }: { onAccess: () => void }) {
             disabled={checking}
             className="w-full mt-4 px-6 py-3 rounded-xl bg-[#1e3a5f] hover:bg-[#2d5282] text-white font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {checking ? <><Loader2 className="h-4 w-4 animate-spin" /> Checking...</> : "Request Access"}
+            {checking ? <><Loader2 className="h-4 w-4 animate-spin" /> Verifying...</> : "Continue"}
           </button>
         </div>
 
         <p className="text-gray-600 text-xs mt-6">
-          Contact{" "}
+          Questions?{" "}
           <a href="mailto:hello@milcrunch.com" className="text-[#1e3a5f] hover:underline">
             hello@milcrunch.com
-          </a>{" "}
-          to request access.
+          </a>
         </p>
       </div>
 
@@ -2635,14 +2638,25 @@ export default function Prospectus() {
   const [gatingEnabled, setGatingEnabled] = useState(true);
   const [gatingLoaded, setGatingLoaded] = useState(false);
 
+  // Access logging
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessLogId, setAccessLogId] = useState("");
+  const sessionStartRef = useRef<number>(Date.now());
+  const tabsViewedRef = useRef<{ tab: string; at: string }[]>([]);
+
   const { isSuperAdmin } = useAuth();
 
   const darkMode =
     themeMode === "dark" || (themeMode === "system" && systemPrefersDark);
 
+  // Restore session from sessionStorage (returning users within same browser session)
   useEffect(() => {
     if (sessionStorage.getItem(SESSION_KEY) === "1") {
       setHasAccess(true);
+      const savedEmail = sessionStorage.getItem("prospectus_email") || "";
+      const savedLogId = sessionStorage.getItem("prospectus_log_id") || "";
+      if (savedEmail) setAccessEmail(savedEmail);
+      if (savedLogId) setAccessLogId(savedLogId);
     }
   }, []);
 
@@ -2770,6 +2784,33 @@ export default function Prospectus() {
     else if (gatingLoaded && gatingEnabled && !isSuperAdmin) setUnlockedUpTo(0);
   }, [isSuperAdmin, gatingEnabled, gatingLoaded, visibleTabs.length]);
 
+  // Load returning-user completions once email is known + gating loaded
+  useEffect(() => {
+    if (!accessEmail || !gatingLoaded || !gatingEnabled || isSuperAdmin) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("prospectus_completions")
+          .select("tab_name")
+          .eq("email", accessEmail);
+        if (data && data.length > 0) {
+          const completedTabs = data.map((r: { tab_name: string }) => r.tab_name);
+          // Find the highest completed tab index
+          let maxIdx = 0;
+          for (const t of completedTabs) {
+            const idx = visibleTabs.indexOf(t as TabId);
+            if (idx > maxIdx) maxIdx = idx;
+          }
+          // Unlock up to one past the last completed (so the next one is the frontier)
+          const unlockTo = Math.min(maxIdx + 1, visibleTabs.length - 1);
+          setUnlockedUpTo((prev) => Math.max(prev, unlockTo));
+        }
+      } catch {
+        // Table may not exist yet
+      }
+    })();
+  }, [accessEmail, gatingLoaded, gatingEnabled, isSuperAdmin, visibleTabs]);
+
   /** Unlock the next tab after the current one */
   const unlockNextTab = () => {
     const currentIdx = visibleTabs.indexOf(activeTab);
@@ -2778,8 +2819,80 @@ export default function Prospectus() {
       setUnlockedUpTo(next);
       setJustUnlocked(next);
       setTimeout(() => setJustUnlocked(null), 2000);
+
+      // Persist completion to prospectus_completions + update log row
+      if (accessEmail) {
+        const tabName = activeTab as string;
+        supabase
+          .from("prospectus_completions")
+          .upsert({ email: accessEmail, tab_name: tabName }, { onConflict: "email,tab_name" })
+          .then(({ error }) => { if (error) console.warn("[Prospectus] completions upsert:", error.message); });
+
+        if (accessLogId) {
+          supabase
+            .from("prospectus_access_log")
+            .select("tabs_completed")
+            .eq("id", accessLogId)
+            .single()
+            .then(({ data }) => {
+              const existing = Array.isArray(data?.tabs_completed) ? data.tabs_completed : [];
+              existing.push({ tab: tabName, at: new Date().toISOString() });
+              supabase
+                .from("prospectus_access_log")
+                .update({ tabs_completed: existing })
+                .eq("id", accessLogId)
+                .then(() => {});
+            });
+        }
+      }
     }
   };
+
+  // Track tab views — append to access log when active tab changes
+  useEffect(() => {
+    if (!accessLogId || !activeTab) return;
+    const entry = { tab: activeTab as string, at: new Date().toISOString() };
+    tabsViewedRef.current.push(entry);
+    // Update access log asynchronously
+    supabase
+      .from("prospectus_access_log")
+      .update({ tabs_viewed: tabsViewedRef.current })
+      .eq("id", accessLogId)
+      .then(() => {});
+  }, [activeTab, accessLogId]);
+
+  // beforeunload — record session_end + total_time_seconds
+  useEffect(() => {
+    if (!accessLogId) return;
+    const handleUnload = () => {
+      const elapsed = Math.round((Date.now() - sessionStartRef.current) / 1000);
+      const payload = JSON.stringify({
+        session_end: new Date().toISOString(),
+        total_time_seconds: elapsed,
+        tabs_viewed: tabsViewedRef.current,
+      });
+      // Use sendBeacon for reliability on tab close
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/prospectus_access_log?id=eq.${accessLogId}`;
+      navigator.sendBeacon(
+        url,
+        new Blob([payload], { type: "application/json" })
+      );
+      // sendBeacon doesn't support custom headers easily, so also try fetch as fallback
+      fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          "Prefer": "return=minimal",
+        },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [accessLogId]);
 
   // Reset scroll progress when active tab changes
   useEffect(() => {
@@ -2809,7 +2922,16 @@ export default function Prospectus() {
   }, [activeTab, hiddenTabs, visibleTabs, isSuperAdmin]);
 
   if (!hasAccess) {
-    return <AccessGate onAccess={() => setHasAccess(true)} />;
+    return (
+      <AccessGate
+        onAccess={(email, logId) => {
+          setAccessEmail(email);
+          setAccessLogId(logId);
+          sessionStartRef.current = Date.now();
+          setHasAccess(true);
+        }}
+      />
+    );
   }
 
   // Gating helpers for tab content

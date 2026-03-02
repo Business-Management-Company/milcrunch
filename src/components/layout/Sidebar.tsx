@@ -43,6 +43,7 @@ import {
   Target,
   UserPlus,
   MapPin,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 
@@ -175,6 +176,7 @@ const SUPER_ADMIN_SECTION: NavSection = {
     { href: "/admin/business-overview", label: "Business Overview", icon: Briefcase },
     { href: "/admin/tasks", label: "Task Board", icon: KanbanSquare },
     { href: "/admin/prospectus-access", label: "Prospectus Access", icon: ShieldCheck },
+    { href: "/admin/prospectus-access-log", label: "Access Log", icon: Eye },
     { href: "/prospectus", label: "View Prospectus", icon: FileText, external: true },
   ],
 };
