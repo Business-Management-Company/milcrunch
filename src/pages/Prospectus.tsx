@@ -383,6 +383,13 @@ function ManageContentPanel({
         }
       }
       setContentDraft(cd);
+      // Default all blocks collapsed so the editor is compact
+      const allKeys = new Set<string>();
+      for (const tab of CONTENT_TABS) {
+        const secs = cd[tab]?.sections ?? [];
+        secs.forEach((_, i) => allKeys.add(`${tab}-${i}`));
+      }
+      setCollapsedBlocks(allKeys);
     }
   }, [open, videos, images, tabContent]);
 
@@ -1130,9 +1137,19 @@ function ManageContentPanel({
                           <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold uppercase flex-shrink-0", blockTypeColor(blockType))}>
                             {blockType}
                           </span>
-                          <span className={cn("text-xs truncate flex-1 min-w-0", dark ? "text-gray-300" : "text-gray-700")}>
-                            {section.heading || (blockType === "image" ? "Image" : blockType === "video" ? "Video" : blockType === "stats" ? "Stats" : "Untitled")}
-                          </span>
+                          <input
+                            type="text"
+                            value={section.block_name ?? section.heading ?? ""}
+                            placeholder={blockType === "image" ? "Image" : blockType === "video" ? "Video" : blockType === "stats" ? "Stats" : "Untitled"}
+                            onChange={(e) => updateSection(tab, idx, "block_name", e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            draggable={false}
+                            className={cn(
+                              "text-xs truncate flex-1 min-w-0 bg-transparent border-0 outline-none cursor-text px-1 py-0.5 rounded",
+                              dark ? "text-gray-300 focus:bg-white/10 placeholder:text-gray-600" : "text-gray-700 focus:bg-white placeholder:text-gray-400",
+                            )}
+                          />
                           <div className="flex items-center gap-0.5 flex-shrink-0">
                             <button type="button" onClick={() => toggleSectionVisibility(tab, idx)}
                               className={cn("p-1 transition-colors", section.visible === false ? (dark ? "text-gray-600" : "text-gray-300") : (dark ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"))}>
@@ -1786,6 +1803,7 @@ interface SectionBlock {
   link_label?: string;
   visible?: boolean;
   image_size?: "25" | "50" | "75" | "100";
+  block_name?: string;
 }
 
 interface TabContent {
