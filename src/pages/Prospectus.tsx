@@ -190,6 +190,17 @@ function ProspectusMedia({
     return () => window.removeEventListener("message", handler);
   }, [onVideoEnded, videoUrl]);
 
+  // Timer-based fallback for iframe embeds — after 30s of viewing, consider engagement met
+  useEffect(() => {
+    if (!onVideoEnded || !videoUrl) return;
+    const parsed = parseVideoEmbed(videoUrl);
+    if (!parsed || parsed.type === "mp4") return; // mp4 has reliable native ended event
+    // Only start timer when video is visible (cover dismissed or no cover image)
+    if (imageUrl && !coverDismissed) return;
+    const timer = setTimeout(() => onVideoEnded(), 30_000);
+    return () => clearTimeout(timer);
+  }, [onVideoEnded, videoUrl, coverDismissed, imageUrl]);
+
   // Priority 1: Video (with optional cover image overlay)
   if (videoUrl) {
     const parsed = parseVideoEmbed(videoUrl);
@@ -2662,6 +2673,11 @@ export default function Prospectus() {
   const sessionStartRef = useRef<number>(Date.now());
   const tabsViewedRef = useRef<{ tab: string; at: string }[]>([]);
 
+  // Per-tab completion tracking
+  const [completedTabs, setCompletedTabs] = useState<Set<string>>(new Set());
+  const [warningModal, setWarningModal] = useState<{ show: boolean; isVideo: boolean } | null>(null);
+  const financialRef = useRef<HTMLDivElement>(null);
+
   const { isSuperAdmin } = useAuth();
 
   const darkMode =
@@ -2804,7 +2820,7 @@ export default function Prospectus() {
 
   // Load returning-user completions once email is known + gating loaded
   useEffect(() => {
-    if (!accessEmail || !gatingLoaded || !gatingEnabled || isSuperAdmin) return;
+    if (!accessEmail || !gatingLoaded || isSuperAdmin) return;
     (async () => {
       try {
         const { data } = await supabase
@@ -2812,16 +2828,20 @@ export default function Prospectus() {
           .select("tab_name")
           .eq("email", accessEmail);
         if (data && data.length > 0) {
-          const completedTabs = data.map((r: { tab_name: string }) => r.tab_name);
-          // Find the highest completed tab index
-          let maxIdx = 0;
-          for (const t of completedTabs) {
-            const idx = visibleTabs.indexOf(t as TabId);
-            if (idx > maxIdx) maxIdx = idx;
+          const names = data.map((r: { tab_name: string }) => r.tab_name);
+          // Populate completedTabs set for checkmarks
+          setCompletedTabs(new Set(names));
+          if (gatingEnabled) {
+            // Find the highest completed tab index
+            let maxIdx = 0;
+            for (const t of names) {
+              const idx = visibleTabs.indexOf(t as TabId);
+              if (idx > maxIdx) maxIdx = idx;
+            }
+            // Unlock up to one past the last completed (so the next one is the frontier)
+            const unlockTo = Math.min(maxIdx + 1, visibleTabs.length - 1);
+            setUnlockedUpTo((prev) => Math.max(prev, unlockTo));
           }
-          // Unlock up to one past the last completed (so the next one is the frontier)
-          const unlockTo = Math.min(maxIdx + 1, visibleTabs.length - 1);
-          setUnlockedUpTo((prev) => Math.max(prev, unlockTo));
         }
       } catch {
         // Table may not exist yet
@@ -2829,39 +2849,47 @@ export default function Prospectus() {
     })();
   }, [accessEmail, gatingLoaded, gatingEnabled, isSuperAdmin, visibleTabs]);
 
-  /** Unlock the next tab after the current one */
-  const unlockNextTab = () => {
-    const currentIdx = visibleTabs.indexOf(activeTab);
-    if (currentIdx >= 0 && currentIdx === unlockedUpTo && currentIdx < visibleTabs.length - 1) {
-      const next = currentIdx + 1;
+  /** Mark a tab as completed — persist checkmark, save to DB, unlock next if frontier */
+  const markTabCompleted = (tabName: string) => {
+    if (completedTabs.has(tabName)) return; // already completed
+    // Update local state
+    setCompletedTabs((prev) => {
+      const next = new Set(prev);
+      next.add(tabName);
+      return next;
+    });
+
+    // If this tab is the frontier, unlock the next one
+    const tabIdx = visibleTabs.indexOf(tabName as TabId);
+    if (tabIdx >= 0 && tabIdx === unlockedUpTo && tabIdx < visibleTabs.length - 1) {
+      const next = tabIdx + 1;
       setUnlockedUpTo(next);
       setJustUnlocked(next);
       setTimeout(() => setJustUnlocked(null), 2000);
+    }
 
-      // Persist completion to prospectus_completions + update log row
-      if (accessEmail) {
-        const tabName = activeTab as string;
+    // Persist completion to prospectus_completions + update access log
+    if (accessEmail) {
+      supabase
+        .from("prospectus_completions")
+        .upsert({ email: accessEmail, tab_name: tabName }, { onConflict: "email,tab_name" })
+        .then(({ error }) => { if (error) console.warn("[Prospectus] completions upsert:", error.message); });
+
+      if (accessLogId) {
         supabase
-          .from("prospectus_completions")
-          .upsert({ email: accessEmail, tab_name: tabName }, { onConflict: "email,tab_name" })
-          .then(({ error }) => { if (error) console.warn("[Prospectus] completions upsert:", error.message); });
-
-        if (accessLogId) {
-          supabase
-            .from("prospectus_access_log")
-            .select("tabs_completed")
-            .eq("id", accessLogId)
-            .single()
-            .then(({ data }) => {
-              const existing = Array.isArray(data?.tabs_completed) ? data.tabs_completed : [];
-              existing.push({ tab: tabName, at: new Date().toISOString() });
-              supabase
-                .from("prospectus_access_log")
-                .update({ tabs_completed: existing })
-                .eq("id", accessLogId)
-                .then(() => {});
-            });
-        }
+          .from("prospectus_access_log")
+          .select("tabs_completed")
+          .eq("id", accessLogId)
+          .single()
+          .then(({ data }) => {
+            const existing = Array.isArray(data?.tabs_completed) ? data.tabs_completed : [];
+            existing.push({ tab: tabName, at: new Date().toISOString() });
+            supabase
+              .from("prospectus_access_log")
+              .update({ tabs_completed: existing })
+              .eq("id", accessLogId)
+              .then(() => {});
+          });
       }
     }
   };
@@ -2917,20 +2945,35 @@ export default function Prospectus() {
     setScrollProgress(0);
   }, [activeTab]);
 
-  // Scroll-based unlock: unlock next tab when user scrolls past 50% (for non-video tabs)
+  // Scroll-based completion: mark tab complete when user scrolls past 50% (non-video tabs)
   useEffect(() => {
     if (isSuperAdmin || !gatingEnabled) return;
-    const currentIdx = visibleTabs.indexOf(activeTab);
-    if (currentIdx !== unlockedUpTo || currentIdx >= visibleTabs.length - 1) return;
-
+    if (completedTabs.has(activeTab)) return; // already completed
     const hasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
-    // If tab has a video, unlock is handled by onVideoEnded — not scroll
-    if (hasVideo) return;
-
+    if (hasVideo) return; // video tabs complete via onVideoEnded
     if (scrollProgress >= 0.5) {
-      unlockNextTab();
+      markTabCompleted(activeTab);
     }
-  }, [scrollProgress, activeTab, unlockedUpTo, videoUrls, imageUrls, isSuperAdmin, gatingEnabled]);
+  }, [scrollProgress, activeTab, completedTabs, videoUrls, imageUrls, isSuperAdmin, gatingEnabled]);
+
+  // Financial Model tab: scroll-based completion (separate component, no built-in onScrollProgress)
+  useEffect(() => {
+    if (activeTab !== "Financial Model" || !financialRef.current || isSuperAdmin || !gatingEnabled) return;
+    if (completedTabs.has("Financial Model")) return;
+    const container = financialRef.current;
+    const handleScroll = () => {
+      const rect = container.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const scrolled = Math.max(0, -rect.top + viewportH);
+      const total = container.scrollHeight;
+      if (total <= 0) return;
+      const pct = Math.min(1, scrolled / total);
+      if (pct >= 0.5) markTabCompleted("Financial Model");
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [activeTab, completedTabs, isSuperAdmin, gatingEnabled]);
 
   // If active tab is hidden (and not super admin), redirect to first visible tab
   useEffect(() => {
@@ -2953,9 +2996,8 @@ export default function Prospectus() {
   }
 
   // Gating helpers for tab content
-  const isFrontierTab = gatingEnabled && !isSuperAdmin && visibleTabs.indexOf(activeTab) === unlockedUpTo;
   const activeHasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
-  const showScrollHint = isFrontierTab && !activeHasVideo;
+  const showScrollHint = gatingEnabled && !isSuperAdmin && !completedTabs.has(activeTab) && !activeHasVideo;
   const handleScrollProgress = (pct: number) => setScrollProgress(pct);
 
   const handleShare = async () => {
@@ -3139,6 +3181,13 @@ export default function Prospectus() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (tab === activeTab) return;
+                      // Block navigation if current tab isn't completed yet
+                      if (gatingEnabled && !isSuperAdmin && !completedTabs.has(activeTab)) {
+                        const curHasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
+                        setWarningModal({ show: true, isVideo: curHasVideo });
+                        return;
+                      }
                       if (isLocked) {
                         setLockedTooltip(tab);
                         setTimeout(() => setLockedTooltip(null), 2000);
@@ -3168,6 +3217,7 @@ export default function Prospectus() {
                     )}
                   >
                     {isLocked && <Lock className="h-3 w-3" />}
+                    {!isLocked && completedTabs.has(tab) && <Check className="h-3 w-3 text-emerald-400" />}
                     {TAB_LABELS[tab]}
                   </button>
                   {/* Locked tooltip */}
@@ -3196,19 +3246,67 @@ export default function Prospectus() {
         </div>
       </header>
 
+      {/* Engagement warning modal */}
+      {warningModal?.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div
+            className={cn(
+              "w-full max-w-sm mx-4 rounded-2xl p-6 text-center shadow-xl border",
+              darkMode
+                ? "bg-[#14141f] border-white/10"
+                : "bg-white border-gray-200"
+            )}
+          >
+            <div className={cn(
+              "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4",
+              darkMode ? "bg-amber-500/10" : "bg-amber-50"
+            )}>
+              {warningModal.isVideo ? (
+                <Video className="h-6 w-6 text-amber-500" />
+              ) : (
+                <BookOpen className="h-6 w-6 text-amber-500" />
+              )}
+            </div>
+            <h3 className={cn(
+              "text-lg font-bold mb-2",
+              darkMode ? "text-white" : "text-gray-900"
+            )}>
+              {warningModal.isVideo ? "Finish the Video" : "Keep Scrolling"}
+            </h3>
+            <p className={cn(
+              "text-sm mb-6",
+              darkMode ? "text-gray-400" : "text-gray-500"
+            )}>
+              {warningModal.isVideo
+                ? "Please finish watching the video before moving to the next section."
+                : "Please scroll through at least half of this section before continuing."}
+            </p>
+            <button
+              type="button"
+              onClick={() => setWarningModal(null)}
+              className="w-full px-4 py-2.5 rounded-xl bg-[#1e3a5f] hover:bg-[#2d5282] text-white text-sm font-semibold transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onVideoEnded={unlockNextTab} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onVideoEnded={() => markTabCompleted("Overview")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onVideoEnded={() => markTabCompleted("Events & Attendee App")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onVideoEnded={() => markTabCompleted("Event Venues")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onVideoEnded={() => markTabCompleted("Discovery")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onVideoEnded={() => markTabCompleted("Verification")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onVideoEnded={() => markTabCompleted("365 Insights")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onVideoEnded={() => markTabCompleted("Social Media")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onVideoEnded={() => markTabCompleted("Streaming/Media")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onVideoEnded={() => markTabCompleted("Partnership Model")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Financial Model" && (
-          <FinancialModelTab dark={darkMode} />
+          <div ref={financialRef}>
+            <FinancialModelTab dark={darkMode} />
+          </div>
         )}
       </main>
 
