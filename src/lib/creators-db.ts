@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// ── Legacy "creators" table has been retired ──
+// All creator data now lives in directory_members (single source of truth).
+// This file retains the exported interface + utility functions so callers
+// (HomePage, CreatorBioPage, BrandDiscover) continue to work.
+
 export type FeaturedSection = "hero" | "grid" | "both";
 
 export interface CreatorRow {
@@ -20,68 +25,34 @@ export interface CreatorRow {
   created_at: string | null;
 }
 
-/** Hero: 3 cards from creators where is_featured and section in (hero, both). */
-export async function fetchFeaturedHero(limit = 3): Promise<CreatorRow[]> {
-  const { data, error } = await supabase
-    .from("creators")
-    .select("*")
-    .eq("is_featured", true)
-    .in("featured_section", ["hero", "both"])
-    .order("featured_sort_order", { ascending: true })
-    .limit(limit);
-  if (error) {
-    console.warn("[creators] Hero fetch failed:", error.message);
-    return [];
-  }
-  return (data ?? []) as CreatorRow[];
-}
-
-/** Big Names grid: up to 8 from creators where is_featured and section in (grid, both). */
-export async function fetchFeaturedGrid(limit = 8): Promise<CreatorRow[]> {
-  const { data, error } = await supabase
-    .from("creators")
-    .select("*")
-    .eq("is_featured", true)
-    .in("featured_section", ["grid", "both"])
-    .order("featured_sort_order", { ascending: true })
-    .limit(limit);
-  if (error) {
-    console.warn("[creators] Grid fetch failed:", error.message);
-    return [];
-  }
-  return (data ?? []) as CreatorRow[];
-}
-
-/** Directory: all creators, optional filter by is_featured. */
-export async function fetchCreators(options: {
-  featuredOnly?: boolean;
-  limit?: number;
-  offset?: number;
-}): Promise<CreatorRow[]> {
-  let q = supabase.from("creators").select("*").order("created_at", { ascending: false });
-  if (options.featuredOnly) q = q.eq("is_featured", true);
-  if (options.limit != null) q = q.limit(options.limit);
-  if (options.offset != null) q = q.range(options.offset, options.offset + (options.limit ?? 50) - 1);
-  const { data, error } = await q;
-  if (error) {
-    console.warn("[creators] Fetch failed:", error.message);
-    return [];
-  }
-  return (data ?? []) as CreatorRow[];
-}
-
-/** Get a single creator by handle (for bio page). Prefers instagram row if multiple platforms. */
+/** Get a single creator by handle (for bio page). Queries directory_members. */
 export async function getCreatorByHandle(handle: string): Promise<CreatorRow | null> {
   const normalized = handle.replace(/^@/, "").trim().toLowerCase();
   const { data, error } = await supabase
-    .from("creators")
-    .select("*")
-    .ilike("handle", normalized)
+    .from("directory_members")
+    .select("id, creator_name, creator_handle, platform, avatar_url, follower_count, engagement_rate, category, bio, added_at, featured_homepage, sort_order")
+    .ilike("creator_handle", normalized)
     .order("platform", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (error || !data) return null;
-  return data as CreatorRow;
+  return {
+    id: data.id,
+    display_name: (data.creator_name as string) ?? normalized,
+    handle: (data.creator_handle as string) ?? normalized,
+    platform: (data.platform as string) ?? "instagram",
+    avatar_url: (data.avatar_url as string) ?? null,
+    follower_count: (data.follower_count as number) ?? null,
+    engagement_rate: (data.engagement_rate as number) ?? null,
+    category: (data.category as string) ?? null,
+    bio: (data.bio as string) ?? null,
+    location: null,
+    is_verified: false,
+    is_featured: !!(data.featured_homepage),
+    featured_section: "grid",
+    featured_sort_order: (data.sort_order as number) ?? 999,
+    created_at: (data.added_at as string) ?? null,
+  } as CreatorRow;
 }
 
 export function formatFollowerCount(n: number | null | undefined): string {
@@ -99,7 +70,7 @@ export function getInitials(displayName: string, handle: string): string {
   return "?";
 }
 
-/** Upsert creator by (platform, handle); returns id. Use for import from Discovery (avatar_url = profile picture). */
+/** Upsert creator into directory_members by (platform, creator_handle). Used by Discovery Import. */
 export async function upsertCreator(row: {
   display_name: string;
   handle: string;
@@ -112,38 +83,69 @@ export async function upsertCreator(row: {
   location?: string | null;
   is_verified?: boolean;
 }): Promise<{ id: string } | null> {
-  const handle = row.handle.replace(/^@/, "").trim();
-  const { data, error } = await supabase
-    .from("creators")
-    .upsert(
-      {
-        display_name: row.display_name.trim(),
-        handle,
-        platform: row.platform ?? "instagram",
+  const handle = row.handle.replace(/^@/, "").trim().toLowerCase();
+  const platform = row.platform ?? "instagram";
+
+  // Check if this creator already exists in directory_members
+  const { data: existing } = await supabase
+    .from("directory_members")
+    .select("id")
+    .eq("platform", platform)
+    .ilike("creator_handle", handle)
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    // Update existing record
+    const { error } = await supabase
+      .from("directory_members")
+      .update({
+        creator_name: row.display_name.trim(),
         avatar_url: row.avatar_url ?? null,
         follower_count: row.follower_count ?? null,
         engagement_rate: row.engagement_rate ?? null,
         category: row.category ?? null,
         bio: row.bio ?? null,
-        location: row.location ?? null,
-        is_verified: row.is_verified ?? false,
-      },
-      { onConflict: "platform,handle", ignoreDuplicates: false }
-    )
+      })
+      .eq("id", existing.id);
+    if (error) {
+      console.warn("[creators-db] update error:", error.message);
+      return null;
+    }
+    return { id: existing.id };
+  }
+
+  // Insert new record — need a directory_id. Use the first available directory.
+  const { data: dir } = await supabase
+    .from("directories")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+
+  if (!dir) {
+    console.warn("[creators-db] No directories found — cannot insert creator");
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("directory_members")
+    .insert({
+      directory_id: dir.id,
+      creator_name: row.display_name.trim(),
+      creator_handle: handle,
+      platform,
+      avatar_url: row.avatar_url ?? null,
+      follower_count: row.follower_count ?? null,
+      engagement_rate: row.engagement_rate ?? null,
+      category: row.category ?? null,
+      bio: row.bio ?? null,
+    })
     .select("id")
     .single();
+
   if (error) {
-    console.warn("[creators-db] upsert error:", error.message);
+    console.warn("[creators-db] insert error:", error.message);
     return null;
   }
   return data as { id: string };
-}
-
-/** Set featured state for a creator. */
-export async function setFeatured(
-  creatorId: string,
-  payload: { is_featured: boolean; featured_section?: FeaturedSection; featured_sort_order?: number }
-): Promise<boolean> {
-  const { error } = await supabase.from("creators").update(payload).eq("id", creatorId);
-  return !error;
 }
