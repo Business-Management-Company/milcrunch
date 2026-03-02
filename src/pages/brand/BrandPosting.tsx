@@ -43,6 +43,7 @@ import {
   Pencil,
   Repeat2,
   ThumbsUp,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -991,22 +992,23 @@ export default function BrandPosting() {
   );
 
   const XPreview = () => (
-    <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto p-4">
+    <div className="bg-black rounded-2xl border border-[#2F3336] overflow-hidden max-w-[320px] mx-auto p-4">
       <div className="flex gap-3">
         <div className="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-sm font-bold shrink-0">
           {displayInitial}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-bold text-gray-900 dark:text-white truncate">{displayName}</span>
-            <span className="text-xs text-gray-400">@{previewUsername}</span>
+            <span className="text-[15px] font-bold text-white truncate">{displayName}</span>
+            <span className="text-[13px] text-[#71767B]">@{previewUsername}</span>
+            <span className="text-[13px] text-[#71767B]">· now</span>
           </div>
           {previewCaption ? (
-            <p className="text-sm text-gray-900 dark:text-gray-200 mt-1 whitespace-pre-wrap leading-relaxed">
+            <p className="text-[15px] text-[#E7E9EA] mt-1 whitespace-pre-wrap leading-relaxed">
               {previewCaption}
             </p>
           ) : (
-            <p className="text-sm text-gray-400 italic mt-1">Your post preview...</p>
+            <p className="text-[15px] text-[#71767B] italic mt-1">Your post preview...</p>
           )}
           {previewCaption.length > 280 && (
             <p className="text-xs text-red-500 font-medium mt-1.5">
@@ -1014,13 +1016,22 @@ export default function BrandPosting() {
             </p>
           )}
           {filePreview && (
-            <img src={filePreview} alt="Preview" className="w-full rounded-xl mt-3 border border-gray-200 dark:border-gray-700" />
+            <img src={filePreview} alt="Preview" className="w-full rounded-2xl mt-3 border border-[#2F3336]" />
           )}
-          <div className="flex items-center justify-between mt-3 text-gray-400 max-w-[240px]">
-            <MessageCircle className="h-4 w-4" />
-            <Repeat2 className="h-4 w-4" />
-            <Heart className="h-4 w-4" />
-            <Share2 className="h-4 w-4" />
+          <div className="flex items-center justify-between mt-3 text-[#71767B] max-w-[240px]">
+            <div className="flex items-center gap-1 hover:text-[#1D9BF0]">
+              <MessageCircle className="h-[18px] w-[18px]" />
+              <span className="text-[13px]">0</span>
+            </div>
+            <div className="flex items-center gap-1 hover:text-[#00BA7C]">
+              <Repeat2 className="h-[18px] w-[18px]" />
+              <span className="text-[13px]">0</span>
+            </div>
+            <div className="flex items-center gap-1 hover:text-[#F91880]">
+              <Heart className="h-[18px] w-[18px]" />
+              <span className="text-[13px]">0</span>
+            </div>
+            <Share2 className="h-[18px] w-[18px] hover:text-[#1D9BF0]" />
           </div>
         </div>
       </div>
@@ -1063,41 +1074,60 @@ export default function BrandPosting() {
   );
 
   const FacebookPreview = () => (
-    <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
-      <div className="flex items-center gap-2.5 px-4 py-3">
-        <div className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-sm font-bold">
-          {displayInitial}
+    <div className="bg-[#F0F2F5] dark:bg-[#18191A] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
+      <div className="bg-white dark:bg-[#242526] px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-sm font-bold">
+            {displayInitial}
+          </div>
+          <div>
+            <p className="text-[13px] font-semibold text-gray-900 dark:text-[#E4E6EB]">{displayName}</p>
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] text-gray-500 dark:text-[#B0B3B8]">Just now</span>
+              <span className="text-[11px] text-gray-400">·</span>
+              <Globe className="h-2.5 w-2.5 text-gray-400 dark:text-[#B0B3B8]" />
+            </div>
+          </div>
+          <MoreHorizontal className="h-5 w-5 text-gray-400 ml-auto" />
         </div>
-        <div>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">{displayName}</p>
-          <p className="text-[10px] text-gray-400">Just now</p>
+        <div className="mt-2.5">
+          {previewCaption ? (
+            <p className="text-[14px] text-gray-900 dark:text-[#E4E6EB] whitespace-pre-wrap leading-relaxed">{previewCaption}</p>
+          ) : (
+            <p className="text-[14px] text-gray-400 italic">Your post preview...</p>
+          )}
         </div>
-      </div>
-      <div className="px-4 pb-2">
-        {previewCaption ? (
-          <p className="text-sm text-gray-900 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{previewCaption}</p>
-        ) : (
-          <p className="text-sm text-gray-400 italic">Your post preview...</p>
-        )}
       </div>
       {filePreview && (
         <img src={filePreview} alt="Preview" className="w-full" />
       )}
       {file && !filePreview && (
-        <div className="w-full aspect-video bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+        <div className="w-full aspect-video bg-gray-100 dark:bg-[#3A3B3C] flex items-center justify-center">
           <FileVideo className="h-10 w-10 text-gray-400" />
         </div>
       )}
-      <div className="flex items-center border-t border-gray-200 dark:border-gray-700 mt-2">
-        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <ThumbsUp className="h-4 w-4" /> Like
-        </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <MessageCircle className="h-4 w-4" /> Comment
-        </button>
-        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800">
-          <Share2 className="h-4 w-4" /> Share
-        </button>
+      <div className="bg-white dark:bg-[#242526]">
+        <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200 dark:border-[#3A3B3C]">
+          <div className="flex items-center gap-1">
+            <div className="flex -space-x-1">
+              <span className="w-[18px] h-[18px] rounded-full bg-[#1877F2] flex items-center justify-center text-white text-[9px]">👍</span>
+              <span className="w-[18px] h-[18px] rounded-full bg-red-500 flex items-center justify-center text-white text-[9px]">❤️</span>
+            </div>
+            <span className="text-[12px] text-gray-500 dark:text-[#B0B3B8] ml-1">0</span>
+          </div>
+          <span className="text-[12px] text-gray-500 dark:text-[#B0B3B8]">0 comments</span>
+        </div>
+        <div className="flex items-center">
+          <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-gray-500 dark:text-[#B0B3B8] hover:bg-gray-50 dark:hover:bg-[#3A3B3C]">
+            <ThumbsUp className="h-4 w-4" /> Like
+          </button>
+          <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-gray-500 dark:text-[#B0B3B8] hover:bg-gray-50 dark:hover:bg-[#3A3B3C]">
+            <MessageCircle className="h-4 w-4" /> Comment
+          </button>
+          <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-medium text-gray-500 dark:text-[#B0B3B8] hover:bg-gray-50 dark:hover:bg-[#3A3B3C]">
+            <Share2 className="h-4 w-4" /> Share
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1301,19 +1331,17 @@ export default function BrandPosting() {
   return (
     <div className="min-h-full bg-pd-page-light dark:bg-[#0F1117] text-foreground transition-colors">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
+        {/* Header + Tabs */}
+        <div className="mb-6 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-1 pb-5 bg-gradient-to-b from-gray-50 to-transparent dark:from-[#151821] dark:to-transparent border-b border-gray-100 dark:border-gray-800/50">
           <h1 className="text-2xl font-bold text-pd-navy dark:text-white">
             Social Posting
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5 mb-4">
             Manage your campaign queue, compose posts, and view your content calendar.
           </p>
-        </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
-          <div className="flex gap-6">
+          {/* Pill Tabs */}
+          <div className="flex gap-2">
             {([
               { id: "queue" as const, label: "Queue", count: queuePosts.length },
               { id: "compose" as const, label: "Compose", count: null },
@@ -1325,29 +1353,24 @@ export default function BrandPosting() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "relative pb-3 text-sm font-medium transition-colors",
+                  "px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2",
                   activeTab === tab.id
-                    ? "text-[#1e3a5f]"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300",
+                    ? "bg-[#1e3a5f] text-white shadow-md shadow-[#1e3a5f]/20"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200",
                 )}
               >
-                <span className="flex items-center gap-2">
-                  {tab.label}
-                  {tab.count !== null && (
-                    <span
-                      className={cn(
-                        "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-                        activeTab === tab.id
-                          ? "bg-[#1e3a5f]/10 text-[#1e3a5f]"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
-                      )}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </span>
-                {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1e3a5f] rounded-full" />
+                {tab.label}
+                {tab.count !== null && (
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center",
+                      activeTab === tab.id
+                        ? "bg-white/20 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400",
+                    )}
+                  >
+                    {tab.count}
+                  </span>
                 )}
               </button>
             ))}
@@ -1548,7 +1571,7 @@ export default function BrandPosting() {
             {/* LEFT — Compose */}
             <div className="lg:col-span-3 space-y-5">
               {/* Caption */}
-              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Caption
                 </label>
@@ -1589,7 +1612,7 @@ export default function BrandPosting() {
                       }
                     }}
                     disabled={aiLoading}
-                    className="flex items-center gap-1.5 text-xs font-medium text-[#1e3a5f] hover:text-[#2d5282] transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1e3a5f] text-white hover:bg-[#2d5282] transition-colors disabled:opacity-50 shadow-sm"
                   >
                     {aiLoading ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1618,7 +1641,7 @@ export default function BrandPosting() {
                       type="button"
                       onClick={handleGenerateCaptions}
                       disabled={aiLoading || selectedPlatforms.length === 0}
-                      className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1e3a5f] text-white text-xs font-semibold hover:bg-[#2d5282] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="mt-2 flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#1e3a5f] to-[#2d5282] text-white text-xs font-semibold hover:from-[#2d5282] hover:to-[#3a6aaa] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-[#1e3a5f]/20"
                     >
                       {aiLoading ? (
                         <>
@@ -1681,7 +1704,7 @@ export default function BrandPosting() {
               </div>
 
               {/* Media upload */}
-              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Media <span className="text-gray-400 font-normal">— Optional</span>
                 </label>
@@ -1745,7 +1768,7 @@ export default function BrandPosting() {
               </div>
 
               {/* Platform selector */}
-              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Publish To
@@ -2051,7 +2074,8 @@ export default function BrandPosting() {
             {/* RIGHT — Preview + Status */}
             <div className="lg:col-span-2 space-y-5">
               {/* Per-platform preview */}
-              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#1e3a5f] to-[#3a6aaa]" />
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Preview
                 </h3>
