@@ -238,8 +238,8 @@ function ProspectusMedia({
       <img
         src={imageUrl}
         alt="Tab content"
-        className="rounded-xl object-cover max-h-[500px] mx-auto"
-        style={{ maxWidth: 600, width: "100%", height: "auto" }}
+        className="rounded-xl object-cover mx-auto"
+        style={{ maxWidth: "50%", height: "auto" }}
       />
     );
   }
@@ -2375,7 +2375,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
               {hasImage && (
                 <div
                   className="relative group cursor-pointer mx-auto"
-                  style={{ maxWidth: 600 }}
+                  style={{ maxWidth: "50%" }}
                   onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
                 >
                   <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
@@ -2473,7 +2473,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
             {section.image_url && (
               <div
                 className="relative mb-5 group cursor-pointer mx-auto"
-                style={{ maxWidth: 600 }}
+                style={{ maxWidth: "50%" }}
                 onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
               >
                 <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
