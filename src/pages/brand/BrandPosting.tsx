@@ -267,6 +267,9 @@ export default function BrandPosting() {
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [queueSort, setQueueSort] = useState<QueueSort>("scheduled");
 
+  // Queue date-group collapse state (keys are date strings like "2026-03-05")
+  const [collapsedDateGroups, setCollapsedDateGroups] = useState<Set<string>>(new Set());
+
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -413,25 +416,39 @@ export default function BrandPosting() {
     return posts;
   }, [queuePostsAll, queueFilter, queueSort]);
 
-  const queueGrouped = useMemo(() => {
-    const groups = new Map<string, { name: string; posts: RecentPost[] }>();
-    const ungrouped: RecentPost[] = [];
+  const queueByDate = useMemo(() => {
+    const todayStr = new Date().toLocaleDateString("en-CA"); // "YYYY-MM-DD"
+    const groups = new Map<string, RecentPost[]>();
+    const noDate: RecentPost[] = [];
     for (const post of queuePosts) {
-      if (post.campaign_id) {
-        const existing = groups.get(post.campaign_id);
-        if (existing) {
-          existing.posts.push(post);
-        } else {
-          groups.set(post.campaign_id, {
-            name: post.campaign_name || "Campaign",
-            posts: [post],
-          });
-        }
+      if (post.scheduled_time) {
+        const dateKey = new Date(post.scheduled_time).toLocaleDateString("en-CA");
+        const existing = groups.get(dateKey);
+        if (existing) existing.push(post);
+        else groups.set(dateKey, [post]);
       } else {
-        ungrouped.push(post);
+        noDate.push(post);
       }
     }
-    return { campaigns: Array.from(groups.entries()), ungrouped };
+    // Sort date keys chronologically
+    const sorted = Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+    // Build result with labels
+    const sevenDaysOut = new Date();
+    sevenDaysOut.setDate(sevenDaysOut.getDate() + 7);
+    const sevenStr = sevenDaysOut.toLocaleDateString("en-CA");
+    const result: { dateKey: string; label: string; isToday: boolean; defaultCollapsed: boolean; posts: RecentPost[] }[] = [];
+    for (const [dateKey, posts] of sorted) {
+      const d = new Date(dateKey + "T12:00:00");
+      const isToday = dateKey === todayStr;
+      const label = isToday
+        ? `Today — ${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`
+        : d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+      result.push({ dateKey, label, isToday, defaultCollapsed: dateKey > sevenStr, posts });
+    }
+    if (noDate.length > 0) {
+      result.push({ dateKey: "__unscheduled__", label: "Unscheduled", isToday: false, defaultCollapsed: false, posts: noDate });
+    }
+    return result;
   }, [queuePosts]);
 
   /* ---------------------------------------------------------------- */
@@ -1110,10 +1127,10 @@ export default function BrandPosting() {
                   </span>
                 </div>
                 {post.scheduled_time && (
-                  <span className="text-[10px] text-gray-400 ml-auto flex items-center gap-1 shrink-0">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto flex items-center gap-1 shrink-0 font-medium">
                     <Clock className="h-3 w-3" />
                     {new Date(post.scheduled_time).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    {" "}
+                    {" · "}
                     {new Date(post.scheduled_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                   </span>
                 )}
@@ -1355,48 +1372,68 @@ export default function BrandPosting() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-6">
-                {/* Campaign groups */}
-                {queueGrouped.campaigns.map(([campaignId, group]) => (
-                  <div key={campaignId}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#1e3a5f]" />
-                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        {group.name}
-                      </h3>
-                      <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                        {group.posts.length} post{group.posts.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {group.posts.map((post) => (
-                        <QueueCard key={post.id} post={post} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Ungrouped posts */}
-                {queueGrouped.ungrouped.length > 0 && (
-                  <div>
-                    {queueGrouped.campaigns.length > 0 && (
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Individual Posts
-                        </h3>
-                        <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                          {queueGrouped.ungrouped.length}
+              <div className="space-y-4">
+                {queueByDate.map((group) => {
+                  // Auto-collapse dates beyond 7 days if user hasn't explicitly toggled
+                  const effectiveCollapsed = collapsedDateGroups.has(group.dateKey)
+                    ? true
+                    : !collapsedDateGroups.has("__expanded__" + group.dateKey) && group.defaultCollapsed;
+                  const GroupChevron = effectiveCollapsed ? ChevronRight : ChevronDown;
+                  return (
+                    <div key={group.dateKey}>
+                      {/* Date group header */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCollapsedDateGroups((prev) => {
+                            const next = new Set(prev);
+                            if (effectiveCollapsed) {
+                              // Expand: remove collapsed key, add expanded key
+                              next.delete(group.dateKey);
+                              next.add("__expanded__" + group.dateKey);
+                            } else {
+                              // Collapse: add collapsed key, remove expanded key
+                              next.add(group.dateKey);
+                              next.delete("__expanded__" + group.dateKey);
+                            }
+                            return next;
+                          });
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors group/date mb-2",
+                          group.isToday
+                            ? "bg-blue-50 dark:bg-blue-900/20 border-l-[3px] border-l-blue-500"
+                            : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800",
+                        )}
+                      >
+                        <GroupChevron className="h-4 w-4 text-gray-400 shrink-0" />
+                        <span className={cn(
+                          "text-sm font-semibold",
+                          group.isToday ? "text-blue-700 dark:text-blue-400" : "text-gray-700 dark:text-gray-300",
+                        )}>
+                          {group.label}
                         </span>
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      {queueGrouped.ungrouped.map((post) => (
-                        <QueueCard key={post.id} post={post} />
-                      ))}
+                        {group.isToday && (
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full">
+                            TODAY
+                          </span>
+                        )}
+                        <span className="text-[10px] text-gray-400 bg-white dark:bg-gray-900 px-2 py-0.5 rounded-full ml-auto">
+                          {group.posts.length} post{group.posts.length !== 1 ? "s" : ""}
+                        </span>
+                      </button>
+
+                      {/* Date group posts */}
+                      {!effectiveCollapsed && (
+                        <div className="space-y-2 ml-2">
+                          {group.posts.map((post) => (
+                            <QueueCard key={post.id} post={post} />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             )}
           </div>
