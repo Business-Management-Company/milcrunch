@@ -1,12 +1,17 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Link2, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function CopyDeepLink() {
   const { isSuperAdmin } = useAuth();
+  const location = useLocation();
   const [copied, setCopied] = useState(false);
 
-  if (!isSuperAdmin) return null;
+  const params = new URLSearchParams(location.search);
+  const isDemoView = params.get("ref") === "prospectus" || params.get("demo") === "true";
+
+  if (!isSuperAdmin || isDemoView) return null;
 
   const handleCopy = async () => {
     try {
