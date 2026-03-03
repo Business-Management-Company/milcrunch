@@ -134,7 +134,8 @@ function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4" | "if
 }
 
 /** Parse **bold** markdown in plain text and return React nodes */
-function renderBoldText(text: string): React.ReactNode {
+function renderBoldText(text: string | null | undefined): React.ReactNode {
+  if (!text) return "";
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   if (parts.length === 1) return text;
   return parts.map((part, i) => {
