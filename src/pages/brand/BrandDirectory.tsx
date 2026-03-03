@@ -83,7 +83,6 @@ import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, type EnrichedProfileResponse } from "@/lib/influencers-club";
-import { PlatformIcons } from "@/components/PlatformIcons";
 
 interface PreviewMember {
   directory_id: string;
@@ -1327,7 +1326,6 @@ const BrandDirectory = () => {
                     <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#1e3a5f] mb-1 truncate max-w-full">@{m.creator_handle}</p>
-                    {platforms.length > 0 && <div className="mb-2"><PlatformIcons platforms={platforms} username={m.creator_handle} max={5} /></div>}
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
                     <div className="flex items-center gap-4 text-xs mb-3">
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>

@@ -24,7 +24,6 @@ import type { ListCreator } from "@/contexts/ListContext";
 import { Progress } from "@/components/ui/progress";
 import { detectBranch } from "@/lib/featured-creators";
 import { fetchDirectoriesWithCounts, addToDirectory, type Directory } from "@/lib/directories";
-import { PlatformIcons } from "@/components/PlatformIcons";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1419,14 +1418,6 @@ export const BrandListDetail = () => {
                     </a>
                   )}
                 </div>
-                {Array.isArray(creator.platforms) && creator.platforms.length > 0 && (
-                  <PlatformIcons
-                    platforms={creator.platforms}
-                    username={creator.username}
-                    max={5}
-                    className="shrink-0"
-                  />
-                )}
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                 {creator.bio || "\u2014"}

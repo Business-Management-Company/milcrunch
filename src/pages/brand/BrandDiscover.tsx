@@ -47,7 +47,6 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useDemoMode } from "@/hooks/useDemoMode";
-import { PlatformIcons } from "@/components/PlatformIcons";
 import { addFullContact, getEmailLists, upsertEmailList, syncBulkContacts } from "@/lib/email-db";
 import type { EmailList } from "@/lib/email-types";
 
@@ -3857,20 +3856,10 @@ const BrandDiscover = () => {
                                 </div>
                               </div>
                             </td>
-                            {/* Social Links — only active platforms */}
+                            {/* Social Links */}
                             <td className="p-3" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-1">
-                                {pending && socialSet.size <= 1 ? (
-                                  <EnrichShimmer />
-                                ) : socialSet.size > 0 ? (
-                                  <PlatformIcons
-                                    platforms={ALL_SOCIAL_PLATFORMS.filter((p) => socialSet.has(p))}
-                                    username={creator.username}
-                                    max={5}
-                                  />
-                                ) : (
-                                  <span className="text-gray-300 dark:text-gray-600">—</span>
-                                )}
+                                <span className="text-gray-300 dark:text-gray-600">—</span>
                               </div>
                             </td>
                             {/* Followers */}
@@ -4142,10 +4131,9 @@ const BrandDiscover = () => {
                           </div>
                         </div>
 
-                        {/* Platform icons + email */}
-                        {(socialPlatforms.length > 0 || creator.username) && (
+                        {/* Email / contact */}
+                        {creator.username && (
                           <div className="flex items-center gap-2 mb-4 flex-wrap">
-                            <PlatformIcons platforms={socialPlatforms} username={creator.username} max={8} size="h-[18px] w-[18px]" />
                             {contactEmails[creator.id] ? (
                               <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 <Tooltip>
