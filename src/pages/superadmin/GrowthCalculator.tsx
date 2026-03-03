@@ -8,7 +8,7 @@ export default function GrowthCalculator() {
   const [newCreators, setNewCreators] = useState(50);
   const [churnPct, setChurnPct] = useState(5);
   const [newClients, setNewClients] = useState(2);
-  const [contractVal, setContractVal] = useState(2500);
+  const [contractVal, setContractVal] = useState(7700);
   const [upsellPct, setUpsellPct] = useState(35);
   const [months, setMonths] = useState(12);
 
@@ -33,7 +33,7 @@ export default function GrowthCalculator() {
     { label: "Monthly New Creators", value: newCreators, set: setNewCreators, min: 1, max: 500, step: 5 },
     { label: "Creator Monthly Churn", value: churnPct, set: setChurnPct, min: 1, max: 20, step: 1, suffix: "%" },
     { label: "Monthly New Event Clients", value: newClients, set: setNewClients, min: 1, max: 10, step: 1 },
-    { label: "Avg Contract Value/mo", value: contractVal, set: setContractVal, min: 500, max: 10000, step: 100, prefix: "$" },
+    { label: "Avg Contract Value/mo", value: contractVal, set: setContractVal, min: 500, max: 500000, step: 100, prefix: "$" },
     { label: "Sponsor Upsell Rate", value: upsellPct, set: setUpsellPct, min: 10, max: 80, step: 5, suffix: "%" },
     { label: "Time Horizon", value: months, set: setMonths, min: 6, max: 36, step: 1, suffix: " months" },
   ];

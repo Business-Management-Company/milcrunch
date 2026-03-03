@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const fmt = (n: number) => "$" + n.toLocaleString();
 
@@ -10,25 +9,24 @@ interface ToolRow {
   name: string;
   category: string;
   defaultCost: number;
+  max: number;
 }
 
 const TOOLS: ToolRow[] = [
-  { name: "Event Management", category: "Event Management Platform", defaultCost: 500 },
-  { name: "Creator Discovery", category: "Creator Discovery & Management", defaultCost: 800 },
-  { name: "Live Streaming", category: "Live Streaming Tools", defaultCost: 50 },
-  { name: "Registration / Forms", category: "Registration & Forms", defaultCost: 50 },
-  { name: "Social Monitoring", category: "Social Monitoring & Analytics", defaultCost: 300 },
-  { name: "Email Marketing", category: "Email & Outreach Platform", defaultCost: 100 },
-  { name: "Creator Verification", category: "Manual Creator Verification", defaultCost: 2000 },
+  { name: "Event Management", category: "Event Management Platform", defaultCost: 500, max: 25000 },
+  { name: "Creator Discovery", category: "Creator Discovery & Management", defaultCost: 800, max: 10000 },
+  { name: "Live Streaming", category: "Live Streaming Tools", defaultCost: 50, max: 5000 },
+  { name: "Registration / Forms", category: "Registration & Forms", defaultCost: 50, max: 5000 },
+  { name: "Social Monitoring", category: "Social Monitoring & Analytics", defaultCost: 300, max: 5000 },
+  { name: "Email Marketing", category: "Email & Outreach Platform", defaultCost: 100, max: 5000 },
+  { name: "Creator Verification", category: "Manual Creator Verification", defaultCost: 2000, max: 10000 },
 ];
 
 export default function SaasCalculator() {
   const [costs, setCosts] = useState<number[]>(TOOLS.map((t) => t.defaultCost));
-  const [rxFee] = useState(2500);
   const [copied, setCopied] = useState(false);
 
   const total = costs.reduce((s, c) => s + c, 0);
-  const savings = total - rxFee;
 
   const updateCost = (i: number, v: number) => {
     setCosts((prev) => {
@@ -40,7 +38,7 @@ export default function SaasCalculator() {
 
   const copyToClipboard = () => {
     const lines = TOOLS.map((t, i) => `${t.category}: ${fmt(costs[i])}/mo`).join("\n");
-    const text = `Current SaaS Stack: ${fmt(total)}/mo\nMilCrunch: ${fmt(rxFee)}/mo\nMonthly Savings: ${fmt(savings)}\nAnnual Savings: ${fmt(savings * 12)}\n\n${lines}`;
+    const text = `Current SaaS Stack: ${fmt(total)}/mo\n\n${lines}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -66,13 +64,13 @@ export default function SaasCalculator() {
                 value={[costs[i]]}
                 onValueChange={([v]) => updateCost(i, v)}
                 min={0}
-                max={tool.name === "Creator Verification" ? 5000 : 2000}
+                max={tool.max}
                 step={25}
                 className="[&_[role=slider]]:bg-[#1e3a5f] [&_[role=slider]]:border-[#1e3a5f] [&_.range]:bg-[#1e3a5f]"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1.5">
                 <span>$0</span>
-                <span>{fmt(tool.name === "Creator Verification" ? 5000 : 2000)}</span>
+                <span>{fmt(tool.max)}</span>
               </div>
             </div>
           ))}
@@ -94,26 +92,6 @@ export default function SaasCalculator() {
                 <span className="text-lg font-extrabold text-red-500 tabular-nums">{fmt(total)}/mo</span>
               </div>
             </div>
-          </div>
-
-          <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl p-6 text-center">
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#10B981] mb-2">MilCrunch Replaces All of This</p>
-            <p className="text-3xl font-extrabold text-[#1a1a2e]">{fmt(rxFee)}<span className="text-base font-normal text-gray-400">/mo</span></p>
-          </div>
-
-          <div className={cn(
-            "rounded-xl p-6 text-center border",
-            savings > 0
-              ? "bg-[#10B981]/10 border-[#10B981]/30"
-              : "bg-[#F8F9FA] border-gray-200"
-          )}>
-            <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-2">Monthly Savings</p>
-            <p className={cn("text-3xl font-extrabold", savings > 0 ? "text-[#10B981]" : "text-gray-400")}>
-              {savings > 0 ? "+" : ""}{fmt(savings)}<span className="text-base font-normal text-gray-400">/mo</span>
-            </p>
-            <p className={cn("text-sm mt-1", savings > 0 ? "text-[#10B981]/70" : "text-gray-400")}>
-              {fmt(savings * 12)} saved per year
-            </p>
           </div>
 
           <Button
