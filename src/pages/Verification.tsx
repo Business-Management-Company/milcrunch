@@ -377,6 +377,7 @@ export default function Verification() {
     name: "",
     branch: "",
     militaryStatus: "",
+    originalMilitaryStatus: "",
     category: "",
     confidenceScore: null as number | null,
     verificationStatus: "pending" as string,
@@ -1128,29 +1129,31 @@ export default function Verification() {
     setAutoFilledFields(filled);
 
     const mc = (row.manual_checks as Record<string, unknown> | null) ?? {};
+    const resolvedMilitaryStatus = (() => {
+      const raw = (row as any).claimed_type || row.claimed_status || "";
+      const options = ["Veteran", "Active Duty", "Military Spouse", "Military Family", "DOD", "Reserves", "Guard", "Retired", "Cadet/ROTC"];
+      const exact = options.find(o => o === raw);
+      if (exact) return exact;
+      const lower = raw.toLowerCase().replace(/_/g, " ");
+      const match = options.find(o => o.toLowerCase() === lower);
+      if (match) return match;
+      if (lower.includes("spouse")) return "Military Spouse";
+      if (lower.includes("active")) return "Active Duty";
+      if (lower.includes("gold") && lower.includes("star")) return "Gold Star Family";
+      if (lower.includes("family")) return "Military Family";
+      if (lower.includes("reserve")) return "Reserves";
+      if (lower.includes("guard")) return "Guard";
+      if (lower.includes("veteran") || lower === "vet") return "Veteran";
+      if (lower.includes("retired")) return "Retired";
+      if (lower.includes("cadet") || lower.includes("rotc")) return "Cadet/ROTC";
+      return raw;
+    })();
     setEditForm({
       id: row.id,
       name: row.person_name,
       branch: row.claimed_branch ?? "",
-      militaryStatus: (() => {
-        const raw = (row as any).claimed_type || row.claimed_status || "";
-        const options = ["Veteran", "Active Duty", "Military Spouse", "Military Family", "DOD", "Reserves", "Guard", "Retired", "Cadet/ROTC"];
-        const exact = options.find(o => o === raw);
-        if (exact) return exact;
-        const lower = raw.toLowerCase().replace(/_/g, " ");
-        const match = options.find(o => o.toLowerCase() === lower);
-        if (match) return match;
-        if (lower.includes("spouse")) return "Military Spouse";
-        if (lower.includes("active")) return "Active Duty";
-        if (lower.includes("gold") && lower.includes("star")) return "Gold Star Family";
-        if (lower.includes("family")) return "Military Family";
-        if (lower.includes("reserve")) return "Reserves";
-        if (lower.includes("guard")) return "Guard";
-        if (lower.includes("veteran") || lower === "vet") return "Veteran";
-        if (lower.includes("retired")) return "Retired";
-        if (lower.includes("cadet") || lower.includes("rotc")) return "Cadet/ROTC";
-        return raw;
-      })(),
+      militaryStatus: resolvedMilitaryStatus,
+      originalMilitaryStatus: resolvedMilitaryStatus,
       category: finalCategory,
       confidenceScore: row.verification_score,
       verificationStatus: row.status ?? "pending",
@@ -1220,13 +1223,16 @@ export default function Verification() {
         const dmPayload: Record<string, unknown> = {
           creator_name: editForm.name,
           branch: editForm.branch || null,
-          status: editForm.militaryStatus || null, // Always save military status
           bio: editForm.bio || editForm.notes || null,
           ic_avatar_url: editForm.photoUrl || null,
           category: editForm.category || null,
           platform_urls: platformUrls,
           platforms,
         };
+        // Only update military status in directory_members if user explicitly changed it
+        if (editForm.militaryStatus !== editForm.originalMilitaryStatus) {
+          dmPayload.status = editForm.militaryStatus || null;
+        }
         if (editForm.verificationStatus === "verified") {
           dmPayload.is_verified = true;
         }

@@ -1086,20 +1086,37 @@ const FAMILY_PATTERNS: RegExp[] = [
 ];
 
 const PERSONAL_SERVICE_PATTERNS: RegExp[] = [
+  // First-person (creator's own bio/content)
   /\bI\s+served\b/i,
   /\bwhen\s+I\s+(?:was\s+)?(?:deployed|enlisted|stationed)\b/i,
   /\bmy\s+(?:enlistment|service|deployment|MOS|DD[\s-]?214|military\s+career)\b/i,
   /\bI\s+(?:enlisted|deployed|was\s+stationed)\b/i,
   /\b(?:my|I)\s+(?:time\s+)?(?:in|with)\s+the\s+(?:army|navy|marines|air\s*force|coast\s*guard|military)\b/i,
   /\bafter\s+(?:I|my)\s+(?:left|retired\s+from)\s+(?:the\s+)?(?:army|navy|marines|air\s*force|coast\s*guard|military|service)\b/i,
+  // Third-person (AI analysis text about the person)
+  /\bpersonal\s+military\s+service\b/i,
+  /\beveridence\s+(?:of|shows?|indicates?|confirms?)\s+(?:military\s+)?service\b/i,
+  /\bserved\s+in\s+the\s+(?:army|navy|marines|air\s*force|coast\s*guard|military|armed\s+forces)\b/i,
+  /\b(?:is|was)\s+a\s+(?:veteran|service\s*member)\b/i,
+  /\b(?:his|her|their)\s+(?:military\s+)?service\b/i,
+  /\bdeployed\s+to\b/i,
+  /\bveteran\s+(?:who|that|of)\b/i,
+  /\bcategory\s*(?:is|:)\s*veteran\b/i,
+  /\bdetected\s+category\s*(?:is|:)\s*veteran\b/i,
 ];
 
 export function detectType(
   aiAnalysis: string | null,
   evidenceSources: { title?: string; snippet?: string; category?: string }[],
 ): { claimedStatus: string; claimedType: string } | null {
+  // Strip lines that list category options (AI analysis often mentions all categories in a list)
+  // e.g. "Veteran / Military Spouse / Gold Star Family / Military Family / Active Duty"
+  const cleanedAnalysis = (aiAnalysis ?? "").replace(
+    /(?:Veteran|Active Duty)\s*[\/|,]\s*Military Spouse\s*[\/|,]\s*(?:Gold Star|Military Family)[^\n]*/gi,
+    ""
+  );
   const texts = [
-    aiAnalysis ?? "",
+    cleanedAnalysis,
     ...evidenceSources.map((s) => `${s.title ?? ""} ${s.snippet ?? ""}`),
   ].join("\n");
   if (!texts.trim()) return null;
