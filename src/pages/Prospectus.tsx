@@ -5,6 +5,7 @@ import {
   CheckCircle2, BookOpen, ZoomIn,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
   Eye, EyeOff, ChevronDown, GripVertical, ChevronRight,
+  Sparkles, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -94,6 +95,14 @@ const TAB_KB_CATEGORY: Record<string, string> = {
 const TAB_DEEP_DIVE_URL: Record<string, string> = {
   "365 Insights": "/brand/events/9cfd70f9-e542-49ad-91e7-2ae01a1e150e?tab=365-insights",
   "Events & Attendee App": "/brand/events/85e418d7-8295-4525-9f9d-97fa90fa3d25?tab=gtm-planner&section=all&expand=all&demo=true",
+};
+
+/** Tabs that have an interactive live demo — used for floating bar, badges, and callout banners */
+const TAB_DEMO_URLS: Partial<Record<TabId, string>> = {
+  "Events & Attendee App": "/brand/events/85e418d7-8295-4525-9f9d-97fa90fa3d25?tab=gtm-planner&section=all&expand=all&demo=true",
+  "Discovery": "/brand/discover",
+  "Verification": "/verification",
+  "365 Insights": "/brand/events/9cfd70f9-e542-49ad-91e7-2ae01a1e150e?tab=365-insights",
 };
 
 /* ------------------------------------------------------------------ */
@@ -2263,11 +2272,56 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
   const visibleBlocks = content.sections.filter((s) => s.visible !== false);
   const hasVideoBlock = visibleBlocks.some((s) => inferBlockType(s) === "video");
 
+  const tabDemoUrl = TAB_DEMO_URLS[tab as TabId];
+
   return (
     <div ref={containerRef} className="space-y-12 relative">
+      {/* Demo callout banner */}
+      {tabDemoUrl && (
+        <div
+          className={cn(
+            "max-w-3xl mx-auto rounded-xl px-5 py-3.5 flex items-center justify-between gap-3 border",
+            dark
+              ? "bg-[#1e3a5f]/10 border-[#1e3a5f]/20"
+              : "bg-blue-50 border-blue-100"
+          )}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={cn("flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center", dark ? "bg-[#1e3a5f]/20" : "bg-blue-100")}>
+              <Play className={cn("h-4 w-4", dark ? "text-[#4a8fd4]" : "text-[#1e3a5f]")} />
+            </div>
+            <p className={cn("text-sm", dark ? "text-gray-300" : "text-gray-700")}>
+              This section includes a <span className="font-semibold">live interactive demo</span> — scroll down or{" "}
+              <a
+                href={withProspectusRef(tabDemoUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn("font-semibold underline underline-offset-2 hover:no-underline", dark ? "text-[#4a8fd4]" : "text-[#1e3a5f]")}
+              >
+                click here to launch it
+              </a>.
+            </p>
+          </div>
+          <a
+            href={withProspectusRef(tabDemoUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "flex-shrink-0 hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors",
+              dark
+                ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
+                : "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
+            )}
+          >
+            <ExternalLink className="h-3 w-3" />
+            Launch Demo
+          </a>
+        </div>
+      )}
+
       {/* Deep Dive link */}
       {(deepDiveUrl || kbSlug) && (
-        <div className="flex justify-end -mb-8">
+        <div className={cn("flex justify-end", tabDemoUrl ? "-mb-8 -mt-4" : "-mb-8")}>
           <a
             href={withProspectusRef(deepDiveUrl || `/kb/${kbSlug}`)}
             target="_blank"
@@ -2344,23 +2398,17 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                   ) : section.media_url ? (
                     <img src={section.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   ) : null}
-                  <div className={cn("absolute inset-0 flex items-center justify-center", heroClickable ? "bg-black/40 group-hover:bg-black/60 transition-colors duration-200" : "bg-black/50")}>
+                  <div className={cn("absolute inset-0 flex items-center justify-center", heroClickable ? "bg-black/30 group-hover:bg-black/50 transition-colors duration-300" : "bg-black/50")}>
                     <div className="text-center px-6">
                       {section.heading && !heroHeadingDuplicatesTab && <h2 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg">{section.heading}</h2>}
                       {section.subheading && <p className="text-lg text-white/80 mt-2">{section.subheading}</p>}
                       {heroClickable && (
-                        <span className="inline-flex items-center gap-2 mt-4 text-white font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <Play className="h-5 w-5" /> Explore Live Demo
+                        <span className="inline-flex items-center gap-2.5 mt-5 px-6 py-3 rounded-full bg-white/95 text-[#1e3a5f] font-bold text-sm shadow-xl group-hover:scale-105 transition-transform duration-300 demo-pill-pulse">
+                          <Play className="h-5 w-5 fill-current" /> Explore Live Demo
                         </span>
                       )}
                     </div>
                   </div>
-                  {/* Mobile badge */}
-                  {heroClickable && (
-                    <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
-                      <Play className="h-4 w-4 text-white" />
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div
@@ -2478,16 +2526,31 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                   style={{ maxWidth: `${section.image_size || "100"}%` }}
                   onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
                 >
-                  <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
-                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm flex items-center gap-2">
-                      {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
-                    </span>
-                  </div>
-                  {/* Mobile badge — always visible since no hover on touch */}
-                  <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
-                    {section.demo_url ? <Play className="h-4 w-4 text-white" /> : <ZoomIn className="h-4 w-4 text-white" />}
-                  </div>
+                  <img src={section.image_url!} alt="" className={cn("w-full rounded-xl shadow-md object-cover transition-all duration-300", section.demo_url && "group-hover:brightness-110 group-hover:shadow-lg group-hover:shadow-blue-500/20")} style={{ height: "auto" }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+                  {section.demo_url ? (
+                    <>
+                      {/* Dark scrim for contrast */}
+                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors duration-300 rounded-xl" />
+                      {/* Prominent center pill button */}
+                      <div className="absolute inset-0 flex items-center justify-center rounded-xl">
+                        <span className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/95 text-[#1e3a5f] font-bold text-sm shadow-xl group-hover:scale-105 transition-transform duration-300 demo-pill-pulse">
+                          <Play className="h-5 w-5 fill-current" />
+                          Explore Live Demo
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm flex items-center gap-2">
+                          <ZoomIn className="h-5 w-5" /> View Full Size
+                        </span>
+                      </div>
+                      <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
+                        <ZoomIn className="h-4 w-4 text-white" />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
               {hasVideo && (() => {
@@ -2576,16 +2639,29 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                 style={{ maxWidth: `${section.image_size || "100"}%` }}
                 onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
               >
-                <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm flex items-center gap-2">
-                    {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
-                  </span>
-                </div>
-                {/* Mobile badge */}
-                <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
-                  {section.demo_url ? <Play className="h-4 w-4 text-white" /> : <ZoomIn className="h-4 w-4 text-white" />}
-                </div>
+                <img src={section.image_url} alt="" className={cn("w-full rounded-xl shadow-md object-cover transition-all duration-300", section.demo_url && "group-hover:brightness-110 group-hover:shadow-lg group-hover:shadow-blue-500/20")} style={{ height: "auto" }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+                {section.demo_url ? (
+                  <>
+                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors duration-300 rounded-xl" />
+                    <div className="absolute inset-0 flex items-center justify-center rounded-xl">
+                      <span className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/95 text-[#1e3a5f] font-bold text-sm shadow-xl group-hover:scale-105 transition-transform duration-300 demo-pill-pulse">
+                        <Play className="h-5 w-5 fill-current" />
+                        Explore Live Demo
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
+                      <span className="text-white font-semibold text-sm flex items-center gap-2">
+                        <ZoomIn className="h-5 w-5" /> View Full Size
+                      </span>
+                    </div>
+                    <div className="absolute top-3 right-3 md:hidden bg-black/60 backdrop-blur-sm rounded-lg p-1.5">
+                      <ZoomIn className="h-4 w-4 text-white" />
+                    </div>
+                  </>
+                )}
               </div>
             )}
             {section.description && (
@@ -3265,6 +3341,12 @@ export default function Prospectus() {
                     {isLocked && <Lock className="h-3 w-3" />}
                     {!isLocked && completedTabs.has(tab) && <Check className="h-3 w-3 text-emerald-400" />}
                     {TAB_LABELS[tab]}
+                    {!isLocked && TAB_DEMO_URLS[tab] && (
+                      <span className="relative flex h-2 w-2 ml-0.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                      </span>
+                    )}
                   </button>
                   {/* Locked tooltip */}
                   {lockedTooltip === tab && (
@@ -3360,7 +3442,8 @@ export default function Prospectus() {
       <footer
         className={cn(
           "border-t py-8 transition-colors duration-300",
-          darkMode ? "border-white/[0.06]" : "border-[#E5E7EB]"
+          darkMode ? "border-white/[0.06]" : "border-[#E5E7EB]",
+          TAB_DEMO_URLS[activeTab] && "pb-20"
         )}
       >
         <div className="max-w-6xl mx-auto px-4 md:px-8 text-center">
@@ -3393,12 +3476,48 @@ export default function Prospectus() {
         />
       )}
 
-      {/* Unlock pulse animation */}
+      {/* Persistent floating demo bar */}
+      {TAB_DEMO_URLS[activeTab] && (
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <div className="bg-gradient-to-r from-[#0a1628] via-[#1e3a5f] to-[#2d5282] border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+            <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="hidden sm:flex h-7 w-7 rounded-full bg-white/10 items-center justify-center flex-shrink-0">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-white/60 text-[10px] uppercase tracking-wider font-medium leading-none mb-0.5">Live Demo Available</p>
+                  <p className="text-white text-sm font-semibold truncate">{activeTab}</p>
+                </div>
+              </div>
+              <a
+                href={withProspectusRef(TAB_DEMO_URLS[activeTab]!)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-[#1e3a5f] font-bold text-sm shadow-lg hover:bg-gray-100 hover:scale-[1.03] active:scale-[0.98] transition-all duration-200"
+              >
+                <Play className="h-4 w-4 fill-current" />
+                <span>Launch Live Demo</span>
+                <ChevronRight className="h-4 w-4 -ml-0.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlock pulse + demo pill pulse animations */}
       <style>{`
         @keyframes unlockPulse {
           0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); transform: scale(1); }
           50% { box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.3); transform: scale(1.05); }
           100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); transform: scale(1); }
+        }
+        @keyframes demoPillPulse {
+          0%, 100% { box-shadow: 0 4px 15px rgba(30, 58, 95, 0.3); }
+          50% { box-shadow: 0 4px 25px rgba(30, 58, 95, 0.5), 0 0 40px rgba(30, 58, 95, 0.15); }
+        }
+        .demo-pill-pulse {
+          animation: demoPillPulse 2.5s ease-in-out infinite;
         }
       `}</style>
     </div>
