@@ -44,6 +44,7 @@ import {
   Repeat2,
   ThumbsUp,
   Globe,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -394,11 +395,14 @@ export default function BrandPosting() {
   const loadDrafts = useCallback(async () => {
     if (!userId) return;
     setLoadingDrafts(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("post_drafts")
       .select("id, caption, media_url, platforms, scheduled_at, created_at, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
+    if (error) {
+      console.error("[Drafts] Load failed:", error.message, error.details, error.hint);
+    }
     setDrafts(
       (data ?? []).map((r: any) => ({
         id: r.id,
@@ -607,40 +611,49 @@ export default function BrandPosting() {
 
   // Save as draft (to post_drafts table)
   const handleSaveDraft = async () => {
-    if (!userId) return;
+    if (!userId) {
+      toast.error("Not signed in — cannot save draft.");
+      return;
+    }
     if (!caption.trim() && !filePreview) {
       toast.error("Add a caption or media before saving.");
       return;
     }
-    try {
-      if (activeDraftId) {
-        // Update existing draft
-        await supabase
-          .from("post_drafts")
-          .update({
-            caption: caption.trim(),
-            media_url: filePreview || null,
-            platforms: selectedPlatforms,
-            scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
-            updated_at: new Date().toISOString(),
-          } as Record<string, unknown>)
-          .eq("id", activeDraftId);
-        toast.success("Draft updated!");
-      } else {
-        // Insert new draft
-        await supabase.from("post_drafts").insert({
-          user_id: userId,
+    if (activeDraftId) {
+      // Update existing draft
+      const { error } = await supabase
+        .from("post_drafts")
+        .update({
           caption: caption.trim(),
           media_url: filePreview || null,
           platforms: selectedPlatforms,
           scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
-        } as Record<string, unknown>);
-        toast.success("Draft saved!");
+          updated_at: new Date().toISOString(),
+        } as Record<string, unknown>)
+        .eq("id", activeDraftId);
+      if (error) {
+        console.error("[Drafts] Update failed:", error.message, error.details, error.hint);
+        toast.error(`Failed to update draft: ${error.message}`);
+        return;
       }
-      loadDrafts();
-    } catch {
-      toast.error("Failed to save draft.");
+      toast.success("Draft updated!");
+    } else {
+      // Insert new draft
+      const { error } = await supabase.from("post_drafts").insert({
+        user_id: userId,
+        caption: caption.trim(),
+        media_url: filePreview || null,
+        platforms: selectedPlatforms,
+        scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
+      } as Record<string, unknown>);
+      if (error) {
+        console.error("[Drafts] Insert failed:", error.message, error.details, error.hint);
+        toast.error(`Failed to save draft: ${error.message}`);
+        return;
+      }
+      toast.success("Draft saved!");
     }
+    loadDrafts();
   };
 
   // Load a draft into compose
@@ -662,14 +675,15 @@ export default function BrandPosting() {
 
   // Delete a draft
   const handleDeleteDraft = async (draftId: string) => {
-    try {
-      await supabase.from("post_drafts").delete().eq("id", draftId);
-      if (activeDraftId === draftId) setActiveDraftId(null);
-      toast.success("Draft deleted.");
-      loadDrafts();
-    } catch {
-      toast.error("Failed to delete draft.");
+    const { error } = await supabase.from("post_drafts").delete().eq("id", draftId);
+    if (error) {
+      console.error("[Drafts] Delete failed:", error.message);
+      toast.error(`Failed to delete draft: ${error.message}`);
+      return;
     }
+    if (activeDraftId === draftId) setActiveDraftId(null);
+    toast.success("Draft deleted.");
+    loadDrafts();
   };
 
   // Auto-remove draft after posting/queueing
@@ -978,14 +992,48 @@ export default function BrandPosting() {
 
   const previewCaption = caption.trim() || "";
   const previewUsername = displayName.toLowerCase().replace(/\s+/g, "");
+  const previewAvatarUrl = "https://swposmlpipmdwocpkfwc.supabase.co/storage/v1/object/public/avatars/pamela-raven.jpg";
+
+  // Follower counts for demo reach estimates
+  const PLATFORM_FOLLOWERS: Record<string, number> = {
+    instagram: 48200,
+    tiktok: 125600,
+    facebook: 15800,
+    x: 32400,
+    youtube: 8900,
+  };
+  const estimatedReach = selectedPlatforms.reduce((sum, pid) => {
+    const followers = connectedAccounts.find((a) => a.platform === pid)?.followers_count ?? PLATFORM_FOLLOWERS[pid] ?? 0;
+    return sum + Math.round(followers * 0.12);
+  }, 0);
+  const formatReach = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
+
+  // Best time suggestions per platform
+  const BEST_TIMES: Record<string, string> = {
+    instagram: "Tue & Thu, 9:00 AM",
+    tiktok: "Wed & Fri, 7:00 PM",
+    facebook: "Mon & Wed, 1:00 PM",
+    x: "Tue & Thu, 12:00 PM",
+    youtube: "Sat, 10:00 AM",
+  };
+
+  // Media type state
+  const [mediaType, setMediaType] = useState<"image" | "video" | "carousel">("image");
+
+  // Platform recommended dimensions
+  const PLATFORM_DIMENSIONS: Record<string, string> = {
+    instagram: "1080 × 1080",
+    tiktok: "1080 × 1920",
+    facebook: "1200 × 630",
+    x: "1600 × 900",
+    youtube: "1280 × 720",
+  };
 
   const InstagramPreview = () => (
     <div className="bg-white dark:bg-[#0F1117] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
       <div className="flex items-center gap-2.5 px-3 py-2.5">
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] p-[2px]">
-          <div className="w-full h-full rounded-full bg-white dark:bg-[#0F1117] flex items-center justify-center text-[10px] font-bold text-gray-700 dark:text-gray-300">
-            {displayInitial}
-          </div>
+          <img src={previewAvatarUrl} alt={displayName} className="w-full h-full rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.innerHTML = `<div class="w-full h-full rounded-full bg-white dark:bg-[#0F1117] flex items-center justify-center text-[10px] font-bold text-gray-700">${displayInitial}</div>`; }} />
         </div>
         <span className="text-xs font-semibold text-gray-900 dark:text-white">{previewUsername}</span>
         <MoreHorizontal className="h-4 w-4 text-gray-400 ml-auto" />
@@ -1025,9 +1073,7 @@ export default function BrandPosting() {
   const XPreview = () => (
     <div className="bg-black rounded-2xl border border-[#2F3336] overflow-hidden max-w-[320px] mx-auto p-4">
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-sm font-bold shrink-0">
-          {displayInitial}
-        </div>
+        <img src={previewAvatarUrl} alt={displayName} className="w-10 h-10 rounded-full object-cover shrink-0" onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = "none"; el.insertAdjacentHTML("afterend", `<div class="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-sm font-bold shrink-0">${displayInitial}</div>`); }} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-[15px] font-bold text-white truncate">{displayName}</span>
@@ -1108,9 +1154,7 @@ export default function BrandPosting() {
     <div className="bg-[#F0F2F5] dark:bg-[#18191A] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-w-[320px] mx-auto">
       <div className="bg-white dark:bg-[#242526] px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-sm font-bold">
-            {displayInitial}
-          </div>
+          <img src={previewAvatarUrl} alt={displayName} className="w-10 h-10 rounded-full object-cover" onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = "none"; el.insertAdjacentHTML("afterend", `<div class="w-10 h-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-sm font-bold">${displayInitial}</div>`); }} />
           <div>
             <p className="text-[13px] font-semibold text-gray-900 dark:text-[#E4E6EB]">{displayName}</p>
             <div className="flex items-center gap-1">
@@ -1602,36 +1646,12 @@ export default function BrandPosting() {
             {/* LEFT — Compose */}
             <div className="lg:col-span-3 space-y-5">
               {/* Caption */}
-              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Caption
-                </label>
-                <textarea
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="What do you want to share?"
-                  rows={5}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
-                />
-                <div className="flex items-center justify-between mt-2">
-                  <p
-                    className={cn(
-                      "text-xs",
-                      charOver
-                        ? "text-red-500 font-semibold"
-                        : charWarning
-                          ? "text-amber-500"
-                          : "text-gray-400"
-                    )}
-                  >
-                    {caption.length}
-                    {effectiveLimit && ` / ${effectiveLimit}`} characters
-                    {charOver && " — over limit for " + selectedPlatforms.find((p) => {
-                      const plat = PLATFORMS.find((x) => x.id === p);
-                      return plat?.charLimit && caption.length > plat.charLimit;
-                    })}
-                  </p>
-
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500" />
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Caption
+                  </label>
                   <button
                     type="button"
                     onClick={() => {
@@ -1643,15 +1663,57 @@ export default function BrandPosting() {
                       }
                     }}
                     disabled={aiLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1e3a5f] text-white hover:bg-[#2d5282] transition-colors disabled:opacity-50 shadow-sm"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white hover:from-blue-500 hover:via-purple-500 hover:to-pink-400 transition-all disabled:opacity-50 shadow-md shadow-purple-500/20"
                   >
                     {aiLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Sparkles className="h-3.5 w-3.5" />
+                      <Sparkles className="h-4 w-4" />
                     )}
                     Write with AI
                   </button>
+                </div>
+                {/* Quick insert toolbar */}
+                <div className="flex items-center gap-1 mb-2">
+                  <button type="button" onClick={() => setCaption((c) => c + " #")} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-[#0F1117] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <Hash className="h-3 w-3" /> Hashtag
+                  </button>
+                  <button type="button" onClick={() => setCaption((c) => c + " @")} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-[#0F1117] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    @ Mention
+                  </button>
+                  {["\u{1F525}", "\u{1F389}", "\u{1F4AA}", "\u{1F1FA}\u{1F1F8}"].map((emoji) => (
+                    <button key={emoji} type="button" onClick={() => setCaption((c) => c + emoji)} className="w-7 h-7 rounded-lg text-sm bg-gray-100 dark:bg-[#0F1117] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center">{emoji}</button>
+                  ))}
+                </div>
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="What do you want to share?"
+                  rows={5}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all"
+                />
+                {/* Character count progress bar */}
+                <div className="mt-2">
+                  <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-300",
+                        caption.length > 280 ? "bg-red-500" : caption.length > 200 ? "bg-amber-400" : "bg-emerald-500"
+                      )}
+                      style={{ width: `${Math.min((caption.length / (effectiveLimit || 280)) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className={cn(
+                      "text-[11px] font-medium",
+                      charOver ? "text-red-500" : charWarning ? "text-amber-500" : "text-gray-400"
+                    )}>
+                      {caption.length}{effectiveLimit ? ` / ${effectiveLimit}` : ""} characters
+                    </p>
+                    {charOver && (
+                      <p className="text-[11px] text-red-500 font-medium">Over limit</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* AI Prompt Popover */}
@@ -1736,9 +1798,28 @@ export default function BrandPosting() {
 
               {/* Media upload */}
               <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Media <span className="text-gray-400 font-normal">— Optional</span>
-                </label>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Media
+                  </label>
+                  <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#0F1117] rounded-lg p-0.5">
+                    {(["image", "video", "carousel"] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setMediaType(type)}
+                        className={cn(
+                          "px-3 py-1 rounded-md text-[11px] font-medium transition-all capitalize",
+                          mediaType === type
+                            ? "bg-white dark:bg-[#1A1D27] text-[#1e3a5f] shadow-sm"
+                            : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                        )}
+                      >
+                        {type === "image" ? "Image" : type === "video" ? "Video" : "Carousel"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {file ? (
                   <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
                     {filePreview ? (
@@ -1771,31 +1852,45 @@ export default function BrandPosting() {
                 ) : (
                   <div
                     ref={dropRef}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={handleDrop}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-purple-500", "bg-purple-50", "dark:bg-purple-900/10"); }}
+                    onDragLeave={(e) => { e.currentTarget.classList.remove("border-purple-500", "bg-purple-50", "dark:bg-purple-900/10"); }}
+                    onDrop={(e) => { e.currentTarget.classList.remove("border-purple-500", "bg-purple-50", "dark:bg-purple-900/10"); handleDrop(e); }}
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl px-6 py-10 text-center cursor-pointer hover:border-[#1e3a5f]/40 transition-colors"
+                    className="group border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl px-6 py-10 text-center cursor-pointer hover:border-[#1e3a5f] hover:bg-[#1e3a5f]/[0.02] dark:hover:bg-[#1e3a5f]/5 transition-all duration-200"
                   >
-                    <ImagePlus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-[#1e3a5f]/10 flex items-center justify-center mx-auto mb-3 transition-colors">
+                      <ImagePlus className="h-6 w-6 text-gray-400 group-hover:text-[#1e3a5f] transition-colors" />
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Drag & drop or{" "}
-                      <span className="text-[#1e3a5f] font-medium">click to upload</span>
+                      <span className="text-[#1e3a5f] font-semibold">browse files</span>
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Image (PNG, JPG, WebP) or Video (MP4)
-                    </p>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG, WebP, or MP4</p>
                   </div>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/mp4"
+                  accept={mediaType === "video" ? "video/mp4" : "image/*,video/mp4"}
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) handleFileSelect(f);
                   }}
                 />
+                {/* Recommended dimensions */}
+                {selectedPlatforms.length > 0 && !file && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {selectedPlatforms.filter((pid) => PLATFORM_DIMENSIONS[pid]).map((pid) => {
+                      const plat = PLATFORMS.find((p) => p.id === pid);
+                      return (
+                        <span key={pid} className="text-[10px] text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-md px-2 py-0.5">
+                          {plat?.name}: {PLATFORM_DIMENSIONS[pid]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Platform selector */}
@@ -1834,14 +1929,17 @@ export default function BrandPosting() {
                       const account = connectedAccounts.find(
                         (a) => a.platform === p.id
                       );
+                      const followers = account?.followers_count ?? PLATFORM_FOLLOWERS[p.id] ?? 0;
+                      const formatFollowers = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
                       return (
                         <label
                           key={p.id}
+                          onClick={(e) => { e.preventDefault(); togglePlatform(p.id); }}
                           className={cn(
                             "flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all",
                             selected
-                              ? "border-[#1e3a5f] bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10"
-                              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                              ? "border-[#1e3a5f] bg-[#1e3a5f]/5 dark:bg-[#1e3a5f]/10 shadow-sm shadow-[#1e3a5f]/10"
+                              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 opacity-60"
                           )}
                         >
                           <div
@@ -1851,20 +1949,24 @@ export default function BrandPosting() {
                                 ? "bg-[#1e3a5f] border-[#1e3a5f]"
                                 : "border-gray-300 dark:border-gray-600 bg-white dark:bg-[#0F1117]"
                             )}
-                            onClick={(e) => { e.preventDefault(); togglePlatform(p.id); }}
                           >
                             {selected && <Check className="h-3 w-3 text-white" />}
                           </div>
                           <div className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                            "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
                             PLATFORM_GRADIENTS[p.id] ?? PLATFORM_COLORS[p.id] ?? "bg-gray-500"
                           )}>
-                            {Icon && <Icon className="h-4 w-4 text-white" />}
+                            {Icon && <Icon className="h-4.5 w-4.5 text-white" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{p.name}</p>
+                              {followers > 0 && (
+                                <span className="text-[10px] text-gray-400 font-medium">{formatFollowers(followers)} followers</span>
+                              )}
+                            </div>
                             {account?.platform_username && (
-                              <p className="text-[10px] text-gray-400 truncate">
+                              <p className="text-[11px] text-gray-400 truncate">
                                 {p.id === "facebook" ? account.platform_username + " (Page)" : "@" + account.platform_username}
                               </p>
                             )}
@@ -1875,16 +1977,26 @@ export default function BrandPosting() {
                               ? "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20"
                               : "text-gray-400 bg-gray-50 dark:text-gray-500 dark:bg-gray-800"
                           )}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                            Connected
+                            <span className={cn("w-1.5 h-1.5 rounded-full", selected ? "bg-green-500" : "bg-gray-400")} />
+                            {selected ? "Active" : "Off"}
                           </span>
                         </label>
                       );
                     })}
+
+                    {/* Best Time to Post suggestion */}
                     {selectedPlatforms.length > 0 && (
-                      <p className="text-xs text-gray-400 pt-1">
-                        Posting simultaneously to {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? "s" : ""}
-                      </p>
+                      <div className="mt-2 px-3 py-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20">
+                        <div className="flex items-start gap-2">
+                          <Clock className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[11px] font-semibold text-blue-700 dark:text-blue-400">Best Time to Post</p>
+                            <p className="text-[10px] text-blue-600/70 dark:text-blue-400/70 mt-0.5">
+                              {BEST_TIMES[selectedPlatforms[0]] ?? "Weekdays, 9:00 AM"} for {PLATFORMS.find((p) => p.id === selectedPlatforms[0])?.name}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1956,137 +2068,77 @@ export default function BrandPosting() {
               </div>
 
               {/* Send actions */}
-              <div className="flex items-center gap-3">
-                {/* Save Draft button */}
-                {sendMode !== "draft" && (
+              <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm">
+                {/* Schedule picker — inline when schedule mode is active */}
+                {sendMode === "schedule" && (
+                  <div className="mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" /> Schedule for
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3" ref={sendMenuRef}>
+                  {/* Save Draft */}
                   <button
                     type="button"
                     onClick={handleSaveDraft}
                     disabled={!caption.trim() && !filePreview}
                     className={cn(
-                      "flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all border",
+                      "flex items-center gap-2 px-5 py-3.5 rounded-xl text-sm font-semibold transition-all",
                       caption.trim() || filePreview
-                        ? "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                        : "border-gray-200 dark:border-gray-700 text-gray-400 cursor-not-allowed",
+                        ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        : "bg-gray-50 dark:bg-gray-900 text-gray-400 cursor-not-allowed",
                     )}
                   >
                     <Save className="h-4 w-4" />
                     {activeDraftId ? "Update Draft" : "Save Draft"}
                   </button>
-                )}
 
-                <div className="relative flex-1" ref={sendMenuRef}>
-                  <div className="flex">
-                    <button
-                      type="button"
-                      onClick={handlePost}
-                      disabled={!canPost}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-l-xl text-sm font-semibold transition-all",
-                        canPost
-                          ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                      )}
-                    >
-                      {posting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> Posting...
-                        </>
-                      ) : sendMode === "draft" ? (
-                        <>
-                          <Save className="h-4 w-4" /> Save Draft
-                        </>
-                      ) : sendMode === "schedule" ? (
-                        <>
-                          <Clock className="h-4 w-4" /> Schedule Post
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" /> Post Now
-                        </>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowSendMenu(!showSendMenu)}
-                      className={cn(
-                        "flex items-center justify-center px-3 py-3 rounded-r-xl border-l text-sm transition-all",
-                        canPost || sendMode === "draft"
-                          ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white border-[#2d5282]"
-                          : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border-gray-200 dark:border-gray-700"
-                      )}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {/* Schedule */}
+                  <button
+                    type="button"
+                    onClick={() => setSendMode(sendMode === "schedule" ? "now" : "schedule")}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-3.5 rounded-xl text-sm font-semibold transition-all border-2",
+                      sendMode === "schedule"
+                        ? "border-[#1e3a5f] text-[#1e3a5f] bg-[#1e3a5f]/5"
+                        : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-[#1e3a5f]/50 hover:text-[#1e3a5f]"
+                    )}
+                  >
+                    <Clock className="h-4 w-4" />
+                    Schedule
+                  </button>
 
-                  {showSendMenu && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden z-20">
-                      <button
-                        type="button"
-                        onClick={() => { setSendMode("now"); setShowSendMenu(false); }}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors",
-                          sendMode === "now" && "text-[#1e3a5f] font-medium"
-                        )}
-                      >
-                        <Send className="h-4 w-4" />
-                        <div>
-                          <p className="font-medium">Post Immediately</p>
-                          <p className="text-[10px] text-gray-400">Publish to selected platforms now</p>
-                        </div>
-                        {sendMode === "now" && <Check className="h-4 w-4 ml-auto text-[#1e3a5f]" />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setSendMode("schedule"); setShowSendMenu(false); }}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
-                          sendMode === "schedule" && "text-[#1e3a5f] font-medium"
-                        )}
-                      >
-                        <Calendar className="h-4 w-4" />
-                        <div>
-                          <p className="font-medium">Schedule for...</p>
-                          <p className="text-[10px] text-gray-400">Pick a date & time to publish</p>
-                        </div>
-                        {sendMode === "schedule" && <Check className="h-4 w-4 ml-auto text-[#1e3a5f]" />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setSendMode("draft"); setShowSendMenu(false); }}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-gray-50 dark:hover:bg-[#0F1117] transition-colors border-t border-gray-100 dark:border-gray-800",
-                          sendMode === "draft" && "text-[#1e3a5f] font-medium"
-                        )}
-                      >
-                        <Save className="h-4 w-4" />
-                        <div>
-                          <p className="font-medium">Save as Draft</p>
-                          <p className="text-[10px] text-gray-400">Save without posting</p>
-                        </div>
-                        {sendMode === "draft" && <Check className="h-4 w-4 ml-auto text-[#1e3a5f]" />}
-                      </button>
-                    </div>
-                  )}
+                  {/* Post Now */}
+                  <button
+                    type="button"
+                    onClick={handlePost}
+                    disabled={!canPost}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold transition-all shadow-md",
+                      canPost
+                        ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white shadow-[#1e3a5f]/25"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed shadow-none"
+                    )}
+                  >
+                    {posting ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Posting...</>
+                    ) : sendMode === "schedule" ? (
+                      <><Calendar className="h-4 w-4" /> Schedule Post</>
+                    ) : (
+                      <><Send className="h-4 w-4" /> Post Now</>
+                    )}
+                  </button>
                 </div>
               </div>
-
-              {/* Schedule picker */}
-              {sendMode === "schedule" && (
-                <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Schedule for
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0F1117] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
-                  />
-                </div>
-              )}
 
               {hasResults && (
                 <div className="flex justify-end">
@@ -2105,31 +2157,33 @@ export default function BrandPosting() {
             <div className="lg:col-span-2 space-y-5">
               {/* Per-platform preview */}
               <div className="bg-white dark:bg-[#1A1D27] rounded-xl border border-gray-200 dark:border-gray-800 p-5 shadow-sm relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#1e3a5f] to-[#3a6aaa]" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500" />
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Preview
                 </h3>
 
-                <div className="flex rounded-lg bg-gray-100 dark:bg-[#0F1117] p-0.5 mb-4">
+                {/* Pill-style preview tabs */}
+                <div className="flex gap-2 mb-4">
                   {(["instagram", "tiktok", "facebook", "x"] as PreviewTab[]).map((tab) => {
                     const plat = PLATFORMS.find((p) => p.id === tab);
                     const Icon = tab === "tiktok" ? TikTokIcon : plat?.icon;
                     const isChecked = selectedPlatforms.includes(tab as UploadPostPlatform);
+                    const isActive = previewTab === tab;
                     return (
                       <button
                         key={tab}
                         type="button"
                         onClick={() => isChecked && setPreviewTab(tab)}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all",
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border",
                           !isChecked
-                            ? "opacity-35 cursor-not-allowed text-gray-400 dark:text-gray-600"
-                            : previewTab === tab
-                              ? "bg-white dark:bg-[#1A1D27] text-[#1e3a5f] shadow-sm"
-                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                            ? "opacity-30 cursor-not-allowed border-gray-200 dark:border-gray-700 text-gray-400"
+                            : isActive
+                              ? "border-[#1e3a5f] bg-[#1e3a5f] text-white shadow-sm"
+                              : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-[#1e3a5f]/50 hover:text-[#1e3a5f]"
                         )}
                       >
-                        {Icon && <Icon className="h-3.5 w-3.5" />}
+                        {Icon && <Icon className={cn("h-3.5 w-3.5", isActive && "text-white")} />}
                         {plat?.name ?? tab}
                       </button>
                     );
@@ -2140,6 +2194,22 @@ export default function BrandPosting() {
                 {previewTab === "x" && <XPreview />}
                 {previewTab === "tiktok" && <TikTokPreview />}
                 {previewTab === "facebook" && <FacebookPreview />}
+
+                {/* Estimated reach */}
+                {selectedPlatforms.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+                        <TrendingUp className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Estimated Reach</p>
+                        <p className="text-[10px] text-gray-400">Based on {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? "s" : ""}</p>
+                      </div>
+                    </div>
+                    <p className="text-lg font-bold text-purple-600 dark:text-purple-400">~{formatReach(estimatedReach)}</p>
+                  </div>
+                )}
               </div>
 
               {/* Platform status */}
