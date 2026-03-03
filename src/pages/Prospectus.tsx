@@ -5,7 +5,7 @@ import {
   CheckCircle2, BookOpen, ZoomIn,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
   Eye, EyeOff, ChevronDown, GripVertical, ChevronRight,
-  Sparkles, ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -2272,56 +2272,13 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
   const visibleBlocks = content.sections.filter((s) => s.visible !== false);
   const hasVideoBlock = visibleBlocks.some((s) => inferBlockType(s) === "video");
 
-  const tabDemoUrl = TAB_DEMO_URLS[tab as TabId];
+
 
   return (
     <div ref={containerRef} className="space-y-12 relative">
-      {/* Demo callout banner */}
-      {tabDemoUrl && (
-        <div
-          className={cn(
-            "max-w-3xl mx-auto rounded-xl px-5 py-3.5 flex items-center justify-between gap-3 border",
-            dark
-              ? "bg-[#1e3a5f]/10 border-[#1e3a5f]/20"
-              : "bg-blue-50 border-blue-100"
-          )}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={cn("flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center", dark ? "bg-[#1e3a5f]/20" : "bg-blue-100")}>
-              <Play className={cn("h-4 w-4", dark ? "text-[#4a8fd4]" : "text-[#1e3a5f]")} />
-            </div>
-            <p className={cn("text-sm", dark ? "text-gray-300" : "text-gray-700")}>
-              This section includes a <span className="font-semibold">live interactive demo</span> — scroll down or{" "}
-              <a
-                href={withProspectusRef(tabDemoUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn("font-semibold underline underline-offset-2 hover:no-underline", dark ? "text-[#4a8fd4]" : "text-[#1e3a5f]")}
-              >
-                click here to launch it
-              </a>.
-            </p>
-          </div>
-          <a
-            href={withProspectusRef(tabDemoUrl)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex-shrink-0 hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors",
-              dark
-                ? "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
-                : "bg-[#1e3a5f] hover:bg-[#2d5282] text-white"
-            )}
-          >
-            <ExternalLink className="h-3 w-3" />
-            Launch Demo
-          </a>
-        </div>
-      )}
-
       {/* Deep Dive link */}
       {(deepDiveUrl || kbSlug) && (
-        <div className={cn("flex justify-end", tabDemoUrl ? "-mb-8 -mt-4" : "-mb-8")}>
+        <div className={cn("flex justify-end -mb-8")}>
           <a
             href={withProspectusRef(deepDiveUrl || `/kb/${kbSlug}`)}
             target="_blank"
