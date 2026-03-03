@@ -9,7 +9,7 @@ import {
   type UploadPostPlatform,
   type UploadResult,
 } from "@/services/upload-post";
-import { getConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-post-sync";
+import { getConnectedAccounts, seedDemoConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-post-sync";
 import {
   Send,
   Clock,
@@ -228,7 +228,7 @@ function getPlatformIcon(pid: string) {
 
 export default function BrandPosting() {
   const { user, effectiveUserId } = useAuth();
-  const { guardAction } = useDemoMode();
+  const { isDemo, guardAction } = useDemoMode();
   const userId = effectiveUserId ?? null;
 
   // Tab state
@@ -298,14 +298,17 @@ export default function BrandPosting() {
   const dropRef = useRef<HTMLDivElement>(null);
   const sendMenuRef = useRef<HTMLDivElement>(null);
 
-  // Load connected accounts
+  // Load connected accounts (seed demo accounts if needed)
   useEffect(() => {
     if (!userId) return;
     setLoadingAccounts(true);
-    getConnectedAccounts(userId)
+    const load = isDemo
+      ? seedDemoConnectedAccounts(userId)
+      : getConnectedAccounts(userId);
+    load
       .then(setConnectedAccounts)
       .finally(() => setLoadingAccounts(false));
-  }, [userId]);
+  }, [userId, isDemo]);
 
   // Load recent posts (manual + campaign)
   const loadRecentPosts = useCallback(async () => {
@@ -417,6 +420,15 @@ export default function BrandPosting() {
       setSelectedPlatforms(availablePlatforms.map((p) => p.id));
     }
   }, [connectedAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-switch preview tab when current one gets unchecked
+  useEffect(() => {
+    if (selectedPlatforms.length > 0 && !selectedPlatforms.includes(previewTab as UploadPostPlatform)) {
+      const previewOrder: PreviewTab[] = ["instagram", "tiktok", "facebook", "x"];
+      const next = previewOrder.find((t) => selectedPlatforms.includes(t as UploadPostPlatform));
+      if (next) setPreviewTab(next);
+    }
+  }, [selectedPlatforms, previewTab]);
 
   // Character limit
   const minCharLimit = selectedPlatforms.reduce((min, pid) => {
@@ -1841,14 +1853,20 @@ export default function BrandPosting() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.name}</p>
                             {account?.platform_username && (
-                              <p className="text-[10px] text-gray-400 truncate">@{account.platform_username}</p>
+                              <p className="text-[10px] text-gray-400 truncate">
+                                {p.id === "facebook" ? account.platform_username + " (Page)" : "@" + account.platform_username}
+                              </p>
                             )}
                           </div>
-                          {selected && (
-                            <span className="text-[10px] font-medium text-[#1e3a5f] bg-[#1e3a5f]/10 px-2 py-0.5 rounded-full shrink-0">
-                              Active
-                            </span>
-                          )}
+                          <span className={cn(
+                            "flex items-center gap-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0",
+                            selected
+                              ? "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20"
+                              : "text-gray-400 bg-gray-50 dark:text-gray-500 dark:bg-gray-800"
+                          )}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            Connected
+                          </span>
                         </label>
                       );
                     })}
@@ -2085,16 +2103,19 @@ export default function BrandPosting() {
                   {(["instagram", "tiktok", "facebook", "x"] as PreviewTab[]).map((tab) => {
                     const plat = PLATFORMS.find((p) => p.id === tab);
                     const Icon = tab === "tiktok" ? TikTokIcon : plat?.icon;
+                    const isChecked = selectedPlatforms.includes(tab as UploadPostPlatform);
                     return (
                       <button
                         key={tab}
                         type="button"
-                        onClick={() => setPreviewTab(tab)}
+                        onClick={() => isChecked && setPreviewTab(tab)}
                         className={cn(
                           "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all",
-                          previewTab === tab
-                            ? "bg-white dark:bg-[#1A1D27] text-[#1e3a5f] shadow-sm"
-                            : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
+                          !isChecked
+                            ? "opacity-35 cursor-not-allowed text-gray-400 dark:text-gray-600"
+                            : previewTab === tab
+                              ? "bg-white dark:bg-[#1A1D27] text-[#1e3a5f] shadow-sm"
+                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700"
                         )}
                       >
                         {Icon && <Icon className="h-3.5 w-3.5" />}

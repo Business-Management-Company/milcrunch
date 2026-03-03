@@ -26,8 +26,12 @@ export async function syncConnectedAccountsFromUploadPost(userId: string): Promi
   const accounts = (profile?.connected_accounts ?? []) as ConnectedAccount[];
 
   if (accounts.length === 0) {
-    await supabase.from("connected_accounts").delete().eq("user_id", userId);
-    return [];
+    // Preserve demo rows; fall back to deleting all if is_demo column missing
+    const del = await supabase.from("connected_accounts").delete().eq("user_id", userId).neq("is_demo", true);
+    if (del.error?.message?.includes("is_demo")) {
+      await supabase.from("connected_accounts").delete().eq("user_id", userId);
+    }
+    return getConnectedAccounts(userId);
   }
 
   const rows = accounts.map((acc) => ({
@@ -41,8 +45,11 @@ export async function syncConnectedAccountsFromUploadPost(userId: string): Promi
     updated_at: new Date().toISOString(),
   }));
 
-  // Upsert: delete existing for this user, then insert current set.
-  await supabase.from("connected_accounts").delete().eq("user_id", userId);
+  // Upsert: delete existing non-demo for this user, then insert current set.
+  const delResult = await supabase.from("connected_accounts").delete().eq("user_id", userId).neq("is_demo", true);
+  if (delResult.error?.message?.includes("is_demo")) {
+    await supabase.from("connected_accounts").delete().eq("user_id", userId);
+  }
   const { data: inserted, error } = await supabase
     .from("connected_accounts")
     .insert(rows)
@@ -64,6 +71,45 @@ export async function getConnectedAccounts(userId: string): Promise<ConnectedAcc
     .order("platform");
   if (error) return [];
   return (data ?? []) as ConnectedAccountRow[];
+}
+
+/** Seed demo connected accounts if none exist for this user. */
+export async function seedDemoConnectedAccounts(userId: string): Promise<ConnectedAccountRow[]> {
+  // Check if accounts already exist
+  const existing = await getConnectedAccounts(userId);
+  if (existing.length > 0) return existing;
+
+  const demoAccounts = [
+    { platform: "instagram", platform_user_id: "demo_ig_001", platform_username: "milcrunchx", followers_count: 48200 },
+    { platform: "tiktok", platform_user_id: "demo_tt_001", platform_username: "milcrunchx", followers_count: 125600 },
+    { platform: "facebook", platform_user_id: "demo_fb_001", platform_username: "MilCrunch", followers_count: 15800 },
+    { platform: "x", platform_user_id: "demo_x_001", platform_username: "milcrunchx", followers_count: 32400 },
+    { platform: "youtube", platform_user_id: "demo_yt_001", platform_username: "MilCrunch Official", followers_count: 8900 },
+  ];
+
+  const rows = demoAccounts.map((acc) => ({
+    user_id: userId,
+    platform: acc.platform,
+    platform_user_id: acc.platform_user_id,
+    platform_username: acc.platform_username,
+    profile_image_url: null as string | null,
+    followers_count: acc.followers_count,
+    raw_data: { demo: true },
+    is_demo: true,
+    updated_at: new Date().toISOString(),
+  }));
+
+  // Try with is_demo column; fall back without it if column doesn't exist yet
+  let result = await supabase.from("connected_accounts").insert(rows);
+  if (result.error?.message?.includes("is_demo")) {
+    const fallbackRows = rows.map(({ is_demo: _, ...rest }) => rest);
+    result = await supabase.from("connected_accounts").insert(fallbackRows);
+  }
+  if (result.error) {
+    console.warn("[upload-post-sync] Demo seed failed:", result.error.message);
+    return [];
+  }
+  return getConnectedAccounts(userId);
 }
 
 /** Ensure Upload-Post profile exists for this user; create if not. */
