@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { generateProfileSlug, saveCreatorAvatar } from "@/lib/directories";
 // Cache-first: no IC API imports — all reads from Supabase
 import { type EnrichedProfileResponse } from "@/lib/influencers-club";
+import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
 
 // Homepage showcase functions use `featured_creators` table.
 // Directory/network page functions use `directory_members` table
@@ -601,6 +602,18 @@ function mapFeaturedRow(r: Record<string, unknown>): ShowcaseCreator {
 
 /** Map a raw directory_members row to ShowcaseCreator (shared by multiple fetch functions). */
 function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
+  // Start with stored platforms array
+  let platforms = Array.isArray(r.platforms) ? r.platforms as string[] : [];
+
+  // Enrich from enrichment_data if stored array is sparse (only primary platform)
+  if (r.enrichment_data && platforms.length <= 1) {
+    const enriched = getPlatformsFromEnrichmentData(r.enrichment_data);
+    if (enriched.length > 0) {
+      const merged = new Set([...platforms, ...enriched.map((ep) => ep.platform)]);
+      platforms = [...merged];
+    }
+  }
+
   return {
     id: r.id as string,
     display_name: (r.creator_name as string) ?? "",
@@ -618,7 +631,7 @@ function mapDirectoryRow(r: Record<string, unknown>): ShowcaseCreator {
     branch: (r.branch as string) ?? null,
     status: (r.status as string) ?? null,
     bio: (r.bio as string) ?? null,
-    platforms: Array.isArray(r.platforms) ? r.platforms as string[] : [],
+    platforms,
     profile_slug: (r.profile_slug as string) ?? null,
     ic_avatar_url: (r.ic_avatar_url as string) ?? null,
     platform_urls: (r.platform_urls as Record<string, string>) ?? {},
