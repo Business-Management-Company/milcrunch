@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Outlet, useSearchParams } from "react-router-dom";
-import { Menu, X, Link as LinkIcon } from "lucide-react";
+import { Menu, X, Link as LinkIcon, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TopNav from "@/components/layout/TopNav";
 import Sidebar from "@/components/layout/Sidebar";
@@ -25,6 +25,7 @@ export default function AppLayout() {
   const { isSuperAdmin } = useAuth();
   const [searchParams] = useSearchParams();
   const isEmbed = searchParams.get("embed") === "true";
+  const isProspectusRef = searchParams.get("ref") === "prospectus";
   const demoOffset = isDemo && !isEmbed ? DEMO_BANNER_HEIGHT : 0;
 
   const checkMobile = useCallback(() => {
@@ -88,7 +89,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background dark:bg-[#0F1117]">
       <DemoBanner />
-      <TopNav onOpenCommandPalette={() => setCommandOpen(true)} demoOffset={demoOffset} />
+      <TopNav onOpenCommandPalette={() => !isProspectusRef && setCommandOpen(true)} demoOffset={demoOffset} navLocked={isProspectusRef} />
       {isMobile && (
         <div
           className="fixed left-0 z-40 flex h-14 items-center pl-2"
@@ -105,7 +106,7 @@ export default function AppLayout() {
           </Button>
         </div>
       )}
-      <Sidebar collapsed={sidebarCollapsed} demoOffset={demoOffset} />
+      <Sidebar collapsed={sidebarCollapsed} demoOffset={demoOffset} navLocked={isProspectusRef} />
       <main
         className={cn("transition-[margin-left] duration-200 min-h-screen bg-background dark:bg-[#0F1117]")}
         style={{ marginLeft: sidebarWidth, paddingTop: `calc(3.5rem + ${demoOffset}px)` }}
@@ -114,9 +115,18 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </main>
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      <FloatingAdminChat />
-      {isSuperAdmin && (
+      {!isProspectusRef && <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />}
+      {!isProspectusRef && <FloatingAdminChat />}
+      {isProspectusRef && (
+        <a
+          href="/prospectus"
+          className="fixed bottom-4 left-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#1e3a5f] text-white text-sm font-medium shadow-lg hover:bg-[#2d5282] transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Prospectus
+        </a>
+      )}
+      {!isProspectusRef && isSuperAdmin && (
         <button
           type="button"
           onClick={() => {

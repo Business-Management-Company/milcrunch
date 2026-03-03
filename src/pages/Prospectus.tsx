@@ -120,6 +120,20 @@ function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4" | "if
 }
 
 /** Returns "video", "image", or "none" for a given tab's media */
+/** Append ?ref=prospectus to internal deep link URLs */
+function withProspectusRef(url: string): string {
+  try {
+    // Handle relative URLs
+    const base = window.location.origin;
+    const u = new URL(url, base);
+    if (!u.searchParams.has("ref")) u.searchParams.set("ref", "prospectus");
+    // Return relative for internal, full for external
+    return u.origin === base ? u.pathname + u.search : u.href;
+  } catch {
+    return url;
+  }
+}
+
 function getMediaType(videoUrl?: string, imageUrl?: string): "video" | "image" | "none" {
   if (videoUrl && parseVideoEmbed(videoUrl)) return "video";
   if (imageUrl) return "image";
@@ -2243,7 +2257,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
       {kbSlug && (
         <div className="flex justify-end -mb-8">
           <a
-            href={`/kb/${kbSlug}`}
+            href={withProspectusRef(`/kb/${kbSlug}`)}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
@@ -2375,7 +2389,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
               )}
               {section.link_url && (
                 <a
-                  href={section.link_url}
+                  href={withProspectusRef(section.link_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(

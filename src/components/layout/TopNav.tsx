@@ -27,6 +27,7 @@ function getInitials(name: string | undefined, email: string): string {
 interface TopNavProps {
   onOpenCommandPalette: () => void;
   demoOffset?: number;
+  navLocked?: boolean;
 }
 
 const ALERT_ICONS: Record<string, React.ReactNode> = {
@@ -41,7 +42,7 @@ const MOCK_ALERTS = [
   { id: "a3", message: "#MilSpouseFest hit 500 total mentions", type: "milestone", is_read: true },
 ];
 
-export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavProps) {
+export default function TopNav({ onOpenCommandPalette, demoOffset = 0, navLocked = false }: TopNavProps) {
   const { user, isSuperAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const pres = usePresentationMode();
@@ -66,17 +67,24 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavP
       style={{ top: demoOffset }}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Link to="/brand/dashboard" className="flex items-center shrink-0" aria-label="MilCrunch home">
-          <span className="font-bold text-lg text-foreground tracking-tight hidden sm:inline">MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
+        <Link
+          to="/brand/dashboard"
+          className={cn("flex items-center shrink-0", navLocked && "pointer-events-none")}
+          aria-label="MilCrunch home"
+          tabIndex={navLocked ? -1 : undefined}
+        >
+          <span className={cn("font-bold text-lg tracking-tight hidden sm:inline", navLocked ? "text-muted-foreground" : "text-foreground")}>MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
         </Link>
       </div>
 
       <button
         type="button"
         onClick={onOpenCommandPalette}
+        disabled={navLocked}
         className={cn(
           "flex-1 max-w-xl mx-4 flex items-center gap-2 rounded-full border border-gray-200 dark:border-gray-700",
-          "bg-pd-page-light/80 dark:bg-[#1A1D27] px-4 py-2.5 text-sm text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800",
+          "bg-pd-page-light/80 dark:bg-[#1A1D27] px-4 py-2.5 text-sm text-muted-foreground",
+          navLocked ? "cursor-default opacity-60" : "hover:bg-gray-100 dark:hover:bg-gray-800",
           "transition-colors"
         )}
       >
@@ -86,7 +94,7 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0 }: TopNavP
         </kbd>
       </button>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className={cn("flex items-center gap-2 shrink-0", navLocked && "pointer-events-none opacity-60")}>
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

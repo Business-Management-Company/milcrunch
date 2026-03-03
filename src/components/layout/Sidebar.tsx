@@ -202,9 +202,10 @@ interface SidebarProps {
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
   demoOffset?: number;
+  navLocked?: boolean;
 }
 
-export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarProps) {
+export default function Sidebar({ collapsed = false, demoOffset = 0, navLocked = false }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
@@ -289,7 +290,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                     idx === 0 ? "pt-2" : "pt-5 border-t border-white/10"
                   )}
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest text-slate-300">
+                  <span className={cn("text-xs font-bold uppercase tracking-widest", navLocked ? "text-slate-500" : "text-slate-300")}>
                     {section.label}
                   </span>
                   <Chevron className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-200 transition-colors" />
@@ -306,9 +307,11 @@ export default function Sidebar({ collapsed = false, demoOffset = 0 }: SidebarPr
                     const Icon = item.icon;
                     const linkClasses = cn(
                       "flex items-center gap-3 px-4 py-2 mx-2 rounded-lg text-sm transition-colors",
-                      active
-                        ? "bg-white/10 text-white font-semibold border-l-2 border-white"
-                        : "text-slate-300 font-normal hover:bg-white/5 hover:text-white",
+                      navLocked
+                        ? "pointer-events-none cursor-default text-slate-500 font-normal"
+                        : active
+                          ? "bg-white/10 text-white font-semibold border-l-2 border-white"
+                          : "text-slate-300 font-normal hover:bg-white/5 hover:text-white",
                       collapsed && "justify-center px-2 mx-1"
                     );
                     const linkContent = (
