@@ -98,7 +98,7 @@ const Navbar = () => {
                   <Link to="/auth">Sign In</Link>
                 </Button>
                 <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary">
-                  <Link to="/auth?mode=signup">Get Started</Link>
+                  <Link to="/signup">Request Demo</Link>
                 </Button>
               </>
             )}
@@ -139,7 +139,7 @@ const Navbar = () => {
                       <Link to="/auth">Sign In</Link>
                     </Button>
                     <Button asChild className="w-full bg-primary">
-                      <Link to="/auth?mode=signup">Get Started</Link>
+                      <Link to="/signup">Request Demo</Link>
                     </Button>
                   </>
                 )}

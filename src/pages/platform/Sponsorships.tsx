@@ -48,7 +48,7 @@ const PlatformSponsorships = () => {
 
           <div className="text-center">
             <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Link to="/auth?mode=signup">
+              <Link to="/signup">
                 Start Closing Sponsors
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>

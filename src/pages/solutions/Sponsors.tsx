@@ -80,7 +80,7 @@ const SolutionsSponsors = () => {
 
           <div className="text-center">
             <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <Link to="/auth?mode=signup">
+              <Link to="/signup">
                 Become a Sponsor
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>

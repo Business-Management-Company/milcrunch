@@ -241,9 +241,9 @@ export default function PublicNav() {
           <Link to="/sign-in" className="text-sm font-medium text-white hover:text-gray-300 transition-colors">
             Sign In
           </Link>
-          <Link to="/plans">
+          <Link to="/signup">
             <Button size="sm" className="rounded-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white px-5 py-2 font-semibold">
-              Sign Up
+              Request Demo
             </Button>
           </Link>
         </div>
@@ -309,9 +309,9 @@ export default function PublicNav() {
             >
               Sign In
             </Link>
-            <Link to="/plans" onClick={() => setMobileOpen(false)}>
+            <Link to="/signup" onClick={() => setMobileOpen(false)}>
               <Button size="sm" className="w-full rounded-full bg-[#1e3a5f] hover:bg-[#2d5282] text-white font-semibold">
-                Sign Up
+                Request Demo
               </Button>
             </Link>
           </div>

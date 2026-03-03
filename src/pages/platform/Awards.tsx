@@ -61,7 +61,7 @@ const PlatformAwards = () => {
 
           <div className="text-center">
             <Button size="lg" asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <Link to="/auth?mode=signup">
+              <Link to="/signup">
                 Create Your Awards Program
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>

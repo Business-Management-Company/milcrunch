@@ -299,7 +299,7 @@ const VeteranPodcastAwards = () => {
             Use the same platform that powers the Veteran Podcast Awards.
           </p>
           <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90 font-semibold transition-all hover:scale-105 h-14 px-8 text-lg">
-            <Link to="/auth?mode=signup">
+            <Link to="/signup">
               Get Started
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>

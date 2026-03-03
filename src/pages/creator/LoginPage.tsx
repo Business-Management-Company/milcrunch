@@ -222,9 +222,9 @@ export default function LoginPage() {
           )}
 
           <p className="text-center text-sm text-muted-foreground pt-2">
-            Don&apos;t have an account?{" "}
+            Interested in MilCrunch?{" "}
             <Link to="/signup" className="text-primary font-medium hover:underline">
-              Sign up
+              Request a Demo
             </Link>
           </p>
         </CardContent>
