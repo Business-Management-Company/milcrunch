@@ -2798,6 +2798,30 @@ export default function Prospectus() {
   const darkMode =
     themeMode === "dark" || (themeMode === "system" && systemPrefersDark);
 
+  // Load completed tabs from prospectus_completions for a given email,
+  // restore completedTabs set and unlockedUpTo index.
+  const loadCompletions = async (email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("prospectus_completions")
+        .select("tab_name")
+        .eq("email", email);
+      if (error || !data || data.length === 0) return;
+      const completed = new Set<string>(data.map((r: { tab_name: string }) => r.tab_name));
+      setCompletedTabs(completed);
+      // Find the highest consecutive completed tab index to set unlockedUpTo
+      let frontier = 0;
+      for (let i = 0; i < visibleTabs.length; i++) {
+        if (completed.has(visibleTabs[i])) {
+          frontier = i + 1; // unlock the tab after the last completed one
+        } else {
+          break; // stop at first gap
+        }
+      }
+      setUnlockedUpTo(Math.min(frontier, visibleTabs.length - 1));
+    } catch { /* Table may not exist yet */ }
+  };
+
   // Restore session from localStorage (returning users)
   useEffect(() => {
     if (localStorage.getItem(SESSION_KEY) === "1") {
@@ -2805,6 +2829,8 @@ export default function Prospectus() {
       const savedEmail = localStorage.getItem("prospectus_email") || "";
       if (savedEmail) {
         setAccessEmail(savedEmail);
+        // Load prior completions to restore progress
+        loadCompletions(savedEmail);
         // Create a new access_log entry for this returning session
         (async () => {
           try {
@@ -3111,6 +3137,7 @@ export default function Prospectus() {
           setAccessEmail(email);
           setAccessLogId(logId);
           sessionStartRef.current = Date.now();
+          loadCompletions(email);
           setHasAccess(true);
         }}
       />
@@ -3339,14 +3366,14 @@ export default function Prospectus() {
                     )}
                   >
                     {isLocked && <Lock className="h-3 w-3" />}
-                    {!isLocked && completedTabs.has(tab) && <Check className="h-3 w-3 text-emerald-400" />}
-                    {TAB_LABELS[tab]}
-                    {!isLocked && TAB_DEMO_URLS[tab] && (
-                      <span className="relative flex h-2 w-2 ml-0.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                    {!isLocked && completedTabs.has(tab) && (
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400 items-center justify-center">
+                          <Check className="h-2 w-2 text-white" strokeWidth={3} />
+                        </span>
                       </span>
                     )}
+                    {TAB_LABELS[tab]}
                   </button>
                   {/* Locked tooltip */}
                   {lockedTooltip === tab && (
@@ -3399,15 +3426,13 @@ export default function Prospectus() {
               "text-lg font-bold mb-2",
               darkMode ? "text-white" : "text-gray-900"
             )}>
-              {warningModal.isVideo ? "Finish the Video" : "Keep Scrolling"}
+              Complete the Previous Section
             </h3>
             <p className={cn(
               "text-sm mb-6",
               darkMode ? "text-gray-400" : "text-gray-500"
             )}>
-              {warningModal.isVideo
-                ? "Please finish watching the video before moving to the next section."
-                : "Please scroll through at least half of this section before continuing."}
+              Watch the video or scroll to the bottom of the page to enable the next tab.
             </p>
             <button
               type="button"
