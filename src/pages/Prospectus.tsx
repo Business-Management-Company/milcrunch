@@ -93,6 +93,7 @@ const TAB_KB_CATEGORY: Record<string, string> = {
 /** Direct Deep Dive URL overrides — bypasses /kb/ for specific tabs */
 const TAB_DEEP_DIVE_URL: Record<string, string> = {
   "365 Insights": "/brand/events/9cfd70f9-e542-49ad-91e7-2ae01a1e150e?tab=365-insights",
+  "Events & Attendee App": "/brand/events/85e418d7-8295-4525-9f9d-97fa90fa3d25?tab=gtm-planner&section=all&expand=all&demo=true",
 };
 
 /* ------------------------------------------------------------------ */

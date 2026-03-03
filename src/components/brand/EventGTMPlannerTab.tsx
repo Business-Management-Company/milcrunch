@@ -432,8 +432,11 @@ export default function EventGTMPlannerTab({
   /* Demo persistence: load saved results from DB for all users */
   const { isSuperAdmin } = useAuth();
 
+  const autoGenTriggered = useRef(false);
+
   useEffect(() => {
     (async () => {
+      let loaded = false;
       try {
         const { data } = await supabase
           .from("gtm_demo_results")
@@ -452,6 +455,7 @@ export default function EventGTMPlannerTab({
           }
           if (data.gtm_plan) setGtmPlan(data.gtm_plan as string);
           if (data.summary) setSummary(data.summary as string);
+          loaded = !!(data.conflicts || data.gtm_plan || data.summary);
         }
       } catch {
         // Table may not exist yet — fall back to localStorage
@@ -467,13 +471,23 @@ export default function EventGTMPlannerTab({
               aiEvents: parsed.aiEvents ?? [],
               aiFailed: parsed.aiFailed ?? false,
             });
+            loaded = true;
           }
-          if (savedGtm) setGtmPlan(savedGtm);
-          if (savedSummary) setSummary(savedSummary);
+          if (savedGtm) { setGtmPlan(savedGtm); loaded = true; }
+          if (savedSummary) { setSummary(savedSummary); loaded = true; }
         } catch { /* ignore */ }
       }
+
+      // Auto-generate all sections when demo mode is active and nothing is persisted
+      if (demoMode && !loaded && startDate && !autoGenTriggered.current) {
+        autoGenTriggered.current = true;
+        // Kick off generation after a brief delay to let the UI render first
+        setTimeout(() => {
+          saveAllAsDemo();
+        }, 500);
+      }
     })();
-  }, [eventId]);
+  }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Scroll to section when showAll + scrollToSection specifies a card */
   useEffect(() => {
