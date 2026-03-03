@@ -33,6 +33,7 @@
     {"source": "/api/social-listening-scan", "destination": "/api/social-listening-scan"},
     {"source": "/api/social-listening-agent", "destination": "/api/social-listening-agent"},
     {"source": "/api/shared-reports", "destination": "/api/shared-reports"},
+    {"source": "/api/ensure-post-drafts", "destination": "/api/ensure-post-drafts"},
     {"source": "/api/backfill-avatars", "destination": "/api/backfill-avatars"},
     {"source": "/api/cleanup-avatars", "destination": "/api/cleanup-avatars"},
     {"source": "/api/refresh-avatars", "destination": "/api/refresh-avatars"},

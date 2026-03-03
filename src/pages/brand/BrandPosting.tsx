@@ -391,17 +391,41 @@ export default function BrandPosting() {
     loadRecentPosts();
   }, [loadRecentPosts]);
 
+  // Ensure post_drafts table exists (fires once)
+  const tableBootstrapped = useRef(false);
+  const ensureDraftsTable = useCallback(async () => {
+    if (tableBootstrapped.current) return;
+    tableBootstrapped.current = true;
+    try {
+      await fetch("/api/ensure-post-drafts", { method: "POST" });
+    } catch {
+      // Non-critical — table may already exist
+    }
+  }, []);
+
   // Load drafts
   const loadDrafts = useCallback(async () => {
     if (!userId) return;
     setLoadingDrafts(true);
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("post_drafts")
       .select("id, caption, media_url, platforms, scheduled_at, created_at, updated_at")
       .eq("user_id", userId)
       .order("updated_at", { ascending: false });
     if (error) {
       console.error("[Drafts] Load failed:", error.message, error.details, error.hint);
+      // Table might not exist — try bootstrapping then retry
+      if (error.message?.includes("post_drafts") || error.code === "PGRST204" || error.code === "PGRST205" || error.code === "42P01") {
+        await ensureDraftsTable();
+        const retry = await supabase
+          .from("post_drafts")
+          .select("id, caption, media_url, platforms, scheduled_at, created_at, updated_at")
+          .eq("user_id", userId)
+          .order("updated_at", { ascending: false });
+        data = retry.data;
+        error = retry.error;
+        if (error) console.error("[Drafts] Retry failed:", error.message);
+      }
     }
     setDrafts(
       (data ?? []).map((r: any) => ({
@@ -415,7 +439,7 @@ export default function BrandPosting() {
       })),
     );
     setLoadingDrafts(false);
-  }, [userId]);
+  }, [userId, ensureDraftsTable]);
 
   useEffect(() => {
     loadDrafts();
@@ -619,40 +643,55 @@ export default function BrandPosting() {
       toast.error("Add a caption or media before saving.");
       return;
     }
-    if (activeDraftId) {
-      // Update existing draft
-      const { error } = await supabase
-        .from("post_drafts")
-        .update({
-          caption: caption.trim(),
-          media_url: filePreview || null,
-          platforms: selectedPlatforms,
-          scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
-          updated_at: new Date().toISOString(),
-        } as Record<string, unknown>)
-        .eq("id", activeDraftId);
-      if (error) {
-        console.error("[Drafts] Update failed:", error.message, error.details, error.hint);
-        toast.error(`Failed to update draft: ${error.message}`);
-        return;
+
+    const draftPayload = {
+      caption: caption.trim(),
+      media_url: filePreview || null,
+      platforms: selectedPlatforms,
+      scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
+    };
+
+    const runSave = async (): Promise<{ data: any; error: any }> => {
+      if (activeDraftId) {
+        return supabase
+          .from("post_drafts")
+          .update({ ...draftPayload, updated_at: new Date().toISOString() } as Record<string, unknown>)
+          .eq("id", activeDraftId)
+          .select();
       }
-      toast.success("Draft updated!");
-    } else {
-      // Insert new draft
-      const { error } = await supabase.from("post_drafts").insert({
+      return supabase.from("post_drafts").insert({
+        ...draftPayload,
         user_id: userId,
-        caption: caption.trim(),
-        media_url: filePreview || null,
-        platforms: selectedPlatforms,
-        scheduled_at: scheduledTime ? new Date(scheduledTime).toISOString() : null,
-      } as Record<string, unknown>);
-      if (error) {
-        console.error("[Drafts] Insert failed:", error.message, error.details, error.hint);
-        toast.error(`Failed to save draft: ${error.message}`);
+      } as Record<string, unknown>).select();
+    };
+
+    let result = await runSave();
+
+    // If table doesn't exist, bootstrap and retry
+    if (result.error && (result.error.message?.includes("post_drafts") || result.error.code === "PGRST205" || result.error.code === "42P01")) {
+      await ensureDraftsTable();
+      result = await runSave();
+    }
+
+    if (result.error) {
+      console.error("[Drafts] Save failed:", result.error.message, result.error.details, result.error.hint);
+      toast.error(`Failed to save draft: ${result.error.message}`);
+      return;
+    }
+
+    // RLS can silently drop the insert (no error but no rows returned)
+    if (!result.data || result.data.length === 0) {
+      console.error("[Drafts] Save silently blocked — likely missing RLS policy. Bootstrapping...");
+      await ensureDraftsTable();
+      // Retry once after bootstrap
+      const retry = await runSave();
+      if (retry.error || !retry.data?.length) {
+        toast.error("Draft save blocked by database permissions. Please contact your admin.");
         return;
       }
-      toast.success("Draft saved!");
     }
+
+    toast.success(activeDraftId ? "Draft updated!" : "Draft saved!");
     loadDrafts();
   };
 
