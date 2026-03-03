@@ -1645,7 +1645,7 @@ function ManageContentPanel({
 /* ------------------------------------------------------------------ */
 
 function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => void }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => localStorage.getItem("prospectus_email") || "");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -1670,15 +1670,15 @@ function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => 
     setChecking(false);
     if (logErr || !logRow) {
       // If logging table doesn't exist yet, still let them in
-      localStorage.setItem(SESSION_KEY, "1");
+      sessionStorage.setItem(SESSION_KEY, "1");
       localStorage.setItem("prospectus_email", trimmed);
       onAccess(trimmed, "");
       return;
     }
 
-    localStorage.setItem(SESSION_KEY, "1");
+    sessionStorage.setItem(SESSION_KEY, "1");
     localStorage.setItem("prospectus_email", trimmed);
-    localStorage.setItem("prospectus_log_id", logRow.id);
+    sessionStorage.setItem("prospectus_log_id", logRow.id);
     onAccess(trimmed, logRow.id);
   };
 
@@ -2709,28 +2709,16 @@ export default function Prospectus() {
   const darkMode =
     themeMode === "dark" || (themeMode === "system" && systemPrefersDark);
 
-  // Restore session from localStorage (returning users)
+  // Restore session from sessionStorage (same browser session only)
   // (Completion loading is handled by the dedicated effect once accessEmail + gatingLoaded are set)
   useEffect(() => {
-    if (localStorage.getItem(SESSION_KEY) === "1") {
+    if (sessionStorage.getItem(SESSION_KEY) === "1") {
       setHasAccess(true);
       const savedEmail = localStorage.getItem("prospectus_email") || "";
       if (savedEmail) {
         setAccessEmail(savedEmail);
-        // Create a new access_log entry for this returning session
-        (async () => {
-          try {
-          const { data: logRow } = await supabase
-            .from("prospectus_access_log")
-            .insert({ email: savedEmail })
-            .select("id")
-            .single();
-          if (logRow) {
-            localStorage.setItem("prospectus_log_id", logRow.id);
-            setAccessLogId(logRow.id);
-          }
-          } catch { /* Table may not exist yet */ }
-        })();
+        const savedLogId = sessionStorage.getItem("prospectus_log_id") || "";
+        if (savedLogId) setAccessLogId(savedLogId);
       }
     }
   }, []);
