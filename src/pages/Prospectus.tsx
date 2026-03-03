@@ -1895,37 +1895,35 @@ const TAB_CONTENT: Record<string, TabContent> = {
     headline: "Where the military and veteran community comes to be",
     headlineAccent: "seen, heard, and understood.",
     description:
-      "MilCrunch is the operating system military events and communities have been missing \u2014 built by a veteran and designed to offer a home for storytellers and turn every event into a year-round community that sponsors want to fund again and again.",
+      "MilCrunch is the operating system military events and communities have been missing \u2014 built by a veteran, proven at MIC, and designed to turn every event into a year-round community that sponsors want to fund again and again.",
     sections: [
       {
-        heading: "The Community Is the Asset",
+        heading: "The Origin Story",
         description:
-          "There are thousands of military-connected creators \u2014 veterans, active duty, military spouses, and Gold Star families \u2014 telling powerful stories every day across Instagram, TikTok, YouTube, and podcasts. They command massive, loyal audiences. But there has never been a single platform that identifies them, verifies their service, and connects them to the brands that want to reach the military community authentically.\n\nMilCrunch changes that. We\u2019ve built the largest verified military creator network \u2014 a living, searchable directory of storytellers with real military connections, scored for authenticity and reach. This isn\u2019t a talent agency or a marketplace. It\u2019s infrastructure: the verified layer that sits between creators and brands, ensuring every partnership is built on trust.",
+          "It started with a problem a veteran couldn\u2019t let go of: the military and veteran community needed a place to be heard, seen, and understood\u2014in one home. That home was the Parade Deck experience\u2014where every military or veteran influencer, spouse-owned business, creator, and podcaster could show up, build a real presence, and be discovered.",
         items: [],
       },
       {
-        heading: "Why This Matters for Recurrent",
+        heading: "The Evolution to MilCrunch",
         description:
-          "Recurrent already owns the military media brands \u2014 We Are The Mighty, Task & Purpose, Military.com content partnerships. But brand publishing alone doesn\u2019t capture the creator economy. MilCrunch brings the other half: the thousands of authentic voices that audiences actually trust.\n\nTogether, Recurrent\u2019s editorial authority and MilCrunch\u2019s verified creator network create something no one else has \u2014 a full-spectrum military media ecosystem where brands can publish, partner, and activate with confidence.",
-        items: [
-          "1,000+ verified military creators with AI-powered trust scores",
-          "Proprietary discovery engine \u2014 filter by branch, status, reach, engagement, and Military Match Score",
-          "Multi-phase verification \u2014 People Data Labs, web intelligence, social cross-referencing, and AI analysis",
-          "Built-in community tools \u2014 events, streaming, social posting, sponsor dashboards, and 365-day engagement tracking",
-          "Creator-to-brand pipeline \u2014 not just discovery, but activation and ROI measurement",
-        ],
+          "Now, Parade Deck\u2019s name and infrastructure are being rebranded as MilCrunch\u2014with a meaningful upgrade in AI technology that makes the platform faster to use, easier to grow on, and built for scale.",
+        items: [],
       },
       {
         heading: "Essential Infrastructure",
         description:
-          "MilCrunch is the essential infrastructure for media companies and brands that want to authentically engage the military and veteran community. At the core is a powerful network directory and creator-to-brand toolkit \u2014 helping you discover the right voices with precision through Discovery\u2019s proprietary Military Match Scores, including filters by branch and location.",
+          "MilCrunch is the essential infrastructure for media companies and brands that want to authentically engage the military and veteran community. At the core is a powerful network directory and creator-to-brand toolkit\u2014helping you discover the right voices with precision through Discovery\u2019s proprietary Military Match Scores, including filters by branch and location.",
         items: [
-          "Trust is built in \u2014 MilCrunch uses multi-phase AI verification \u2014 web intelligence and confidence scoring \u2014 to help eliminate stolen valor and protect credibility",
-          "Goes beyond fragmented event stacks by bringing event creation, registration, and attendee experience into one system \u2014 complete with a Progressive Web App for schedules, speaker bios, and networking",
+          "Trust is built in \u2014 MilCrunch uses multi-phase AI verification\u2014web intelligence and confidence scoring\u2014to help eliminate stolen valor and protect credibility",
+          "Goes beyond discovery \u2014 Replaces fragmented event stacks by bringing event creation, registration, and attendee experience into one system\u2014complete with a high-performance Progressive Web App for schedules, speaker bios, and networking (no downloads)",
           "AI-assisted execution \u2014 Teams can plan and execute faster with AI-assisted go-to-market strategy, automated campaign building, one-click streaming integrations, and real-time analytics/ROI tracking",
         ],
       },
     ],
+    bottomNote: {
+      heading: "In Short",
+      text: "MilCrunch is one platform for military creator discovery, verification, event management, email and campaign automation, live streaming, and performance insights\u2014built by veterans, for the community.",
+    },
   },
   "Events & Attendee App": {
     headline: "One Event. Every Channel. Year-Round Revenue.",
