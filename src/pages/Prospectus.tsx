@@ -133,7 +133,18 @@ function parseVideoEmbed(url: string): { type: "youtube" | "vimeo" | "mp4" | "if
   return null;
 }
 
-/** Returns "video", "image", or "none" for a given tab's media */
+/** Parse **bold** markdown in plain text and return React nodes */
+function renderBoldText(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 /** Append ?ref=prospectus to internal deep link URLs */
 function withProspectusRef(url: string): string {
   try {
@@ -2260,7 +2271,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
               dark ? "text-gray-400" : "text-[#6B7280]"
             )}
           >
-            {content.description}
+            {renderBoldText(content.description)}
           </p>
         )}
       </section>
@@ -2346,7 +2357,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
                 <div className="space-y-3">
                   {section.description.split("\n\n").map((para, pi) => (
                     <p key={pi} className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                      {para}
+                      {renderBoldText(para)}
                     </p>
                   ))}
                 </div>
@@ -2384,7 +2395,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
                 <div className="space-y-3 mb-4">
                   {section.description.split("\n\n").map((para, pi) => (
                     <p key={pi} className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                      {para}
+                      {renderBoldText(para)}
                     </p>
                   ))}
                 </div>
@@ -2395,7 +2406,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
                     <div key={j} className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
                       <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                        {item}
+                        {renderBoldText(item)}
                       </p>
                     </div>
                   ))}
@@ -2467,7 +2478,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
                 );
               })()}
               {section.caption && (
-                <p className={cn("text-xs mt-2 text-center transition-colors duration-300", dark ? "text-gray-500" : "text-gray-400")}>{section.caption}</p>
+                <p className={cn("text-xs mt-2 text-center transition-colors duration-300", dark ? "text-gray-500" : "text-gray-400")}>{renderBoldText(section.caption)}</p>
               )}
             </section>
           );
@@ -2565,7 +2576,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
             )}
             {section.description && (
               <p className={cn("text-sm leading-relaxed mb-4 transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                {section.description}
+                {renderBoldText(section.description)}
               </p>
             )}
             {Array.isArray(section.items) && section.items.length > 0 && section.items.some((it) => it.trim()) && (
@@ -2574,7 +2585,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
                   <div key={j} className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 flex-shrink-0" />
                     <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                      {item}
+                      {renderBoldText(item)}
                     </p>
                   </div>
                 ))}
@@ -2612,7 +2623,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
               dark ? "text-gray-400" : "text-[#6B7280]"
             )}
           >
-            {content.bottomNote.text}
+            {renderBoldText(content.bottomNote.text)}
           </p>
         </section>
       )}
