@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy, Filter, CircleCheck, Copy, UserPlus, X } from "lucide-react";
+import { Search, ListPlus, Loader2, Plus, MapPin, ExternalLink, Mail, BadgeCheck, LayoutGrid, List, Save, Bookmark, ChevronDown, Trash2, ShieldCheck, Coins, AlertTriangle, UserSearch, Info, Link as LinkIcon, Sparkles, Users, Trophy, Filter, CircleCheck, Copy, UserPlus, X, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -4122,7 +4122,7 @@ const BrandDiscover = () => {
                             <span className="font-bold text-emerald-500 tabular-nums">{typeof creator.engagementRate === "number" ? creator.engagementRate.toFixed(2) : "—"}%</span>
                           </div>
                           <div>
-                            <span className="text-[11px] text-gray-400 dark:text-gray-500 block">Avg Likes</span>
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500 block flex items-center gap-1"><Heart className="h-3 w-3 text-pink-500 fill-pink-500" />Avg Likes</span>
                             <span className="font-bold text-gray-900 dark:text-white tabular-nums">{creator.avgLikes ? formatFollowers(creator.avgLikes) : "—"}</span>
                           </div>
                           <div>

@@ -1329,7 +1329,7 @@ const BrandDirectory = () => {
                     {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
                     <div className="flex items-center gap-4 text-xs mb-3">
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
-                      <div className="flex items-center gap-1"><Heart className="h-3 w-3 text-pink-500 fill-pink-500" /><span className="font-bold text-[#000741] dark:text-white">{m.avg_likes ?? "—"}</span><span className="text-muted-foreground ml-1">avg likes</span></div>
+                      <div className="flex items-center gap-1"><Heart className="h-3 w-3 text-pink-500 fill-pink-500" /><span className="font-bold text-[#000741] dark:text-white">{m.avg_likes != null && String(m.avg_likes) !== "0" ? (/^\d+$/.test(String(m.avg_likes)) ? formatFollowerCount(Number(m.avg_likes)) : m.avg_likes) : "—"}</span><span className="text-muted-foreground ml-1">avg likes</span></div>
                     </div>
                     <div className="flex items-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 w-full justify-center flex-wrap" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1.5">

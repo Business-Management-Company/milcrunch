@@ -265,23 +265,26 @@ function getTotalReach(creator: ShowcaseCreator): { total: number; platformCount
 
 function getBestStats(creator: ShowcaseCreator): { value: string; label: string }[] {
   const stats: { value: string; label: string }[] = [];
-  if (creator.follower_count && creator.follower_count > 0) {
-    stats.push({ value: formatFollowerCount(creator.follower_count), label: "Followers" });
-  }
+  // Always show followers
+  stats.push({
+    value: creator.follower_count && creator.follower_count > 0
+      ? formatFollowerCount(creator.follower_count)
+      : "—",
+    label: "Followers",
+  });
+  // Always show avg likes
+  let likesValue = "—";
   if (creator.avg_likes != null) {
     const raw = String(creator.avg_likes);
-    // avg_likes may already be formatted (e.g. "2.9K") after enrichment,
-    // or a raw number string (e.g. "2949") from the database.
     const numeric = parseFloat(raw);
     if (!isNaN(numeric) && numeric > 0) {
-      // Raw number — format it
-      stats.push({ value: formatFollowerCount(numeric), label: "Avg Likes" });
+      likesValue = formatFollowerCount(numeric);
     } else if (/\d/.test(raw) && raw !== "0" && raw !== "—") {
-      // Already formatted string like "2.9K" — use as-is
-      stats.push({ value: raw, label: "Avg Likes" });
+      likesValue = raw;
     }
   }
-  return stats.slice(0, 2);
+  stats.push({ value: likesValue, label: "Avg Likes" });
+  return stats;
 }
 
 function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
@@ -371,19 +374,14 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       </div>
 
       {/* Stats row */}
-      {(() => {
-        const best = getBestStats(c);
-        return best.length > 0 ? (
-          <div className="flex items-center gap-3 px-4 mb-2">
-            {best.map((s) => (
-              <p key={s.label} className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
-                {s.label === "Avg Likes" && <Heart className="h-3 w-3 text-pink-500 fill-pink-500" />}
-                <span className="font-semibold text-[#1A1A2E]">{s.value}</span> {s.label.toLowerCase()}
-              </p>
-            ))}
-          </div>
-        ) : null;
-      })()}
+      <div className="flex items-center gap-3 px-4 mb-2">
+        {getBestStats(c).map((s) => (
+          <p key={s.label} className="text-xs text-gray-500 whitespace-nowrap flex items-center gap-1">
+            {s.label === "Avg Likes" && <Heart className="h-3 w-3 text-pink-500 fill-pink-500" />}
+            <span className="font-semibold text-[#1A1A2E]">{s.value}</span> {s.label.toLowerCase()}
+          </p>
+        ))}
+      </div>
 
     </Link>
   );
