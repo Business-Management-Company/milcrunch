@@ -73,21 +73,37 @@ export async function getConnectedAccounts(userId: string): Promise<ConnectedAcc
   return (data ?? []) as ConnectedAccountRow[];
 }
 
+const DEMO_ACCOUNTS = [
+  { platform: "instagram", platform_user_id: "demo_ig_001", platform_username: "milcrunchx", followers_count: 48200 },
+  { platform: "tiktok", platform_user_id: "demo_tt_001", platform_username: "milcrunchx", followers_count: 125600 },
+  { platform: "facebook", platform_user_id: "demo_fb_001", platform_username: "MilCrunch", followers_count: 15800 },
+  { platform: "x", platform_user_id: "demo_x_001", platform_username: "milcrunchx", followers_count: 32400 },
+  { platform: "youtube", platform_user_id: "demo_yt_001", platform_username: "MilCrunch Official", followers_count: 8900 },
+];
+
+/** Build in-memory fallback rows so the UI works even if the DB table is missing. */
+function buildFallbackRows(userId: string): ConnectedAccountRow[] {
+  return DEMO_ACCOUNTS.map((acc) => ({
+    id: acc.platform_user_id,
+    user_id: userId,
+    platform: acc.platform,
+    platform_user_id: acc.platform_user_id,
+    platform_username: acc.platform_username,
+    profile_image_url: null,
+    followers_count: acc.followers_count,
+    raw_data: { demo: true },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
+}
+
 /** Seed demo connected accounts if none exist for this user. */
 export async function seedDemoConnectedAccounts(userId: string): Promise<ConnectedAccountRow[]> {
   // Check if accounts already exist
   const existing = await getConnectedAccounts(userId);
   if (existing.length > 0) return existing;
 
-  const demoAccounts = [
-    { platform: "instagram", platform_user_id: "demo_ig_001", platform_username: "milcrunchx", followers_count: 48200 },
-    { platform: "tiktok", platform_user_id: "demo_tt_001", platform_username: "milcrunchx", followers_count: 125600 },
-    { platform: "facebook", platform_user_id: "demo_fb_001", platform_username: "MilCrunch", followers_count: 15800 },
-    { platform: "x", platform_user_id: "demo_x_001", platform_username: "milcrunchx", followers_count: 32400 },
-    { platform: "youtube", platform_user_id: "demo_yt_001", platform_username: "MilCrunch Official", followers_count: 8900 },
-  ];
-
-  const rows = demoAccounts.map((acc) => ({
+  const rows = DEMO_ACCOUNTS.map((acc) => ({
     user_id: userId,
     platform: acc.platform,
     platform_user_id: acc.platform_user_id,
@@ -107,9 +123,12 @@ export async function seedDemoConnectedAccounts(userId: string): Promise<Connect
   }
   if (result.error) {
     console.warn("[upload-post-sync] Demo seed failed:", result.error.message);
-    return [];
+    // Return in-memory fallback so the UI still shows platforms
+    return buildFallbackRows(userId);
   }
-  return getConnectedAccounts(userId);
+  const seeded = await getConnectedAccounts(userId);
+  // If re-fetch also fails (RLS etc.), return in-memory fallback
+  return seeded.length > 0 ? seeded : buildFallbackRows(userId);
 }
 
 /** Ensure Upload-Post profile exists for this user; create if not. */

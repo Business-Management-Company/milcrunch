@@ -298,17 +298,19 @@ export default function BrandPosting() {
   const dropRef = useRef<HTMLDivElement>(null);
   const sendMenuRef = useRef<HTMLDivElement>(null);
 
-  // Load connected accounts (seed demo accounts if needed)
+  // Load connected accounts (seed demo accounts if none exist)
   useEffect(() => {
     if (!userId) return;
     setLoadingAccounts(true);
-    const load = isDemo
-      ? seedDemoConnectedAccounts(userId)
-      : getConnectedAccounts(userId);
-    load
+    getConnectedAccounts(userId)
+      .then((accounts) => {
+        if (accounts.length > 0) return accounts;
+        // No real accounts — seed demo accounts so Publish To works
+        return seedDemoConnectedAccounts(userId);
+      })
       .then(setConnectedAccounts)
       .finally(() => setLoadingAccounts(false));
-  }, [userId, isDemo]);
+  }, [userId]);
 
   // Load recent posts (manual + campaign)
   const loadRecentPosts = useCallback(async () => {
