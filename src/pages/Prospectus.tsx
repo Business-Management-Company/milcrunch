@@ -159,90 +159,19 @@ function ProspectusMedia({
   imageUrl,
   dark,
   isSuperAdmin,
-  onVideoEnded,
 }: {
   videoUrl?: string;
   imageUrl?: string;
   dark: boolean;
   isSuperAdmin: boolean;
-  onVideoEnded?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [coverDismissed, setCoverDismissed] = useState(false);
   const [mediaError, setMediaError] = useState(false);
 
-  // Stable ref for onVideoEnded so timers/listeners don't reset on every parent re-render
-  const onVideoEndedRef = useRef(onVideoEnded);
-  useEffect(() => { onVideoEndedRef.current = onVideoEnded; }, [onVideoEnded]);
-  const fireVideoEnded = () => { onVideoEndedRef.current?.(); };
-
   // Reset cover and error state when URLs change
   useEffect(() => { setCoverDismissed(false); setMediaError(false); }, [videoUrl, imageUrl]);
-
-  // MP4 ended event + 80% progress detection
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    const handleEnded = () => fireVideoEnded();
-    const handleTimeUpdate = () => {
-      if (el.duration > 0 && el.currentTime / el.duration >= 0.8) {
-        fireVideoEnded();
-      }
-    };
-    el.addEventListener("ended", handleEnded);
-    el.addEventListener("timeupdate", handleTimeUpdate);
-    return () => {
-      el.removeEventListener("ended", handleEnded);
-      el.removeEventListener("timeupdate", handleTimeUpdate);
-    };
-  }, [videoUrl]);
-
-  // YouTube postMessage API — listen for state change "ended" (state === 0)
-  useEffect(() => {
-    if (!videoUrl) return;
-    const parsed = parseVideoEmbed(videoUrl);
-    if (!parsed || parsed.type === "mp4") return;
-
-    const handler = (e: MessageEvent) => {
-      try {
-        if (typeof e.data === "string") {
-          const msg = JSON.parse(e.data);
-          if (msg.event === "onStateChange" && msg.info === 0) fireVideoEnded();
-          if (msg.event === "ended" || msg.method === "ended") fireVideoEnded();
-        }
-      } catch { /* Not JSON */ }
-    };
-    window.addEventListener("message", handler);
-
-    const iframe = iframeRef.current;
-    if (iframe) {
-      const onLoad = () => {
-        try {
-          if (parsed.type === "youtube") {
-            iframe.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
-          }
-          if (parsed.type === "vimeo") {
-            iframe.contentWindow?.postMessage(JSON.stringify({ method: "addEventListener", value: "ended" }), "*");
-          }
-        } catch { /* cross-origin */ }
-      };
-      iframe.addEventListener("load", onLoad);
-      return () => { window.removeEventListener("message", handler); iframe.removeEventListener("load", onLoad); };
-    }
-    return () => window.removeEventListener("message", handler);
-  }, [videoUrl]);
-
-  // Timer-based fallback for iframe embeds — after 30s of viewing, consider engagement met
-  useEffect(() => {
-    if (!videoUrl) return;
-    const parsed = parseVideoEmbed(videoUrl);
-    if (!parsed || parsed.type === "mp4") return; // mp4 has reliable native ended event
-    // Only start timer when video is visible (cover dismissed or no cover image)
-    if (imageUrl && !coverDismissed) return;
-    const timer = setTimeout(() => fireVideoEnded(), 30_000);
-    return () => clearTimeout(timer);
-  }, [videoUrl, coverDismissed, imageUrl]);
 
   // If media failed to load, hide gracefully
   if (mediaError) return null;
@@ -1831,11 +1760,11 @@ function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => 
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, dbContent, videoUrl, imageUrl, onVideoEnded, onScrollProgress, showScrollHint }: {
+function OverviewTab({ dark, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint }: {
   dark: boolean; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
-  onVideoEnded?: () => void; onScrollProgress?: (pct: number) => void; showScrollHint?: boolean;
+  onScrollProgress?: (pct: number) => void; showScrollHint?: boolean;
 }) {
-  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} onVideoEnded={onVideoEnded} onScrollProgress={onScrollProgress} showScrollHint={showScrollHint} />;
+  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} onScrollProgress={onScrollProgress} showScrollHint={showScrollHint} />;
 }
 
 /* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
@@ -2242,9 +2171,8 @@ const TAB_CONTENT: Record<string, TabContent> = {
   },
 };
 
-function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, onScrollProgress, showScrollHint }: {
+function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint }: {
   dark: boolean; tab: string; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
-  onVideoEnded?: () => void;
   onScrollProgress?: (pct: number) => void;
   showScrollHint?: boolean;
 }) {
@@ -2340,7 +2268,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
       {/* Show prospectus_videos media (video or fallback image) below headline if no VIDEO block exists */}
       {!hasVideoBlock && (videoUrl || imageUrl) && (
         <div className="rounded-xl overflow-hidden max-w-3xl mx-auto">
-          <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} onVideoEnded={onVideoEnded} />
+          <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
         </div>
       )}
 
@@ -3342,7 +3270,7 @@ export default function Prospectus() {
       </header>
 
       {/* Engagement warning modal */}
-      {warningModal?.show && (
+      {warningModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div
             className={cn(
@@ -3356,11 +3284,7 @@ export default function Prospectus() {
               "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4",
               darkMode ? "bg-amber-500/10" : "bg-amber-50"
             )}>
-              {warningModal.isVideo ? (
-                <Video className="h-6 w-6 text-amber-500" />
-              ) : (
-                <BookOpen className="h-6 w-6 text-amber-500" />
-              )}
+              <BookOpen className="h-6 w-6 text-amber-500" />
             </div>
             <h3 className={cn(
               "text-lg font-bold mb-2",
@@ -3372,11 +3296,11 @@ export default function Prospectus() {
               "text-sm mb-6",
               darkMode ? "text-gray-400" : "text-gray-500"
             )}>
-              Watch the video or scroll to the bottom of the page to enable the next tab.
+              Scroll through the current section to unlock the next tab.
             </p>
             <button
               type="button"
-              onClick={() => setWarningModal(null)}
+              onClick={() => setWarningModal(false)}
               className="w-full px-4 py-2.5 rounded-xl bg-[#1e3a5f] hover:bg-[#2d5282] text-white text-sm font-semibold transition-colors"
             >
               Got it
@@ -3387,15 +3311,15 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onVideoEnded={() => markTabCompleted("Overview")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onVideoEnded={() => markTabCompleted("Events & Attendee App")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onVideoEnded={() => markTabCompleted("Event Venues")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onVideoEnded={() => markTabCompleted("Discovery")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onVideoEnded={() => markTabCompleted("Verification")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onVideoEnded={() => markTabCompleted("365 Insights")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onVideoEnded={() => markTabCompleted("Social Media")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onVideoEnded={() => markTabCompleted("Streaming/Media")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onVideoEnded={() => markTabCompleted("Partnership Model")} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
         {activeTab === "Financial Model" && (
           <div ref={financialRef}>
             <FinancialModelTab dark={darkMode} />
