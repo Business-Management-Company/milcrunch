@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Lock, Play, Share2, Check, Video,
   Loader2, Sun, Moon, Monitor,
@@ -172,21 +172,35 @@ function ProspectusMedia({
   const [coverDismissed, setCoverDismissed] = useState(false);
   const [mediaError, setMediaError] = useState(false);
 
+  // Stable ref for onVideoEnded so timers/listeners don't reset on every parent re-render
+  const onVideoEndedRef = useRef(onVideoEnded);
+  useEffect(() => { onVideoEndedRef.current = onVideoEnded; }, [onVideoEnded]);
+  const fireVideoEnded = () => { onVideoEndedRef.current?.(); };
+
   // Reset cover and error state when URLs change
   useEffect(() => { setCoverDismissed(false); setMediaError(false); }, [videoUrl, imageUrl]);
 
-  // MP4 ended event
+  // MP4 ended event + 80% progress detection
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || !onVideoEnded) return;
-    const handler = () => onVideoEnded();
-    el.addEventListener("ended", handler);
-    return () => el.removeEventListener("ended", handler);
-  }, [onVideoEnded]);
+    if (!el) return;
+    const handleEnded = () => fireVideoEnded();
+    const handleTimeUpdate = () => {
+      if (el.duration > 0 && el.currentTime / el.duration >= 0.8) {
+        fireVideoEnded();
+      }
+    };
+    el.addEventListener("ended", handleEnded);
+    el.addEventListener("timeupdate", handleTimeUpdate);
+    return () => {
+      el.removeEventListener("ended", handleEnded);
+      el.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, [videoUrl]);
 
   // YouTube postMessage API — listen for state change "ended" (state === 0)
   useEffect(() => {
-    if (!onVideoEnded || !videoUrl) return;
+    if (!videoUrl) return;
     const parsed = parseVideoEmbed(videoUrl);
     if (!parsed || parsed.type === "mp4") return;
 
@@ -194,8 +208,8 @@ function ProspectusMedia({
       try {
         if (typeof e.data === "string") {
           const msg = JSON.parse(e.data);
-          if (msg.event === "onStateChange" && msg.info === 0) onVideoEnded();
-          if (msg.event === "ended" || msg.method === "ended") onVideoEnded();
+          if (msg.event === "onStateChange" && msg.info === 0) fireVideoEnded();
+          if (msg.event === "ended" || msg.method === "ended") fireVideoEnded();
         }
       } catch { /* Not JSON */ }
     };
@@ -217,18 +231,18 @@ function ProspectusMedia({
       return () => { window.removeEventListener("message", handler); iframe.removeEventListener("load", onLoad); };
     }
     return () => window.removeEventListener("message", handler);
-  }, [onVideoEnded, videoUrl]);
+  }, [videoUrl]);
 
   // Timer-based fallback for iframe embeds — after 30s of viewing, consider engagement met
   useEffect(() => {
-    if (!onVideoEnded || !videoUrl) return;
+    if (!videoUrl) return;
     const parsed = parseVideoEmbed(videoUrl);
     if (!parsed || parsed.type === "mp4") return; // mp4 has reliable native ended event
     // Only start timer when video is visible (cover dismissed or no cover image)
     if (imageUrl && !coverDismissed) return;
-    const timer = setTimeout(() => onVideoEnded(), 30_000);
+    const timer = setTimeout(() => fireVideoEnded(), 30_000);
     return () => clearTimeout(timer);
-  }, [onVideoEnded, videoUrl, coverDismissed, imageUrl]);
+  }, [videoUrl, coverDismissed, imageUrl]);
 
   // If media failed to load, hide gracefully
   if (mediaError) return null;
@@ -2684,7 +2698,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
               style={{ width: `${Math.round((scrollProgressLocal ?? 0) * 100)}%` }}
             />
           </div>
-          {(scrollProgressLocal ?? 0) < 0.5 && (
+          {(scrollProgressLocal ?? 0) < 0.9 && (
             <p className={cn(
               "text-center text-xs mt-2 animate-pulse transition-colors duration-300",
               dark ? "text-gray-500" : "text-gray-400"
@@ -2726,7 +2740,7 @@ export default function Prospectus() {
   const [imageUrls, setImageUrls] = useState<ImageUrls>({});
   const [tabContent, setTabContent] = useState<Record<string, TabContent>>({});
   const [hiddenTabs, setHiddenTabs] = useState<Set<string>>(new Set());
-  const visibleTabs = TABS.filter((t) => !hiddenTabs.has(t));
+  const visibleTabs = useMemo(() => TABS.filter((t) => !hiddenTabs.has(t)), [hiddenTabs]);
   const [manageOpen, setManageOpen] = useState(false);
 
   // Tab gating: track which tabs are unlocked (by index). Index 0 always unlocked.
@@ -2747,7 +2761,7 @@ export default function Prospectus() {
 
   // Per-tab completion tracking
   const [completedTabs, setCompletedTabs] = useState<Set<string>>(new Set());
-  const [warningModal, setWarningModal] = useState<{ show: boolean; isVideo: boolean } | null>(null);
+  const [warningModal, setWarningModal] = useState(false);
   const financialRef = useRef<HTMLDivElement>(null);
 
   const { isSuperAdmin } = useAuth();
@@ -2755,39 +2769,14 @@ export default function Prospectus() {
   const darkMode =
     themeMode === "dark" || (themeMode === "system" && systemPrefersDark);
 
-  // Load completed tabs from prospectus_completions for a given email,
-  // restore completedTabs set and unlockedUpTo index.
-  const loadCompletions = async (email: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("prospectus_completions")
-        .select("tab_name")
-        .eq("email", email);
-      if (error || !data || data.length === 0) return;
-      const completed = new Set<string>(data.map((r: { tab_name: string }) => r.tab_name));
-      setCompletedTabs(completed);
-      // Find the highest consecutive completed tab index to set unlockedUpTo
-      let frontier = 0;
-      for (let i = 0; i < visibleTabs.length; i++) {
-        if (completed.has(visibleTabs[i])) {
-          frontier = i + 1; // unlock the tab after the last completed one
-        } else {
-          break; // stop at first gap
-        }
-      }
-      setUnlockedUpTo(Math.min(frontier, visibleTabs.length - 1));
-    } catch { /* Table may not exist yet */ }
-  };
-
   // Restore session from localStorage (returning users)
+  // (Completion loading is handled by the dedicated effect once accessEmail + gatingLoaded are set)
   useEffect(() => {
     if (localStorage.getItem(SESSION_KEY) === "1") {
       setHasAccess(true);
       const savedEmail = localStorage.getItem("prospectus_email") || "";
       if (savedEmail) {
         setAccessEmail(savedEmail);
-        // Load prior completions to restore progress
-        loadCompletions(savedEmail);
         // Create a new access_log entry for this returning session
         (async () => {
           try {
@@ -2924,12 +2913,13 @@ export default function Prospectus() {
   // Super admin bypasses gating — unlock all tabs; also unlock all when gating disabled
   useEffect(() => {
     if (isSuperAdmin || !gatingEnabled) setUnlockedUpTo(visibleTabs.length - 1);
-    else if (gatingLoaded && gatingEnabled && !isSuperAdmin) setUnlockedUpTo(0);
-  }, [isSuperAdmin, gatingEnabled, gatingLoaded, visibleTabs.length]);
+  }, [isSuperAdmin, gatingEnabled, visibleTabs.length]);
 
   // Load returning-user completions once email is known + gating loaded
+  const completionsLoadedRef = useRef(false);
   useEffect(() => {
-    if (!accessEmail || !gatingLoaded || isSuperAdmin) return;
+    if (!accessEmail || !gatingLoaded || isSuperAdmin || completionsLoadedRef.current) return;
+    completionsLoadedRef.current = true;
     (async () => {
       try {
         const { data } = await supabase
@@ -2938,16 +2928,13 @@ export default function Prospectus() {
           .eq("email", accessEmail);
         if (data && data.length > 0) {
           const names = data.map((r: { tab_name: string }) => r.tab_name);
-          // Populate completedTabs set for checkmarks
           setCompletedTabs(new Set(names));
           if (gatingEnabled) {
-            // Find the highest completed tab index
             let maxIdx = 0;
             for (const t of names) {
               const idx = visibleTabs.indexOf(t as TabId);
               if (idx > maxIdx) maxIdx = idx;
             }
-            // Unlock up to one past the last completed (so the next one is the frontier)
             const unlockTo = Math.min(maxIdx + 1, visibleTabs.length - 1);
             setUnlockedUpTo((prev) => Math.max(prev, unlockTo));
           }
@@ -2968,11 +2955,11 @@ export default function Prospectus() {
       return next;
     });
 
-    // If this tab is the frontier, unlock the next one
+    // If this tab is at or past the frontier, unlock the next one
     const tabIdx = visibleTabs.indexOf(tabName as TabId);
-    if (tabIdx >= 0 && tabIdx === unlockedUpTo && tabIdx < visibleTabs.length - 1) {
+    if (tabIdx >= 0 && tabIdx >= unlockedUpTo && tabIdx < visibleTabs.length - 1) {
       const next = tabIdx + 1;
-      setUnlockedUpTo(next);
+      setUnlockedUpTo((prev) => Math.max(prev, next));
       setJustUnlocked(next);
       setTimeout(() => setJustUnlocked(null), 2000);
     }
@@ -3050,16 +3037,14 @@ export default function Prospectus() {
     setScrollProgress(0);
   }, [activeTab]);
 
-  // Scroll-based completion: mark tab complete when user scrolls past 50% (non-video tabs)
+  // Scroll-based completion: mark tab complete when user scrolls to 90% of content
   useEffect(() => {
     if (isSuperAdmin || !gatingEnabled) return;
     if (completedTabs.has(activeTab)) return; // already completed
-    const hasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
-    if (hasVideo) return; // video tabs complete via onVideoEnded
-    if (scrollProgress >= 0.5) {
+    if (scrollProgress >= 0.9) {
       markTabCompleted(activeTab);
     }
-  }, [scrollProgress, activeTab, completedTabs, videoUrls, imageUrls, isSuperAdmin, gatingEnabled]);
+  }, [scrollProgress, activeTab, completedTabs, isSuperAdmin, gatingEnabled]);
 
   // Financial Model tab: scroll-based completion (separate component, no built-in onScrollProgress)
   useEffect(() => {
@@ -3073,7 +3058,7 @@ export default function Prospectus() {
       const total = container.scrollHeight;
       if (total <= 0) return;
       const pct = Math.min(1, scrolled / total);
-      if (pct >= 0.5) markTabCompleted("Financial Model");
+      if (pct >= 0.9) markTabCompleted("Financial Model");
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
@@ -3094,7 +3079,6 @@ export default function Prospectus() {
           setAccessEmail(email);
           setAccessLogId(logId);
           sessionStartRef.current = Date.now();
-          loadCompletions(email);
           setHasAccess(true);
         }}
       />
@@ -3290,8 +3274,7 @@ export default function Prospectus() {
                       if (tab === activeTab) return;
                       // Block navigation if current tab isn't completed yet
                       if (gatingEnabled && !isSuperAdmin && !completedTabs.has(activeTab)) {
-                        const curHasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
-                        setWarningModal({ show: true, isVideo: curHasVideo });
+                        setWarningModal(true);
                         return;
                       }
                       if (isLocked) {
