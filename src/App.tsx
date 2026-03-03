@@ -113,6 +113,7 @@ import SaasCalculator from "./pages/superadmin/SaasCalculator";
 import Calculators from "./pages/superadmin/Calculators";
 import ProspectusAccess from "./pages/admin/ProspectusAccess";
 import ProspectusAccessLog from "./pages/superadmin/ProspectusAccessLog";
+import SalesCRM from "./pages/superadmin/SalesCRM";
 import SuperAdminHub from "./pages/admin/SuperAdminHub";
 import BrandPages from "./pages/brand/BrandPages";
 import BrandPageEdit from "./pages/brand/BrandPageEdit";
@@ -210,6 +211,7 @@ const App = () => (
                 <Route path="saas-calculator" element={<SaasCalculator />} />
                 <Route path="kb" element={<KbAdmin />} />
                 <Route path="prospectus-access-log" element={<ProspectusAccessLog />} />
+                <Route path="sales" element={<SalesCRM />} />
               </Route>
               <Route element={<BrandRoute><RoleAwareChatProvider><AppLayout /></RoleAwareChatProvider></BrandRoute>}>
                 <Route path="/dashboard" element={<Navigate to="/brand/dashboard" replace />} />
