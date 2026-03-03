@@ -85,10 +85,14 @@ const TAB_KB_CATEGORY: Record<string, string> = {
   "Events & Attendee App": "events-pdx",
   "Event Venues": "events-pdx",
   "Discovery": "creator-network",
-  "365 Insights": "365-insights",
   "Social Media": "social-media",
   "Streaming/Media": "streaming-media",
   "Partnership Model": "sponsorship-revenue",
+};
+
+/** Direct Deep Dive URL overrides — bypasses /kb/ for specific tabs */
+const TAB_DEEP_DIVE_URL: Record<string, string> = {
+  "365 Insights": "/brand/events/9cfd70f9-e542-49ad-91e7-2ae01a1e150e?tab=365-insights",
 };
 
 /* ------------------------------------------------------------------ */
@@ -2219,6 +2223,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
   const containerRef = useRef<HTMLDivElement>(null);
   const content = dbContent || TAB_CONTENT[tab];
   const kbSlug = TAB_KB_CATEGORY[tab];
+  const deepDiveUrl = TAB_DEEP_DIVE_URL[tab];
 
   // Track scroll progress through this tab's content
   useEffect(() => {
@@ -2254,10 +2259,10 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
   return (
     <div ref={containerRef} className="space-y-12 relative">
       {/* Deep Dive link */}
-      {kbSlug && (
+      {(deepDiveUrl || kbSlug) && (
         <div className="flex justify-end -mb-8">
           <a
-            href={withProspectusRef(`/kb/${kbSlug}`)}
+            href={withProspectusRef(deepDiveUrl || `/kb/${kbSlug}`)}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(

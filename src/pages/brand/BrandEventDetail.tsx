@@ -280,8 +280,10 @@ const BrandEventDetail = () => {
   const [eventStreams, setEventStreams] = useState<StreamRow[]>([]);
   const [searchParams] = useSearchParams();
   const VALID_TABS = new Set(["overview","agenda","speakers","sponsors","tickets","public-page","media","settings","registrations","attendee-app","community","insights","gtm-planner"]);
+  const TAB_ALIASES: Record<string, string> = { "365-insights": "insights" };
   const initialTab = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState(initialTab && VALID_TABS.has(initialTab) ? initialTab : "overview");
+  const resolvedTab = initialTab ? (TAB_ALIASES[initialTab] ?? initialTab) : null;
+  const [activeTab, setActiveTab] = useState(resolvedTab && VALID_TABS.has(resolvedTab) ? resolvedTab : "overview");
   const isEmbed = searchParams.get("embed") === "true";
   const isExpandAll = searchParams.get("expand") === "all";
   const isDemoView = searchParams.get("demo") === "true";
