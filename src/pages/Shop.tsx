@@ -16,120 +16,20 @@ interface MerchProduct {
 
 const CATEGORIES = ["All", "Apparel", "Headwear", "Accessories", "Drinkware"];
 
-/* ---------- SVG placeholder generator ---------- */
-function placeholderSvg(bg: string, accent: string, line1: string, line2: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${accent}"/></linearGradient></defs>
-    <rect width="600" height="600" fill="url(#g)"/>
-    <text x="300" y="260" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="42" fill="white" opacity="0.95">MilCrunch</text>
-    <text x="300" y="310" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="22" fill="white" opacity="0.7">${line1}</text>
-    <text x="300" y="345" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="400" font-size="16" fill="white" opacity="0.5">${line2}</text>
-  </svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
-/* ---------- 12 MilCrunch products ---------- */
+/* ---------- 12 MilCrunch products (fallback when DB is empty) ---------- */
 const SEED_PRODUCTS: MerchProduct[] = [
-  // APPAREL
-  {
-    id: "mc-classic-hoodie",
-    title: "MilCrunch Classic Hoodie",
-    price: 64.99,
-    compare_at_price: 79.99,
-    category: "Apparel",
-    images: [placeholderSvg("#1a1a1a", "#2d2d2d", "Classic Hoodie", "Black \u2022 Logo on chest")],
-  },
-  {
-    id: "mc-veteran-tee",
-    title: "MilCrunch Veteran Tee",
-    price: 34.99,
-    compare_at_price: 44.99,
-    category: "Apparel",
-    images: [placeholderSvg("#0c2340", "#1a3a5f", "Veteran Tee", "Navy Blue \u2022 Wordmark")],
-  },
-  {
-    id: "mc-crew-tee",
-    title: "MilCrunch Crew Tee",
-    price: 29.99,
-    compare_at_price: null,
-    category: "Apparel",
-    images: [placeholderSvg("#3a3a3a", "#555555", "Crew Tee", "Dark Grey \u2022 X Logo")],
-  },
-  {
-    id: "mc-creator-hoodie",
-    title: "MilCrunch Creator Hoodie",
-    price: 69.99,
-    compare_at_price: null,
-    category: "Apparel",
-    images: [placeholderSvg("#2d4a1e", "#3d6b2e", "Creator Hoodie", "Military Green \u2022 Back Print")],
-  },
-  // HEADWEAR
-  {
-    id: "mc-snapback",
-    title: "MilCrunch Snapback",
-    price: 32.99,
-    compare_at_price: null,
-    category: "Headwear",
-    images: [placeholderSvg("#111111", "#282828", "Snapback", "Black \u2022 Embroidered Logo")],
-  },
-  {
-    id: "mc-tactical-cap",
-    title: "MilCrunch Tactical Cap",
-    price: 28.99,
-    compare_at_price: null,
-    category: "Headwear",
-    images: [placeholderSvg("#4b5320", "#6b7340", "Tactical Cap", "OD Green \u2022 Patch")],
-  },
-  // DRINKWARE
-  {
-    id: "mc-command-mug",
-    title: "MilCrunch Command Mug",
-    price: 18.99,
-    compare_at_price: null,
-    category: "Drinkware",
-    images: [placeholderSvg("#1c1c1c", "#333333", "Command Mug", "Matte Black \u2022 Ceramic")],
-  },
-  {
-    id: "mc-hydro-bottle",
-    title: "MilCrunch Hydro Bottle",
-    price: 34.99,
-    compare_at_price: null,
-    category: "Drinkware",
-    images: [placeholderSvg("#1e3a5f", "#2d5282", "Hydro Bottle", "32oz \u2022 Insulated Steel")],
-  },
-  {
-    id: "mc-tumbler",
-    title: "MilCrunch Tumbler",
-    price: 24.99,
-    compare_at_price: null,
-    category: "Drinkware",
-    images: [placeholderSvg("#1a1a1a", "#3a3020", "Tumbler", "Matte Black \u2022 Gold Wordmark")],
-  },
-  // ACCESSORIES
-  {
-    id: "mc-sticker-pack",
-    title: "MilCrunch Sticker Pack",
-    price: 9.99,
-    compare_at_price: null,
-    category: "Accessories",
-    images: [placeholderSvg("#4a1e6b", "#6b2fa0", "Sticker Pack", "5-Pack \u2022 Vinyl Die-Cut")],
-  },
-  {
-    id: "mc-laptop-sleeve",
-    title: "MilCrunch Laptop Sleeve",
-    price: 39.99,
-    compare_at_price: null,
-    category: "Accessories",
-    images: [placeholderSvg("#0a1628", "#152a4a", "Laptop Sleeve", '15" Neoprene \u2022 Embossed')],
-  },
-  {
-    id: "mc-patch-set",
-    title: "MilCrunch Patch Set",
-    price: 14.99,
-    compare_at_price: null,
-    category: "Accessories",
-    images: [placeholderSvg("#5a3e1a", "#7a5e2a", "Patch Set", "3-Pack \u2022 Velcro Morale Patches")],
-  },
+  { id: "mc-classic-hoodie", title: "MilCrunch Classic Hoodie", price: 64.99, compare_at_price: 79.99, category: "Apparel", images: ["https://placehold.co/600x600/1a1a2e/ffffff?text=MilCrunch%0AClassic+Hoodie"] },
+  { id: "mc-veteran-tee", title: "MilCrunch Veteran Tee", price: 34.99, compare_at_price: 44.99, category: "Apparel", images: ["https://placehold.co/600x600/0c2340/ffffff?text=MilCrunch%0AVeteran+Tee"] },
+  { id: "mc-crew-tee", title: "MilCrunch Crew Tee", price: 29.99, compare_at_price: null, category: "Apparel", images: ["https://placehold.co/600x600/3a3a3a/ffffff?text=MilCrunch%0ACrew+Tee"] },
+  { id: "mc-creator-hoodie", title: "MilCrunch Creator Hoodie", price: 69.99, compare_at_price: null, category: "Apparel", images: ["https://placehold.co/600x600/2d4a1e/ffffff?text=MilCrunch%0ACreator+Hoodie"] },
+  { id: "mc-snapback", title: "MilCrunch Snapback", price: 32.99, compare_at_price: null, category: "Headwear", images: ["https://placehold.co/600x600/111111/ffffff?text=MilCrunch%0ASnapback"] },
+  { id: "mc-tactical-cap", title: "MilCrunch Tactical Cap", price: 28.99, compare_at_price: null, category: "Headwear", images: ["https://placehold.co/600x600/4b5320/ffffff?text=MilCrunch%0ATactical+Cap"] },
+  { id: "mc-command-mug", title: "MilCrunch Command Mug", price: 18.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/1c1c1c/ffffff?text=MilCrunch%0ACommand+Mug"] },
+  { id: "mc-hydro-bottle", title: "MilCrunch Hydro Bottle", price: 34.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/1e3a5f/ffffff?text=MilCrunch%0AHydro+Bottle"] },
+  { id: "mc-tumbler", title: "MilCrunch Creator Tumbler", price: 24.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/1a1a1a/d4a843?text=MilCrunch%0ACreator+Tumbler"] },
+  { id: "mc-sticker-pack", title: "MilCrunch Sticker Pack", price: 9.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/f0f0f0/0c2340?text=MilCrunch%0ASticker+Pack"] },
+  { id: "mc-laptop-sleeve", title: "MilCrunch Laptop Sleeve", price: 39.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/0a1628/ffffff?text=MilCrunch%0ALaptop+Sleeve"] },
+  { id: "mc-patch-set", title: "MilCrunch Patch Set", price: 14.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/4b5320/ffffff?text=MilCrunch%0APatch+Set"] },
 ];
 
 export default function Shop() {
