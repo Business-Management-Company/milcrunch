@@ -390,7 +390,7 @@ export default function EventGTMPlannerTab({
 }: Props) {
   /* GTM sub-tab state */
   type GtmSection = "conflicts" | "strategy" | "summary";
-  const showAll = scrollToSection === "all";
+  const showAll = scrollToSection === "all" && !demoMode;
   const initialSection: GtmSection =
     scrollToSection === "strategy" || scrollToSection === "gtm" ? "strategy"
     : scrollToSection === "summary" ? "summary"
@@ -436,7 +436,7 @@ export default function EventGTMPlannerTab({
 
   useEffect(() => {
     (async () => {
-      let loaded = false;
+      let allSectionsLoaded = false;
       try {
         const { data } = await supabase
           .from("gtm_demo_results")
@@ -455,7 +455,7 @@ export default function EventGTMPlannerTab({
           }
           if (data.gtm_plan) setGtmPlan(data.gtm_plan as string);
           if (data.summary) setSummary(data.summary as string);
-          loaded = !!(data.conflicts || data.gtm_plan || data.summary);
+          allSectionsLoaded = !!(data.conflicts && data.gtm_plan && data.summary);
         }
       } catch {
         // Table may not exist yet — fall back to localStorage
@@ -471,15 +471,15 @@ export default function EventGTMPlannerTab({
               aiEvents: parsed.aiEvents ?? [],
               aiFailed: parsed.aiFailed ?? false,
             });
-            loaded = true;
           }
-          if (savedGtm) { setGtmPlan(savedGtm); loaded = true; }
-          if (savedSummary) { setSummary(savedSummary); loaded = true; }
+          if (savedGtm) setGtmPlan(savedGtm);
+          if (savedSummary) setSummary(savedSummary);
+          allSectionsLoaded = !!(savedConflicts && savedGtm && savedSummary);
         } catch { /* ignore */ }
       }
 
-      // Auto-generate all sections when demo mode is active and nothing is persisted
-      if (demoMode && !loaded && startDate && !autoGenTriggered.current) {
+      // Auto-generate missing sections when demo mode is active
+      if (demoMode && !allSectionsLoaded && startDate && !autoGenTriggered.current) {
         autoGenTriggered.current = true;
         // Kick off generation after a brief delay to let the UI render first
         setTimeout(() => {
@@ -1006,6 +1006,13 @@ Both events serve overlapping military audiences. Write the email.`,
         Check for US holidays, military observance dates, competing events, and collaboration opportunities near your event dates.
       </p>
 
+      {!conflicts && demoMode && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-amber-500 mr-2" />
+          <span className="text-sm text-muted-foreground">Loading conflict analysis...</span>
+        </div>
+      )}
+
       {conflicts && conflicts.aiEvents.length > 0 && (
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -1237,6 +1244,13 @@ Both events serve overlapping military audiences. Write the email.`,
         {conflicts ? " Detected conflicts will be factored into risk mitigation." : " Run the conflict scanner first for best results."}
       </p>
 
+      {!gtmPlan && demoMode && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-2" />
+          <span className="text-sm text-muted-foreground">Generating GTM strategy...</span>
+        </div>
+      )}
+
       {gtmPlan && (
         <CollapsibleSection title="Generated GTM Plan" forceOpen={expandAll}>
           <div ref={gtmRef} className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-900/30 max-h-[600px] overflow-y-auto">
@@ -1284,6 +1298,13 @@ Both events serve overlapping military audiences. Write the email.`,
       <p className="text-sm text-muted-foreground mb-4">
         Generate a military-style executive brief with BLUF, readiness assessment, and risk analysis — ready to send up the chain.
       </p>
+
+      {!summary && demoMode && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-500 mr-2" />
+          <span className="text-sm text-muted-foreground">Generating executive summary...</span>
+        </div>
+      )}
 
       {summary && (
         <CollapsibleSection title="Generated Executive Brief" forceOpen={expandAll}>
