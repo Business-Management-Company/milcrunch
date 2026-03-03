@@ -86,10 +86,34 @@ export default function AppLayout() {
     );
   }
 
+  // Prospectus demo mode: no sidebar, no topnav, just content + back button
+  if (isProspectusRef) {
+    return (
+      <div className="min-h-screen bg-background dark:bg-[#0F1117]">
+        {/* Slim top bar with back button only */}
+        <header className="fixed top-0 left-0 right-0 z-40 h-12 flex items-center px-4 bg-[#0a1628] border-b border-white/10">
+          <a
+            href="/prospectus"
+            className="inline-flex items-center gap-2 text-sm font-medium text-white hover:text-gray-300 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Prospectus
+          </a>
+          <span className="ml-auto text-xs text-white/40">MilCrunch Demo</span>
+        </header>
+        <main className="min-h-screen bg-background dark:bg-[#0F1117]" style={{ paddingTop: "3rem" }}>
+          <div className="p-4 md:p-6 lg:p-8">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background dark:bg-[#0F1117]">
       <DemoBanner />
-      <TopNav onOpenCommandPalette={() => !isProspectusRef && setCommandOpen(true)} demoOffset={demoOffset} navLocked={isProspectusRef} />
+      <TopNav onOpenCommandPalette={() => setCommandOpen(true)} demoOffset={demoOffset} navLocked={false} />
       {isMobile && (
         <div
           className="fixed left-0 z-40 flex h-14 items-center pl-2"
@@ -106,7 +130,7 @@ export default function AppLayout() {
           </Button>
         </div>
       )}
-      <Sidebar collapsed={sidebarCollapsed} demoOffset={demoOffset} navLocked={isProspectusRef} />
+      <Sidebar collapsed={sidebarCollapsed} demoOffset={demoOffset} navLocked={false} />
       <main
         className={cn("transition-[margin-left] duration-200 min-h-screen bg-background dark:bg-[#0F1117]")}
         style={{ marginLeft: sidebarWidth, paddingTop: `calc(3.5rem + ${demoOffset}px)` }}
@@ -115,18 +139,9 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </main>
-      {!isProspectusRef && <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />}
-      {!isProspectusRef && <FloatingAdminChat />}
-      {isProspectusRef && (
-        <a
-          href="/prospectus"
-          className="fixed bottom-4 left-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#1e3a5f] text-white text-sm font-medium shadow-lg hover:bg-[#2d5282] transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Prospectus
-        </a>
-      )}
-      {!isProspectusRef && isSuperAdmin && (
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      <FloatingAdminChat />
+      {isSuperAdmin && (
         <button
           type="button"
           onClick={() => {
