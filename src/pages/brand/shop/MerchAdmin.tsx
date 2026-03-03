@@ -13,7 +13,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useDemoMode } from "@/hooks/useDemoMode";
 
-const CATEGORIES = ["Apparel", "Headwear", "Accessories", "Challenge Coins", "Patches", "Drinkware", "Other"];
+const CATEGORIES = ["Apparel", "Headwear", "Accessories", "Drinkware"];
+
+/* ---------- SVG placeholder generator ---------- */
+function placeholderSvg(bg: string, accent: string, line1: string, line2: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${accent}"/></linearGradient></defs>
+    <rect width="600" height="600" fill="url(#g)"/>
+    <text x="300" y="260" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="42" fill="white" opacity="0.95">MilCrunch</text>
+    <text x="300" y="310" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="22" fill="white" opacity="0.7">${line1}</text>
+    <text x="300" y="345" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="400" font-size="16" fill="white" opacity="0.5">${line2}</text>
+  </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+const SEED_PRODUCTS: MerchProduct[] = [
+  { id: "mc-classic-hoodie", title: "MilCrunch Classic Hoodie", description: "Black hoodie with MilCrunch logo on chest", price: 64.99, compare_at_price: 79.99, category: "Apparel", tags: ["hoodie", "apparel"], images: [placeholderSvg("#1a1a1a", "#2d2d2d", "Classic Hoodie", "Black \u2022 Logo on chest")], variants: [{ name: "S", price_override: null, inventory: 25 }, { name: "M", price_override: null, inventory: 40 }, { name: "L", price_override: null, inventory: 40 }, { name: "XL", price_override: null, inventory: 30 }, { name: "2XL", price_override: null, inventory: 15 }], total_inventory: 150, is_published: true, created_at: "2026-03-01T00:00:00Z" },
+  { id: "mc-veteran-tee", title: "MilCrunch Veteran Tee", description: "Navy blue t-shirt with \"MilCrunch\" wordmark", price: 34.99, compare_at_price: 44.99, category: "Apparel", tags: ["tee", "veteran"], images: [placeholderSvg("#0c2340", "#1a3a5f", "Veteran Tee", "Navy Blue \u2022 Wordmark")], variants: [{ name: "S", price_override: null, inventory: 30 }, { name: "M", price_override: null, inventory: 50 }, { name: "L", price_override: null, inventory: 50 }, { name: "XL", price_override: null, inventory: 30 }], total_inventory: 160, is_published: true, created_at: "2026-03-01T00:01:00Z" },
+  { id: "mc-crew-tee", title: "MilCrunch Crew Tee", description: "Dark grey tee with small MilCrunch \"X\" logo on left chest", price: 29.99, compare_at_price: null, category: "Apparel", tags: ["tee", "crew"], images: [placeholderSvg("#3a3a3a", "#555555", "Crew Tee", "Dark Grey \u2022 X Logo")], variants: [{ name: "S", price_override: null, inventory: 30 }, { name: "M", price_override: null, inventory: 45 }, { name: "L", price_override: null, inventory: 45 }, { name: "XL", price_override: null, inventory: 30 }], total_inventory: 150, is_published: true, created_at: "2026-03-01T00:02:00Z" },
+  { id: "mc-creator-hoodie", title: "MilCrunch Creator Hoodie", description: "Military green hoodie with \"Built by Veterans. Powered by Creators.\" on back", price: 69.99, compare_at_price: null, category: "Apparel", tags: ["hoodie", "creator"], images: [placeholderSvg("#2d4a1e", "#3d6b2e", "Creator Hoodie", "Military Green \u2022 Back Print")], variants: [{ name: "S", price_override: null, inventory: 20 }, { name: "M", price_override: null, inventory: 35 }, { name: "L", price_override: null, inventory: 35 }, { name: "XL", price_override: null, inventory: 25 }, { name: "2XL", price_override: null, inventory: 10 }], total_inventory: 125, is_published: true, created_at: "2026-03-01T00:03:00Z" },
+  { id: "mc-snapback", title: "MilCrunch Snapback", description: "Black snapback with embroidered MilCrunch logo", price: 32.99, compare_at_price: null, category: "Headwear", tags: ["hat", "snapback"], images: [placeholderSvg("#111111", "#282828", "Snapback", "Black \u2022 Embroidered Logo")], variants: [{ name: "One Size", price_override: null, inventory: 75 }], total_inventory: 75, is_published: true, created_at: "2026-03-01T00:04:00Z" },
+  { id: "mc-tactical-cap", title: "MilCrunch Tactical Cap", description: "OD green fitted cap with MilCrunch patch", price: 28.99, compare_at_price: null, category: "Headwear", tags: ["hat", "tactical"], images: [placeholderSvg("#4b5320", "#6b7340", "Tactical Cap", "OD Green \u2022 Patch")], variants: [{ name: "S/M", price_override: null, inventory: 40 }, { name: "L/XL", price_override: null, inventory: 40 }], total_inventory: 80, is_published: true, created_at: "2026-03-01T00:05:00Z" },
+  { id: "mc-command-mug", title: "MilCrunch Command Mug", description: "Matte black ceramic mug with MilCrunch logo", price: 18.99, compare_at_price: null, category: "Drinkware", tags: ["mug", "drinkware"], images: [placeholderSvg("#1c1c1c", "#333333", "Command Mug", "Matte Black \u2022 Ceramic")], variants: [], total_inventory: 200, is_published: true, created_at: "2026-03-01T00:06:00Z" },
+  { id: "mc-hydro-bottle", title: "MilCrunch Hydro Bottle", description: "32oz insulated steel water bottle", price: 34.99, compare_at_price: null, category: "Drinkware", tags: ["bottle", "drinkware"], images: [placeholderSvg("#1e3a5f", "#2d5282", "Hydro Bottle", "32oz \u2022 Insulated Steel")], variants: [], total_inventory: 100, is_published: true, created_at: "2026-03-01T00:07:00Z" },
+  { id: "mc-tumbler", title: "MilCrunch Tumbler", description: "20oz tumbler, matte black with gold MilCrunch wordmark", price: 24.99, compare_at_price: null, category: "Drinkware", tags: ["tumbler", "drinkware"], images: [placeholderSvg("#1a1a1a", "#3a3020", "Tumbler", "Matte Black \u2022 Gold Wordmark")], variants: [], total_inventory: 120, is_published: true, created_at: "2026-03-01T00:08:00Z" },
+  { id: "mc-sticker-pack", title: "MilCrunch Sticker Pack", description: "5-pack vinyl die-cut stickers with MilCrunch logos and military-themed designs", price: 9.99, compare_at_price: null, category: "Accessories", tags: ["stickers", "accessories"], images: [placeholderSvg("#4a1e6b", "#6b2fa0", "Sticker Pack", "5-Pack \u2022 Vinyl Die-Cut")], variants: [], total_inventory: 500, is_published: true, created_at: "2026-03-01T00:09:00Z" },
+  { id: "mc-laptop-sleeve", title: "MilCrunch Laptop Sleeve", description: "15\" neoprene sleeve, dark navy with embossed logo", price: 39.99, compare_at_price: null, category: "Accessories", tags: ["laptop", "sleeve"], images: [placeholderSvg("#0a1628", "#152a4a", "Laptop Sleeve", "15\\\" Neoprene \u2022 Embossed")], variants: [], total_inventory: 60, is_published: true, created_at: "2026-03-01T00:10:00Z" },
+  { id: "mc-patch-set", title: "MilCrunch Patch Set", description: "Velcro-backed morale patches, 3-pack", price: 14.99, compare_at_price: null, category: "Accessories", tags: ["patches", "morale"], images: [placeholderSvg("#5a3e1a", "#7a5e2a", "Patch Set", "3-Pack \u2022 Velcro Morale Patches")], variants: [], total_inventory: 300, is_published: true, created_at: "2026-03-01T00:11:00Z" },
+];
 
 interface Variant {
   name: string;
@@ -75,11 +102,8 @@ export default function MerchAdmin() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Failed to fetch merch products:", error);
-      toast({ title: "Error", description: "Failed to load products", variant: "destructive" });
-    }
-    setProducts((data as MerchProduct[] | null) || []);
+    const rows = (data as MerchProduct[] | null) || [];
+    setProducts(rows.length > 0 && !error ? rows : SEED_PRODUCTS);
     setLoading(false);
   };
 
