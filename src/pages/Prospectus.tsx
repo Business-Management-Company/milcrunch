@@ -160,9 +160,10 @@ function ProspectusMedia({
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [coverDismissed, setCoverDismissed] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
 
-  // Reset cover when video URL changes
-  useEffect(() => { setCoverDismissed(false); }, [videoUrl]);
+  // Reset cover and error state when URLs change
+  useEffect(() => { setCoverDismissed(false); setMediaError(false); }, [videoUrl, imageUrl]);
 
   // MP4 ended event
   useEffect(() => {
@@ -219,6 +220,9 @@ function ProspectusMedia({
     return () => clearTimeout(timer);
   }, [onVideoEnded, videoUrl, coverDismissed, imageUrl]);
 
+  // If media failed to load, hide gracefully
+  if (mediaError) return null;
+
   // Priority 1: Video (with optional cover image overlay)
   if (videoUrl) {
     const parsed = parseVideoEmbed(videoUrl);
@@ -227,7 +231,7 @@ function ProspectusMedia({
       if (imageUrl && !coverDismissed) {
         return (
           <div className="relative w-full aspect-video rounded-xl overflow-hidden cursor-pointer group" onClick={() => setCoverDismissed(true)}>
-            <img src={imageUrl} alt="Click to play" className="w-full h-full object-cover" />
+            <img src={imageUrl} alt="Click to play" className="w-full h-full object-cover" onError={() => setCoverDismissed(true)} />
             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
               <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                 <Play className="h-7 w-7 text-[#1e3a5f] ml-1" />
@@ -246,6 +250,7 @@ function ProspectusMedia({
             autoPlay={coverDismissed}
             className="w-full aspect-video rounded-xl bg-black"
             preload="metadata"
+            onError={() => setMediaError(true)}
           />
         );
       }
@@ -269,6 +274,7 @@ function ProspectusMedia({
           allowFullScreen
           className="w-full aspect-video rounded-xl"
           style={{ border: 0 }}
+          onError={() => setMediaError(true)}
         />
       );
     }
@@ -282,6 +288,7 @@ function ProspectusMedia({
         alt="Tab content"
         className="rounded-xl object-cover mx-auto"
         style={{ maxWidth: "100%", height: "auto" }}
+        onError={() => setMediaError(true)}
       />
     );
   }
@@ -1698,7 +1705,6 @@ function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => 
     setChecking(false);
     if (logErr || !logRow) {
       // If logging table doesn't exist yet, still let them in
-      console.warn("[Prospectus] access log insert failed:", logErr?.message);
       localStorage.setItem(SESSION_KEY, "1");
       localStorage.setItem("prospectus_email", trimmed);
       onAccess(trimmed, "");
@@ -2316,6 +2322,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
 
       {/* Block-aware section rendering */}
       {visibleBlocks.map((section, i) => {
+        try {
         const blockType = inferBlockType(section);
 
         /* ---- HERO block ---- */
@@ -2336,7 +2343,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                   {bgParsed?.type === "mp4" ? (
                     <video src={bgParsed.embedUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
                   ) : section.media_url ? (
-                    <img src={section.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={section.media_url} alt="" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   ) : null}
                   <div className={cn("absolute inset-0 flex items-center justify-center", heroClickable ? "bg-black/40 group-hover:bg-black/60 transition-colors duration-200" : "bg-black/50")}>
                     <div className="text-center px-6">
@@ -2390,9 +2397,13 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                 </h3>
               )}
               {section.description && (
-                <p className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                  {section.description}
-                </p>
+                <div className="space-y-3">
+                  {section.description.split("\n\n").map((para, pi) => (
+                    <p key={pi} className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                      {para}
+                    </p>
+                  ))}
+                </div>
               )}
               {section.link_url && (
                 <a
@@ -2424,9 +2435,13 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                 </h3>
               )}
               {section.description && (
-                <p className={cn("text-sm leading-relaxed mb-4 transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
-                  {section.description}
-                </p>
+                <div className="space-y-3 mb-4">
+                  {section.description.split("\n\n").map((para, pi) => (
+                    <p key={pi} className={cn("text-sm leading-relaxed transition-colors duration-300", dark ? "text-gray-300" : "text-[#374151]")}>
+                      {para}
+                    </p>
+                  ))}
+                </div>
               )}
               {Array.isArray(section.items) && section.items.length > 0 && section.items.some((it) => it.trim()) && (
                 <div className="space-y-3">
@@ -2464,7 +2479,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                   style={{ maxWidth: `${section.image_size || "100"}%` }}
                   onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
                 >
-                  <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
+                  <img src={section.image_url!} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
                   <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
                     <span className="text-white font-semibold text-sm flex items-center gap-2">
                       {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
@@ -2562,7 +2577,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
                 style={{ maxWidth: `${section.image_size || "100"}%` }}
                 onClick={() => section.demo_url ? setDemoModal({ open: true, url: section.demo_url }) : window.open(section.image_url!, "_blank")}
               >
-                <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} />
+                <img src={section.image_url} alt="" className="w-full rounded-xl shadow-md object-cover" style={{ height: "auto" }} onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl flex items-center justify-center">
                   <span className="text-white font-semibold text-sm flex items-center gap-2">
                     {section.demo_url ? <><Play className="h-5 w-5" /> Explore Live Demo</> : <><ZoomIn className="h-5 w-5" /> View Full Size</>}
@@ -2593,6 +2608,10 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onVideoEnded, on
             )}
           </section>
         );
+        } catch (err) {
+          console.warn("[Prospectus] Block render error at index", i, err);
+          return null; // Skip broken block, don't crash the page
+        }
       })}
 
       {/* Bottom note */}
@@ -2713,6 +2732,7 @@ export default function Prospectus() {
         setAccessEmail(savedEmail);
         // Create a new access_log entry for this returning session
         (async () => {
+          try {
           const { data: logRow } = await supabase
             .from("prospectus_access_log")
             .insert({ email: savedEmail })
@@ -2722,6 +2742,7 @@ export default function Prospectus() {
             localStorage.setItem("prospectus_log_id", logRow.id);
             setAccessLogId(logRow.id);
           }
+          } catch { /* Table may not exist yet */ }
         })();
       }
     }
@@ -2732,10 +2753,11 @@ export default function Prospectus() {
   // "first-wins" map to handle any duplicate tab_name rows.
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("prospectus_videos")
         .select("tab_name, video_url, image_url")
         .order("updated_at", { ascending: false });
+      if (error) return; // Table may not exist yet — silently skip
       if (data) {
         const vMap: VideoUrls = {};
         const iMap: ImageUrls = {};
@@ -2764,12 +2786,8 @@ export default function Prospectus() {
       const { data, error } = await supabase
         .from("prospectus_tab_content")
         .select("*");
-      if (error) {
-        console.error("[Prospectus] Failed to fetch tab content:", error.message, error);
-        return;
-      }
-      if (!data || data.length === 0) {
-        console.warn("[Prospectus] No rows in prospectus_tab_content");
+      if (error || !data || data.length === 0) {
+        // Table may not exist yet — silently use hardcoded TAB_CONTENT
         return;
       }
       const map: Record<string, TabContent> = {};
@@ -2906,7 +2924,7 @@ export default function Prospectus() {
       supabase
         .from("prospectus_completions")
         .upsert({ email: accessEmail, tab_name: tabName }, { onConflict: "email,tab_name" })
-        .then(({ error }) => { if (error) console.warn("[Prospectus] completions upsert:", error.message); });
+        .then(() => {}).catch(() => {});
 
       if (accessLogId) {
         supabase
