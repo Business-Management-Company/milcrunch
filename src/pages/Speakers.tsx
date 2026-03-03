@@ -427,24 +427,40 @@ export default function Speakers() {
     // keyed by handle or name → { avatar, bio }
     const dmMap = new Map<string, { avatar: string | null; bio: string | null }>();
 
+    // Helper: extract best bio from a directory_members row
+    const extractDmBio = (dm: Record<string, unknown>): string | null => {
+      // Priority 1: direct bio column on directory_members
+      const directBio = dm.bio as string | undefined;
+      if (directBio && directBio.trim() && !/^Added from directory:/i.test(directBio.trim())) {
+        return directBio.trim();
+      }
+      // Priority 2: enrichment_data instagram biography
+      const ed = dm.enrichment_data as Record<string, unknown> | null;
+      const igData = (ed?.result as Record<string, unknown>)?.instagram as Record<string, unknown> | undefined ?? ed?.instagram as Record<string, unknown> | undefined;
+      const enrichBio = (igData?.biography ?? igData?.bio) as string | undefined;
+      if (enrichBio && enrichBio.trim()) return enrichBio.trim();
+      return null;
+    };
+
+    // Helper: extract avatar from a directory_members row
+    const extractDmAvatar = (dm: Record<string, unknown>): string | null => {
+      const url = (dm.profile_image_url || dm.avatar_url || dm.ic_avatar_url) as string | null;
+      const clean = url && typeof url === "string" && url.startsWith("http://") ? url.replace("http://", "https://") : url;
+      return clean && typeof clean === "string" && clean.startsWith("https://") ? clean : null;
+    };
+
     // Fetch by handle
     if (handles.length > 0) {
       const { data: dmRows } = await supabase
         .from("directory_members")
-        .select("creator_handle, creator_name, profile_image_url, avatar_url, ic_avatar_url, enrichment_data")
+        .select("creator_handle, creator_name, profile_image_url, avatar_url, ic_avatar_url, enrichment_data, bio")
         .in("creator_handle", handles);
       if (dmRows) {
-        for (const dm of dmRows) {
-          // Priority: profile_image_url → avatar_url → ic_avatar_url
-          const url = dm.profile_image_url || dm.avatar_url || dm.ic_avatar_url;
-          const clean = url && typeof url === "string" && url.startsWith("http://") ? url.replace("http://", "https://") : url;
-          const avatar = clean && typeof clean === "string" && clean.startsWith("https://") ? clean : null;
-          // Extract bio from enrichment_data if available
-          const ed = dm.enrichment_data as Record<string, unknown> | null;
-          const igData = (ed?.result as Record<string, unknown>)?.instagram as Record<string, unknown> | undefined ?? ed?.instagram as Record<string, unknown> | undefined;
-          const bio = (igData?.biography ?? igData?.bio) as string | undefined;
-          dmMap.set(dm.creator_handle, { avatar, bio: bio || null });
-          if (dm.creator_name) dmMap.set(dm.creator_name, { avatar, bio: bio || null });
+        for (const dm of dmRows as Record<string, unknown>[]) {
+          const avatar = extractDmAvatar(dm);
+          const bio = extractDmBio(dm);
+          dmMap.set(dm.creator_handle as string, { avatar, bio });
+          if (dm.creator_name) dmMap.set(dm.creator_name as string, { avatar, bio });
         }
       }
     }
@@ -454,19 +470,14 @@ export default function Speakers() {
     if (unmatchedNames.length > 0) {
       const { data: dmByName } = await supabase
         .from("directory_members")
-        .select("creator_handle, creator_name, profile_image_url, avatar_url, ic_avatar_url, enrichment_data")
+        .select("creator_handle, creator_name, profile_image_url, avatar_url, ic_avatar_url, enrichment_data, bio")
         .in("creator_name", unmatchedNames);
       if (dmByName) {
-        for (const dm of dmByName) {
-          // Priority: profile_image_url → avatar_url → ic_avatar_url
-          const url = dm.profile_image_url || dm.avatar_url || dm.ic_avatar_url;
-          const clean = url && typeof url === "string" && url.startsWith("http://") ? url.replace("http://", "https://") : url;
-          const avatar = clean && typeof clean === "string" && clean.startsWith("https://") ? clean : null;
-          const ed = dm.enrichment_data as Record<string, unknown> | null;
-          const igData = (ed?.result as Record<string, unknown>)?.instagram as Record<string, unknown> | undefined ?? ed?.instagram as Record<string, unknown> | undefined;
-          const bio = (igData?.biography ?? igData?.bio) as string | undefined;
-          if (dm.creator_name) dmMap.set(dm.creator_name, { avatar, bio: bio || null });
-          if (dm.creator_handle) dmMap.set(dm.creator_handle, { avatar, bio: bio || null });
+        for (const dm of dmByName as Record<string, unknown>[]) {
+          const avatar = extractDmAvatar(dm);
+          const bio = extractDmBio(dm);
+          if (dm.creator_name) dmMap.set(dm.creator_name as string, { avatar, bio });
+          if (dm.creator_handle) dmMap.set(dm.creator_handle as string, { avatar, bio });
         }
       }
     }
@@ -488,19 +499,21 @@ export default function Speakers() {
           if (bestPhoto) updated.photo_url = bestPhoto;
         }
 
-        // Backfill bio from verification notes or directory_members
-        if (!updated.bio || updated.bio.trim() === "") {
-          const vBio = v.bio && !/failed|error|skipped/i.test(v.bio) ? v.bio : null;
+        // Backfill bio: directory_members > verification notes > enrichment
+        const isSystemNote = (b: string | null) => !b || b.trim() === "" || /^Added from directory:/i.test(b.trim());
+        if (isSystemNote(updated.bio)) {
           const dmByHandle = v.handle ? dmMap.get(v.handle) : null;
           const dmByName = dmMap.get(updated.name);
-          updated.bio = vBio || dmByHandle?.bio || dmByName?.bio || null;
+          const vBio = v.bio && !/failed|error|skipped/i.test(v.bio) && !isSystemNote(v.bio) ? v.bio : null;
+          updated.bio = dmByHandle?.bio || dmByName?.bio || vBio || null;
         }
       } else {
         // No verification — still try directory_members by name
         const dm = dmMap.get(updated.name);
         if (dm) {
           if (!getCreatorAvatar(updated) && dm.avatar) updated.photo_url = dm.avatar;
-          if ((!updated.bio || updated.bio.trim() === "") && dm.bio) updated.bio = dm.bio;
+          const isSystemNote = (b: string | null) => !b || b.trim() === "" || /^Added from directory:/i.test(b.trim());
+          if (isSystemNote(updated.bio) && dm.bio) updated.bio = dm.bio;
         }
       }
 
@@ -1583,7 +1596,9 @@ export default function Speakers() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {speaker.bio || "No bio available."}
+              {speaker.bio && speaker.bio.trim() && !/^Added from directory:/i.test(speaker.bio.trim())
+                ? speaker.bio
+                : <span className="italic text-muted-foreground/60">Bio pending verification</span>}
             </p>
           </CardContent>
         </Card>
@@ -1915,7 +1930,16 @@ export default function Speakers() {
                     <TableCell>{speaker.branch ?? "—"}</TableCell>
                     <TableCell>{speaker.rank ?? "—"}</TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="text-sm text-muted-foreground line-clamp-2">{speaker.bio ?? "—"}</p>
+                      {speaker.bio && speaker.bio.trim() && !/^Added from directory:/i.test(speaker.bio.trim()) ? (
+                        <p
+                          className="text-sm text-muted-foreground truncate max-w-[280px]"
+                          title={speaker.bio}
+                        >
+                          {speaker.bio.length > 100 ? speaker.bio.slice(0, 100) + "..." : speaker.bio}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground/60 italic">Bio pending verification</p>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
