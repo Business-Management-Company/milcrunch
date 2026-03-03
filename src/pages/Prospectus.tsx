@@ -1902,7 +1902,8 @@ const TAB_CONTENT: Record<string, TabContent> = {
         description:
           "Recurrent already owns the military media brands \u2014 We Are The Mighty, Task & Purpose, Military.com content partnerships. But brand publishing alone doesn\u2019t capture the creator economy. MilCrunch brings the other half: the thousands of authentic voices that audiences actually trust.\n\nTogether, Recurrent\u2019s editorial authority and MilCrunch\u2019s verified creator network create something no one else has \u2014 a full-spectrum military media ecosystem where brands can publish, partner, and activate with confidence.",
         items: [
-          "1,000+ verified military creators with AI-powered trust scoring \u2014 Proprietary discovery engine filters by branch, status, reach, engagement, and Military Match Score",
+          "1,000+ verified military creators with AI-powered trust scores",
+          "Proprietary discovery engine \u2014 filter by branch, status, reach, engagement, and Military Match Score",
           "Multi-phase verification \u2014 People Data Labs, web intelligence, social cross-referencing, and AI analysis",
           "Built-in community tools \u2014 events, streaming, social posting, sponsor dashboards, and 365-day engagement tracking",
           "Creator-to-brand pipeline \u2014 not just discovery, but activation and ROI measurement",

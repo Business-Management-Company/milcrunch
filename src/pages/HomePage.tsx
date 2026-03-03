@@ -22,9 +22,6 @@ import {
   BarChart3,
   Handshake,
   MapPin,
-  Instagram,
-  Youtube,
-  Twitter,
   Pencil,
   Loader2,
   Save,
@@ -172,12 +169,6 @@ function AnimatedCounter({ target, display, inView }: { target: number; display:
 
 
 // --- Showcase helpers ---
-const TikTokIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.39a8.16 8.16 0 003.76.92V6.86a4.85 4.85 0 01-.01-.17z" />
-  </svg>
-);
-
 const BRANCH_STYLES: Record<string, string> = {
   Army: "bg-green-800/10 text-green-800",
   Navy: "bg-blue-900/10 text-blue-900",
@@ -197,13 +188,6 @@ const BRANCH_GRADIENT: Record<string, string> = {
   "Air Force": "linear-gradient(135deg, #003594 0%, #002070 50%, #003594 100%)",
   "Coast Guard": "linear-gradient(135deg, #005F9E 0%, #CC2529 50%, #005F9E 100%)",
   "National Guard": "linear-gradient(135deg, #4B5320 0%, #DAA520 50%, #4B5320 100%)",
-};
-
-const PLATFORM_ICON: Record<string, React.ReactNode> = {
-  instagram: <Instagram className="h-3.5 w-3.5" />,
-  tiktok: <TikTokIcon className="h-3.5 w-3.5" />,
-  youtube: <Youtube className="h-3.5 w-3.5" />,
-  twitter: <Twitter className="h-3.5 w-3.5" />,
 };
 
 function HeroAvatar({ avatarUrl, name, handle }: { avatarUrl: string | null; name: string; handle: string }) {
@@ -301,7 +285,6 @@ function getBestStats(creator: ShowcaseCreator): { value: string; label: string 
 }
 
 function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator; index: number; inView: boolean }) {
-  const platforms = c.platforms ?? [];
   const branchStyle = BRANCH_STYLES[c.branch ?? ""] ?? "bg-gray-100 text-gray-700";
   const branchGradient = BRANCH_GRADIENT[c.branch ?? ""] ?? BRANCH_GRADIENT.default;
 
@@ -402,14 +385,6 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         ) : null;
       })()}
 
-      {/* Platform icons */}
-      {platforms.length > 0 && (
-        <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-500 transition-colors pb-5">
-          {platforms.map((p) => (
-            <span key={p}>{PLATFORM_ICON[p] ?? null}</span>
-          ))}
-        </div>
-      )}
     </Link>
   );
 }
