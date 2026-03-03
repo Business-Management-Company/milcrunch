@@ -205,7 +205,6 @@ function CreatorCard({
   const fallbackUrl = safeImageUrl(extractAvatarFromEnrichment(c.enrichment_data));
   const [avatarUrl, setAvatarUrl] = useState(primaryUrl ?? fallbackUrl);
   const [triedFallback, setTriedFallback] = useState(false);
-  const platforms = getAllPlatforms(c);
   const badgeClass = BRANCH_BADGE[c.branch ?? ""] ?? "bg-gray-500 text-white";
   const isVerified = !!c.featured_homepage;
   const branchGradient = BRANCH_GRADIENT[c.branch ?? ""] ?? BRANCH_GRADIENT.default;
@@ -328,20 +327,6 @@ function CreatorCard({
             </div>
           )}
         </div>
-
-        {/* Platform icons */}
-        {platforms.length > 0 && (
-          <div className="flex items-center justify-center gap-2.5 mt-2.5">
-            {platforms.map((p) => (
-              <span
-                key={p}
-                className={cn("transition-colors", PLATFORM_COLOR[p] ?? "text-gray-400")}
-              >
-                {PLATFORM_ICON[p] ?? null}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* View Profile link */}
         <div className="border-t border-gray-100 mt-3 pt-3 w-full">
