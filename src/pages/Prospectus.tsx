@@ -1699,15 +1699,15 @@ function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => 
     if (logErr || !logRow) {
       // If logging table doesn't exist yet, still let them in
       console.warn("[Prospectus] access log insert failed:", logErr?.message);
-      sessionStorage.setItem(SESSION_KEY, "1");
-      sessionStorage.setItem("prospectus_email", trimmed);
+      localStorage.setItem(SESSION_KEY, "1");
+      localStorage.setItem("prospectus_email", trimmed);
       onAccess(trimmed, "");
       return;
     }
 
-    sessionStorage.setItem(SESSION_KEY, "1");
-    sessionStorage.setItem("prospectus_email", trimmed);
-    sessionStorage.setItem("prospectus_log_id", logRow.id);
+    localStorage.setItem(SESSION_KEY, "1");
+    localStorage.setItem("prospectus_email", trimmed);
+    localStorage.setItem("prospectus_log_id", logRow.id);
     onAccess(trimmed, logRow.id);
   };
 
@@ -2702,14 +2702,26 @@ export default function Prospectus() {
   const darkMode =
     themeMode === "dark" || (themeMode === "system" && systemPrefersDark);
 
-  // Restore session from sessionStorage (returning users within same browser session)
+  // Restore session from localStorage (returning users)
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_KEY) === "1") {
+    if (localStorage.getItem(SESSION_KEY) === "1") {
       setHasAccess(true);
-      const savedEmail = sessionStorage.getItem("prospectus_email") || "";
-      const savedLogId = sessionStorage.getItem("prospectus_log_id") || "";
-      if (savedEmail) setAccessEmail(savedEmail);
-      if (savedLogId) setAccessLogId(savedLogId);
+      const savedEmail = localStorage.getItem("prospectus_email") || "";
+      if (savedEmail) {
+        setAccessEmail(savedEmail);
+        // Create a new access_log entry for this returning session
+        (async () => {
+          const { data: logRow } = await supabase
+            .from("prospectus_access_log")
+            .insert({ email: savedEmail })
+            .select("id")
+            .single();
+          if (logRow) {
+            localStorage.setItem("prospectus_log_id", logRow.id);
+            setAccessLogId(logRow.id);
+          }
+        })();
+      }
     }
   }, []);
 
@@ -2936,13 +2948,9 @@ export default function Prospectus() {
         total_time_seconds: elapsed,
         tabs_viewed: tabsViewedRef.current,
       });
-      // Use sendBeacon for reliability on tab close
+      // Use fetch with keepalive for reliability on tab close
+      // (sendBeacon can't include custom headers needed by Supabase)
       const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/prospectus_access_log?id=eq.${accessLogId}`;
-      navigator.sendBeacon(
-        url,
-        new Blob([payload], { type: "application/json" })
-      );
-      // sendBeacon doesn't support custom headers easily, so also try fetch as fallback
       fetch(url, {
         method: "PATCH",
         headers: {
