@@ -369,7 +369,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
           </span>
         )}
         {c.status && (
-          <span className="text-[10px] text-gray-500 font-medium">{c.status}</span>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{c.status}</span>
         )}
       </div>
 
@@ -948,12 +948,17 @@ export default function HomePage() {
         {/* Military Podcast Network */}
         <section className="px-4 md:px-8 py-16 md:py-20 bg-white">
           <div className="max-w-6xl mx-auto">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1A1A2E] mb-2 text-center">
-              Military Podcast Network
-            </h2>
-            <p className="text-gray-500 text-lg mb-8 text-center">
-              839 veteran and military voices — streaming 24/7.
-            </p>
+            <div className="text-center mb-12">
+              <p className="text-[#1e3a5f] text-xs font-semibold uppercase tracking-widest mb-2">
+                VETERAN & MILITARY VOICES
+              </p>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1A1A2E] mb-3">
+                Military Podcast Network
+              </h2>
+              <p className="text-[#6B7280] text-lg max-w-2xl mx-auto">
+                839 veteran and military voices — streaming 24/7.
+              </p>
+            </div>
 
             {podcastsLoading ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
