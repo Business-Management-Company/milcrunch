@@ -18,18 +18,18 @@ const CATEGORIES = ["All", "Apparel", "Headwear", "Accessories", "Drinkware"];
 
 /* ---------- 12 MilCrunch products (fallback when DB is empty) ---------- */
 const SEED_PRODUCTS: MerchProduct[] = [
-  { id: "mc-classic-hoodie", title: "MilCrunch Classic Hoodie", price: 64.99, compare_at_price: 79.99, category: "Apparel", images: ["https://placehold.co/600x600/1a1a2e/ffffff?text=MilCrunch%0AClassic+Hoodie"] },
-  { id: "mc-veteran-tee", title: "MilCrunch Veteran Tee", price: 34.99, compare_at_price: 44.99, category: "Apparel", images: ["https://placehold.co/600x600/0c2340/ffffff?text=MilCrunch%0AVeteran+Tee"] },
-  { id: "mc-crew-tee", title: "MilCrunch Crew Tee", price: 29.99, compare_at_price: null, category: "Apparel", images: ["https://placehold.co/600x600/3a3a3a/ffffff?text=MilCrunch%0ACrew+Tee"] },
-  { id: "mc-creator-hoodie", title: "MilCrunch Creator Hoodie", price: 69.99, compare_at_price: null, category: "Apparel", images: ["https://placehold.co/600x600/2d4a1e/ffffff?text=MilCrunch%0ACreator+Hoodie"] },
-  { id: "mc-snapback", title: "MilCrunch Snapback", price: 32.99, compare_at_price: null, category: "Headwear", images: ["https://placehold.co/600x600/111111/ffffff?text=MilCrunch%0ASnapback"] },
-  { id: "mc-tactical-cap", title: "MilCrunch Tactical Cap", price: 28.99, compare_at_price: null, category: "Headwear", images: ["https://placehold.co/600x600/4b5320/ffffff?text=MilCrunch%0ATactical+Cap"] },
-  { id: "mc-command-mug", title: "MilCrunch Command Mug", price: 18.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/1c1c1c/ffffff?text=MilCrunch%0ACommand+Mug"] },
-  { id: "mc-hydro-bottle", title: "MilCrunch Hydro Bottle", price: 34.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/1e3a5f/ffffff?text=MilCrunch%0AHydro+Bottle"] },
-  { id: "mc-tumbler", title: "MilCrunch Creator Tumbler", price: 24.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/1a1a1a/d4a843?text=MilCrunch%0ACreator+Tumbler"] },
-  { id: "mc-sticker-pack", title: "MilCrunch Sticker Pack", price: 9.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/f0f0f0/0c2340?text=MilCrunch%0ASticker+Pack"] },
-  { id: "mc-laptop-sleeve", title: "MilCrunch Laptop Sleeve", price: 39.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/0a1628/ffffff?text=MilCrunch%0ALaptop+Sleeve"] },
-  { id: "mc-patch-set", title: "MilCrunch Patch Set", price: 14.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/4b5320/ffffff?text=MilCrunch%0APatch+Set"] },
+  { id: "mc-veteran-hoodie", title: "MilCrunch Veteran Hoodie", price: 59.99, compare_at_price: 74.99, category: "Apparel", images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0AVeteran+Hoodie"] },
+  { id: "mc-creator-tee", title: "MilCrunch Creator Tee", price: 34.99, compare_at_price: 44.99, category: "Apparel", images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0ACreator+Tee"] },
+  { id: "mc-milspousefest-tee", title: "MilSpouseFest Official Tee", price: 29.99, compare_at_price: null, category: "Apparel", images: ["https://placehold.co/600x600/7c3aed/ffffff?text=MilSpouseFest%0AOfficial+Tee"] },
+  { id: "mc-milcon-hoodie", title: "Military Influencer Conference Hoodie", price: 64.99, compare_at_price: 79.99, category: "Apparel", images: ["https://placehold.co/600x600/1e293b/f59e0b?text=MilCon+2026%0AHoodie"] },
+  { id: "mc-snapback", title: "MilCrunch Snapback", price: 28.99, compare_at_price: 34.99, category: "Headwear", images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0ASnapback"] },
+  { id: "mc-tactical-cap", title: "MilCrunch Tactical Cap", price: 32.99, compare_at_price: null, category: "Headwear", images: ["https://placehold.co/600x600/4b5563/ffffff?text=MilCrunch%0ATactical+Cap"] },
+  { id: "mc-coffee-mug", title: "MilCrunch Coffee Mug", price: 18.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/ffffff/1e293b?text=MilCrunch%0ACoffee+Mug"] },
+  { id: "mc-water-bottle", title: "MilCrunch Water Bottle", price: 27.99, compare_at_price: 34.99, category: "Drinkware", images: ["https://placehold.co/600x600/3b82f6/ffffff?text=MilCrunch%0AWater+Bottle"] },
+  { id: "mc-milspouse-tumbler", title: "MilSpouse Strong Tumbler", price: 24.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/ec4899/ffffff?text=MilSpouse%0AStrong+Tumbler"] },
+  { id: "mc-patch-set", title: "MilCrunch Creator Patch Set", price: 14.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/f59e0b/1e293b?text=MilCrunch%0APatch+Set"] },
+  { id: "mc-sticker-pack", title: "MilCrunch Sticker Pack", price: 9.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/10b981/ffffff?text=MilCrunch%0ASticker+Pack"] },
+  { id: "mc-laptop-sleeve", title: "MilCrunch Laptop Sleeve", price: 29.99, compare_at_price: 39.99, category: "Accessories", images: ["https://placehold.co/600x600/1e293b/3b82f6?text=MilCrunch%0ALaptop+Sleeve"] },
 ];
 
 export default function Shop() {
