@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Core pages -->
+  <url><loc>https://milcrunch.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://milcrunch.com/creators</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://milcrunch.com/podcasts</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/events</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/pricing</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://milcrunch.com/resources</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://milcrunch.com/prospectus</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/shop</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://milcrunch.com/speakers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://milcrunch.com/verification</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://milcrunch.com/kb</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+
+  <!-- Platform pages -->
+  <url><loc>https://milcrunch.com/platform/events</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://milcrunch.com/platform/awards</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://milcrunch.com/platform/sponsorships</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://milcrunch.com/platform/ai-agents</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+  <!-- Solutions pages -->
+  <url><loc>https://milcrunch.com/solutions/media-brands</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://milcrunch.com/solutions/event-teams</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://milcrunch.com/solutions/sponsors</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+
+  <!-- SEO landing pages -->
+  <url><loc>https://milcrunch.com/military-influencers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/veteran-creators</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/military-podcasts</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/sponsor-military-creators</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/veteran-influencer-marketing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/military-spouse-influencers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/army-influencers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/navy-influencers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/air-force-influencers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/marine-influencers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/coast-guard-influencers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/veteran-youtube</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/veteran-tiktok</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/military-instagram</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/veteran-brand-partnerships</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/military-influencer-conference</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/verified-veteran-creators</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/military-creator-economy</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/brand-safety-military</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://milcrunch.com/veteran-podcast-advertising</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+
+  <!-- Special pages -->
+  <url><loc>https://milcrunch.com/veteran-podcast-awards</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://milcrunch.com/national-military-podcast-day</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://milcrunch.com/nominate</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+</urlset>
