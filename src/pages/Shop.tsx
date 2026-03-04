@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
 
@@ -33,22 +32,9 @@ const SEED_PRODUCTS: MerchProduct[] = [
 ];
 
 export default function Shop() {
-  const [products, setProducts] = useState<MerchProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products] = useState<MerchProduct[]>(SEED_PRODUCTS);
+  const [loading] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
-
-  useEffect(() => {
-    supabase
-      .from("merch_products")
-      .select("id, title, price, compare_at_price, category, images")
-      .eq("is_published", true)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        const rows = (data as MerchProduct[] | null) || [];
-        setProducts(rows.length > 0 ? rows : SEED_PRODUCTS);
-        setLoading(false);
-      });
-  }, []);
 
   const filtered = activeCategory === "All"
     ? products

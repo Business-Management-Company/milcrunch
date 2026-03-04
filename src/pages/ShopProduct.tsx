@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ShoppingCart, Loader2, ShoppingBag, Calendar } from "lucide-react";
+import { ArrowLeft, ShoppingCart, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
@@ -46,34 +45,11 @@ const SEED_PRODUCTS: MerchProduct[] = [
 export default function ShopProduct() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [product, setProduct] = useState<MerchProduct | null>(null);
-  const [loading, setLoading] = useState(true);
+  const product = useMemo(() => SEED_PRODUCTS.find((s) => s.id === id) || null, [id]);
   const [mainImage, setMainImage] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState<string>("");
-
-  useEffect(() => {
-    if (!id) return;
-    supabase
-      .from("merch_products")
-      .select("*")
-      .eq("id", id)
-      .eq("is_published", true)
-      .single()
-      .then(({ data, error }) => {
-        let p: MerchProduct | null = null;
-        if (!error && data) {
-          p = data as MerchProduct;
-        } else {
-          // Fall back to seed data
-          p = SEED_PRODUCTS.find((s) => s.id === id) || null;
-        }
-        if (p) {
-          setProduct(p);
-          if (p.variants?.length > 0) setSelectedVariant(p.variants[0].name);
-        }
-        setLoading(false);
-      });
-  }, [id]);
+  const [selectedVariant, setSelectedVariant] = useState<string>(
+    product?.variants?.[0]?.name || ""
+  );
 
   const handleAddToCart = () => {
     toast({
@@ -81,17 +57,6 @@ export default function ShopProduct() {
       description: "Check back soon for online ordering.",
     });
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0D0D1A] text-white">
-        <PublicNav />
-        <div className="flex items-center justify-center pt-14 min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
-        </div>
-      </div>
-    );
-  }
 
   if (!product) {
     return (
