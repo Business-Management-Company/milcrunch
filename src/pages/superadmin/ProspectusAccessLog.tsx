@@ -46,6 +46,9 @@ const ALL_TABS = [
   "Partnership Model", "Financial Model",
 ];
 
+const INTERNAL_EMAILS = new Set(["andrew@podlogix.co", "appletonab@gmail.com"]);
+const isInternal = (email: string) => INTERNAL_EMAILS.has(email.toLowerCase());
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
@@ -181,19 +184,20 @@ export default function ProspectusAccessLog() {
     })();
   }, []);
 
-  /* ---- Aggregate stats ---- */
+  /* ---- Aggregate stats (excludes internal accounts) ---- */
   const stats = useMemo(() => {
     if (rows.length === 0) return null;
-    const uniqueEmails = new Set(rows.map((r) => r.email.toLowerCase()));
-    const totalSessions = rows.length;
-    const sessionsWithTime = rows.filter((r) => r.total_time_seconds != null && r.total_time_seconds > 0);
+    const extRows = rows.filter((r) => !isInternal(r.email));
+    const uniqueEmails = new Set(extRows.map((r) => r.email.toLowerCase()));
+    const totalSessions = extRows.length;
+    const sessionsWithTime = extRows.filter((r) => r.total_time_seconds != null && r.total_time_seconds > 0);
     const avgTime = sessionsWithTime.length > 0
       ? Math.round(sessionsWithTime.reduce((s, r) => s + (r.total_time_seconds ?? 0), 0) / sessionsWithTime.length)
       : 0;
 
     // Tab view counts
     const tabCounts = new Map<string, number>();
-    rows.forEach((r) => {
+    extRows.forEach((r) => {
       const seen = new Set<string>();
       r.tabs_viewed.forEach((tv) => {
         if (!seen.has(tv.tab)) {
@@ -209,7 +213,7 @@ export default function ProspectusAccessLog() {
     // Completion rate: visitors who completed ALL tabs vs total unique visitors
     const completedAll = new Set<string>();
     const emailCompletions = new Map<string, Set<string>>();
-    rows.forEach((r) => {
+    extRows.forEach((r) => {
       const em = r.email.toLowerCase();
       if (!emailCompletions.has(em)) emailCompletions.set(em, new Set());
       r.tabs_completed.forEach((tc) => emailCompletions.get(em)!.add(tc.tab));
@@ -485,17 +489,25 @@ export default function ProspectusAccessLog() {
                         }
                       });
 
+                      const rowIsInternal = isInternal(row.email);
+
                       return (
                         <Fragment key={row.id}>
                           <tr
                             onClick={() => setExpandedId(isExpanded ? null : row.id)}
-                            className="border-b border-gray-50 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                            className={cn(
+                              "border-b border-gray-50 cursor-pointer hover:bg-gray-50/50 transition-colors",
+                              rowIsInternal && "opacity-50"
+                            )}
                           >
                             <td className="px-2 py-3 text-center">
                               {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" /> : <ChevronRight className="h-4 w-4 text-gray-400 mx-auto" />}
                             </td>
                             <td className="px-4 py-3 font-medium text-gray-900 truncate">
-                              {row.email}
+                              <span className="flex items-center gap-1.5">
+                                <span className="truncate">{row.email}</span>
+                                {rowIsInternal && <span className="shrink-0 text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Internal</span>}
+                              </span>
                             </td>
                             <td className="px-4 py-3 text-gray-500 truncate">
                               {formatDate(row.session_start)}
@@ -706,17 +718,24 @@ export default function ProspectusAccessLog() {
                 ) : (
                   sortedEmailGroups.map((group) => {
                     const isExpanded = expandedEmail === group.email;
+                    const groupIsInternal = isInternal(group.email);
                     return (
                       <Fragment key={group.email}>
                         <tr
                           onClick={() => setExpandedEmail(isExpanded ? null : group.email)}
-                          className="border-b border-gray-50 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                          className={cn(
+                            "border-b border-gray-50 cursor-pointer hover:bg-gray-50/50 transition-colors",
+                            groupIsInternal && "opacity-50"
+                          )}
                         >
                           <td className="px-2 py-3 text-center">
                             {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" /> : <ChevronRight className="h-4 w-4 text-gray-400 mx-auto" />}
                           </td>
                           <td className="px-4 py-3 font-medium text-gray-900 truncate">
-                            {group.email}
+                            <span className="flex items-center gap-1.5">
+                              <span className="truncate">{group.email}</span>
+                              {groupIsInternal && <span className="shrink-0 text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Internal</span>}
+                            </span>
                           </td>
                           <td className="px-4 py-3 text-gray-600">
                             {group.totalSessions}
