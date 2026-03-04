@@ -140,7 +140,9 @@ export default function PublicSponsorPage() {
         {/* Footer */}
         <div className="text-center pt-8">
           <Link to="/" className="text-sm text-gray-400 hover:text-[#1e3a5f]">
-            Powered by MilCrunch<span className="text-[#3b82f6] font-bold">X</span>
+            Powered by{" "}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="14" height="14" style={{ display: "inline-block", verticalAlign: "middle", marginRight: 2 }}><polygon points="16,1 29,8.5 29,23.5 16,31 3,23.5 3,8.5" fill="#f59e0b"/></svg>
+              <span style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800 }}>MilCrunch</span>
           </Link>
         </div>
       </div>

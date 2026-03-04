@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import HexLogo from "@/components/brand/HexLogo";
 import { getForm, createSubmission } from "@/lib/sponsor-db";
 import { SPONSOR_TIERS } from "@/lib/sponsor-types";
 import type { SponsorForm, FormField } from "@/lib/sponsor-types";
@@ -117,9 +118,7 @@ export default function SponsorApply() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <span className="font-bold text-2xl tracking-tight text-gray-900">
-              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
-            </span>
+            <HexLogo variant="light" iconSize={24} textClass="text-2xl" />
           </Link>
         </div>
 
@@ -151,7 +150,9 @@ export default function SponsorApply() {
 
           <div className="p-4 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-400">
-              Powered by <span className="font-semibold">MilCrunch<span className="text-[#1e3a5f]">X</span></span>
+              Powered by{" "}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="14" height="14" style={{ display: "inline-block", verticalAlign: "middle", marginRight: 2 }}><polygon points="16,1 29,8.5 29,23.5 16,31 3,23.5 3,8.5" fill="#f59e0b"/></svg>
+                <span style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800 }}>MilCrunch</span>
             </p>
           </div>
         </Card>

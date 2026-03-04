@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import HexLogo from "@/components/brand/HexLogo";
 import {
   Calendar,
   Users,
@@ -47,9 +48,7 @@ export default function SuperAdminHub() {
       {/* Header */}
       <header className="px-8 pt-10 pb-6">
         <div className="flex items-center gap-3">
-          <span className="text-2xl font-bold tracking-tight">
-            MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
-          </span>
+          <HexLogo variant="dark" iconSize={24} textClass="text-2xl" />
           <span className="text-gray-500 text-lg">/</span>
           <h1 className="text-2xl font-bold">Super Admin</h1>
         </div>

@@ -7,6 +7,7 @@ import {
   Eye, EyeOff, ChevronDown, GripVertical, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import HexLogo from "@/components/brand/HexLogo";
 import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
 import DemoIframeModal from "@/components/demo/DemoIframeModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -1771,9 +1772,7 @@ function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => 
       <div className="w-full max-w-md text-center">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          <span className="text-2xl font-bold text-white tracking-tight">
-            MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
-          </span>
+          <HexLogo variant="dark" iconSize={24} textClass="text-2xl" />
         </div>
 
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
@@ -3152,14 +3151,7 @@ export default function Prospectus() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           {/* Logo + tagline */}
           <div className="flex items-center gap-3">
-            <span
-              className={cn(
-                "text-lg font-bold tracking-tight transition-colors duration-300",
-                darkMode ? "text-white" : "text-[#111827]"
-              )}
-            >
-              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
-            </span>
+            <HexLogo variant={darkMode ? "dark" : "light"} iconSize={20} textClass="text-lg" />
             <span
               className={cn(
                 "hidden md:inline text-xs border-l pl-3 transition-colors duration-300",

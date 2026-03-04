@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresentationMode } from "@/hooks/usePresentationMode";
+import HexLogo from "@/components/brand/HexLogo";
 import {
   LayoutDashboard,
   User,
@@ -144,7 +145,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border">
         <Link to="/creator/dashboard" className="flex items-center min-w-0">
-          <span className="font-bold text-lg text-foreground tracking-tight truncate">MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
+          <HexLogo variant="light" iconSize={20} textClass="text-lg" />
         </Link>
       </div>
       <div className="p-3 border-b border-border flex items-center gap-3 min-w-0">
@@ -218,7 +219,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
               {sidebar}
             </SheetContent>
           </Sheet>
-          <span className="font-bold text-foreground tracking-tight ml-2">MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
+          <span className="ml-2"><HexLogo variant="light" iconSize={20} textClass="text-lg" /></span>
         </div>
       )}
 

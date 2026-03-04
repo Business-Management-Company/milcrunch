@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
+import HexLogo from "@/components/brand/HexLogo";
 
 interface ReportData {
   id: string;
@@ -71,9 +72,7 @@ export default function SharedReport() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
-          <span className="text-lg font-bold text-gray-900 tracking-tight">
-            MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
-          </span>
+          <HexLogo variant="light" iconSize={20} textClass="text-lg" />
           <span className="text-xs text-gray-400">{typeLabel}</span>
         </div>
       </header>

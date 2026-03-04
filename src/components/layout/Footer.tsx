@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import HexLogo from "@/components/brand/HexLogo";
 
 const Footer = () => {
   return (
@@ -7,7 +8,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <div className="flex items-center">
-              <span className="font-bold text-xl text-foreground tracking-tight">MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
+              <HexLogo variant="light" iconSize={22} textClass="text-xl" />
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               Where the military and veteran community comes to be seen, heard, and understood. Creators, events, podcasts, and brands in one platform.

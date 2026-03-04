@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Loader2 } from "lucide-react";
+import { HexIcon } from "@/components/brand/HexLogo";
 import { supabase } from "@/integrations/supabase/client";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
@@ -37,7 +38,7 @@ export default function Shop() {
         <div className="bg-gradient-to-b from-[#1A1A2E] to-[#0D0D1A] py-16 px-4">
           <div className="max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-3">
-              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span> Merch
+              MilCrunch<HexIcon size={36} className="inline-block align-middle mx-1" /> Merch
             </h1>
             <p className="text-gray-400 text-lg max-w-xl mx-auto">
               Official gear for the military creator community
