@@ -526,8 +526,7 @@ export default function Creators() {
               Military Influencer Network
             </h1>
             <p className="text-[#6B7280] text-lg max-w-2xl mx-auto">
-              The #1 network for verified military and veteran content creators.
-              Discover authentic voices from those who served.
+              The #1 network for verified military and veteran creators. Discover authentic voices from those who served.
             </p>
           </div>
 
