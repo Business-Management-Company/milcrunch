@@ -303,6 +303,25 @@ export const ADMIN_CHAT_TOOLS: { name: string; description: string; input_schema
       required: ["title", "content"],
     },
   },
+  {
+    name: "createEvent",
+    description: "Create a draft event in the events table. Use this after building an event strategy when the user confirms they want to save it as a draft event in their dashboard.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Event name" },
+        description: { type: "string", description: "Event description" },
+        event_type: { type: "string", description: "Type of event (conference, retreat, meetup, activation, etc.)" },
+        venue: { type: "string", description: "Venue name" },
+        city: { type: "string", description: "City" },
+        state: { type: "string", description: "State abbreviation" },
+        start_date: { type: "string", description: "Start date ISO string (YYYY-MM-DD)" },
+        end_date: { type: "string", description: "End date ISO string (YYYY-MM-DD)" },
+        capacity: { type: "number", description: "Expected attendee count" },
+      },
+      required: ["title"],
+    },
+  },
 ];
 
 export async function executeAdminTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
@@ -645,6 +664,50 @@ export async function executeAdminTool(name: string, args: Record<string, unknow
       return {
         result: `Strategy brief saved successfully. Shareable URL: ${shareUrl}`,
         confirmation: `Strategy brief "${title}" saved — ${shareUrl}`,
+      };
+    }
+
+    case "createEvent": {
+      const title = args.title as string;
+      const description = (args.description as string) ?? null;
+      const event_type = (args.event_type as string) ?? "conference";
+      const venue = (args.venue as string) ?? null;
+      const city = (args.city as string) ?? null;
+      const state = (args.state as string) ?? null;
+      const start_date = (args.start_date as string) ?? null;
+      const end_date = (args.end_date as string) ?? null;
+      const capacity = (args.capacity as number) ?? null;
+
+      const { data: userData } = await supabase.auth.getUser();
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now();
+
+      const { data: event, error } = await supabase
+        .from("events")
+        .insert({
+          title,
+          description,
+          event_type,
+          venue,
+          city,
+          state,
+          start_date,
+          end_date,
+          capacity,
+          slug,
+          is_published: false,
+          created_by: userData?.user?.id ?? null,
+        })
+        .select("id")
+        .single();
+
+      if (error) return { result: `Error creating event: ${error.message}` };
+
+      const eventId = (event as { id: string }).id;
+      const eventUrl = `${window.location.origin}/brand/events/${eventId}`;
+
+      return {
+        result: `Draft event "${title}" created successfully. Dashboard URL: ${eventUrl}`,
+        confirmation: `Draft event "${title}" created — ${eventUrl}`,
       };
     }
 

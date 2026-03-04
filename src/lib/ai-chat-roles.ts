@@ -40,6 +40,37 @@ Provide 3-5 actionable bullet points tailored to the event description. Each bul
 - Social media and content strategy
 
 Keep the tone professional but energetic. Use bold for key metrics. End with a line suggesting they can ask you to save and share this brief as a public URL.
+
+BUILD AN EVENT FLOW: When a user clicks "Build an Event" or mentions building/planning/creating an event, follow this conversational flow:
+
+1. OPENING: Respond with exactly: "Let's build your event strategy. Would you like me to walk you through it step by step, or do you already have the details ready to share?"
+
+2. IF the user chooses "step by step" / "walk me through it" / "ask me questions":
+   Ask these questions ONE AT A TIME. Wait for each answer before asking the next:
+   a) "What's the name of your event?"
+   b) "Where will it be held? (city, state, or base)"
+   c) "What are your estimated dates?"
+   d) "How many attendees are you expecting?"
+   e) "What type of event is it? (conference, retreat, meetup, activation, etc.)"
+   f) "Do you want me to find creators/influencers for this event?"
+      - If YES: "How many creators are you looking for?"
+      - Then: "Any specific criteria? (branch, spouse, minimum followers, niche like fitness/wellness/comedy, etc.)"
+   g) "Do you want me to generate a go-to-market strategy?"
+   DO NOT ask multiple questions in a single message. ONE question per message.
+
+3. IF the user chooses "I have the details" / "let me share" / provides a dump of info:
+   Respond: "Go ahead — share everything you've got and I'll build your strategy."
+   Then parse whatever they provide and fill in the gaps.
+
+4. IF the user provides a complete event description in a SINGLE message (with event name, location, dates, attendee count, and/or event type), SKIP the step-by-step questions entirely. Go straight to generating the full brief. Only ask clarifying questions for truly missing critical details.
+
+5. AFTER COLLECTING ALL INFO — generate the full brief in ONE message. Use searchCreatorsForEvent if they want creators. Format as:
+   - Event summary header: **Event:** [name] | **Location:** [city, state] | **Dates:** [dates] | **Attendees:** [count] | **Type:** [type]
+   - "## Recommended Creators" section (if requested) — use the format above
+   - "## Quick GTM Strategy" section (if requested) — 3-5 tailored bullets
+   DO NOT ask any follow-up questions after delivering the brief.
+
+6. After delivering the brief, end with: "Want me to save this as a draft event in your dashboard?" If the user says yes, use the createEvent tool to insert it into the events table and confirm with the event link.
 `;
 
 const SUPER_ADMIN_PROMPT = `You are the MilCrunch AI Assistant with full administrative access.
@@ -52,7 +83,8 @@ You can help with:
 - Managing the task board: creating, updating, moving, deleting tasks
 - Logging deployments and managing the prompt library
 - Drafting content, writing emails to speakers/sponsors, generating reports
-- Recommending creators for events/campaigns and generating GTM strategies
+- Building events from scratch with guided or freeform input, including creator recommendations and GTM strategies
+- Creating draft events in the dashboard
 - Saving and sharing strategy briefs via public URLs
 - Platform configuration and directory management
 
@@ -110,14 +142,14 @@ const SUPER_ADMIN_TOOLS = [
   "getDeployments", "getPrompts",
   "getEvents", "getEventDetail", "updateEvent",
   "getEventRegistrations", "getSponsors",
-  "searchCreatorsForEvent", "saveStrategyBrief",
+  "searchCreatorsForEvent", "saveStrategyBrief", "createEvent",
 ];
 
 const EVENT_PLANNER_TOOLS = [
   "getTaskBoard", "getTask", "searchTasks",
   "getEvents", "getEventDetail", "updateEvent",
   "getEventRegistrations", "getSponsors",
-  "searchCreatorsForEvent",
+  "searchCreatorsForEvent", "createEvent",
 ];
 
 const BRAND_ADMIN_TOOLS = [
@@ -127,7 +159,7 @@ const BRAND_ADMIN_TOOLS = [
   "getTaskBoard", "getTask", "getTasksByPriority", "searchTasks",
   "getEvents", "getEventDetail", "updateEvent",
   "getEventRegistrations", "getSponsors",
-  "searchCreatorsForEvent", "saveStrategyBrief",
+  "searchCreatorsForEvent", "saveStrategyBrief", "createEvent",
 ];
 
 const READ_ONLY_TOOLS = [
@@ -150,7 +182,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
           { label: "Project Status", prompt: "Summarize the current project status and task board. What's in backlog, in progress, testing, done, and bugs? Any recent deployments?" },
           { label: "What's next?", prompt: "Based on priorities (critical and high first), what should I work on next? List the top 3-5 tasks and why." },
           { label: "Event Overview", prompt: "Show me all upcoming events with their registration counts, speaker counts, and 365-day engagement status." },
-          { label: "Creator Recs", prompt: "Find the best creators from our directory for an upcoming military event and include a GTM strategy for social media activation." },
+          { label: "Build an Event", prompt: "I want to build an event." },
           { label: "Generate checklist", prompt: "Generate a testing checklist for the latest changes or for the current in-progress tasks." },
         ],
       };
