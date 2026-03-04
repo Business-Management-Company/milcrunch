@@ -164,6 +164,13 @@ import SharedReport from "./pages/SharedReport";
 import PublicVerificationReport from "./pages/PublicVerificationReport";
 import StrategyBriefPage from "./pages/StrategyBriefPage";
 import CopyDeepLink from "./components/superadmin/CopyDeepLink";
+import MilitaryInfluencers from "./pages/seo/MilitaryInfluencers";
+import VeteranCreators from "./pages/seo/VeteranCreators";
+import MilitaryPodcasts from "./pages/seo/MilitaryPodcasts";
+import SponsorMilitaryCreators from "./pages/seo/SponsorMilitaryCreators";
+import VeteranInfluencerMarketing from "./pages/seo/VeteranInfluencerMarketing";
+import MilitarySpouseInfluencers from "./pages/seo/MilitarySpouseInfluencers";
+import ArmyInfluencers from "./pages/seo/ArmyInfluencers";
 
 const queryClient = new QueryClient();
 
@@ -363,6 +370,14 @@ const App = () => (
               <Route path="/report/:token" element={<PublicVerificationReport />} />
               {/* Public AI strategy brief (shareable link) */}
               <Route path="/strategy/:id" element={<StrategyBriefPage />} />
+              {/* SEO pages */}
+              <Route path="/military-influencers" element={<MilitaryInfluencers />} />
+              <Route path="/veteran-creators" element={<VeteranCreators />} />
+              <Route path="/military-podcasts" element={<MilitaryPodcasts />} />
+              <Route path="/sponsor-military-creators" element={<SponsorMilitaryCreators />} />
+              <Route path="/veteran-influencer-marketing" element={<VeteranInfluencerMarketing />} />
+              <Route path="/military-spouse-influencers" element={<MilitarySpouseInfluencers />} />
+              <Route path="/army-influencers" element={<ArmyInfluencers />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
