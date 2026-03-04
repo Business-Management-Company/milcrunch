@@ -246,10 +246,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithOAuth = async (provider: "google" | "linkedin_oidc") => {
-    const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: redirectUrl },
+      options: { redirectTo: "https://milcrunch.com/auth/callback" },
     });
     return { error };
   };

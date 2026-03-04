@@ -12,6 +12,7 @@ import Creators from "./pages/Creators";
 import CreatorPublicProfile from "./pages/CreatorPublicProfile";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/auth/AuthCallback";
 import Pricing from "./pages/Pricing";
 import Resources from "./pages/Resources";
 import VeteranPodcastAwards from "./pages/VeteranPodcastAwards";
@@ -182,6 +183,7 @@ const App = () => (
               <Route path="/creators/:handle" element={<CreatorPublicProfile />} />
               <Route path="/home" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/sign-in" element={<Navigate to="/login" replace />} />
               <Route path="/signup" element={<SignupPage />} />
