@@ -955,7 +955,7 @@ export default function HomePage() {
               Military Podcast Network
             </h2>
             <p className="text-gray-500 text-lg mb-8">
-              825+ military and veteran voices — streaming 24/7
+              839 veteran and military voices — streaming 24/7.
             </p>
 
             {podcastsLoading ? (
