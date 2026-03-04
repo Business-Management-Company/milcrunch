@@ -56,7 +56,7 @@ interface AuthContextType {
     tosAccepted: boolean;
   }) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signInWithOAuth: (provider: "google" | "apple") => Promise<{ error: Error | null }>;
+  signInWithOAuth: (provider: "google") => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   /** Where to send user after login: /creator/onboard, /creator/dashboard, or /brand/dashboard */
@@ -245,10 +245,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
-  const signInWithOAuth = async (provider: "google" | "apple") => {
+  const signInWithOAuth = async (provider: "google") => {
     const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider === "apple" ? "apple" : "google",
+      provider: "google",
       options: { redirectTo: redirectUrl },
     });
     return { error };
