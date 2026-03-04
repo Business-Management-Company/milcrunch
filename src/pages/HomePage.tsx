@@ -178,6 +178,14 @@ const BRANCH_STYLES: Record<string, string> = {
   "Space Force": "bg-indigo-600/10 text-indigo-700",
 };
 
+function statusPillStyle(status: string): string {
+  const s = status.toLowerCase();
+  if (s.includes("spouse")) return "bg-[#e11d48] text-white";
+  if (s.includes("active")) return "bg-[#16a34a] text-white";
+  if (s.includes("veteran")) return "bg-[#64748b] text-white";
+  return "bg-slate-100 text-slate-600";
+}
+
 /* Branch → animated gradient mesh for card banners */
 const BRANCH_GRADIENT: Record<string, string> = {
   default: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6B73FF 100%)",
@@ -369,7 +377,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
           </span>
         )}
         {c.status && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{c.status}</span>
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(c.status)}`}>{c.status}</span>
         )}
       </div>
 

@@ -104,6 +104,14 @@ const BRANCH_STYLES: Record<string, string> = {
   "Space Force": "bg-indigo-600/10 text-indigo-700",
 };
 
+function statusPillStyle(status: string): string {
+  const s = status.toLowerCase();
+  if (s.includes("spouse")) return "bg-[#e11d48] text-white";
+  if (s.includes("active")) return "bg-[#16a34a] text-white";
+  if (s.includes("veteran")) return "bg-[#64748b] text-white";
+  return "bg-slate-100 text-slate-600";
+}
+
 type SortField = "sort_order" | "followers" | "engagement" | "added";
 type ViewMode = "table" | "cards";
 const VIEW_KEY = "pd_directory_view";
@@ -1326,7 +1334,12 @@ const BrandDirectory = () => {
                     <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#1e3a5f] mb-1 truncate max-w-full">@{m.creator_handle}</p>
-                    {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0 mb-2", branchStyle)}>{m.branch}</Badge>}
+                    {(m.branch || m.status) && (
+                      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
+                        {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0", branchStyle)}>{m.branch}</Badge>}
+                        {m.status && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(m.status)}`}>{m.status}</span>}
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 text-xs mb-3">
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
                       <div className="flex items-center gap-1"><Heart className="h-3 w-3 text-pink-500 fill-pink-500" /><span className="font-bold text-[#000741] dark:text-white">{m.avg_likes != null && String(m.avg_likes) !== "0" ? (/^\d+$/.test(String(m.avg_likes)) ? formatFollowerCount(Number(m.avg_likes)) : m.avg_likes) : "—"}</span><span className="text-muted-foreground ml-1">avg likes</span></div>
@@ -1508,7 +1521,10 @@ const BrandDirectory = () => {
                         </div>
                       </td>
                       <td className="p-3">
-                        {m.branch ? <Badge variant="outline" className={cn("text-[10px] font-semibold border-0", branchStyle)}>{m.branch}</Badge> : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {m.branch ? <Badge variant="outline" className={cn("text-[10px] font-semibold border-0", branchStyle)}>{m.branch}</Badge> : (!m.status && <span className="text-gray-300 dark:text-gray-600">—</span>)}
+                          {m.status && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(m.status)}`}>{m.status}</span>}
+                        </div>
                       </td>
                       <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowerCount(m.follower_count)}</td>
                       <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof m.engagement_rate === "number" ? `${m.engagement_rate.toFixed(2)}%` : "—"}</td>
