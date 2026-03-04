@@ -81,6 +81,7 @@ import { useLists } from "@/contexts/ListContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import { detectMilitarySpouse, backgroundUpdateSpouseStatus } from "@/lib/detect-spouse";
 import CreatorProfileModal from "@/components/CreatorProfileModal";
 import { type CreatorCard, type EnrichedProfileResponse } from "@/lib/influencers-club";
 
@@ -1334,12 +1335,18 @@ const BrandDirectory = () => {
                     <DirAvatar m={m} size="lg" />
                     <h3 className="font-semibold text-[#000741] dark:text-white text-sm truncate max-w-full">{m.creator_name}</h3>
                     <p className="text-xs text-[#1e3a5f] mb-1 truncate max-w-full">@{m.creator_handle}</p>
-                    {(m.branch || m.status) && (
-                      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
-                        {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0", branchStyle)}>{m.branch}</Badge>}
-                        {m.status && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(m.status)}`}>{m.status}</span>}
-                      </div>
-                    )}
+                    {(() => {
+                      const isSpouse = detectMilitarySpouse(m);
+                      const showStatusPill = m.status && !(/\bspouse\b/i.test(m.status));
+                      if (isSpouse) backgroundUpdateSpouseStatus(m.id, m.status ?? null);
+                      return (m.branch || showStatusPill || isSpouse) ? (
+                        <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
+                          {m.branch && <Badge variant="outline" className={cn("text-[10px] font-semibold border-0", branchStyle)}>{m.branch}</Badge>}
+                          {isSpouse && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e11d48] text-white">Mil Spouse</span>}
+                          {showStatusPill && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(m.status!)}`}>{m.status}</span>}
+                        </div>
+                      ) : null;
+                    })()}
                     <div className="flex items-center gap-4 text-xs mb-3">
                       <div><span className="font-bold text-[#000741] dark:text-white">{formatFollowerCount(m.follower_count)}</span><span className="text-muted-foreground ml-1">followers</span></div>
                       <div className="flex items-center gap-1"><Heart className="h-3 w-3 text-pink-500 fill-pink-500" /><span className="font-bold text-[#000741] dark:text-white">{m.avg_likes != null && String(m.avg_likes) !== "0" ? (/^\d+$/.test(String(m.avg_likes)) ? formatFollowerCount(Number(m.avg_likes)) : m.avg_likes) : "—"}</span><span className="text-muted-foreground ml-1">avg likes</span></div>
@@ -1521,10 +1528,18 @@ const BrandDirectory = () => {
                         </div>
                       </td>
                       <td className="p-3">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {m.branch ? <Badge variant="outline" className={cn("text-[10px] font-semibold border-0", branchStyle)}>{m.branch}</Badge> : (!m.status && <span className="text-gray-300 dark:text-gray-600">—</span>)}
-                          {m.status && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(m.status)}`}>{m.status}</span>}
-                        </div>
+                        {(() => {
+                          const isSpouse = detectMilitarySpouse(m);
+                          const showStatusPill = m.status && !(/\bspouse\b/i.test(m.status));
+                          if (isSpouse) backgroundUpdateSpouseStatus(m.id, m.status ?? null);
+                          return (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {m.branch ? <Badge variant="outline" className={cn("text-[10px] font-semibold border-0", branchStyle)}>{m.branch}</Badge> : (!showStatusPill && !isSpouse && <span className="text-gray-300 dark:text-gray-600">—</span>)}
+                              {isSpouse && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e11d48] text-white">Mil Spouse</span>}
+                              {showStatusPill && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(m.status!)}`}>{m.status}</span>}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{formatFollowerCount(m.follower_count)}</td>
                       <td className="p-3 text-right font-semibold text-[#000741] dark:text-white tabular-nums">{typeof m.engagement_rate === "number" ? `${m.engagement_rate.toFixed(2)}%` : "—"}</td>

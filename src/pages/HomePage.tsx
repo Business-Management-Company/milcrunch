@@ -62,6 +62,7 @@ import {
   extractAvatarFromEnrichment,
   type ShowcaseCreator,
 } from "@/lib/featured-creators";
+import { detectMilitarySpouse, backgroundUpdateSpouseStatus } from "@/lib/detect-spouse";
 
 // Hero background: clean group photo without baked-in social cards
 const HERO_BG_IMAGE = "/home-hero-creators.png";
@@ -369,17 +370,27 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
         )}
       </div>
 
-      {/* Branch badge + Status */}
-      <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center px-4">
-        {c.branch && (
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${branchStyle}`}>
-            {c.branch}
-          </span>
-        )}
-        {c.status && (
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(c.status)}`}>{c.status}</span>
-        )}
-      </div>
+      {/* Branch badge + Status + Spouse */}
+      {(() => {
+        const isSpouse = detectMilitarySpouse(c);
+        const showStatusPill = c.status && !(/\bspouse\b/i.test(c.status));
+        if (isSpouse && c.id && !c.id.startsWith("hero-")) backgroundUpdateSpouseStatus(c.id, c.status ?? null);
+        return (c.branch || showStatusPill || isSpouse) ? (
+          <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center px-4">
+            {c.branch && (
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${branchStyle}`}>
+                {c.branch}
+              </span>
+            )}
+            {isSpouse && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e11d48] text-white">Mil Spouse</span>
+            )}
+            {showStatusPill && (
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(c.status!)}`}>{c.status}</span>
+            )}
+          </div>
+        ) : null;
+      })()}
 
       {/* Stats row */}
       <div className="flex items-center gap-3 px-4 mb-2">
@@ -822,16 +833,24 @@ export default function HomePage() {
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-[17px] text-gray-900">{db.display_name}</p>
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>
-                            {(db.branch || db.status) && (
-                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                {db.branch && (
-                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${BRANCH_STYLES[db.branch] ?? "bg-gray-100 text-gray-700"}`}>{db.branch}</span>
-                                )}
-                                {db.status && (
-                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(db.status)}`}>{db.status}</span>
-                                )}
-                              </div>
-                            )}
+                            {(() => {
+                              const isSpouse = detectMilitarySpouse(db);
+                              const showStatusPill = db.status && !(/\bspouse\b/i.test(db.status));
+                              if (isSpouse && db.id && !db.id.startsWith("hero-")) backgroundUpdateSpouseStatus(db.id, db.status ?? null);
+                              return (db.branch || showStatusPill || isSpouse) ? (
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                  {db.branch && (
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${BRANCH_STYLES[db.branch] ?? "bg-gray-100 text-gray-700"}`}>{db.branch}</span>
+                                  )}
+                                  {isSpouse && (
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e11d48] text-white">Mil Spouse</span>
+                                  )}
+                                  {showStatusPill && (
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(db.status!)}`}>{db.status}</span>
+                                  )}
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
                           {db.category && (
                             <span className={`text-[12px] font-medium px-3 py-1.5 rounded-full ${TAG_COLORS[i % TAG_COLORS.length]}`}>{db.category}</span>

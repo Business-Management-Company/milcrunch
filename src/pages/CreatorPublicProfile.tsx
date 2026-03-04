@@ -46,6 +46,7 @@ import {
 import { cn, safeImageUrl, creatorAvatarUrl } from "@/lib/utils";
 import { getCreatorAvatar } from "@/lib/avatar";
 import { getPlatformsFromEnrichmentData } from "@/lib/enrichment-platforms";
+import { detectMilitarySpouse, backgroundUpdateSpouseStatus } from "@/lib/detect-spouse";
 
 /* ------------------------------------------------------------------ */
 /* Icons                                                               */
@@ -788,11 +789,25 @@ export default function CreatorPublicProfile() {
                         Attending Events
                       </span>
                     )}
-                    {creator.status && typeof creator.status === "string" && (
-                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                        {creator.status}
-                      </span>
-                    )}
+                    {(() => {
+                      const isSpouse = detectMilitarySpouse(creator);
+                      const showStatusPill = creator.status && typeof creator.status === "string" && !(/\bspouse\b/i.test(creator.status));
+                      if (isSpouse && creator.id) backgroundUpdateSpouseStatus(creator.id, creator.status ?? null);
+                      return (
+                        <>
+                          {isSpouse && (
+                            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#e11d48] text-white">
+                              Mil Spouse
+                            </span>
+                          )}
+                          {showStatusPill && (
+                            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                              {creator.status}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                     {creator.category && typeof creator.category === "string" && (
                       <span className="text-xs font-medium text-[#1e3a5f] bg-[#1e3a5f]/10 px-3 py-1 rounded-full">
                         {creator.category}
@@ -903,6 +918,25 @@ export default function CreatorPublicProfile() {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-2">About</h3>
                   <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{bio}</p>
+                </div>
+              )}
+
+              {/* Military Spouse Section */}
+              {creator && detectMilitarySpouse(creator) && (
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-rose-800 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                    <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
+                    Military Spouse
+                  </h3>
+                  <p className="text-sm text-rose-700">
+                    This creator is a military spouse — part of the community that supports those who serve.
+                  </p>
+                  {creator.platform_urls?.linkedin && (
+                    <p className="text-xs text-rose-600 mt-2">
+                      Spouse status confirmed via{" "}
+                      <a href={creator.platform_urls.linkedin} target="_blank" rel="noopener noreferrer" className="underline hover:text-rose-800">LinkedIn profile</a>.
+                    </p>
+                  )}
                 </div>
               )}
 
