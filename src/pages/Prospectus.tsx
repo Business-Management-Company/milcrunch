@@ -3078,50 +3078,81 @@ export default function Prospectus() {
       });
     }
 
-    // Save on play/pause/ended immediately; timeupdate is batched
-    if (!accessLogId) return;
+    // Persist to prospectus_video_views table
+    if (!accessLogId || !accessEmail) return;
+    const saveVideoRow = () => {
+      supabase.from("prospectus_video_views").upsert({
+        session_id: accessLogId,
+        email: accessEmail,
+        tab_name: tab,
+        video_started: entry.started,
+        watch_time_seconds: entry.watch_time,
+        total_duration_seconds: entry.duration,
+        completed: entry.completed,
+      }, { onConflict: "session_id,tab_name" }).then(() => {});
+    };
+    // Save immediately on play/pause/ended; batch timeupdate with 5s debounce
     if (e.type === "timeupdate") {
       if (!videoSavePending.current) {
         videoSavePending.current = true;
         setTimeout(() => {
           videoSavePending.current = false;
-          supabase.from("prospectus_access_log").update({ video_views: videoViewsRef.current }).eq("id", accessLogId).then(() => {});
-        }, 2000);
+          saveVideoRow();
+        }, 5000);
       }
     } else {
-      supabase.from("prospectus_access_log").update({ video_views: videoViewsRef.current }).eq("id", accessLogId).then(() => {});
+      saveVideoRow();
     }
-  }, [accessLogId]);
+  }, [accessLogId, accessEmail]);
 
-  // beforeunload — record session_end + total_time_seconds
+  // beforeunload — record session_end + total_time_seconds + final video views
   useEffect(() => {
     if (!accessLogId) return;
     const handleUnload = () => {
       const elapsed = Math.round((Date.now() - sessionStartRef.current) / 1000);
-      const payload = JSON.stringify({
-        session_end: new Date().toISOString(),
-        total_time_seconds: elapsed,
-        tabs_viewed: tabsViewedRef.current,
-        video_views: videoViewsRef.current,
-      });
-      // Use fetch with keepalive for reliability on tab close
-      // (sendBeacon can't include custom headers needed by Supabase)
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/prospectus_access_log?id=eq.${accessLogId}`;
-      fetch(url, {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const headers = {
+        "Content-Type": "application/json",
+        "apikey": apiKey,
+        "Authorization": `Bearer ${apiKey}`,
+        "Prefer": "return=minimal",
+      };
+
+      // Save session end
+      fetch(`${supabaseUrl}/rest/v1/prospectus_access_log?id=eq.${accessLogId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          "Prefer": "return=minimal",
-        },
-        body: payload,
+        headers,
+        body: JSON.stringify({
+          session_end: new Date().toISOString(),
+          total_time_seconds: elapsed,
+          tabs_viewed: tabsViewedRef.current,
+        }),
         keepalive: true,
       }).catch(() => {});
+
+      // Save final video views to prospectus_video_views
+      const views = videoViewsRef.current;
+      Object.entries(views).forEach(([tab, v]) => {
+        fetch(`${supabaseUrl}/rest/v1/prospectus_video_views`, {
+          method: "POST",
+          headers: { ...headers, "Prefer": "resolution=merge-duplicates" },
+          body: JSON.stringify({
+            session_id: accessLogId,
+            email: accessEmail,
+            tab_name: tab,
+            video_started: v.started,
+            watch_time_seconds: v.watch_time,
+            total_duration_seconds: v.duration,
+            completed: v.completed,
+          }),
+          keepalive: true,
+        }).catch(() => {});
+      });
     };
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
-  }, [accessLogId]);
+  }, [accessLogId, accessEmail]);
 
   // Reset scroll progress when active tab changes
   useEffect(() => {

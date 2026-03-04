@@ -178,13 +178,29 @@ export default function ProspectusAccessLog() {
   /* ---- Fetch ---- */
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("prospectus_access_log")
-        .select("*")
-        .order("session_start", { ascending: false });
-      if (error) console.warn("[ProspectusAccessLog] fetch error:", error.message);
+      // Fetch sessions and video views in parallel
+      const [logRes, videoRes] = await Promise.all([
+        supabase.from("prospectus_access_log").select("*").order("session_start", { ascending: false }),
+        supabase.from("prospectus_video_views").select("*"),
+      ]);
+      if (logRes.error) console.warn("[ProspectusAccessLog] fetch error:", logRes.error.message);
+
+      // Build video views lookup: session_id → { tab_name → VideoView }
+      const videoMap = new Map<string, Record<string, VideoView>>();
+      if (videoRes.data) {
+        for (const v of videoRes.data as { session_id: string; tab_name: string; video_started: boolean; watch_time_seconds: number; total_duration_seconds: number; completed: boolean }[]) {
+          if (!videoMap.has(v.session_id)) videoMap.set(v.session_id, {});
+          videoMap.get(v.session_id)![v.tab_name] = {
+            started: v.video_started ?? false,
+            watch_time: v.watch_time_seconds ?? 0,
+            duration: v.total_duration_seconds ?? 0,
+            completed: v.completed ?? false,
+          };
+        }
+      }
+
       setRows(
-        (data ?? []).map((r: Record<string, unknown>) => ({
+        (logRes.data ?? []).map((r: Record<string, unknown>) => ({
           id: r.id as string,
           email: r.email as string,
           session_start: r.session_start as string,
@@ -192,7 +208,7 @@ export default function ProspectusAccessLog() {
           total_time_seconds: (r.total_time_seconds as number) ?? null,
           tabs_viewed: Array.isArray(r.tabs_viewed) ? r.tabs_viewed as { tab: string; at: string }[] : [],
           tabs_completed: Array.isArray(r.tabs_completed) ? r.tabs_completed as { tab: string; at: string }[] : [],
-          video_views: (r.video_views && typeof r.video_views === "object" && !Array.isArray(r.video_views)) ? r.video_views as Record<string, VideoView> : {},
+          video_views: videoMap.get(r.id as string) ?? {},
           created_at: r.created_at as string,
         }))
       );
