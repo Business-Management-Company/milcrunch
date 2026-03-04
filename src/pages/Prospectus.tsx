@@ -7,7 +7,6 @@ import {
   Eye, EyeOff, ChevronDown, GripVertical, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
 import FinancialModelTab from "@/components/prospectus/FinancialModelTab";
 import DemoIframeModal from "@/components/demo/DemoIframeModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -421,8 +420,6 @@ function ManageContentPanel({
   onSaveMedia,
   onSaveContent,
   dark,
-  gatingEnabled,
-  onToggleGating,
   hiddenTabs,
   onToggleTabVisible,
 }: {
@@ -434,8 +431,6 @@ function ManageContentPanel({
   onSaveMedia: (v: VideoUrls, i: ImageUrls) => void;
   onSaveContent: (c: Record<string, TabContent>) => void;
   dark: boolean;
-  gatingEnabled: boolean;
-  onToggleGating: (enabled: boolean) => void;
   hiddenTabs: Set<string>;
   onToggleTabVisible: (tab: string) => void;
 }) {
@@ -946,19 +941,6 @@ function ManageContentPanel({
           <button type="button" onClick={onClose} className="p-1 hover:opacity-70">
             <X className="h-5 w-5" />
           </button>
-        </div>
-
-        {/* Sequential Viewing toggle */}
-        <div className={cn("flex items-center justify-between px-5 py-3 border-b", dark ? "border-white/10" : "border-gray-200")}>
-          <div>
-            <label htmlFor="gating-toggle" className={cn("text-sm font-medium cursor-pointer select-none", dark ? "text-gray-200" : "text-gray-700")}>
-              Require Sequential Viewing
-            </label>
-            <p className={cn("text-xs mt-0.5", dark ? "text-gray-500" : "text-gray-400")}>
-              Require viewers to watch each video before unlocking the next tab
-            </p>
-          </div>
-          <Switch id="gating-toggle" checked={gatingEnabled} onCheckedChange={onToggleGating} />
         </div>
 
         {/* Sub-tabs */}
@@ -1874,13 +1856,12 @@ function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => 
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint, onVideoEvent, videoWatchRequired, videoWatched }: {
+function OverviewTab({ dark, dbContent, videoUrl, imageUrl, onScrollProgress, onVideoEvent }: {
   dark: boolean; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
-  onScrollProgress?: (pct: number) => void; showScrollHint?: boolean;
+  onScrollProgress?: (pct: number) => void;
   onVideoEvent?: (e: VideoEvent) => void;
-  videoWatchRequired?: boolean; videoWatched?: boolean;
 }) {
-  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} onScrollProgress={onScrollProgress} showScrollHint={showScrollHint} onVideoEvent={onVideoEvent} videoWatchRequired={videoWatchRequired} videoWatched={videoWatched} />;
+  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} onScrollProgress={onScrollProgress} onVideoEvent={onVideoEvent} />;
 }
 
 /* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
@@ -2287,15 +2268,12 @@ const TAB_CONTENT: Record<string, TabContent> = {
   },
 };
 
-function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint, onVideoEvent, videoWatchRequired, videoWatched }: {
+function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress, onVideoEvent }: {
   dark: boolean; tab: string; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
   onScrollProgress?: (pct: number) => void;
-  showScrollHint?: boolean;
   onVideoEvent?: (e: VideoEvent) => void;
-  videoWatchRequired?: boolean; videoWatched?: boolean;
 }) {
   const [demoModal, setDemoModal] = useState<{ open: boolean; url: string }>({ open: false, url: "" });
-  const [scrollProgressLocal, setScrollProgressLocal] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const content = dbContent || TAB_CONTENT[tab];
   const kbSlug = TAB_KB_CATEGORY[tab];
@@ -2313,7 +2291,6 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
       const total = container.scrollHeight;
       if (total <= 0) return;
       const pct = Math.min(1, scrolled / total);
-      setScrollProgressLocal(pct);
       onScrollProgress?.(pct);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -2387,23 +2364,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
       {!hasVideoBlock && (videoUrl || imageUrl) && (
         <div className="relative rounded-xl overflow-hidden max-w-3xl mx-auto">
           <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} onVideoEvent={onVideoEvent} />
-          {/* Video watched checkmark overlay */}
-          {videoWatched && (
-            <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-emerald-500/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-lg backdrop-blur-sm">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Watched
-            </div>
-          )}
         </div>
-      )}
-      {/* Video watch requirement message */}
-      {videoWatchRequired && (
-        <p className={cn(
-          "text-center text-xs mt-3 animate-pulse",
-          dark ? "text-amber-400/70" : "text-amber-600/70"
-        )}>
-          <Play className="inline h-3 w-3 mr-1 -mt-0.5" />
-          Watch the video above to unlock the next section
-        </p>
       )}
 
       {/* Block-aware section rendering */}
@@ -2751,26 +2712,6 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
         </section>
       )}
 
-      {/* Scroll progress bar + hint */}
-      {showScrollHint && (
-        <div className="sticky bottom-0 left-0 right-0 z-10 pointer-events-none">
-          <div className="h-1 bg-gray-200/30 dark:bg-white/10 rounded-full overflow-hidden max-w-3xl mx-auto">
-            <div
-              className="h-full bg-[#1e3a5f] transition-all duration-200 rounded-full"
-              style={{ width: `${Math.round((scrollProgressLocal ?? 0) * 100)}%` }}
-            />
-          </div>
-          {(scrollProgressLocal ?? 0) < 0.5 && (
-            <p className={cn(
-              "text-center text-xs mt-2 animate-pulse transition-colors duration-300",
-              dark ? "text-gray-500" : "text-gray-400"
-            )}>
-              <ChevronDown className="inline h-3 w-3 mr-1" />
-              Scroll to continue
-            </p>
-          )}
-        </div>
-      )}
 
       <DemoIframeModal
         open={demoModal.open}
@@ -2805,15 +2746,7 @@ export default function Prospectus() {
   const visibleTabs = useMemo(() => TABS.filter((t) => !hiddenTabs.has(t)), [hiddenTabs]);
   const [manageOpen, setManageOpen] = useState(false);
 
-  // Tab gating: track which tabs are unlocked (by index). Index 0 always unlocked.
-  const [unlockedUpTo, setUnlockedUpTo] = useState(0);
-  const [justUnlocked, setJustUnlocked] = useState<number | null>(null);
-  const [lockedTooltip, setLockedTooltip] = useState<string | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
-
-  // Admin gating toggle
-  const [gatingEnabled, setGatingEnabled] = useState(true);
-  const [gatingLoaded, setGatingLoaded] = useState(false);
 
   // Access logging
   const [accessEmail, setAccessEmail] = useState("");
@@ -2823,9 +2756,8 @@ export default function Prospectus() {
   const videoViewsRef = useRef<Record<string, { started: boolean; watch_time: number; duration: number; completed: boolean }>>({});
   const [videoWatchedTabs, setVideoWatchedTabs] = useState<Set<string>>(new Set());
 
-  // Per-tab completion tracking
+  // Per-tab completion tracking (for analytics — no gating)
   const [completedTabs, setCompletedTabs] = useState<Set<string>>(new Set());
-  const [warningModal, setWarningModal] = useState(false);
   const financialRef = useRef<HTMLDivElement>(null);
 
   const { isSuperAdmin } = useAuth();
@@ -2942,35 +2874,11 @@ export default function Prospectus() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Fetch gating setting from Supabase (falls back to enabled if table missing)
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data, error } = await (supabase as any)
-          .from("app_settings")
-          .select("value")
-          .eq("key", "prospectus_tab_gating")
-          .maybeSingle();
-        if (!error && data?.value != null) {
-          const enabled = typeof data.value === "object" ? data.value.enabled !== false : true;
-          setGatingEnabled(enabled);
-        }
-      } catch {
-        // Table may not exist yet — default to enabled
-      }
-      setGatingLoaded(true);
-    })();
-  }, []);
 
-  // Super admin bypasses gating — unlock all tabs; also unlock all when gating disabled
-  useEffect(() => {
-    if (isSuperAdmin || !gatingEnabled) setUnlockedUpTo(visibleTabs.length - 1);
-  }, [isSuperAdmin, gatingEnabled, visibleTabs.length]);
-
-  // Load returning-user completions once email is known + gating loaded
+  // Load returning-user completions once email is known (for green checkmarks)
   const completionsLoadedRef = useRef(false);
   useEffect(() => {
-    if (!accessEmail || !gatingLoaded || isSuperAdmin || completionsLoadedRef.current) return;
+    if (!accessEmail || completionsLoadedRef.current) return;
     completionsLoadedRef.current = true;
     (async () => {
       try {
@@ -2981,40 +2889,21 @@ export default function Prospectus() {
         if (data && data.length > 0) {
           const names = data.map((r: { tab_name: string }) => r.tab_name);
           setCompletedTabs(new Set(names));
-          if (gatingEnabled) {
-            let maxIdx = 0;
-            for (const t of names) {
-              const idx = visibleTabs.indexOf(t as TabId);
-              if (idx > maxIdx) maxIdx = idx;
-            }
-            const unlockTo = Math.min(maxIdx + 1, visibleTabs.length - 1);
-            setUnlockedUpTo((prev) => Math.max(prev, unlockTo));
-          }
         }
       } catch {
         // Table may not exist yet
       }
     })();
-  }, [accessEmail, gatingLoaded, gatingEnabled, isSuperAdmin, visibleTabs]);
+  }, [accessEmail]);
 
-  /** Mark a tab as completed — persist checkmark, save to DB, unlock next if frontier */
+  /** Mark a tab as completed — persist checkmark + save to DB for analytics */
   const markTabCompleted = (tabName: string) => {
     if (completedTabs.has(tabName)) return; // already completed
-    // Update local state
     setCompletedTabs((prev) => {
       const next = new Set(prev);
       next.add(tabName);
       return next;
     });
-
-    // If this tab is at or past the frontier, unlock the next one
-    const tabIdx = visibleTabs.indexOf(tabName as TabId);
-    if (tabIdx >= 0 && tabIdx >= unlockedUpTo && tabIdx < visibleTabs.length - 1) {
-      const next = tabIdx + 1;
-      setUnlockedUpTo((prev) => Math.max(prev, next));
-      setJustUnlocked(next);
-      setTimeout(() => setJustUnlocked(null), 2000);
-    }
 
     // Persist completion to prospectus_completions + update access log
     if (accessEmail) {
@@ -3159,22 +3048,16 @@ export default function Prospectus() {
     setScrollProgress(0);
   }, [activeTab]);
 
-  // Scroll + video completion: mark tab complete when requirements are met
-  // Tabs WITH video: require 80% video watched AND 50% scroll
-  // Tabs WITHOUT video: require 50% scroll only
-  // Already-completed tabs (from DB) are never re-gated
+  // Scroll completion: mark tab complete at 50% scroll (for analytics tracking)
   useEffect(() => {
-    if (isSuperAdmin || !gatingEnabled) return;
-    if (completedTabs.has(activeTab)) return; // already completed — honour existing completions
-    if (scrollProgress < 0.5) return; // scroll threshold not met
-    const tabHasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
-    if (tabHasVideo && !videoWatchedTabs.has(activeTab)) return; // video not watched 80%
+    if (completedTabs.has(activeTab)) return;
+    if (scrollProgress < 0.5) return;
     markTabCompleted(activeTab);
-  }, [scrollProgress, activeTab, completedTabs, isSuperAdmin, gatingEnabled, videoWatchedTabs, videoUrls, imageUrls]);
+  }, [scrollProgress, activeTab, completedTabs]);
 
   // Financial Model tab: scroll-based completion (separate component, no built-in onScrollProgress)
   useEffect(() => {
-    if (activeTab !== "Financial Model" || !financialRef.current || isSuperAdmin || !gatingEnabled) return;
+    if (activeTab !== "Financial Model" || !financialRef.current) return;
     if (completedTabs.has("Financial Model")) return;
     const container = financialRef.current;
     const handleScroll = () => {
@@ -3189,7 +3072,7 @@ export default function Prospectus() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [activeTab, completedTabs, isSuperAdmin, gatingEnabled]);
+  }, [activeTab, completedTabs]);
 
   // If active tab is hidden (and not super admin), redirect to first visible tab
   useEffect(() => {
@@ -3211,13 +3094,6 @@ export default function Prospectus() {
     );
   }
 
-  // Gating helpers for tab content
-  const activeHasVideo = getMediaType(videoUrls[activeTab], imageUrls[activeTab]) === "video";
-  const activeIsCompleted = completedTabs.has(activeTab);
-  const showScrollHint = gatingEnabled && !isSuperAdmin && !activeIsCompleted;
-  const activeVideoWatched = videoWatchedTabs.has(activeTab);
-  // Show "watch the video" message when tab has video, isn't completed, and video not yet watched 80%
-  const showVideoRequired = gatingEnabled && !isSuperAdmin && !activeIsCompleted && activeHasVideo && !activeVideoWatched;
   const handleScrollProgress = (pct: number) => setScrollProgress(pct);
 
   const handleShare = async () => {
@@ -3230,18 +3106,6 @@ export default function Prospectus() {
     }
   };
 
-  const handleToggleGating = async (enabled: boolean) => {
-    setGatingEnabled(enabled);
-    if (!enabled) setUnlockedUpTo(visibleTabs.length - 1);
-    else if (!isSuperAdmin) setUnlockedUpTo(0);
-    try {
-      await (supabase as any)
-        .from("app_settings")
-        .upsert({ key: "prospectus_tab_gating", value: { enabled }, updated_at: new Date().toISOString() }, { onConflict: "key" });
-    } catch {
-      // Table may not exist — setting only persists locally this session
-    }
-  };
 
   const handleToggleTabVisible = async (tab: string) => {
     const nowHidden = !hiddenTabs.has(tab);
@@ -3391,137 +3255,50 @@ export default function Prospectus() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 pb-3 overflow-x-auto">
           <div className="flex items-center gap-1.5 min-w-max">
             {(isSuperAdmin ? TABS : visibleTabs).map((tab) => {
-              const visIdx = visibleTabs.indexOf(tab);
-              const isLocked = !isSuperAdmin && visIdx > unlockedUpTo;
-              const isJustUnlocked = visIdx === justUnlocked;
               const isActive = activeTab === tab;
 
               return (
-                <div key={tab} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (tab === activeTab) return;
-                      // Block navigation if current tab isn't completed yet
-                      if (gatingEnabled && !isSuperAdmin && !completedTabs.has(activeTab)) {
-                        setWarningModal(true);
-                        return;
-                      }
-                      if (isLocked) {
-                        setLockedTooltip(tab);
-                        setTimeout(() => setLockedTooltip(null), 2000);
-                        return;
-                      }
-                      setActiveTab(tab);
-                    }}
-                    className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center gap-1.5",
-                      isLocked
-                        ? "opacity-40 cursor-not-allowed"
-                        : isJustUnlocked
-                          ? "animate-[unlockPulse_0.6s_ease-out]"
-                          : "",
-                      !isLocked && (
-                        isActive
-                          ? "bg-[#1e3a5f] text-white"
-                          : darkMode
-                            ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
-                            : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
-                      ),
-                      isLocked && (
-                        darkMode
-                          ? "text-gray-600"
-                          : "text-gray-400"
-                      )
-                    )}
-                  >
-                    {isLocked && <Lock className="h-3 w-3" />}
-                    {!isLocked && completedTabs.has(tab) && (
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400 items-center justify-center">
-                          <Check className="h-2 w-2 text-white" strokeWidth={3} />
-                        </span>
-                      </span>
-                    )}
-                    {TAB_LABELS[tab]}
-                  </button>
-                  {/* Locked tooltip */}
-                  {lockedTooltip === tab && (
-                    <div
-                      className={cn(
-                        "absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap z-50 shadow-lg",
-                        darkMode
-                          ? "bg-white/10 text-gray-300 border border-white/10"
-                          : "bg-gray-800 text-white"
-                      )}
-                    >
-                      Complete the current tab to unlock
-                      <div
-                        className={cn(
-                          "absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45",
-                          darkMode ? "bg-white/10 border-l border-t border-white/10" : "bg-gray-800"
-                        )}
-                      />
-                    </div>
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => {
+                    if (tab !== activeTab) setActiveTab(tab);
+                  }}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 flex items-center gap-1.5",
+                    isActive
+                      ? "bg-[#1e3a5f] text-white"
+                      : darkMode
+                        ? "text-gray-400 hover:text-white hover:bg-white/[0.06]"
+                        : "text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
                   )}
-                </div>
+                >
+                  {completedTabs.has(tab) && (
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400 items-center justify-center">
+                        <Check className="h-2 w-2 text-white" strokeWidth={3} />
+                      </span>
+                    </span>
+                  )}
+                  {TAB_LABELS[tab]}
+                </button>
               );
             })}
           </div>
         </div>
       </header>
 
-      {/* Engagement warning modal */}
-      {warningModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div
-            className={cn(
-              "w-full max-w-sm mx-4 rounded-2xl p-6 text-center shadow-xl border",
-              darkMode
-                ? "bg-[#14141f] border-white/10"
-                : "bg-white border-gray-200"
-            )}
-          >
-            <div className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4",
-              darkMode ? "bg-amber-500/10" : "bg-amber-50"
-            )}>
-              <BookOpen className="h-6 w-6 text-amber-500" />
-            </div>
-            <h3 className={cn(
-              "text-lg font-bold mb-2",
-              darkMode ? "text-white" : "text-gray-900"
-            )}>
-              Complete the Previous Section
-            </h3>
-            <p className={cn(
-              "text-sm mb-6",
-              darkMode ? "text-gray-400" : "text-gray-500"
-            )}>
-              Watch the video and scroll through the current section to unlock the next tab.
-            </p>
-            <button
-              type="button"
-              onClick={() => setWarningModal(false)}
-              className="w-full px-4 py-2.5 rounded-xl bg-[#1e3a5f] hover:bg-[#2d5282] text-white text-sm font-semibold transition-colors"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Overview")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Events & Attendee App")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Event Venues")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Discovery")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Verification")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("365 Insights")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Social Media")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Streaming/Media")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
-        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Partnership Model")} videoWatchRequired={showVideoRequired} videoWatched={activeVideoWatched} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Overview")} />}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Events & Attendee App")} />}
+        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Event Venues")} />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Discovery")} />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Verification")} />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("365 Insights")} />}
+        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Social Media")} />}
+        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Streaming/Media")} />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onScrollProgress={handleScrollProgress} onVideoEvent={handleVideoEvent("Partnership Model")} />}
         {activeTab === "Financial Model" && (
           <div ref={financialRef}>
             <FinancialModelTab dark={darkMode} />
@@ -3559,8 +3336,6 @@ export default function Prospectus() {
           onSaveMedia={(v, i) => { setVideoUrls(v); setImageUrls(i); }}
           onSaveContent={(c) => setTabContent(c)}
           dark={darkMode}
-          gatingEnabled={gatingEnabled}
-          onToggleGating={handleToggleGating}
           hiddenTabs={hiddenTabs}
           onToggleTabVisible={handleToggleTabVisible}
         />
