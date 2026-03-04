@@ -32,6 +32,14 @@ export function detectCTAs(text: string): CTAButton[] {
   const ctas: CTAButton[] = [];
   const lower = text.toLowerCase();
 
+  // Suppress CTAs during guided "Build an Event" conversational flow.
+  // Detect: short messages that are asking a question (part of the step-by-step flow).
+  const isEventBuildingQuestion =
+    text.length < 300 &&
+    /\?/.test(text) &&
+    (/walk you through|step by step|details ready to share|name of your event|where will it be held|estimated dates|how many attendees|type of event|find creators|how many creators|specific criteria|go-to-market strategy|save this as a draft/i.test(text));
+  if (isEventBuildingQuestion) return [];
+
   // --- Event-specific CTAs ---
   // Registration / RSVP context → detailed registrations
   if (/\b(registration|registrations|rsvp|sign.?up|attendee|ticket)/i.test(text)) {
