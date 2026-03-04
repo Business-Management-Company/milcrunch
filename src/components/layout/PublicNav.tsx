@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Calendar, MapPin, ChevronRight } from "lucide-react";
+import HexLogo from "@/components/brand/HexLogo";
 import { supabase } from "@/integrations/supabase/client";
 
 const NAV_LINKS = [
@@ -138,10 +139,7 @@ export default function PublicNav() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#1A1A2E] shadow-[0_1px_3px_rgba(0,0,0,0.3)]">
       <div className="max-w-7xl mx-auto h-14 flex items-center justify-between px-4 md:px-8">
         <Link to="/" className="shrink-0">
-          <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-white">MilCrunch</span>
-            <span className="text-[#3b82f6] font-extrabold">X</span>
-          </span>
+          <HexLogo variant="dark" iconSize={22} textClass="text-xl" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">

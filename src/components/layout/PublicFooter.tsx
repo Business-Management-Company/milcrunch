@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Instagram, Youtube, Twitter } from "lucide-react";
+import HexLogo from "@/components/brand/HexLogo";
 
 const TikTokIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -15,10 +16,7 @@ export default function PublicFooter() {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/">
-              <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                <span className="text-white">MilCrunch</span>
-                <span className="text-[#3b82f6] font-extrabold">X</span>
-              </span>
+              <HexLogo variant="dark" iconSize={22} textClass="text-xl" />
             </Link>
             <p className="text-sm text-gray-400 max-w-xs">
               Where the military and veteran community comes to be seen, heard, and understood.

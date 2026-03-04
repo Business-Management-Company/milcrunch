@@ -10,6 +10,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import HexLogo from "@/components/brand/HexLogo";
 import {
   getArticleBySlug,
   getCategoryBySlug,
@@ -154,9 +155,8 @@ const KbArticle = () => {
       <div className="min-h-screen bg-white">
         <header className="border-b border-gray-100 bg-white">
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-1 text-xl font-bold">
-              <span className="text-gray-900">MilCrunch</span>
-              <span className="text-[#3b82f6] font-extrabold">X</span>
+            <Link to="/" className="flex items-center">
+              <HexLogo variant="light" iconSize={22} textClass="text-xl" />
             </Link>
             <Link
               to="/kb"
@@ -192,9 +192,8 @@ const KbArticle = () => {
       {/* Header */}
       <header className="border-b border-gray-100 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-1 text-xl font-bold">
-            <span className="text-gray-900">MilCrunch</span>
-            <span className="text-[#3b82f6] font-extrabold">X</span>
+          <Link to="/" className="flex items-center">
+            <HexLogo variant="light" iconSize={22} textClass="text-xl" />
           </Link>
           <Link
             to="/kb"

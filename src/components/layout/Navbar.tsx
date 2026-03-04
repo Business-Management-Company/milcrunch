@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Menu, X, ChevronDown } from "lucide-react";
+import HexLogo from "@/components/brand/HexLogo";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -25,7 +26,7 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center group">
-            <span className="font-bold text-xl text-foreground tracking-tight">MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
+            <HexLogo variant="light" iconSize={22} textClass="text-xl" />
           </Link>
 
           <div className="hidden md:flex items-center gap-1">

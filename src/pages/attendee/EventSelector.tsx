@@ -70,8 +70,9 @@ const EventSelector = () => {
         <header className="bg-[#0A0F1E] px-5 pt-12 pb-6">
           <div className="flex items-center justify-between mb-1">
             <h1 className="text-xl font-bold text-white">Events</h1>
-            <span className="text-xs font-bold text-white tracking-tight">
-              MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
+            <span className="inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="14" height="14"><polygon points="16,1 29,8.5 29,23.5 16,31 3,23.5 3,8.5" fill="#f59e0b"/></svg>
+              <span className="text-xs font-bold text-white" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800 }}>MilCrunch</span>
             </span>
           </div>
           <p className="text-sm text-gray-400">Select an event to get started</p>

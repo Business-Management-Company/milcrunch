@@ -280,8 +280,9 @@ const AttendeeRegister = () => {
             <h1 className="font-bold text-white text-sm truncate">{event.title}</h1>
             <p className="text-xs text-gray-400">Registration</p>
           </div>
-          <span className="text-xs font-bold text-white tracking-tight shrink-0">
-            MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span>
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="14" height="14"><polygon points="16,1 29,8.5 29,23.5 16,31 3,23.5 3,8.5" fill="#f59e0b"/></svg>
+            <span className="text-xs font-bold text-white" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800 }}>MilCrunch</span>
           </span>
         </header>
 

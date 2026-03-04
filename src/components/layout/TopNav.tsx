@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import HexLogo from "@/components/brand/HexLogo";
 
 function getInitials(name: string | undefined, email: string): string {
   if (name?.trim()) {
@@ -73,7 +74,7 @@ export default function TopNav({ onOpenCommandPalette, demoOffset = 0, navLocked
           aria-label="MilCrunch home"
           tabIndex={navLocked ? -1 : undefined}
         >
-          <span className={cn("font-bold text-lg tracking-tight hidden sm:inline", navLocked ? "text-muted-foreground" : "text-foreground")}>MilCrunch<span className="text-[#3b82f6] font-extrabold">X</span></span>
+          <span className="hidden sm:inline"><HexLogo variant="light" iconSize={20} textClass="text-lg" /></span>
         </Link>
       </div>
 

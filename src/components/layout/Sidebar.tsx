@@ -384,8 +384,9 @@ export default function Sidebar({ collapsed = false, demoOffset = 0, navLocked =
       {/* Footer */}
       {!collapsed && (
         <div className="px-5 py-4 border-t border-white/10">
-          <p className="text-xs text-slate-600 text-center">
-            MilCrunch<span className="text-[#3b82f6] font-bold">X</span> &middot; v1.0
+          <p className="text-xs text-slate-500 text-center flex items-center justify-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="12" height="12"><polygon points="16,1 29,8.5 29,23.5 16,31 3,23.5 3,8.5" fill="#f59e0b"/></svg>
+            <span style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800 }}>MilCrunch</span> &middot; v1.0
           </p>
         </div>
       )}

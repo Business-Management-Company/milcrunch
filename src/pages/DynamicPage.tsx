@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import HexLogo from "@/components/brand/HexLogo";
 
 interface FaqPair {
   q: string;
@@ -300,10 +301,7 @@ export default function DynamicPage() {
       {/* Simple nav */}
       <header className="h-14 flex items-center justify-between px-4 md:px-8 border-b border-gray-200 bg-white">
         <Link to="/" className="shrink-0">
-          <span className="font-bold text-xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-[#000741]">MilCrunch</span>
-            <span className="text-[#3b82f6] font-extrabold">X</span>
-          </span>
+          <HexLogo variant="light" iconSize={22} textClass="text-xl" />
         </Link>
         <nav className="hidden md:flex items-center gap-6">
           <Link to="/events" className="text-sm font-medium text-gray-600 hover:text-[#1e3a5f]">Events</Link>
@@ -325,10 +323,7 @@ export default function DynamicPage() {
 
       <footer className="px-4 md:px-8 py-8 border-t border-gray-200 bg-white text-center">
         <Link to="/" className="inline-block mb-2">
-          <span className="font-bold text-lg" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-[#000741]">MilCrunch</span>
-            <span className="text-[#3b82f6] font-extrabold">X</span>
-          </span>
+          <HexLogo variant="light" iconSize={18} textClass="text-lg" />
         </Link>
         <p className="text-xs text-gray-500">&copy; 2026 MilCrunch. All rights reserved.</p>
       </footer>
