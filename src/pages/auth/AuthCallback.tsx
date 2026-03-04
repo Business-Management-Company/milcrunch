@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { enrichOAuthUser } from "@/lib/oauth-enrichment";
 import { Loader2 } from "lucide-react";
 
 export default function AuthCallback() {
@@ -8,7 +9,7 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      const { error } = await supabase.auth.exchangeCodeForSession(
+      const { data, error } = await supabase.auth.exchangeCodeForSession(
         window.location.href
       );
 
@@ -16,6 +17,11 @@ export default function AuthCallback() {
         console.error("[AuthCallback] Session exchange failed:", error.message);
         navigate("/login", { replace: true });
         return;
+      }
+
+      // Fire-and-forget: enrich profile via PDL on first OAuth login
+      if (data.session?.user) {
+        enrichOAuthUser(data.session.user).catch(() => {});
       }
 
       // Session is now set — redirect to dashboard.
