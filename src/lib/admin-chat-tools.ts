@@ -273,6 +273,36 @@ export const ADMIN_CHAT_TOOLS: { name: string; description: string; input_schema
       },
     },
   },
+  {
+    name: "searchCreatorsForEvent",
+    description: "Search the verified creator directory for creators matching an event or campaign. Returns profiles with name, handle, branch, followers, avg likes, bio, tags, and profile URL. Use this when a user asks for creator/influencer recommendations, speaker suggestions, or partner ideas for an event. After receiving results, format them as a strategy brief with a Recommended Creators section and a Quick GTM Strategy section.",
+    input_schema: {
+      type: "object",
+      properties: {
+        event_description: { type: "string", description: "Description of the event or campaign" },
+        branch: { type: "string", description: "Military branch filter (Army, Navy, Air Force, Marines, Coast Guard, Space Force)" },
+        status: { type: "string", description: "Military status filter (Active Duty, Veteran, Spouse, Guard/Reserve)" },
+        min_followers: { type: "number", description: "Minimum follower count" },
+        keywords: { type: "array", items: { type: "string" }, description: "Keywords to match against bio, tags, and category" },
+        limit: { type: "number", description: "Max creators to return (default 10, max 25)" },
+      },
+      required: ["event_description"],
+    },
+  },
+  {
+    name: "saveStrategyBrief",
+    description: "Save a strategy brief (creator recommendations + GTM plan) and generate a shareable public URL. Call this when the user wants to share or save a strategy brief.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Brief title (event or campaign name)" },
+        event_description: { type: "string", description: "The event or campaign description" },
+        content: { type: "string", description: "The full markdown content of the strategy brief including recommended creators and GTM strategy" },
+        creator_handles: { type: "array", items: { type: "string" }, description: "Handles of recommended creators" },
+      },
+      required: ["title", "content"],
+    },
+  },
 ];
 
 export async function executeAdminTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
@@ -527,6 +557,95 @@ export async function executeAdminTool(name: string, args: Record<string, unknow
       const limit = Math.min(Number(args.limit) || 20, 50);
       const { data } = await supabase.from("sponsors").select("id, name, contact_name, contact_email, website, industries, logo_url, created_at").order("created_at", { ascending: false }).limit(limit);
       return { result: JSON.stringify(data ?? [], null, 2) };
+    }
+
+    case "searchCreatorsForEvent": {
+      const eventDescription = args.event_description as string;
+      const branch = args.branch as string | undefined;
+      const status = args.status as string | undefined;
+      const minFollowers = (args.min_followers as number) ?? 0;
+      const keywords = (args.keywords as string[]) ?? [];
+      const limit = Math.min(Number(args.limit) || 10, 25);
+
+      let q = (supabase as any)
+        .from("directory_members")
+        .select("id, creator_name, creator_handle, avatar_url, ic_avatar_url, follower_count, avg_likes, engagement_rate, branch, status, bio, category, tags, platforms, platform_urls, profile_slug")
+        .eq("approved", true)
+        .order("follower_count", { ascending: false })
+        .limit(limit * 3); // over-fetch for client-side filtering
+
+      if (minFollowers > 0) q = q.gte("follower_count", minFollowers);
+      if (branch) q = q.ilike("branch", `%${branch}%`);
+      if (status) q = q.ilike("status", `%${status}%`);
+
+      const { data: creators, error } = await q;
+      if (error) return { result: `Error searching creators: ${error.message}` };
+      if (!creators || creators.length === 0) return { result: "No creators found matching those criteria. Try broadening your filters." };
+
+      let filtered = creators as Record<string, any>[];
+      if (keywords.length > 0) {
+        const kwFiltered = filtered.filter((c) => {
+          const searchText = [
+            (c.bio as string) ?? "",
+            (c.category as string) ?? "",
+            ...(Array.isArray(c.tags) ? (c.tags as string[]) : []),
+          ].join(" ").toLowerCase();
+          return keywords.some((kw) => searchText.includes(kw.toLowerCase()));
+        });
+        if (kwFiltered.length > 0) filtered = kwFiltered;
+      }
+
+      const result = {
+        event_description: eventDescription,
+        total_found: filtered.length,
+        creators: filtered.slice(0, limit).map((c) => ({
+          name: c.creator_name ?? c.creator_handle,
+          handle: c.creator_handle,
+          branch: c.branch ?? "Unknown",
+          status: c.status ?? "Unknown",
+          followers: c.follower_count ?? 0,
+          avg_likes: c.avg_likes ?? null,
+          engagement_rate: c.engagement_rate ?? null,
+          bio: c.bio ? (c.bio as string).slice(0, 200) : null,
+          category: c.category,
+          tags: c.tags,
+          platforms: c.platforms,
+          profile_url: c.profile_slug ? `/creators/${c.profile_slug}` : `/creators/${c.creator_handle}`,
+        })),
+      };
+
+      return { result: JSON.stringify(result, null, 2) };
+    }
+
+    case "saveStrategyBrief": {
+      const title = args.title as string;
+      const eventDescription = (args.event_description as string) ?? "";
+      const content = args.content as string;
+      const creatorHandles = (args.creator_handles as string[]) ?? [];
+
+      const { data: userData } = await supabase.auth.getUser();
+
+      const { data, error } = await (supabase as any)
+        .from("ai_strategy_briefs")
+        .insert({
+          title,
+          event_description: eventDescription,
+          content,
+          creator_handles: creatorHandles,
+          created_by: userData?.user?.id ?? null,
+        })
+        .select("id")
+        .single();
+
+      if (error) return { result: `Error saving brief: ${error.message}` };
+
+      const briefId = (data as { id: string }).id;
+      const shareUrl = `${window.location.origin}/strategy/${briefId}`;
+
+      return {
+        result: `Strategy brief saved successfully. Shareable URL: ${shareUrl}`,
+        confirmation: `Strategy brief "${title}" saved — ${shareUrl}`,
+      };
     }
 
     default:

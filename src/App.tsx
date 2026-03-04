@@ -161,6 +161,7 @@ import KbArticlePage from "./pages/kb/KbArticle";
 import KbAdmin from "./pages/kb/KbAdmin";
 import SharedReport from "./pages/SharedReport";
 import PublicVerificationReport from "./pages/PublicVerificationReport";
+import StrategyBriefPage from "./pages/StrategyBriefPage";
 import CopyDeepLink from "./components/superadmin/CopyDeepLink";
 
 const queryClient = new QueryClient();
@@ -358,6 +359,8 @@ const App = () => (
               <Route path="/shared/:reportId" element={<SharedReport />} />
               {/* Public verification report (shareable link) */}
               <Route path="/report/:token" element={<PublicVerificationReport />} />
+              {/* Public AI strategy brief (shareable link) */}
+              <Route path="/strategy/:id" element={<StrategyBriefPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

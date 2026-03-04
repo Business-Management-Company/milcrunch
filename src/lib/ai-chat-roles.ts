@@ -23,6 +23,23 @@ RESPONSE FORMAT: Never output raw JSON. Always respond in natural language. Use 
 - "MIC 2026 has X speakers confirmed and a community of X registered attendees."
 - "The 365-day engagement for this event shows X total impressions across the creator directory."
 - These metrics are being built out — use placeholder language like "growing community" when exact numbers aren't available yet.
+
+CREATOR RECOMMENDATIONS & GTM STRATEGY: When the searchCreatorsForEvent tool returns results, format your response as a one-page strategy brief with two clearly separated sections:
+
+## Recommended Creators
+For each creator, format as:
+**[Creator Name]** (@handle) — [Branch] · [Status]
+[Follower count] followers · [Avg likes or "—"] avg likes
+> [One sentence explaining why this creator is a strong match for this specific event/campaign — reference their bio, niche, audience, or branch relevance]
+
+## Quick GTM Strategy
+Provide 3-5 actionable bullet points tailored to the event description. Each bullet should be specific and reference the types of creators found. Include:
+- Outreach timeline and sequencing
+- Creator activation ideas (content themes, challenges, partnerships)
+- Sponsor integration points
+- Social media and content strategy
+
+Keep the tone professional but energetic. Use bold for key metrics. End with a line suggesting they can ask you to save and share this brief as a public URL.
 `;
 
 const SUPER_ADMIN_PROMPT = `You are the MilCrunch AI Assistant with full administrative access.
@@ -35,6 +52,8 @@ You can help with:
 - Managing the task board: creating, updating, moving, deleting tasks
 - Logging deployments and managing the prompt library
 - Drafting content, writing emails to speakers/sponsors, generating reports
+- Recommending creators for events/campaigns and generating GTM strategies
+- Saving and sharing strategy briefs via public URLs
 - Platform configuration and directory management
 
 When the user asks you to update event details (title, description, dates, venue), make those changes directly. Show what you're about to change, then execute.
@@ -91,12 +110,14 @@ const SUPER_ADMIN_TOOLS = [
   "getDeployments", "getPrompts",
   "getEvents", "getEventDetail", "updateEvent",
   "getEventRegistrations", "getSponsors",
+  "searchCreatorsForEvent", "saveStrategyBrief",
 ];
 
 const EVENT_PLANNER_TOOLS = [
   "getTaskBoard", "getTask", "searchTasks",
   "getEvents", "getEventDetail", "updateEvent",
   "getEventRegistrations", "getSponsors",
+  "searchCreatorsForEvent",
 ];
 
 const BRAND_ADMIN_TOOLS = [
@@ -106,12 +127,14 @@ const BRAND_ADMIN_TOOLS = [
   "getTaskBoard", "getTask", "getTasksByPriority", "searchTasks",
   "getEvents", "getEventDetail", "updateEvent",
   "getEventRegistrations", "getSponsors",
+  "searchCreatorsForEvent", "saveStrategyBrief",
 ];
 
 const READ_ONLY_TOOLS = [
   "getTaskBoard", "getTask", "searchTasks",
   "getEvents", "getEventDetail",
   "getEventRegistrations",
+  "searchCreatorsForEvent",
 ];
 
 export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
@@ -127,6 +150,7 @@ export function getRoleChatConfig(role: ChatRole): RoleChatConfig {
           { label: "Project Status", prompt: "Summarize the current project status and task board. What's in backlog, in progress, testing, done, and bugs? Any recent deployments?" },
           { label: "What's next?", prompt: "Based on priorities (critical and high first), what should I work on next? List the top 3-5 tasks and why." },
           { label: "Event Overview", prompt: "Show me all upcoming events with their registration counts, speaker counts, and 365-day engagement status." },
+          { label: "Creator Recs", prompt: "Find the best creators from our directory for an upcoming military event and include a GTM strategy for social media activation." },
           { label: "Generate checklist", prompt: "Generate a testing checklist for the latest changes or for the current in-progress tasks." },
         ],
       };

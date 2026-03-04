@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import MarkdownRenderer from "@/components/ui/markdown-renderer";
 import { AICTAButtons } from "@/components/ui/ai-cta-buttons";
+import { StrategyShareButton } from "@/components/ui/strategy-share-button";
 
 const ROLE_ICONS = {
   shield: Shield,
@@ -108,6 +109,7 @@ export default function AdminChat() {
                       <>
                         <MarkdownRenderer content={m.content} />
                         <AICTAButtons text={m.content} />
+                        <StrategyShareButton content={m.content} />
                       </>
                     ) : (
                       <p className="whitespace-pre-wrap text-sm">{m.content}</p>
@@ -132,6 +134,7 @@ export default function AdminChat() {
                     <p className="text-xs font-medium opacity-80 mb-1">Assistant</p>
                     <MarkdownRenderer content={streamingContent} />
                     <AICTAButtons text={streamingContent} />
+                    <StrategyShareButton content={streamingContent} />
                   </div>
                 )}
                 {loading && !streamingContent && (
