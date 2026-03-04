@@ -1,6 +1,6 @@
 /**
  * Fetch parsed podcast episodes from the server-side RSS parser.
- * The API (/api/parse-rss) fetches the feed, parses XML with fast-xml-parser,
+ * The API (/api/podcast-rss) fetches the feed, parses XML,
  * and returns JSON episodes — no client-side XML parsing needed.
  */
 
@@ -26,17 +26,21 @@ export interface ParsedPodcastFeed {
 }
 
 export async function parsePodcastFeed(
-  feedUrl: string
+  rssUrl: string
 ): Promise<ParsedPodcastFeed | null> {
-  console.log("[parsePodcastFeed] Fetching feed:", feedUrl);
   try {
-    const proxyUrl = `/api/parse-rss?url=${encodeURIComponent(feedUrl)}`;
-    console.log("[parsePodcastFeed] Proxy URL:", proxyUrl);
+    const proxyUrl = `/api/podcast-rss?url=${encodeURIComponent(rssUrl)}`;
     const res = await fetch(proxyUrl);
     if (!res.ok) {
       const errorText = await res.text().catch(() => "");
-      console.error("[parsePodcastFeed] API error:", res.status, errorText);
-      throw new Error(`RSS API returned ${res.status}`);
+      let parsed: any = {};
+      try { parsed = JSON.parse(errorText); } catch {}
+      const msg = parsed.timeout
+        ? "Feed timed out"
+        : `RSS API returned ${res.status}`;
+      const err = new Error(msg);
+      (err as any).timeout = !!parsed.timeout;
+      throw err;
     }
 
     const text = await res.text();
@@ -44,22 +48,16 @@ export async function parsePodcastFeed(
     try {
       data = JSON.parse(text);
     } catch {
-      console.error("[parsePodcastFeed] Response is not JSON:", text.slice(0, 200));
       throw new Error("RSS API returned non-JSON response");
     }
 
-    console.log("[parsePodcastFeed] Got response:", {
-      episodeCount: data.episodes?.length ?? 0,
-      title: data.title,
-      error: data.error,
-    });
-
     if (data.error) {
-      throw new Error(data.error);
+      const err = new Error(data.error);
+      (err as any).timeout = !!data.timeout;
+      throw err;
     }
 
     if (!data.episodes || !Array.isArray(data.episodes)) {
-      console.error("[parsePodcastFeed] No episodes array in response:", data);
       throw new Error("No episodes found in feed");
     }
 
@@ -84,7 +82,7 @@ export async function parsePodcastFeed(
       episodes,
     };
   } catch (err) {
-    console.error("[parsePodcastFeed] Failed for", feedUrl, err);
+    console.error("[parsePodcastFeed] Failed for", rssUrl, err);
     throw err;
   }
 }

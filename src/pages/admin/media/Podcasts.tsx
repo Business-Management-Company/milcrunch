@@ -64,20 +64,20 @@ type PodcastRow = Database["public"]["Tables"]["podcasts"]["Row"];
 const CATEGORIES = ["Military", "Veterans", "Fitness", "News & Politics", "Comedy", "Lifestyle", "Education", "Business", "Other"];
 const PAGE_SIZE = 25;
 
-function parseCSV(text: string): { feed_url: string; title?: string; category?: string; author?: string }[] {
+function parseCSV(text: string): { rss_url: string; title?: string; category?: string; author?: string }[] {
   const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
   const fields = result.meta.fields ?? [];
-  const feedUrlKey = fields.find((f) => /^feed_?url$/i.test(f.trim())) ?? fields.find((f) => /feed\s*url/i.test(f));
+  const feedUrlKey = fields.find((f) => /^(rss_?url|feed_?url)$/i.test(f.trim())) ?? fields.find((f) => /(?:rss|feed)\s*url/i.test(f));
   if (!feedUrlKey) return [];
   const titleKey = fields.find((f) => /^title$/i.test(f.trim()));
   const categoryKey = fields.find((f) => /^category$/i.test(f.trim()));
   const authorKey = fields.find((f) => /^author$/i.test(f.trim()));
-  const rows: { feed_url: string; title?: string; category?: string; author?: string }[] = [];
+  const rows: { rss_url: string; title?: string; category?: string; author?: string }[] = [];
   for (const row of result.data) {
-    const feed_url = (row[feedUrlKey] ?? "").trim();
-    if (!feed_url) continue;
+    const rss_url = (row[feedUrlKey] ?? "").trim();
+    if (!rss_url) continue;
     rows.push({
-      feed_url,
+      rss_url,
       title: (titleKey ? (row[titleKey] ?? "").trim() : "") || undefined,
       category: (categoryKey ? (row[categoryKey] ?? "").trim() : "") || undefined,
       author: (authorKey ? (row[authorKey] ?? "").trim() : "") || undefined,
@@ -110,7 +110,7 @@ export default function AdminPodcasts() {
   const [editRefreshing, setEditRefreshing] = useState(false);
 
   const [csvOpen, setCsvOpen] = useState(false);
-  const [csvRows, setCsvRows] = useState<{ feed_url: string; title?: string; category?: string; author?: string }[]>([]);
+  const [csvRows, setCsvRows] = useState<{ rss_url: string; title?: string; category?: string; author?: string }[]>([]);
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvProgress, setCsvProgress] = useState(0);
 
@@ -159,7 +159,7 @@ export default function AdminPodcasts() {
   const filtered = podcasts.filter((p) => {
     if (search && !(p.title ?? "").toLowerCase().includes(search.toLowerCase()) &&
         !(p.author ?? "").toLowerCase().includes(search.toLowerCase()) &&
-        !(p.feed_url ?? "").toLowerCase().includes(search.toLowerCase())) return false;
+        !(p.rss_url ?? "").toLowerCase().includes(search.toLowerCase())) return false;
     if (categoryFilter !== "all" && (p.category ?? "") !== categoryFilter) return false;
     if (statusFilter !== "all" && (p.status ?? "active") !== statusFilter) return false;
     return true;
@@ -224,7 +224,7 @@ export default function AdminPodcasts() {
       const { data: inserted, error } = await supabase
         .from("podcasts")
         .insert({
-          feed_url: url,
+          rss_url: url,
           title: preview.title || null,
           description: preview.description || null,
           author: preview.author || null,
@@ -270,7 +270,7 @@ export default function AdminPodcasts() {
       const rows = parseCSV(text);
       setCsvRows(rows);
       setCsvOpen(rows.length > 0);
-      if (rows.length === 0) toast.error("No valid rows with feed_url found in CSV.");
+      if (rows.length === 0) toast.error("No valid rows with rss_url found in CSV.");
     };
     reader.onerror = () => toast.error("Failed to read file.");
     reader.readAsText(file, "UTF-8");
@@ -285,13 +285,13 @@ export default function AdminPodcasts() {
     const total = csvRows.length;
     for (let i = 0; i < total; i++) {
       const row = csvRows[i];
-      const parsed = await parsePodcastFeed(row.feed_url);
+      const parsed = await parsePodcastFeed(row.rss_url);
       if (parsed) {
         const { data: inserted, error: insertError } = await supabase
           .from("podcasts")
           .upsert(
             {
-              feed_url: row.feed_url,
+              rss_url: row.rss_url,
               title: (parsed.title || row.title) ?? null,
               description: parsed.description ?? null,
               author: (parsed.author || row.author) ?? null,
@@ -304,7 +304,7 @@ export default function AdminPodcasts() {
               last_episode_date: parsed.lastEpisodeDate ? new Date(parsed.lastEpisodeDate).toISOString() : null,
               status: "active",
             },
-            { onConflict: "feed_url" }
+            { onConflict: "rss_url", ignoreDuplicates: false }
           )
           .select("id")
           .single();
@@ -336,7 +336,8 @@ export default function AdminPodcasts() {
   };
 
   const handleRefreshFeed = async (row: PodcastRow) => {
-    const parsed = await parsePodcastFeed(row.feed_url);
+    if (!row.rss_url) { toast.error("No RSS URL for this podcast."); return; }
+    const parsed = await parsePodcastFeed(row.rss_url);
     if (!parsed) {
       toast.error("Could not refresh feed.");
       return;
@@ -425,8 +426,9 @@ export default function AdminPodcasts() {
 
   const handleEditRefresh = async () => {
     if (!editingPodcast) return;
+    if (!editingPodcast.rss_url) { toast.error("No RSS URL for this podcast."); return; }
     setEditRefreshing(true);
-    const parsed = await parsePodcastFeed(editingPodcast.feed_url);
+    const parsed = await parsePodcastFeed(editingPodcast.rss_url);
     if (parsed) {
       setEditForm((f) => ({
         ...f,
@@ -722,12 +724,12 @@ export default function AdminPodcasts() {
           <DialogHeader>
             <DialogTitle>Import CSV</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Expected columns: feed_url (required), title, category, author (optional). First 10 rows:</p>
+          <p className="text-sm text-muted-foreground">Expected columns: rss_url or feed_url (required), title, category, author (optional). First 10 rows:</p>
           <div className="overflow-auto max-h-48 border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>feed_url</TableHead>
+                  <TableHead>rss_url</TableHead>
                   <TableHead>title</TableHead>
                   <TableHead>category</TableHead>
                   <TableHead>author</TableHead>
@@ -736,7 +738,7 @@ export default function AdminPodcasts() {
               <TableBody>
                 {csvRows.slice(0, 10).map((r, i) => (
                   <TableRow key={i}>
-                    <TableCell className="max-w-[200px] truncate">{r.feed_url}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{r.rss_url}</TableCell>
                     <TableCell className="max-w-[120px] truncate">{r.title ?? "—"}</TableCell>
                     <TableCell>{r.category ?? "—"}</TableCell>
                     <TableCell>{r.author ?? "—"}</TableCell>

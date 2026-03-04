@@ -58,7 +58,7 @@ export default function PodcastDetailModal({
   const [volume, setVolume] = useState(0.8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const hasFeed = !!(podcast?.feed_url);
+  const hasFeed = !!(podcast?.rss_url);
 
   useEffect(() => {
     if (!open || !podcast) {
@@ -68,7 +68,7 @@ export default function PodcastDetailModal({
       return;
     }
 
-    if (!podcast.feed_url) {
+    if (!podcast.rss_url) {
       // No RSS feed — don't try to load episodes
       setEpisodes([]);
       setFetchError(null);
@@ -77,7 +77,7 @@ export default function PodcastDetailModal({
 
     setLoadingEpisodes(true);
     setFetchError(null);
-    parsePodcastFeed(podcast.feed_url)
+    parsePodcastFeed(podcast.rss_url)
       .then((feed) => {
         setEpisodes(feed?.episodes.slice(0, 20) ?? []);
         if (feed && feed.episodes.length === 0) {
@@ -91,7 +91,7 @@ export default function PodcastDetailModal({
         setEpisodes([]);
         setLoadingEpisodes(false);
       });
-  }, [open, podcast?.feed_url]);
+  }, [open, podcast?.rss_url]);
 
   useEffect(() => {
     if (!open && audioRef.current) {
@@ -261,9 +261,55 @@ export default function PodcastDetailModal({
                 Loading episodes...
               </div>
             ) : fetchError ? (
-              <div className="flex items-start gap-2 py-4 px-3 rounded-lg bg-red-50 border border-red-100">
-                <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
-                <p className="text-sm text-red-600">{fetchError}</p>
+              <div className="py-4 space-y-3">
+                <div className="flex items-start gap-2 px-3 py-3 rounded-lg bg-amber-50 border border-amber-100">
+                  <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-sm text-amber-700">Episodes unavailable — try listening on:</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {podcast.title && (
+                    <>
+                      <a
+                        href={`https://podcasts.apple.com/search?term=${encodeURIComponent(podcast.title)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button size="sm" className="rounded-lg text-xs gap-1.5 bg-[#872EC4] hover:bg-[#6e25a0] text-white">
+                          <Headphones className="h-3.5 w-3.5" />
+                          Apple Podcasts
+                        </Button>
+                      </a>
+                      <a
+                        href={`https://open.spotify.com/search/${encodeURIComponent(podcast.title)}/shows`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button size="sm" className="rounded-lg text-xs gap-1.5 bg-[#1DB954] hover:bg-[#1aa34a] text-white">
+                          <Headphones className="h-3.5 w-3.5" />
+                          Spotify
+                        </Button>
+                      </a>
+                      <a
+                        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(podcast.title + " podcast")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button size="sm" className="rounded-lg text-xs gap-1.5 bg-[#FF0000] hover:bg-[#cc0000] text-white">
+                          <Headphones className="h-3.5 w-3.5" />
+                          YouTube
+                        </Button>
+                      </a>
+                    </>
+                  )}
+                  {podcast.website_url && (
+                    <a href={podcast.website_url} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" variant="outline" className="rounded-lg text-xs gap-1.5">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Website
+                      </Button>
+                    </a>
+                  )}
+                </div>
               </div>
             ) : episodes.length === 0 ? (
               <p className="text-sm text-gray-500 py-4">No episodes available.</p>

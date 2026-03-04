@@ -380,7 +380,7 @@ log("Email campaigns", emailResult);
 console.log("\n🎙️  Seeding podcast & episodes...");
 
 const podcastPayload = {
-  feed_url: "https://feeds.milcrunch.com/command-post",
+  rss_url: "https://feeds.milcrunch.com/command-post",
   title: "The Command Post",
   description:
     "The official MilCrunch podcast. Conversations with military creators, veteran entrepreneurs, and the brands that back them.",

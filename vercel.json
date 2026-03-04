@@ -29,6 +29,7 @@
     {"source": "/api/openai-image", "destination": "/api/openai-image"},
     {"source": "/api/youtube", "destination": "/api/youtube"},
     {"source": "/api/parse-rss", "destination": "/api/parse-rss"},
+    {"source": "/api/podcast-rss", "destination": "/api/podcast-rss"},
     {"source": "/api/social-monitor", "destination": "/api/social-monitor"},
     {"source": "/api/social-listening-scan", "destination": "/api/social-listening-scan"},
     {"source": "/api/social-listening-agent", "destination": "/api/social-listening-agent"},
