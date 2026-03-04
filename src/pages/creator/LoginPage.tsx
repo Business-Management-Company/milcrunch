@@ -224,17 +224,8 @@ export default function LoginPage() {
             className="w-full text-white font-medium"
             style={{ backgroundColor: "#1B2A4A" }}
             disabled={loading}
-            onClick={async () => {
-              setLoading(true);
-              localStorage.setItem('parade-deck-theme', 'light');
-              document.documentElement.classList.remove('dark');
-              const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
-              setLoading(false);
-              if (error) {
-                toast.error("Demo login failed. Please try again.");
-              } else {
-                navigate("/brand/dashboard", { replace: true });
-              }
+            onClick={() => {
+              navigate("/prospectus");
             }}
           >
             🎯 Explore Demo

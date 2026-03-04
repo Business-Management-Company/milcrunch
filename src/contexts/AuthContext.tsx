@@ -278,7 +278,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     console.log("[getRedirectPath] User:", user.email, "| role:", role, "| onboarding_complete:", creatorProfile?.onboarding_completed);
 
-    if (role === "super_admin") return "/admin";
+    if (role === "super_admin") return "/admin/dashboard";
     if (role === "admin" || role === "brand") return "/brand/dashboard";
     // Only creators hit onboarding check
     if (!creatorProfile || !creatorProfile.onboarding_completed) return "/creator/onboard";
