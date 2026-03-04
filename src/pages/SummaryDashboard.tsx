@@ -12,11 +12,11 @@ import {
   Clock,
   Search,
   ListPlus,
-  Mic,
   CheckCircle,
   Mail,
   Presentation,
   FolderOpen,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchDirectoriesWithCounts, type Directory } from "@/lib/directories";
@@ -187,7 +187,7 @@ export default function SummaryDashboard() {
         {[
           { icon: Search, label: "Find Creators", color: "#1e3a5f", prompt: "Help me find creators" },
           { icon: ListPlus, label: "Build a List", color: "#0EA5E9", prompt: "Help me build a creator list" },
-          { icon: Mic, label: "Browse Podcasts", color: "#F59E0B", prompt: "Show me military podcasts" },
+          { icon: Rocket, label: "Build an Event", color: "#8B5CF6", prompt: "I want to build an event." },
           { icon: BarChart3, label: "Event Analytics", color: "#22C55E", prompt: "Show me event analytics" },
           { icon: Presentation, label: "Find Speakers", color: "#EC4899", prompt: "Help me find speakers for an event" },
           { icon: CheckCircle, label: "Verify Creator", color: "#14B8A6", prompt: "Help me verify a creator" },
