@@ -171,6 +171,16 @@ import SponsorMilitaryCreators from "./pages/seo/SponsorMilitaryCreators";
 import VeteranInfluencerMarketing from "./pages/seo/VeteranInfluencerMarketing";
 import MilitarySpouseInfluencers from "./pages/seo/MilitarySpouseInfluencers";
 import ArmyInfluencers from "./pages/seo/ArmyInfluencers";
+import NavyInfluencers from "./pages/seo/NavyInfluencers";
+import AirForceInfluencers from "./pages/seo/AirForceInfluencers";
+import MarineInfluencers from "./pages/seo/MarineInfluencers";
+import CoastGuardInfluencers from "./pages/seo/CoastGuardInfluencers";
+import VeteranYouTube from "./pages/seo/VeteranYouTube";
+import VeteranTikTok from "./pages/seo/VeteranTikTok";
+import MilitaryInstagram from "./pages/seo/MilitaryInstagram";
+import VeteranBrandPartnerships from "./pages/seo/VeteranBrandPartnerships";
+import MilitaryInfluencerConference from "./pages/seo/MilitaryInfluencerConference";
+import VerifiedVeteranCreators from "./pages/seo/VerifiedVeteranCreators";
 
 const queryClient = new QueryClient();
 
@@ -378,6 +388,11 @@ const App = () => (
               <Route path="/veteran-influencer-marketing" element={<VeteranInfluencerMarketing />} />
               <Route path="/military-spouse-influencers" element={<MilitarySpouseInfluencers />} />
               <Route path="/army-influencers" element={<ArmyInfluencers />} />
+              <Route path="/navy-influencers" element={<NavyInfluencers />} />
+              <Route path="/air-force-influencers" element={<AirForceInfluencers />} />
+              <Route path="/marine-influencers" element={<MarineInfluencers />} />
+              <Route path="/coast-guard-influencers" element={<CoastGuardInfluencers />} />
+              <Route path="/veteran-youtube" element={<VeteranYouTube />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
