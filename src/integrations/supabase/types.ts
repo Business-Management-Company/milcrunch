@@ -168,7 +168,7 @@ export type Database = {
       podcasts: {
         Row: {
           id: string
-          feed_url: string
+          feed_url: string | null
           title: string | null
           description: string | null
           author: string | null
@@ -185,7 +185,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          feed_url: string
+          feed_url?: string | null
           title?: string | null
           description?: string | null
           author?: string | null
@@ -202,7 +202,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          feed_url?: string
+          feed_url?: string | null
           title?: string | null
           description?: string | null
           author?: string | null

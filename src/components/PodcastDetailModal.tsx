@@ -15,6 +15,7 @@ import {
   Loader2,
   Volume2,
   AlertCircle,
+  Headphones,
 } from "lucide-react";
 import { parsePodcastFeed, type ParsedEpisode } from "@/lib/podcast-feed";
 import type { Database } from "@/integrations/supabase/types";
@@ -25,6 +26,22 @@ interface PodcastDetailModalProps {
   podcast: Podcast | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+/** Detect listening platform from a URL */
+function detectPlatform(url: string): { name: string; color: string } | null {
+  const lower = url.toLowerCase();
+  if (lower.includes("apple.com") || lower.includes("itunes.apple"))
+    return { name: "Apple Podcasts", color: "bg-[#872EC4] hover:bg-[#6e25a0]" };
+  if (lower.includes("spotify.com"))
+    return { name: "Spotify", color: "bg-[#1DB954] hover:bg-[#1aa34a]" };
+  if (lower.includes("amazon.com") || lower.includes("audible.com") || lower.includes("music.amazon"))
+    return { name: "Amazon", color: "bg-[#FF9900] hover:bg-[#e68a00]" };
+  if (lower.includes("youtube.com") || lower.includes("youtu.be"))
+    return { name: "YouTube", color: "bg-[#FF0000] hover:bg-[#cc0000]" };
+  if (lower.includes("iheart.com"))
+    return { name: "iHeart", color: "bg-[#C6002B] hover:bg-[#a30024]" };
+  return null;
 }
 
 export default function PodcastDetailModal({
@@ -41,6 +58,8 @@ export default function PodcastDetailModal({
   const [volume, setVolume] = useState(0.8);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const hasFeed = !!(podcast?.feed_url);
+
   useEffect(() => {
     if (!open || !podcast) {
       setEpisodes([]);
@@ -49,15 +68,10 @@ export default function PodcastDetailModal({
       return;
     }
 
-    console.log("[PodcastModal] Podcast object:", {
-      id: podcast.id,
-      title: podcast.title,
-      feed_url: podcast.feed_url,
-    });
-
     if (!podcast.feed_url) {
-      setFetchError("No RSS feed URL configured for this podcast.");
+      // No RSS feed — don't try to load episodes
       setEpisodes([]);
+      setFetchError(null);
       return;
     }
 
@@ -146,6 +160,7 @@ export default function PodcastDetailModal({
   if (!podcast) return null;
 
   const nowPlaying = playingIndex !== null ? episodes[playingIndex] : null;
+  const platformInfo = podcast.website_url ? detectPlatform(podcast.website_url) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -176,7 +191,7 @@ export default function PodcastDetailModal({
                     {podcast.category}
                   </span>
                 )}
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
                   {podcast.website_url && (
                     <a
                       href={podcast.website_url}
@@ -189,7 +204,7 @@ export default function PodcastDetailModal({
                         className="rounded-lg text-xs gap-1.5"
                       >
                         <ExternalLink className="h-3 w-3" />
-                        Visit Website
+                        {platformInfo ? `Listen on ${platformInfo.name}` : "Visit Website"}
                       </Button>
                     </a>
                   )}
@@ -205,78 +220,109 @@ export default function PodcastDetailModal({
           )}
         </div>
 
-        <div className="border-t border-gray-100 px-6 py-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            Recent Episodes
-          </p>
-
-          {loadingEpisodes ? (
-            <div className="flex items-center justify-center py-8 text-gray-400">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              Loading episodes...
-            </div>
-          ) : fetchError ? (
-            <div className="flex items-start gap-2 py-4 px-3 rounded-lg bg-red-50 border border-red-100">
-              <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
-              <p className="text-sm text-red-600">{fetchError}</p>
-            </div>
-          ) : episodes.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4">No episodes available.</p>
-          ) : (
-            <div className="space-y-2">
-              {episodes.map((ep, i) => (
-                <div
-                  key={i}
-                  className={`rounded-lg border p-3 flex items-start gap-3 transition-colors ${
-                    playingIndex === i
-                      ? "border-[#1e3a5f]/30 bg-[#1e3a5f]/5"
-                      : "border-gray-100 bg-gray-50"
-                  }`}
-                >
-                  {ep.audioUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => handlePlay(i)}
-                      className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-[#1e3a5f] text-white flex items-center justify-center hover:bg-[#2d5282] transition-colors"
+        {/* Platform-only podcast (no RSS feed) */}
+        {!hasFeed && (
+          <div className="border-t border-gray-100 px-6 py-8">
+            <div className="text-center">
+              <Headphones className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-600 mb-1">
+                This podcast is available on external platforms
+              </p>
+              <p className="text-xs text-gray-400 mb-5">
+                Episodes are not available for in-app playback
+              </p>
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                {podcast.website_url && (
+                  <a href={podcast.website_url} target="_blank" rel="noopener noreferrer">
+                    <Button
+                      size="sm"
+                      className={`rounded-lg text-xs gap-1.5 text-white ${platformInfo?.color || "bg-[#1e3a5f] hover:bg-[#2d5282]"}`}
                     >
-                      {isPlaying(i) ? (
-                        <Pause className="h-3.5 w-3.5" />
-                      ) : (
-                        <Play className="h-3.5 w-3.5 ml-0.5" />
-                      )}
-                    </button>
-                  ) : (
-                    <div className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      <Mic2 className="h-3.5 w-3.5 text-gray-400" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#000741] line-clamp-2">
-                      {ep.title || "Untitled Episode"}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {ep.publishedAt && (
-                        <span className="text-xs text-gray-400">
-                          {formatDate(ep.publishedAt)}
-                        </span>
-                      )}
-                      {ep.duration && (
-                        <span className="text-xs text-gray-400">
-                          · {ep.duration}
-                        </span>
-                      )}
-                    </div>
-                    {ep.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                        {ep.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      <Headphones className="h-3.5 w-3.5" />
+                      {platformInfo ? `Listen on ${platformInfo.name}` : "Listen Now"}
+                    </Button>
+                  </a>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* RSS-based podcast with episode player */}
+        {hasFeed && (
+          <div className="border-t border-gray-100 px-6 py-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Recent Episodes
+            </p>
+
+            {loadingEpisodes ? (
+              <div className="flex items-center justify-center py-8 text-gray-400">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                Loading episodes...
+              </div>
+            ) : fetchError ? (
+              <div className="flex items-start gap-2 py-4 px-3 rounded-lg bg-red-50 border border-red-100">
+                <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-red-600">{fetchError}</p>
+              </div>
+            ) : episodes.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4">No episodes available.</p>
+            ) : (
+              <div className="space-y-2">
+                {episodes.map((ep, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-lg border p-3 flex items-start gap-3 transition-colors ${
+                      playingIndex === i
+                        ? "border-[#1e3a5f]/30 bg-[#1e3a5f]/5"
+                        : "border-gray-100 bg-gray-50"
+                    }`}
+                  >
+                    {ep.audioUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => handlePlay(i)}
+                        className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-[#1e3a5f] text-white flex items-center justify-center hover:bg-[#2d5282] transition-colors"
+                      >
+                        {isPlaying(i) ? (
+                          <Pause className="h-3.5 w-3.5" />
+                        ) : (
+                          <Play className="h-3.5 w-3.5 ml-0.5" />
+                        )}
+                      </button>
+                    ) : (
+                      <div className="mt-0.5 shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <Mic2 className="h-3.5 w-3.5 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#000741] line-clamp-2">
+                        {ep.title || "Untitled Episode"}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {ep.publishedAt && (
+                          <span className="text-xs text-gray-400">
+                            {formatDate(ep.publishedAt)}
+                          </span>
+                        )}
+                        {ep.duration && (
+                          <span className="text-xs text-gray-400">
+                            · {ep.duration}
+                          </span>
+                        )}
+                      </div>
+                      {ep.description && (
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                          {ep.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {nowPlaying && (
           <div className="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-3 space-y-2">

@@ -1,11 +1,12 @@
 -- Podcasts table for RSS feed directory
 CREATE TABLE public.podcasts (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  feed_url TEXT NOT NULL UNIQUE,
+  feed_url TEXT UNIQUE,
   title TEXT,
   description TEXT,
   author TEXT,
   artwork_url TEXT,
+  image_url TEXT,
   website_url TEXT,
   category TEXT,
   language TEXT DEFAULT 'en',
