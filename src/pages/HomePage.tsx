@@ -174,8 +174,8 @@ const BRANCH_STYLES: Record<string, string> = {
   Navy: "bg-blue-900/10 text-blue-900",
   "Air Force": "bg-sky-600/10 text-sky-700",
   Marines: "bg-red-700/10 text-red-700",
-  "Coast Guard": "bg-orange-600/10 text-orange-700",
-  "Space Force": "bg-indigo-600/10 text-indigo-700",
+  "Coast Guard": "bg-[#0a1628]/10 text-[#0a1628]",
+  "Space Force": "bg-[#0a1628]/10 text-[#0a1628]",
 };
 
 function statusPillStyle(status: string): string {
@@ -822,6 +822,16 @@ export default function HomePage() {
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-[17px] text-gray-900">{db.display_name}</p>
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>
+                            {(db.branch || db.status) && (
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                {db.branch && (
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${BRANCH_STYLES[db.branch] ?? "bg-gray-100 text-gray-700"}`}>{db.branch}</span>
+                                )}
+                                {db.status && (
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusPillStyle(db.status)}`}>{db.status}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                           {db.category && (
                             <span className={`text-[12px] font-medium px-3 py-1.5 rounded-full ${TAG_COLORS[i % TAG_COLORS.length]}`}>{db.category}</span>
