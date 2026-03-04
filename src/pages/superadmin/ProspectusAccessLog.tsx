@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Eye, Loader2, ChevronDown, ChevronRight, Clock, Mail, CheckCircle2,
@@ -422,18 +422,26 @@ export default function ProspectusAccessLog() {
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ maxHeight: "calc(100vh - 340px)" }}>
             {/* Scrollable wrapper */}
             <div className="overflow-y-auto flex-1">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "25%" }} />
+                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "20%" }} />
+                </colgroup>
                 <thead className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm">
                   <tr className="border-b border-gray-100">
-                    <th className="w-8 px-3 py-3" />
+                    <th className="px-2 py-3" />
                     {([
-                      { key: "email" as SortKey, label: "Email", align: "text-left" },
-                      { key: "date" as SortKey, label: "Date", align: "text-left" },
-                      { key: "time" as SortKey, label: "Time Spent", align: "text-left" },
-                      { key: "viewed" as SortKey, label: "Tabs Viewed", align: "text-center" },
-                      { key: "completed" as SortKey, label: "Tabs Completed", align: "text-center" },
-                    ]).map(({ key, label, align }) => (
-                      <th key={key} className={`${align} font-medium text-gray-500 px-4 py-3`}>
+                      { key: "email" as SortKey, label: "Email" },
+                      { key: "date" as SortKey, label: "Date" },
+                      { key: "time" as SortKey, label: "Time Spent" },
+                      { key: "viewed" as SortKey, label: "Tabs Viewed" },
+                      { key: "completed" as SortKey, label: "Tabs Completed" },
+                    ]).map(({ key, label }) => (
+                      <th key={key} className="text-left font-medium text-gray-500 px-4 py-3">
                         <button
                           type="button"
                           onClick={() => handleSort(key)}
@@ -478,41 +486,39 @@ export default function ProspectusAccessLog() {
                       });
 
                       return (
-                        <tr key={row.id} className="border-b border-gray-50">
-                          <td colSpan={6} className="p-0">
-                            {/* Main row */}
-                            <button
-                              type="button"
-                              onClick={() => setExpandedId(isExpanded ? null : row.id)}
-                              className="w-full flex items-center hover:bg-gray-50/50 transition-colors"
-                            >
-                              <span className="w-8 px-3 py-3 flex items-center justify-center">
-                                {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                        <Fragment key={row.id}>
+                          <tr
+                            onClick={() => setExpandedId(isExpanded ? null : row.id)}
+                            className="border-b border-gray-50 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                          >
+                            <td className="px-2 py-3 text-center">
+                              {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" /> : <ChevronRight className="h-4 w-4 text-gray-400 mx-auto" />}
+                            </td>
+                            <td className="px-4 py-3 font-medium text-gray-900 truncate">
+                              {row.email}
+                            </td>
+                            <td className="px-4 py-3 text-gray-500 truncate">
+                              {formatDate(row.session_start)}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600 tabular-nums">
+                              {formatDuration(row.total_time_seconds)}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              <span className="inline-flex items-center gap-1">
+                                <Eye className="h-3.5 w-3.5" /> {uniqueViewed}
                               </span>
-                              <span className="flex-1 text-left px-4 py-3 font-medium text-gray-900 truncate">
-                                {row.email}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              <span className="inline-flex items-center gap-1">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> {completedCount}
                               </span>
-                              <span className="px-4 py-3 text-gray-500 text-left min-w-[180px]">
-                                {formatDate(row.session_start)}
-                              </span>
-                              <span className="px-4 py-3 text-gray-600 text-left min-w-[100px] tabular-nums">
-                                {formatDuration(row.total_time_seconds)}
-                              </span>
-                              <span className="px-4 py-3 text-center min-w-[100px]">
-                                <span className="inline-flex items-center gap-1 text-gray-600">
-                                  <Eye className="h-3.5 w-3.5" /> {uniqueViewed}
-                                </span>
-                              </span>
-                              <span className="px-4 py-3 text-center min-w-[120px]">
-                                <span className="inline-flex items-center gap-1 text-gray-600">
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> {completedCount}
-                                </span>
-                              </span>
-                            </button>
+                            </td>
+                          </tr>
 
-                            {/* Expanded detail */}
-                            {isExpanded && (
-                              <div className="px-12 pb-5 pt-2 bg-gray-50/30 border-t border-gray-100">
+                          {/* Expanded detail */}
+                          {isExpanded && (
+                            <tr className="border-b border-gray-50">
+                              <td colSpan={6} className="px-12 pb-5 pt-2 bg-gray-50/30">
                                 {/* Tab journey */}
                                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                                   Tab Journey (in order viewed)
@@ -584,10 +590,10 @@ export default function ProspectusAccessLog() {
                                     <Mail className="h-3 w-3" /> {row.email}
                                   </span>
                                 </div>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       );
                     })
                   )}
@@ -650,18 +656,27 @@ export default function ProspectusAccessLog() {
       {viewMode === "byEmail" && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ maxHeight: "calc(100vh - 340px)" }}>
           <div className="overflow-y-auto flex-1">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "25%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "18%" }} />
+              </colgroup>
               <thead className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm">
                 <tr className="border-b border-gray-100">
-                  <th className="w-8 px-3 py-3" />
+                  <th className="px-2 py-3" />
                   {([
-                    { key: "email" as EmailSortKey, label: "Email", align: "text-left" },
-                    { key: "sessions" as EmailSortKey, label: "Sessions", align: "text-center" },
-                    { key: "time" as EmailSortKey, label: "Total Time", align: "text-left" },
-                    { key: "completed" as EmailSortKey, label: "Tabs Completed", align: "text-center" },
-                    { key: "lastVisit" as EmailSortKey, label: "Last Visit", align: "text-left" },
-                  ]).map(({ key, label, align }) => (
-                    <th key={key} className={`${align} font-medium text-gray-500 px-4 py-3`}>
+                    { key: "email" as EmailSortKey, label: "Email" },
+                    { key: "sessions" as EmailSortKey, label: "Sessions" },
+                    { key: "time" as EmailSortKey, label: "Total Time" },
+                    { key: "completed" as EmailSortKey, label: "Tabs Completed" },
+                    { key: "lastVisit" as EmailSortKey, label: "Last Visit" },
+                  ]).map(({ key, label }) => (
+                    <th key={key} className="text-left font-medium text-gray-500 px-4 py-3">
                       <button
                         type="button"
                         onClick={() => handleEmailSort(key)}
@@ -692,43 +707,40 @@ export default function ProspectusAccessLog() {
                   sortedEmailGroups.map((group) => {
                     const isExpanded = expandedEmail === group.email;
                     return (
-                      <tr key={group.email} className="border-b border-gray-50">
-                        <td colSpan={7} className="p-0">
-                          <button
-                            type="button"
-                            onClick={() => setExpandedEmail(isExpanded ? null : group.email)}
-                            className="w-full flex items-center hover:bg-gray-50/50 transition-colors"
-                          >
-                            <span className="w-8 px-3 py-3 flex items-center justify-center">
-                              {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                      <Fragment key={group.email}>
+                        <tr
+                          onClick={() => setExpandedEmail(isExpanded ? null : group.email)}
+                          className="border-b border-gray-50 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                        >
+                          <td className="px-2 py-3 text-center">
+                            {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" /> : <ChevronRight className="h-4 w-4 text-gray-400 mx-auto" />}
+                          </td>
+                          <td className="px-4 py-3 font-medium text-gray-900 truncate">
+                            {group.email}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {group.totalSessions}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 tabular-nums">
+                            {formatDuration(group.totalTimeSeconds)}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            <span className="inline-flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> {group.totalTabsCompleted}/{ALL_TABS.length}
                             </span>
-                            <span className="flex-1 text-left px-4 py-3 font-medium text-gray-900 truncate">
-                              {group.email}
-                            </span>
-                            <span className="px-4 py-3 text-center min-w-[80px]">
-                              <span className="inline-flex items-center gap-1 text-gray-600">
-                                {group.totalSessions}
-                              </span>
-                            </span>
-                            <span className="px-4 py-3 text-gray-600 text-left min-w-[100px] tabular-nums">
-                              {formatDuration(group.totalTimeSeconds)}
-                            </span>
-                            <span className="px-4 py-3 text-center min-w-[120px]">
-                              <span className="inline-flex items-center gap-1 text-gray-600">
-                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> {group.totalTabsCompleted}/{ALL_TABS.length}
-                              </span>
-                            </span>
-                            <span className="px-4 py-3 text-gray-500 text-left min-w-[130px]">
-                              {formatDateShort(group.lastVisit)}
-                            </span>
-                            <span className="px-4 py-3 text-left text-gray-600 text-xs min-w-[140px] truncate">
-                              {group.furthestTab}
-                            </span>
-                          </button>
+                          </td>
+                          <td className="px-4 py-3 text-gray-500">
+                            {formatDateShort(group.lastVisit)}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 text-xs truncate">
+                            {group.furthestTab}
+                          </td>
+                        </tr>
 
-                          {/* Expanded: individual sessions for this person */}
-                          {isExpanded && (
-                            <div className="px-12 pb-5 pt-2 bg-gray-50/30 border-t border-gray-100">
+                        {/* Expanded: individual sessions for this person */}
+                        {isExpanded && (
+                          <tr className="border-b border-gray-50">
+                            <td colSpan={7} className="px-12 pb-5 pt-2 bg-gray-50/30">
                               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                                 Session History
                               </h4>
@@ -772,10 +784,10 @@ export default function ProspectusAccessLog() {
                                     );
                                   })}
                               </div>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     );
                   })
                 )}
