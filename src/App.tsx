@@ -181,6 +181,9 @@ import MilitaryInstagram from "./pages/seo/MilitaryInstagram";
 import VeteranBrandPartnerships from "./pages/seo/VeteranBrandPartnerships";
 import MilitaryInfluencerConference from "./pages/seo/MilitaryInfluencerConference";
 import VerifiedVeteranCreators from "./pages/seo/VerifiedVeteranCreators";
+import MilitaryCreatorEconomy from "./pages/seo/MilitaryCreatorEconomy";
+import BrandSafetyMilitary from "./pages/seo/BrandSafetyMilitary";
+import VeteranPodcastAdvertising from "./pages/seo/VeteranPodcastAdvertising";
 
 const queryClient = new QueryClient();
 
@@ -398,6 +401,9 @@ const App = () => (
               <Route path="/veteran-brand-partnerships" element={<VeteranBrandPartnerships />} />
               <Route path="/military-influencer-conference" element={<MilitaryInfluencerConference />} />
               <Route path="/verified-veteran-creators" element={<VerifiedVeteranCreators />} />
+              <Route path="/military-creator-economy" element={<MilitaryCreatorEconomy />} />
+              <Route path="/brand-safety-military" element={<BrandSafetyMilitary />} />
+              <Route path="/veteran-podcast-advertising" element={<VeteranPodcastAdvertising />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
