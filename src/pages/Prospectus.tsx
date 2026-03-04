@@ -5,7 +5,6 @@ import {
   CheckCircle2, BookOpen, ZoomIn,
   Settings, X, Save, Upload, Trash2, ImageIcon, Plus, Minus,
   Eye, EyeOff, ChevronDown, GripVertical, ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -95,14 +94,6 @@ const TAB_KB_CATEGORY: Record<string, string> = {
 const TAB_DEEP_DIVE_URL: Record<string, string> = {
   "365 Insights": "/brand/events/9cfd70f9-e542-49ad-91e7-2ae01a1e150e?tab=365-insights",
   "Events & Attendee App": "/brand/events/85e418d7-8295-4525-9f9d-97fa90fa3d25?tab=gtm-planner&section=all&expand=all&demo=true",
-};
-
-/** Tabs that have an interactive live demo — used for floating bar, badges, and callout banners */
-const TAB_DEMO_URLS: Partial<Record<TabId, string>> = {
-  "Events & Attendee App": "/brand/events/85e418d7-8295-4525-9f9d-97fa90fa3d25?tab=gtm-planner&section=all&expand=all&demo=true",
-  "Discovery": "/brand/discover",
-  "Verification": "/verification",
-  "365 Insights": "/brand/events/9cfd70f9-e542-49ad-91e7-2ae01a1e150e?tab=365-insights",
 };
 
 /* ------------------------------------------------------------------ */
@@ -3331,8 +3322,7 @@ export default function Prospectus() {
       <footer
         className={cn(
           "border-t py-8 transition-colors duration-300",
-          darkMode ? "border-white/[0.06]" : "border-[#E5E7EB]",
-          TAB_DEMO_URLS[activeTab] && "pb-20"
+          darkMode ? "border-white/[0.06]" : "border-[#E5E7EB]"
         )}
       >
         <div className="max-w-6xl mx-auto px-4 md:px-8 text-center">
@@ -3365,34 +3355,6 @@ export default function Prospectus() {
         />
       )}
 
-      {/* Persistent floating demo bar */}
-      {TAB_DEMO_URLS[activeTab] && (
-        <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="bg-gradient-to-r from-[#0a1628] via-[#1e3a5f] to-[#2d5282] border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
-            <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="hidden sm:flex h-7 w-7 rounded-full bg-white/10 items-center justify-center flex-shrink-0">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-white/60 text-[10px] uppercase tracking-wider font-medium leading-none mb-0.5">Live Demo Available</p>
-                  <p className="text-white text-sm font-semibold truncate">{activeTab}</p>
-                </div>
-              </div>
-              <a
-                href={withProspectusRef(TAB_DEMO_URLS[activeTab]!)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-[#1e3a5f] font-bold text-sm shadow-lg hover:bg-gray-100 hover:scale-[1.03] active:scale-[0.98] transition-all duration-200"
-              >
-                <Play className="h-4 w-4 fill-current" />
-                <span>Launch Live Demo</span>
-                <ChevronRight className="h-4 w-4 -ml-0.5" />
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Unlock pulse + demo pill pulse animations */}
       <style>{`
