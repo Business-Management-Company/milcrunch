@@ -1,55 +1,42 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, ShoppingCart, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ShoppingCart, ShoppingBag, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
-
-interface Variant {
-  name: string;
-  price_override: number | null;
-  inventory: number;
-}
-
-interface MerchProduct {
-  id: string;
-  title: string;
-  description: string | null;
-  price: number;
-  compare_at_price: number | null;
-  category: string;
-  tags: string[];
-  images: string[];
-  variants: Variant[];
-  total_inventory: number;
-}
-
-const SEED_PRODUCTS: MerchProduct[] = [
-  { id: "mc-veteran-hoodie", title: "MilCrunch Veteran Hoodie", description: "Premium heavyweight hoodie with embroidered MilCrunch logo. Built for veterans who build.", price: 59.99, compare_at_price: 74.99, category: "Apparel", tags: ["hoodie", "veteran"], images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0AVeteran+Hoodie"], variants: [{ name: "S", price_override: null, inventory: 25 }, { name: "M", price_override: null, inventory: 40 }, { name: "L", price_override: null, inventory: 40 }, { name: "XL", price_override: null, inventory: 30 }, { name: "2XL", price_override: null, inventory: 15 }], total_inventory: 150 },
-  { id: "mc-creator-tee", title: "MilCrunch Creator Tee", description: "Soft tri-blend tee with MilCrunch wordmark. The unofficial uniform of military creators.", price: 34.99, compare_at_price: 44.99, category: "Apparel", tags: ["tee", "creator"], images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0ACreator+Tee"], variants: [{ name: "S", price_override: null, inventory: 30 }, { name: "M", price_override: null, inventory: 50 }, { name: "L", price_override: null, inventory: 50 }, { name: "XL", price_override: null, inventory: 30 }], total_inventory: 160 },
-  { id: "mc-milspousefest-tee", title: "MilSpouseFest Official Tee", description: "Event exclusive tee for MilSpouseFest attendees and supporters.", price: 29.99, compare_at_price: null, category: "Apparel", tags: ["tee", "milspousefest", "event"], images: ["https://placehold.co/600x600/7c3aed/ffffff?text=MilSpouseFest%0AOfficial+Tee"], variants: [{ name: "S", price_override: null, inventory: 30 }, { name: "M", price_override: null, inventory: 45 }, { name: "L", price_override: null, inventory: 45 }, { name: "XL", price_override: null, inventory: 30 }], total_inventory: 150 },
-  { id: "mc-milcon-hoodie", title: "Military Influencer Conference Hoodie", description: "Limited edition MilCon 2026 hoodie. Premium fleece, embroidered patch.", price: 64.99, compare_at_price: 79.99, category: "Apparel", tags: ["hoodie", "milcon", "event"], images: ["https://placehold.co/600x600/1e293b/f59e0b?text=MilCon+2026%0AHoodie"], variants: [{ name: "S", price_override: null, inventory: 20 }, { name: "M", price_override: null, inventory: 35 }, { name: "L", price_override: null, inventory: 35 }, { name: "XL", price_override: null, inventory: 25 }, { name: "2XL", price_override: null, inventory: 10 }], total_inventory: 125 },
-  { id: "mc-snapback", title: "MilCrunch Snapback", description: "Structured snapback with embroidered MilCrunch logo. One size fits all.", price: 28.99, compare_at_price: 34.99, category: "Headwear", tags: ["hat", "snapback"], images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0ASnapback"], variants: [{ name: "One Size", price_override: null, inventory: 75 }], total_inventory: 75 },
-  { id: "mc-tactical-cap", title: "MilCrunch Tactical Cap", description: "Low-profile fitted cap with subdued MilCrunch patch. Range ready.", price: 32.99, compare_at_price: null, category: "Headwear", tags: ["hat", "tactical"], images: ["https://placehold.co/600x600/4b5563/ffffff?text=MilCrunch%0ATactical+Cap"], variants: [{ name: "S/M", price_override: null, inventory: 40 }, { name: "L/XL", price_override: null, inventory: 40 }], total_inventory: 80 },
-  { id: "mc-coffee-mug", title: "MilCrunch Coffee Mug", description: "15oz ceramic mug. \"Powered by Coffee & MilCrunch\" on the back.", price: 18.99, compare_at_price: null, category: "Drinkware", tags: ["mug", "drinkware"], images: ["https://placehold.co/600x600/ffffff/1e293b?text=MilCrunch%0ACoffee+Mug"], variants: [], total_inventory: 200 },
-  { id: "mc-water-bottle", title: "MilCrunch Water Bottle", description: "32oz insulated steel bottle with MilCrunch logo. Keeps coffee hot, water cold.", price: 27.99, compare_at_price: 34.99, category: "Drinkware", tags: ["bottle", "drinkware"], images: ["https://placehold.co/600x600/3b82f6/ffffff?text=MilCrunch%0AWater+Bottle"], variants: [], total_inventory: 100 },
-  { id: "mc-milspouse-tumbler", title: "MilSpouse Strong Tumbler", description: "20oz insulated tumbler. Because military spouses run on caffeine and resilience.", price: 24.99, compare_at_price: null, category: "Drinkware", tags: ["tumbler", "milspouse"], images: ["https://placehold.co/600x600/ec4899/ffffff?text=MilSpouse%0AStrong+Tumbler"], variants: [], total_inventory: 120 },
-  { id: "mc-patch-set", title: "MilCrunch Creator Patch Set", description: "Set of 3 embroidered patches: MilCrunch logo, Verified Creator badge, and branch patch.", price: 14.99, compare_at_price: null, category: "Accessories", tags: ["patches", "morale"], images: ["https://placehold.co/600x600/f59e0b/1e293b?text=MilCrunch%0APatch+Set"], variants: [], total_inventory: 300 },
-  { id: "mc-sticker-pack", title: "MilCrunch Sticker Pack", description: "10-pack of die-cut vinyl stickers. MilCrunch, MilSpouseFest, and military creator designs.", price: 9.99, compare_at_price: null, category: "Accessories", tags: ["stickers", "accessories"], images: ["https://placehold.co/600x600/10b981/ffffff?text=MilCrunch%0ASticker+Pack"], variants: [], total_inventory: 500 },
-  { id: "mc-laptop-sleeve", title: "MilCrunch Laptop Sleeve", description: "15\" neoprene laptop sleeve with MilCrunch branding. Protect the machine that runs the mission.", price: 29.99, compare_at_price: 39.99, category: "Accessories", tags: ["laptop", "sleeve"], images: ["https://placehold.co/600x600/1e293b/3b82f6?text=MilCrunch%0ALaptop+Sleeve"], variants: [], total_inventory: 60 },
-];
+import { MERCH_PRODUCTS, applyOverrides } from "@/data/merch-products";
+import type { MerchOverride } from "@/data/merch-products";
 
 export default function ShopProduct() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const product = useMemo(() => SEED_PRODUCTS.find((s) => s.id === id) || null, [id]);
+  const [overrides, setOverrides] = useState<MerchOverride[]>([]);
+  const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState<string>(
-    product?.variants?.[0]?.name || ""
-  );
+  const [selectedVariant, setSelectedVariant] = useState<string>("");
+
+  useEffect(() => {
+    supabase
+      .from("merch_overrides")
+      .select("*")
+      .then(({ data }) => {
+        setOverrides((data as MerchOverride[] | null) || []);
+        setLoading(false);
+      });
+  }, []);
+
+  const products = applyOverrides(MERCH_PRODUCTS, overrides);
+  const product = products.find((p) => p.id === id) || null;
+
+  useEffect(() => {
+    if (product?.variants?.length && !selectedVariant) {
+      setSelectedVariant(product.variants[0].name);
+    }
+  }, [product, selectedVariant]);
 
   const handleAddToCart = () => {
     toast({
@@ -57,6 +44,17 @@ export default function ShopProduct() {
       description: "Check back soon for online ordering.",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0D0D1A] text-white">
+        <PublicNav />
+        <div className="flex items-center justify-center pt-14 min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-[#1e3a5f]" />
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (

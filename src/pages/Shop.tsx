@@ -1,41 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import PublicNav from "@/components/layout/PublicNav";
 import PublicFooter from "@/components/layout/PublicFooter";
+import { MERCH_PRODUCTS, CATEGORIES, applyOverrides } from "@/data/merch-products";
+import type { MerchOverride } from "@/data/merch-products";
 
-interface MerchProduct {
-  id: string;
-  title: string;
-  price: number;
-  compare_at_price: number | null;
-  category: string;
-  images: string[];
-}
-
-const CATEGORIES = ["All", "Apparel", "Headwear", "Accessories", "Drinkware"];
-
-/* ---------- 12 MilCrunch products (fallback when DB is empty) ---------- */
-const SEED_PRODUCTS: MerchProduct[] = [
-  { id: "mc-veteran-hoodie", title: "MilCrunch Veteran Hoodie", price: 59.99, compare_at_price: 74.99, category: "Apparel", images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0AVeteran+Hoodie"] },
-  { id: "mc-creator-tee", title: "MilCrunch Creator Tee", price: 34.99, compare_at_price: 44.99, category: "Apparel", images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0ACreator+Tee"] },
-  { id: "mc-milspousefest-tee", title: "MilSpouseFest Official Tee", price: 29.99, compare_at_price: null, category: "Apparel", images: ["https://placehold.co/600x600/7c3aed/ffffff?text=MilSpouseFest%0AOfficial+Tee"] },
-  { id: "mc-milcon-hoodie", title: "Military Influencer Conference Hoodie", price: 64.99, compare_at_price: 79.99, category: "Apparel", images: ["https://placehold.co/600x600/1e293b/f59e0b?text=MilCon+2026%0AHoodie"] },
-  { id: "mc-snapback", title: "MilCrunch Snapback", price: 28.99, compare_at_price: 34.99, category: "Headwear", images: ["https://placehold.co/600x600/1e293b/ffffff?text=MilCrunch%0ASnapback"] },
-  { id: "mc-tactical-cap", title: "MilCrunch Tactical Cap", price: 32.99, compare_at_price: null, category: "Headwear", images: ["https://placehold.co/600x600/4b5563/ffffff?text=MilCrunch%0ATactical+Cap"] },
-  { id: "mc-coffee-mug", title: "MilCrunch Coffee Mug", price: 18.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/ffffff/1e293b?text=MilCrunch%0ACoffee+Mug"] },
-  { id: "mc-water-bottle", title: "MilCrunch Water Bottle", price: 27.99, compare_at_price: 34.99, category: "Drinkware", images: ["https://placehold.co/600x600/3b82f6/ffffff?text=MilCrunch%0AWater+Bottle"] },
-  { id: "mc-milspouse-tumbler", title: "MilSpouse Strong Tumbler", price: 24.99, compare_at_price: null, category: "Drinkware", images: ["https://placehold.co/600x600/ec4899/ffffff?text=MilSpouse%0AStrong+Tumbler"] },
-  { id: "mc-patch-set", title: "MilCrunch Creator Patch Set", price: 14.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/f59e0b/1e293b?text=MilCrunch%0APatch+Set"] },
-  { id: "mc-sticker-pack", title: "MilCrunch Sticker Pack", price: 9.99, compare_at_price: null, category: "Accessories", images: ["https://placehold.co/600x600/10b981/ffffff?text=MilCrunch%0ASticker+Pack"] },
-  { id: "mc-laptop-sleeve", title: "MilCrunch Laptop Sleeve", price: 29.99, compare_at_price: 39.99, category: "Accessories", images: ["https://placehold.co/600x600/1e293b/3b82f6?text=MilCrunch%0ALaptop+Sleeve"] },
-];
+const ALL_CATEGORIES = ["All", ...CATEGORIES];
 
 export default function Shop() {
-  const [products] = useState<MerchProduct[]>(SEED_PRODUCTS);
-  const [loading] = useState(false);
+  const [overrides, setOverrides] = useState<MerchOverride[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All");
 
+  useEffect(() => {
+    supabase
+      .from("merch_overrides")
+      .select("*")
+      .then(({ data }) => {
+        setOverrides((data as MerchOverride[] | null) || []);
+        setLoading(false);
+      });
+  }, []);
+
+  const products = applyOverrides(MERCH_PRODUCTS, overrides);
   const filtered = activeCategory === "All"
     ? products
     : products.filter((p) => p.category === activeCategory);
@@ -59,7 +48,7 @@ export default function Shop() {
         {/* Category Pills */}
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex flex-wrap gap-2 justify-center mb-8">
-            {CATEGORIES.map((cat) => (
+            {ALL_CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
