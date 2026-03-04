@@ -1337,7 +1337,7 @@ const BrandDirectory = () => {
                     <p className="text-xs text-[#1e3a5f] mb-1 truncate max-w-full">@{m.creator_handle}</p>
                     {(() => {
                       const isSpouse = detectMilitarySpouse(m);
-                      const showStatusPill = m.status && !(/\bspouse\b/i.test(m.status));
+                      const showStatusPill = !isSpouse && m.status && !(/\bspouse\b/i.test(m.status));
                       if (isSpouse) backgroundUpdateSpouseStatus(m.id, m.status ?? null);
                       return (m.branch || showStatusPill || isSpouse) ? (
                         <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center">
@@ -1530,7 +1530,7 @@ const BrandDirectory = () => {
                       <td className="p-3">
                         {(() => {
                           const isSpouse = detectMilitarySpouse(m);
-                          const showStatusPill = m.status && !(/\bspouse\b/i.test(m.status));
+                          const showStatusPill = !isSpouse && m.status && !(/\bspouse\b/i.test(m.status));
                           if (isSpouse) backgroundUpdateSpouseStatus(m.id, m.status ?? null);
                           return (
                             <div className="flex items-center gap-1.5 flex-wrap">

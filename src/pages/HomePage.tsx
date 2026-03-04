@@ -373,7 +373,7 @@ function ShowcaseCard({ creator: c, index, inView }: { creator: ShowcaseCreator;
       {/* Branch badge + Status + Spouse */}
       {(() => {
         const isSpouse = detectMilitarySpouse(c);
-        const showStatusPill = c.status && !(/\bspouse\b/i.test(c.status));
+        const showStatusPill = !isSpouse && c.status && !(/\bspouse\b/i.test(c.status));
         if (isSpouse && c.id && !c.id.startsWith("hero-")) backgroundUpdateSpouseStatus(c.id, c.status ?? null);
         return (c.branch || showStatusPill || isSpouse) ? (
           <div className="flex items-center gap-1.5 mb-2 flex-wrap justify-center px-4">
@@ -835,7 +835,7 @@ export default function HomePage() {
                             <p className="text-[14px] text-gray-400">@{db.handle}</p>
                             {(() => {
                               const isSpouse = detectMilitarySpouse(db);
-                              const showStatusPill = db.status && !(/\bspouse\b/i.test(db.status));
+                              const showStatusPill = !isSpouse && db.status && !(/\bspouse\b/i.test(db.status));
                               if (isSpouse && db.id && !db.id.startsWith("hero-")) backgroundUpdateSpouseStatus(db.id, db.status ?? null);
                               return (db.branch || showStatusPill || isSpouse) ? (
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">

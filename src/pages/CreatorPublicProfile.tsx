@@ -791,8 +791,14 @@ export default function CreatorPublicProfile() {
                     )}
                     {(() => {
                       const isSpouse = detectMilitarySpouse(creator);
-                      const showStatusPill = creator.status && typeof creator.status === "string" && !(/\bspouse\b/i.test(creator.status));
+                      const showStatusPill = !isSpouse && creator.status && typeof creator.status === "string" && !(/\bspouse\b/i.test(creator.status));
                       if (isSpouse && creator.id) backgroundUpdateSpouseStatus(creator.id, creator.status ?? null);
+                      const profileStatusPill = (s: string) => {
+                        const sl = s.toLowerCase();
+                        if (sl.includes("active")) return "bg-[#16a34a] text-white";
+                        if (sl.includes("veteran")) return "bg-[#64748b] text-white";
+                        return "bg-gray-100 text-gray-500";
+                      };
                       return (
                         <>
                           {isSpouse && (
@@ -801,7 +807,7 @@ export default function CreatorPublicProfile() {
                             </span>
                           )}
                           {showStatusPill && (
-                            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${profileStatusPill(creator.status!)}`}>
                               {creator.status}
                             </span>
                           )}
