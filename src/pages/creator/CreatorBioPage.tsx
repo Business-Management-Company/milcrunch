@@ -29,6 +29,7 @@ import {
   Youtube,
   Facebook,
   Globe,
+  Linkedin,
   Mic,
   ShoppingBag,
   X,
@@ -134,6 +135,7 @@ function socialIcon(platform: string, className: string) {
   if (p.includes("instagram")) return <Instagram className={className} />;
   if (p.includes("youtube")) return <Youtube className={className} />;
   if (p.includes("facebook")) return <Facebook className={className} />;
+  if (p.includes("linkedin")) return <Linkedin className={className} />;
   if (p.includes("twitter") || p === "x") return <X className={className} />;
   return <Globe className={className} />;
 }
@@ -144,6 +146,7 @@ function socialUrl(platform: string, username: string | null): string {
   if (p.includes("instagram")) return `https://instagram.com/${username}`;
   if (p.includes("youtube")) return `https://youtube.com/@${username}`;
   if (p.includes("facebook")) return `https://facebook.com/${username}`;
+  if (p.includes("linkedin")) return username.startsWith("http") ? username : `https://linkedin.com/in/${username}`;
   if (p.includes("twitter") || p === "x") return `https://x.com/${username}`;
   if (p.includes("tiktok")) return `https://tiktok.com/@${username}`;
   if (p.includes("pinterest")) return `https://pinterest.com/${username}`;

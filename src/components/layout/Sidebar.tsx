@@ -385,7 +385,7 @@ export default function Sidebar({ collapsed = false, demoOffset = 0, navLocked =
       {!collapsed && (
         <div className="px-5 py-4 border-t border-white/10">
           <p className="text-xs text-slate-500 text-center flex items-center justify-center gap-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="12" height="12"><polygon points="16,1 29,8.5 29,23.5 16,31 3,23.5 3,8.5" fill="#f59e0b"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="12" height="12"><circle cx="50" cy="50" r="47" fill="none" stroke="#f59e0b" strokeWidth="3"/><circle cx="50" cy="50" r="44" fill="#0d1525"/><circle cx="50" cy="50" r="35" fill="#0f1a2e"/><rect x="30" y="38" width="40" height="28" rx="2" fill="#f59e0b"/><rect x="30" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/><rect x="41" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/><rect x="52" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/><rect x="62" y="30" width="8" height="10" rx="1.5" fill="#f59e0b"/><rect x="42" y="52" width="16" height="14" rx="8" fill="#0f1a2e"/><rect x="34" y="42" width="3.5" height="9" rx="1.5" fill="#0f1a2e"/><rect x="62" y="42" width="5" height="9" rx="1.5" fill="#0f1a2e"/></svg>
             <span style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800 }}>MilCrunch</span> &middot; v1.0
           </p>
         </div>

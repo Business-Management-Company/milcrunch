@@ -107,6 +107,91 @@ export function scorePDL(data: PDLResponse | null): number {
   return Math.min(40, employer + title + education);
 }
 
+// --- PDL Military Auto-Detection ---
+const MILITARY_AUTO_VERIFY_KEYWORDS = [
+  ...MILITARY_EMPLOYERS,
+  "National Guard", "U.S. Military", "veteran", "active duty",
+  "enlisted", "commissioned", "deployed",
+];
+
+const PDL_BRANCH_MAP: Record<string, string> = {
+  "army": "Army", "us army": "Army", "u.s. army": "Army", "united states army": "Army",
+  "national guard": "Army",
+  "navy": "Navy", "us navy": "Navy", "u.s. navy": "Navy",
+  "marine corps": "Marines", "marines": "Marines", "usmc": "Marines", "u.s. marine": "Marines",
+  "air force": "Air Force", "us air force": "Air Force", "u.s. air force": "Air Force",
+  "coast guard": "Coast Guard", "us coast guard": "Coast Guard",
+  "space force": "Space Force",
+  "department of defense": "DoD", "dod": "DoD",
+  "veterans affairs": "Unknown", "va ": "Unknown",
+};
+
+export interface PDLMilitaryDetection {
+  isMilitary: boolean;
+  detectedBranch: string | null;
+  matchedKeywords: string[];
+  matchedEmployment: { title?: string; organization?: string }[];
+}
+
+export function detectMilitaryFromPDL(data: PDLResponse | null): PDLMilitaryDetection {
+  const result: PDLMilitaryDetection = {
+    isMilitary: false,
+    detectedBranch: null,
+    matchedKeywords: [],
+    matchedEmployment: [],
+  };
+  if (!data) return result;
+
+  const employment = (data.employment ?? []) as Record<string, unknown>[];
+
+  for (const job of employment) {
+    const org = safeString(job?.company) || safeString(job?.organization);
+    const title = safeString(job?.title);
+    const combined = `${org} ${title}`;
+
+    // Check extended military keywords
+    for (const keyword of MILITARY_AUTO_VERIFY_KEYWORDS) {
+      if (combined.includes(keyword.toLowerCase())) {
+        result.isMilitary = true;
+        if (!result.matchedKeywords.includes(keyword)) result.matchedKeywords.push(keyword);
+        const entry = { title: title || undefined, organization: org || undefined };
+        if (!result.matchedEmployment.some((e) => e.organization === entry.organization && e.title === entry.title)) {
+          result.matchedEmployment.push(entry);
+        }
+
+        // Detect specific branch
+        if (!result.detectedBranch || result.detectedBranch === "Unknown" || result.detectedBranch === "DoD") {
+          for (const [key, branch] of Object.entries(PDL_BRANCH_MAP)) {
+            if (combined.includes(key)) {
+              if (branch !== "Unknown" && branch !== "DoD") {
+                result.detectedBranch = branch;
+                break;
+              } else if (!result.detectedBranch) {
+                result.detectedBranch = branch;
+              }
+            }
+          }
+        }
+        break; // Found match for this job entry
+      }
+    }
+
+    // Also check military titles for additional confidence
+    for (const milTitle of MILITARY_TITLES) {
+      if (title.includes(milTitle.toLowerCase())) {
+        result.isMilitary = true;
+        if (!result.matchedKeywords.includes(milTitle)) result.matchedKeywords.push(milTitle);
+        const entry = { title: title || undefined, organization: org || undefined };
+        if (!result.matchedEmployment.some((e) => e.organization === entry.organization && e.title === entry.title)) {
+          result.matchedEmployment.push(entry);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 // --- SerpAPI ---
 export interface SerpResult {
   title?: string;
@@ -682,6 +767,7 @@ export async function runVerificationPipeline(
   careerComplete: boolean;
   socialVerification: SocialVerificationResult;
   socialComplete: boolean;
+  pdlMilitaryDetection: PDLMilitaryDetection;
 }> {
   console.log("[Verify] API Keys present:", {
     serp: !!import.meta.env.VITE_SERP_API_KEY,
@@ -719,6 +805,12 @@ export async function runVerificationPipeline(
   const pdlExperience = pdlData?.employment || [];
   const pdlEducation = pdlData?.education || [];
   onPhase({ phase: 1, name: "People Data Labs", status: "done", data: pdlData });
+
+  // PDL military auto-detection
+  const pdlMilitaryDetection = detectMilitaryFromPDL(pdlData);
+  if (pdlMilitaryDetection.isMilitary) {
+    console.log("[Verify] PDL military detected:", pdlMilitaryDetection.detectedBranch, "keywords:", pdlMilitaryDetection.matchedKeywords);
+  }
 
   // Phase 2: SerpAPI — always mark complete even if no results
   onPhase({ phase: 2, name: "Web Search", status: "running" });
@@ -1016,6 +1108,7 @@ export async function runVerificationPipeline(
     careerComplete,
     socialVerification,
     socialComplete,
+    pdlMilitaryDetection,
   };
 }
 

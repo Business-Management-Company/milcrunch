@@ -99,6 +99,7 @@ import {
   recomputeScoreFromRecord,
   computeVerificationScore,
   recommendStatus,
+  type PDLMilitaryDetection,
 } from "@/lib/verification";
 import {
   DropdownMenu,
@@ -781,7 +782,7 @@ export default function Verification() {
       );
       // Auto-detect branch from AI analysis if not manually set
       const detectedBranch = detectBranch(result.aiAnalysis, result.evidenceSources);
-      const finalBranch = addForm.claimedBranch || detectedBranch || null;
+      let finalBranch = addForm.claimedBranch || detectedBranch || null;
 
       // Auto-detect type (spouse/family/veteran) from AI analysis + evidence — stored as suggestion only
       const detectedType = detectType(result.aiAnalysis, result.evidenceSources);
@@ -795,6 +796,18 @@ export default function Verification() {
       if (detectedType) {
         finalScore = computeVerificationScore(0, result.evidenceSources, { hasUnitOrMOS: false, hasDates: false, hasAwards: false }, { claimedBranch: finalBranch ?? undefined, claimedType: finalStatus, linkedinUrl: result.linkedinUrl ?? undefined, pdlData: result.pdlData });
         finalVerificationStatus = recommendStatus(finalScore, result.redFlags.length > 0);
+      }
+
+      // PDL military auto-verification: if PDL found military employment, auto-verify
+      const pdlMilitary = result.pdlMilitaryDetection;
+      if (pdlMilitary.isMilitary && finalVerificationStatus !== "verified") {
+        console.log("[Verify] Auto-verifying via PDL military detection:", pdlMilitary);
+        finalVerificationStatus = "verified";
+        finalScore = Math.max(finalScore, 80);
+      }
+      // Use PDL-detected branch if not manually set
+      if (pdlMilitary.isMilitary && !addForm.claimedBranch && pdlMilitary.detectedBranch && pdlMilitary.detectedBranch !== "Unknown" && pdlMilitary.detectedBranch !== "DoD") {
+        finalBranch = pdlMilitary.detectedBranch;
       }
 
       const { data: inserted, error } = await supabase
@@ -828,6 +841,12 @@ export default function Verification() {
             career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
             social_profiles: result.socialVerification?.profiles ?? [],
             ...(detectedType ? { ai_suggested_type: detectedType.claimedType, ai_suggested_status: detectedType.claimedStatus } : {}),
+            ...(pdlMilitary.isMilitary ? {
+              pdl_auto_verified: true,
+              pdl_matched_keywords: pdlMilitary.matchedKeywords,
+              pdl_detected_branch: pdlMilitary.detectedBranch,
+              pdl_matched_employment: pdlMilitary.matchedEmployment,
+            } : {}),
           },
           last_verified_at: new Date().toISOString(),
         })
@@ -880,18 +899,29 @@ export default function Verification() {
         }
         })();
 
-        // Upsert directory_members with avatar so Verification list row shows the photo
+        // Upsert directory_members with avatar + PDL data
         const dmHandle = (addForm.instagramHandle.trim().replace(/^@/, "") || addForm.sourceUsername || "").toLowerCase();
         const finalPhoto = resolvedPhoto || addForm.profilePhotoUrl || null;
-        if (dmHandle && finalPhoto) {
+        if (dmHandle) {
+          const dmUpsertPayload: Record<string, unknown> = {
+            creator_handle: dmHandle,
+            creator_name: addForm.fullName.trim(),
+            ic_avatar_url: finalPhoto,
+            avatar_url: finalPhoto,
+            // PDL work history and LinkedIn URL
+            work_history: result.pdlData?.employment ?? null,
+            linkedin_url: addForm.linkedinUrl.trim() || result.linkedinUrl || null,
+          };
+          // Set verification_source and auto-verify fields if PDL found military
+          if (pdlMilitary.isMilitary) {
+            dmUpsertPayload.verification_source = "LinkedIn + PDL";
+            dmUpsertPayload.is_verified = true;
+            dmUpsertPayload.status = "verified";
+            if (finalBranch) dmUpsertPayload.branch = finalBranch;
+          }
           await supabase
             .from("directory_members")
-            .upsert({
-              creator_handle: dmHandle,
-              creator_name: addForm.fullName.trim(),
-              ic_avatar_url: finalPhoto,
-              avatar_url: finalPhoto,
-            } as Record<string, unknown>, { onConflict: "creator_handle" });
+            .upsert(dmUpsertPayload, { onConflict: "creator_handle" });
         }
 
         setList((prev) => [
@@ -1228,6 +1258,10 @@ export default function Verification() {
           category: editForm.category || null,
           platform_urls: platformUrls,
           platforms,
+          // Persist LinkedIn URL to dedicated column
+          linkedin_url: editForm.linkedin
+            ? (editForm.linkedin.startsWith("http") ? editForm.linkedin : `https://linkedin.com/in/${editForm.linkedin}`)
+            : null,
         };
         // Only update military status in directory_members if user explicitly changed it
         if (editForm.militaryStatus !== editForm.originalMilitaryStatus) {
@@ -1235,6 +1269,7 @@ export default function Verification() {
         }
         if (editForm.verificationStatus === "verified") {
           dmPayload.is_verified = true;
+          if (!dmPayload.verification_source) dmPayload.verification_source = "Manual Review";
         }
         await supabase.from("directory_members").update(dmPayload).eq("creator_handle", editForm.sourceUsername);
       }
@@ -1354,16 +1389,31 @@ export default function Verification() {
       // Final save merges everything including phases that may not have triggered incremental saves
       const { data: existingReverify } = await supabase.from("verifications").select("manual_checks").eq("id", realId).single();
       const existingChecksReverify = (existingReverify?.manual_checks ?? {}) as Record<string, unknown>;
+      // PDL military auto-verification on re-verify
+      const reverifyPdlMilitary = result.pdlMilitaryDetection;
+      let reverifyStatus = result.status;
+      let reverifyScore = result.verificationScore;
+      if (reverifyPdlMilitary.isMilitary && reverifyStatus !== "verified") {
+        reverifyStatus = "verified";
+        reverifyScore = Math.max(reverifyScore, 80);
+      }
+
       const mergedChecks = {
         ...existingChecksReverify,
         youtube_results: result.youtubeResults ?? [],
         youtube_media: { videos: result.mediaAppearances ?? [], searched_at: new Date().toISOString() },
         career_track: { result: result.careerData ?? null, generated_at: new Date().toISOString() },
         social_profiles: result.socialVerification?.profiles ?? [],
+        ...(reverifyPdlMilitary.isMilitary ? {
+          pdl_auto_verified: true,
+          pdl_matched_keywords: reverifyPdlMilitary.matchedKeywords,
+          pdl_detected_branch: reverifyPdlMilitary.detectedBranch,
+          pdl_matched_employment: reverifyPdlMilitary.matchedEmployment,
+        } : {}),
       };
       const { error: reverifyError } = await supabase.from("verifications").update({
-        verification_score: result.verificationScore,
-        status: result.status,
+        verification_score: reverifyScore,
+        status: reverifyStatus,
         pdl_data: result.pdlData,
         serp_results: result.serpResults,
         firecrawl_data: result.firecrawlData,
@@ -1380,6 +1430,24 @@ export default function Verification() {
       } else {
         console.log('RE-VERIFY SAVED OK —', row.person_name, '| career:', !!result.careerData, '| media:', (result.mediaAppearances ?? []).length, 'items');
         toast.success(`Re-verification complete for ${row.person_name}`);
+
+        // Update directory_members with fresh PDL data
+        const reverifyHandle = row.source_username;
+        if (reverifyHandle) {
+          const reverifyDmPayload: Record<string, unknown> = {
+            work_history: result.pdlData?.employment ?? null,
+            linkedin_url: result.linkedinUrl || row.linkedin_url || null,
+          };
+          if (reverifyPdlMilitary.isMilitary) {
+            reverifyDmPayload.verification_source = "LinkedIn + PDL";
+            reverifyDmPayload.is_verified = true;
+            reverifyDmPayload.status = "verified";
+            if (reverifyPdlMilitary.detectedBranch && reverifyPdlMilitary.detectedBranch !== "Unknown" && reverifyPdlMilitary.detectedBranch !== "DoD") {
+              reverifyDmPayload.branch = reverifyPdlMilitary.detectedBranch;
+            }
+          }
+          await supabase.from("directory_members").update(reverifyDmPayload).eq("creator_handle", reverifyHandle);
+        }
       }
       await fetchVerifications();
     } catch {
@@ -4054,9 +4122,14 @@ function ExpandedRow({ record, onRefresh, dirEnrichmentMap, onInviteToEvent }: {
 
     // 3. Propagate to directory_members by matching creator_handle
     if (record.source_username) {
+      const dmStatusPayload: Record<string, unknown> = { status: newStatus };
+      if (newStatus === "verified") {
+        dmStatusPayload.is_verified = true;
+        if (manual) dmStatusPayload.verification_source = "Manual Review";
+      }
       await supabase
         .from("directory_members")
-        .update({ status: newStatus } as Record<string, unknown>)
+        .update(dmStatusPayload)
         .eq("creator_handle", record.source_username);
     }
 

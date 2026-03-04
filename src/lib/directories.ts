@@ -77,6 +77,9 @@ export interface DirectoryMember {
   avg_comments: number | null;
   post_count: number | null;
   banner_image_url: string | null;
+  work_history: Record<string, unknown>[] | null;
+  verification_source: string | null;
+  linkedin_url: string | null;
 }
 
 // ─── Directory CRUD ─────────────────────────────────────────
@@ -403,5 +406,8 @@ function mapMemberRow(row: Record<string, unknown>): DirectoryMember {
     avg_likes: (row.avg_likes as string) ?? null,
     avg_comments: row.avg_comments != null ? Number(row.avg_comments) : null,
     post_count: row.post_count != null ? Number(row.post_count) : null,
+    work_history: Array.isArray(row.work_history) ? (row.work_history as Record<string, unknown>[]) : null,
+    verification_source: (row.verification_source as string) ?? null,
+    linkedin_url: (row.linkedin_url as string) ?? null,
   };
 }
