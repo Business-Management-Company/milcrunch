@@ -40,6 +40,7 @@
     {"source": "/api/refresh-avatars", "destination": "/api/refresh-avatars"},
     {"source": "/api/migrate-avatars", "destination": "/api/migrate-avatars"},
     {"source": "/api/re-enrich-avatars", "destination": "/api/re-enrich-avatars"},
+    {"source": "/api/enrich-profile", "destination": "/api/enrich-profile"},
     {"source": "/api/fix-avatars", "destination": "/api/fix-avatars"},
     {"source": "/api/ic-locations", "destination": "/api/ic-locations"},
     {"source": "/api/resend-verify-domain", "destination": "/api/resend-verify-domain"},
