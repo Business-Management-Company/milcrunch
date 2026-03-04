@@ -393,6 +393,11 @@ const App = () => (
               <Route path="/marine-influencers" element={<MarineInfluencers />} />
               <Route path="/coast-guard-influencers" element={<CoastGuardInfluencers />} />
               <Route path="/veteran-youtube" element={<VeteranYouTube />} />
+              <Route path="/veteran-tiktok" element={<VeteranTikTok />} />
+              <Route path="/military-instagram" element={<MilitaryInstagram />} />
+              <Route path="/veteran-brand-partnerships" element={<VeteranBrandPartnerships />} />
+              <Route path="/military-influencer-conference" element={<MilitaryInfluencerConference />} />
+              <Route path="/verified-veteran-creators" element={<VerifiedVeteranCreators />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
