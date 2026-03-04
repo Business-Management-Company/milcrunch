@@ -157,24 +157,135 @@ function getMediaType(videoUrl?: string, imageUrl?: string): "video" | "image" |
   return "none";
 }
 
+/** Video event callback for tracking watch progress */
+type VideoEventType = "play" | "pause" | "timeupdate" | "ended";
+interface VideoEvent { type: VideoEventType; currentTime: number; duration: number; }
+
 function ProspectusMedia({
   videoUrl,
   imageUrl,
   dark,
   isSuperAdmin,
+  onVideoEvent,
 }: {
   videoUrl?: string;
   imageUrl?: string;
   dark: boolean;
   isSuperAdmin: boolean;
+  onVideoEvent?: (e: VideoEvent) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [coverDismissed, setCoverDismissed] = useState(false);
   const [mediaError, setMediaError] = useState(false);
 
+  // Stable ref so listeners don't reset on parent re-render
+  const onVideoEventRef = useRef(onVideoEvent);
+  useEffect(() => { onVideoEventRef.current = onVideoEvent; }, [onVideoEvent]);
+  const fire = (e: VideoEvent) => { onVideoEventRef.current?.(e); };
+
   // Reset cover and error state when URLs change
   useEffect(() => { setCoverDismissed(false); setMediaError(false); }, [videoUrl, imageUrl]);
+
+  // MP4 tracking: play, pause, timeupdate (throttled), ended
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    let lastReport = 0;
+    const onPlay = () => fire({ type: "play", currentTime: el.currentTime, duration: el.duration || 0 });
+    const onPause = () => fire({ type: "pause", currentTime: el.currentTime, duration: el.duration || 0 });
+    const onEnded = () => fire({ type: "ended", currentTime: el.duration || el.currentTime, duration: el.duration || 0 });
+    const onTimeUpdate = () => {
+      const now = Date.now();
+      if (now - lastReport >= 5000) {
+        lastReport = now;
+        fire({ type: "timeupdate", currentTime: el.currentTime, duration: el.duration || 0 });
+      }
+    };
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+    el.addEventListener("ended", onEnded);
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => { el.removeEventListener("play", onPlay); el.removeEventListener("pause", onPause); el.removeEventListener("ended", onEnded); el.removeEventListener("timeupdate", onTimeUpdate); };
+  }, [videoUrl]);
+
+  // YouTube / Vimeo postMessage tracking
+  useEffect(() => {
+    if (!videoUrl) return;
+    const parsed = parseVideoEmbed(videoUrl);
+    if (!parsed || parsed.type === "mp4") return;
+
+    // Track iframe play state for timeupdate polling
+    let playing = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let iframeDuration = 0;
+    let iframeCurrentTime = 0;
+
+    const startPoll = () => {
+      if (pollTimer) return;
+      pollTimer = setInterval(() => {
+        // For YouTube, request current time
+        const iframe = iframeRef.current;
+        if (iframe?.contentWindow) {
+          if (parsed.type === "youtube") {
+            iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getCurrentTime" }), "*");
+            iframe.contentWindow.postMessage(JSON.stringify({ event: "command", func: "getDuration" }), "*");
+          }
+          if (parsed.type === "vimeo") {
+            iframe.contentWindow.postMessage(JSON.stringify({ method: "getCurrentTime" }), "*");
+            iframe.contentWindow.postMessage(JSON.stringify({ method: "getDuration" }), "*");
+          }
+        }
+        fire({ type: "timeupdate", currentTime: iframeCurrentTime, duration: iframeDuration });
+      }, 5000);
+    };
+    const stopPoll = () => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } };
+
+    const handler = (e: MessageEvent) => {
+      try {
+        if (typeof e.data !== "string") return;
+        const msg = JSON.parse(e.data);
+        // YouTube
+        if (msg.event === "onStateChange") {
+          if (msg.info === 1) { playing = true; fire({ type: "play", currentTime: iframeCurrentTime, duration: iframeDuration }); startPoll(); }
+          if (msg.info === 2) { playing = false; stopPoll(); fire({ type: "pause", currentTime: iframeCurrentTime, duration: iframeDuration }); }
+          if (msg.info === 0) { playing = false; stopPoll(); fire({ type: "ended", currentTime: iframeDuration, duration: iframeDuration }); }
+        }
+        if (msg.event === "infoDelivery" && msg.info) {
+          if (typeof msg.info.currentTime === "number") iframeCurrentTime = msg.info.currentTime;
+          if (typeof msg.info.duration === "number") iframeDuration = msg.info.duration;
+        }
+        // Vimeo
+        if (msg.event === "play") { playing = true; fire({ type: "play", currentTime: iframeCurrentTime, duration: iframeDuration }); startPoll(); }
+        if (msg.event === "pause") { playing = false; stopPoll(); fire({ type: "pause", currentTime: iframeCurrentTime, duration: iframeDuration }); }
+        if (msg.event === "ended") { playing = false; stopPoll(); fire({ type: "ended", currentTime: iframeDuration, duration: iframeDuration }); }
+        if (msg.method === "getCurrentTime" && typeof msg.value === "number") iframeCurrentTime = msg.value;
+        if (msg.method === "getDuration" && typeof msg.value === "number") iframeDuration = msg.value;
+      } catch { /* Not JSON */ }
+    };
+    window.addEventListener("message", handler);
+
+    // Register for YouTube/Vimeo events when iframe loads
+    const iframe = iframeRef.current;
+    if (iframe) {
+      const onLoad = () => {
+        try {
+          if (parsed.type === "youtube") {
+            iframe.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*");
+          }
+          if (parsed.type === "vimeo") {
+            iframe.contentWindow?.postMessage(JSON.stringify({ method: "addEventListener", value: "play" }), "*");
+            iframe.contentWindow?.postMessage(JSON.stringify({ method: "addEventListener", value: "pause" }), "*");
+            iframe.contentWindow?.postMessage(JSON.stringify({ method: "addEventListener", value: "ended" }), "*");
+            iframe.contentWindow?.postMessage(JSON.stringify({ method: "addEventListener", value: "timeupdate" }), "*");
+          }
+        } catch { /* cross-origin */ }
+      };
+      iframe.addEventListener("load", onLoad);
+      return () => { window.removeEventListener("message", handler); iframe.removeEventListener("load", onLoad); stopPoll(); };
+    }
+    return () => { window.removeEventListener("message", handler); stopPoll(); };
+  }, [videoUrl]);
 
   // If media failed to load, hide gracefully
   if (mediaError) return null;
@@ -1763,11 +1874,12 @@ function AccessGate({ onAccess }: { onAccess: (email: string, logId: string) => 
 /* Tab: Overview                                                       */
 /* ------------------------------------------------------------------ */
 
-function OverviewTab({ dark, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint }: {
+function OverviewTab({ dark, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint, onVideoEvent }: {
   dark: boolean; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
   onScrollProgress?: (pct: number) => void; showScrollHint?: boolean;
+  onVideoEvent?: (e: VideoEvent) => void;
 }) {
-  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} onScrollProgress={onScrollProgress} showScrollHint={showScrollHint} />;
+  return <ContentTab dark={dark} tab="Overview" dbContent={dbContent} videoUrl={videoUrl} imageUrl={imageUrl} onScrollProgress={onScrollProgress} showScrollHint={showScrollHint} onVideoEvent={onVideoEvent} />;
 }
 
 /* Old tab components removed — replaced by ContentTab + TAB_CONTENT below */
@@ -2174,10 +2286,11 @@ const TAB_CONTENT: Record<string, TabContent> = {
   },
 };
 
-function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint }: {
+function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress, showScrollHint, onVideoEvent }: {
   dark: boolean; tab: string; dbContent?: TabContent; videoUrl?: string; imageUrl?: string;
   onScrollProgress?: (pct: number) => void;
   showScrollHint?: boolean;
+  onVideoEvent?: (e: VideoEvent) => void;
 }) {
   const [demoModal, setDemoModal] = useState<{ open: boolean; url: string }>({ open: false, url: "" });
   const [scrollProgressLocal, setScrollProgressLocal] = useState(0);
@@ -2271,7 +2384,7 @@ function ContentTab({ dark, tab, dbContent, videoUrl, imageUrl, onScrollProgress
       {/* Show prospectus_videos media (video or fallback image) below headline if no VIDEO block exists */}
       {!hasVideoBlock && (videoUrl || imageUrl) && (
         <div className="rounded-xl overflow-hidden max-w-3xl mx-auto">
-          <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} />
+          <ProspectusMedia videoUrl={videoUrl} imageUrl={imageUrl} dark={dark} isSuperAdmin={false} onVideoEvent={onVideoEvent} />
         </div>
       )}
 
@@ -2689,6 +2802,7 @@ export default function Prospectus() {
   const [accessLogId, setAccessLogId] = useState("");
   const sessionStartRef = useRef<number>(Date.now());
   const tabsViewedRef = useRef<{ tab: string; at: string }[]>([]);
+  const videoViewsRef = useRef<Record<string, { started: boolean; watch_time: number; duration: number; completed: boolean }>>({});
 
   // Per-tab completion tracking
   const [completedTabs, setCompletedTabs] = useState<Set<string>>(new Set());
@@ -2922,6 +3036,34 @@ export default function Prospectus() {
       .then(() => {});
   }, [activeTab, accessLogId]);
 
+  // Video watch tracking — handle events from ProspectusMedia
+  const videoSavePending = useRef(false);
+  const handleVideoEvent = useCallback((tab: string) => (e: VideoEvent) => {
+    const views = videoViewsRef.current;
+    if (!views[tab]) views[tab] = { started: false, watch_time: 0, duration: 0, completed: false };
+    const entry = views[tab];
+    if (e.type === "play") entry.started = true;
+    if (e.duration > 0) entry.duration = Math.round(e.duration);
+    if (e.type === "timeupdate" || e.type === "pause" || e.type === "ended") {
+      entry.watch_time = Math.max(entry.watch_time, Math.round(e.currentTime));
+    }
+    if (e.type === "ended") entry.completed = true;
+
+    // Save on play/pause/ended immediately; timeupdate is batched
+    if (!accessLogId) return;
+    if (e.type === "timeupdate") {
+      if (!videoSavePending.current) {
+        videoSavePending.current = true;
+        setTimeout(() => {
+          videoSavePending.current = false;
+          supabase.from("prospectus_access_log").update({ video_views: videoViewsRef.current }).eq("id", accessLogId).then(() => {});
+        }, 2000);
+      }
+    } else {
+      supabase.from("prospectus_access_log").update({ video_views: videoViewsRef.current }).eq("id", accessLogId).then(() => {});
+    }
+  }, [accessLogId]);
+
   // beforeunload — record session_end + total_time_seconds
   useEffect(() => {
     if (!accessLogId) return;
@@ -2931,6 +3073,7 @@ export default function Prospectus() {
         session_end: new Date().toISOString(),
         total_time_seconds: elapsed,
         tabs_viewed: tabsViewedRef.current,
+        video_views: videoViewsRef.current,
       });
       // Use fetch with keepalive for reliability on tab close
       // (sendBeacon can't include custom headers needed by Supabase)
@@ -3302,15 +3445,15 @@ export default function Prospectus() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-10 md:py-14">
-        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
-        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} />}
+        {activeTab === "Overview" && <OverviewTab dark={darkMode} dbContent={tabContent["Overview"]} videoUrl={videoUrls["Overview"]} imageUrl={imageUrls["Overview"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Overview")} />}
+        {activeTab === "Events & Attendee App" && <ContentTab dark={darkMode} tab="Events & Attendee App" dbContent={tabContent["Events & Attendee App"]} videoUrl={videoUrls["Events & Attendee App"]} imageUrl={imageUrls["Events & Attendee App"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Events & Attendee App")} />}
+        {activeTab === "Event Venues" && <ContentTab dark={darkMode} tab="Event Venues" dbContent={tabContent["Event Venues"]} videoUrl={videoUrls["Event Venues"]} imageUrl={imageUrls["Event Venues"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Event Venues")} />}
+        {activeTab === "Discovery" && <ContentTab dark={darkMode} tab="Discovery" dbContent={tabContent["Discovery"]} videoUrl={videoUrls["Discovery"]} imageUrl={imageUrls["Discovery"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Discovery")} />}
+        {activeTab === "Verification" && <ContentTab dark={darkMode} tab="Verification" dbContent={tabContent["Verification"]} videoUrl={videoUrls["Verification"]} imageUrl={imageUrls["Verification"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Verification")} />}
+        {activeTab === "365 Insights" && <ContentTab dark={darkMode} tab="365 Insights" dbContent={tabContent["365 Insights"]} videoUrl={videoUrls["365 Insights"]} imageUrl={imageUrls["365 Insights"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("365 Insights")} />}
+        {activeTab === "Social Media" && <ContentTab dark={darkMode} tab="Social Media" dbContent={tabContent["Social Media"]} videoUrl={videoUrls["Social Media"]} imageUrl={imageUrls["Social Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Social Media")} />}
+        {activeTab === "Streaming/Media" && <ContentTab dark={darkMode} tab="Streaming/Media" dbContent={tabContent["Streaming/Media"]} videoUrl={videoUrls["Streaming/Media"]} imageUrl={imageUrls["Streaming/Media"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Streaming/Media")} />}
+        {activeTab === "Partnership Model" && <ContentTab dark={darkMode} tab="Partnership Model" dbContent={tabContent["Partnership Model"]} videoUrl={videoUrls["Partnership Model"]} imageUrl={imageUrls["Partnership Model"]} onScrollProgress={handleScrollProgress} showScrollHint={showScrollHint} onVideoEvent={handleVideoEvent("Partnership Model")} />}
         {activeTab === "Financial Model" && (
           <div ref={financialRef}>
             <FinancialModelTab dark={darkMode} />

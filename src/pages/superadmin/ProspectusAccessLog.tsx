@@ -3,13 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Eye, Loader2, ChevronDown, ChevronRight, Clock, Mail, CheckCircle2,
   ArrowUp, ArrowDown, ChevronLeft, Users, BarChart3, Timer, Trophy,
-  AlertCircle, List, User,
+  AlertCircle, List, User, Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
 /* ------------------------------------------------------------------ */
+
+interface VideoView {
+  started: boolean;
+  watch_time: number;
+  duration: number;
+  completed: boolean;
+}
 
 interface LogRow {
   id: string;
@@ -19,6 +26,7 @@ interface LogRow {
   total_time_seconds: number | null;
   tabs_viewed: { tab: string; at: string }[];
   tabs_completed: { tab: string; at: string }[];
+  video_views: Record<string, VideoView>;
   created_at: string;
 }
 
@@ -60,6 +68,13 @@ function formatDuration(seconds: number | null): string {
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Format seconds as m:ss for video timestamps (always show even if 0:00) */
+function fmtVideoTime(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
@@ -177,6 +192,7 @@ export default function ProspectusAccessLog() {
           total_time_seconds: (r.total_time_seconds as number) ?? null,
           tabs_viewed: Array.isArray(r.tabs_viewed) ? r.tabs_viewed as { tab: string; at: string }[] : [],
           tabs_completed: Array.isArray(r.tabs_completed) ? r.tabs_completed as { tab: string; at: string }[] : [],
+          video_views: (r.video_views && typeof r.video_views === "object" && !Array.isArray(r.video_views)) ? r.video_views as Record<string, VideoView> : {},
           created_at: r.created_at as string,
         }))
       );
@@ -542,6 +558,7 @@ export default function ProspectusAccessLog() {
                                     {orderedTabs.map((tv, i) => {
                                       const isCompleted = completedSet.has(tv.tab);
                                       const time = tabTimes?.get(tv.tab) ?? null;
+                                      const vv = row.video_views[tv.tab];
                                       return (
                                         <div key={i} className="flex items-center gap-2 text-sm">
                                           <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-gray-200 text-gray-500 shrink-0">
@@ -558,6 +575,19 @@ export default function ProspectusAccessLog() {
                                           )}>
                                             {tv.tab}
                                           </span>
+                                          {/* Video watch indicator */}
+                                          {vv && (
+                                            <span className={cn(
+                                              "inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded tabular-nums",
+                                              vv.completed ? "bg-emerald-50 text-emerald-700" : vv.started ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-400"
+                                            )}>
+                                              <Play className="h-3 w-3" />
+                                              {vv.started
+                                                ? `${fmtVideoTime(vv.watch_time)} / ${fmtVideoTime(vv.duration)}`
+                                                : "Not watched"}
+                                              {vv.completed && <CheckCircle2 className="h-3 w-3" />}
+                                            </span>
+                                          )}
                                           {time != null && (
                                             <span className="text-xs text-gray-400 tabular-nums">
                                               {formatDuration(time)}
