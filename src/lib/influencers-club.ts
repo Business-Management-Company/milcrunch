@@ -378,7 +378,7 @@ export async function searchCreators(
 
   const body: Record<string, unknown> = {
     platform: platformValue,
-    paging: { limit: 25, page: options.page ?? 1 },
+    paging: { limit: 10, page: options.page ?? 1 },
     sort: { sort_by: options.sort_by ?? "relevancy", sort_order: "desc" as const },
     filters: {
       ai_search: aiSearch,
