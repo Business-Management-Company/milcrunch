@@ -1307,6 +1307,10 @@ export default function CreatorBioEditor() {
                         );
                       })
                     )}
+                    <Button variant="outline" size="sm" className="w-full mt-3 text-xs" onClick={() => navigate("/creator/socials")}>
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Go to My Socials
+                    </Button>
                   </div>
                 )}
 
