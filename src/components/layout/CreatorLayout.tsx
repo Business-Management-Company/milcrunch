@@ -40,14 +40,13 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
     label: "MAIN",
     items: [
       { icon: LayoutDashboard, label: "Dashboard", href: "/creator/dashboard" },
-      { icon: User, label: "My Profile", href: "/creator/profile" },
       { icon: Link2, label: "My Bio Page", href: "/creator/bio" },
-      { icon: Share2, label: "My Socials", href: "/creator/socials" },
     ],
   },
   {
     label: "CONTENT",
     items: [
+      { icon: Share2, label: "My Socials", href: "/creator/socials" },
       { icon: PenSquare, label: "Create Post", href: "/creator/post/new" },
       { icon: Calendar, label: "Scheduled Posts", href: "/creator/posts" },
       { icon: BarChart3, label: "Content Analytics", href: "/creator/analytics" },
@@ -71,6 +70,7 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "SETTINGS",
     items: [
+      { icon: User, label: "My Profile", href: "/creator/profile" },
       { icon: Settings, label: "Settings", href: "/creator/settings" },
       { icon: Palette, label: "Customize", href: "/creator/customize" },
       { icon: HelpCircle, label: "Help", href: "/creator/help" },
