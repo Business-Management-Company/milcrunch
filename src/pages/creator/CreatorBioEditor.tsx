@@ -577,17 +577,41 @@ export default function CreatorBioEditor() {
               </div>
             </div>
 
-            {/* Phone frame */}
-            <div className={`${deviceWidth[previewDevice]} transition-all duration-300`}>
-              <div className="bg-gray-900 rounded-[2.5rem] p-3 shadow-2xl">
-                {/* Notch */}
-                <div className="flex justify-center mb-1">
-                  <div className="w-24 h-5 bg-black rounded-full" />
+            {/* Phone frame — realistic iPhone mockup */}
+            <div className={`${deviceWidth[previewDevice]} transition-all duration-300 relative`}>
+              {/* Side buttons — left: silent switch + volume */}
+              <div className="absolute -left-[3px] top-[80px] w-[3px] h-[28px] bg-[#2a2a2a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[120px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[170px] w-[3px] h-[44px] bg-[#2a2a2a] rounded-l-sm" />
+              {/* Side button — right: power */}
+              <div className="absolute -right-[3px] top-[130px] w-[3px] h-[64px] bg-[#2a2a2a] rounded-r-sm" />
+
+              {/* Bezel */}
+              <div
+                className="rounded-[40px] p-[10px] relative"
+                style={{
+                  background: "linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 50%, #1a1a1a 100%)",
+                  boxShadow:
+                    "0 25px 60px -12px rgba(0,0,0,0.4), 0 12px 28px -8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.3)",
+                }}
+              >
+                {/* Dynamic Island */}
+                <div className="absolute top-[18px] left-1/2 -translate-x-1/2 z-10">
+                  <div
+                    className="w-[90px] h-[24px] bg-black rounded-full"
+                    style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.04)" }}
+                  />
                 </div>
+
                 {/* Screen */}
-                <div className="bg-white rounded-[2rem] overflow-hidden min-h-[500px] max-h-[600px] overflow-y-auto">
+                <div
+                  className="rounded-[30px] overflow-hidden min-h-[500px] max-h-[600px] overflow-y-auto relative bg-white"
+                  style={{
+                    boxShadow: "inset 0 0 8px rgba(0,0,0,0.08), inset 0 1px 3px rgba(0,0,0,0.06)",
+                  }}
+                >
                   {/* Profile header inside phone */}
-                  <div className="bg-gradient-to-b from-gray-100 to-white p-5 flex flex-col items-center">
+                  <div className="bg-gradient-to-b from-gray-100 to-white p-5 pt-10 flex flex-col items-center">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow" />
                     ) : (
@@ -634,6 +658,7 @@ export default function CreatorBioEditor() {
                     )}
                   </div>
                 </div>
+
                 {/* Home indicator */}
                 <div className="flex justify-center mt-2">
                   <div className="w-28 h-1 bg-gray-600 rounded-full" />
