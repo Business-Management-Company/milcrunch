@@ -131,146 +131,102 @@ const CreatorSocials = () => {
 
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [profileReady, setProfileReady] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = useState(false);
   const [disconnectAccount, setDisconnectAccount] = useState<ConnectedAccountRow | null>(null);
-  const initDone = useRef<string | null>(null);
+  const initDone = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /* ── Load accounts from creator_social_connections first ── */
-  const loadAccounts = useCallback(async () => {
+  /** Helper: fetch rows from creator_social_connections and set state */
+  const refreshAccountsFromDB = useCallback(async () => {
     if (!userId) return;
-    const { data } = await supabase
+    console.log("[CreatorSocials] refreshAccountsFromDB for", userId);
+    const { data, error } = await supabase
       .from("creator_social_connections")
       .select("*")
       .eq("user_id", userId)
       .order("platform");
+    console.log("[CreatorSocials] DB rows:", data?.length ?? 0, "error:", error?.message ?? "none");
     if (data && data.length > 0) {
-      setAccounts(
-        data.map((r: any) => ({
-          id: r.id,
-          user_id: r.user_id,
-          platform: r.platform,
-          platform_user_id: r.upload_post_account_id ?? null,
-          platform_username: r.account_name ?? null,
-          profile_image_url: r.account_avatar ?? null,
-          followers_count: null,
-          raw_data: null,
-          created_at: r.connected_at,
-          updated_at: r.connected_at,
-        }))
-      );
-      return;
+      const mapped = data.map((r: any) => ({
+        id: r.id,
+        user_id: r.user_id,
+        platform: r.platform,
+        platform_user_id: r.upload_post_account_id ?? null,
+        platform_username: r.account_name ?? null,
+        profile_image_url: r.account_avatar ?? null,
+        followers_count: null,
+        raw_data: null,
+        created_at: r.connected_at,
+        updated_at: r.connected_at,
+      }));
+      console.log("[CreatorSocials] Setting accounts state:", mapped.length, "accounts");
+      setAccounts(mapped);
     }
-    const list = await getConnectedAccounts(userId);
-    if (list.length > 0) setAccounts(list);
   }, [userId]);
 
-  /* ── Ensure UploadPost profile ── */
-  const ensureProfile = useCallback(async () => {
-    if (!userId) return;
-    const ensured = await ensureUploadPostProfile(userId);
-    if (!ensured.ok) {
-      toast.error(ensured.error ?? "Could not create UploadPost profile");
-      return;
-    }
-    setProfileReady(true);
-  }, [userId]);
-
-  /* ── Persist to creator_social_connections ── */
-  const persistConnections = useCallback(
-    async (rows: ConnectedAccountRow[]) => {
-      if (!userId || rows.length === 0) return;
-      for (const r of rows) {
-        await supabase.from("creator_social_connections").upsert(
-          {
-            user_id: userId,
-            platform: r.platform,
-            account_name: r.platform_username ?? null,
-            account_avatar: r.profile_image_url ?? null,
-            upload_post_account_id: r.platform_user_id ?? null,
-            connected_at: r.created_at ?? new Date().toISOString(),
-          },
-          { onConflict: "user_id,platform" }
-        );
-      }
-    },
-    [userId]
-  );
-
-  /* ── Sync from UploadPost API ── */
+  /** Sync from UploadPost API → upsert to Supabase → refresh state */
   const syncAccounts = useCallback(async () => {
     if (!userId) return;
     setSyncing(true);
     try {
+      console.log("[CreatorSocials] syncAccounts starting...");
+      // This calls the proxy, parses social_accounts, upserts to Supabase
       const synced = await syncConnectedAccountsFromUploadPost(userId);
-      await persistConnections(synced).catch(() => {});
-      await syncDirectoryMemberStats(userId).catch(() => {});
-      // Re-fetch from creator_social_connections as source of truth
-      const { data: csc } = await supabase
-        .from("creator_social_connections")
-        .select("*")
-        .eq("user_id", userId)
-        .order("platform");
-      if (csc && csc.length > 0) {
-        setAccounts(
-          csc.map((r: any) => ({
-            id: r.id,
-            user_id: r.user_id,
-            platform: r.platform,
-            platform_user_id: r.upload_post_account_id ?? null,
-            platform_username: r.account_name ?? null,
-            profile_image_url: r.account_avatar ?? null,
-            followers_count: null,
-            raw_data: null,
-            created_at: r.connected_at,
-            updated_at: r.connected_at,
-          }))
-        );
-      } else {
-        setAccounts(synced);
-      }
+      console.log("[CreatorSocials] syncConnectedAccountsFromUploadPost returned:", synced.length, "accounts");
+
+      // If sync returned accounts, use those directly (already from Supabase re-fetch)
       if (synced.length > 0) {
+        console.log("[CreatorSocials] Setting state from sync result:", JSON.stringify(synced.map(a => a.platform)));
+        setAccounts(synced);
         toast.success(`Synced ${synced.length} account${synced.length !== 1 ? "s" : ""}`);
+      } else {
+        // Sync returned nothing — try reading Supabase directly
+        console.log("[CreatorSocials] Sync returned 0 — refreshing from DB...");
+        await refreshAccountsFromDB();
       }
-    } catch {
+
+      // Background: sync directory stats
+      syncDirectoryMemberStats(userId).catch(() => {});
+    } catch (err) {
+      console.error("[CreatorSocials] syncAccounts error:", err);
       toast.error("Sync failed");
     } finally {
       setSyncing(false);
     }
-  }, [userId, persistConnections]);
+  }, [userId, refreshAccountsFromDB]);
 
-  /* ── Init on mount — also sync from UploadPost on every load ── */
+  /** On mount: sync immediately and automatically */
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
-    if (initDone.current === userId) return;
-    initDone.current = userId;
-    setLoading(true);
-    (async () => {
-      await ensureProfile();
-      // Load local accounts first for instant display
-      await loadAccounts();
-      // Then sync from UploadPost API to catch any new connections
-      await syncAccounts().catch(() => {});
-    })().finally(() => setLoading(false));
-  }, [userId, ensureProfile, loadAccounts, syncAccounts]);
+    if (initDone.current) return;
+    initDone.current = true;
 
-  /* ── Auto-sync on ?connected=true return from OAuth ── */
+    console.log("[CreatorSocials] Mount — starting auto-sync for", userId);
+    setLoading(true);
+
+    // Ensure profile exists (fire-and-forget, don't block sync)
+    ensureUploadPostProfile(userId).catch(() => {});
+
+    // Sync immediately
+    syncAccounts().finally(() => setLoading(false));
+  }, [userId, syncAccounts]);
+
+  /** Auto-sync on ?connected=true return from OAuth */
   useEffect(() => {
-    if (!userId || !profileReady) return;
+    if (!userId) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected") === "true") {
       window.history.replaceState({}, "", window.location.pathname);
       syncAccounts();
     }
-  }, [userId, profileReady, syncAccounts]);
+  }, [userId, syncAccounts]);
 
   /* ── Open popup for a specific platform ── */
   const handleConnect = useCallback((provider: string) => {
-    if (!userId || !profileReady) {
-      toast.error("Profile is still loading. Please wait.");
+    if (!userId) {
+      toast.error("Please sign in first.");
       return;
     }
     const popup = window.open(
@@ -317,7 +273,7 @@ const CreatorSocials = () => {
       popup.close();
       toast.error("Could not generate connect link");
     });
-  }, [userId, profileReady, syncAccounts]);
+  }, [userId, syncAccounts]);
 
   /* ── Disconnect with confirmation ── */
   const confirmDisconnect = async () => {

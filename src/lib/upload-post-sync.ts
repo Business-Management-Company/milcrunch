@@ -27,23 +27,32 @@ export interface ConnectedAccountRow {
  */
 function parseSocialAccounts(profile: any): ConnectedAccount[] {
   const sa = profile?.social_accounts;
-  if (!sa || typeof sa !== "object") return [];
+  console.log("[parseSocialAccounts] social_accounts type:", typeof sa, "value:", JSON.stringify(sa, null, 2));
+  if (!sa || typeof sa !== "object") {
+    console.log("[parseSocialAccounts] No social_accounts dict found on profile");
+    return [];
+  }
 
   const accounts: ConnectedAccount[] = [];
   for (const [platform, info] of Object.entries(sa)) {
+    console.log(`[parseSocialAccounts] Platform "${platform}" →`, typeof info, JSON.stringify(info));
     // Empty string = not connected, skip
-    if (!info || info === "") continue;
+    if (!info || info === "") {
+      console.log(`[parseSocialAccounts] Skipping "${platform}" (empty/falsy)`);
+      continue;
+    }
     const acc = info as Record<string, any>;
-    // Skip if reauth_required and no handle (disconnected state)
-    accounts.push({
+    const parsed = {
       platform: platform.toLowerCase(),
       platform_username: acc.handle ?? acc.username ?? acc.display_name ?? null,
       profile_image_url: acc.social_images ?? acc.avatar ?? acc.profile_image_url ?? null,
       followers_count: acc.followers_count ?? acc.follower_count ?? null,
-      // preserve all raw fields
       ...acc,
-    });
+    };
+    console.log(`[parseSocialAccounts] Parsed "${platform}":`, JSON.stringify({ platform: parsed.platform, username: parsed.platform_username, avatar: parsed.profile_image_url }));
+    accounts.push(parsed);
   }
+  console.log("[parseSocialAccounts] Total parsed:", accounts.length);
   return accounts;
 }
 
