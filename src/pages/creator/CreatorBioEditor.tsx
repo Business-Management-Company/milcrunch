@@ -359,11 +359,11 @@ export default function CreatorBioEditor() {
 
   const visibleSections = sections.filter((s) => s.visible).sort((a, b) => a.order - b.order);
 
-  /* ── Phone frame width per device ── */
+  /* ── Phone frame width per device (iPhone 17: 19.5:9 aspect, ~310px frame) ── */
   const deviceWidth: Record<PreviewDevice, string> = {
-    phone: "w-[380px]",
-    tablet: "w-[480px]",
-    desktop: "w-[560px]",
+    phone: "w-[310px]",
+    tablet: "w-[440px]",
+    desktop: "w-[540px]",
   };
 
   /* ── Preview avatar shape from imageStyle ── */
@@ -459,54 +459,7 @@ export default function CreatorBioEditor() {
               <div className="space-y-5">
                 <h2 className="text-sm font-semibold text-foreground">Profile</h2>
 
-                {/* Display Name */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Display Name</label>
-                  <Input
-                    value={profileName}
-                    onChange={(e) => {
-                      setProfileName(e.target.value);
-                      debouncedProfileSave({ full_name: e.target.value });
-                    }}
-                    placeholder="Your name"
-                    className="h-9 text-sm"
-                  />
-                </div>
-
-                {/* Username */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Username</label>
-                  <Input
-                    value={profileHandle}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase();
-                      setProfileHandle(v);
-                      debouncedProfileSave({ handle: v });
-                    }}
-                    placeholder="your-username"
-                    className="h-9 text-sm"
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    milcrunch.com/c/{profileHandle || "your-username"}
-                  </p>
-                </div>
-
-                {/* Bio */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Bio</label>
-                  <Textarea
-                    value={profileBio}
-                    onChange={(e) => {
-                      setProfileBio(e.target.value);
-                      debouncedProfileSave({ bio: e.target.value });
-                    }}
-                    placeholder="Tell your audience about yourself..."
-                    rows={4}
-                    className="text-sm resize-none"
-                  />
-                </div>
-
-                {/* Profile Image Upload */}
+                {/* 1. Profile Image Upload */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Profile Image</label>
                   <input
@@ -539,7 +492,7 @@ export default function CreatorBioEditor() {
                   </button>
                 </div>
 
-                {/* Image Style */}
+                {/* 2. Image Style */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Image Style</label>
                   <div className="flex gap-1 rounded-full border border-border p-0.5">
@@ -562,7 +515,7 @@ export default function CreatorBioEditor() {
                   </div>
                 </div>
 
-                {/* Hero Image Upload */}
+                {/* 3. Hero / Cover Image Upload */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Hero / Cover Image</label>
                   <input
@@ -614,7 +567,7 @@ export default function CreatorBioEditor() {
                   )}
                 </div>
 
-                {/* Hero Image Format */}
+                {/* 4. Hero Image Format */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">Hero Format</label>
                   <p className="text-[10px] text-muted-foreground/80">How the hero image displays on your public bio page.</p>
@@ -636,6 +589,53 @@ export default function CreatorBioEditor() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* 5. Display Name */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Display Name</label>
+                  <Input
+                    value={profileName}
+                    onChange={(e) => {
+                      setProfileName(e.target.value);
+                      debouncedProfileSave({ full_name: e.target.value });
+                    }}
+                    placeholder="Your name"
+                    className="h-9 text-sm"
+                  />
+                </div>
+
+                {/* 6. Username / Handle */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Username</label>
+                  <Input
+                    value={profileHandle}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase();
+                      setProfileHandle(v);
+                      debouncedProfileSave({ handle: v });
+                    }}
+                    placeholder="your-username"
+                    className="h-9 text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    milcrunch.com/c/{profileHandle || "your-username"}
+                  </p>
+                </div>
+
+                {/* 7. Bio */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Bio</label>
+                  <Textarea
+                    value={profileBio}
+                    onChange={(e) => {
+                      setProfileBio(e.target.value);
+                      debouncedProfileSave({ bio: e.target.value });
+                    }}
+                    placeholder="Tell your audience about yourself..."
+                    rows={4}
+                    className="text-sm resize-none"
+                  />
                 </div>
 
                 {/* Social Links */}
@@ -940,33 +940,32 @@ export default function CreatorBioEditor() {
               </div>
             </div>
 
-            {/* Phone frame — larger iPhone mockup */}
+            {/* Phone frame — iPhone 17 mockup (19.5:9, 6.3") */}
             <div className={`${deviceWidth[previewDevice]} transition-all duration-300 relative`}>
-              {/* Side buttons */}
-              <div className="absolute -left-[3px] top-[100px] w-[3px] h-[32px] bg-[#2a2a2a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[148px] w-[3px] h-[52px] bg-[#2a2a2a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[210px] w-[3px] h-[52px] bg-[#2a2a2a] rounded-l-sm" />
-              <div className="absolute -right-[3px] top-[160px] w-[3px] h-[76px] bg-[#2a2a2a] rounded-r-sm" />
+              {/* Side buttons (iPhone 17 — action button left, volume left, power right) */}
+              <div className="absolute -left-[3px] top-[90px] w-[3px] h-[28px] bg-[#2a2a2a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[132px] w-[3px] h-[48px] bg-[#2a2a2a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[190px] w-[3px] h-[48px] bg-[#2a2a2a] rounded-l-sm" />
+              <div className="absolute -right-[3px] top-[148px] w-[3px] h-[68px] bg-[#2a2a2a] rounded-r-sm" />
 
-              {/* Bezel */}
+              {/* Bezel — iPhone 17 aluminum frame */}
               <div
-                className="rounded-[44px] p-[12px] relative"
+                className="rounded-[48px] p-[10px] relative"
                 style={{
-                  background: "linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 50%, #1a1a1a 100%)",
-                  boxShadow: "0 30px 70px -10px rgba(0,0,0,0.45), 0 15px 35px -5px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4)",
+                  background: "linear-gradient(145deg, #1c1c1c 0%, #0e0e0e 50%, #1c1c1c 100%)",
+                  boxShadow: "0 25px 60px -10px rgba(0,0,0,0.5), 0 12px 30px -5px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.4)",
                 }}
               >
-                {/* Dynamic Island */}
-                <div className="absolute top-[20px] left-1/2 -translate-x-1/2 z-10">
-                  <div className="w-[100px] h-[25px] rounded-full" style={{ backgroundColor: "#000000", boxShadow: "0 0 0 1px rgba(255,255,255,0.05), inset 0 0 2px rgba(0,0,0,1)" }} />
+                {/* Dynamic Island (iPhone 17) */}
+                <div className="absolute top-[18px] left-1/2 -translate-x-1/2 z-10">
+                  <div className="w-[90px] h-[24px] rounded-full" style={{ backgroundColor: "#000000", boxShadow: "0 0 0 1px rgba(255,255,255,0.05), inset 0 0 2px rgba(0,0,0,1)" }} />
                 </div>
 
-                {/* Screen */}
+                {/* Screen — 19.5:9 aspect ratio */}
                 <div
-                  className="rounded-[32px] overflow-hidden overflow-y-auto relative"
+                  className="rounded-[38px] overflow-hidden overflow-y-auto relative"
                   style={{
-                    minHeight: "660px",
-                    maxHeight: "720px",
+                    height: "628px",
                     backgroundColor: phoneBg,
                     backgroundImage: theme.bgMode === "gradient" ? `linear-gradient(180deg, ${theme.themeColor}22 0%, ${phoneBg} 60%)` : undefined,
                     boxShadow: "inset 0 0 12px rgba(0,0,0,0.1), inset 0 2px 4px rgba(0,0,0,0.08)",
