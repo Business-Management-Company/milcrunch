@@ -11,11 +11,11 @@ import {
   syncDirectoryMemberStats,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
-import { Loader2, RefreshCw, Check, Calendar, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
+import { Loader2, RefreshCw, X, Calendar, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
-/*  SVG icons for platforms without Lucide equivalents                  */
+/*  SVG icons                                                          */
 /* ------------------------------------------------------------------ */
 
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -67,23 +67,23 @@ interface Platform {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   bg: string;
+  connectedBg: string;
 }
 
 const PLATFORMS: Platform[] = [
-  { key: "tiktok",           label: "TikTok",           icon: TikTokIcon,    color: "text-gray-900",    bg: "bg-gray-100"  },
-  { key: "instagram",        label: "Instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50"   },
-  { key: "linkedin",         label: "LinkedIn",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50"   },
-  { key: "youtube",          label: "YouTube",          icon: Youtube,       color: "text-red-600",     bg: "bg-red-50"    },
-  { key: "facebook",         label: "Facebook",         icon: Facebook,      color: "text-blue-600",    bg: "bg-blue-50"   },
-  { key: "x",                label: "X (Twitter)",      icon: Twitter,       color: "text-gray-900",    bg: "bg-gray-100"  },
-  { key: "threads",          label: "Threads",          icon: ThreadsIcon,   color: "text-gray-900",    bg: "bg-gray-100"  },
-  { key: "pinterest",        label: "Pinterest",        icon: PinterestIcon, color: "text-red-600",     bg: "bg-red-50"    },
-  { key: "reddit",           label: "Reddit",           icon: RedditIcon,    color: "text-orange-500",  bg: "bg-orange-50" },
-  { key: "bluesky",          label: "Bluesky",          icon: BlueskyIcon,   color: "text-blue-500",    bg: "bg-blue-50"   },
-  { key: "google_business",  label: "Google Business",  icon: GoogleIcon,    color: "",                 bg: "bg-gray-50"   },
+  { key: "tiktok",           label: "TikTok",           icon: TikTokIcon,    color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
+  { key: "instagram",        label: "Instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50",    connectedBg: "bg-pink-600"    },
+  { key: "linkedin",         label: "LinkedIn",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50",    connectedBg: "bg-blue-700"    },
+  { key: "youtube",          label: "YouTube",          icon: Youtube,       color: "text-red-600",     bg: "bg-red-50",     connectedBg: "bg-red-600"     },
+  { key: "facebook",         label: "Facebook",         icon: Facebook,      color: "text-blue-600",    bg: "bg-blue-50",    connectedBg: "bg-blue-600"    },
+  { key: "x",                label: "X (Twitter)",      icon: Twitter,       color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
+  { key: "threads",          label: "Threads",          icon: ThreadsIcon,   color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
+  { key: "pinterest",        label: "Pinterest",        icon: PinterestIcon, color: "text-red-600",     bg: "bg-red-50",     connectedBg: "bg-red-600"     },
+  { key: "reddit",           label: "Reddit",           icon: RedditIcon,    color: "text-orange-500",  bg: "bg-orange-50",  connectedBg: "bg-orange-500"  },
+  { key: "bluesky",          label: "Bluesky",          icon: BlueskyIcon,   color: "text-blue-500",    bg: "bg-blue-50",    connectedBg: "bg-blue-500"    },
+  { key: "google_business",  label: "Google Business",  icon: GoogleIcon,    color: "",                 bg: "bg-gray-50",    connectedBg: "bg-blue-600"    },
 ];
 
-/* Match synced platform name to our key (handles "twitter"/"x" mismatch) */
 function accountForPlatform(accounts: ConnectedAccountRow[], key: string): ConnectedAccountRow | undefined {
   const match = accounts.find((a) => a.platform === key);
   if (match) return match;
@@ -92,7 +92,6 @@ function accountForPlatform(accounts: ConnectedAccountRow[], key: string): Conne
   return undefined;
 }
 
-/* Redirect URL that UploadPost sends the user back to after OAuth */
 const REDIRECT_URL =
   typeof window !== "undefined"
     ? `${window.location.origin}/creator/socials?connected=true`
@@ -113,6 +112,12 @@ const CreatorSocials = () => {
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState<"connect" | "calendar">("connect");
   const initDone = useRef<string | null>(null);
+
+  // Iframe modal state
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [iframeLabel, setIframeLabel] = useState("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ---- Load accounts from Supabase ---- */
   const loadAccounts = useCallback(async () => {
@@ -152,7 +157,7 @@ const CreatorSocials = () => {
     }
   }, [userId]);
 
-  /* ---- Init on mount: ensure profile, load accounts ---- */
+  /* ---- Init on mount ---- */
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
     if (initDone.current === userId) return;
@@ -169,14 +174,23 @@ const CreatorSocials = () => {
     if (!userId || !profileReady) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("connected") === "true") {
-      // Clean the URL so it doesn't re-trigger
       window.history.replaceState({}, "", window.location.pathname);
       syncAccounts();
     }
   }, [userId, profileReady, syncAccounts]);
 
-  /* ---- Open UploadPost OAuth popup, sync on close ---- */
-  const handleConnect = useCallback(async () => {
+  /* ---- Close iframe modal + cleanup ---- */
+  const closeModal = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    setIframeUrl(null);
+    setIframeLabel("");
+  }, []);
+
+  /* ---- Open iframe modal for connect ---- */
+  const handleConnect = useCallback(async (platformLabel: string) => {
     if (!userId || !profileReady) {
       toast.error("Profile is still loading. Please wait.");
       return;
@@ -188,40 +202,29 @@ const CreatorSocials = () => {
         toast.error(res.error ?? "Could not generate connect link");
         return;
       }
-      const popup = window.open(
-        res.access_url,
-        "connect_social",
-        "width=600,height=700,scrollbars=yes"
-      );
-      if (!popup) {
-        toast.error("Popup blocked. Please allow popups for this site.");
-        return;
-      }
-      // Poll: detect redirect back or popup close
-      const timer = setInterval(async () => {
-        // Check if popup navigated to our redirect URL
+      setIframeLabel(platformLabel);
+      setIframeUrl(res.access_url);
+
+      // Poll iframe location for redirect detection
+      pollRef.current = setInterval(async () => {
         try {
-          if (popup.location?.href?.includes("/creator/socials?connected=true")) {
-            clearInterval(timer);
-            popup.close();
+          const href = iframeRef.current?.contentWindow?.location?.href;
+          if (href && href.includes("/creator/socials?connected=true")) {
+            closeModal();
             await syncAccounts();
-            return;
           }
         } catch {
           // Cross-origin — expected while on UploadPost domain
-        }
-        if (popup.closed) {
-          clearInterval(timer);
-          await syncAccounts();
         }
       }, 500);
     } finally {
       setConnecting(false);
     }
-  }, [userId, profileReady, syncAccounts]);
+  }, [userId, profileReady, syncAccounts, closeModal]);
 
-  /* ---- Disconnect: remove from Supabase ---- */
-  const handleDisconnect = async (account: ConnectedAccountRow) => {
+  /* ---- Disconnect ---- */
+  const handleDisconnect = async (e: React.MouseEvent, account: ConnectedAccountRow) => {
+    e.stopPropagation();
     const { error } = await (supabase as any)
       .from("connected_accounts")
       .delete()
@@ -234,6 +237,13 @@ const CreatorSocials = () => {
       await loadAccounts();
     }
   };
+
+  /* Cleanup polling on unmount */
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   /* ---- Not signed in ---- */
   if (!userId) {
@@ -304,7 +314,6 @@ const CreatorSocials = () => {
           Loading…
         </div>
       ) : activeTab === "calendar" ? (
-        /* ---- Calendar tab placeholder ---- */
         <div className="text-center py-16">
           <Calendar className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
           <p className="text-muted-foreground">Content calendar coming soon.</p>
@@ -316,68 +325,102 @@ const CreatorSocials = () => {
             const Icon = p.icon;
             const connected = accountForPlatform(accounts, p.key);
             const isConnected = !!connected;
+            const avatar = connected?.profile_image_url;
+            const displayName = connected?.platform_username;
+
+            if (isConnected) {
+              return (
+                <div
+                  key={p.key}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3.5 ${p.connectedBg} text-white`}
+                >
+                  {/* Avatar or platform icon */}
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt=""
+                      className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white/30"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+
+                  {/* Name + platform */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">
+                      {displayName ? `@${displayName}` : p.label}
+                    </p>
+                    <p className="text-xs text-white/70">{p.label} Connected</p>
+                  </div>
+
+                  {/* Disconnect X */}
+                  <button
+                    onClick={(e) => handleDisconnect(e, connected)}
+                    className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center shrink-0 transition-colors"
+                    title={`Disconnect ${p.label}`}
+                  >
+                    <X className="w-3.5 h-3.5 text-white" />
+                  </button>
+                </div>
+              );
+            }
 
             return (
               <button
                 key={p.key}
-                onClick={() => {
-                  if (isConnected) return;
-                  handleConnect();
-                }}
-                disabled={connecting && !isConnected}
-                className={`relative flex items-center gap-3 border rounded-xl px-4 py-3.5 text-left transition-colors ${
-                  isConnected
-                    ? "border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20"
-                    : "border-border hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 cursor-pointer"
-                }`}
+                onClick={() => handleConnect(p.label)}
+                disabled={connecting}
+                className="flex items-center gap-3 border border-border rounded-xl px-4 py-3.5 text-left transition-colors hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 cursor-pointer"
               >
-                {/* Platform icon */}
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${p.bg} ${p.color}`}>
                   <Icon className="w-5 h-5" />
                 </div>
-
-                {/* Label */}
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-semibold text-foreground">
-                    {isConnected ? `${p.label} Connected` : `Connect ${p.label}`}
-                  </span>
-                  {connected?.platform_username && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      @{connected.platform_username}
-                    </p>
-                  )}
-                </div>
-
-                {/* Connected badge */}
-                {isConnected && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white">
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDisconnect(connected);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") { e.stopPropagation(); handleDisconnect(connected); }
-                      }}
-                      className="text-xs text-red-500 hover:text-red-400 transition-colors"
-                    >
-                      Disconnect
-                    </span>
-                  </div>
-                )}
-
-                {/* Connecting spinner */}
-                {!isConnected && connecting && (
+                <span className="text-sm font-semibold text-foreground flex-1">
+                  Connect {p.label}
+                </span>
+                {connecting && (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
                 )}
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* ---- Iframe Modal ---- */}
+      {iframeUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">
+                Connect {iframeLabel}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            {/* Iframe body */}
+            <iframe
+              ref={iframeRef}
+              src={iframeUrl}
+              className="w-full border-0"
+              style={{ minHeight: "500px" }}
+              title={`Connect ${iframeLabel}`}
+            />
+          </div>
         </div>
       )}
     </CreatorLayout>
