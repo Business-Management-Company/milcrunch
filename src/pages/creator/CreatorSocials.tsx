@@ -118,13 +118,7 @@ const CreatorSocials = () => {
   /* ---- Load accounts from Supabase ---- */
   const loadAccounts = useCallback(async () => {
     if (!userId) return;
-    // Try Upload-Post synced accounts first
-    const list = await getConnectedAccounts(userId);
-    if (list.length > 0) {
-      setAccounts(list);
-      return;
-    }
-    // Fallback: load from creator_social_connections
+    // Try creator_social_connections FIRST (persisted on connect)
     const { data } = await supabase
       .from("creator_social_connections")
       .select("*")
@@ -145,6 +139,12 @@ const CreatorSocials = () => {
           updated_at: r.connected_at,
         }))
       );
+      return;
+    }
+    // Fallback: try Upload-Post synced connected_accounts table
+    const list = await getConnectedAccounts(userId);
+    if (list.length > 0) {
+      setAccounts(list);
     }
   }, [userId]);
 
