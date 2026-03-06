@@ -45,7 +45,7 @@
     {"source": "/api/ic-locations", "destination": "/api/ic-locations"},
     {"source": "/api/resend-verify-domain", "destination": "/api/resend-verify-domain"},
     {"source": "/api/resend/:path*", "destination": "https://api.resend.com/:path*"},
-    {"source": "/api/uploadpost/:path*", "destination": "https://api.upload-post.com/:path*"},
+    {"source": "/api/uploadpost-proxy", "destination": "/api/uploadpost-proxy"},
     {"source": "/((?!api/).*)", "destination": "/index.html"}
   ]
 }
