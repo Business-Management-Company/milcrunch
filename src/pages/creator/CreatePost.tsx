@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-post-sync";
-import { uploadText, uploadVideo, uploadPhotos, type UploadPostPlatform } from "@/services/upload-post";
+import { createUploadPost, uploadText, uploadVideo, uploadPhotos, type UploadPostPlatform } from "@/services/upload-post";
 import {
   Loader2, Send, Calendar, Check, Link2,
   Instagram, Youtube, Facebook, Linkedin, Twitter,
@@ -156,30 +156,52 @@ export default function CreatePost() {
       toast.error("Enter post content.");
       return;
     }
-    const platformList = Array.from(selected) as UploadPostPlatform[];
-    if (platformList.length === 0) {
+    const selectedPlatforms = Array.from(selected);
+    if (selectedPlatforms.length === 0) {
       toast.error("Select at least one platform.");
       return;
     }
     setPosting(true);
     try {
+      // Gather upload_post_account_ids for selected platforms
+      const accountIds = accounts
+        .filter((a) => selectedPlatforms.includes(a.platform))
+        .map((a) => a.platform_user_id)
+        .filter((id): id is string => !!id);
+
       const scheduled = scheduledDate ? new Date(scheduledDate).toISOString() : undefined;
-      let result;
-      if (mediaType === "video" && mediaUrl.trim()) {
-        result = await uploadVideo({ title: title.trim(), user: user.id, platform: platformList, video: mediaUrl.trim(), scheduled_date: scheduled, async_upload: true });
-      } else if (mediaType === "photo" && mediaUrl.trim()) {
-        result = await uploadPhotos({ title: title.trim(), user: user.id, platform: platformList, photos: [mediaUrl.trim()], scheduled_date: scheduled, async_upload: true });
+
+      // Use unified posts endpoint when we have account_ids
+      if (accountIds.length > 0) {
+        const result = await createUploadPost({
+          text: title.trim(),
+          account_ids: accountIds,
+          media_url: (mediaType !== "none" && mediaUrl.trim()) ? mediaUrl.trim() : undefined,
+          scheduled_at: scheduled,
+        });
+        if (result.success) {
+          toast.success(scheduled ? "Post scheduled!" : "Post published!");
+          setTitle(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
+        } else {
+          toast.error(result.error ?? "Post failed.");
+        }
       } else {
-        result = await uploadText({ title: title.trim(), user: user.id, platform: platformList, scheduled_date: scheduled });
-      }
-      if (result.success) {
-        toast.success(scheduled ? "Post scheduled!" : "Post published!");
-        setTitle("");
-        setMediaUrl("");
-        setScheduledDate("");
-        setSelected(new Set());
-      } else {
-        toast.error(result.error ?? "Post failed.");
+        // Fallback to legacy per-type endpoints
+        const platformList = selectedPlatforms as UploadPostPlatform[];
+        let result;
+        if (mediaType === "video" && mediaUrl.trim()) {
+          result = await uploadVideo({ title: title.trim(), user: user.id, platform: platformList, video: mediaUrl.trim(), scheduled_date: scheduled, async_upload: true });
+        } else if (mediaType === "photo" && mediaUrl.trim()) {
+          result = await uploadPhotos({ title: title.trim(), user: user.id, platform: platformList, photos: [mediaUrl.trim()], scheduled_date: scheduled, async_upload: true });
+        } else {
+          result = await uploadText({ title: title.trim(), user: user.id, platform: platformList, scheduled_date: scheduled });
+        }
+        if (result.success) {
+          toast.success(scheduled ? "Post scheduled!" : "Post published!");
+          setTitle(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
+        } else {
+          toast.error(result.error ?? "Post failed.");
+        }
       }
     } catch {
       toast.error("Post failed.");

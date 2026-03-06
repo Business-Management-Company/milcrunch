@@ -151,6 +151,23 @@ export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<
   return data;
 }
 
+/** Fetch a single user profile with connected accounts. */
+export async function getUploadPostUser(username: string): Promise<UploadPostUser | null> {
+  const url = `${API_BASE}/api/uploadposts/users/${encodeURIComponent(username)}`;
+  console.log("[UploadPost] GET user:", url);
+  const res = await fetch(url, {
+    method: "GET",
+    headers: getHeaders(),
+  });
+  const data = await res.json().catch(() => ({}));
+  console.log("[UploadPost] GET user raw response:", JSON.stringify(data, null, 2));
+  if (!res.ok) {
+    console.warn("[UploadPost] GET user failed:", res.status, res.statusText);
+    return null;
+  }
+  return data.user ?? data ?? null;
+}
+
 /** Validate JWT; returns profile with connected accounts. */
 export async function validateUploadPostJwt(token: string): Promise<UploadPostUser | null> {
   const res = await fetch(`${API_BASE}/api/uploadposts/users/validate-jwt`, {
@@ -286,6 +303,46 @@ export async function uploadText(opts: UploadTextOptions): Promise<UploadResult>
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return { success: false, error: data.message ?? data.error ?? res.statusText };
   return data;
+}
+
+// --- Unified post endpoint ---
+
+export interface CreatePostOptions {
+  text: string;
+  account_ids: string[];
+  media_url?: string;
+  scheduled_at?: string;
+}
+
+export interface CreatePostResult {
+  success?: boolean;
+  id?: string;
+  request_id?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
+/** Create a post via the unified UploadPost posts endpoint. */
+export async function createUploadPost(opts: CreatePostOptions): Promise<CreatePostResult> {
+  const body: Record<string, unknown> = {
+    text: opts.text,
+    account_ids: opts.account_ids,
+  };
+  if (opts.media_url) body.media_url = opts.media_url;
+  if (opts.scheduled_at) body.scheduled_at = opts.scheduled_at;
+
+  console.log("[UploadPost] POST /api/uploadposts/posts request:", JSON.stringify(body, null, 2));
+
+  const res = await fetch(`${API_BASE}/api/uploadposts/posts`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  console.log("[UploadPost] POST /api/uploadposts/posts response:", res.status, JSON.stringify(data, null, 2));
+
+  if (!res.ok) return { success: false, error: data.message ?? data.error ?? res.statusText };
+  return { success: true, ...data };
 }
 
 /** Get upload status (async or scheduled). */

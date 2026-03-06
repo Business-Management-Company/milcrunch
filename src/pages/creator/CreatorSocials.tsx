@@ -242,7 +242,7 @@ const CreatorSocials = () => {
     }
   }, [userId, persistConnections]);
 
-  /* ── Init on mount ── */
+  /* ── Init on mount — also sync from UploadPost on every load ── */
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
     if (initDone.current === userId) return;
@@ -250,9 +250,12 @@ const CreatorSocials = () => {
     setLoading(true);
     (async () => {
       await ensureProfile();
+      // Load local accounts first for instant display
       await loadAccounts();
+      // Then sync from UploadPost API to catch any new connections
+      await syncAccounts().catch(() => {});
     })().finally(() => setLoading(false));
-  }, [userId, ensureProfile, loadAccounts]);
+  }, [userId, ensureProfile, loadAccounts, syncAccounts]);
 
   /* ── Auto-sync on ?connected=true return from OAuth ── */
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   listUploadPostUsers,
+  getUploadPostUser,
   createUploadPostProfile,
   type UploadPostUser,
   type ConnectedAccount,
@@ -19,46 +20,108 @@ export interface ConnectedAccountRow {
   updated_at: string | null;
 }
 
-/** Sync connected accounts from Upload-Post user profile into Supabase connected_accounts. */
+/** Sync connected accounts from Upload-Post user profile into Supabase.
+ *  Uses the single-user endpoint for accurate data, falls back to list endpoint.
+ *  Upserts directly to creator_social_connections AND connected_accounts. */
 export async function syncConnectedAccountsFromUploadPost(userId: string): Promise<ConnectedAccountRow[]> {
-  const users = await listUploadPostUsers();
-  const profile = users.find((u) => u.username === userId);
-  const accounts = (profile?.connected_accounts ?? []) as ConnectedAccount[];
+  // Try single-user endpoint first, fall back to list
+  let profile = await getUploadPostUser(userId);
+  if (!profile) {
+    const users = await listUploadPostUsers();
+    profile = users.find((u) => u.username === userId) ?? null;
+  }
 
-  if (accounts.length === 0) {
-    // Preserve demo rows; fall back to deleting all if is_demo column missing
-    const del = await supabase.from("connected_accounts").delete().eq("user_id", userId).neq("is_demo", true);
-    if (del.error?.message?.includes("is_demo")) {
-      await supabase.from("connected_accounts").delete().eq("user_id", userId);
-    }
+  const rawAccounts = (profile?.connected_accounts ?? profile?.accounts ?? []) as ConnectedAccount[];
+  console.log("[upload-post-sync] Raw accounts from UploadPost:", JSON.stringify(rawAccounts, null, 2));
+
+  if (rawAccounts.length === 0) {
+    console.log("[upload-post-sync] No connected accounts found from UploadPost API for user:", userId);
     return getConnectedAccounts(userId);
   }
 
-  const rows = accounts.map((acc) => ({
+  // Map fields generously — UploadPost may use different field names
+  const rows = rawAccounts.map((acc) => {
+    const platform = (acc.platform ?? acc.provider ?? acc.type ?? "unknown").toString().toLowerCase();
+    const accountId = (acc.id ?? acc.account_id ?? acc.platform_user_id ?? "").toString();
+    const username = acc.platform_username ?? acc.username ?? acc.name ?? acc.account_name ?? null;
+    const avatar = acc.profile_image_url ?? acc.avatar ?? acc.profile_image ?? acc.image ?? null;
+    const followers = acc.followers_count ?? acc.follower_count ?? acc.followers ?? null;
+
+    return {
+      platform,
+      accountId,
+      username: typeof username === "string" ? username : null,
+      avatar: typeof avatar === "string" ? avatar : null,
+      followers: typeof followers === "number" ? followers : null,
+      raw: acc,
+    };
+  });
+
+  console.log("[upload-post-sync] Mapped accounts:", JSON.stringify(rows, null, 2));
+
+  // Upsert to creator_social_connections (primary table)
+  for (const r of rows) {
+    const { error } = await supabase.from("creator_social_connections").upsert(
+      {
+        user_id: userId,
+        platform: r.platform === "twitter" ? "x" : r.platform,
+        account_name: r.username,
+        account_avatar: r.avatar,
+        upload_post_account_id: r.accountId || null,
+        connected_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,platform" }
+    );
+    if (error) console.warn("[upload-post-sync] creator_social_connections upsert error:", error.message);
+  }
+
+  // Also sync to connected_accounts (legacy table)
+  const legacyRows = rows.map((r) => ({
     user_id: userId,
-    platform: (acc.platform ?? "unknown").toLowerCase(),
-    platform_user_id: acc.platform_user_id ?? acc.id ?? null,
-    platform_username: acc.platform_username ?? acc.username ?? null,
-    profile_image_url: acc.profile_image_url ?? null,
-    followers_count: acc.followers_count ?? null,
-    raw_data: acc,
+    platform: r.platform,
+    platform_user_id: r.accountId || null,
+    platform_username: r.username,
+    profile_image_url: r.avatar,
+    followers_count: r.followers,
+    raw_data: r.raw,
     updated_at: new Date().toISOString(),
   }));
 
-  // Upsert: delete existing non-demo for this user, then insert current set.
   const delResult = await supabase.from("connected_accounts").delete().eq("user_id", userId).neq("is_demo", true);
   if (delResult.error?.message?.includes("is_demo")) {
     await supabase.from("connected_accounts").delete().eq("user_id", userId);
   }
   const { data: inserted, error } = await supabase
     .from("connected_accounts")
-    .insert(rows)
+    .insert(legacyRows)
     .select();
 
   if (error) {
-    console.warn("[upload-post-sync] Insert failed:", error.message);
-    return [];
+    console.warn("[upload-post-sync] connected_accounts insert failed:", error.message);
   }
+
+  // Re-fetch from creator_social_connections as source of truth
+  const { data: csc } = await supabase
+    .from("creator_social_connections")
+    .select("*")
+    .eq("user_id", userId)
+    .order("platform");
+
+  if (csc && csc.length > 0) {
+    return csc.map((r: any) => ({
+      id: r.id,
+      user_id: r.user_id,
+      platform: r.platform,
+      platform_user_id: r.upload_post_account_id ?? null,
+      platform_username: r.account_name ?? null,
+      profile_image_url: r.account_avatar ?? null,
+      followers_count: null,
+      raw_data: null,
+      created_at: r.connected_at,
+      updated_at: r.connected_at,
+    })) as ConnectedAccountRow[];
+  }
+
   return (inserted ?? []) as ConnectedAccountRow[];
 }
 
