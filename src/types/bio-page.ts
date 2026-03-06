@@ -38,6 +38,8 @@ export interface BioSectionConfig {
   label: string;
   visible: boolean;
   order: number;
+  /** Section-specific configuration (links, URLs, toggles, etc.) */
+  config?: Record<string, unknown>;
 }
 
 export interface SectionCatalogEntry {

@@ -57,6 +57,7 @@ import {
   Facebook,
   Linkedin,
   Twitter,
+  Settings,
 } from "lucide-react";
 import { getDominantColorFromFile } from "@/lib/dominant-color";
 import type { BioSectionConfig, SectionType, SectionCatalogEntry, HeroImageFormat } from "@/types/bio-page";
@@ -165,6 +166,8 @@ export default function CreatorBioEditor() {
   const [activeTab, setActiveTab] = useState<EditorTab>("sections");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("phone");
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("preview");
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const sectionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Theme state ── */
   const [theme, setTheme] = useState<ThemeSettings>({
@@ -195,8 +198,29 @@ export default function CreatorBioEditor() {
         setTheme((prev) => ({ ...prev, ...(saved as Partial<ThemeSettings>) }));
     }
     setLoaded(true);
-    // Fetch connected accounts
-    getConnectedAccounts(user.id).then(setSocialAccounts);
+    // Fetch connected accounts (fallback to creator_social_connections)
+    getConnectedAccounts(user.id).then((accs) => {
+      if (accs.length > 0) { setSocialAccounts(accs); return; }
+      supabase
+        .from("creator_social_connections")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("platform")
+        .then(({ data }) => {
+          if (data?.length) {
+            setSocialAccounts(
+              data.map((r: any) => ({
+                id: r.id, user_id: r.user_id, platform: r.platform,
+                platform_user_id: r.upload_post_account_id ?? null,
+                platform_username: r.account_name ?? null,
+                profile_image_url: r.account_avatar ?? null,
+                followers_count: null, raw_data: null,
+                created_at: r.connected_at, updated_at: r.connected_at,
+              }))
+            );
+          }
+        });
+    });
   }, [user?.id]);
 
   useEffect(() => {
@@ -350,6 +374,21 @@ export default function CreatorBioEditor() {
   };
 
   const catalogEntryFor = (type: SectionType) => SECTION_CATALOG.find((e) => e.type === type);
+
+  /** Update a section's config and debounce-save to Supabase. */
+  const updateSectionConfig = useCallback(
+    (sectionId: string, patch: Record<string, unknown>) => {
+      setSections((prev) => {
+        const updated = prev.map((s) =>
+          s.id === sectionId ? { ...s, config: { ...(s.config ?? {}), ...patch } } : s
+        );
+        if (sectionSaveTimerRef.current) clearTimeout(sectionSaveTimerRef.current);
+        sectionSaveTimerRef.current = setTimeout(() => persistSections(updated), 1000);
+        return updated;
+      });
+    },
+    [persistSections],
+  );
 
   const copyUrl = () => {
     if (!bioUrl) return;
@@ -847,6 +886,9 @@ export default function CreatorBioEditor() {
                         <Button variant="ghost" size="icon" className="h-6 w-6" disabled={idx === sections.length - 1} onClick={() => moveSection(section.id, "down")}>
                           <ChevronDown className="h-3.5 w-3.5" />
                         </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingSectionId(section.id)} title="Edit section">
+                          <Settings className="h-3.5 w-3.5" />
+                        </Button>
                         <Switch checked={section.visible} onCheckedChange={() => toggleVisibility(section.id)} aria-label={section.visible ? "Hide" : "Show"} className="scale-75 origin-center" />
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeSection(section.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1035,10 +1077,11 @@ export default function CreatorBioEditor() {
                       visibleSections.map((section) => {
                         const entry = catalogEntryFor(section.type);
                         if (!entry) return null;
+                        const cfg = (section.config ?? {}) as Record<string, any>;
                         return (
                           <div
                             key={section.id}
-                            className="flex items-center gap-3 p-3.5"
+                            className="p-3.5"
                             style={{
                               borderRadius: phoneCardRadius,
                               border: `1px solid ${phoneSectionBorder}`,
@@ -1047,25 +1090,74 @@ export default function CreatorBioEditor() {
                               backdropFilter: phoneCardBackdrop,
                             }}
                           >
-                            <div
-                              className="flex items-center justify-center h-10 w-10 shrink-0"
-                              style={{
-                                borderRadius: theme.cardStyle === "square" ? "0.375rem" : "0.5rem",
-                                backgroundColor: `${theme.themeColor}18`,
-                                color: theme.themeColor,
-                              }}
-                            >
-                              {getSectionIcon(entry)}
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="flex items-center justify-center h-10 w-10 shrink-0"
+                                style={{
+                                  borderRadius: theme.cardStyle === "square" ? "0.375rem" : "0.5rem",
+                                  backgroundColor: `${theme.themeColor}18`,
+                                  color: theme.themeColor,
+                                }}
+                              >
+                                {getSectionIcon(entry)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm font-medium truncate" style={{ color: phoneText }}>{section.label}</span>
+                                  {entry.comingSoon && (
+                                    <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
+                                  )}
+                                </div>
+                                <p className="text-xs truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-medium truncate" style={{ color: phoneText }}>{section.label}</span>
-                                {entry.comingSoon && (
-                                  <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
+
+                            {/* Section-specific preview content */}
+                            {section.type === "social_links" && socialAccounts.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2.5 pl-[52px]">
+                                {socialAccounts
+                                  .filter((acc) => {
+                                    const toggles = (cfg.platformToggles as any[]) ?? [];
+                                    const t = toggles.find((t: any) => t.platform === acc.platform);
+                                    return t ? t.enabled : true;
+                                  })
+                                  .map((acc) => {
+                                    const SIcon = socialIcon(acc.platform);
+                                    return <SIcon key={acc.id} className="h-4 w-4" style={{ color: theme.themeColor }} />;
+                                  })}
+                              </div>
+                            )}
+                            {section.type === "custom_links" && (cfg.links as any[])?.length > 0 && (
+                              <div className="space-y-1 mt-2.5 pl-[52px]">
+                                {((cfg.links as any[]) ?? []).slice(0, 3).map((link: any) => (
+                                  <div
+                                    key={link.id}
+                                    className="text-[10px] py-1 px-2.5 rounded truncate"
+                                    style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}
+                                  >
+                                    {link.label || link.url || "Untitled link"}
+                                  </div>
+                                ))}
+                                {(cfg.links as any[]).length > 3 && (
+                                  <p className="text-[9px]" style={{ color: phoneSubtext }}>+{(cfg.links as any[]).length - 3} more</p>
                                 )}
                               </div>
-                              <p className="text-xs truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
-                            </div>
+                            )}
+                            {section.type === "book_meeting" && (cfg.calendlyUrl || cfg.buttonLabel) && (
+                              <div className="mt-2.5 pl-[52px]">
+                                <div
+                                  className="text-[10px] py-1.5 px-3 rounded-full text-center font-medium text-white"
+                                  style={{ backgroundColor: theme.themeColor }}
+                                >
+                                  {(cfg.buttonLabel as string) || "Book a Meeting"}
+                                </div>
+                              </div>
+                            )}
+                            {section.type === "podcast" && cfg.displayTitle && (
+                              <p className="text-[10px] mt-1.5 pl-[52px] font-medium truncate" style={{ color: phoneText }}>
+                                {cfg.displayTitle as string}
+                              </p>
+                            )}
                           </div>
                         );
                       })
@@ -1082,6 +1174,384 @@ export default function CreatorBioEditor() {
           </div>
         </div>
       </div>
+
+      {/* ── SECTION EDITOR SLIDE-OUT PANEL ── */}
+      {editingSectionId && (() => {
+        const section = sections.find((s) => s.id === editingSectionId);
+        if (!section) return null;
+        const entry = catalogEntryFor(section.type);
+        if (!entry) return null;
+        const cfg = (section.config ?? {}) as Record<string, any>;
+        const showAddBtn = section.type === "custom_links";
+
+        return (
+          <>
+            {/* Backdrop */}
+            <div className="fixed inset-0 bg-black/20 z-40" onClick={() => setEditingSectionId(null)} />
+            {/* Panel */}
+            <div className="fixed top-0 right-0 h-full w-96 bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col">
+              {/* Header */}
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-border shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary/10 text-primary shrink-0">
+                  {getSectionIcon(entry)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm text-foreground">{section.label}</h3>
+                  <p className="text-[11px] text-muted-foreground">{entry.description}</p>
+                </div>
+                <button
+                  onClick={() => setEditingSectionId(null)}
+                  className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Add button bar (for applicable types) */}
+              {showAddBtn && (
+                <div className="px-5 py-2.5 border-b border-border flex justify-end shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => {
+                      const links = (cfg.links ?? []) as any[];
+                      updateSectionConfig(section.id, {
+                        links: [...links, { id: generateId(), label: "", url: "", thumbnail: "", group: "" }],
+                      });
+                    }}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />Add Link
+                  </Button>
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+                {/* ── SOCIAL LINKS ── */}
+                {section.type === "social_links" && (
+                  <div className="space-y-2">
+                    {socialAccounts.length === 0 ? (
+                      <div className="text-center py-6">
+                        <Share2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                        <p className="text-sm text-muted-foreground">No social accounts connected.</p>
+                        <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => navigate("/creator/socials")}>
+                          Connect Accounts
+                        </Button>
+                      </div>
+                    ) : (
+                      socialAccounts.map((acc) => {
+                        const SIcon = socialIcon(acc.platform);
+                        const toggles = (cfg.platformToggles ?? []) as Array<{ platform: string; enabled: boolean }>;
+                        const toggle = toggles.find((t) => t.platform === acc.platform);
+                        const enabled = toggle ? toggle.enabled : true;
+                        return (
+                          <div key={acc.id} className="flex items-center gap-3 rounded-lg border border-border p-3">
+                            <SIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium capitalize">{acc.platform}</p>
+                              {acc.platform_username && (
+                                <p className="text-[11px] text-muted-foreground truncate">@{acc.platform_username}</p>
+                              )}
+                            </div>
+                            <Switch
+                              checked={enabled}
+                              onCheckedChange={(v) => {
+                                const newToggles = socialAccounts.map((a) => ({
+                                  platform: a.platform,
+                                  enabled: a.platform === acc.platform
+                                    ? v
+                                    : ((toggles.find((t) => t.platform === a.platform)?.enabled) ?? true),
+                                }));
+                                updateSectionConfig(section.id, { platformToggles: newToggles });
+                              }}
+                            />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {/* ── CUSTOM LINKS ── */}
+                {section.type === "custom_links" && (() => {
+                  const links = (cfg.links ?? []) as Array<{ id: string; label: string; url: string; thumbnail?: string; group?: string }>;
+                  return (
+                    <div className="space-y-3">
+                      {links.length === 0 && (
+                        <div className="text-center py-6">
+                          <Link2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                          <p className="text-sm text-muted-foreground">No links added yet.</p>
+                        </div>
+                      )}
+                      {links.map((link, linkIdx) => (
+                        <div key={link.id} className="rounded-lg border border-border p-3 space-y-2">
+                          <Input
+                            value={link.label}
+                            onChange={(e) => {
+                              const updated = [...links];
+                              updated[linkIdx] = { ...link, label: e.target.value };
+                              updateSectionConfig(section.id, { links: updated });
+                            }}
+                            placeholder="Link Label"
+                            className="h-8 text-xs"
+                          />
+                          <Input
+                            value={link.url}
+                            onChange={(e) => {
+                              const updated = [...links];
+                              updated[linkIdx] = { ...link, url: e.target.value };
+                              updateSectionConfig(section.id, { links: updated });
+                            }}
+                            placeholder="https://..."
+                            className="h-8 text-xs"
+                          />
+                          <Input
+                            value={link.thumbnail ?? ""}
+                            onChange={(e) => {
+                              const updated = [...links];
+                              updated[linkIdx] = { ...link, thumbnail: e.target.value };
+                              updateSectionConfig(section.id, { links: updated });
+                            }}
+                            placeholder="Thumbnail URL (optional)"
+                            className="h-8 text-xs"
+                          />
+                          <Input
+                            value={link.group ?? ""}
+                            onChange={(e) => {
+                              const updated = [...links];
+                              updated[linkIdx] = { ...link, group: e.target.value };
+                              updateSectionConfig(section.id, { links: updated });
+                            }}
+                            placeholder="Group Name (optional)"
+                            className="h-8 text-xs"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs flex-1"
+                              onClick={() => { persistSections(sections); toast.success("Link saved!"); }}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                const updated = links.filter((_, i) => i !== linkIdx);
+                                updateSectionConfig(section.id, { links: updated });
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        className="w-full border-dashed text-xs h-8"
+                        onClick={() => {
+                          updateSectionConfig(section.id, {
+                            links: [...links, { id: generateId(), label: "", url: "", thumbnail: "", group: "" }],
+                          });
+                        }}
+                      >
+                        <Plus className="h-3 w-3 mr-1.5" />Add Link
+                      </Button>
+                    </div>
+                  );
+                })()}
+
+                {/* ── BOOK A MEETING ── */}
+                {section.type === "book_meeting" && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Calendly URL</label>
+                      <Input
+                        value={(cfg.calendlyUrl as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { calendlyUrl: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="https://calendly.com/yourname"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Button Label</label>
+                      <Input
+                        value={(cfg.buttonLabel as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { buttonLabel: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="Book a Meeting"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Description</label>
+                      <Textarea
+                        value={(cfg.description as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { description: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="Describe what the meeting is about..."
+                        rows={3}
+                        className="text-xs resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── PODCAST ── */}
+                {section.type === "podcast" && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">RSS Feed or Podcast URL</label>
+                      <Input
+                        value={(cfg.feedUrl as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { feedUrl: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="https://feeds.example.com/podcast"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Display Title</label>
+                      <Input
+                        value={(cfg.displayTitle as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { displayTitle: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="My Podcast"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── GENERIC (all other section types) ── */}
+                {!["social_links", "custom_links", "book_meeting", "podcast"].includes(section.type) && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Title</label>
+                      <Input
+                        value={(cfg.title as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { title: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="Section title"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Description</label>
+                      <Textarea
+                        value={(cfg.sectionDescription as string) ?? ""}
+                        onChange={(e) => updateSectionConfig(section.id, { sectionDescription: e.target.value })}
+                        onBlur={() => persistSections(sections)}
+                        placeholder="Section description..."
+                        rows={3}
+                        className="text-xs resize-none"
+                      />
+                    </div>
+                    {/* Type-specific extra fields */}
+                    {section.type === "featured_video" && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Video URL</label>
+                        <Input
+                          value={(cfg.videoUrl as string) ?? ""}
+                          onChange={(e) => updateSectionConfig(section.id, { videoUrl: e.target.value })}
+                          onBlur={() => persistSections(sections)}
+                          placeholder="https://youtube.com/watch?v=..."
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                    {section.type === "streaming_channel" && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Channel URL</label>
+                        <Input
+                          value={(cfg.channelUrl as string) ?? ""}
+                          onChange={(e) => updateSectionConfig(section.id, { channelUrl: e.target.value })}
+                          onBlur={() => persistSections(sections)}
+                          placeholder="https://twitch.tv/yourchannel"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                    {section.type === "store" && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Store URL</label>
+                        <Input
+                          value={(cfg.storeUrl as string) ?? ""}
+                          onChange={(e) => updateSectionConfig(section.id, { storeUrl: e.target.value })}
+                          onBlur={() => persistSections(sections)}
+                          placeholder="https://your-store.com"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                    {section.type === "tips" && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Tips / Donation URL</label>
+                        <Input
+                          value={(cfg.tipsUrl as string) ?? ""}
+                          onChange={(e) => updateSectionConfig(section.id, { tipsUrl: e.target.value })}
+                          onBlur={() => persistSections(sections)}
+                          placeholder="https://buymeacoffee.com/you"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                    {section.type === "promo_codes" && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Promo Code</label>
+                        <Input
+                          value={(cfg.promoCode as string) ?? ""}
+                          onChange={(e) => updateSectionConfig(section.id, { promoCode: e.target.value })}
+                          onBlur={() => persistSections(sections)}
+                          placeholder="SAVE20"
+                          className="h-8 text-xs"
+                        />
+                        <label className="text-xs font-medium text-muted-foreground">Promo URL</label>
+                        <Input
+                          value={(cfg.promoUrl as string) ?? ""}
+                          onChange={(e) => updateSectionConfig(section.id, { promoUrl: e.target.value })}
+                          onBlur={() => persistSections(sections)}
+                          placeholder="https://store.com?code=SAVE20"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                    {section.type === "blog" && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Blog URL</label>
+                        <Input
+                          value={(cfg.blogUrl as string) ?? ""}
+                          onChange={(e) => updateSectionConfig(section.id, { blogUrl: e.target.value })}
+                          onBlur={() => persistSections(sections)}
+                          placeholder="https://yourblog.com"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-border shrink-0">
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                  onClick={() => {
+                    persistSections(sections);
+                    toast.success("Changes saved!");
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── ADD SECTION MODAL ── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
