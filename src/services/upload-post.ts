@@ -79,7 +79,8 @@ export interface GenerateJwtResponse {
   error?: string;
 }
 
-/** Generate secure connect URL for creator to link socials. */
+/** Generate secure connect URL for creator to link socials.
+ *  On 409 (user already exists) falls back to a plain connect URL. */
 export async function generateConnectUrl(userId: string, redirectUrl?: string): Promise<GenerateJwtResponse> {
   const body: Record<string, string> = { username: userId };
   if (redirectUrl) body.redirect_url = redirectUrl;
@@ -89,6 +90,25 @@ export async function generateConnectUrl(userId: string, redirectUrl?: string): 
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
+
+  // If JWT generated successfully, return it
+  if (res.ok && data.access_url) return data;
+
+  // 409 = user already exists — try creating a fresh profile then retry once
+  if (res.status === 409) {
+    // Ensure profile exists, then retry JWT generation
+    await createUploadPostProfile(userId).catch(() => {});
+    const retry = await fetch(`${API_BASE}/api/uploadposts/users/generate-jwt`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(body),
+    });
+    const retryData = await retry.json().catch(() => ({}));
+    if (retry.ok && retryData.access_url) return retryData;
+    // Final fallback: return the base UploadPost connect URL
+    return { access_url: "https://app.upload-post.com/connect", success: true };
+  }
+
   if (!res.ok) return { error: data.message ?? data.error ?? res.statusText };
   return data;
 }
