@@ -49,13 +49,23 @@ export async function createUploadPostProfile(userId: string): Promise<{ success
 
 /** List all user profiles with connected accounts. */
 export async function listUploadPostUsers(): Promise<UploadPostUser[]> {
-  const res = await fetch(`${API_BASE}/api/uploadposts/users`, {
+  const url = `${API_BASE}/api/uploadposts/users`;
+  console.log("[UploadPost] GET all users:", url);
+  const res = await fetch(url, {
     method: "GET",
     headers: getHeaders(),
   });
   const data = await res.json().catch(() => ({}));
+  console.log("[UploadPost] GET all users status:", res.status);
+  console.log("[UploadPost] GET all users raw response:", JSON.stringify(data, null, 2));
   if (!res.ok) return [];
-  return Array.isArray(data) ? data : data.users ?? data.data ?? [];
+  const users = Array.isArray(data) ? data : data.users ?? data.data ?? [];
+  console.log("[UploadPost] GET all users parsed count:", users.length);
+  if (users.length > 0) {
+    console.log("[UploadPost] First user keys:", Object.keys(users[0]));
+    console.log("[UploadPost] First user:", JSON.stringify(users[0], null, 2));
+  }
+  return users;
 }
 
 /** Delete a user profile. */
@@ -154,18 +164,57 @@ export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<
 /** Fetch a single user profile with connected accounts. */
 export async function getUploadPostUser(username: string): Promise<UploadPostUser | null> {
   const url = `${API_BASE}/api/uploadposts/users/${encodeURIComponent(username)}`;
-  console.log("[UploadPost] GET user:", url);
+  console.log("[UploadPost] GET single user:", url);
+  console.log("[UploadPost] GET single user headers:", JSON.stringify(getHeaders(), null, 2));
   const res = await fetch(url, {
     method: "GET",
     headers: getHeaders(),
   });
+  console.log("[UploadPost] GET single user status:", res.status, res.statusText);
   const data = await res.json().catch(() => ({}));
-  console.log("[UploadPost] GET user raw response:", JSON.stringify(data, null, 2));
+  console.log("[UploadPost] GET single user raw response keys:", Object.keys(data));
+  console.log("[UploadPost] GET single user raw response:", JSON.stringify(data, null, 2));
   if (!res.ok) {
-    console.warn("[UploadPost] GET user failed:", res.status, res.statusText);
+    console.warn("[UploadPost] GET single user FAILED:", res.status, res.statusText);
     return null;
   }
-  return data.user ?? data ?? null;
+  const profile = data.user ?? data ?? null;
+  if (profile) {
+    console.log("[UploadPost] Parsed profile keys:", Object.keys(profile));
+    console.log("[UploadPost] connected_accounts field:", profile.connected_accounts);
+    console.log("[UploadPost] accounts field:", profile.accounts);
+    console.log("[UploadPost] All profile fields:", JSON.stringify(profile, null, 2));
+  }
+  return profile;
+}
+
+/** Try the /accounts endpoint — may require user-scoped JWT. */
+export async function getUploadPostUserAccounts(username: string): Promise<ConnectedAccount[]> {
+  // Try 1: with API key
+  const url1 = `${API_BASE}/api/uploadposts/users/${encodeURIComponent(username)}/accounts`;
+  console.log("[UploadPost] GET user accounts (apikey):", url1);
+  const res1 = await fetch(url1, { method: "GET", headers: getHeaders() });
+  const data1 = await res1.json().catch(() => ({}));
+  console.log("[UploadPost] GET user accounts (apikey) status:", res1.status);
+  console.log("[UploadPost] GET user accounts (apikey) response:", JSON.stringify(data1, null, 2));
+  if (res1.ok) {
+    const accs = Array.isArray(data1) ? data1 : data1.accounts ?? data1.data ?? data1.connected_accounts ?? [];
+    if (accs.length > 0) return accs;
+  }
+
+  // Try 2: alternative path /api/uploadposts/users/accounts with username in body/query
+  const url2 = `${API_BASE}/api/uploadposts/users/accounts?username=${encodeURIComponent(username)}`;
+  console.log("[UploadPost] GET user accounts (alt path):", url2);
+  const res2 = await fetch(url2, { method: "GET", headers: getHeaders() });
+  const data2 = await res2.json().catch(() => ({}));
+  console.log("[UploadPost] GET user accounts (alt path) status:", res2.status);
+  console.log("[UploadPost] GET user accounts (alt path) response:", JSON.stringify(data2, null, 2));
+  if (res2.ok) {
+    const accs = Array.isArray(data2) ? data2 : data2.accounts ?? data2.data ?? data2.connected_accounts ?? [];
+    if (accs.length > 0) return accs;
+  }
+
+  return [];
 }
 
 /** Validate JWT; returns profile with connected accounts. */

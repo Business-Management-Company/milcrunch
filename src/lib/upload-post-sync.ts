@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   listUploadPostUsers,
   getUploadPostUser,
+  getUploadPostUserAccounts,
   createUploadPostProfile,
   type UploadPostUser,
   type ConnectedAccount,
@@ -21,33 +22,75 @@ export interface ConnectedAccountRow {
 }
 
 /** Sync connected accounts from Upload-Post user profile into Supabase.
- *  Uses the single-user endpoint for accurate data, falls back to list endpoint.
- *  Upserts directly to creator_social_connections AND connected_accounts. */
+ *  Tries multiple endpoints with aggressive diagnostic logging. */
 export async function syncConnectedAccountsFromUploadPost(userId: string): Promise<ConnectedAccountRow[]> {
-  // Try single-user endpoint first, fall back to list
+  console.log("=".repeat(60));
+  console.log("[SYNC] Starting sync for userId:", userId);
+  console.log("=".repeat(60));
+
+  // ── Step 1: Try single-user endpoint ──
+  console.log("[SYNC] Step 1: Trying GET /api/uploadposts/users/{username}...");
   let profile = await getUploadPostUser(userId);
+  console.log("[SYNC] Step 1 result — profile:", profile ? "found" : "null");
+  if (profile) {
+    console.log("[SYNC] Step 1 profile keys:", Object.keys(profile));
+    console.log("[SYNC] Step 1 profile.connected_accounts:", JSON.stringify(profile.connected_accounts, null, 2));
+    console.log("[SYNC] Step 1 profile.accounts:", JSON.stringify((profile as any).accounts, null, 2));
+  }
+
+  // ── Step 2: Try dedicated accounts endpoint ──
+  console.log("[SYNC] Step 2: Trying GET /api/uploadposts/users/{username}/accounts...");
+  const accountsFromEndpoint = await getUploadPostUserAccounts(userId);
+  console.log("[SYNC] Step 2 result — accounts count:", accountsFromEndpoint.length);
+  if (accountsFromEndpoint.length > 0) {
+    console.log("[SYNC] Step 2 accounts:", JSON.stringify(accountsFromEndpoint, null, 2));
+  }
+
+  // ── Step 3: Fallback to list endpoint ──
   if (!profile) {
+    console.log("[SYNC] Step 3: Falling back to GET /api/uploadposts/users (list all)...");
     const users = await listUploadPostUsers();
+    console.log("[SYNC] Step 3 result — total users:", users.length);
     profile = users.find((u) => u.username === userId) ?? null;
+    console.log("[SYNC] Step 3 found matching profile:", profile ? "yes" : "no");
+    if (profile) {
+      console.log("[SYNC] Step 3 profile keys:", Object.keys(profile));
+      console.log("[SYNC] Step 3 profile.connected_accounts:", JSON.stringify(profile.connected_accounts, null, 2));
+    }
   }
 
-  const rawAccounts = (profile?.connected_accounts ?? profile?.accounts ?? []) as ConnectedAccount[];
-  console.log("[upload-post-sync] Raw accounts from UploadPost:", JSON.stringify(rawAccounts, null, 2));
-
-  if (rawAccounts.length === 0) {
-    console.log("[upload-post-sync] No connected accounts found from UploadPost API for user:", userId);
-    return getConnectedAccounts(userId);
+  // ── Merge accounts from all sources ──
+  const fromProfile = (profile?.connected_accounts ?? (profile as any)?.accounts ?? []) as ConnectedAccount[];
+  const allRaw = [...fromProfile];
+  // Merge accounts endpoint results (avoid duplicates by id)
+  for (const acc of accountsFromEndpoint) {
+    const id = (acc as any).id ?? (acc as any).account_id ?? "";
+    if (!allRaw.some((a) => ((a as any).id ?? (a as any).account_id ?? "") === id && id !== "")) {
+      allRaw.push(acc);
+    }
   }
 
-  // Map fields generously — UploadPost may use different field names
-  const rows = rawAccounts.map((acc) => {
-    const platform = (acc.platform ?? acc.provider ?? acc.type ?? "unknown").toString().toLowerCase();
-    const accountId = (acc.id ?? acc.account_id ?? acc.platform_user_id ?? "").toString();
-    const username = acc.platform_username ?? acc.username ?? acc.name ?? acc.account_name ?? null;
-    const avatar = acc.profile_image_url ?? acc.avatar ?? acc.profile_image ?? acc.image ?? null;
-    const followers = acc.followers_count ?? acc.follower_count ?? acc.followers ?? null;
+  console.log("[SYNC] Merged raw accounts total:", allRaw.length);
+  console.log("[SYNC] Merged raw accounts:", JSON.stringify(allRaw, null, 2));
 
-    return {
+  if (allRaw.length === 0) {
+    console.log("[SYNC] ⚠ NO connected accounts found from ANY UploadPost endpoint for user:", userId);
+    console.log("[SYNC] Returning existing Supabase data instead.");
+    const existing = await getConnectedAccounts(userId);
+    console.log("[SYNC] Existing connected_accounts in Supabase:", existing.length);
+    return existing;
+  }
+
+  // ── Map fields generously ──
+  const mapped = allRaw.map((acc, i) => {
+    console.log(`[SYNC] Mapping account ${i} — raw keys:`, Object.keys(acc));
+    const platform = (acc.platform ?? (acc as any).provider ?? (acc as any).type ?? "unknown").toString().toLowerCase();
+    const accountId = ((acc as any).id ?? (acc as any).account_id ?? (acc as any).platform_user_id ?? "").toString();
+    const username = acc.platform_username ?? (acc as any).username ?? (acc as any).name ?? (acc as any).account_name ?? null;
+    const avatar = acc.profile_image_url ?? (acc as any).avatar ?? (acc as any).profile_image ?? (acc as any).image ?? (acc as any).avatar_url ?? null;
+    const followers = acc.followers_count ?? (acc as any).follower_count ?? (acc as any).followers ?? null;
+
+    const result = {
       platform,
       accountId,
       username: typeof username === "string" ? username : null,
@@ -55,28 +98,34 @@ export async function syncConnectedAccountsFromUploadPost(userId: string): Promi
       followers: typeof followers === "number" ? followers : null,
       raw: acc,
     };
+    console.log(`[SYNC] Mapped account ${i}:`, JSON.stringify(result, null, 2));
+    return result;
   });
 
-  console.log("[upload-post-sync] Mapped accounts:", JSON.stringify(rows, null, 2));
+  // ── Upsert to creator_social_connections ──
+  console.log("[SYNC] Upserting", mapped.length, "accounts to creator_social_connections...");
+  for (const r of mapped) {
+    const upsertData = {
+      user_id: userId,
+      platform: r.platform === "twitter" ? "x" : r.platform,
+      account_name: r.username,
+      account_avatar: r.avatar,
+      upload_post_account_id: r.accountId || null,
+      connected_at: new Date().toISOString(),
+    };
+    console.log("[Supabase] upserting account:", JSON.stringify(upsertData, null, 2));
 
-  // Upsert to creator_social_connections (primary table)
-  for (const r of rows) {
-    const { error } = await supabase.from("creator_social_connections").upsert(
-      {
-        user_id: userId,
-        platform: r.platform === "twitter" ? "x" : r.platform,
-        account_name: r.username,
-        account_avatar: r.avatar,
-        upload_post_account_id: r.accountId || null,
-        connected_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,platform" }
-    );
-    if (error) console.warn("[upload-post-sync] creator_social_connections upsert error:", error.message);
+    const { data: upsertResult, error: upsertError } = await supabase
+      .from("creator_social_connections")
+      .upsert(upsertData, { onConflict: "user_id,platform" })
+      .select();
+
+    console.log("[Supabase] upsert result:", JSON.stringify(upsertResult, null, 2));
+    console.log("[Supabase] upsert error:", upsertError ? JSON.stringify(upsertError, null, 2) : "none");
   }
 
-  // Also sync to connected_accounts (legacy table)
-  const legacyRows = rows.map((r) => ({
+  // ── Also sync to connected_accounts (legacy) ──
+  const legacyRows = mapped.map((r) => ({
     user_id: userId,
     platform: r.platform,
     platform_user_id: r.accountId || null,
@@ -91,21 +140,28 @@ export async function syncConnectedAccountsFromUploadPost(userId: string): Promi
   if (delResult.error?.message?.includes("is_demo")) {
     await supabase.from("connected_accounts").delete().eq("user_id", userId);
   }
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error: legacyError } = await supabase
     .from("connected_accounts")
     .insert(legacyRows)
     .select();
 
-  if (error) {
-    console.warn("[upload-post-sync] connected_accounts insert failed:", error.message);
+  if (legacyError) {
+    console.warn("[SYNC] connected_accounts legacy insert failed:", legacyError.message);
   }
 
-  // Re-fetch from creator_social_connections as source of truth
-  const { data: csc } = await supabase
+  // ── Re-fetch from creator_social_connections as source of truth ──
+  console.log("[SYNC] Re-fetching creator_social_connections...");
+  const { data: csc, error: fetchError } = await supabase
     .from("creator_social_connections")
     .select("*")
     .eq("user_id", userId)
     .order("platform");
+
+  console.log("[Supabase] fetched connections:", JSON.stringify(csc, null, 2));
+  console.log("[Supabase] fetch error:", fetchError ? JSON.stringify(fetchError, null, 2) : "none");
+  console.log("=".repeat(60));
+  console.log("[SYNC] Complete. Connections in DB:", csc?.length ?? 0);
+  console.log("=".repeat(60));
 
   if (csc && csc.length > 0) {
     return csc.map((r: any) => ({

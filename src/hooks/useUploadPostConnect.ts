@@ -46,16 +46,20 @@ export function useUploadPostConnect() {
 
   const syncAccounts = useCallback(async () => {
     if (!userId) return;
+    console.log("[useUploadPostConnect] syncAccounts called for userId:", userId);
     setSyncing(true);
     try {
       const synced = await syncConnectedAccountsFromUploadPost(userId);
+      console.log("[useUploadPostConnect] syncAccounts returned:", synced.length, "accounts");
+      console.log("[useUploadPostConnect] syncAccounts data:", JSON.stringify(synced, null, 2));
       setAccounts(synced);
       // Also sync directory member stats
       await syncDirectoryMemberStats(userId).catch(() => {});
       if (synced.length > 0) {
         toast.success(`Synced ${synced.length} connected account${synced.length !== 1 ? "s" : ""}`);
       }
-    } catch {
+    } catch (err) {
+      console.error("[useUploadPostConnect] syncAccounts FAILED:", err);
       toast.error("Sync failed");
     } finally {
       setSyncing(false);
