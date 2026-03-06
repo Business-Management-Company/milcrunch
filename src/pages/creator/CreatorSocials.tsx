@@ -12,7 +12,7 @@ import {
   syncDirectoryMemberStats,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
-import { Loader2, RefreshCw, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
+import { Loader2, RefreshCw, Link2, Check, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -220,6 +220,14 @@ const CreatorSocials = () => {
     );
   }
 
+  /* Look up platform config for a connected account */
+  const platformFor = (acc: ConnectedAccountRow): Platform | undefined => {
+    const p = acc.platform?.toLowerCase();
+    return PLATFORMS.find(
+      (pl) => pl.key === p || (pl.key === "x" && p === "twitter") || (pl.key === "twitter" && p === "x")
+    );
+  };
+
   return (
     <CreatorLayout>
       <div className="mb-8">
@@ -236,80 +244,106 @@ const CreatorSocials = () => {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </Card>
       ) : (
-        <Card className="bg-gradient-card border-border p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground mb-1">Connected Accounts</h2>
+        <div className="space-y-6">
+          {/* ---- TOP: Connect Accounts ---- */}
+          <Card className="bg-gradient-card border-border p-6">
+            <div className="text-center space-y-3">
+              <div className="flex items-center justify-center gap-2">
+                <Link2 className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Connect Accounts</h2>
+              </div>
               <p className="text-sm text-muted-foreground">
-                Link your social media accounts to auto-sync content and analytics.
+                Connect your social accounts via our secure partner portal
               </p>
+              <Button
+                onClick={handleConnect}
+                disabled={connecting || !profileReady}
+                className="w-full sm:w-auto sm:min-w-[280px] rounded-lg"
+                size="lg"
+              >
+                {connecting ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Link2 className="h-4 w-4 mr-2" />
+                )}
+                Connect &amp; Manage Accounts
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={syncAccounts}
-              disabled={syncing}
-              className="shrink-0"
-            >
-              {syncing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              Sync
-            </Button>
-          </div>
+          </Card>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {PLATFORMS.map((p) => {
-              const Icon = p.icon;
-              const connected = accountForPlatform(accounts, p.key);
+          {/* ---- BOTTOM: Connected Accounts ---- */}
+          <Card className="bg-gradient-card border-border p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Connected Accounts</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={syncAccounts}
+                disabled={syncing}
+                className="shrink-0"
+              >
+                {syncing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Sync
+              </Button>
+            </div>
 
-              return (
-                <div
-                  key={p.key}
-                  className="flex items-center justify-between border border-border rounded-lg px-4 py-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${p.bg} ${p.color}`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-sm font-medium text-foreground">{p.label}</span>
-                      {connected?.platform_username && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          @{connected.platform_username}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+            {accounts.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  No accounts connected yet. Click &quot;Connect &amp; Manage Accounts&quot; above to link your socials.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {accounts.map((acc) => {
+                  const p = platformFor(acc);
+                  const Icon = p?.icon;
+                  const label = p?.label ?? acc.platform;
 
-                  {connected ? (
-                    <button
-                      onClick={() => handleDisconnect(connected)}
-                      className="text-xs text-red-500 hover:text-red-400 transition-colors ml-2 shrink-0"
+                  return (
+                    <div
+                      key={acc.id}
+                      className="flex items-center justify-between border border-border rounded-lg px-4 py-3"
                     >
-                      Disconnect
-                    </button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="ml-2 shrink-0"
-                      disabled={connecting}
-                      onClick={handleConnect}
-                    >
-                      {connecting ? (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
-                      ) : null}
-                      Connect
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${p?.bg ?? "bg-gray-100"} ${p?.color ?? "text-gray-600"}`}>
+                          {Icon ? <Icon className="w-5 h-5" /> : (
+                            <span className="text-xs font-bold">{(acc.platform ?? "?").charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium text-foreground">{label}</span>
+                          {acc.platform_username && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              @{acc.platform_username}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 ml-2 shrink-0">
+                        <span className="flex items-center gap-1 text-xs text-emerald-500 font-medium">
+                          <Check className="h-3.5 w-3.5" />
+                          Connected
+                        </span>
+                        <button
+                          onClick={() => handleDisconnect(acc)}
+                          className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
     </CreatorLayout>
   );
