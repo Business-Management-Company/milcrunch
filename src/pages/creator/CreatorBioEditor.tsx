@@ -227,14 +227,14 @@ export default function CreatorBioEditor() {
       return;
     }
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${user.id}/avatar.${ext}`;
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
     setUploadingAvatar(true);
     try {
       const { error: upErr } = await supabase.storage
-        .from("creator-assets")
+        .from("bio-images")
         .upload(path, file, { upsert: true });
       if (upErr) { toast.error(upErr.message); return; }
-      const { data: urlData } = supabase.storage.from("creator-assets").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("bio-images").getPublicUrl(path);
       const url = urlData.publicUrl;
       setProfileAvatar(url);
       await supabase.auth.updateUser({ data: { avatar_url: url } });
@@ -254,14 +254,14 @@ export default function CreatorBioEditor() {
       return;
     }
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${user.id}/hero.${ext}`;
+    const path = `${user.id}/hero-${Date.now()}.${ext}`;
     setUploadingHero(true);
     try {
       const { error: upErr } = await supabase.storage
-        .from("creator-assets")
+        .from("bio-images")
         .upload(path, file, { upsert: true });
       if (upErr) { toast.error(upErr.message); return; }
-      const { data: urlData } = supabase.storage.from("creator-assets").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("bio-images").getPublicUrl(path);
       const url = urlData.publicUrl;
       setHeroImageUrl(url);
       const color = await getDominantColorFromFile(file);
