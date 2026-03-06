@@ -64,6 +64,8 @@ const GoogleIcon = ({ className }: { className?: string }) => (
 interface Platform {
   key: string;
   label: string;
+  /** UploadPost provider string for the JWT platforms[] / provider param. */
+  provider: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   bg: string;
@@ -71,17 +73,17 @@ interface Platform {
 }
 
 const PLATFORMS: Platform[] = [
-  { key: "tiktok",           label: "TikTok",           icon: TikTokIcon,    color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
-  { key: "instagram",        label: "Instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50",    connectedBg: "bg-pink-600"    },
-  { key: "linkedin",         label: "LinkedIn",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50",    connectedBg: "bg-blue-700"    },
-  { key: "youtube",          label: "YouTube",          icon: Youtube,       color: "text-red-600",     bg: "bg-red-50",     connectedBg: "bg-red-600"     },
-  { key: "facebook",         label: "Facebook",         icon: Facebook,      color: "text-blue-600",    bg: "bg-blue-50",    connectedBg: "bg-blue-600"    },
-  { key: "x",                label: "X (Twitter)",      icon: Twitter,       color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
-  { key: "threads",          label: "Threads",          icon: ThreadsIcon,   color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
-  { key: "pinterest",        label: "Pinterest",        icon: PinterestIcon, color: "text-red-600",     bg: "bg-red-50",     connectedBg: "bg-red-600"     },
-  { key: "reddit",           label: "Reddit",           icon: RedditIcon,    color: "text-orange-500",  bg: "bg-orange-50",  connectedBg: "bg-orange-500"  },
-  { key: "bluesky",          label: "Bluesky",          icon: BlueskyIcon,   color: "text-blue-500",    bg: "bg-blue-50",    connectedBg: "bg-blue-500"    },
-  { key: "google_business",  label: "Google Business",  icon: GoogleIcon,    color: "",                 bg: "bg-gray-50",    connectedBg: "bg-blue-600"    },
+  { key: "tiktok",           label: "TikTok",           provider: "tiktok",           icon: TikTokIcon,    color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
+  { key: "instagram",        label: "Instagram",        provider: "instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50",    connectedBg: "bg-pink-600"    },
+  { key: "linkedin",         label: "LinkedIn",         provider: "linkedin",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50",    connectedBg: "bg-blue-700"    },
+  { key: "youtube",          label: "YouTube",          provider: "youtube",          icon: Youtube,       color: "text-red-600",     bg: "bg-red-50",     connectedBg: "bg-red-600"     },
+  { key: "facebook",         label: "Facebook",         provider: "facebook",         icon: Facebook,      color: "text-blue-600",    bg: "bg-blue-50",    connectedBg: "bg-blue-600"    },
+  { key: "x",                label: "X (Twitter)",      provider: "twitter",          icon: Twitter,       color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
+  { key: "threads",          label: "Threads",          provider: "threads",          icon: ThreadsIcon,   color: "text-gray-900",    bg: "bg-gray-100",   connectedBg: "bg-gray-900"    },
+  { key: "pinterest",        label: "Pinterest",        provider: "pinterest",        icon: PinterestIcon, color: "text-red-600",     bg: "bg-red-50",     connectedBg: "bg-red-600"     },
+  { key: "reddit",           label: "Reddit",           provider: "reddit",           icon: RedditIcon,    color: "text-orange-500",  bg: "bg-orange-50",  connectedBg: "bg-orange-500"  },
+  { key: "bluesky",          label: "Bluesky",          provider: "bluesky",          icon: BlueskyIcon,   color: "text-blue-500",    bg: "bg-blue-50",    connectedBg: "bg-blue-500"    },
+  { key: "google_business",  label: "Google Business",  provider: "google_business",  icon: GoogleIcon,    color: "",                 bg: "bg-gray-50",    connectedBg: "bg-blue-600"    },
 ];
 
 function accountForPlatform(accounts: ConnectedAccountRow[], key: string): ConnectedAccountRow | undefined {
@@ -223,7 +225,7 @@ const CreatorSocials = () => {
   }, [userId, profileReady, syncAccounts]);
 
   /* ---- Open popup for a specific platform ---- */
-  const handleConnect = useCallback((platformKey: string) => {
+  const handleConnect = useCallback((provider: string) => {
     if (!userId || !profileReady) {
       toast.error("Profile is still loading. Please wait.");
       return;
@@ -244,7 +246,7 @@ const CreatorSocials = () => {
     generateConnectUrl({
       userId,
       redirectUrl: REDIRECT_URL,
-      platforms: [platformKey],
+      provider,
     }).then((res) => {
       setConnecting(false);
       if (!res.access_url) {
@@ -252,6 +254,7 @@ const CreatorSocials = () => {
         toast.error(res.error ?? "Could not generate connect link");
         return;
       }
+      console.log("[CreatorSocials] Opening connect URL:", res.access_url, "| provider:", provider);
       popup.location.href = res.access_url;
 
       if (pollRef.current) clearInterval(pollRef.current);
@@ -359,74 +362,94 @@ const CreatorSocials = () => {
           Loading…
         </div>
       ) : (
-        /* ---- Connect Accounts grid ---- */
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {PLATFORMS.map((p) => {
-            const Icon = p.icon;
-            const connected = accountForPlatform(accounts, p.key);
-            const isConnected = !!connected;
-            const avatar = connected?.profile_image_url;
-            const displayName = connected?.platform_username;
+        <>
+          {/* ---- Platform connect grid (always visible) ---- */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {PLATFORMS.map((p) => {
+              const Icon = p.icon;
+              const connected = accountForPlatform(accounts, p.key);
+              const isConnected = !!connected;
 
-            if (isConnected) {
               return (
-                <div
+                <button
                   key={p.key}
-                  className={`flex items-center gap-3 rounded-xl px-4 py-3.5 ${p.connectedBg} text-white`}
+                  onClick={() => handleConnect(p.provider)}
+                  disabled={connecting || isConnected}
+                  className={`flex items-center gap-3 border rounded-xl px-4 py-3.5 text-left transition-colors cursor-pointer ${
+                    isConnected
+                      ? "border-green-300 bg-green-50 dark:bg-green-950/20 opacity-70 cursor-default"
+                      : "border-border hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20"
+                  }`}
                 >
-                  {/* Avatar or platform icon */}
-                  {avatar ? (
-                    <img
-                      src={avatar}
-                      alt=""
-                      className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white/30"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                      <Icon className="w-5 h-5 text-white" />
-                    </div>
-                  )}
-
-                  {/* Name + platform */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">
-                      {displayName ? `@${displayName}` : p.label}
-                    </p>
-                    <p className="text-xs text-white/70">{p.label} Connected</p>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${p.bg} ${p.color}`}>
+                    <Icon className="w-5 h-5" />
                   </div>
-
-                  {/* Disconnect X */}
-                  <button
-                    onClick={(e) => handleDisconnect(e, connected)}
-                    className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center shrink-0 transition-colors"
-                    title={`Disconnect ${p.label}`}
-                  >
-                    <X className="w-3.5 h-3.5 text-white" />
-                  </button>
-                </div>
+                  <span className="text-sm font-semibold text-foreground flex-1">
+                    {isConnected ? `${p.label} Connected` : `Connect ${p.label}`}
+                  </span>
+                  {isConnected && (
+                    <span className="text-xs text-green-600 font-medium shrink-0">Connected</span>
+                  )}
+                  {connecting && !isConnected && (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                  )}
+                </button>
               );
-            }
+            })}
+          </div>
 
-            return (
-              <button
-                key={p.key}
-                onClick={() => handleConnect(p.key)}
-                disabled={connecting}
-                className="flex items-center gap-3 border border-border rounded-xl px-4 py-3.5 text-left transition-colors hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 cursor-pointer"
-              >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${p.bg} ${p.color}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-semibold text-foreground flex-1">
-                  Connect {p.label}
-                </span>
-                {connecting && (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+          {/* ---- Connected Accounts section ---- */}
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-foreground mb-3">Connected Accounts</h2>
+            {accounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">
+                No connected accounts yet. Click a platform above to get started.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {accounts.map((acc) => {
+                  const p = PLATFORMS.find(
+                    (pl) => pl.key === acc.platform || pl.provider === acc.platform
+                  ) ?? PLATFORMS.find(
+                    (pl) => pl.key === "x" && acc.platform === "twitter"
+                  );
+                  const Icon = p?.icon ?? Twitter;
+                  return (
+                    <div
+                      key={acc.id}
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3.5 ${p?.connectedBg ?? "bg-gray-700"} text-white`}
+                    >
+                      {acc.profile_image_url ? (
+                        <img
+                          src={acc.profile_image_url}
+                          alt=""
+                          className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white/30"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">
+                          {acc.platform_username ? `@${acc.platform_username}` : (p?.label ?? acc.platform)}
+                        </p>
+                        <p className="text-xs text-white/70">{p?.label ?? acc.platform}</p>
+                      </div>
+                      <button
+                        onClick={(e) => handleDisconnect(e, acc)}
+                        className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-400 flex items-center justify-center shrink-0 transition-colors"
+                        title={`Disconnect ${p?.label ?? acc.platform}`}
+                      >
+                        <X className="w-3.5 h-3.5 text-white" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
       )}
 
     </CreatorLayout>

@@ -82,8 +82,8 @@ export interface GenerateJwtResponse {
 export interface GenerateConnectOptions {
   userId: string;
   redirectUrl?: string;
-  /** Limit the connect page to specific platforms (e.g. ["tiktok"]). */
-  platforms?: string[];
+  /** Single provider string to pre-select a platform (e.g. "tiktok", "twitter"). */
+  provider?: string;
 }
 
 /** Generate secure connect URL for creator to link socials.
@@ -91,7 +91,12 @@ export interface GenerateConnectOptions {
 export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<GenerateJwtResponse> {
   const body: Record<string, unknown> = { username: opts.userId };
   if (opts.redirectUrl) body.redirect_url = opts.redirectUrl;
-  if (opts.platforms?.length) body.platforms = opts.platforms;
+  // Pass provider both as single-element platforms array (documented) and
+  // as provider field (in case the API supports undocumented direct OAuth).
+  if (opts.provider) {
+    body.platforms = [opts.provider];
+    body.provider = opts.provider;
+  }
 
   const res = await fetch(`${API_BASE}/api/uploadposts/users/generate-jwt`, {
     method: "POST",
@@ -101,11 +106,13 @@ export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<
   const data = await res.json().catch(() => ({}));
 
   // If JWT generated successfully, return it
-  if (res.ok && data.access_url) return data;
+  if (res.ok && data.access_url) {
+    console.log("[UploadPost] JWT URL:", data.access_url, "| provider:", opts.provider);
+    return data;
+  }
 
   // 409 = user already exists — try creating a fresh profile then retry once
   if (res.status === 409) {
-    // Ensure profile exists, then retry JWT generation
     await createUploadPostProfile(opts.userId).catch(() => {});
     const retry = await fetch(`${API_BASE}/api/uploadposts/users/generate-jwt`, {
       method: "POST",
@@ -113,12 +120,15 @@ export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<
       body: JSON.stringify(body),
     });
     const retryData = await retry.json().catch(() => ({}));
-    if (retry.ok && retryData.access_url) return retryData;
-    // Final fallback: return the base UploadPost connect URL
+    if (retry.ok && retryData.access_url) {
+      console.log("[UploadPost] JWT URL (retry):", retryData.access_url, "| provider:", opts.provider);
+      return retryData;
+    }
     return { access_url: "https://app.upload-post.com/connect", success: true };
   }
 
   if (!res.ok) return { error: data.message ?? data.error ?? res.statusText };
+  console.log("[UploadPost] JWT URL:", data.access_url, "| provider:", opts.provider);
   return data;
 }
 
