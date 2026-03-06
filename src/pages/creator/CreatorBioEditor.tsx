@@ -47,6 +47,7 @@ import {
   MessageSquare,
   CreditCard,
   Wifi,
+  ChevronDown as SelectArrow,
 } from "lucide-react";
 import type { BioSectionConfig, SectionType, SectionCatalogEntry } from "@/types/bio-page";
 import { SECTION_CATALOG, normalizeCustomLinks } from "@/types/bio-page";
@@ -82,17 +83,43 @@ const SIDEBAR_TABS: {
   id: EditorTab;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  activeColor: string;
-  activeBg: string;
 }[] = [
-  { id: "profile", label: "Profile", icon: User, activeColor: "text-blue-600", activeBg: "bg-blue-100" },
-  { id: "theme", label: "Theme", icon: Palette, activeColor: "text-fuchsia-600", activeBg: "bg-gradient-to-br from-pink-100 to-purple-100" },
-  { id: "sections", label: "Sections", icon: Layers, activeColor: "text-emerald-600", activeBg: "bg-emerald-100" },
-  { id: "share", label: "Share", icon: Share2, activeColor: "text-violet-600", activeBg: "bg-violet-100" },
+  { id: "profile", label: "Profile", icon: User },
+  { id: "theme", label: "Theme", icon: Palette },
+  { id: "sections", label: "Sections", icon: Layers },
+  { id: "share", label: "Share", icon: Share2 },
 ];
 
 /* ── Phone preview device selector ── */
 type PreviewDevice = "phone" | "tablet" | "desktop";
+
+/* ── Theme settings types ── */
+type BgMode = "solid" | "gradient" | "image";
+type CardStyle = "round" | "square" | "shadow" | "glass";
+
+interface ThemeSettings {
+  themeColor: string;
+  bgMode: BgMode;
+  bgColor: string;
+  cardStyle: CardStyle;
+  fontFamily: string;
+  darkMode: boolean;
+}
+
+const THEME_SWATCHES = [
+  "#000000", "#374151", "#7f1d1d", "#dc2626",
+  "#f97316", "#ea580c", "#db2777", "#9333ea",
+  "#1e3a8a", "#3b82f6", "#0d9488", "#16a34a",
+  "#d1d5db", "#fce7f3", "#fca5a5", "#fed7aa",
+];
+
+const FONT_OPTIONS = [
+  { value: "Inter", label: "Inter" },
+  { value: "Roboto", label: "Roboto" },
+  { value: "Poppins", label: "Poppins" },
+  { value: "Playfair Display", label: "Playfair Display" },
+  { value: "Montserrat", label: "Montserrat" },
+];
 
 export default function CreatorBioEditor() {
   const { user, creatorProfile } = useAuth();
@@ -112,6 +139,19 @@ export default function CreatorBioEditor() {
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("phone");
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("preview");
 
+  /* ── Theme state ── */
+  const [theme, setTheme] = useState<ThemeSettings>({
+    themeColor: "#3b82f6",
+    bgMode: "solid",
+    bgColor: "#ffffff",
+    cardStyle: "round",
+    fontFamily: "Inter",
+    darkMode: false,
+  });
+
+  const updateTheme = (patch: Partial<ThemeSettings>) =>
+    setTheme((prev) => ({ ...prev, ...patch }));
+
   /* ── Load sections from user_metadata ── */
   useEffect(() => {
     if (!user?.id) return;
@@ -119,6 +159,13 @@ export default function CreatorBioEditor() {
     const cl = meta.custom_links;
     const config = normalizeCustomLinks(cl);
     setSections(config.sections ?? []);
+    // Load persisted theme settings if they exist
+    if (cl && typeof cl === "object") {
+      const saved = (cl as Record<string, unknown>).themeSettings;
+      if (saved && typeof saved === "object") {
+        setTheme((prev) => ({ ...prev, ...(saved as Partial<ThemeSettings>) }));
+      }
+    }
     setLoaded(true);
   }, [user?.id]);
 
@@ -139,10 +186,26 @@ export default function CreatorBioEditor() {
           ? (meta.custom_links as Record<string, unknown>)
           : {};
       const { error } = await supabase.auth.updateUser({
-        data: { custom_links: { ...cl, sections: updated } },
+        data: { custom_links: { ...cl, sections: updated, themeSettings: theme } },
       });
       setSaving(false);
       if (error) toast.error("Failed to save: " + error.message);
+    },
+    [user, theme],
+  );
+
+  /* ── Persist theme only ── */
+  const persistTheme = useCallback(
+    async (updated: ThemeSettings) => {
+      if (!user?.id) return;
+      const meta = user.user_metadata ?? {};
+      const cl =
+        typeof meta.custom_links === "object" && meta.custom_links
+          ? (meta.custom_links as Record<string, unknown>)
+          : {};
+      await supabase.auth.updateUser({
+        data: { custom_links: { ...cl, themeSettings: updated } },
+      });
     },
     [user],
   );
@@ -216,6 +279,27 @@ export default function CreatorBioEditor() {
     desktop: "w-[480px]",
   };
 
+  /* ── Compute phone preview styles from theme ── */
+  const phoneBg = theme.darkMode ? "#111827" : theme.bgColor;
+  const phoneText = theme.darkMode ? "#f9fafb" : "#111827";
+  const phoneSubtext = theme.darkMode ? "#9ca3af" : "#6b7280";
+  const phoneSectionBg = theme.darkMode ? "#1f2937" : "#f9fafb";
+  const phoneSectionBorder = theme.darkMode ? "#374151" : "#f3f4f6";
+  const phoneCardRadius = theme.cardStyle === "round" ? "0.75rem" : "0.375rem";
+  const phoneCardShadow =
+    theme.cardStyle === "shadow"
+      ? "0 1px 3px rgba(0,0,0,0.12)"
+      : theme.cardStyle === "glass"
+        ? "0 0 0 1px rgba(255,255,255,0.1)"
+        : "none";
+  const phoneCardBackdrop = theme.cardStyle === "glass" ? "blur(8px)" : undefined;
+  const phoneGlassBg =
+    theme.cardStyle === "glass"
+      ? theme.darkMode
+        ? "rgba(31,41,55,0.6)"
+        : "rgba(249,250,251,0.6)"
+      : phoneSectionBg;
+
   /* ────────────────────────────────────────────────────────────────────── */
   return (
     <CreatorLayout>
@@ -253,9 +337,14 @@ export default function CreatorBioEditor() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center gap-0.5 rounded-xl p-2 w-14 transition-colors ${
-                    active ? `${tab.activeBg} ${tab.activeColor}` : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className={`flex flex-col items-center gap-0.5 rounded-xl p-2 w-14 transition-all ${
+                    active ? "text-white" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
+                  style={
+                    active
+                      ? { background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" }
+                      : undefined
+                  }
                 >
                   <Icon className="h-5 w-5" />
                   <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
@@ -273,9 +362,14 @@ export default function CreatorBioEditor() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    active ? `${tab.activeBg} ${tab.activeColor}` : "text-muted-foreground hover:bg-muted"
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                    active ? "text-white" : "text-muted-foreground hover:bg-muted"
                   }`}
+                  style={
+                    active
+                      ? { background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" }
+                      : undefined
+                  }
                 >
                   <Icon className="h-3.5 w-3.5" />
                   {tab.label}
@@ -331,36 +425,156 @@ export default function CreatorBioEditor() {
               </div>
             )}
 
-            {/* ── THEME TAB ── */}
+            {/* ── THEME TAB (inline editor) ── */}
             {activeTab === "theme" && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <h2 className="text-sm font-semibold text-foreground">Theme</h2>
-                <p className="text-xs text-muted-foreground">
-                  Customize your page theme in&nbsp;
-                  <button
-                    className="text-blue-600 hover:underline"
-                    onClick={() => navigate("/creator/profile")}
-                  >
-                    My Profile
-                  </button>.
-                </p>
-                <div className="rounded-lg border border-border p-4 space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    Current theme: <span className="font-medium text-foreground capitalize">{(user?.user_metadata?.bio_page_theme as string) || "light"}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Hero format: <span className="font-medium text-foreground capitalize">{(user?.user_metadata?.hero_image_format as string) || "landscape"}</span>
-                  </p>
+
+                {/* Theme Color */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Theme Color</label>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-9 w-9 rounded-md border border-border shrink-0"
+                      style={{ backgroundColor: theme.themeColor }}
+                    />
+                    <Input
+                      value={theme.themeColor}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateTheme({ themeColor: v });
+                        if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, themeColor: v });
+                      }}
+                      className="h-9 text-xs font-mono uppercase"
+                      maxLength={7}
+                    />
+                  </div>
+                  <div className="grid grid-cols-8 gap-1.5 mt-2">
+                    {THEME_SWATCHES.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          updateTheme({ themeColor: color });
+                          persistTheme({ ...theme, themeColor: color });
+                        }}
+                        className={`h-7 w-full rounded-md border-2 transition-all ${
+                          theme.themeColor.toLowerCase() === color.toLowerCase()
+                            ? "border-blue-500 ring-2 ring-blue-500/30 scale-110"
+                            : "border-transparent hover:scale-105"
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => navigate("/creator/profile")}
-                >
-                  <Palette className="h-3.5 w-3.5 mr-2" />
-                  Edit Theme
-                </Button>
+
+                {/* Background */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Background</label>
+                  <div className="flex gap-1 rounded-full border border-border p-0.5">
+                    {(["solid", "gradient", "image"] as BgMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => {
+                          updateTheme({ bgMode: mode });
+                          persistTheme({ ...theme, bgMode: mode });
+                        }}
+                        className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
+                          theme.bgMode === mode
+                            ? "bg-[#3B82F6] text-white"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                  {theme.bgMode === "solid" && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <div
+                        className="h-8 w-8 rounded-md border border-border shrink-0"
+                        style={{ backgroundColor: theme.bgColor }}
+                      />
+                      <Input
+                        value={theme.bgColor}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          updateTheme({ bgColor: v });
+                          if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                        }}
+                        className="h-8 text-xs font-mono uppercase"
+                        maxLength={7}
+                      />
+                    </div>
+                  )}
+                  {theme.bgMode === "gradient" && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Gradient uses your theme color fading to the background color.
+                    </p>
+                  )}
+                  {theme.bgMode === "image" && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Background image upload coming soon.
+                    </p>
+                  )}
+                </div>
+
+                {/* Card Style */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Card Style</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(["round", "square", "shadow", "glass"] as CardStyle[]).map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => {
+                          updateTheme({ cardStyle: style });
+                          persistTheme({ ...theme, cardStyle: style });
+                        }}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors capitalize ${
+                          theme.cardStyle === style
+                            ? "bg-[#3B82F6] text-white"
+                            : "bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Font Family */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Font Family</label>
+                  <div className="relative">
+                    <select
+                      value={theme.fontFamily}
+                      onChange={(e) => {
+                        updateTheme({ fontFamily: e.target.value });
+                        persistTheme({ ...theme, fontFamily: e.target.value });
+                      }}
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 pr-8 text-xs appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      {FONT_OPTIONS.map((f) => (
+                        <option key={f.value} value={f.value}>
+                          {f.label}
+                        </option>
+                      ))}
+                    </select>
+                    <SelectArrow className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Dark Mode */}
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-foreground">Dark Mode</label>
+                  <Switch
+                    checked={theme.darkMode}
+                    onCheckedChange={(v) => {
+                      updateTheme({ darkMode: v });
+                      persistTheme({ ...theme, darkMode: v });
+                    }}
+                  />
+                </div>
               </div>
             )}
 
@@ -534,42 +748,44 @@ export default function CreatorBioEditor() {
           <div className="hidden lg:flex flex-1 flex-col items-center bg-muted/20 p-4 overflow-y-auto">
             {/* Device & mode toggles */}
             <div className="flex items-center justify-between w-full max-w-[500px] mb-4">
-              <div className="flex items-center gap-1 bg-card rounded-lg border border-border p-0.5">
+              {/* Device pills with icon + label */}
+              <div className="flex items-center gap-0 rounded-full border border-border bg-card p-1">
                 {([
-                  { id: "phone" as PreviewDevice, icon: Smartphone },
-                  { id: "tablet" as PreviewDevice, icon: Tablet },
-                  { id: "desktop" as PreviewDevice, icon: Monitor },
-                ] as const).map(({ id, icon: DIcon }) => (
+                  { id: "phone" as PreviewDevice, icon: Smartphone, label: "Mobile" },
+                  { id: "tablet" as PreviewDevice, icon: Tablet, label: "Tablet" },
+                  { id: "desktop" as PreviewDevice, icon: Monitor, label: "Desktop" },
+                ] as const).map(({ id, icon: DIcon, label }) => (
                   <button
                     key={id}
                     onClick={() => setPreviewDevice(id)}
-                    className={`p-1.5 rounded-md transition-colors ${
+                    className={`flex items-center gap-1.5 px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${
                       previewDevice === id
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "bg-[#3B82F6] text-white"
+                        : "text-gray-500 hover:text-foreground"
                     }`}
                   >
-                    <DIcon className="h-4 w-4" />
+                    <DIcon className="h-3.5 w-3.5" />
+                    {label}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-1 bg-card rounded-lg border border-border p-0.5">
+              <div className="flex items-center gap-0 rounded-full border border-border bg-card p-1">
                 <button
                   onClick={() => setPreviewMode("edit")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${
                     previewMode === "edit"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-[#3B82F6] text-white"
+                      : "text-gray-500 hover:text-foreground"
                   }`}
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => setPreviewMode("preview")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`px-4 h-[30px] rounded-full text-xs font-medium transition-colors ${
                     previewMode === "preview"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-[#3B82F6] text-white"
+                      : "text-gray-500 hover:text-foreground"
                   }`}
                 >
                   Preview
@@ -592,44 +808,83 @@ export default function CreatorBioEditor() {
                 style={{
                   background: "linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 50%, #1a1a1a 100%)",
                   boxShadow:
-                    "0 25px 60px -12px rgba(0,0,0,0.4), 0 12px 28px -8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.3)",
+                    "0 30px 70px -10px rgba(0,0,0,0.45), 0 15px 35px -5px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4)",
                 }}
               >
                 {/* Dynamic Island */}
                 <div className="absolute top-[18px] left-1/2 -translate-x-1/2 z-10">
                   <div
-                    className="w-[90px] h-[24px] bg-black rounded-full"
-                    style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.04)" }}
+                    className="w-[100px] h-[25px] rounded-full"
+                    style={{
+                      backgroundColor: "#000000",
+                      boxShadow: "0 0 0 1px rgba(255,255,255,0.05), inset 0 0 2px rgba(0,0,0,1)",
+                    }}
                   />
                 </div>
 
                 {/* Screen */}
                 <div
-                  className="rounded-[30px] overflow-hidden min-h-[500px] max-h-[600px] overflow-y-auto relative bg-white"
+                  className="rounded-[30px] overflow-hidden min-h-[500px] max-h-[600px] overflow-y-auto relative"
                   style={{
-                    boxShadow: "inset 0 0 8px rgba(0,0,0,0.08), inset 0 1px 3px rgba(0,0,0,0.06)",
+                    backgroundColor: phoneBg,
+                    backgroundImage:
+                      theme.bgMode === "gradient"
+                        ? `linear-gradient(180deg, ${theme.themeColor}22 0%, ${phoneBg} 60%)`
+                        : undefined,
+                    boxShadow: "inset 0 0 12px rgba(0,0,0,0.1), inset 0 2px 4px rgba(0,0,0,0.08)",
+                    fontFamily: theme.fontFamily,
                   }}
                 >
                   {/* Profile header inside phone */}
-                  <div className="bg-gradient-to-b from-gray-100 to-white p-5 pt-10 flex flex-col items-center">
+                  <div
+                    className="p-5 pt-10 flex flex-col items-center"
+                    style={{
+                      background:
+                        theme.bgMode === "gradient"
+                          ? "transparent"
+                          : theme.darkMode
+                            ? "linear-gradient(to bottom, #1f293780, transparent)"
+                            : "linear-gradient(to bottom, #f3f4f680, transparent)",
+                    }}
+                  >
                     {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow" />
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        className="h-16 w-16 rounded-full object-cover shadow"
+                        style={{ border: `2px solid ${theme.themeColor}` }}
+                      />
                     ) : (
-                      <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center text-xl font-semibold text-gray-400">
+                      <div
+                        className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-semibold"
+                        style={{
+                          backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb",
+                          color: phoneSubtext,
+                        }}
+                      >
                         {(displayName || "?")[0].toUpperCase()}
                       </div>
                     )}
-                    <h3 className="mt-2 text-sm font-semibold text-gray-900">{displayName || "Your Name"}</h3>
-                    <p className="text-[11px] text-gray-500">@{handle}</p>
+                    <h3
+                      className="mt-2 text-sm font-semibold"
+                      style={{ color: phoneText, fontFamily: theme.fontFamily }}
+                    >
+                      {displayName || "Your Name"}
+                    </h3>
+                    <p className="text-[11px]" style={{ color: phoneSubtext }}>
+                      @{handle}
+                    </p>
                   </div>
 
                   {/* Sections inside phone */}
                   <div className="px-4 pb-6 space-y-2.5">
                     {visibleSections.length === 0 ? (
                       <div className="py-12 text-center">
-                        <Layers className="h-8 w-8 mx-auto text-gray-300 mb-2" />
-                        <p className="text-xs text-gray-400">No sections enabled yet</p>
-                        <p className="text-[11px] text-gray-300 mt-1">Add sections from the Sections tab</p>
+                        <Layers className="h-8 w-8 mx-auto mb-2" style={{ color: phoneSectionBorder }} />
+                        <p className="text-xs" style={{ color: phoneSubtext }}>No sections enabled yet</p>
+                        <p className="text-[11px] mt-1" style={{ color: phoneSectionBorder }}>
+                          Add sections from the Sections tab
+                        </p>
                       </div>
                     ) : (
                       visibleSections.map((section) => {
@@ -638,19 +893,48 @@ export default function CreatorBioEditor() {
                         return (
                           <div
                             key={section.id}
-                            className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50 p-3"
+                            className="flex items-center gap-2.5 p-3"
+                            style={{
+                              borderRadius: phoneCardRadius,
+                              border: `1px solid ${phoneSectionBorder}`,
+                              backgroundColor: phoneGlassBg,
+                              boxShadow: phoneCardShadow,
+                              backdropFilter: phoneCardBackdrop,
+                            }}
                           >
-                            <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-blue-50 text-blue-600 shrink-0">
+                            <div
+                              className="flex items-center justify-center h-9 w-9 shrink-0"
+                              style={{
+                                borderRadius: theme.cardStyle === "square" ? "0.375rem" : "0.5rem",
+                                backgroundColor: `${theme.themeColor}18`,
+                                color: theme.themeColor,
+                              }}
+                            >
                               {getSectionIcon(entry)}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-medium text-gray-900 truncate">{section.label}</span>
+                                <span
+                                  className="text-xs font-medium truncate"
+                                  style={{ color: phoneText }}
+                                >
+                                  {section.label}
+                                </span>
                                 {entry.comingSoon && (
-                                  <span className="text-[8px] bg-gray-200 text-gray-500 px-1 py-px rounded font-medium">SOON</span>
+                                  <span
+                                    className="text-[8px] px-1 py-px rounded font-medium"
+                                    style={{
+                                      backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb",
+                                      color: phoneSubtext,
+                                    }}
+                                  >
+                                    SOON
+                                  </span>
                                 )}
                               </div>
-                              <p className="text-[10px] text-gray-400 truncate">{entry.description}</p>
+                              <p className="text-[10px] truncate" style={{ color: phoneSubtext }}>
+                                {entry.description}
+                              </p>
                             </div>
                           </div>
                         );
