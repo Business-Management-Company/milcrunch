@@ -93,7 +93,10 @@ const ALL_PLATFORMS = [
 ];
 
 /** MilCrunch logo URL used on the UploadPost connect page. */
-const LOGO_URL = "https://milcrunch.com/icons/icon-512.png";
+const LOGO_URL =
+  typeof window !== "undefined"
+    ? `${window.location.origin}/icons/icon-512.png`
+    : "https://milcrunch.com/icons/icon-512.png";
 
 /** Generate secure connect URL for creator to link socials.
  *  On 409 (user already exists) falls back to a plain connect URL. */
@@ -107,11 +110,10 @@ export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<
       "Link your social media accounts to MilCrunch to manage posts, track performance, and grow your military creator brand.",
     redirect_button_text: "Return to MilCrunch",
     show_calendar: false,
-    // Default to all platforms; narrow to one when a provider is specified
+    // Always show all platforms; narrow to one only when a specific provider is requested
     platforms: opts.provider ? [opts.provider] : ALL_PLATFORMS,
   };
   if (opts.redirectUrl) body.redirect_url = opts.redirectUrl;
-  if (opts.provider) body.provider = opts.provider;
 
   console.log("[UploadPost] generate-jwt request body:", JSON.stringify(body, null, 2));
 

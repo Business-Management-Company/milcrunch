@@ -186,15 +186,37 @@ const CreatorSocials = () => {
     setSyncing(true);
     try {
       const synced = await syncConnectedAccountsFromUploadPost(userId);
-      setAccounts(synced);
-      // Persist to creator_social_connections for fast reload
+      // Persist every synced account to creator_social_connections
       await persistConnections(synced).catch(() => {});
       await syncDirectoryMemberStats(userId).catch(() => {});
-      toast.success(
-        synced.length > 0
-          ? `Synced ${synced.length} account${synced.length !== 1 ? "s" : ""}`
-          : "No connected accounts found. Try connecting above."
-      );
+      // Re-fetch from creator_social_connections as the source of truth
+      const { data: csc } = await supabase
+        .from("creator_social_connections")
+        .select("*")
+        .eq("user_id", userId)
+        .order("platform");
+      if (csc && csc.length > 0) {
+        setAccounts(
+          csc.map((r: any) => ({
+            id: r.id,
+            user_id: r.user_id,
+            platform: r.platform,
+            platform_user_id: r.upload_post_account_id ?? null,
+            platform_username: r.account_name ?? null,
+            profile_image_url: r.account_avatar ?? null,
+            followers_count: null,
+            raw_data: null,
+            created_at: r.connected_at,
+            updated_at: r.connected_at,
+          }))
+        );
+      } else {
+        // Fall back to the raw synced data if table query fails
+        setAccounts(synced);
+      }
+      if (synced.length > 0) {
+        toast.success(`Synced ${synced.length} account${synced.length !== 1 ? "s" : ""}`);
+      }
     } catch {
       toast.error("Sync failed");
     } finally {

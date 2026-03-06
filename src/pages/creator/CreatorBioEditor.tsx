@@ -1098,25 +1098,24 @@ export default function CreatorBioEditor() {
                             const t = toggles.find((t: any) => t.platform === acc.platform);
                             return t ? t.enabled : true;
                           });
-                          const icons = accs.length > 0
-                            ? accs.map((acc) => ({ key: acc.id, platform: acc.platform }))
-                            : ["instagram", "youtube", "twitter", "tiktok"].map((p) => ({ key: p, platform: p }));
                           return (
                             <div key={section.id} style={cStyle}>
                               <p className="text-xs font-semibold mb-3" style={{ color: phoneText }}>Social Links</p>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {icons.map(({ key, platform }) => {
-                                  const SIcon = socialIcon(platform);
-                                  const brandColor = accs.length > 0
-                                    ? (SOCIAL_BRAND_COLORS[platform.toLowerCase()] ?? theme.themeColor)
-                                    : theme.darkMode ? "#6b7280" : "#9ca3af";
-                                  return (
-                                    <div key={key} className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, backgroundColor: `${brandColor}15` }}>
-                                      <SIcon className="h-5 w-5" style={{ color: brandColor }} />
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                              {accs.length > 0 ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {accs.map((acc) => {
+                                    const SIcon = socialIcon(acc.platform);
+                                    const brandColor = SOCIAL_BRAND_COLORS[acc.platform.toLowerCase()] ?? theme.themeColor;
+                                    return (
+                                      <div key={acc.id} className="flex items-center justify-center rounded-full shadow-sm" style={{ width: 40, height: 40, backgroundColor: brandColor }}>
+                                        <SIcon className="h-5 w-5 text-white" />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-xs" style={{ color: phoneSubtext }}>No social accounts connected yet</p>
+                              )}
                             </div>
                           );
                         }
