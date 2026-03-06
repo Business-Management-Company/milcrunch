@@ -151,6 +151,7 @@ interface ThemeSettings {
   themeColor: string;
   bgMode: BgMode;
   bgColor: string;
+  bgImageUrl?: string;
   cardStyle: CardStyle;
   fontFamily: string;
   darkMode: boolean;
@@ -194,6 +195,10 @@ export default function CreatorBioEditor() {
   const [heroDominantColor, setHeroDominantColor] = useState<string | null>(null);
   const [uploadingHero, setUploadingHero] = useState(false);
   const heroInputRef = useRef<HTMLInputElement>(null);
+
+  /* ── Background image upload ── */
+  const [uploadingBgImage, setUploadingBgImage] = useState(false);
+  const bgImageInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Connected social accounts ── */
   const [socialAccounts, setSocialAccounts] = useState<ConnectedAccountRow[]>([]);
@@ -377,6 +382,29 @@ export default function CreatorBioEditor() {
     [user],
   );
 
+  /* ── Background image upload ── */
+  const uploadBgImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error("File must be under 10MB"); return; }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user.id}/bg-${Date.now()}.${ext}`;
+    setUploadingBgImage(true);
+    try {
+      const { error: upErr } = await supabase.storage.from("bio-images").upload(path, file, { upsert: true });
+      if (upErr) { toast.error(upErr.message); return; }
+      const { data: urlData } = supabase.storage.from("bio-images").getPublicUrl(path);
+      const url = urlData.publicUrl;
+      const updated = { ...theme, bgImageUrl: url };
+      setTheme(updated);
+      persistTheme(updated);
+      toast.success("Background image uploaded");
+    } finally {
+      setUploadingBgImage(false);
+      e.target.value = "";
+    }
+  };
+
   const addSection = (entry: SectionCatalogEntry) => {
     if (sections.find((s) => s.type === entry.type)) {
       toast.info(`${entry.label} is already added.`);
@@ -456,19 +484,17 @@ export default function CreatorBioEditor() {
   const avatarAspect = imageStyle === "portrait" ? "aspect-[3/4]" : "aspect-square";
 
   /* ── Compute phone preview styles from theme ── */
-  const phoneBg = theme.darkMode ? "#111827" : theme.bgColor;
-  const phoneText = theme.darkMode ? "#f9fafb" : "#111827";
+  const phoneText = theme.darkMode ? "#ffffff" : "#111827";
   const phoneSubtext = theme.darkMode ? "#9ca3af" : "#6b7280";
-  const phoneSectionBg = theme.darkMode ? "#1f2937" : "#f9fafb";
-  const phoneSectionBorder = theme.darkMode ? "#374151" : "#f3f4f6";
-  const phoneCardRadius = theme.cardStyle === "round" ? "0.75rem" : "0.375rem";
-  const phoneCardShadow = theme.cardStyle === "shadow"
-    ? "0 1px 3px rgba(0,0,0,0.12)" : theme.cardStyle === "glass"
-      ? "0 0 0 1px rgba(255,255,255,0.1)" : "none";
-  const phoneCardBackdrop = theme.cardStyle === "glass" ? "blur(8px)" : undefined;
-  const phoneGlassBg = theme.cardStyle === "glass"
-    ? theme.darkMode ? "rgba(31,41,55,0.6)" : "rgba(249,250,251,0.6)"
-    : phoneSectionBg;
+
+  /* Screen background — varies by bgMode; dark mode always overrides */
+  const phoneScreenBg: React.CSSProperties = theme.darkMode
+    ? { backgroundColor: "#0f1117" }
+    : theme.bgMode === "gradient"
+      ? { background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }
+      : theme.bgMode === "image" && theme.bgImageUrl
+        ? { backgroundImage: `url(${theme.bgImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+        : { backgroundColor: theme.bgColor };
 
   /* ────────────────────────────────────────────────────────────────── */
   return (
@@ -826,26 +852,98 @@ export default function CreatorBioEditor() {
                       </button>
                     ))}
                   </div>
+                  {/* Solid — bg color picker */}
                   {theme.bgMode === "solid" && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="h-8 w-8 rounded-md border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
-                      <Input
-                        value={theme.bgColor}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          updateTheme({ bgColor: v });
-                          if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
-                        }}
-                        className="h-8 text-xs font-mono uppercase"
-                        maxLength={7}
-                      />
+                    <div className="space-y-2 mt-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-md border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
+                        <Input
+                          value={theme.bgColor}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            updateTheme({ bgColor: v });
+                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                          }}
+                          className="h-8 text-xs font-mono uppercase"
+                          maxLength={7}
+                        />
+                      </div>
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {["#ffffff", "#f9fafb", "#f3f4f6", "#e5e7eb", "#111827", "#0f1117",
+                          "#fef3c7", "#fce7f3", "#ede9fe", "#dbeafe", "#d1fae5", "#fecaca",
+                        ].map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => { updateTheme({ bgColor: c }); persistTheme({ ...theme, bgColor: c }); }}
+                            className={`h-7 rounded-md border transition-all ${theme.bgColor.toLowerCase() === c.toLowerCase() ? "border-blue-500 ring-2 ring-blue-500/30 scale-105" : "border-border hover:scale-[1.04]"}`}
+                            style={{ backgroundColor: c }}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
+                  {/* Gradient — theme color (top) → bg color (bottom) */}
                   {theme.bgMode === "gradient" && (
-                    <p className="text-[11px] text-muted-foreground">Gradient uses your theme color fading to the background color.</p>
+                    <div className="space-y-2 mt-1">
+                      <div className="h-10 w-full rounded-lg border border-border" style={{ background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }} />
+                      <p className="text-[11px] text-muted-foreground">Top: theme color &rarr; Bottom: background color</p>
+                      <label className="text-[11px] font-medium text-muted-foreground">Bottom Color</label>
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-md border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
+                        <Input
+                          value={theme.bgColor}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            updateTheme({ bgColor: v });
+                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                          }}
+                          className="h-7 text-xs font-mono uppercase"
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
                   )}
+                  {/* Image — file upload zone */}
                   {theme.bgMode === "image" && (
-                    <p className="text-[11px] text-muted-foreground">Background image upload coming soon.</p>
+                    <div className="space-y-2 mt-1">
+                      <input
+                        ref={bgImageInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={uploadBgImage}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => bgImageInputRef.current?.click()}
+                        className="w-full rounded-lg border-2 border-dashed border-border hover:border-blue-400 transition-colors p-4 flex flex-col items-center gap-2"
+                      >
+                        {theme.bgImageUrl ? (
+                          <img src={theme.bgImageUrl} alt="Background" className="w-full h-20 object-cover rounded-md" />
+                        ) : uploadingBgImage ? (
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        ) : (
+                          <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                        )}
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {theme.bgImageUrl ? "Change background image" : "Upload background image"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
+                      </button>
+                      {theme.bgImageUrl && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            const updated = { ...theme, bgImageUrl: undefined };
+                            setTheme(updated);
+                            persistTheme(updated);
+                          }}
+                        >
+                          Remove background image
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -1056,9 +1154,8 @@ export default function CreatorBioEditor() {
                   style={{
                     width: "348px",
                     height: "720px",
-                    backgroundColor: phoneBg,
-                    backgroundImage: theme.bgMode === "gradient" ? `linear-gradient(180deg, ${theme.themeColor}22 0%, ${phoneBg} 60%)` : undefined,
                     fontFamily: theme.fontFamily,
+                    ...phoneScreenBg,
                   }}
                 >
                   {/* Hero image */}
@@ -1074,7 +1171,7 @@ export default function CreatorBioEditor() {
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover shadow-sm" style={{ border: `2px solid ${theme.themeColor}` }} />
                     ) : (
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-semibold" style={{ backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb", color: phoneSubtext }}>
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-semibold" style={{ backgroundColor: theme.darkMode ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>
                         {(displayName || "?")[0].toUpperCase()}
                       </div>
                     )}
@@ -1111,10 +1208,10 @@ export default function CreatorBioEditor() {
                         if (!entry) return null;
                         const cfg = (section.config ?? {}) as Record<string, any>;
 
-                        /* Card style from theme */
+                        /* Card style from theme — white (light) / #1e2433 (dark) */
                         const cardBg = theme.cardStyle === "glass"
-                          ? theme.darkMode ? "rgba(31,41,55,0.6)" : "rgba(255,255,255,0.7)"
-                          : theme.darkMode ? "#1f2937" : "#ffffff";
+                          ? theme.darkMode ? "rgba(30,36,51,0.6)" : "rgba(255,255,255,0.7)"
+                          : theme.darkMode ? "#1e2433" : "#ffffff";
                         const cardRadius = theme.cardStyle === "square" ? "6px" : "12px";
                         const cardShadow = theme.cardStyle === "shadow"
                           ? "0 2px 8px rgba(0,0,0,0.08)"
@@ -1139,7 +1236,7 @@ export default function CreatorBioEditor() {
                           });
                           return (
                             <div key={section.id} style={cStyle}>
-                              <p className="text-xs font-semibold mb-3" style={{ color: phoneText }}>Social Links</p>
+                              <p className="text-xs font-semibold mb-3" style={{ color: theme.themeColor }}>Social Links</p>
                               {accs.length > 0 ? (
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {accs.map((acc) => {
@@ -1208,7 +1305,7 @@ export default function CreatorBioEditor() {
                                   <CalendarCheck className="h-5 w-5" style={{ color: theme.themeColor }} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold" style={{ color: phoneText }}>{(cfg.buttonLabel as string) || "Book a Meeting"}</p>
+                                  <p className="text-sm font-semibold" style={{ color: theme.themeColor }}>{(cfg.buttonLabel as string) || "Book a Meeting"}</p>
                                   <p className="text-xs" style={{ color: phoneSubtext }}>Schedule time with me</p>
                                 </div>
                               </div>
@@ -1225,9 +1322,9 @@ export default function CreatorBioEditor() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-sm font-medium truncate" style={{ color: phoneText }}>{section.label}</span>
+                                  <span className="text-sm font-medium truncate" style={{ color: theme.themeColor }}>{section.label}</span>
                                   {entry.comingSoon && (
-                                    <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: theme.darkMode ? "#374151" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
+                                    <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: theme.darkMode ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
                                   )}
                                 </div>
                                 <p className="text-xs truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
