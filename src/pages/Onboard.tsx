@@ -652,7 +652,7 @@ export default function Onboard() {
       try {
         const ensured = await ensureUploadPostProfile(userId);
         if (!ensured.ok) return;
-        const res = await generateConnectUrl(userId);
+        const res = await generateConnectUrl({ userId });
         if (mounted && res.access_url) setConnectUrl(res.access_url);
         const list = await getConnectedAccounts(userId);
         if (mounted) setAccounts(list);

@@ -190,7 +190,7 @@ export default function Integrations() {
         });
         return;
       }
-      const res = await generateConnectUrl(userId);
+      const res = await generateConnectUrl({ userId });
       if (res.access_url) {
         setConnectUrl(res.access_url);
       } else {

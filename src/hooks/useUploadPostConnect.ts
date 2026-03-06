@@ -36,7 +36,7 @@ export function useUploadPostConnect() {
         toast.error(ensured.error ?? "Could not create profile");
         return;
       }
-      const res = await generateConnectUrl(userId);
+      const res = await generateConnectUrl({ userId });
       if (res.access_url) setConnectUrl(res.access_url);
       else toast.error(res.error ?? "Could not generate connect link");
     } finally {

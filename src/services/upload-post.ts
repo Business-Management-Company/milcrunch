@@ -79,11 +79,20 @@ export interface GenerateJwtResponse {
   error?: string;
 }
 
+export interface GenerateConnectOptions {
+  userId: string;
+  redirectUrl?: string;
+  /** Limit the connect page to specific platforms (e.g. ["tiktok"]). */
+  platforms?: string[];
+}
+
 /** Generate secure connect URL for creator to link socials.
  *  On 409 (user already exists) falls back to a plain connect URL. */
-export async function generateConnectUrl(userId: string, redirectUrl?: string): Promise<GenerateJwtResponse> {
-  const body: Record<string, string> = { username: userId };
-  if (redirectUrl) body.redirect_url = redirectUrl;
+export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<GenerateJwtResponse> {
+  const body: Record<string, unknown> = { username: opts.userId };
+  if (opts.redirectUrl) body.redirect_url = opts.redirectUrl;
+  if (opts.platforms?.length) body.platforms = opts.platforms;
+
   const res = await fetch(`${API_BASE}/api/uploadposts/users/generate-jwt`, {
     method: "POST",
     headers: getHeaders(),
@@ -97,7 +106,7 @@ export async function generateConnectUrl(userId: string, redirectUrl?: string): 
   // 409 = user already exists — try creating a fresh profile then retry once
   if (res.status === 409) {
     // Ensure profile exists, then retry JWT generation
-    await createUploadPostProfile(userId).catch(() => {});
+    await createUploadPostProfile(opts.userId).catch(() => {});
     const retry = await fetch(`${API_BASE}/api/uploadposts/users/generate-jwt`, {
       method: "POST",
       headers: getHeaders(),

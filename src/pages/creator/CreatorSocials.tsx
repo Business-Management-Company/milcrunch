@@ -223,8 +223,8 @@ const CreatorSocials = () => {
     }
   }, [userId, profileReady, syncAccounts]);
 
-  /* ---- Open popup for connect ---- */
-  const handleConnect = useCallback(() => {
+  /* ---- Open popup for a specific platform ---- */
+  const handleConnect = useCallback((platformKey: string) => {
     if (!userId || !profileReady) {
       toast.error("Profile is still loading. Please wait.");
       return;
@@ -242,7 +242,11 @@ const CreatorSocials = () => {
 
     setConnecting(true);
 
-    generateConnectUrl(userId, REDIRECT_URL).then((res) => {
+    generateConnectUrl({
+      userId,
+      redirectUrl: REDIRECT_URL,
+      platforms: [platformKey],
+    }).then((res) => {
       setConnecting(false);
       if (!res.access_url) {
         popup.close();
@@ -434,7 +438,7 @@ const CreatorSocials = () => {
             return (
               <button
                 key={p.key}
-                onClick={handleConnect}
+                onClick={() => handleConnect(p.key)}
                 disabled={connecting}
                 className="flex items-center gap-3 border border-border rounded-xl px-4 py-3.5 text-left transition-colors hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 cursor-pointer"
               >
