@@ -117,8 +117,34 @@ const CreatorSocials = () => {
   /* ---- Load accounts from Supabase ---- */
   const loadAccounts = useCallback(async () => {
     if (!userId) return;
+    // Try Upload-Post synced accounts first
     const list = await getConnectedAccounts(userId);
-    setAccounts(list);
+    if (list.length > 0) {
+      setAccounts(list);
+      return;
+    }
+    // Fallback: load from creator_social_connections
+    const { data } = await supabase
+      .from("creator_social_connections")
+      .select("*")
+      .eq("user_id", userId)
+      .order("platform");
+    if (data && data.length > 0) {
+      setAccounts(
+        data.map((r: any) => ({
+          id: r.id,
+          user_id: r.user_id,
+          platform: r.platform,
+          platform_user_id: r.upload_post_account_id ?? null,
+          platform_username: r.account_name ?? null,
+          profile_image_url: r.account_avatar ?? null,
+          followers_count: null,
+          raw_data: null,
+          created_at: r.connected_at,
+          updated_at: r.connected_at,
+        }))
+      );
+    }
   }, [userId]);
 
   /* ---- Ensure UploadPost profile exists ---- */
@@ -132,6 +158,27 @@ const CreatorSocials = () => {
     setProfileReady(true);
   }, [userId]);
 
+  /* ---- Persist to creator_social_connections ---- */
+  const persistConnections = useCallback(
+    async (rows: ConnectedAccountRow[]) => {
+      if (!userId || rows.length === 0) return;
+      for (const r of rows) {
+        await supabase.from("creator_social_connections").upsert(
+          {
+            user_id: userId,
+            platform: r.platform,
+            account_name: r.platform_username ?? null,
+            account_avatar: r.profile_image_url ?? null,
+            upload_post_account_id: r.platform_user_id ?? null,
+            connected_at: r.created_at ?? new Date().toISOString(),
+          },
+          { onConflict: "user_id,platform" }
+        );
+      }
+    },
+    [userId]
+  );
+
   /* ---- Sync from UploadPost API → Supabase ---- */
   const syncAccounts = useCallback(async () => {
     if (!userId) return;
@@ -139,6 +186,8 @@ const CreatorSocials = () => {
     try {
       const synced = await syncConnectedAccountsFromUploadPost(userId);
       setAccounts(synced);
+      // Persist to creator_social_connections for fast reload
+      await persistConnections(synced).catch(() => {});
       await syncDirectoryMemberStats(userId).catch(() => {});
       toast.success(
         synced.length > 0
@@ -150,7 +199,7 @@ const CreatorSocials = () => {
     } finally {
       setSyncing(false);
     }
-  }, [userId]);
+  }, [userId, persistConnections]);
 
   /* ---- Init on mount ---- */
   useEffect(() => {
@@ -175,12 +224,12 @@ const CreatorSocials = () => {
   }, [userId, profileReady, syncAccounts]);
 
   /* ---- Open popup for connect ---- */
-  const handleConnect = useCallback(async () => {
+  const handleConnect = useCallback(() => {
     if (!userId || !profileReady) {
       toast.error("Profile is still loading. Please wait.");
       return;
     }
-    // Open popup synchronously on click so the browser doesn't block it
+    // window.open MUST be the very first line — synchronous, no awaits before it
     const popup = window.open(
       "about:blank",
       "connect_social",
@@ -192,21 +241,20 @@ const CreatorSocials = () => {
     }
 
     setConnecting(true);
-    try {
-      const res = await generateConnectUrl(userId, REDIRECT_URL);
+
+    generateConnectUrl(userId, REDIRECT_URL).then((res) => {
+      setConnecting(false);
       if (!res.access_url) {
         popup.close();
         toast.error(res.error ?? "Could not generate connect link");
         return;
       }
-      // Navigate the already-open popup to the JWT URL
       popup.location.href = res.access_url;
 
-      // Poll: cross-origin pages throw — ignore until redirect lands on our domain
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(() => {
         try {
-          if (popup.closed) {
+          if (!popup || popup.closed) {
             clearInterval(pollRef.current!);
             pollRef.current = null;
             syncAccounts();
@@ -219,21 +267,32 @@ const CreatorSocials = () => {
             syncAccounts();
           }
         } catch {
-          // Cross-origin — expected while on UploadPost / OAuth provider domain
+          /* cross-origin — expected */
         }
       }, 500);
-    } finally {
+    }).catch(() => {
       setConnecting(false);
-    }
+      popup.close();
+      toast.error("Could not generate connect link");
+    });
   }, [userId, profileReady, syncAccounts]);
 
   /* ---- Disconnect ---- */
   const handleDisconnect = async (e: React.MouseEvent, account: ConnectedAccountRow) => {
     e.stopPropagation();
+    // Delete from connected_accounts (Upload-Post synced)
     const { error } = await (supabase as any)
       .from("connected_accounts")
       .delete()
       .eq("id", account.id);
+    // Also delete from creator_social_connections (persisted)
+    if (userId) {
+      await supabase
+        .from("creator_social_connections")
+        .delete()
+        .eq("user_id", userId)
+        .eq("platform", account.platform);
+    }
     if (error) {
       toast.error("Failed to disconnect");
       console.error(error);
