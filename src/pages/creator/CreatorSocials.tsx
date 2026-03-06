@@ -2,105 +2,163 @@ import { useState, useEffect, useCallback } from "react";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { generateConnectUrl } from "@/services/upload-post";
-import {
-  syncConnectedAccountsFromUploadPost,
-  getConnectedAccounts,
-  ensureUploadPostProfile,
-  type ConnectedAccountRow,
-} from "@/lib/upload-post-sync";
-import { Loader2, Link2, RefreshCw, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Check, X, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
-const PLATFORM_LABELS: Record<string, string> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  linkedin: "LinkedIn",
-  youtube: "YouTube",
-  facebook: "Facebook",
-  x: "X (Twitter)",
-  threads: "Threads",
-  pinterest: "Pinterest",
-  reddit: "Reddit",
-  bluesky: "Bluesky",
-};
+/* ------------------------------------------------------------------ */
+/*  Platform definitions                                               */
+/* ------------------------------------------------------------------ */
 
-function formatFollowers(n: number | null | undefined): string {
-  if (n == null) return "—";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
+interface Platform {
+  key: string;
+  label: string;
+  color: string;        // brand color for the icon circle
+  placeholder: string;  // input placeholder
 }
+
+const PLATFORMS: Platform[] = [
+  { key: "instagram",        label: "Instagram",        color: "#E1306C", placeholder: "@username" },
+  { key: "tiktok",           label: "TikTok",           color: "#000000", placeholder: "@username" },
+  { key: "youtube",          label: "YouTube",          color: "#FF0000", placeholder: "@channel or URL" },
+  { key: "facebook",         label: "Facebook",         color: "#1877F2", placeholder: "Page or profile name" },
+  { key: "x",                label: "X (Twitter)",      color: "#000000", placeholder: "@handle" },
+  { key: "linkedin",         label: "LinkedIn",         color: "#0A66C2", placeholder: "Profile URL or name" },
+  { key: "threads",          label: "Threads",          color: "#000000", placeholder: "@username" },
+  { key: "pinterest",        label: "Pinterest",        color: "#E60023", placeholder: "@username" },
+  { key: "reddit",           label: "Reddit",           color: "#FF4500", placeholder: "u/username" },
+  { key: "bluesky",          label: "Bluesky",          color: "#0085FF", placeholder: "@handle.bsky.social" },
+  { key: "google_business",  label: "Google Business",  color: "#4285F4", placeholder: "Business name" },
+];
+
+/* Simple SVG-style icon — first letter(s) in a brand-colored circle */
+function PlatformIcon({ platform }: { platform: Platform }) {
+  const abbr =
+    platform.key === "google_business"
+      ? "G"
+      : platform.key === "x"
+        ? "X"
+        : platform.label.charAt(0);
+
+  return (
+    <div
+      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0"
+      style={{ backgroundColor: platform.color }}
+    >
+      {abbr}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+interface ConnectedAccount {
+  id: string;
+  platform: string;
+  platform_username: string | null;
+  created_at: string | null;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 const CreatorSocials = () => {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const [connectUrl, setConnectUrl] = useState<string | null>(null);
-  const [connectLoading, setConnectLoading] = useState(false);
-  const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
 
+  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Track which platform card is in "editing" mode and the draft username
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  /* ---- Load connected accounts ---- */
   const loadAccounts = useCallback(async () => {
     if (!userId) return;
-    const list = await getConnectedAccounts(userId);
-    setAccounts(list);
-  }, [userId]);
-
-  const ensureProfileAndConnectUrl = useCallback(async () => {
-    if (!userId) return;
-    setConnectLoading(true);
-    try {
-      const ensured = await ensureUploadPostProfile(userId);
-      if (!ensured.ok) {
-        toast.error(ensured.error ?? "Could not create profile");
-        setConnectLoading(false);
-        return;
-      }
-      const res = await generateConnectUrl(userId);
-      if (res.access_url) setConnectUrl(res.access_url);
-      else toast.error(res.error ?? "Could not generate connect link");
-    } finally {
-      setConnectLoading(false);
-    }
-  }, [userId]);
-
-  const syncFromUploadPost = useCallback(async () => {
-    if (!userId) return;
-    setSyncing(true);
-    try {
-      const synced = await syncConnectedAccountsFromUploadPost(userId);
-      setAccounts(synced);
-      toast.success(
-        synced.length > 0
-          ? `Synced ${synced.length} connected account${synced.length !== 1 ? "s" : ""}`
-          : "No connected accounts yet. Connect above."
-      );
-    } catch (e) {
-      toast.error("Sync failed");
-    } finally {
-      setSyncing(false);
+    const { data, error } = await (supabase as any)
+      .from("connected_accounts")
+      .select("id, platform, platform_username, created_at")
+      .eq("user_id", userId);
+    if (error) {
+      console.error("Failed to load connected accounts", error);
+    } else {
+      setAccounts(data ?? []);
     }
   }, [userId]);
 
   useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    (async () => {
-      await ensureProfileAndConnectUrl();
-      await loadAccounts();
-    })().finally(() => setLoading(false));
-  }, [userId, ensureProfileAndConnectUrl, loadAccounts]);
+    loadAccounts().finally(() => setLoading(false));
+  }, [loadAccounts]);
 
-  const openConnect = () => {
-    if (connectUrl) window.open(connectUrl, "uploadpost-connect", "width=600,height=700");
-    else toast.error("Connect link not ready");
+  /* ---- Helpers ---- */
+  const accountFor = (platformKey: string) =>
+    accounts.find((a) => a.platform === platformKey);
+
+  /* ---- Connect (upsert) ---- */
+  const handleSave = async (platformKey: string) => {
+    if (!userId || !draft.trim()) return;
+    setSaving(true);
+    const existing = accountFor(platformKey);
+    if (existing) {
+      // Update
+      const { error } = await (supabase as any)
+        .from("connected_accounts")
+        .update({ platform_username: draft.trim(), updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      if (error) {
+        toast.error("Failed to update account");
+        console.error(error);
+      } else {
+        toast.success("Account updated");
+      }
+    } else {
+      // Insert
+      const { error } = await (supabase as any)
+        .from("connected_accounts")
+        .insert({
+          user_id: userId,
+          platform: platformKey,
+          platform_username: draft.trim(),
+        });
+      if (error) {
+        toast.error("Failed to connect account");
+        console.error(error);
+      } else {
+        toast.success("Account connected");
+      }
+    }
+    setSaving(false);
+    setEditing(null);
+    setDraft("");
+    await loadAccounts();
   };
 
+  /* ---- Disconnect ---- */
+  const handleDisconnect = async (platformKey: string) => {
+    const existing = accountFor(platformKey);
+    if (!existing) return;
+    const { error } = await (supabase as any)
+      .from("connected_accounts")
+      .delete()
+      .eq("id", existing.id);
+    if (error) {
+      toast.error("Failed to disconnect");
+      console.error(error);
+    } else {
+      toast.success("Account disconnected");
+      await loadAccounts();
+    }
+  };
+
+  /* ---- Not signed in ---- */
   if (!userId) {
     return (
       <CreatorLayout>
@@ -113,114 +171,134 @@ const CreatorSocials = () => {
 
   return (
     <CreatorLayout>
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-headline font-bold text-foreground mb-2">
-          Connected Socials
+          My Socials
         </h1>
         <p className="text-muted-foreground">
-          Connect once, use everywhere. Your linked accounts power your bio page, content scheduling, and brand discovery.
+          Connect your social accounts to power your bio page, content scheduling, and brand discovery.
         </p>
       </div>
 
-      {/* Connect Your Socials */}
-      <Card className="bg-gradient-card border-border p-6 mb-6">
-        <h2 className="text-lg font-semibold text-foreground mb-2 flex items-center gap-2">
-          <Link2 className="h-5 w-5" />
-          Connect Your Socials
-        </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Link your Instagram, TikTok, and other platforms via Upload-Post. One connection is used across MilCrunch.
-        </p>
-        {loading && !connectUrl ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Preparing connect link…</span>
-          </div>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={openConnect}
-              disabled={connectLoading}
-              className="rounded-lg"
-            >
-              {connectLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <ExternalLink className="h-4 w-4 mr-2" />
-              )}
-              Open Connect Page
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                ensureProfileAndConnectUrl();
-                openConnect();
-              }}
-              disabled={connectLoading}
-              className="rounded-lg"
-            >
-              Refresh link
-            </Button>
-            <Button
-              variant="outline"
-              onClick={syncFromUploadPost}
-              disabled={syncing}
-              className="rounded-lg"
-            >
-              {syncing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
-              )}
-              Sync accounts
-            </Button>
-          </div>
-        )}
-      </Card>
+      {/* Loading state */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading accounts…
+        </div>
+      ) : (
+        /* Platform grid — 2 columns on md+ */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {PLATFORMS.map((p) => {
+            const connected = accountFor(p.key);
+            const isEditing = editing === p.key;
 
-      {/* Connected accounts */}
-      <Card className="bg-gradient-card border-border p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Connected accounts</h2>
-        {accounts.length === 0 ? (
-          <p className="text-muted-foreground">
-            No accounts connected yet. Click &quot;Open Connect Page&quot; above to link your socials.
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {accounts.map((acc) => (
-              <li
-                key={`${acc.platform}-${acc.platform_username ?? acc.id}`}
-                className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
+            return (
+              <Card
+                key={p.key}
+                className="bg-[#000741]/60 border-white/10 p-5 flex flex-col gap-3"
               >
-                {acc.profile_image_url ? (
-                  <img
-                    src={acc.profile_image_url}
-                    alt=""
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                    {(acc.platform ?? "?").slice(0, 1).toUpperCase()}
+                {/* Top row: icon + name + status */}
+                <div className="flex items-center gap-3">
+                  <PlatformIcon platform={p} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground">{p.label}</p>
+                    {connected && !isEditing && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {connected.platform_username}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right side: status badge or action */}
+                  {connected && !isEditing ? (
+                    <span className="flex items-center gap-1 text-sm text-emerald-400 font-medium">
+                      <Check className="h-4 w-4" />
+                      Connected
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Editing row */}
+                {isEditing && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder={p.placeholder}
+                      className="bg-white/10 border-white/20 text-foreground placeholder:text-white/40"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSave(p.key);
+                        if (e.key === "Escape") {
+                          setEditing(null);
+                          setDraft("");
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleSave(p.key)}
+                      disabled={saving || !draft.trim()}
+                      className="shrink-0"
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setEditing(null); setDraft(""); }}
+                      className="shrink-0 text-muted-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground">
-                    {PLATFORM_LABELS[acc.platform] ?? acc.platform}
-                  </p>
-                  {acc.platform_username && (
-                    <p className="text-sm text-muted-foreground truncate">
-                      @{acc.platform_username}
-                    </p>
-                  )}
-                </div>
-                <p className="text-sm tabular-nums text-muted-foreground">
-                  {formatFollowers(acc.followers_count)} followers
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+
+                {/* Action buttons */}
+                {!isEditing && (
+                  <div className="flex items-center gap-2">
+                    {connected ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-white/20 text-foreground hover:bg-white/10"
+                          onClick={() => {
+                            setEditing(p.key);
+                            setDraft(connected.platform_username ?? "");
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <button
+                          onClick={() => handleDisconnect(p.key)}
+                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors ml-auto"
+                        >
+                          <Unlink className="h-3 w-3" />
+                          Disconnect
+                        </button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setEditing(p.key);
+                          setDraft("");
+                        }}
+                        className="bg-white/10 hover:bg-white/20 text-foreground border border-white/20"
+                      >
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </CreatorLayout>
   );
 };
