@@ -104,8 +104,8 @@ const CreatorSocials = () => {
 
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [connectUrl, setConnectUrl] = useState<string | null>(null);
-  const [connectLoading, setConnectLoading] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const initDone = useRef<string | null>(null);
 
@@ -116,22 +116,15 @@ const CreatorSocials = () => {
     setAccounts(list);
   }, [userId]);
 
-  /* ---- Ensure UploadPost profile + generate connect URL ---- */
-  const ensureProfileAndGetUrl = useCallback(async () => {
+  /* ---- Ensure UploadPost profile exists ---- */
+  const ensureProfile = useCallback(async () => {
     if (!userId) return;
-    setConnectLoading(true);
-    try {
-      const ensured = await ensureUploadPostProfile(userId);
-      if (!ensured.ok) {
-        toast.error(ensured.error ?? "Could not create UploadPost profile");
-        return;
-      }
-      const res = await generateConnectUrl(userId);
-      if (res.access_url) setConnectUrl(res.access_url);
-      else toast.error(res.error ?? "Could not generate connect link");
-    } finally {
-      setConnectLoading(false);
+    const ensured = await ensureUploadPostProfile(userId);
+    if (!ensured.ok) {
+      toast.error(ensured.error ?? "Could not create UploadPost profile");
+      return;
     }
+    setProfileReady(true);
   }, [userId]);
 
   /* ---- Sync from UploadPost API → Supabase ---- */
@@ -154,40 +147,52 @@ const CreatorSocials = () => {
     }
   }, [userId]);
 
-  /* ---- Init on mount: ensure profile, get URL, load accounts ---- */
+  /* ---- Init on mount: ensure profile, load accounts ---- */
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
     if (initDone.current === userId) return;
     initDone.current = userId;
     setLoading(true);
     (async () => {
-      await ensureProfileAndGetUrl();
+      await ensureProfile();
       await loadAccounts();
     })().finally(() => setLoading(false));
-  }, [userId, ensureProfileAndGetUrl, loadAccounts]);
+  }, [userId, ensureProfile, loadAccounts]);
 
   /* ---- Open UploadPost OAuth popup, sync on close ---- */
-  const handleConnect = useCallback(() => {
-    if (connectLoading) {
-      toast.error("Connect link is still loading. Please wait.");
+  const handleConnect = useCallback(async () => {
+    if (!userId || !profileReady) {
+      toast.error("Profile is still loading. Please wait.");
       return;
     }
-    if (!connectUrl) {
-      toast.error("Connect link unavailable. Please refresh the page.");
-      return;
-    }
-    const popup = window.open(connectUrl, "uploadpost-connect", "width=600,height=700");
-    if (!popup) {
-      toast.error("Popup blocked. Please allow popups for this site.");
-      return;
-    }
-    const interval = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(interval);
-        syncAccounts();
+    setConnecting(true);
+    try {
+      // Generate a fresh connect URL each time (JWT URLs expire)
+      const res = await generateConnectUrl(userId);
+      if (!res.access_url) {
+        toast.error(res.error ?? "Could not generate connect link");
+        return;
       }
-    }, 1500);
-  }, [connectUrl, connectLoading, syncAccounts]);
+      const popup = window.open(
+        res.access_url,
+        "connect_social",
+        "width=600,height=700,scrollbars=yes"
+      );
+      if (!popup) {
+        toast.error("Popup blocked. Please allow popups for this site.");
+        return;
+      }
+      // Poll for popup close, then sync
+      const timer = setInterval(async () => {
+        if (popup.closed) {
+          clearInterval(timer);
+          await syncAccounts();
+        }
+      }, 500);
+    } finally {
+      setConnecting(false);
+    }
+  }, [userId, profileReady, syncAccounts]);
 
   /* ---- Disconnect: remove from Supabase ---- */
   const handleDisconnect = async (account: ConnectedAccountRow) => {
@@ -291,10 +296,10 @@ const CreatorSocials = () => {
                       variant="outline"
                       size="sm"
                       className="ml-2 shrink-0"
-                      disabled={connectLoading}
+                      disabled={connecting}
                       onClick={handleConnect}
                     >
-                      {connectLoading ? (
+                      {connecting ? (
                         <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
                       ) : null}
                       Connect
