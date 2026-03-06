@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { getConnectedAccounts } from "@/lib/upload-post-sync";
+import { getConnectedAccounts, syncConnectedAccountsFromUploadPost } from "@/lib/upload-post-sync";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3,
@@ -24,7 +24,16 @@ import {
   Send,
   Plus,
   Share2,
+  Check,
+  Circle,
+  RefreshCw,
+  DollarSign,
+  Sparkles,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 /* ── Platform SVG icons (brand) ── */
@@ -101,6 +110,11 @@ export default function CreatorDashboard() {
   const [pageViews, setPageViews] = useState(0);
   const [linkClicks, setLinkClicks] = useState(0);
   const [notifications, setNotifications] = useState<{ id: string; type: string; title: string; message: string | null; link: string | null; is_read: boolean; created_at: string }[]>([]);
+  const navigate = useNavigate();
+  const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [showWorth, setShowWorth] = useState(false);
+  const [worthEstimate, setWorthEstimate] = useState({ tier: "", minRate: 0, maxRate: 0 });
 
   useEffect(() => {
     if (!user?.id) return;
@@ -173,6 +187,53 @@ export default function CreatorDashboard() {
     }
     navigator.clipboard.writeText(bioUrl);
     toast.success("Bio link copied!");
+  };
+
+  const handleSync = async (platform: string, type: string) => {
+    if (!user?.id) return;
+    setSyncing(true);
+    try {
+      await syncConnectedAccountsFromUploadPost(user.id);
+      const list = await getConnectedAccounts(user.id);
+      if (list.length > 0) {
+        setAccounts(list.map((a) => ({
+          platform: a.platform,
+          platform_username: a.platform_username ?? null,
+          followers_count: a.followers_count ?? null,
+        })));
+      }
+      const label = PLATFORM_LABELS[platform] ?? platform;
+      const action = type === "full" ? "Full sync" : type === "posts" ? "Posts sync" : "Insights sync";
+      toast.success(`${label}: ${action} complete`);
+    } catch {
+      toast.error("Sync failed. Try again.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const calculateWorth = () => {
+    let minRate = 0, maxRate = 0, tier = "";
+    const f = totalFollowers;
+    if (f < 1000) { tier = "Starter"; minRate = 5; maxRate = 25; }
+    else if (f < 10000) { tier = "Nano"; minRate = 10; maxRate = 100; }
+    else if (f < 50000) { tier = "Micro"; minRate = 100; maxRate = 500; }
+    else if (f < 500000) { tier = "Mid-Tier"; minRate = 500; maxRate = 5000; }
+    else if (f < 1000000) { tier = "Macro"; minRate = 5000; maxRate = 10000; }
+    else { tier = "Mega"; minRate = 10000; maxRate = 50000; }
+    const platformMult = Math.min(1 + (accounts.length - 1) * 0.15, 2);
+    setWorthEstimate({
+      tier,
+      minRate: Math.round(minRate * platformMult),
+      maxRate: Math.round(maxRate * platformMult),
+    });
+    setShowWorth(true);
+  };
+
+  const fmtFollowers = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return String(n);
   };
 
   return (
@@ -300,6 +361,163 @@ export default function CreatorDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Social Media Setup + Know Your Worth */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Social Media Setup */}
+          <Card className="rounded-xl border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <RefreshCw className="h-5 w-5" />
+                Social Media Setup
+              </CardTitle>
+              <CardDescription>Platform integration status &amp; sync</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {accounts.length === 0 ? (
+                <div className="text-center py-6">
+                  <Share2 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                  <p className="text-sm text-muted-foreground mb-3">Connect accounts to see setup status.</p>
+                  <Button size="sm" asChild>
+                    <Link to="/creator/socials">Connect Accounts</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {accounts.map((acc) => {
+                    const isExpanded = expandedPlatform === acc.platform;
+                    const PIcon = PLATFORM_ICONS[acc.platform] ?? Share2;
+                    const color = PLATFORM_COLORS[acc.platform] ?? "text-muted-foreground";
+                    const label = PLATFORM_LABELS[acc.platform] ?? acc.platform;
+                    const checks = [
+                      { label: "Account Connected", done: true },
+                      { label: "Profile Synced", done: !!acc.platform_username },
+                      { label: "Posts & Engagement Imported", done: false },
+                      { label: "Insights Available", done: false },
+                      { label: "Audience Data Available", done: (acc.followers_count ?? 0) > 0 },
+                      { label: "Daily Auto-Sync Enabled", done: true },
+                    ];
+                    const completed = checks.filter((c) => c.done).length;
+                    return (
+                      <div key={acc.platform} className="rounded-xl border border-border overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedPlatform(isExpanded ? null : acc.platform)}
+                          className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-background flex items-center justify-center shrink-0">
+                            <PIcon className={`h-[18px] w-[18px] ${color}`} />
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="font-medium text-sm">{label}</p>
+                            <p className="text-xs text-muted-foreground">{completed}/{checks.length} steps complete</p>
+                          </div>
+                          <span className={cn(
+                            "text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0",
+                            completed === checks.length
+                              ? "text-green-600 bg-green-50 dark:bg-green-950/30"
+                              : "text-amber-600 bg-amber-50 dark:bg-amber-950/30"
+                          )}>
+                            {completed === checks.length ? "Complete" : `${completed}/${checks.length}`}
+                          </span>
+                          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", isExpanded && "rotate-180")} />
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-border bg-muted/30 p-3 space-y-2">
+                            {checks.map((item) => (
+                              <div key={item.label} className="flex items-center gap-2.5 text-sm">
+                                {item.done ? (
+                                  <Check className="h-4 w-4 text-green-500 shrink-0" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                                )}
+                                <span className={item.done ? "text-foreground" : "text-muted-foreground"}>{item.label}</span>
+                              </div>
+                            ))}
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-border mt-3">
+                              <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => navigate("/creator/socials")}>
+                                Reconnect
+                              </Button>
+                              <Button variant="outline" size="sm" className="text-xs h-7" disabled={syncing} onClick={() => handleSync(acc.platform, "posts")}>
+                                {syncing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                                Sync Posts
+                              </Button>
+                              <Button variant="outline" size="sm" className="text-xs h-7" disabled={syncing} onClick={() => handleSync(acc.platform, "insights")}>
+                                Sync Insights
+                              </Button>
+                              <Button variant="outline" size="sm" className="text-xs h-7" disabled={syncing} onClick={() => handleSync(acc.platform, "full")}>
+                                <RefreshCw className={cn("h-3 w-3 mr-1", syncing && "animate-spin")} />
+                                Run Sync
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Know Your Worth */}
+          <Card className="rounded-xl border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Know Your Worth
+              </CardTitle>
+              <CardDescription>Estimate your sponsored post value</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!showWorth ? (
+                <div className="text-center py-6">
+                  <DollarSign className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Find out what brands should pay for a sponsored post based on your audience size and reach.
+                  </p>
+                  <Button onClick={calculateWorth} disabled={accounts.length === 0}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Calculate My Value
+                  </Button>
+                  {accounts.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-3">Connect social accounts first.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="text-center py-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Estimated Rate Per Sponsored Post</p>
+                    <p className="text-3xl font-bold text-foreground">${worthEstimate.minRate.toLocaleString()} – ${worthEstimate.maxRate.toLocaleString()}</p>
+                    <Badge variant="secondary" className="mt-2">{worthEstimate.tier} Creator</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Total Followers</p>
+                      <p className="font-bold text-sm">{fmtFollowers(totalFollowers)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Platforms</p>
+                      <p className="font-bold text-sm">{accounts.length}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-xs text-muted-foreground">
+                    <div className="flex justify-between"><span>Story / Reel</span><span className="font-medium text-foreground">${Math.round(worthEstimate.minRate * 0.6).toLocaleString()} – ${Math.round(worthEstimate.maxRate * 0.6).toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span>Feed Post</span><span className="font-medium text-foreground">${worthEstimate.minRate.toLocaleString()} – ${worthEstimate.maxRate.toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span>Video / YouTube</span><span className="font-medium text-foreground">${Math.round(worthEstimate.minRate * 2).toLocaleString()} – ${Math.round(worthEstimate.maxRate * 2).toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span>Brand Partnership (Monthly)</span><span className="font-medium text-foreground">${Math.round(worthEstimate.maxRate * 4).toLocaleString()}+</span></div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    Based on industry benchmarks. Actual rates vary by niche, content quality, and audience demographics.
+                  </p>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setShowWorth(false)}>
+                    Recalculate
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Recent activity */}
