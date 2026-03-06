@@ -501,27 +501,22 @@ export default function CreatorBioEditor() {
     <CreatorLayout>
       <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
         {/* ── TOP BAR ── */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card rounded-t-xl shrink-0">
-          <div className="min-w-0">
-            <h1 className="text-lg font-semibold text-foreground truncate">My Page Builder</h1>
-            <p className="text-xs text-muted-foreground">Create your perfect profile</p>
+        <div className="shrink-0 border-b border-border bg-card rounded-t-xl">
+          <div className="flex items-center justify-between px-5 pt-3 pb-2">
+            <h1 className="text-lg font-semibold text-foreground">My Page Builder</h1>
+            <div className="flex items-center gap-2 shrink-0">
+              {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              <Button
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => { persistSections(sections); toast.success("Published!"); }}
+              >
+                Publish
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => { persistSections(sections); toast.success("Published!"); }}
-            >
-              Publish
-            </Button>
-          </div>
-        </div>
-
-        {/* ── BODY ── */}
-        <div className="flex flex-1 min-h-0 bg-muted/30 rounded-b-xl overflow-hidden">
-          {/* ── ICON SIDEBAR (desktop) ── */}
-          <div className="hidden md:flex flex-col items-center gap-1 py-4 px-1.5 w-[68px] shrink-0 border-r border-border bg-card">
+          {/* ── Tab pills (shared on all breakpoints) ── */}
+          <div className="flex items-center gap-1 px-5 pb-3 overflow-x-auto">
             {SIDEBAR_TABS.map((tab) => {
               const active = activeTab === tab.id;
               const Icon = tab.icon;
@@ -529,29 +524,8 @@ export default function CreatorBioEditor() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center gap-0.5 rounded-xl p-2 w-14 transition-all ${
-                    active ? "text-white" : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                  style={active ? { background: "linear-gradient(135deg, #ec4899 0%, #9333ea 100%)" } : undefined}
-                >
-                  <Icon className="h-5 w-5" />
-                  <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* ── MOBILE TAB BAR ── */}
-          <div className="flex md:hidden items-center gap-1 px-2 py-2 border-b border-border bg-card w-full absolute z-10">
-            {SIDEBAR_TABS.map((tab) => {
-              const active = activeTab === tab.id;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                    active ? "text-white" : "text-muted-foreground hover:bg-muted"
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-all whitespace-nowrap ${
+                    active ? "text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                   style={active ? { background: "linear-gradient(135deg, #ec4899 0%, #9333ea 100%)" } : undefined}
                 >
@@ -561,9 +535,12 @@ export default function CreatorBioEditor() {
               );
             })}
           </div>
+        </div>
 
+        {/* ── BODY ── */}
+        <div className="flex flex-1 min-h-0 bg-muted/30 rounded-b-xl overflow-hidden">
           {/* ── CONTENT PANEL ── */}
-          <div className="flex-1 md:max-w-[400px] overflow-y-auto border-r border-border bg-card p-4 pt-14 md:pt-4">
+          <div className="flex-1 md:max-w-[420px] overflow-y-auto border-r border-border bg-card p-5">
 
             {/* ── PROFILE TAB (inline editor) ── */}
             {activeTab === "profile" && (
