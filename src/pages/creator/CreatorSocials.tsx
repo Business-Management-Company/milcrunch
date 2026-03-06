@@ -11,7 +11,7 @@ import {
   syncDirectoryMemberStats,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
-import { Loader2, RefreshCw, X, Calendar, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
+import { Loader2, RefreshCw, X, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -110,7 +110,6 @@ const CreatorSocials = () => {
   const [profileReady, setProfileReady] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"connect" | "calendar">("connect");
   const initDone = useRef<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -336,30 +335,8 @@ const CreatorSocials = () => {
         </p>
       </div>
 
-      {/* ---- Tabs + Sync ---- */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab("connect")}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              activeTab === "connect"
-                ? "bg-purple-600 text-white"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Connect Accounts
-          </button>
-          <button
-            onClick={() => setActiveTab("calendar")}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              activeTab === "calendar"
-                ? "bg-purple-600 text-white"
-                : "bg-muted text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            View Calendar
-          </button>
-        </div>
+      {/* ---- Sync ---- */}
+      <div className="flex items-center justify-end mb-6">
         <Button
           variant="outline"
           size="sm"
@@ -380,11 +357,6 @@ const CreatorSocials = () => {
         <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
           Loading…
-        </div>
-      ) : activeTab === "calendar" ? (
-        <div className="text-center py-16">
-          <Calendar className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="text-muted-foreground">Content calendar coming soon.</p>
         </div>
       ) : (
         /* ---- Connect Accounts grid ---- */
