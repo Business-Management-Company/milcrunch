@@ -52,11 +52,9 @@ export function useUploadPostConnect() {
       setAccounts(synced);
       // Also sync directory member stats
       await syncDirectoryMemberStats(userId).catch(() => {});
-      toast.success(
-        synced.length > 0
-          ? `Synced ${synced.length} connected account${synced.length !== 1 ? "s" : ""}`
-          : "No connected accounts yet. Connect above."
-      );
+      if (synced.length > 0) {
+        toast.success(`Synced ${synced.length} connected account${synced.length !== 1 ? "s" : ""}`);
+      }
     } catch {
       toast.error("Sync failed");
     } finally {
