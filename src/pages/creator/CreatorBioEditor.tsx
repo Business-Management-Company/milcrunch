@@ -58,6 +58,13 @@ import {
   Linkedin,
   Twitter,
   Settings,
+  Type,
+  Contrast,
+  Shapes,
+  Paintbrush,
+  Droplets,
+  QrCode,
+  X,
 } from "lucide-react";
 import { getDominantColorFromFile } from "@/lib/dominant-color";
 import type { BioSectionConfig, SectionType, SectionCatalogEntry, HeroImageFormat } from "@/types/bio-page";
@@ -131,10 +138,10 @@ const SOCIAL_BRAND_COLORS: Record<string, string> = {
 };
 
 /* ── Sidebar tab definitions ── */
-type EditorTab = "profile" | "theme" | "sections" | "share";
+type EditorTab = "profile" | "design" | "sections" | "share";
 const SIDEBAR_TABS: { id: EditorTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "profile", label: "Profile", icon: User },
-  { id: "theme", label: "Theme", icon: Palette },
+  { id: "design", label: "Design", icon: Palette },
   { id: "sections", label: "Sections", icon: Layers },
   { id: "share", label: "Share", icon: Share2 },
 ];
@@ -155,24 +162,62 @@ interface ThemeSettings {
   cardStyle: CardStyle;
   fontFamily: string;
   darkMode: boolean;
+  shade: string;
+  linkShape: string;
+  linkStyle: string;
+  linkColor: string;
+  showBranding: boolean;
 }
 
-/* ── 4×6 swatch grid (Seeksy-style) ── */
-const THEME_SWATCHES = [
-  "#000000", "#374151", "#78350f", "#dc2626",
-  "#f97316", "#ea580c", "#db2777", "#9333ea",
-  "#1e3a8a", "#3b82f6", "#0d9488", "#16a34a",
-  "#6366f1", "#8b5cf6", "#14b8a6", "#22c55e",
-  "#d1d5db", "#fce7f3", "#fca5a5", "#fed7aa",
-  "#bfdbfe", "#e9d5ff", "#a7f3d0", "#ffffff",
+/* ── Design sub-tab definitions ── */
+type DesignSubTab = "color" | "shade" | "font" | "link-shape" | "link-style" | "link-color" | "background" | "branding";
+const DESIGN_ITEMS: { id: DesignSubTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "color", label: "Color", icon: Palette },
+  { id: "shade", label: "Shade", icon: Contrast },
+  { id: "font", label: "Font", icon: Type },
+  { id: "link-shape", label: "Shape", icon: Shapes },
+  { id: "link-style", label: "Style", icon: Paintbrush },
+  { id: "link-color", label: "Link", icon: Droplets },
+  { id: "background", label: "BG", icon: ImagePlus },
+  { id: "branding", label: "Brand", icon: QrCode },
 ];
 
+/* ── Color swatches (2-row × 6 grid of circles) ── */
+const DEFAULT_COLORS = [
+  "#000000", "#6b7280", "#7f1d1d", "#dc2626", "#f97316", "#eab308",
+  "#db2777", "#9333ea", "#1e3a8a", "#3b82f6", "#0d9488", "#16a34a",
+];
+
+/* ── Font options ── */
 const FONT_OPTIONS = [
   { value: "Inter", label: "Inter" },
-  { value: "Roboto", label: "Roboto" },
-  { value: "Poppins", label: "Poppins" },
+  { value: "Merriweather", label: "Merriweather" },
+  { value: "IBM Plex Mono", label: "IBM Plex Mono" },
   { value: "Playfair Display", label: "Playfair Display" },
   { value: "Montserrat", label: "Montserrat" },
+  { value: "Poppins", label: "Poppins" },
+];
+
+/* ── Link shape options ── */
+const LINK_SHAPES = [
+  { value: "pill", label: "Pill", radius: "9999px" },
+  { value: "rounded", label: "Rounded", radius: "12px" },
+  { value: "square", label: "Square", radius: "0px" },
+  { value: "squircle", label: "Squircle", radius: "20px" },
+];
+
+/* ── Link style options ── */
+const LINK_STYLES = [
+  { value: "fill", label: "Fill" },
+  { value: "outline", label: "Outline" },
+  { value: "soft-shadow", label: "Soft Shadow" },
+  { value: "hard-shadow", label: "Hard Shadow" },
+];
+
+/* ── Background color swatches ── */
+const BG_COLORS = [
+  "#ffffff", "#f9fafb", "#f3f4f6", "#e5e7eb", "#111827", "#0f1117",
+  "#fef3c7", "#fce7f3", "#ede9fe", "#dbeafe", "#d1fae5", "#fecaca",
 ];
 
 export default function CreatorBioEditor() {
@@ -220,10 +265,15 @@ export default function CreatorBioEditor() {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const sectionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Design sub-tab state ── */
+  const [designSubTab, setDesignSubTab] = useState<DesignSubTab>("color");
+
   /* ── Theme state ── */
   const [theme, setTheme] = useState<ThemeSettings>({
     themeColor: "#3b82f6", bgMode: "solid", bgColor: "#ffffff",
     cardStyle: "round", fontFamily: "Inter", darkMode: false,
+    shade: "none", linkShape: "pill", linkStyle: "fill",
+    linkColor: "#3b82f6", showBranding: true,
   });
   const updateTheme = (patch: Partial<ThemeSettings>) =>
     setTheme((prev) => ({ ...prev, ...patch }));
@@ -484,17 +534,35 @@ export default function CreatorBioEditor() {
   const avatarAspect = imageStyle === "portrait" ? "aspect-[3/4]" : "aspect-square";
 
   /* ── Compute phone preview styles from theme ── */
-  const phoneText = theme.darkMode ? "#ffffff" : "#111827";
-  const phoneSubtext = theme.darkMode ? "#9ca3af" : "#6b7280";
+  const isDark = theme.darkMode || theme.shade === "dark";
+  const phoneText = isDark ? "#ffffff" : "#111827";
+  const phoneSubtext = isDark ? "#9ca3af" : "#6b7280";
 
   /* Screen background — varies by bgMode; dark mode always overrides */
-  const phoneScreenBg: React.CSSProperties = theme.darkMode
+  const phoneScreenBg: React.CSSProperties = isDark
     ? { backgroundColor: "#0f1117" }
     : theme.bgMode === "gradient"
       ? { background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }
       : theme.bgMode === "image" && theme.bgImageUrl
         ? { backgroundImage: `url(${theme.bgImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
         : { backgroundColor: theme.bgColor };
+
+  /* Link rendering helpers */
+  const linkRadius = LINK_SHAPES.find((s) => s.value === theme.linkShape)?.radius ?? "9999px";
+  const linkColor = theme.linkColor || theme.themeColor;
+  const getLinkItemStyle = (): React.CSSProperties => {
+    const base: React.CSSProperties = { borderRadius: linkRadius };
+    switch (theme.linkStyle) {
+      case "outline":
+        return { ...base, border: `2px solid ${linkColor}`, color: linkColor, backgroundColor: "transparent" };
+      case "soft-shadow":
+        return { ...base, backgroundColor: isDark ? "#1e2433" : "#ffffff", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", color: linkColor };
+      case "hard-shadow":
+        return { ...base, backgroundColor: isDark ? "#1e2433" : "#ffffff", boxShadow: `4px 4px 0 0 ${linkColor}`, color: isDark ? "#ffffff" : "#111827" };
+      default: // fill
+        return { ...base, backgroundColor: linkColor, color: "#ffffff" };
+    }
+  };
 
   /* ────────────────────────────────────────────────────────────────── */
   return (
@@ -540,7 +608,7 @@ export default function CreatorBioEditor() {
         {/* ── BODY ── */}
         <div className="flex flex-1 min-h-0 bg-muted/30 rounded-b-xl overflow-hidden">
           {/* ── CONTENT PANEL ── */}
-          <div className="flex-1 md:max-w-[420px] overflow-y-auto border-r border-border bg-card p-5">
+          <div className={`flex-1 md:max-w-[420px] overflow-y-auto border-r border-border bg-card ${activeTab === "design" ? "" : "p-5"}`}>
 
             {/* ── PROFILE TAB (inline editor) ── */}
             {activeTab === "profile" && (
@@ -776,196 +844,384 @@ export default function CreatorBioEditor() {
               </div>
             )}
 
-            {/* ── THEME TAB (inline editor) ── */}
-            {activeTab === "theme" && (
-              <div className="space-y-5">
-                <h2 className="text-sm font-semibold text-foreground">Theme</h2>
-
-                {/* Theme Color */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Theme Color</label>
-                  <div className="flex items-center gap-2">
-                    <div className="h-9 w-9 rounded-md border border-border shrink-0" style={{ backgroundColor: theme.themeColor }} />
-                    <Input
-                      value={theme.themeColor}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        updateTheme({ themeColor: v });
-                        if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, themeColor: v });
-                      }}
-                      className="h-9 text-xs font-mono uppercase"
-                      maxLength={7}
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 mt-2">
-                    {THEME_SWATCHES.map((color) => (
+            {/* ── DESIGN TAB (Linktree-style left sidebar + right content) ── */}
+            {activeTab === "design" && (
+              <div className="flex h-full">
+                {/* Left icon sidebar */}
+                <div className="w-[72px] shrink-0 border-r border-border bg-muted/30 py-3 flex flex-col items-center gap-1 overflow-y-auto">
+                  {DESIGN_ITEMS.map((item) => {
+                    const active = designSubTab === item.id;
+                    const Icon = item.icon;
+                    return (
                       <button
-                        key={color}
-                        onClick={() => { updateTheme({ themeColor: color }); persistTheme({ ...theme, themeColor: color }); }}
-                        className={`h-9 w-full rounded-lg border-2 transition-all ${
-                          theme.themeColor.toLowerCase() === color.toLowerCase()
-                            ? "border-blue-500 ring-2 ring-blue-500/30 scale-105"
-                            : "border-transparent hover:scale-[1.02]"
-                        }`}
-                        style={{ backgroundColor: color, ...(color === "#ffffff" ? { border: "1px solid #e5e7eb" } : {}) }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Background */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Background</label>
-                  <div className="flex gap-1 rounded-full border border-border p-0.5">
-                    {(["solid", "gradient", "image"] as BgMode[]).map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => { updateTheme({ bgMode: mode }); persistTheme({ ...theme, bgMode: mode }); }}
-                        className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
-                          theme.bgMode === mode ? "bg-[#3B82F6] text-white" : "text-muted-foreground hover:text-foreground"
+                        key={item.id}
+                        onClick={() => setDesignSubTab(item.id)}
+                        className={`flex flex-col items-center gap-0.5 w-[60px] py-2 rounded-xl text-[10px] font-medium transition-colors ${
+                          active
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
-                        {mode}
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors ${active ? "bg-green-200 dark:bg-green-800/40" : ""}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <span>{item.label}</span>
                       </button>
-                    ))}
-                  </div>
-                  {/* Solid — bg color picker */}
-                  {theme.bgMode === "solid" && (
-                    <div className="space-y-2 mt-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-md border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
-                        <Input
-                          value={theme.bgColor}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            updateTheme({ bgColor: v });
-                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
-                          }}
-                          className="h-8 text-xs font-mono uppercase"
-                          maxLength={7}
-                        />
-                      </div>
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {["#ffffff", "#f9fafb", "#f3f4f6", "#e5e7eb", "#111827", "#0f1117",
-                          "#fef3c7", "#fce7f3", "#ede9fe", "#dbeafe", "#d1fae5", "#fecaca",
-                        ].map((c) => (
+                    );
+                  })}
+                </div>
+
+                {/* Right content panel */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+                  {/* ── COLOR ── */}
+                  {designSubTab === "color" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Theme Color</h3>
+                      <p className="text-xs text-muted-foreground">Pick an accent color for headings, badges, and buttons.</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {DEFAULT_COLORS.map((c) => (
                           <button
                             key={c}
-                            onClick={() => { updateTheme({ bgColor: c }); persistTheme({ ...theme, bgColor: c }); }}
-                            className={`h-7 rounded-md border transition-all ${theme.bgColor.toLowerCase() === c.toLowerCase() ? "border-blue-500 ring-2 ring-blue-500/30 scale-105" : "border-border hover:scale-[1.04]"}`}
+                            onClick={() => { updateTheme({ themeColor: c }); persistTheme({ ...theme, themeColor: c }); }}
+                            className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
+                              theme.themeColor.toLowerCase() === c.toLowerCase()
+                                ? "border-foreground ring-2 ring-foreground/20 scale-110"
+                                : "border-transparent hover:scale-105"
+                            }`}
                             style={{ backgroundColor: c }}
                           />
                         ))}
                       </div>
-                    </div>
-                  )}
-                  {/* Gradient — theme color (top) → bg color (bottom) */}
-                  {theme.bgMode === "gradient" && (
-                    <div className="space-y-2 mt-1">
-                      <div className="h-10 w-full rounded-lg border border-border" style={{ background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }} />
-                      <p className="text-[11px] text-muted-foreground">Top: theme color &rarr; Bottom: background color</p>
-                      <label className="text-[11px] font-medium text-muted-foreground">Bottom Color</label>
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-md border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
+                      <div className="flex items-center gap-2 pt-1">
+                        <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.themeColor }} />
                         <Input
-                          value={theme.bgColor}
+                          value={theme.themeColor}
                           onChange={(e) => {
                             const v = e.target.value;
-                            updateTheme({ bgColor: v });
-                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                            updateTheme({ themeColor: v });
+                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, themeColor: v });
                           }}
-                          className="h-7 text-xs font-mono uppercase"
+                          className="h-8 text-xs font-mono uppercase flex-1"
                           maxLength={7}
                         />
                       </div>
                     </div>
                   )}
-                  {/* Image — file upload zone */}
-                  {theme.bgMode === "image" && (
-                    <div className="space-y-2 mt-1">
-                      <input
-                        ref={bgImageInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        onChange={uploadBgImage}
-                        className="hidden"
-                      />
-                      <button
-                        onClick={() => bgImageInputRef.current?.click()}
-                        className="w-full rounded-lg border-2 border-dashed border-border hover:border-blue-400 transition-colors p-4 flex flex-col items-center gap-2"
-                      >
-                        {theme.bgImageUrl ? (
-                          <img src={theme.bgImageUrl} alt="Background" className="w-full h-20 object-cover rounded-md" />
-                        ) : uploadingBgImage ? (
-                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        ) : (
-                          <ImagePlus className="h-8 w-8 text-muted-foreground" />
-                        )}
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {theme.bgImageUrl ? "Change background image" : "Upload background image"}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
-                      </button>
-                      {theme.bgImageUrl && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs h-7 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            const updated = { ...theme, bgImageUrl: undefined };
-                            setTheme(updated);
-                            persistTheme(updated);
+
+                  {/* ── SHADE ── */}
+                  {designSubTab === "shade" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Shade</h3>
+                      <p className="text-xs text-muted-foreground">Set the overall page brightness tone.</p>
+                      <div className="space-y-2">
+                        {([
+                          { value: "none", label: "None", bg: "#ffffff", text: "#111827" },
+                          { value: "minimal", label: "Minimal", bg: "#f9fafb", text: "#111827" },
+                          { value: "light", label: "Light", bg: "#f3f4f6", text: "#111827" },
+                          { value: "color", label: "Color Tint", bg: `${theme.themeColor}15`, text: "#111827" },
+                          { value: "dark", label: "Dark", bg: "#0f1117", text: "#ffffff" },
+                        ] as const).map((s) => (
+                          <button
+                            key={s.value}
+                            onClick={() => {
+                              const updated = { ...theme, shade: s.value, darkMode: s.value === "dark" };
+                              setTheme(updated);
+                              persistTheme(updated);
+                            }}
+                            className={`w-full flex items-center gap-3 rounded-xl border-2 p-3 transition-all ${
+                              theme.shade === s.value
+                                ? "border-green-500 ring-2 ring-green-500/20"
+                                : "border-border hover:border-muted-foreground/30"
+                            }`}
+                          >
+                            <div
+                              className="h-10 w-16 rounded-lg border border-border/50 shrink-0"
+                              style={{ backgroundColor: s.bg }}
+                            >
+                              <div className="flex flex-col items-center justify-center h-full gap-0.5">
+                                <div className="w-6 h-1 rounded-full" style={{ backgroundColor: s.text, opacity: 0.7 }} />
+                                <div className="w-4 h-1 rounded-full" style={{ backgroundColor: s.text, opacity: 0.4 }} />
+                              </div>
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="text-xs font-medium text-foreground">{s.label}</p>
+                            </div>
+                            {theme.shade === s.value && (
+                              <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                                <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── FONT ── */}
+                  {designSubTab === "font" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Font</h3>
+                      <p className="text-xs text-muted-foreground">Choose a typeface for your page.</p>
+                      <div className="space-y-1.5">
+                        {FONT_OPTIONS.map((f) => (
+                          <button
+                            key={f.value}
+                            onClick={() => { updateTheme({ fontFamily: f.value }); persistTheme({ ...theme, fontFamily: f.value }); }}
+                            className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
+                              theme.fontFamily === f.value
+                                ? "border-green-500 ring-2 ring-green-500/20 bg-green-50 dark:bg-green-900/10"
+                                : "border-border hover:border-muted-foreground/30"
+                            }`}
+                          >
+                            <span className="text-sm" style={{ fontFamily: f.value }}>{f.label}</span>
+                            <span className="text-lg font-semibold" style={{ fontFamily: f.value }}>Aa</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── LINK SHAPE ── */}
+                  {designSubTab === "link-shape" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Link Shape</h3>
+                      <p className="text-xs text-muted-foreground">Choose the corner style for your link buttons.</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {LINK_SHAPES.map((s) => (
+                          <button
+                            key={s.value}
+                            onClick={() => { updateTheme({ linkShape: s.value }); persistTheme({ ...theme, linkShape: s.value }); }}
+                            className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                              theme.linkShape === s.value
+                                ? "border-green-500 ring-2 ring-green-500/20"
+                                : "border-border hover:border-muted-foreground/30"
+                            }`}
+                          >
+                            <div
+                              className="w-full h-8 bg-muted-foreground/20"
+                              style={{ borderRadius: s.radius }}
+                            />
+                            <span className="text-[11px] font-medium text-foreground">{s.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── LINK STYLE ── */}
+                  {designSubTab === "link-style" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Link Style</h3>
+                      <p className="text-xs text-muted-foreground">How your link buttons are styled.</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {LINK_STYLES.map((s) => {
+                          const previewStyle: React.CSSProperties = { borderRadius: linkRadius };
+                          if (s.value === "fill") Object.assign(previewStyle, { backgroundColor: linkColor, color: "#fff" });
+                          else if (s.value === "outline") Object.assign(previewStyle, { border: `2px solid ${linkColor}`, color: linkColor, backgroundColor: "transparent" });
+                          else if (s.value === "soft-shadow") Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", color: linkColor });
+                          else Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: `4px 4px 0 0 ${linkColor}`, color: "#111827" });
+                          return (
+                            <button
+                              key={s.value}
+                              onClick={() => { updateTheme({ linkStyle: s.value }); persistTheme({ ...theme, linkStyle: s.value }); }}
+                              className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                                theme.linkStyle === s.value
+                                  ? "border-green-500 ring-2 ring-green-500/20"
+                                  : "border-border hover:border-muted-foreground/30"
+                              }`}
+                            >
+                              <div className="w-full h-8 flex items-center justify-center text-[10px] font-medium" style={previewStyle}>
+                                Sample
+                              </div>
+                              <span className="text-[11px] font-medium text-foreground">{s.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── LINK COLOR ── */}
+                  {designSubTab === "link-color" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Link Color</h3>
+                      <p className="text-xs text-muted-foreground">Color for your link buttons (defaults to theme color).</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {DEFAULT_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => { updateTheme({ linkColor: c }); persistTheme({ ...theme, linkColor: c }); }}
+                            className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
+                              theme.linkColor.toLowerCase() === c.toLowerCase()
+                                ? "border-foreground ring-2 ring-foreground/20 scale-110"
+                                : "border-transparent hover:scale-105"
+                            }`}
+                            style={{ backgroundColor: c }}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.linkColor }} />
+                        <Input
+                          value={theme.linkColor}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            updateTheme({ linkColor: v });
+                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, linkColor: v });
                           }}
-                        >
-                          Remove background image
-                        </Button>
+                          className="h-8 text-xs font-mono uppercase flex-1"
+                          maxLength={7}
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => { updateTheme({ linkColor: theme.themeColor }); persistTheme({ ...theme, linkColor: theme.themeColor }); }}
+                      >
+                        Reset to theme color
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* ── BACKGROUND ── */}
+                  {designSubTab === "background" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Background</h3>
+                      <p className="text-xs text-muted-foreground">Set your page background style.</p>
+                      <div className="flex gap-1 rounded-full border border-border p-0.5">
+                        {(["solid", "gradient", "image"] as BgMode[]).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => { updateTheme({ bgMode: mode }); persistTheme({ ...theme, bgMode: mode }); }}
+                            className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
+                              theme.bgMode === mode ? "bg-green-600 text-white" : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Solid — bg color swatches + hex */}
+                      {theme.bgMode === "solid" && (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-6 gap-2">
+                            {BG_COLORS.map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => { updateTheme({ bgColor: c }); persistTheme({ ...theme, bgColor: c }); }}
+                                className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
+                                  theme.bgColor.toLowerCase() === c.toLowerCase()
+                                    ? "border-foreground ring-2 ring-foreground/20 scale-110"
+                                    : c === "#ffffff" ? "border-border hover:scale-105" : "border-transparent hover:scale-105"
+                                }`}
+                                style={{ backgroundColor: c }}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
+                            <Input
+                              value={theme.bgColor}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                updateTheme({ bgColor: v });
+                                if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                              }}
+                              className="h-8 text-xs font-mono uppercase flex-1"
+                              maxLength={7}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {/* Gradient — live preview + bottom color */}
+                      {theme.bgMode === "gradient" && (
+                        <div className="space-y-3">
+                          <div className="h-16 w-full rounded-xl border border-border" style={{ background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }} />
+                          <p className="text-[11px] text-muted-foreground">Top: theme color &rarr; Bottom:</p>
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
+                            <Input
+                              value={theme.bgColor}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                updateTheme({ bgColor: v });
+                                if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                              }}
+                              className="h-8 text-xs font-mono uppercase flex-1"
+                              maxLength={7}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {/* Image — file upload */}
+                      {theme.bgMode === "image" && (
+                        <div className="space-y-3">
+                          <input
+                            ref={bgImageInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={uploadBgImage}
+                            className="hidden"
+                          />
+                          <button
+                            onClick={() => bgImageInputRef.current?.click()}
+                            className="w-full rounded-xl border-2 border-dashed border-border hover:border-green-400 transition-colors p-4 flex flex-col items-center gap-2"
+                          >
+                            {theme.bgImageUrl ? (
+                              <img src={theme.bgImageUrl} alt="Background" className="w-full h-20 object-cover rounded-lg" />
+                            ) : uploadingBgImage ? (
+                              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            ) : (
+                              <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                            )}
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {theme.bgImageUrl ? "Change image" : "Upload image"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
+                          </button>
+                          {theme.bgImageUrl && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs h-7 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                const updated = { ...theme, bgImageUrl: undefined };
+                                setTheme(updated);
+                                persistTheme(updated);
+                              }}
+                            >
+                              Remove image
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
-                </div>
 
-                {/* Card Style */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Card Style</label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {(["round", "square", "shadow", "glass"] as CardStyle[]).map((style) => (
-                      <button
-                        key={style}
-                        onClick={() => { updateTheme({ cardStyle: style }); persistTheme({ ...theme, cardStyle: style }); }}
-                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors capitalize ${
-                          theme.cardStyle === style ? "bg-[#3B82F6] text-white" : "bg-muted text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Font Family */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Font Family</label>
-                  <div className="relative">
-                    <select
-                      value={theme.fontFamily}
-                      onChange={(e) => { updateTheme({ fontFamily: e.target.value }); persistTheme({ ...theme, fontFamily: e.target.value }); }}
-                      className="w-full h-9 rounded-md border border-input bg-background px-3 pr-8 text-xs appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {FONT_OPTIONS.map((f) => (
-                        <option key={f.value} value={f.value}>{f.label}</option>
-                      ))}
-                    </select>
-                    <SelectArrow className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Dark Mode */}
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-foreground">Dark Mode</label>
-                  <Switch
-                    checked={theme.darkMode}
-                    onCheckedChange={(v) => { updateTheme({ darkMode: v }); persistTheme({ ...theme, darkMode: v }); }}
-                  />
+                  {/* ── BRANDING ── */}
+                  {designSubTab === "branding" && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">Branding</h3>
+                      <p className="text-xs text-muted-foreground">Control visible branding on your page.</p>
+                      <div className="flex items-center justify-between rounded-xl border border-border p-4">
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-medium text-foreground">Show "Powered by MilCrunch"</p>
+                          <p className="text-[11px] text-muted-foreground">Footer badge on your public page</p>
+                        </div>
+                        <Switch
+                          checked={theme.showBranding}
+                          onCheckedChange={(v) => { updateTheme({ showBranding: v }); persistTheme({ ...theme, showBranding: v }); }}
+                        />
+                      </div>
+                      {theme.showBranding && (
+                        <div className="rounded-xl border border-border p-3 flex items-center justify-center">
+                          <p className="text-[11px] text-muted-foreground">Powered by <span className="font-semibold text-foreground">MilCrunch</span></p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1148,7 +1404,7 @@ export default function CreatorBioEditor() {
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover shadow-sm" style={{ border: `2px solid ${theme.themeColor}` }} />
                     ) : (
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-semibold" style={{ backgroundColor: theme.darkMode ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>
+                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-semibold" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>
                         {(displayName || "?")[0].toUpperCase()}
                       </div>
                     )}
@@ -1187,8 +1443,8 @@ export default function CreatorBioEditor() {
 
                         /* Card style from theme — white (light) / #1e2433 (dark) */
                         const cardBg = theme.cardStyle === "glass"
-                          ? theme.darkMode ? "rgba(30,36,51,0.6)" : "rgba(255,255,255,0.7)"
-                          : theme.darkMode ? "#1e2433" : "#ffffff";
+                          ? isDark ? "rgba(30,36,51,0.6)" : "rgba(255,255,255,0.7)"
+                          : isDark ? "#1e2433" : "#ffffff";
                         const cardRadius = theme.cardStyle === "square" ? "6px" : "12px";
                         const cardShadow = theme.cardStyle === "shadow"
                           ? "0 2px 8px rgba(0,0,0,0.08)"
@@ -1258,7 +1514,7 @@ export default function CreatorBioEditor() {
                               {links.length > 0 ? (
                                 <div className="space-y-1.5">
                                   {links.slice(0, 3).map((link: any) => (
-                                    <div key={link.id} className="text-xs py-1.5 px-3 rounded-lg truncate" style={{ backgroundColor: `${theme.themeColor}10`, color: phoneText }}>
+                                    <div key={link.id} className="text-xs py-2.5 px-4 text-center truncate font-medium" style={getLinkItemStyle()}>
                                       {link.label || link.url || "Untitled link"}
                                     </div>
                                   ))}
@@ -1301,7 +1557,7 @@ export default function CreatorBioEditor() {
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-sm font-medium truncate" style={{ color: theme.themeColor }}>{section.label}</span>
                                   {entry.comingSoon && (
-                                    <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: theme.darkMode ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
+                                    <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
                                   )}
                                 </div>
                                 <p className="text-xs truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
@@ -1315,7 +1571,7 @@ export default function CreatorBioEditor() {
 
                   {/* Home indicator bar — inside screen at bottom */}
                   <div className="sticky bottom-0 flex justify-center pb-2 pt-1">
-                    <div className="w-28 h-1 rounded-full" style={{ backgroundColor: theme.darkMode ? "#4b5563" : "#d1d5db" }} />
+                    <div className="w-28 h-1 rounded-full" style={{ backgroundColor: isDark ? "#4b5563" : "#d1d5db" }} />
                   </div>
                 </div>
               </div>
