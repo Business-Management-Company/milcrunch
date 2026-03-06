@@ -180,22 +180,28 @@ const CreatorSocials = () => {
       toast.error("Profile is still loading. Please wait.");
       return;
     }
+    // Open popup synchronously on click so the browser doesn't block it
+    const popup = window.open(
+      "about:blank",
+      "connect_social",
+      "width=600,height=700,left=200,top=100"
+    );
+    if (!popup) {
+      toast.error("Popup blocked. Please allow popups for this site.");
+      return;
+    }
+
     setConnecting(true);
     try {
       const res = await generateConnectUrl(userId, REDIRECT_URL);
       if (!res.access_url) {
+        popup.close();
         toast.error(res.error ?? "Could not generate connect link");
         return;
       }
-      const popup = window.open(
-        res.access_url,
-        "connect_social",
-        "width=600,height=700,left=200,top=100"
-      );
-      if (!popup) {
-        toast.error("Popup blocked. Please allow popups for this site.");
-        return;
-      }
+      // Navigate the already-open popup to the JWT URL
+      popup.location.href = res.access_url;
+
       // Poll: cross-origin pages throw — ignore until redirect lands on our domain
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(() => {
