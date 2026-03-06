@@ -1,11 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import CreatorLayout from "@/components/layout/CreatorLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, X, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
+import { generateConnectUrl } from "@/services/upload-post";
+import {
+  syncConnectedAccountsFromUploadPost,
+  getConnectedAccounts,
+  ensureUploadPostProfile,
+  syncDirectoryMemberStats,
+  type ConnectedAccountRow,
+} from "@/lib/upload-post-sync";
+import { Loader2, RefreshCw, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -59,34 +66,32 @@ interface Platform {
   key: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  color: string;   // text color for the icon
-  bg: string;      // background color for the icon container
-  placeholder: string;
+  color: string;
+  bg: string;
 }
 
 const PLATFORMS: Platform[] = [
-  { key: "instagram",        label: "Instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50",    placeholder: "@username" },
-  { key: "tiktok",           label: "TikTok",           icon: TikTokIcon,    color: "text-gray-900",    bg: "bg-gray-100",   placeholder: "@username" },
-  { key: "youtube",          label: "YouTube",          icon: Youtube,       color: "text-red-600",     bg: "bg-red-50",     placeholder: "@channel or URL" },
-  { key: "facebook",         label: "Facebook",         icon: Facebook,      color: "text-blue-600",    bg: "bg-blue-50",    placeholder: "Page or profile name" },
-  { key: "x",                label: "X (Twitter)",      icon: Twitter,       color: "text-gray-900",    bg: "bg-gray-100",   placeholder: "@handle" },
-  { key: "linkedin",         label: "LinkedIn",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50",    placeholder: "Profile URL or name" },
-  { key: "threads",          label: "Threads",          icon: ThreadsIcon,   color: "text-gray-900",    bg: "bg-gray-100",   placeholder: "@username" },
-  { key: "pinterest",        label: "Pinterest",        icon: PinterestIcon, color: "text-red-600",     bg: "bg-red-50",     placeholder: "@username" },
-  { key: "reddit",           label: "Reddit",           icon: RedditIcon,    color: "text-orange-500",  bg: "bg-orange-50",  placeholder: "u/username" },
-  { key: "bluesky",          label: "Bluesky",          icon: BlueskyIcon,   color: "text-blue-500",    bg: "bg-blue-50",    placeholder: "@handle.bsky.social" },
-  { key: "google_business",  label: "Google Business",  icon: GoogleIcon,    color: "",                 bg: "bg-gray-50",    placeholder: "Business name" },
+  { key: "instagram",        label: "Instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50"   },
+  { key: "tiktok",           label: "TikTok",           icon: TikTokIcon,    color: "text-gray-900",    bg: "bg-gray-100"  },
+  { key: "youtube",          label: "YouTube",          icon: Youtube,       color: "text-red-600",     bg: "bg-red-50"    },
+  { key: "facebook",         label: "Facebook",         icon: Facebook,      color: "text-blue-600",    bg: "bg-blue-50"   },
+  { key: "x",                label: "X (Twitter)",      icon: Twitter,       color: "text-gray-900",    bg: "bg-gray-100"  },
+  { key: "linkedin",         label: "LinkedIn",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50"   },
+  { key: "threads",          label: "Threads",          icon: ThreadsIcon,   color: "text-gray-900",    bg: "bg-gray-100"  },
+  { key: "pinterest",        label: "Pinterest",        icon: PinterestIcon, color: "text-red-600",     bg: "bg-red-50"    },
+  { key: "reddit",           label: "Reddit",           icon: RedditIcon,    color: "text-orange-500",  bg: "bg-orange-50" },
+  { key: "bluesky",          label: "Bluesky",          icon: BlueskyIcon,   color: "text-blue-500",    bg: "bg-blue-50"   },
+  { key: "google_business",  label: "Google Business",  icon: GoogleIcon,    color: "",                 bg: "bg-gray-50"   },
 ];
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
-
-interface ConnectedAccount {
-  id: string;
-  platform: string;
-  platform_username: string | null;
-  created_at: string | null;
+/* Match synced platform name to our key (handles "twitter"/"x" mismatch) */
+function accountForPlatform(accounts: ConnectedAccountRow[], key: string): ConnectedAccountRow | undefined {
+  const match = accounts.find((a) => a.platform === key);
+  if (match) return match;
+  // UploadPost may return "twitter" while we use "x" or vice-versa
+  if (key === "x") return accounts.find((a) => a.platform === "twitter");
+  if (key === "twitter") return accounts.find((a) => a.platform === "x");
+  return undefined;
 }
 
 /* ------------------------------------------------------------------ */
@@ -97,81 +102,99 @@ const CreatorSocials = () => {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
+  const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [connectUrl, setConnectUrl] = useState<string | null>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const initDone = useRef<string | null>(null);
 
-  const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  /* ---- Load connected accounts ---- */
+  /* ---- Load accounts from Supabase ---- */
   const loadAccounts = useCallback(async () => {
     if (!userId) return;
-    const { data, error } = await (supabase as any)
-      .from("connected_accounts")
-      .select("id, platform, platform_username, created_at")
-      .eq("user_id", userId);
-    if (error) {
-      console.error("Failed to load connected accounts", error);
-    } else {
-      setAccounts(data ?? []);
+    const list = await getConnectedAccounts(userId);
+    setAccounts(list);
+  }, [userId]);
+
+  /* ---- Ensure UploadPost profile + generate connect URL ---- */
+  const ensureProfileAndGetUrl = useCallback(async () => {
+    if (!userId) return;
+    setConnectLoading(true);
+    try {
+      const ensured = await ensureUploadPostProfile(userId);
+      if (!ensured.ok) {
+        toast.error(ensured.error ?? "Could not create UploadPost profile");
+        return;
+      }
+      const res = await generateConnectUrl(userId);
+      if (res.access_url) setConnectUrl(res.access_url);
+      else toast.error(res.error ?? "Could not generate connect link");
+    } finally {
+      setConnectLoading(false);
     }
   }, [userId]);
 
-  useEffect(() => {
-    setLoading(true);
-    loadAccounts().finally(() => setLoading(false));
-  }, [loadAccounts]);
-
-  /* ---- Helpers ---- */
-  const accountFor = (platformKey: string) =>
-    accounts.find((a) => a.platform === platformKey);
-
-  /* ---- Connect (upsert) ---- */
-  const handleSave = async (platformKey: string) => {
-    if (!userId || !draft.trim()) return;
-    setSaving(true);
-    const existing = accountFor(platformKey);
-    if (existing) {
-      const { error } = await (supabase as any)
-        .from("connected_accounts")
-        .update({ platform_username: draft.trim(), updated_at: new Date().toISOString() })
-        .eq("id", existing.id);
-      if (error) {
-        toast.error("Failed to update account");
-        console.error(error);
-      } else {
-        toast.success("Account updated");
-      }
-    } else {
-      const { error } = await (supabase as any)
-        .from("connected_accounts")
-        .insert({
-          user_id: userId,
-          platform: platformKey,
-          platform_username: draft.trim(),
-        });
-      if (error) {
-        toast.error("Failed to connect account");
-        console.error(error);
-      } else {
-        toast.success("Account connected");
-      }
+  /* ---- Sync from UploadPost API → Supabase ---- */
+  const syncAccounts = useCallback(async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      const synced = await syncConnectedAccountsFromUploadPost(userId);
+      setAccounts(synced);
+      await syncDirectoryMemberStats(userId).catch(() => {});
+      toast.success(
+        synced.length > 0
+          ? `Synced ${synced.length} account${synced.length !== 1 ? "s" : ""}`
+          : "No connected accounts found. Try connecting above."
+      );
+    } catch {
+      toast.error("Sync failed");
+    } finally {
+      setSyncing(false);
     }
-    setSaving(false);
-    setEditing(null);
-    setDraft("");
-    await loadAccounts();
-  };
+  }, [userId]);
 
-  /* ---- Disconnect ---- */
-  const handleDisconnect = async (platformKey: string) => {
-    const existing = accountFor(platformKey);
-    if (!existing) return;
+  /* ---- Init on mount: ensure profile, get URL, load accounts ---- */
+  useEffect(() => {
+    if (!userId) { setLoading(false); return; }
+    if (initDone.current === userId) return;
+    initDone.current = userId;
+    setLoading(true);
+    (async () => {
+      await ensureProfileAndGetUrl();
+      await loadAccounts();
+    })().finally(() => setLoading(false));
+  }, [userId, ensureProfileAndGetUrl, loadAccounts]);
+
+  /* ---- Open UploadPost OAuth popup, sync on close ---- */
+  const handleConnect = useCallback(() => {
+    if (connectLoading) {
+      toast.error("Connect link is still loading. Please wait.");
+      return;
+    }
+    if (!connectUrl) {
+      toast.error("Connect link unavailable. Please refresh the page.");
+      return;
+    }
+    const popup = window.open(connectUrl, "uploadpost-connect", "width=600,height=700");
+    if (!popup) {
+      toast.error("Popup blocked. Please allow popups for this site.");
+      return;
+    }
+    const interval = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(interval);
+        syncAccounts();
+      }
+    }, 1500);
+  }, [connectUrl, connectLoading, syncAccounts]);
+
+  /* ---- Disconnect: remove from Supabase ---- */
+  const handleDisconnect = async (account: ConnectedAccountRow) => {
     const { error } = await (supabase as any)
       .from("connected_accounts")
       .delete()
-      .eq("id", existing.id);
+      .eq("id", account.id);
     if (error) {
       toast.error("Failed to disconnect");
       console.error(error);
@@ -209,18 +232,33 @@ const CreatorSocials = () => {
         </Card>
       ) : (
         <Card className="bg-gradient-card border-border p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-1">Connected Accounts</h2>
-            <p className="text-sm text-muted-foreground">
-              Link your social media accounts to auto-sync content and analytics.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Connected Accounts</h2>
+              <p className="text-sm text-muted-foreground">
+                Link your social media accounts to auto-sync content and analytics.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncAccounts}
+              disabled={syncing}
+              className="shrink-0"
+            >
+              {syncing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Sync
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {PLATFORMS.map((p) => {
               const Icon = p.icon;
-              const connected = accountFor(p.key);
-              const isEditing = editing === p.key;
+              const connected = accountForPlatform(accounts, p.key);
 
               return (
                 <div
@@ -233,75 +271,32 @@ const CreatorSocials = () => {
                     </div>
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-foreground">{p.label}</span>
-                      {connected && !isEditing && (
+                      {connected?.platform_username && (
                         <p className="text-xs text-muted-foreground truncate">
-                          {connected.platform_username}
+                          @{connected.platform_username}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* Editing inline */}
-                  {isEditing ? (
-                    <div className="flex items-center gap-1.5 ml-2">
-                      <Input
-                        autoFocus
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        placeholder={p.placeholder}
-                        className="h-8 text-sm w-36"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSave(p.key);
-                          if (e.key === "Escape") {
-                            setEditing(null);
-                            setDraft("");
-                          }
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        className="h-8 px-3 text-xs"
-                        onClick={() => handleSave(p.key)}
-                        disabled={saving || !draft.trim()}
-                      >
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
-                      </Button>
-                      <button
-                        onClick={() => { setEditing(null); setDraft(""); }}
-                        className="text-muted-foreground hover:text-foreground p-1"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : connected ? (
-                    <div className="flex items-center gap-2 ml-2 shrink-0">
-                      <button
-                        onClick={() => {
-                          setEditing(p.key);
-                          setDraft(connected.platform_username ?? "");
-                        }}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Edit
-                      </button>
-                      <span className="text-border">|</span>
-                      <button
-                        onClick={() => handleDisconnect(p.key)}
-                        className="text-xs text-red-500 hover:text-red-400 transition-colors"
-                      >
-                        Disconnect
-                      </button>
-                    </div>
+                  {connected ? (
+                    <button
+                      onClick={() => handleDisconnect(connected)}
+                      className="text-xs text-red-500 hover:text-red-400 transition-colors ml-2 shrink-0"
+                    >
+                      Disconnect
+                    </button>
                   ) : (
                     <Button
                       variant="outline"
                       size="sm"
                       className="ml-2 shrink-0"
-                      onClick={() => {
-                        setEditing(p.key);
-                        setDraft("");
-                      }}
+                      disabled={connectLoading}
+                      onClick={handleConnect}
                     >
+                      {connectLoading ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                      ) : null}
                       Connect
                     </Button>
                   )}
