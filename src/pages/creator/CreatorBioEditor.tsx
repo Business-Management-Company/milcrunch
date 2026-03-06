@@ -182,10 +182,10 @@ const DESIGN_ITEMS: { id: DesignSubTab; label: string; icon: React.ComponentType
   { id: "branding", label: "Brand", icon: QrCode },
 ];
 
-/* ── Color swatches (2-row × 6 grid of circles) ── */
-const DEFAULT_COLORS = [
-  "#000000", "#6b7280", "#7f1d1d", "#dc2626", "#f97316", "#eab308",
-  "#db2777", "#9333ea", "#1e3a8a", "#3b82f6", "#0d9488", "#16a34a",
+/* ── Unified 12-color swatch set (used across all Design sub-tabs) ── */
+const SWATCH_COLORS = [
+  "#000000", "#6B7280", "#991B1B", "#DC2626", "#EA580C", "#CA8A04",
+  "#DB2777", "#7C3AED", "#1E3A8A", "#2563EB", "#0D9488", "#16A34A",
 ];
 
 /* ── Font options ── */
@@ -214,11 +214,6 @@ const LINK_STYLES = [
   { value: "hard-shadow", label: "Hard Shadow" },
 ];
 
-/* ── Background color swatches ── */
-const BG_COLORS = [
-  "#ffffff", "#f9fafb", "#f3f4f6", "#e5e7eb", "#111827", "#0f1117",
-  "#fef3c7", "#fce7f3", "#ede9fe", "#dbeafe", "#d1fae5", "#fecaca",
-];
 
 export default function CreatorBioEditor() {
   const { user, creatorProfile } = useAuth();
@@ -265,8 +260,20 @@ export default function CreatorBioEditor() {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const sectionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── Design sub-tab state ── */
+  /* ── Design scroll-spy state ── */
   const [designSubTab, setDesignSubTab] = useState<DesignSubTab>("color");
+  const designScrollRef = useRef<HTMLDivElement>(null);
+  const designSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const isScrollingRef = useRef(false);
+
+  const scrollToDesignSection = (id: DesignSubTab) => {
+    const el = designSectionRefs.current[id];
+    if (!el) return;
+    isScrollingRef.current = true;
+    setDesignSubTab(id);
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => { isScrollingRef.current = false; }, 800);
+  };
 
   /* ── Theme state ── */
   const [theme, setTheme] = useState<ThemeSettings>({
@@ -327,6 +334,30 @@ export default function CreatorBioEditor() {
   useEffect(() => {
     if (!handle && loaded) setActiveTab("profile");
   }, [handle, loaded]);
+
+  /* ── Design scroll-spy IntersectionObserver ── */
+  useEffect(() => {
+    if (activeTab !== "design") return;
+    const container = designScrollRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrollingRef.current) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute("data-section") as DesignSubTab;
+            if (id) setDesignSubTab(id);
+          }
+        }
+      },
+      { root: container, rootMargin: "0px 0px -60% 0px", threshold: 0 },
+    );
+    DESIGN_ITEMS.forEach((item) => {
+      const el = designSectionRefs.current[item.id];
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [activeTab]);
 
   /* ── Debounced profile save (1s after last keystroke) ── */
   const debouncedProfileSave = useCallback(
@@ -522,11 +553,11 @@ export default function CreatorBioEditor() {
 
   const visibleSections = sections.filter((s) => s.visible).sort((a, b) => a.order - b.order);
 
-  /* ── Phone frame width per device (Seeksy-style: 380px phone frame) ── */
+  /* ── Phone frame width per device (scaled 85% from original 380px) ── */
   const deviceWidth: Record<PreviewDevice, string> = {
-    phone: "w-[380px]",
-    tablet: "w-[480px]",
-    desktop: "w-[560px]",
+    phone: "w-[323px]",
+    tablet: "w-[408px]",
+    desktop: "w-[476px]",
   };
 
   /* ── Preview avatar shape from imageStyle ── */
@@ -592,12 +623,12 @@ export default function CreatorBioEditor() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 rounded-full px-5 py-3 font-medium transition-all whitespace-nowrap ${
                     active ? "text-white shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
-                  style={active ? { background: "linear-gradient(135deg, #ec4899 0%, #9333ea 100%)" } : undefined}
+                  style={{ fontSize: "15px", ...(active ? { background: "linear-gradient(135deg, #ec4899 0%, #9333ea 100%)" } : {}) }}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-4 w-4" />
                   {tab.label}
                 </button>
               );
@@ -844,384 +875,375 @@ export default function CreatorBioEditor() {
               </div>
             )}
 
-            {/* ── DESIGN TAB (Linktree-style left sidebar + right content) ── */}
+            {/* ── DESIGN TAB (left nav + single-scroll right panel) ── */}
             {activeTab === "design" && (
               <div className="flex h-full">
-                {/* Left icon sidebar */}
-                <div className="w-[72px] shrink-0 border-r border-border bg-muted/30 py-3 flex flex-col items-center gap-1 overflow-y-auto">
+                {/* Left icon nav — scroll spy highlights active section */}
+                <div className="w-[76px] shrink-0 border-r border-border bg-muted/30 py-2 flex flex-col items-center gap-0.5 overflow-y-auto">
                   {DESIGN_ITEMS.map((item) => {
                     const active = designSubTab === item.id;
                     const Icon = item.icon;
                     return (
                       <button
                         key={item.id}
-                        onClick={() => setDesignSubTab(item.id)}
-                        className={`flex flex-col items-center gap-0.5 w-[60px] py-2 rounded-xl text-[10px] font-medium transition-colors ${
+                        onClick={() => scrollToDesignSection(item.id)}
+                        className={`flex flex-col items-center justify-center gap-1 w-[68px] h-[72px] rounded-xl transition-colors ${
                           active
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            ? "text-green-700 dark:text-green-400"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       >
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors ${active ? "bg-green-200 dark:bg-green-800/40" : ""}`}>
-                          <Icon className="h-4 w-4" />
+                        <div className={`h-[28px] w-[28px] rounded-full flex items-center justify-center transition-colors ${active ? "bg-green-200 dark:bg-green-800/40" : ""}`}>
+                          <Icon className="h-[14px] w-[14px]" />
                         </div>
-                        <span>{item.label}</span>
+                        <span className="text-[11px] font-medium leading-none">{item.label}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Right content panel */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {/* Right content — all sections stacked, single scroll */}
+                <div ref={designScrollRef} className="flex-1 overflow-y-auto">
 
                   {/* ── COLOR ── */}
-                  {designSubTab === "color" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Theme Color</h3>
-                      <p className="text-xs text-muted-foreground">Pick an accent color for headings, badges, and buttons.</p>
-                      <div className="grid grid-cols-6 gap-2">
-                        {DEFAULT_COLORS.map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => { updateTheme({ themeColor: c }); persistTheme({ ...theme, themeColor: c }); }}
-                            className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
-                              theme.themeColor.toLowerCase() === c.toLowerCase()
-                                ? "border-foreground ring-2 ring-foreground/20 scale-110"
-                                : "border-transparent hover:scale-105"
-                            }`}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.themeColor }} />
-                        <Input
-                          value={theme.themeColor}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            updateTheme({ themeColor: v });
-                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, themeColor: v });
-                          }}
-                          className="h-8 text-xs font-mono uppercase flex-1"
-                          maxLength={7}
+                  <div data-section="color" ref={(el) => { designSectionRefs.current["color"] = el; }} className="p-4 pb-2">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Theme Color</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Accent for headings, badges, and buttons.</p>
+                    <div className="grid grid-cols-6 gap-2 mb-3">
+                      {SWATCH_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => { updateTheme({ themeColor: c }); persistTheme({ ...theme, themeColor: c }); }}
+                          className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
+                            theme.themeColor.toLowerCase() === c.toLowerCase()
+                              ? "border-foreground ring-2 ring-foreground/20 scale-110"
+                              : "border-transparent hover:scale-105"
+                          }`}
+                          style={{ backgroundColor: c }}
                         />
-                      </div>
+                      ))}
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.themeColor }} />
+                      <Input
+                        value={theme.themeColor}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          updateTheme({ themeColor: v });
+                          if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, themeColor: v });
+                        }}
+                        className="h-8 text-xs font-mono uppercase flex-1"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+                  <div className="mx-4 border-b border-border" />
 
                   {/* ── SHADE ── */}
-                  {designSubTab === "shade" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Shade</h3>
-                      <p className="text-xs text-muted-foreground">Set the overall page brightness tone.</p>
-                      <div className="space-y-2">
-                        {([
-                          { value: "none", label: "None", bg: "#ffffff", text: "#111827" },
-                          { value: "minimal", label: "Minimal", bg: "#f9fafb", text: "#111827" },
-                          { value: "light", label: "Light", bg: "#f3f4f6", text: "#111827" },
-                          { value: "color", label: "Color Tint", bg: `${theme.themeColor}15`, text: "#111827" },
-                          { value: "dark", label: "Dark", bg: "#0f1117", text: "#ffffff" },
-                        ] as const).map((s) => (
+                  <div data-section="shade" ref={(el) => { designSectionRefs.current["shade"] = el; }} className="p-4 pb-2">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Shade</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Overall page brightness tone.</p>
+                    <div className="space-y-2">
+                      {([
+                        { value: "none", label: "None", bg: "#ffffff", text: "#111827" },
+                        { value: "minimal", label: "Minimal", bg: "#f9fafb", text: "#111827" },
+                        { value: "light", label: "Light", bg: "#f3f4f6", text: "#111827" },
+                        { value: "color", label: "Color Tint", bg: `${theme.themeColor}15`, text: "#111827" },
+                        { value: "dark", label: "Dark", bg: "#0f1117", text: "#ffffff" },
+                      ] as const).map((s) => (
+                        <button
+                          key={s.value}
+                          onClick={() => {
+                            const updated = { ...theme, shade: s.value, darkMode: s.value === "dark" };
+                            setTheme(updated);
+                            persistTheme(updated);
+                          }}
+                          className={`w-full flex items-center gap-3 rounded-xl border-2 p-3 transition-all ${
+                            theme.shade === s.value
+                              ? "border-green-500 ring-2 ring-green-500/20"
+                              : "border-border hover:border-muted-foreground/30"
+                          }`}
+                        >
+                          <div
+                            className="h-10 w-16 rounded-lg border border-border/50 shrink-0"
+                            style={{ backgroundColor: s.bg }}
+                          >
+                            <div className="flex flex-col items-center justify-center h-full gap-0.5">
+                              <div className="w-6 h-1 rounded-full" style={{ backgroundColor: s.text, opacity: 0.7 }} />
+                              <div className="w-4 h-1 rounded-full" style={{ backgroundColor: s.text, opacity: 0.4 }} />
+                            </div>
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="text-xs font-medium text-foreground">{s.label}</p>
+                          </div>
+                          {theme.shade === s.value && (
+                            <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                              <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mx-4 border-b border-border" />
+
+                  {/* ── FONT ── */}
+                  <div data-section="font" ref={(el) => { designSectionRefs.current["font"] = el; }} className="p-4 pb-2">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Font</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Choose a typeface for your page.</p>
+                    <div className="space-y-1.5">
+                      {FONT_OPTIONS.map((f) => (
+                        <button
+                          key={f.value}
+                          onClick={() => { updateTheme({ fontFamily: f.value }); persistTheme({ ...theme, fontFamily: f.value }); }}
+                          className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
+                            theme.fontFamily === f.value
+                              ? "border-green-500 ring-2 ring-green-500/20 bg-green-50 dark:bg-green-900/10"
+                              : "border-border hover:border-muted-foreground/30"
+                          }`}
+                        >
+                          <span className="text-sm" style={{ fontFamily: f.value }}>{f.label}</span>
+                          <span className="text-lg font-semibold" style={{ fontFamily: f.value }}>Aa</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mx-4 border-b border-border" />
+
+                  {/* ── LINK SHAPE ── */}
+                  <div data-section="link-shape" ref={(el) => { designSectionRefs.current["link-shape"] = el; }} className="p-4 pb-2">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Link Shape</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Corner style for your link buttons.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {LINK_SHAPES.map((s) => (
+                        <button
+                          key={s.value}
+                          onClick={() => { updateTheme({ linkShape: s.value }); persistTheme({ ...theme, linkShape: s.value }); }}
+                          className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                            theme.linkShape === s.value
+                              ? "border-green-500 ring-2 ring-green-500/20"
+                              : "border-border hover:border-muted-foreground/30"
+                          }`}
+                        >
+                          <div
+                            className="w-full h-8 bg-muted-foreground/20"
+                            style={{ borderRadius: s.radius }}
+                          />
+                          <span className="text-[11px] font-medium text-foreground">{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="mx-4 border-b border-border" />
+
+                  {/* ── LINK STYLE ── */}
+                  <div data-section="link-style" ref={(el) => { designSectionRefs.current["link-style"] = el; }} className="p-4 pb-2">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Link Style</h3>
+                    <p className="text-xs text-muted-foreground mb-3">How your link buttons are styled.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {LINK_STYLES.map((s) => {
+                        const previewStyle: React.CSSProperties = { borderRadius: linkRadius };
+                        if (s.value === "fill") Object.assign(previewStyle, { backgroundColor: linkColor, color: "#fff" });
+                        else if (s.value === "outline") Object.assign(previewStyle, { border: `2px solid ${linkColor}`, color: linkColor, backgroundColor: "transparent" });
+                        else if (s.value === "soft-shadow") Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", color: linkColor });
+                        else Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: `4px 4px 0 0 ${linkColor}`, color: "#111827" });
+                        return (
                           <button
                             key={s.value}
+                            onClick={() => { updateTheme({ linkStyle: s.value }); persistTheme({ ...theme, linkStyle: s.value }); }}
+                            className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                              theme.linkStyle === s.value
+                                ? "border-green-500 ring-2 ring-green-500/20"
+                                : "border-border hover:border-muted-foreground/30"
+                            }`}
+                          >
+                            <div className="w-full h-8 flex items-center justify-center text-[10px] font-medium" style={previewStyle}>
+                              Sample
+                            </div>
+                            <span className="text-[11px] font-medium text-foreground">{s.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="mx-4 border-b border-border" />
+
+                  {/* ── LINK COLOR ── */}
+                  <div data-section="link-color" ref={(el) => { designSectionRefs.current["link-color"] = el; }} className="p-4 pb-2">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Link Color</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Color for your link buttons.</p>
+                    <div className="grid grid-cols-6 gap-2 mb-3">
+                      {SWATCH_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => { updateTheme({ linkColor: c }); persistTheme({ ...theme, linkColor: c }); }}
+                          className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
+                            theme.linkColor.toLowerCase() === c.toLowerCase()
+                              ? "border-foreground ring-2 ring-foreground/20 scale-110"
+                              : "border-transparent hover:scale-105"
+                          }`}
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.linkColor }} />
+                      <Input
+                        value={theme.linkColor}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          updateTheme({ linkColor: v });
+                          if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, linkColor: v });
+                        }}
+                        className="h-8 text-xs font-mono uppercase flex-1"
+                        maxLength={7}
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => { updateTheme({ linkColor: theme.themeColor }); persistTheme({ ...theme, linkColor: theme.themeColor }); }}
+                    >
+                      Reset to theme color
+                    </Button>
+                  </div>
+                  <div className="mx-4 border-b border-border" />
+
+                  {/* ── BACKGROUND ── */}
+                  <div data-section="background" ref={(el) => { designSectionRefs.current["background"] = el; }} className="p-4 pb-2">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Background</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Set your page background style.</p>
+                    <div className="flex gap-1 rounded-full border border-border p-0.5 mb-3">
+                      {(["solid", "gradient", "image"] as BgMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => { updateTheme({ bgMode: mode }); persistTheme({ ...theme, bgMode: mode }); }}
+                          className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
+                            theme.bgMode === mode ? "bg-green-600 text-white" : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Solid — unified color swatches + hex */}
+                    {theme.bgMode === "solid" && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-6 gap-2">
+                          {SWATCH_COLORS.map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => { updateTheme({ bgColor: c }); persistTheme({ ...theme, bgColor: c }); }}
+                              className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
+                                theme.bgColor.toLowerCase() === c.toLowerCase()
+                                  ? "border-foreground ring-2 ring-foreground/20 scale-110"
+                                  : "border-transparent hover:scale-105"
+                              }`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
+                          <Input
+                            value={theme.bgColor}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              updateTheme({ bgColor: v });
+                              if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                            }}
+                            className="h-8 text-xs font-mono uppercase flex-1"
+                            maxLength={7}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {/* Gradient — live preview + bottom color */}
+                    {theme.bgMode === "gradient" && (
+                      <div className="space-y-3">
+                        <div className="h-16 w-full rounded-xl border border-border" style={{ background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }} />
+                        <p className="text-[11px] text-muted-foreground">Top: theme color &rarr; Bottom:</p>
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
+                          <Input
+                            value={theme.bgColor}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              updateTheme({ bgColor: v });
+                              if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
+                            }}
+                            className="h-8 text-xs font-mono uppercase flex-1"
+                            maxLength={7}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {/* Image — file upload */}
+                    {theme.bgMode === "image" && (
+                      <div className="space-y-3">
+                        <input
+                          ref={bgImageInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={uploadBgImage}
+                          className="hidden"
+                        />
+                        <button
+                          onClick={() => bgImageInputRef.current?.click()}
+                          className="w-full rounded-xl border-2 border-dashed border-border hover:border-green-400 transition-colors p-4 flex flex-col items-center gap-2"
+                        >
+                          {theme.bgImageUrl ? (
+                            <img src={theme.bgImageUrl} alt="Background" className="w-full h-20 object-cover rounded-lg" />
+                          ) : uploadingBgImage ? (
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          ) : (
+                            <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                          )}
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {theme.bgImageUrl ? "Change image" : "Upload image"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
+                        </button>
+                        {theme.bgImageUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-7 text-destructive hover:text-destructive"
                             onClick={() => {
-                              const updated = { ...theme, shade: s.value, darkMode: s.value === "dark" };
+                              const updated = { ...theme, bgImageUrl: undefined };
                               setTheme(updated);
                               persistTheme(updated);
                             }}
-                            className={`w-full flex items-center gap-3 rounded-xl border-2 p-3 transition-all ${
-                              theme.shade === s.value
-                                ? "border-green-500 ring-2 ring-green-500/20"
-                                : "border-border hover:border-muted-foreground/30"
-                            }`}
                           >
-                            <div
-                              className="h-10 w-16 rounded-lg border border-border/50 shrink-0"
-                              style={{ backgroundColor: s.bg }}
-                            >
-                              <div className="flex flex-col items-center justify-center h-full gap-0.5">
-                                <div className="w-6 h-1 rounded-full" style={{ backgroundColor: s.text, opacity: 0.7 }} />
-                                <div className="w-4 h-1 rounded-full" style={{ backgroundColor: s.text, opacity: 0.4 }} />
-                              </div>
-                            </div>
-                            <div className="flex-1 text-left">
-                              <p className="text-xs font-medium text-foreground">{s.label}</p>
-                            </div>
-                            {theme.shade === s.value && (
-                              <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                                <svg className="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                              </div>
-                            )}
-                          </button>
-                        ))}
+                            Remove image
+                          </Button>
+                        )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* ── FONT ── */}
-                  {designSubTab === "font" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Font</h3>
-                      <p className="text-xs text-muted-foreground">Choose a typeface for your page.</p>
-                      <div className="space-y-1.5">
-                        {FONT_OPTIONS.map((f) => (
-                          <button
-                            key={f.value}
-                            onClick={() => { updateTheme({ fontFamily: f.value }); persistTheme({ ...theme, fontFamily: f.value }); }}
-                            className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
-                              theme.fontFamily === f.value
-                                ? "border-green-500 ring-2 ring-green-500/20 bg-green-50 dark:bg-green-900/10"
-                                : "border-border hover:border-muted-foreground/30"
-                            }`}
-                          >
-                            <span className="text-sm" style={{ fontFamily: f.value }}>{f.label}</span>
-                            <span className="text-lg font-semibold" style={{ fontFamily: f.value }}>Aa</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── LINK SHAPE ── */}
-                  {designSubTab === "link-shape" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Link Shape</h3>
-                      <p className="text-xs text-muted-foreground">Choose the corner style for your link buttons.</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {LINK_SHAPES.map((s) => (
-                          <button
-                            key={s.value}
-                            onClick={() => { updateTheme({ linkShape: s.value }); persistTheme({ ...theme, linkShape: s.value }); }}
-                            className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
-                              theme.linkShape === s.value
-                                ? "border-green-500 ring-2 ring-green-500/20"
-                                : "border-border hover:border-muted-foreground/30"
-                            }`}
-                          >
-                            <div
-                              className="w-full h-8 bg-muted-foreground/20"
-                              style={{ borderRadius: s.radius }}
-                            />
-                            <span className="text-[11px] font-medium text-foreground">{s.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── LINK STYLE ── */}
-                  {designSubTab === "link-style" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Link Style</h3>
-                      <p className="text-xs text-muted-foreground">How your link buttons are styled.</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {LINK_STYLES.map((s) => {
-                          const previewStyle: React.CSSProperties = { borderRadius: linkRadius };
-                          if (s.value === "fill") Object.assign(previewStyle, { backgroundColor: linkColor, color: "#fff" });
-                          else if (s.value === "outline") Object.assign(previewStyle, { border: `2px solid ${linkColor}`, color: linkColor, backgroundColor: "transparent" });
-                          else if (s.value === "soft-shadow") Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", color: linkColor });
-                          else Object.assign(previewStyle, { backgroundColor: "#fff", boxShadow: `4px 4px 0 0 ${linkColor}`, color: "#111827" });
-                          return (
-                            <button
-                              key={s.value}
-                              onClick={() => { updateTheme({ linkStyle: s.value }); persistTheme({ ...theme, linkStyle: s.value }); }}
-                              className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
-                                theme.linkStyle === s.value
-                                  ? "border-green-500 ring-2 ring-green-500/20"
-                                  : "border-border hover:border-muted-foreground/30"
-                              }`}
-                            >
-                              <div className="w-full h-8 flex items-center justify-center text-[10px] font-medium" style={previewStyle}>
-                                Sample
-                              </div>
-                              <span className="text-[11px] font-medium text-foreground">{s.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── LINK COLOR ── */}
-                  {designSubTab === "link-color" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Link Color</h3>
-                      <p className="text-xs text-muted-foreground">Color for your link buttons (defaults to theme color).</p>
-                      <div className="grid grid-cols-6 gap-2">
-                        {DEFAULT_COLORS.map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => { updateTheme({ linkColor: c }); persistTheme({ ...theme, linkColor: c }); }}
-                            className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
-                              theme.linkColor.toLowerCase() === c.toLowerCase()
-                                ? "border-foreground ring-2 ring-foreground/20 scale-110"
-                                : "border-transparent hover:scale-105"
-                            }`}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.linkColor }} />
-                        <Input
-                          value={theme.linkColor}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            updateTheme({ linkColor: v });
-                            if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, linkColor: v });
-                          }}
-                          className="h-8 text-xs font-mono uppercase flex-1"
-                          maxLength={7}
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs h-7"
-                        onClick={() => { updateTheme({ linkColor: theme.themeColor }); persistTheme({ ...theme, linkColor: theme.themeColor }); }}
-                      >
-                        Reset to theme color
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* ── BACKGROUND ── */}
-                  {designSubTab === "background" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Background</h3>
-                      <p className="text-xs text-muted-foreground">Set your page background style.</p>
-                      <div className="flex gap-1 rounded-full border border-border p-0.5">
-                        {(["solid", "gradient", "image"] as BgMode[]).map((mode) => (
-                          <button
-                            key={mode}
-                            onClick={() => { updateTheme({ bgMode: mode }); persistTheme({ ...theme, bgMode: mode }); }}
-                            className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
-                              theme.bgMode === mode ? "bg-green-600 text-white" : "text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        ))}
-                      </div>
-                      {/* Solid — bg color swatches + hex */}
-                      {theme.bgMode === "solid" && (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-6 gap-2">
-                            {BG_COLORS.map((c) => (
-                              <button
-                                key={c}
-                                onClick={() => { updateTheme({ bgColor: c }); persistTheme({ ...theme, bgColor: c }); }}
-                                className={`h-9 w-9 rounded-full border-2 transition-all mx-auto ${
-                                  theme.bgColor.toLowerCase() === c.toLowerCase()
-                                    ? "border-foreground ring-2 ring-foreground/20 scale-110"
-                                    : c === "#ffffff" ? "border-border hover:scale-105" : "border-transparent hover:scale-105"
-                                }`}
-                                style={{ backgroundColor: c }}
-                              />
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
-                            <Input
-                              value={theme.bgColor}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                updateTheme({ bgColor: v });
-                                if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
-                              }}
-                              className="h-8 text-xs font-mono uppercase flex-1"
-                              maxLength={7}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      {/* Gradient — live preview + bottom color */}
-                      {theme.bgMode === "gradient" && (
-                        <div className="space-y-3">
-                          <div className="h-16 w-full rounded-xl border border-border" style={{ background: `linear-gradient(180deg, ${theme.themeColor}33 0%, ${theme.bgColor} 100%)` }} />
-                          <p className="text-[11px] text-muted-foreground">Top: theme color &rarr; Bottom:</p>
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full border border-border shrink-0" style={{ backgroundColor: theme.bgColor }} />
-                            <Input
-                              value={theme.bgColor}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                updateTheme({ bgColor: v });
-                                if (/^#[0-9a-fA-F]{6}$/.test(v)) persistTheme({ ...theme, bgColor: v });
-                              }}
-                              className="h-8 text-xs font-mono uppercase flex-1"
-                              maxLength={7}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      {/* Image — file upload */}
-                      {theme.bgMode === "image" && (
-                        <div className="space-y-3">
-                          <input
-                            ref={bgImageInputRef}
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            onChange={uploadBgImage}
-                            className="hidden"
-                          />
-                          <button
-                            onClick={() => bgImageInputRef.current?.click()}
-                            className="w-full rounded-xl border-2 border-dashed border-border hover:border-green-400 transition-colors p-4 flex flex-col items-center gap-2"
-                          >
-                            {theme.bgImageUrl ? (
-                              <img src={theme.bgImageUrl} alt="Background" className="w-full h-20 object-cover rounded-lg" />
-                            ) : uploadingBgImage ? (
-                              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            ) : (
-                              <ImagePlus className="h-8 w-8 text-muted-foreground" />
-                            )}
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {theme.bgImageUrl ? "Change image" : "Upload image"}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
-                          </button>
-                          {theme.bgImageUrl && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs h-7 text-destructive hover:text-destructive"
-                              onClick={() => {
-                                const updated = { ...theme, bgImageUrl: undefined };
-                                setTheme(updated);
-                                persistTheme(updated);
-                              }}
-                            >
-                              Remove image
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <div className="mx-4 border-b border-border" />
 
                   {/* ── BRANDING ── */}
-                  {designSubTab === "branding" && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Branding</h3>
-                      <p className="text-xs text-muted-foreground">Control visible branding on your page.</p>
-                      <div className="flex items-center justify-between rounded-xl border border-border p-4">
-                        <div className="space-y-0.5">
-                          <p className="text-xs font-medium text-foreground">Show "Powered by MilCrunch"</p>
-                          <p className="text-[11px] text-muted-foreground">Footer badge on your public page</p>
-                        </div>
-                        <Switch
-                          checked={theme.showBranding}
-                          onCheckedChange={(v) => { updateTheme({ showBranding: v }); persistTheme({ ...theme, showBranding: v }); }}
-                        />
+                  <div data-section="branding" ref={(el) => { designSectionRefs.current["branding"] = el; }} className="p-4 pb-6">
+                    <h3 className="text-sm font-bold text-foreground mb-1">Branding</h3>
+                    <p className="text-xs text-muted-foreground mb-3">Control visible branding on your page.</p>
+                    <div className="flex items-center justify-between rounded-xl border border-border p-4">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium text-foreground">Show "Powered by MilCrunch"</p>
+                        <p className="text-[11px] text-muted-foreground">Footer badge on your public page</p>
                       </div>
-                      {theme.showBranding && (
-                        <div className="rounded-xl border border-border p-3 flex items-center justify-center">
-                          <p className="text-[11px] text-muted-foreground">Powered by <span className="font-semibold text-foreground">MilCrunch</span></p>
-                        </div>
-                      )}
+                      <Switch
+                        checked={theme.showBranding}
+                        onCheckedChange={(v) => { updateTheme({ showBranding: v }); persistTheme({ ...theme, showBranding: v }); }}
+                      />
                     </div>
-                  )}
+                    {theme.showBranding && (
+                      <div className="rounded-xl border border-border p-3 mt-3 flex items-center justify-center">
+                        <p className="text-[11px] text-muted-foreground">Powered by <span className="font-semibold text-foreground">MilCrunch</span></p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1359,76 +1381,76 @@ export default function CreatorBioEditor() {
               </div>
             </div>
 
-            {/* Phone frame — Seeksy-style mockup (380×780, 348×720 screen) */}
+            {/* Phone frame — 85% scale mockup (323×663, 296×612 screen) */}
             <div className={`${deviceWidth[previewDevice]} transition-all duration-300 relative`}>
               {/* Side buttons — volume (left), power (right) */}
-              <div className="absolute -left-[3px] top-[130px] w-[3px] h-[30px] bg-[#1a1a1a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[180px] w-[3px] h-[56px] bg-[#1a1a1a] rounded-l-sm" />
-              <div className="absolute -left-[3px] top-[248px] w-[3px] h-[56px] bg-[#1a1a1a] rounded-l-sm" />
-              <div className="absolute -right-[3px] top-[200px] w-[3px] h-[80px] bg-[#1a1a1a] rounded-r-sm" />
+              <div className="absolute -left-[3px] top-[110px] w-[3px] h-[26px] bg-[#1a1a1a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[153px] w-[3px] h-[48px] bg-[#1a1a1a] rounded-l-sm" />
+              <div className="absolute -left-[3px] top-[211px] w-[3px] h-[48px] bg-[#1a1a1a] rounded-l-sm" />
+              <div className="absolute -right-[3px] top-[170px] w-[3px] h-[68px] bg-[#1a1a1a] rounded-r-sm" />
 
               {/* Bezel — dark frame */}
               <div
-                className="rounded-[48px] relative"
+                className="rounded-[41px] relative"
                 style={{
-                  padding: "30px 16px",
+                  padding: "26px 14px",
                   backgroundColor: "#1a1a1a",
                   boxShadow: "0 30px 80px rgba(0,0,0,0.4)",
                 }}
               >
                 {/* Dynamic Island — true black pill */}
-                <div className="absolute top-[16px] left-1/2 -translate-x-1/2 z-10">
-                  <div className="w-32 h-7 rounded-full bg-black" />
+                <div className="absolute top-[14px] left-1/2 -translate-x-1/2 z-10">
+                  <div className="w-[109px] h-[24px] rounded-full bg-black" />
                 </div>
 
-                {/* Screen — 348×720 */}
+                {/* Screen — 296×612 */}
                 <div
-                  className="rounded-[32px] overflow-hidden overflow-y-auto relative"
+                  className="rounded-[27px] overflow-hidden overflow-y-auto relative"
                   style={{
-                    width: "348px",
-                    height: "720px",
+                    width: "296px",
+                    height: "612px",
                     fontFamily: theme.fontFamily,
                     ...phoneScreenBg,
                   }}
                 >
                   {/* Hero image */}
                   {heroImageUrl && (
-                    <div className="w-full overflow-hidden" style={{ height: heroImageFormat === "portrait" ? "200px" : heroImageFormat === "square" ? "160px" : "120px" }}>
+                    <div className="w-full overflow-hidden" style={{ height: heroImageFormat === "portrait" ? "170px" : heroImageFormat === "square" ? "136px" : "102px" }}>
                       <img src={heroImageUrl} alt="" className="w-full h-full object-cover" />
                     </div>
                   )}
 
                   {/* Profile header */}
-                  <div className={`px-5 ${heroImageUrl ? "pt-4" : "pt-14"} pb-3 flex flex-col items-center`}>
-                    {/* Avatar — 64px circular */}
+                  <div className={`px-4 ${heroImageUrl ? "pt-3" : "pt-12"} pb-2.5 flex flex-col items-center`}>
+                    {/* Avatar — 54px circular */}
                     {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover shadow-sm" style={{ border: `2px solid ${theme.themeColor}` }} />
+                      <img src={avatarUrl} alt="" className="h-[54px] w-[54px] rounded-full object-cover shadow-sm" style={{ border: `2px solid ${theme.themeColor}` }} />
                     ) : (
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center text-xl font-semibold" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>
+                      <div className="h-[54px] w-[54px] rounded-full flex items-center justify-center text-lg font-semibold" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>
                         {(displayName || "?")[0].toUpperCase()}
                       </div>
                     )}
-                    {/* Name — 18px bold */}
-                    <h3 className="mt-2.5 font-bold leading-tight" style={{ fontSize: "18px", color: phoneText, fontFamily: theme.fontFamily }}>
+                    {/* Name — 15px bold */}
+                    <h3 className="mt-2 font-bold leading-tight" style={{ fontSize: "15px", color: phoneText, fontFamily: theme.fontFamily }}>
                       {displayName || "Your Name"}
                     </h3>
-                    {/* Username — 13px gray */}
-                    <p className="mt-0.5" style={{ fontSize: "13px", color: phoneSubtext }}>@{handle || "username"}</p>
+                    {/* Username — 11px gray */}
+                    <p className="mt-0.5" style={{ fontSize: "11px", color: phoneSubtext }}>@{handle || "username"}</p>
                     {/* Certified Voice badge */}
-                    <div className="flex items-center gap-1 mt-2 px-3 py-1 rounded-full border" style={{ borderColor: theme.themeColor, color: theme.themeColor }}>
-                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                      <span className="text-[11px] font-medium">Certified Voice</span>
+                    <div className="flex items-center gap-1 mt-1.5 px-2.5 py-0.5 rounded-full border" style={{ borderColor: theme.themeColor, color: theme.themeColor }}>
+                      <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      <span className="text-[10px] font-medium">Certified Voice</span>
                     </div>
                     {/* Bio */}
                     {profileBio && (
-                      <p className="text-xs mt-2 text-center max-w-[280px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>
+                      <p className="text-[11px] mt-1.5 text-center max-w-[240px] leading-relaxed line-clamp-3" style={{ color: phoneSubtext }}>
                         {profileBio}
                       </p>
                     )}
                   </div>
 
                   {/* Sections — render actual content per type */}
-                  <div className="px-4 pb-10 space-y-3">
+                  <div className="px-3 pb-8 space-y-2.5">
                     {visibleSections.length === 0 ? (
                       <div className="py-12 text-center">
                         <Layers className="h-8 w-8 mx-auto mb-2 opacity-20" style={{ color: phoneSubtext }} />
@@ -1457,7 +1479,7 @@ export default function CreatorBioEditor() {
                           backgroundColor: cardBg,
                           boxShadow: cardShadow,
                           backdropFilter: cardBackdrop,
-                          padding: "16px",
+                          padding: "12px",
                         };
 
                         /* ── Social Links ── */
@@ -1469,15 +1491,15 @@ export default function CreatorBioEditor() {
                           });
                           return (
                             <div key={section.id} style={cStyle}>
-                              <p className="text-xs font-semibold mb-3" style={{ color: theme.themeColor }}>Social Links</p>
+                              <p className="text-[11px] font-semibold mb-2" style={{ color: theme.themeColor }}>Social Links</p>
                               {accs.length > 0 ? (
-                                <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   {accs.map((acc) => {
                                     const SIcon = socialIcon(acc.platform);
                                     const brandColor = SOCIAL_BRAND_COLORS[acc.platform.toLowerCase()] ?? theme.themeColor;
                                     return (
-                                      <div key={acc.id} className="flex items-center justify-center rounded-full shadow-sm" style={{ width: 40, height: 40, backgroundColor: brandColor }}>
-                                        <SIcon className="h-5 w-5 text-white" />
+                                      <div key={acc.id} className="flex items-center justify-center rounded-full shadow-sm" style={{ width: 34, height: 34, backgroundColor: brandColor }}>
+                                        <SIcon className="h-4 w-4 text-white" />
                                       </div>
                                     );
                                   })}
@@ -1493,11 +1515,11 @@ export default function CreatorBioEditor() {
                         if (section.type === "podcast") {
                           return (
                             <div key={section.id} style={cStyle}>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold tracking-wide" style={{ color: theme.themeColor, fontSize: "14px" }}>&bull;&bull;&bull;</span>
-                                <span className="text-sm font-semibold" style={{ color: theme.themeColor }}>{section.label}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold tracking-wide" style={{ color: theme.themeColor, fontSize: "12px" }}>&bull;&bull;&bull;</span>
+                                <span className="text-[11px] font-semibold" style={{ color: theme.themeColor }}>{section.label}</span>
                               </div>
-                              <p className="text-xs mt-1" style={{ color: phoneSubtext }}>Display your podcast episodes</p>
+                              <p className="text-[10px] mt-0.5" style={{ color: phoneSubtext }}>Display your podcast episodes</p>
                             </div>
                           );
                         }
@@ -1507,14 +1529,14 @@ export default function CreatorBioEditor() {
                           const links = (cfg.links as any[]) ?? [];
                           return (
                             <div key={section.id} style={cStyle}>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Link className="h-4 w-4" style={{ color: theme.themeColor }} />
-                                <span className="text-sm font-semibold" style={{ color: theme.themeColor }}>Custom Links</span>
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <Link className="h-3.5 w-3.5" style={{ color: theme.themeColor }} />
+                                <span className="text-[11px] font-semibold" style={{ color: theme.themeColor }}>Custom Links</span>
                               </div>
                               {links.length > 0 ? (
                                 <div className="space-y-1.5">
                                   {links.slice(0, 3).map((link: any) => (
-                                    <div key={link.id} className="text-xs py-2.5 px-4 text-center truncate font-medium" style={getLinkItemStyle()}>
+                                    <div key={link.id} className="text-[11px] py-2 px-3 text-center truncate font-medium" style={getLinkItemStyle()}>
                                       {link.label || link.url || "Untitled link"}
                                     </div>
                                   ))}
@@ -1533,13 +1555,13 @@ export default function CreatorBioEditor() {
                         if (section.type === "book_meeting") {
                           return (
                             <div key={section.id} style={cStyle}>
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center h-10 w-10 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15` }}>
-                                  <CalendarCheck className="h-5 w-5" style={{ color: theme.themeColor }} />
+                              <div className="flex items-center gap-2.5">
+                                <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15` }}>
+                                  <CalendarCheck className="h-4 w-4" style={{ color: theme.themeColor }} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold" style={{ color: theme.themeColor }}>{(cfg.buttonLabel as string) || "Book a Meeting"}</p>
-                                  <p className="text-xs" style={{ color: phoneSubtext }}>Schedule time with me</p>
+                                  <p className="text-[11px] font-semibold" style={{ color: theme.themeColor }}>{(cfg.buttonLabel as string) || "Book a Meeting"}</p>
+                                  <p className="text-[10px]" style={{ color: phoneSubtext }}>Schedule time with me</p>
                                 </div>
                               </div>
                             </div>
@@ -1549,18 +1571,18 @@ export default function CreatorBioEditor() {
                         /* ── Default section card ── */
                         return (
                           <div key={section.id} style={cStyle}>
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center h-10 w-10 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}>
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0" style={{ backgroundColor: `${theme.themeColor}15`, color: theme.themeColor }}>
                                 {getSectionIcon(entry)}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-sm font-medium truncate" style={{ color: theme.themeColor }}>{section.label}</span>
+                                  <span className="text-[11px] font-medium truncate" style={{ color: theme.themeColor }}>{section.label}</span>
                                   {entry.comingSoon && (
                                     <span className="text-[9px] px-1.5 py-px rounded font-medium" style={{ backgroundColor: isDark ? "#2d3548" : "#e5e7eb", color: phoneSubtext }}>SOON</span>
                                   )}
                                 </div>
-                                <p className="text-xs truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
+                                <p className="text-[10px] truncate" style={{ color: phoneSubtext }}>{entry.description}</p>
                               </div>
                             </div>
                           </div>
@@ -1570,8 +1592,8 @@ export default function CreatorBioEditor() {
                   </div>
 
                   {/* Home indicator bar — inside screen at bottom */}
-                  <div className="sticky bottom-0 flex justify-center pb-2 pt-1">
-                    <div className="w-28 h-1 rounded-full" style={{ backgroundColor: isDark ? "#4b5563" : "#d1d5db" }} />
+                  <div className="sticky bottom-0 flex justify-center pb-1.5 pt-1">
+                    <div className="w-24 h-1 rounded-full" style={{ backgroundColor: isDark ? "#4b5563" : "#d1d5db" }} />
                   </div>
                 </div>
               </div>
