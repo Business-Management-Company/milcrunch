@@ -80,11 +80,13 @@ export interface GenerateJwtResponse {
 }
 
 /** Generate secure connect URL for creator to link socials. */
-export async function generateConnectUrl(userId: string): Promise<GenerateJwtResponse> {
+export async function generateConnectUrl(userId: string, redirectUrl?: string): Promise<GenerateJwtResponse> {
+  const body: Record<string, string> = { username: userId };
+  if (redirectUrl) body.redirect_url = redirectUrl;
   const res = await fetch(`${API_BASE}/api/uploadposts/users/generate-jwt`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ username: userId }),
+    body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return { error: data.message ?? data.error ?? res.statusText };

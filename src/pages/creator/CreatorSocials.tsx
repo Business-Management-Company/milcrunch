@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import CreatorLayout from "@/components/layout/CreatorLayout";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +11,7 @@ import {
   syncDirectoryMemberStats,
   type ConnectedAccountRow,
 } from "@/lib/upload-post-sync";
-import { Loader2, RefreshCw, Link2, Check, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
+import { Loader2, RefreshCw, Check, Calendar, Instagram, Youtube, Facebook, Linkedin, Twitter } from "lucide-react";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -71,12 +70,12 @@ interface Platform {
 }
 
 const PLATFORMS: Platform[] = [
-  { key: "instagram",        label: "Instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50"   },
   { key: "tiktok",           label: "TikTok",           icon: TikTokIcon,    color: "text-gray-900",    bg: "bg-gray-100"  },
+  { key: "instagram",        label: "Instagram",        icon: Instagram,     color: "text-pink-500",    bg: "bg-pink-50"   },
+  { key: "linkedin",         label: "LinkedIn",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50"   },
   { key: "youtube",          label: "YouTube",          icon: Youtube,       color: "text-red-600",     bg: "bg-red-50"    },
   { key: "facebook",         label: "Facebook",         icon: Facebook,      color: "text-blue-600",    bg: "bg-blue-50"   },
   { key: "x",                label: "X (Twitter)",      icon: Twitter,       color: "text-gray-900",    bg: "bg-gray-100"  },
-  { key: "linkedin",         label: "LinkedIn",         icon: Linkedin,      color: "text-blue-700",    bg: "bg-blue-50"   },
   { key: "threads",          label: "Threads",          icon: ThreadsIcon,   color: "text-gray-900",    bg: "bg-gray-100"  },
   { key: "pinterest",        label: "Pinterest",        icon: PinterestIcon, color: "text-red-600",     bg: "bg-red-50"    },
   { key: "reddit",           label: "Reddit",           icon: RedditIcon,    color: "text-orange-500",  bg: "bg-orange-50" },
@@ -88,11 +87,16 @@ const PLATFORMS: Platform[] = [
 function accountForPlatform(accounts: ConnectedAccountRow[], key: string): ConnectedAccountRow | undefined {
   const match = accounts.find((a) => a.platform === key);
   if (match) return match;
-  // UploadPost may return "twitter" while we use "x" or vice-versa
   if (key === "x") return accounts.find((a) => a.platform === "twitter");
   if (key === "twitter") return accounts.find((a) => a.platform === "x");
   return undefined;
 }
+
+/* Redirect URL that UploadPost sends the user back to after OAuth */
+const REDIRECT_URL =
+  typeof window !== "undefined"
+    ? `${window.location.origin}/creator/socials?connected=true`
+    : "";
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -107,6 +111,7 @@ const CreatorSocials = () => {
   const [profileReady, setProfileReady] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"connect" | "calendar">("connect");
   const initDone = useRef<string | null>(null);
 
   /* ---- Load accounts from Supabase ---- */
@@ -159,6 +164,17 @@ const CreatorSocials = () => {
     })().finally(() => setLoading(false));
   }, [userId, ensureProfile, loadAccounts]);
 
+  /* ---- Auto-sync when returning from OAuth via ?connected=true ---- */
+  useEffect(() => {
+    if (!userId || !profileReady) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "true") {
+      // Clean the URL so it doesn't re-trigger
+      window.history.replaceState({}, "", window.location.pathname);
+      syncAccounts();
+    }
+  }, [userId, profileReady, syncAccounts]);
+
   /* ---- Open UploadPost OAuth popup, sync on close ---- */
   const handleConnect = useCallback(async () => {
     if (!userId || !profileReady) {
@@ -167,8 +183,7 @@ const CreatorSocials = () => {
     }
     setConnecting(true);
     try {
-      // Generate a fresh connect URL each time (JWT URLs expire)
-      const res = await generateConnectUrl(userId);
+      const res = await generateConnectUrl(userId, REDIRECT_URL);
       if (!res.access_url) {
         toast.error(res.error ?? "Could not generate connect link");
         return;
@@ -182,8 +197,19 @@ const CreatorSocials = () => {
         toast.error("Popup blocked. Please allow popups for this site.");
         return;
       }
-      // Poll for popup close, then sync
+      // Poll: detect redirect back or popup close
       const timer = setInterval(async () => {
+        // Check if popup navigated to our redirect URL
+        try {
+          if (popup.location?.href?.includes("/creator/socials?connected=true")) {
+            clearInterval(timer);
+            popup.close();
+            await syncAccounts();
+            return;
+          }
+        } catch {
+          // Cross-origin — expected while on UploadPost domain
+        }
         if (popup.closed) {
           clearInterval(timer);
           await syncAccounts();
@@ -213,136 +239,145 @@ const CreatorSocials = () => {
   if (!userId) {
     return (
       <CreatorLayout>
-        <Card className="p-8">
+        <div className="p-8 text-center">
           <p className="text-muted-foreground">Sign in to connect your social accounts.</p>
-        </Card>
+        </div>
       </CreatorLayout>
     );
   }
 
-  /* Look up platform config for a connected account */
-  const platformFor = (acc: ConnectedAccountRow): Platform | undefined => {
-    const p = acc.platform?.toLowerCase();
-    return PLATFORMS.find(
-      (pl) => pl.key === p || (pl.key === "x" && p === "twitter") || (pl.key === "twitter" && p === "x")
-    );
-  };
-
   return (
     <CreatorLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-headline font-bold text-foreground mb-2">
-          My Socials
+      {/* ---- Header ---- */}
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold text-foreground mb-1">
+          Connect Social Media Accounts
         </h1>
-        <p className="text-muted-foreground">
-          Connect your social accounts to power your bio page, content scheduling, and brand discovery.
+        <p className="text-sm text-muted-foreground">
+          Connect your social media accounts to manage your posts.
         </p>
       </div>
 
+      {/* ---- Tabs + Sync ---- */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("connect")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "connect"
+                ? "bg-purple-600 text-white"
+                : "bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Connect Accounts
+          </button>
+          <button
+            onClick={() => setActiveTab("calendar")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === "calendar"
+                ? "bg-purple-600 text-white"
+                : "bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            View Calendar
+          </button>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={syncAccounts}
+          disabled={syncing}
+          className="shrink-0"
+        >
+          {syncing ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          Sync
+        </Button>
+      </div>
+
       {loading ? (
-        <Card className="p-8 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </Card>
+        <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading…
+        </div>
+      ) : activeTab === "calendar" ? (
+        /* ---- Calendar tab placeholder ---- */
+        <div className="text-center py-16">
+          <Calendar className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+          <p className="text-muted-foreground">Content calendar coming soon.</p>
+        </div>
       ) : (
-        <div className="space-y-6">
-          {/* ---- TOP: Connect Accounts ---- */}
-          <Card className="bg-gradient-card border-border p-6">
-            <div className="text-center space-y-3">
-              <div className="flex items-center justify-center gap-2">
-                <Link2 className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold text-foreground">Connect Accounts</h2>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Connect your social accounts via our secure partner portal
-              </p>
-              <Button
-                onClick={handleConnect}
-                disabled={connecting || !profileReady}
-                className="w-full sm:w-auto sm:min-w-[280px] rounded-lg"
-                size="lg"
+        /* ---- Connect Accounts grid ---- */
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {PLATFORMS.map((p) => {
+            const Icon = p.icon;
+            const connected = accountForPlatform(accounts, p.key);
+            const isConnected = !!connected;
+
+            return (
+              <button
+                key={p.key}
+                onClick={() => {
+                  if (isConnected) return;
+                  handleConnect();
+                }}
+                disabled={connecting && !isConnected}
+                className={`relative flex items-center gap-3 border rounded-xl px-4 py-3.5 text-left transition-colors ${
+                  isConnected
+                    ? "border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20"
+                    : "border-border hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 cursor-pointer"
+                }`}
               >
-                {connecting ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Link2 className="h-4 w-4 mr-2" />
-                )}
-                Connect &amp; Manage Accounts
-              </Button>
-            </div>
-          </Card>
+                {/* Platform icon */}
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${p.bg} ${p.color}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
 
-          {/* ---- BOTTOM: Connected Accounts ---- */}
-          <Card className="bg-gradient-card border-border p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Connected Accounts</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={syncAccounts}
-                disabled={syncing}
-                className="shrink-0"
-              >
-                {syncing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                Sync
-              </Button>
-            </div>
+                {/* Label */}
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-semibold text-foreground">
+                    {isConnected ? `${p.label} Connected` : `Connect ${p.label}`}
+                  </span>
+                  {connected?.platform_username && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      @{connected.platform_username}
+                    </p>
+                  )}
+                </div>
 
-            {accounts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No accounts connected yet. Click &quot;Connect &amp; Manage Accounts&quot; above to link your socials.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {accounts.map((acc) => {
-                  const p = platformFor(acc);
-                  const Icon = p?.icon;
-                  const label = p?.label ?? acc.platform;
-
-                  return (
-                    <div
-                      key={acc.id}
-                      className="flex items-center justify-between border border-border rounded-lg px-4 py-3"
+                {/* Connected badge */}
+                {isConnected && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white">
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDisconnect(connected);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.stopPropagation(); handleDisconnect(connected); }
+                      }}
+                      className="text-xs text-red-500 hover:text-red-400 transition-colors"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${p?.bg ?? "bg-gray-100"} ${p?.color ?? "text-gray-600"}`}>
-                          {Icon ? <Icon className="w-5 h-5" /> : (
-                            <span className="text-xs font-bold">{(acc.platform ?? "?").charAt(0).toUpperCase()}</span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-sm font-medium text-foreground">{label}</span>
-                          {acc.platform_username && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              @{acc.platform_username}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                      Disconnect
+                    </span>
+                  </div>
+                )}
 
-                      <div className="flex items-center gap-3 ml-2 shrink-0">
-                        <span className="flex items-center gap-1 text-xs text-emerald-500 font-medium">
-                          <Check className="h-3.5 w-3.5" />
-                          Connected
-                        </span>
-                        <button
-                          onClick={() => handleDisconnect(acc)}
-                          className="text-xs text-red-500 hover:text-red-400 transition-colors"
-                        >
-                          Disconnect
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
+                {/* Connecting spinner */}
+                {!isConnected && connecting && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </CreatorLayout>
