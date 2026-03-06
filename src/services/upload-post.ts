@@ -62,11 +62,13 @@ export async function listUploadPostUsers(): Promise<UploadPostUser[]> {
   const { status, data } = await proxyFetch("/api/uploadposts/users", "GET");
   console.log("[UploadPost] GET all users status:", status);
   if (status >= 400) return [];
-  const users = Array.isArray(data) ? data : data.users ?? data.data ?? [];
+  // API returns { profiles: [...] }
+  const users = Array.isArray(data)
+    ? data
+    : data.profiles ?? data.users ?? data.data ?? [];
   console.log("[UploadPost] GET all users parsed count:", users.length);
   if (users.length > 0) {
     console.log("[UploadPost] First user keys:", Object.keys(users[0]));
-    console.log("[UploadPost] First user:", JSON.stringify(users[0], null, 2));
   }
   return users;
 }
@@ -183,19 +185,16 @@ export async function getUploadPostUser(
 
   console.log("[UploadPost] GET single user status:", status);
   console.log("[UploadPost] GET single user raw response keys:", Object.keys(data));
-  console.log("[UploadPost] GET single user raw response:", JSON.stringify(data, null, 2));
 
   if (status >= 400) {
     console.warn("[UploadPost] GET single user FAILED:", status);
     return null;
   }
 
-  const profile = data.user ?? data ?? null;
+  const profile = data.user ?? data.profile ?? data ?? null;
   if (profile) {
     console.log("[UploadPost] Parsed profile keys:", Object.keys(profile));
-    console.log("[UploadPost] connected_accounts field:", profile.connected_accounts);
-    console.log("[UploadPost] accounts field:", profile.accounts);
-    console.log("[UploadPost] All profile fields:", JSON.stringify(profile, null, 2));
+    console.log("[UploadPost] social_accounts field:", JSON.stringify(profile.social_accounts, null, 2));
   }
   return profile;
 }
