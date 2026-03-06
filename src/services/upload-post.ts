@@ -86,17 +86,34 @@ export interface GenerateConnectOptions {
   provider?: string;
 }
 
+/** All supported UploadPost platforms for the connect UI. */
+const ALL_PLATFORMS = [
+  "tiktok", "instagram", "linkedin", "youtube", "facebook",
+  "twitter", "threads", "pinterest", "reddit", "bluesky", "google_business",
+];
+
+/** MilCrunch logo URL used on the UploadPost connect page. */
+const LOGO_URL = "https://milcrunch.com/icons/icon-512.png";
+
 /** Generate secure connect URL for creator to link socials.
  *  On 409 (user already exists) falls back to a plain connect URL. */
 export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<GenerateJwtResponse> {
-  const body: Record<string, unknown> = { username: opts.userId };
+  const body: Record<string, unknown> = {
+    username: opts.userId,
+    // White-label branding
+    logo_image: LOGO_URL,
+    connect_title: "Connect Your Social Accounts",
+    connect_description:
+      "Link your social media accounts to MilCrunch to manage posts, track performance, and grow your military creator brand.",
+    redirect_button_text: "Return to MilCrunch",
+    show_calendar: false,
+    // Default to all platforms; narrow to one when a provider is specified
+    platforms: opts.provider ? [opts.provider] : ALL_PLATFORMS,
+  };
   if (opts.redirectUrl) body.redirect_url = opts.redirectUrl;
-  // Pass provider both as single-element platforms array (documented) and
-  // as provider field (in case the API supports undocumented direct OAuth).
-  if (opts.provider) {
-    body.platforms = [opts.provider];
-    body.provider = opts.provider;
-  }
+  if (opts.provider) body.provider = opts.provider;
+
+  console.log("[UploadPost] generate-jwt request body:", JSON.stringify(body, null, 2));
 
   const res = await fetch(`${API_BASE}/api/uploadposts/users/generate-jwt`, {
     method: "POST",
@@ -107,7 +124,7 @@ export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<
 
   // If JWT generated successfully, return it
   if (res.ok && data.access_url) {
-    console.log("[UploadPost] JWT URL:", data.access_url, "| provider:", opts.provider);
+    console.log("[UploadPost] JWT URL:", data.access_url, "| provider:", opts.provider ?? "all");
     return data;
   }
 
@@ -121,14 +138,14 @@ export async function generateConnectUrl(opts: GenerateConnectOptions): Promise<
     });
     const retryData = await retry.json().catch(() => ({}));
     if (retry.ok && retryData.access_url) {
-      console.log("[UploadPost] JWT URL (retry):", retryData.access_url, "| provider:", opts.provider);
+      console.log("[UploadPost] JWT URL (retry):", retryData.access_url, "| provider:", opts.provider ?? "all");
       return retryData;
     }
     return { access_url: "https://app.upload-post.com/connect", success: true };
   }
 
   if (!res.ok) return { error: data.message ?? data.error ?? res.statusText };
-  console.log("[UploadPost] JWT URL:", data.access_url, "| provider:", opts.provider);
+  console.log("[UploadPost] JWT URL:", data.access_url, "| provider:", opts.provider ?? "all");
   return data;
 }
 
