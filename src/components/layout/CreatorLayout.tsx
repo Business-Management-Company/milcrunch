@@ -40,12 +40,12 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
     label: "MAIN",
     items: [
       { icon: LayoutDashboard, label: "Dashboard", href: "/creator/dashboard" },
-      { icon: Link2, label: "My Bio Page", href: "/creator/bio" },
     ],
   },
   {
     label: "CONTENT",
     items: [
+      { icon: Link2, label: "My Bio Page", href: "/creator/bio" },
       { icon: Share2, label: "My Socials", href: "/creator/socials" },
       { icon: PenSquare, label: "Create Post", href: "/creator/post/new" },
       { icon: Calendar, label: "Scheduled Posts", href: "/creator/posts" },
