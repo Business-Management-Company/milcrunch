@@ -51,13 +51,15 @@ import {
   Wifi,
   ChevronDown as SelectArrow,
   Upload,
+  ImagePlus,
   Instagram,
   Youtube,
   Facebook,
   Linkedin,
   Twitter,
 } from "lucide-react";
-import type { BioSectionConfig, SectionType, SectionCatalogEntry } from "@/types/bio-page";
+import { getDominantColorFromFile } from "@/lib/dominant-color";
+import type { BioSectionConfig, SectionType, SectionCatalogEntry, HeroImageFormat } from "@/types/bio-page";
 import { SECTION_CATALOG, normalizeCustomLinks } from "@/types/bio-page";
 
 /* ── Icon map for section catalog entries ── */
@@ -139,6 +141,13 @@ export default function CreatorBioEditor() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Hero image fields (migrated from CreatorProfile) ── */
+  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
+  const [heroImageFormat, setHeroImageFormat] = useState<HeroImageFormat>("landscape");
+  const [heroDominantColor, setHeroDominantColor] = useState<string | null>(null);
+  const [uploadingHero, setUploadingHero] = useState(false);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+
   /* ── Connected social accounts ── */
   const [socialAccounts, setSocialAccounts] = useState<ConnectedAccountRow[]>([]);
 
@@ -174,6 +183,9 @@ export default function CreatorBioEditor() {
     setProfileBio((meta.bio as string) ?? "");
     setProfileAvatar((meta.avatar_url as string) ?? null);
     if (meta.image_style) setImageStyle(meta.image_style as ImageStyle);
+    setHeroImageUrl((meta.hero_image_url as string) ?? null);
+    setHeroImageFormat((meta.hero_image_format as HeroImageFormat) ?? "landscape");
+    setHeroDominantColor((meta.hero_dominant_color as string) ?? null);
     const cl = meta.custom_links;
     const config = normalizeCustomLinks(cl);
     setSections(config.sections ?? []);
@@ -188,8 +200,8 @@ export default function CreatorBioEditor() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!handle && loaded) navigate("/creator/profile");
-  }, [handle, navigate, loaded]);
+    if (!handle && loaded) setActiveTab("profile");
+  }, [handle, loaded]);
 
   /* ── Debounced profile save (1s after last keystroke) ── */
   const debouncedProfileSave = useCallback(
@@ -229,6 +241,37 @@ export default function CreatorBioEditor() {
       toast.success("Profile image uploaded");
     } finally {
       setUploadingAvatar(false);
+      e.target.value = "";
+    }
+  };
+
+  /* ── Hero image upload ── */
+  const uploadHero = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File must be under 10MB");
+      return;
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${user.id}/hero.${ext}`;
+    setUploadingHero(true);
+    try {
+      const { error: upErr } = await supabase.storage
+        .from("creator-assets")
+        .upload(path, file, { upsert: true });
+      if (upErr) { toast.error(upErr.message); return; }
+      const { data: urlData } = supabase.storage.from("creator-assets").getPublicUrl(path);
+      const url = urlData.publicUrl;
+      setHeroImageUrl(url);
+      const color = await getDominantColorFromFile(file);
+      if (color) setHeroDominantColor(color);
+      await supabase.auth.updateUser({
+        data: { hero_image_url: url, hero_dominant_color: color || null },
+      });
+      toast.success("Hero image uploaded");
+    } finally {
+      setUploadingHero(false);
       e.target.value = "";
     }
   };
@@ -514,6 +557,82 @@ export default function CreatorBioEditor() {
                         }`}
                       >
                         {style}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Hero Image Upload */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Hero / Cover Image</label>
+                  <input
+                    ref={heroInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={uploadHero}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => heroInputRef.current?.click()}
+                    className="w-full rounded-lg border-2 border-dashed border-border hover:border-blue-400 transition-colors p-4 flex flex-col items-center gap-2"
+                  >
+                    {heroImageUrl ? (
+                      <img
+                        src={heroImageUrl}
+                        alt="Hero"
+                        className="w-full h-24 object-cover rounded-md"
+                      />
+                    ) : uploadingHero ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    ) : (
+                      <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                    )}
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {heroImageUrl ? "Change hero image" : "Upload hero image"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/70">PNG, JPG up to 10MB</span>
+                  </button>
+                  {heroImageUrl && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-7 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        setHeroImageUrl(null);
+                        setHeroDominantColor(null);
+                        debouncedProfileSave({ hero_image_url: null, hero_dominant_color: null });
+                      }}
+                    >
+                      Remove hero image
+                    </Button>
+                  )}
+                  {heroDominantColor && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-3 w-3 rounded-sm border border-border" style={{ backgroundColor: heroDominantColor }} />
+                      <span className="text-[10px] text-muted-foreground">Extracted accent: {heroDominantColor}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Hero Image Format */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Hero Format</label>
+                  <p className="text-[10px] text-muted-foreground/80">How the hero image displays on your public bio page.</p>
+                  <div className="flex gap-1 rounded-full border border-border p-0.5">
+                    {(["portrait", "square", "landscape"] as HeroImageFormat[]).map((fmt) => (
+                      <button
+                        key={fmt}
+                        onClick={() => {
+                          setHeroImageFormat(fmt);
+                          debouncedProfileSave({ hero_image_format: fmt });
+                        }}
+                        className={`flex-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors capitalize ${
+                          heroImageFormat === fmt
+                            ? "bg-[#3B82F6] text-white"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {fmt}
                       </button>
                     ))}
                   </div>
@@ -854,9 +973,25 @@ export default function CreatorBioEditor() {
                     fontFamily: theme.fontFamily,
                   }}
                 >
+                  {/* Hero image inside phone */}
+                  {heroImageUrl && (
+                    <div
+                      className="w-full overflow-hidden"
+                      style={{
+                        height: heroImageFormat === "portrait" ? "200px" : heroImageFormat === "square" ? "160px" : "120px",
+                      }}
+                    >
+                      <img
+                        src={heroImageUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
                   {/* Profile header inside phone */}
                   <div
-                    className="p-6 pt-12 flex flex-col items-center"
+                    className={`p-6 ${heroImageUrl ? "pt-4" : "pt-12"} flex flex-col items-center`}
                     style={{
                       background: theme.bgMode === "gradient" ? "transparent"
                         : theme.darkMode ? "linear-gradient(to bottom, #1f293780, transparent)"

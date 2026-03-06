@@ -70,7 +70,6 @@ const SECTIONS: { label: string; items: NavItem[] }[] = [
   {
     label: "SETTINGS",
     items: [
-      { icon: User, label: "My Profile", href: "/creator/profile" },
       { icon: Settings, label: "Settings", href: "/creator/settings" },
       { icon: Palette, label: "Customize", href: "/creator/customize" },
       { icon: HelpCircle, label: "Help", href: "/creator/help" },
@@ -196,7 +195,7 @@ const CreatorLayout = ({ children }: CreatorLayoutProps) => {
     { icon: LayoutDashboard, label: "Dashboard", href: "/creator/dashboard" },
     { icon: PenSquare, label: "Content", href: "/creator/post/new" },
     { icon: CalendarDays, label: "Events", href: "/creator/events" },
-    { icon: User, label: "Profile", href: "/creator/profile" },
+    { icon: User, label: "Profile", href: "/creator/bio" },
   ];
 
   return (
