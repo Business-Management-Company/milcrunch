@@ -112,11 +112,6 @@ const CreatorSocials = () => {
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState<"connect" | "calendar">("connect");
   const initDone = useRef<string | null>(null);
-
-  // Iframe modal state
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
-  const [iframeLabel, setIframeLabel] = useState("");
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ---- Load accounts from Supabase ---- */
@@ -179,18 +174,8 @@ const CreatorSocials = () => {
     }
   }, [userId, profileReady, syncAccounts]);
 
-  /* ---- Close iframe modal + cleanup ---- */
-  const closeModal = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    setIframeUrl(null);
-    setIframeLabel("");
-  }, []);
-
-  /* ---- Open iframe modal for connect ---- */
-  const handleConnect = useCallback(async (platformLabel: string) => {
+  /* ---- Open popup for connect ---- */
+  const handleConnect = useCallback(async () => {
     if (!userId || !profileReady) {
       toast.error("Profile is still loading. Please wait.");
       return;
@@ -202,25 +187,39 @@ const CreatorSocials = () => {
         toast.error(res.error ?? "Could not generate connect link");
         return;
       }
-      setIframeLabel(platformLabel);
-      setIframeUrl(res.access_url);
-
-      // Poll iframe location for redirect detection
-      pollRef.current = setInterval(async () => {
+      const popup = window.open(
+        res.access_url,
+        "connect_social",
+        "width=600,height=700,left=200,top=100"
+      );
+      if (!popup) {
+        toast.error("Popup blocked. Please allow popups for this site.");
+        return;
+      }
+      // Poll: cross-origin pages throw — ignore until redirect lands on our domain
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(() => {
         try {
-          const href = iframeRef.current?.contentWindow?.location?.href;
-          if (href && href.includes("/creator/socials?connected=true")) {
-            closeModal();
-            await syncAccounts();
+          if (popup.closed) {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            syncAccounts();
+            return;
+          }
+          if (popup.location.href.includes("/creator/socials?connected=true")) {
+            popup.close();
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            syncAccounts();
           }
         } catch {
-          // Cross-origin — expected while on UploadPost domain
+          // Cross-origin — expected while on UploadPost / OAuth provider domain
         }
       }, 500);
     } finally {
       setConnecting(false);
     }
-  }, [userId, profileReady, syncAccounts, closeModal]);
+  }, [userId, profileReady, syncAccounts]);
 
   /* ---- Disconnect ---- */
   const handleDisconnect = async (e: React.MouseEvent, account: ConnectedAccountRow) => {
@@ -370,7 +369,7 @@ const CreatorSocials = () => {
             return (
               <button
                 key={p.key}
-                onClick={() => handleConnect(p.label)}
+                onClick={handleConnect}
                 disabled={connecting}
                 className="flex items-center gap-3 border border-border rounded-xl px-4 py-3.5 text-left transition-colors hover:border-purple-400 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 cursor-pointer"
               >
@@ -389,40 +388,6 @@ const CreatorSocials = () => {
         </div>
       )}
 
-      {/* ---- Iframe Modal ---- */}
-      {iframeUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-          onClick={closeModal}
-        >
-          <div
-            className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">
-                Connect {iframeLabel}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </div>
-
-            {/* Iframe body */}
-            <iframe
-              ref={iframeRef}
-              src={iframeUrl}
-              className="w-full border-0"
-              style={{ minHeight: "500px" }}
-              title={`Connect ${iframeLabel}`}
-            />
-          </div>
-        </div>
-      )}
     </CreatorLayout>
   );
 };
