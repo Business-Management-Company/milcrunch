@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import CreatorLayout from "@/components/layout/CreatorLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,8 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { getConnectedAccounts, type ConnectedAccountRow } from "@/lib/upload-post-sync";
 import { createUploadPost, uploadText, uploadVideo, uploadPhotos, type UploadPostPlatform } from "@/services/upload-post";
 import {
-  Loader2, Send, Calendar, Check, Link2,
+  Loader2, Check, X, Link2, Plus, Eye, EyeOff, Sparkles,
+  Upload, Image, Video, FileText, Download, Camera, Palette,
+  Hash, Smile, Braces, Calendar, Tag, Copy,
   Instagram, Youtube, Facebook, Linkedin, Twitter,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -51,36 +52,19 @@ const GoogleBizIcon = ({ className }: { className?: string }) => (
     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
   </svg>
 );
+/* Google Drive icon */
+const GoogleDriveIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M7.71 3.5L1.15 15l3.43 5.93 6.56-11.36L7.71 3.5zm1.14 0l6.57 11.36H22L15.43 3.5H8.85zM16 15.5H2.87l3.43 5.93h13.13L16 15.5z" />
+  </svg>
+);
 
 /* Brand colors per platform */
 const BRAND_COLORS: Record<string, string> = {
-  instagram: "#E4405F",
-  youtube: "#FF0000",
-  facebook: "#1877F2",
-  linkedin: "#0A66C2",
-  twitter: "#1DA1F2",
-  x: "#000000",
-  tiktok: "#000000",
-  threads: "#000000",
-  pinterest: "#E60023",
-  reddit: "#FF4500",
-  bluesky: "#0085FF",
-  google_business: "#4285F4",
-};
-
-const PLATFORM_LABELS: Record<string, string> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  linkedin: "LinkedIn",
-  youtube: "YouTube",
-  facebook: "Facebook",
-  x: "X",
-  twitter: "X",
-  threads: "Threads",
-  pinterest: "Pinterest",
-  reddit: "Reddit",
-  bluesky: "Bluesky",
-  google_business: "Google Business",
+  instagram: "#E4405F", youtube: "#FF0000", facebook: "#1877F2",
+  linkedin: "#0A66C2", twitter: "#1DA1F2", x: "#000000",
+  tiktok: "#000000", threads: "#000000", pinterest: "#E60023",
+  reddit: "#FF4500", bluesky: "#0085FF", google_business: "#4285F4",
 };
 
 const PLATFORM_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -94,19 +78,44 @@ function platformIcon(platform: string) {
   return PLATFORM_ICON_MAP[platform.toLowerCase()] ?? Link2;
 }
 
+/* All platforms that could be connected */
+const ALL_PLATFORMS = [
+  "instagram", "facebook", "twitter", "linkedin",
+  "tiktok", "youtube", "threads", "pinterest",
+  "reddit", "bluesky", "google_business",
+];
+
+/* AI post ideas */
+const AI_IDEAS = [
+  "Share a behind-the-scenes look at your daily routine as a veteran creator.",
+  "Post a 'then vs now' side-by-side showing your military journey to civilian life.",
+  "Ask your audience: 'What does service mean to you?' to spark engagement.",
+  "Highlight a fellow veteran creator or small business you admire.",
+];
+
 export default function CreatePost() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [accounts, setAccounts] = useState<ConnectedAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
+  const [caption, setCaption] = useState("");
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState<"none" | "video" | "photo">("none");
-  const [selected, setSelected] = useState<Set<string>>(new Set()); // platform strings
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scheduledDate, setScheduledDate] = useState("");
+  const [postName, setPostName] = useState("");
+  const [postLabel, setPostLabel] = useState("");
+  const [shortenUrls, setShortenUrls] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [showIdeas, setShowIdeas] = useState(false);
+  const [showAiInput, setShowAiInput] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
-  /* Fetch connected accounts — try creator_social_connections first, fall back to connected_accounts */
+  /* Fetch connected accounts */
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
@@ -117,26 +126,24 @@ export default function CreatePost() {
       .order("platform")
       .then(({ data }) => {
         if (data && data.length > 0) {
-          setAccounts(
-            data.map((r: any) => ({
-              id: r.id,
-              user_id: r.user_id,
-              platform: r.platform,
-              platform_user_id: r.upload_post_account_id ?? null,
-              platform_username: r.account_name ?? null,
-              profile_image_url: r.account_avatar ?? null,
-              followers_count: null,
-              raw_data: null,
-              created_at: r.connected_at,
-              updated_at: r.connected_at,
-            }))
-          );
+          const mapped = data.map((r: any) => ({
+            id: r.id, user_id: r.user_id, platform: r.platform,
+            platform_user_id: r.upload_post_account_id ?? null,
+            platform_username: r.account_name ?? null,
+            profile_image_url: r.account_avatar ?? null,
+            followers_count: null, raw_data: null,
+            created_at: r.connected_at, updated_at: r.connected_at,
+          }));
+          setAccounts(mapped);
+          setSelected(new Set(mapped.map((a: any) => a.platform)));
           setLoading(false);
           return;
         }
-        // Fallback to connected_accounts
         getConnectedAccounts(user.id).then((accs) => {
-          if (accs.length > 0) setAccounts(accs);
+          if (accs.length > 0) {
+            setAccounts(accs);
+            setSelected(new Set(accs.map((a) => a.platform)));
+          }
           setLoading(false);
         });
       });
@@ -152,162 +159,435 @@ export default function CreatePost() {
   };
 
   const handlePost = async () => {
-    if (!user?.id || !title.trim()) {
-      toast.error("Enter post content.");
-      return;
-    }
+    if (!user?.id || !caption.trim()) { toast.error("Enter a caption."); return; }
     const selectedPlatforms = Array.from(selected);
-    if (selectedPlatforms.length === 0) {
-      toast.error("Select at least one platform.");
-      return;
-    }
+    if (selectedPlatforms.length === 0) { toast.error("Select at least one platform."); return; }
     setPosting(true);
     try {
-      // Gather upload_post_account_ids for selected platforms
       const accountIds = accounts
         .filter((a) => selectedPlatforms.includes(a.platform))
         .map((a) => a.platform_user_id)
         .filter((id): id is string => !!id);
-
       const scheduled = scheduledDate ? new Date(scheduledDate).toISOString() : undefined;
-
-      // Use unified posts endpoint when we have account_ids
       if (accountIds.length > 0) {
         const result = await createUploadPost({
-          text: title.trim(),
-          account_ids: accountIds,
+          text: caption.trim(), account_ids: accountIds,
           media_url: (mediaType !== "none" && mediaUrl.trim()) ? mediaUrl.trim() : undefined,
           scheduled_at: scheduled,
         });
         if (result.success) {
           toast.success(scheduled ? "Post scheduled!" : "Post published!");
-          setTitle(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
-        } else {
-          toast.error(result.error ?? "Post failed.");
-        }
+          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
+        } else { toast.error(result.error ?? "Post failed."); }
       } else {
-        // Fallback to legacy per-type endpoints
         const platformList = selectedPlatforms as UploadPostPlatform[];
         let result;
         if (mediaType === "video" && mediaUrl.trim()) {
-          result = await uploadVideo({ title: title.trim(), user: user.id, platform: platformList, video: mediaUrl.trim(), scheduled_date: scheduled, async_upload: true });
+          result = await uploadVideo({ title: caption.trim(), user: user.id, platform: platformList, video: mediaUrl.trim(), scheduled_date: scheduled, async_upload: true });
         } else if (mediaType === "photo" && mediaUrl.trim()) {
-          result = await uploadPhotos({ title: title.trim(), user: user.id, platform: platformList, photos: [mediaUrl.trim()], scheduled_date: scheduled, async_upload: true });
+          result = await uploadPhotos({ title: caption.trim(), user: user.id, platform: platformList, photos: [mediaUrl.trim()], scheduled_date: scheduled, async_upload: true });
         } else {
-          result = await uploadText({ title: title.trim(), user: user.id, platform: platformList, scheduled_date: scheduled });
+          result = await uploadText({ title: caption.trim(), user: user.id, platform: platformList, scheduled_date: scheduled });
         }
         if (result.success) {
           toast.success(scheduled ? "Post scheduled!" : "Post published!");
-          setTitle(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
-        } else {
-          toast.error(result.error ?? "Post failed.");
-        }
+          setCaption(""); setMediaUrl(""); setScheduledDate(""); setSelected(new Set());
+        } else { toast.error(result.error ?? "Post failed."); }
       }
-    } catch {
-      toast.error("Post failed.");
-    } finally {
-      setPosting(false);
-    }
+    } catch { toast.error("Post failed."); } finally { setPosting(false); }
   };
 
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/ai-caption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ prompt: aiPrompt.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCaption((prev) => prev + (prev ? "\n\n" : "") + (data.caption ?? data.text ?? ""));
+        setShowAiInput(false);
+        setAiPrompt("");
+        toast.success("Caption generated!");
+      } else {
+        toast.error("AI generation failed — try again.");
+      }
+    } catch {
+      toast.error("AI generation failed.");
+    } finally { setAiLoading(false); }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) {
+      setMediaFiles((prev) => [...prev, ...files]);
+      setMediaType(files[0].type.startsWith("video") ? "video" : "photo");
+    }
+    e.target.value = "";
+  };
+
+  const connectedPlatforms = new Set(accounts.map((a) => a.platform));
   const noAccounts = !loading && accounts.length === 0;
+  const now = new Date();
+  const defaultDateLabel = now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   return (
     <CreatorLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-headline font-bold text-foreground mb-2">Create Post</h1>
-        <p className="text-muted-foreground">Compose and publish or schedule to your connected platforms.</p>
-      </div>
+      <div className="flex flex-col h-[calc(100vh-2rem)] -mt-2">
+        {/* ── SCROLLABLE CONTENT ── */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
-      {/* No accounts banner */}
-      {noAccounts && (
-        <div className="mb-6 rounded-xl border border-border bg-muted/50 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">Connect your social accounts to start posting</p>
-            <p className="text-xs text-muted-foreground mt-1">Link your social media accounts to publish and schedule posts across platforms.</p>
-          </div>
-          <Button size="sm" onClick={() => navigate("/creator/socials")}>
-            <Link2 className="h-4 w-4 mr-2" />
-            Connect Accounts
-          </Button>
-        </div>
-      )}
-
-      <Card className="rounded-xl border-border max-w-2xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Send className="h-5 w-5" /> New post</CardTitle>
-          <CardDescription>Text and optional media; select platforms to post to.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {/* Post to: branded toggle chips */}
-          {accounts.length > 0 && (
-            <div>
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Post to</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {accounts.map((acc) => {
-                  const PIcon = platformIcon(acc.platform);
-                  const brandColor = BRAND_COLORS[acc.platform.toLowerCase()] ?? "#6b7280";
-                  const isSelected = selected.has(acc.platform);
-                  return (
+            {/* ── 1. INSPIRATION BANNER ── */}
+            <div className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800/40 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-green-800 dark:text-green-300 font-medium">
+                  <span className="mr-1.5">💡</span>
+                  Need inspiration for your post?
+                  <span className="ml-1 text-xs text-green-600 dark:text-green-400">({AI_IDEAS.length})</span>
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800/20 text-xs h-7 gap-1"
+                  onClick={() => setShowIdeas(!showIdeas)}
+                >
+                  {showIdeas ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showIdeas ? "Hide" : "Show"}
+                </Button>
+              </div>
+              {showIdeas && (
+                <div className="mt-3 space-y-2">
+                  {AI_IDEAS.map((idea, i) => (
                     <button
-                      key={acc.id}
-                      type="button"
-                      onClick={() => toggle(acc.platform)}
-                      className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium transition-all"
-                      style={{
-                        border: `2px solid ${isSelected ? brandColor : "#e5e7eb"}`,
-                        background: isSelected ? `${brandColor}10` : "transparent",
-                        color: isSelected ? brandColor : "#9ca3af",
-                      }}
+                      key={i}
+                      onClick={() => { setCaption(idea); setShowIdeas(false); toast.success("Idea applied!"); }}
+                      className="w-full text-left rounded-lg border border-green-200 dark:border-green-800/40 bg-white dark:bg-green-900/20 px-3 py-2.5 text-sm text-green-900 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-800/30 transition-colors"
                     >
-                      <PIcon className="h-4 w-4" style={{ color: isSelected ? brandColor : "#9ca3af" }} />
-                      <span>{PLATFORM_LABELS[acc.platform] ?? acc.platform}</span>
-                      {acc.platform_username && (
-                        <span className="text-[10px] opacity-60">@{acc.platform_username}</span>
-                      )}
-                      {isSelected && <Check className="h-3.5 w-3.5 ml-0.5" style={{ color: brandColor }} />}
+                      <span className="text-green-500 mr-1.5">✦</span>{idea}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── 2. SELECT SOCIAL ACCOUNTS ── */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3">Select social accounts</h2>
+              {noAccounts ? (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">Connect your social accounts to start posting</p>
+                  <Button size="sm" onClick={() => navigate("/creator/socials")}>
+                    <Link2 className="h-4 w-4 mr-2" />Connect Accounts
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {ALL_PLATFORMS.map((platform) => {
+                    const connected = connectedPlatforms.has(platform);
+                    const isSelected = selected.has(platform);
+                    const PIcon = platformIcon(platform);
+                    const brandColor = BRAND_COLORS[platform] ?? "#6b7280";
+                    return (
+                      <button
+                        key={platform}
+                        onClick={() => connected ? toggle(platform) : navigate("/creator/socials")}
+                        className="relative group"
+                        title={connected ? platform : `Connect ${platform}`}
+                      >
+                        <div
+                          className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${
+                            connected
+                              ? isSelected
+                                ? "ring-2 ring-offset-2 ring-green-500"
+                                : "opacity-80 hover:opacity-100"
+                              : "opacity-30 hover:opacity-50"
+                          }`}
+                          style={{ backgroundColor: connected ? `${brandColor}15` : "#e5e7eb" }}
+                        >
+                          <PIcon className="h-5 w-5" style={{ color: connected ? brandColor : "#9ca3af" }} />
+                        </div>
+                        {/* Badge overlay — top-right */}
+                        <div className={`absolute -top-0.5 -right-0.5 h-4.5 w-4.5 rounded-full flex items-center justify-center text-white ${
+                          connected
+                            ? isSelected ? "bg-green-500" : "bg-gray-400"
+                            : "bg-gray-300"
+                        }`} style={{ width: 18, height: 18 }}>
+                          {connected ? (
+                            isSelected
+                              ? <Check className="h-2.5 w-2.5" />
+                              : <X className="h-2.5 w-2.5" />
+                          ) : (
+                            <Plus className="h-2.5 w-2.5" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ── 3. WRITE A CAPTION ── */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3">Write a caption</h2>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <Textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="What do you want to talk about?"
+                  className="border-0 focus-visible:ring-0 resize-none min-h-[120px] text-sm rounded-none"
+                />
+                {/* AI prompt inline input */}
+                {showAiInput && (
+                  <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-muted/30">
+                    <Sparkles className="h-4 w-4 text-green-600 shrink-0" />
+                    <Input
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAiGenerate()}
+                      placeholder="Describe the caption you want..."
+                      className="h-8 text-xs flex-1 border-0 bg-transparent focus-visible:ring-0"
+                      autoFocus
+                    />
+                    <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={handleAiGenerate} disabled={aiLoading}>
+                      {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Generate"}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setShowAiInput(false); setAiPrompt(""); }}>
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+                {/* Bottom toolbar */}
+                <div className="flex items-center justify-between px-3 py-2 border-t border-border bg-muted/20">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20"
+                    onClick={() => setShowAiInput(!showAiInput)}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    AI Assistant
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{caption.length} characters</span>
+                </div>
+                {/* Emoji / hashtag / variables / link toolbar */}
+                <div className="flex items-center justify-between px-3 py-2 border-t border-border">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                    <Checkbox checked={shortenUrls} onCheckedChange={(v) => setShortenUrls(!!v)} className="h-3.5 w-3.5" />
+                    Shorten URLs
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Emoji"><Smile className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Hashtag"><Hash className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Variables"><Braces className="h-4 w-4 text-muted-foreground" /></button>
+                    <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Link"><Link2 className="h-4 w-4 text-muted-foreground" /></button>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Content / caption */}
-          <div>
-            <Label>Content / caption</Label>
-            <Textarea value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Write your post..." className="mt-1 min-h-[120px]" />
-          </div>
-
-          {/* Media */}
-          <div>
-            <Label>Media (optional)</Label>
-            <div className="flex flex-wrap gap-4 mt-1">
-              {(["none", "video", "photo"] as const).map((t) => (
-                <label key={t} className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={mediaType === t} onCheckedChange={() => setMediaType(t)} />
-                  {t === "none" ? "Text only" : t === "video" ? "Video URL" : "Photo URL"}
-                </label>
-              ))}
+            {/* ── 4. ADD MEDIA ── */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3">
+                Add images, videos, and PDF documents
+                <span className="text-muted-foreground font-normal ml-1">({mediaFiles.length})</span>
+              </h2>
+              {/* Upload type toolbar */}
+              <div className="flex items-center gap-1 mb-3 flex-wrap">
+                {[
+                  { icon: Upload, label: "File" },
+                  { icon: Image, label: "Image" },
+                  { icon: Video, label: "Video" },
+                  { icon: FileText, label: "Document" },
+                  { icon: Download, label: "Import" },
+                  { icon: Camera, label: "Screenshot" },
+                  { icon: Palette, label: "Design" },
+                  { icon: GoogleDriveIcon, label: "Drive" },
+                ].map(({ icon: Icon, label }) => (
+                  <button
+                    key={label}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <Icon className="h-3.5 w-3.5" />{label}
+                  </button>
+                ))}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*,.pdf"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              {/* Upload zone */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full rounded-xl border-2 border-dashed border-border hover:border-green-400 transition-colors p-8 flex flex-col items-center gap-3"
+              >
+                {/* Stacked card illustration */}
+                <div className="relative w-16 h-16">
+                  <div className="absolute inset-0 rotate-[-6deg] rounded-lg border-2 border-border bg-muted/50" />
+                  <div className="absolute inset-0 rotate-[3deg] rounded-lg border-2 border-border bg-card" />
+                  <div className="absolute inset-0 rounded-lg border-2 border-border bg-card flex items-center justify-center">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <span className="text-sm font-medium text-foreground">Upload media</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">or drag and drop your file</p>
+                </div>
+              </button>
+              {/* Show uploaded files */}
+              {mediaFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {mediaFiles.map((file, i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
+                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-xs text-foreground truncate flex-1">{file.name}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                      <button onClick={() => setMediaFiles((prev) => prev.filter((_, j) => j !== i))} className="text-destructive hover:text-destructive/80">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* URL input fallback */}
+              {mediaFiles.length === 0 && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Or paste a URL:</span>
+                    <div className="flex gap-2">
+                      {(["photo", "video"] as const).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setMediaType(t)}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition-colors capitalize ${
+                            mediaType === t ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400" : "border-border text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {mediaType !== "none" && (
+                    <Input
+                      value={mediaUrl}
+                      onChange={(e) => setMediaUrl(e.target.value)}
+                      placeholder={`https://example.com/my-${mediaType}.${mediaType === "video" ? "mp4" : "jpg"}`}
+                      className="h-8 text-xs"
+                    />
+                  )}
+                </div>
+              )}
             </div>
-            {(mediaType === "video" || mediaType === "photo") && (
-              <Input type="url" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://..." className="mt-2" />
-            )}
-          </div>
 
-          {/* Schedule */}
-          <div>
-            <Label className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Schedule (optional)</Label>
-            <Input type="datetime-local" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="mt-1 max-w-xs" />
-          </div>
+            {/* ── 5. POST DETAILS ── */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground mb-3">Set post details</h2>
+              <div className="space-y-3">
+                {/* Schedule */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground mb-1 block">Select when to publish</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        type="datetime-local"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        placeholder={defaultDateLabel}
+                        className="h-9 text-xs pl-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {/* Post name + Clone button */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground mb-1 block">Name your post (optional)</label>
+                    <Input
+                      value={postName}
+                      onChange={(e) => setPostName(e.target.value)}
+                      placeholder="e.g. Weekly Update #12"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 text-xs gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20 mt-5"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Clone to other calendars
+                  </Button>
+                </div>
+                {/* Label */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Add a label to track campaigns</label>
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      value={postLabel}
+                      onChange={(e) => setPostLabel(e.target.value)}
+                      placeholder="Select or create a label..."
+                      className="h-9 text-xs pl-9"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          {/* Submit */}
-          <Button onClick={handlePost} disabled={posting || noAccounts}>
-            {posting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-            {scheduledDate ? "Schedule post" : "Post now"}
-          </Button>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+
+        {/* ── 6. STICKY BOTTOM ACTION BAR ── */}
+        <div className="shrink-0 border-t border-border bg-card px-4 sm:px-6 py-3">
+          <div className="max-w-3xl mx-auto flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => toast.info("Progress saved!")}
+            >
+              Save progress
+            </Button>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-xs gap-1 pr-7"
+                  onClick={() => {
+                    toast.success("Saved as draft!");
+                    setCaption(""); setMediaUrl(""); setScheduledDate("");
+                  }}
+                >
+                  Save as draft
+                </Button>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+              </div>
+              <Button
+                size="sm"
+                className="h-9 text-xs bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+                onClick={handlePost}
+                disabled={posting || noAccounts}
+              >
+                {posting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                {scheduledDate ? "Schedule" : "Schedule"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </CreatorLayout>
   );
 }
